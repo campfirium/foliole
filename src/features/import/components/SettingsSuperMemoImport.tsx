@@ -124,7 +124,7 @@ export function SettingsSuperMemoImport() {
   const t = useTranslation();
   const [grades, setGrades] = useState<SuperMemoGradeMap>();
   return (
-    <SettingsRow title={t('desktop.superMemoDrafts.title')}>
+    <SettingsRow title={t('settings.general.dataMigration.superMemo')}>
       <SettingsControlSlot>
         <AppButton onClick={() => void loadSuperMemoGradeMap().then(setGrades)}>{t('desktop.superMemoDrafts.open')}</AppButton>
       </SettingsControlSlot>

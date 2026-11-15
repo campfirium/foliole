@@ -22,7 +22,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 
 The HTTP create request takes an explicit `parent_id`, which can be null. The CLI supplies null when the parent flag is omitted. Material reads default to previews and report truncation. Request `content_mode: "full"` or `--content-mode full` to read complete content and answers with the same response revision. Collection tags can travel in Topic content, while the manual virtual Folder routes expose manual membership.
 
-SuperMemo batch preview and import use the desktop Import flow for the current library. Its report, scheduling slider, and configurable grade mapping stay in the desktop flow. With a paired collection, the desktop flow imports dismissed Topics and Items as dismissed and starts pending Items with no active review history. Agent Control does not expose these SuperMemo batch operations. External migration of individual materials uses the existing Agent Control routes.
+SuperMemo batch preview and import are available in desktop **Settings → General → Data migration** for the current library. Its report, scheduling slider, and configurable grade mapping stay in the desktop flow. With a paired collection, the desktop flow imports dismissed Topics and Items as dismissed and starts pending Items with no active review history. Agent Control does not expose these SuperMemo batch operations. External migration of individual materials uses the existing Agent Control routes.
 
 Aide history shows material links for desktop conversation navigation. The linked material titles and IDs are included in Aide turn context. A linked material open at send time becomes the active material. Aide reads bodies through existing material permissions. Agent Control has no conversation-link routes.
 
@@ -42,7 +42,7 @@ Receipts are stored in the local library database and do not sync to other libra
 
 ### Importing a Topic reading schedule
 
-In desktop **Settings → General → Agent Control**, enable **Allow learning progress imports** for the current library. The permission defaults to off and stays local. A request with a learning schedule while it is off returns HTTP 403 with `learning_import_disabled`. Ordinary creation uses the existing permission.
+The **Foliole CLI** installation entry is in desktop **Settings → General → External access**. In the same section, enable **Allow learning progress imports** for the current library. The permission defaults to off and stays local. A request with a learning schedule while it is off returns HTTP 403 with `learning_import_disabled`. Ordinary creation uses the existing permission.
 
 Send `reading_schedule` on a Topic `materials/create` request. With the CLI, pass the same object as JSON in `--reading-schedule`.
 

@@ -14,6 +14,7 @@ test('shows Import before storage locations in Storage settings', async ({ deskt
   const storageHeading = dialog.getByRole('heading', { name: /^(Storage locations|存储位置)$/ });
   await expect(importHeading).toBeVisible();
   await expect(storageHeading).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Open preview|打开预览)$/ })).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: /^(Inbox folder|收件箱文件夹)$/ })).toBeVisible();
   await expect(dialog.getByRole('heading', { name: /^(Import folder|导入文件夹)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Open Import folder|打开导入文件夹)$/ })).toBeVisible();
@@ -26,4 +27,27 @@ test('shows Import before storage locations in Storage settings', async ({ deskt
     body: screenshot,
     contentType: 'image/png'
   });
+});
+
+test('groups Aide, external access and migration in General settings', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  const dialog = await openSettingsDialog(desktopWindow);
+  await dialog.getByRole('button', { name: /^(General|通用)$/ }).click();
+
+  const sectionHeadings = dialog.getByRole('heading', { level: 3 });
+  await expect(sectionHeadings).toHaveText([
+    /^(Language|语言)$/,
+    /^(System|系统)$/,
+    /^(Interface|界面)$/,
+    /^(Search|搜索)$/,
+    /^(Global capture|全局剪辑)$/,
+    /^Foliole Aide$/,
+    /^(External access|外部访问)$/,
+    /^(Data migration|数据迁移)$/
+  ]);
+  const aide = dialog.getByRole('region', { name: 'Foliole Aide' });
+  await expect(aide.getByText(/^(ChatGPT plan|ChatGPT 套餐)$/)).toBeVisible();
+  await expect(aide.getByRole('heading', { name: /^(Local conversation data|本机对话数据)$/ })).toBeVisible();
+  const external = dialog.getByRole('region', { name: /^(External access|外部访问)$/ });
+  await expect(external.getByRole('switch', { name: /^(Allow learning progress imports|允许导入学习进度)$/ })).toBeVisible();
 });

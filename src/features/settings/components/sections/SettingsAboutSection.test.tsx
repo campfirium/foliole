@@ -65,7 +65,7 @@ it('keeps the log description fixed and exposes the file after recording', async
   expect(screen.getByText(intro)).toBeVisible();
 });
 
-it('installs the packaged Foliole CLI from About settings', async () => {
+it('installs the packaged Foliole CLI from External access rather than About', async () => {
   window.electronAPI!.invoke = vi.fn(async (command: string, args?: Record<string, unknown>) => {
     if (command !== NATIVE_COMMANDS.folioleCliInstall) return null;
     return args?.action === 'status'
@@ -73,9 +73,15 @@ it('installs the packaged Foliole CLI from About settings', async () => {
       : { commandPath: '/opt/homebrew/bin/foliole', error: null, status: 'installed' };
   }) as unknown as NativeInvoke;
 
-  renderWithLocalization(<SettingsAboutSection />);
+  renderWithLocalization(<><SettingsAboutSection /><SettingsGeneralSection /></>);
 
-  expect(await screen.findByText('Foliole CLI')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'External access' })).toContainElement(
+    await screen.findByText('Foliole CLI')
+  );
+  expect(screen.getByRole('region', { name: 'External access' })).toContainElement(
+    screen.getByRole('switch', { name: 'Allow learning progress imports' })
+  );
+  expect(screen.getAllByText('Foliole CLI')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'Install command' }));
   await waitFor(() => expect(screen.getByText('The foliole command is ready in Terminal.')).toBeInTheDocument());
   expect(window.electronAPI!.invoke).toHaveBeenCalledWith(

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
@@ -79,10 +79,12 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
 
-it('shows models directly in General without adding a sidebar category', async () => {
+it('shows model connections under Foliole Aide in General without adding a sidebar category', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
 
-  expect(screen.getByRole('heading', { level: 3, name: 'Models' })).toBeInTheDocument();
+  const aide = screen.getByRole('region', { name: 'Foliole Aide' });
+  expect(within(aide).getByRole('table', { name: 'Aide model settings' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Foliole Aide' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'General' })).toHaveAttribute('aria-current', 'page');
   expect(screen.queryByRole('button', { name: 'Manage AI services' })).not.toBeInTheDocument();
 });

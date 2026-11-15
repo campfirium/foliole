@@ -6,7 +6,7 @@ import {
   loadAssistantStorageInfo,
   openAssistantStorageLocation
 } from '../../../../shared/platform/assistantRuntime';
-import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { AppButton, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 
 type StorageState =
   | { kind: 'error' }
@@ -45,30 +45,28 @@ export function SettingsAideStorageSection({ preview = false }: { preview?: bool
   const info = state.kind === 'ready' ? state.info : null;
   const status = storageStatus(state, t);
   return (
-    <SettingsSection ariaLabel={t('settings.general.aide.aria')} title={t('settings.general.aide.section')}>
-      <SettingsRow
-        description={(
-          <>
-            <span className="block">{t('settings.general.aide.description')}</span>
-            <span className="mt-1 block text-foreground/70">{status}</span>
-            {info ? <span className="mt-1 block break-all font-mono text-foreground/60">{info.path}</span> : null}
-            {openFailed ? <span className="mt-1 block text-destructive">{t('settings.general.aide.openError')}</span> : null}
-          </>
-        )}
-        title={t('settings.general.aide.row')}
-      >
-        <SettingsControlSlot>
-          <AppButton
-            disabled={!info || preview}
-            onClick={() => void openStorageLocation()}
-            size="sm"
-            type="button"
-          >
-            {t('settings.general.aide.open')}
-          </AppButton>
-        </SettingsControlSlot>
-      </SettingsRow>
-    </SettingsSection>
+    <SettingsRow
+      description={(
+        <>
+          <span className="block">{t('settings.general.aide.description')}</span>
+          <span className="mt-1 block text-foreground/70">{status}</span>
+          {info ? <span className="mt-1 block break-all font-mono text-foreground/60">{info.path}</span> : null}
+          {openFailed ? <span className="mt-1 block text-destructive">{t('settings.general.aide.openError')}</span> : null}
+        </>
+      )}
+      title={t('settings.general.aide.row')}
+    >
+      <SettingsControlSlot>
+        <AppButton
+          disabled={!info || preview}
+          onClick={() => void openStorageLocation()}
+          size="sm"
+          type="button"
+        >
+          {t('settings.general.aide.open')}
+        </AppButton>
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 
   async function openStorageLocation() {

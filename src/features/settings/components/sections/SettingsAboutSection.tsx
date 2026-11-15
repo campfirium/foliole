@@ -16,7 +16,6 @@ import {
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
-import { SettingsCliSection } from './SettingsCliSection';
 import { SettingsLogRow } from './SettingsLogRow';
 import {
   SettingsAppSection,
@@ -72,7 +71,6 @@ function ApplicationInfo(props: SettingsAboutSectionProps) {
   return (
     <>
       {props.previewDesktopSettings ? null : <SettingsAppSection onRunSupportCommand={props.onRunSupportCommand} />}
-      {props.previewDesktopSettings ? null : <SettingsCliSection />}
       <SettingsSection ariaLabel={t('settings.about.support.aria')} title={t('settings.about.support.section')}>
         <FeedbackRow onRunSupportCommand={props.onRunSupportCommand} />
         {isDesktopRuntime() ? <SettingsLogRow /> : null}

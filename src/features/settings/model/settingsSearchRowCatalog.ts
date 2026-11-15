@@ -14,13 +14,15 @@ interface SearchRowDefinition {
   titleKey: TranslationKey;
 }
 
+export const SETTINGS_CLI_SEARCH_ROW_ID = 'about-cli';
+export const SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID = 'general-learning-import';
+export const SETTINGS_SUPER_MEMO_SEARCH_ROW_ID = 'general-supermemo-migration';
 export const SETTINGS_MODELS_SEARCH_ROW_ID = 'general-models';
 
 export const SETTINGS_CUSTOM_CSS_ROW_ID = 'appearance-css-snippets';
 
 const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('about', 'about-foliole-desktop', 'settings.search.aboutVersion.title', 'settings.search.aboutVersion.description', 'settings.search.aboutVersion.terms'),
-  row('about', 'about-cli', 'settings.search.aboutCli.title', 'settings.search.aboutCli.description', 'settings.search.aboutCli.terms'),
   row('about', 'about-feedback', 'settings.search.aboutFeedback.title', 'settings.search.aboutFeedback.description', 'settings.search.aboutFeedback.terms'),
   row('about', 'about-logs', 'supportLog.title', 'supportLog.desktopDescription'),
   row('about', 'about-community', 'settings.search.aboutCommunity.title', 'settings.search.aboutCommunity.description', 'settings.search.aboutCommunity.terms'),
@@ -31,6 +33,9 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('general', QUIT_ON_CLOSE_SEARCH_ROW_ID, 'settings.general.quitOnClose.title', 'settings.general.quitOnClose.description'),
   row('general', 'general-custom-copy', 'settings.customCopy.row', 'settings.customCopy.description', 'settings.customCopy.searchTerms'),
   row('general', 'general-action-help', 'settings.appearance.actionHelp.row', 'settings.appearance.actionHelp.description'),
+  row('general', SETTINGS_CLI_SEARCH_ROW_ID, 'settings.search.aboutCli.title', 'settings.search.aboutCli.description', 'settings.search.aboutCli.terms', 'settings.general.externalAccess.section'),
+  row('general', SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID, 'settings.general.agentControl.learningImport', 'settings.general.agentControl.learningImportDescription', 'settings.general.agentControl.searchTerms'),
+  row('general', SETTINGS_SUPER_MEMO_SEARCH_ROW_ID, 'settings.general.dataMigration.superMemo', 'desktop.superMemoDrafts.description', 'desktop.superMemoDrafts.title', 'settings.general.dataMigration.section'),
   row('general', SETTINGS_MODELS_SEARCH_ROW_ID, 'settings.models.section', 'settings.models.description', 'settings.models.searchTerms'),
   row('typography', 'typography-text-font', 'settings.appearance.textFont.title', 'settings.appearance.textFont.description'),
   row('typography', 'typography-monospace-font', 'settings.appearance.monospaceFont.title', 'settings.appearance.monospaceFont.description'),

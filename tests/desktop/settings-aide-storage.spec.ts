@@ -13,10 +13,10 @@ test('shows device-local Foliole Aide storage in General settings', async ({
 }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const general = await openSettingsCategory(desktopWindow, 'General');
-  const section = general.getByLabel(/Foliole Aide (?:storage section|存储设置区)/);
+  const section = general.getByRole('region', { name: 'Foliole Aide' });
 
   await expect(section.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
-  await expect(section.getByRole('heading', { name: /^(Device data|本机数据)$/ })).toBeVisible();
+  await expect(section.getByRole('heading', { name: /^(Local conversation data|本机对话数据)$/ })).toBeVisible();
   await expect(section).toContainText(/(?:stay on this device|保存在这台设备上)/);
   await expect(section).toContainText(/(?:Aide|aide)/);
   await expect(section.getByRole('button', { name: /^(Open location|打开位置)$/ })).toBeEnabled();

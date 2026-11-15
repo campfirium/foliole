@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import { useDesktopCustomCss } from '../context/DesktopCustomCssProvider';
 import { canShowQuitOnClose, QUIT_ON_CLOSE_SEARCH_ROW_ID } from '../model/quitOnCloseAvailability';
 import { getSettingsCategories, type SettingsCategoryId } from '../model/settingsPanelOptions';
@@ -8,7 +9,19 @@ import {
   querySettingsSearch,
   type SettingsSearchResult
 } from '../model/settingsSearch';
-import { createSettingsSearchRows, SETTINGS_CUSTOM_CSS_ROW_ID } from '../model/settingsSearchRowCatalog';
+import {
+  createSettingsSearchRows,
+  SETTINGS_CLI_SEARCH_ROW_ID,
+  SETTINGS_CUSTOM_CSS_ROW_ID,
+  SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
+  SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
+} from '../model/settingsSearchRowCatalog';
+
+const DESKTOP_ONLY_SEARCH_ROWS = new Set([
+  SETTINGS_CLI_SEARCH_ROW_ID,
+  SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
+  SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
+]);
 
 const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
   'bg-[rgb(var(--role-accent-rgb)_/_0.12)]',
@@ -30,10 +43,12 @@ export function useSettingsSearchState(
   const categories = getSettingsCategories(t);
   const hasCustomCss = Boolean(useDesktopCustomCss());
   const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
+  const showDesktopOnlyRows = !previewDesktopSettings && isDesktopRuntime();
   const rows = useMemo(() => createSettingsSearchRows(t).filter(
     (row) => (hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID)
       && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
-  ), [hasCustomCss, showQuitOnClose, t]);
+      && (showDesktopOnlyRows || !DESKTOP_ONLY_SEARCH_ROWS.has(row.id))
+  ), [hasCustomCss, showDesktopOnlyRows, showQuitOnClose, t]);
   const results = querySettingsSearch(categories, rows, query);
 
   useEffect(() => setActiveResultIndex(0), [query]);

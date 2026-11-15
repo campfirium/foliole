@@ -7,10 +7,9 @@ import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsButton,
   SettingsControlSlot,
-  SettingsRow,
-  SettingsSection
+  SettingsRow
 } from '../../../../shared/ui';
-import { settingsSearchRowProps } from '../../model/settingsSearch';
+import { SETTINGS_CLI_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 function actionFor(status: NativeFolioleCliInstallState['status']) {
@@ -21,7 +20,7 @@ function actionFor(status: NativeFolioleCliInstallState['status']) {
 
 export function SettingsCliSection() {
   const t = useTranslation();
-  const row = useLocalizedSettingsSearchRow('about-cli');
+  const row = useLocalizedSettingsSearchRow(SETTINGS_CLI_SEARCH_ROW_ID);
   const [state, setState] = useState<NativeFolioleCliInstallState | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -44,23 +43,20 @@ export function SettingsCliSection() {
   };
 
   return (
-    <SettingsSection ariaLabel={t('settings.about.cli.aria')} title={t('settings.about.cli.section')}>
-      <SettingsRow
-        {...settingsSearchRowProps(row)}
-        description={<><span className="block">{row.description}</span><span className="mt-1 block text-foreground/70">{t(feedbackKey)}</span></>}
-        title={row.title}
-      >
-        {state.packageManaged ? null : <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <SettingsButton
-            disabled={state.status === 'conflict'}
-            loading={busy}
-            loadingLabel={t('settings.about.cli.working')}
-            onClick={() => void run()}
-          >
-            {t(`settings.about.cli.action.${action}`)}
-          </SettingsButton>
-        </SettingsControlSlot>}
-      </SettingsRow>
-    </SettingsSection>
+    <SettingsRow
+      description={<><span className="block">{row.description}</span><span className="mt-1 block text-foreground/70">{t(feedbackKey)}</span></>}
+      title={row.title}
+    >
+      {state.packageManaged ? null : <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <SettingsButton
+          disabled={state.status === 'conflict'}
+          loading={busy}
+          loadingLabel={t('settings.about.cli.working')}
+          onClick={() => void run()}
+        >
+          {t(`settings.about.cli.action.${action}`)}
+        </SettingsButton>
+      </SettingsControlSlot>}
+    </SettingsRow>
   );
 }

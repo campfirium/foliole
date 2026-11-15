@@ -80,6 +80,24 @@ it('searches settings rows and jumps to the matching category row', async () => 
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
+it.each([
+  ['Command line', /Foliole CLI/, 'about-cli'],
+  ['Agent Control', /Allow learning progress imports/, 'general-learning-import'],
+  ['SuperMemo import preview', /Migrate from SuperMemo/, 'general-supermemo-migration']
+])('finds moved settings by their former name (%s)', async (query, label, rowId) => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), {
+    target: { value: query }
+  });
+  fireEvent.click(await screen.findByRole('option', { name: label }));
+
+  expect(screen.getByRole('button', { name: 'General' })).toHaveAttribute('aria-current', 'page');
+  await waitFor(() => {
+    expect(document.querySelector(`[data-settings-search-row-id="${rowId}"]`))
+      .toHaveClass('bg-[rgb(var(--role-accent-rgb)_/_0.12)]');
+  });
+});
+
 it('jumps directly to a requested settings row', async () => {
   renderWithMouseGestureProvider(
     <SettingsPanel {...createProps()} requestedCategory="general" requestedRowId="general-models" />

@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { AGENT_CONTROL_LEARNING_IMPORT_KEY } from '../../../../../lib/platform/agentControlLearningImport';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../../../../shared/platform/appSettingsState';
-import { isDesktopRuntime } from '../../../../shared/platform/runtime';
-import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../../shared/ui';
+import { SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 
 export function SettingsAgentControlSection() {
   const t = useTranslation();
@@ -22,11 +22,10 @@ export function SettingsAgentControlSection() {
     return () => { active = false; };
   }, []);
 
-  if (!isDesktopRuntime()) return null;
   const title = t('settings.general.agentControl.learningImport');
   return (
-    <SettingsSection ariaLabel="Agent Control" title="Agent Control">
-      <SettingsRow title={title} description={t('settings.general.agentControl.learningImportDescription')}>
+    <>
+      <SettingsRow data-settings-search-row-id={SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID} title={title} description={t('settings.general.agentControl.learningImportDescription')}>
         <SettingsControlSlot>
           <button aria-checked={enabled === true} aria-label={title} className={settingsSwitchClassName(enabled === true)}
             disabled={enabled === null || saving} onClick={() => void toggle()} role="switch" type="button">
@@ -35,7 +34,7 @@ export function SettingsAgentControlSection() {
         </SettingsControlSlot>
       </SettingsRow>
       {failed ? <p className="text-destructive" role="alert">{t('settings.general.agentControl.learningImportError')}</p> : null}
-    </SettingsSection>
+    </>
   );
 
   async function toggle() {

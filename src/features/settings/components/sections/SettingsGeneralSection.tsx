@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { setActionHelpCardsEnabled, useActionHelpCardsEnabled } from '../../../../shared/platform/actionHelpCards';
+import { isDesktopRuntime } from '../../../../shared/platform/runtime';
 import {
   getFullTextSearchIndexStrategy,
   updateFullTextSearchIndexStrategy,
@@ -22,13 +23,16 @@ import {
   settingsFieldClassName
 } from '../../../../shared/ui';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../../shared/ui';
+import { SettingsSuperMemoImport } from '../../../import/components/SettingsSuperMemoImport';
 import { requestCustomCopyDialogOpen } from '../../model/customCopyDialogRequests';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
+import { SETTINGS_CLI_SEARCH_ROW_ID, SETTINGS_MODELS_SEARCH_ROW_ID, SETTINGS_SUPER_MEMO_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import { SettingsAgentControlSection } from './SettingsAgentControlSection';
 import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
+import { SettingsCliSection } from './SettingsCliSection';
 import { SettingsExperimentalFeaturesSection } from './SettingsExperimentalFeaturesSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
@@ -160,20 +164,42 @@ export function SettingsGeneralSection({
   previewDesktopSettings?: boolean;
 }) {
   const t = useTranslation();
+  const showDesktopGroups = !previewDesktopSettings && isDesktopRuntime();
   return (
     <>
       <SettingsLanguageSection />
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
-      {previewDesktopSettings ? null : <SettingsModelsSection />}
       <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />
         <SettingsSearchAliasRow preview={previewDesktopSettings} />
       </SettingsSection>
-      {previewDesktopSettings ? null : <SettingsExperimentalFeaturesSection />}
       <SettingsCaptureSection />
-      {previewDesktopSettings ? null : <SettingsAgentControlSection />}
-      <SettingsAideStorageSection preview={previewDesktopSettings} />
+      <SettingsSection
+        ariaLabel={t('settings.general.aide.aria')}
+        {...(previewDesktopSettings ? {} : { description: t('settings.models.description') })}
+        searchRowId={SETTINGS_MODELS_SEARCH_ROW_ID}
+        title={t('settings.general.aide.section')}
+      >
+        {previewDesktopSettings ? null : <SettingsModelsSection />}
+        <SettingsAideStorageSection preview={previewDesktopSettings} />
+      </SettingsSection>
+      {showDesktopGroups ? (
+        <SettingsSection
+          ariaLabel={t('settings.general.externalAccess.section')}
+          searchRowId={SETTINGS_CLI_SEARCH_ROW_ID}
+          title={t('settings.general.externalAccess.section')}
+        >
+          <SettingsCliSection />
+          <SettingsAgentControlSection />
+        </SettingsSection>
+      ) : null}
+      {showDesktopGroups ? (
+        <SettingsSection searchRowId={SETTINGS_SUPER_MEMO_SEARCH_ROW_ID} title={t('settings.general.dataMigration.section')}>
+          <SettingsSuperMemoImport />
+        </SettingsSection>
+      ) : null}
+      {previewDesktopSettings ? null : <SettingsExperimentalFeaturesSection />}
     </>
   );
 }

@@ -20,7 +20,7 @@ const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCol
 
 async function openPreview(page: Page) {
   const settings = await openSettingsDialog(page);
-  await settings.getByRole('button', { name: /^(Storage|存储)$/ }).click();
+  await settings.getByRole('button', { name: /^(General|通用)$/ }).click();
   await settings.getByRole('button', { name: open }).click();
   return page.getByRole('dialog', { name: title });
 }
