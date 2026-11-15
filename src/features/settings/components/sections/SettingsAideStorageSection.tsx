@@ -49,14 +49,13 @@ export function SettingsAideStorageSection({ preview = false }: { preview?: bool
       description={(
         <>
           <span className="block">{t('settings.general.aide.description')}</span>
-          <span className="mt-1 block text-foreground/70">{status}</span>
-          {info ? <span className="mt-1 block break-all font-mono text-foreground/60">{info.path}</span> : null}
           {openFailed ? <span className="mt-1 block text-destructive">{t('settings.general.aide.openError')}</span> : null}
         </>
       )}
       title={t('settings.general.aide.row')}
     >
       <SettingsControlSlot>
+        <span className="text-ui-md text-foreground/70">{status}</span>
         <AppButton
           disabled={!info || preview}
           onClick={() => void openStorageLocation()}
@@ -83,6 +82,7 @@ function storageStatus(state: StorageState, t: ReturnType<typeof useTranslation>
   if (state.kind === 'loading') return t('settings.general.aide.loading');
   if (state.kind === 'error') return t('settings.general.aide.error');
   if (state.kind === 'unavailable') return '';
+  if (state.info.complete && state.info.bytes === 0) return t('settings.general.aide.empty');
   const size = formatBytes(state.info.bytes);
   return t(state.info.complete ? 'settings.general.aide.size' : 'settings.general.aide.sizePartial', { size });
 }

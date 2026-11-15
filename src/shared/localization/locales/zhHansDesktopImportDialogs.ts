@@ -2,7 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'desktop.superMemoDrafts.title': 'SuperMemo 导入预览',
-  'desktop.superMemoDrafts.open': '打开预览',
+  'desktop.superMemoDrafts.open': '开始迁移',
   'desktop.superMemoDrafts.description': '选择 SuperMemo 导出的 XML 文件，预览转换结果。',
   'desktop.superMemoDrafts.chooseXml': '选择 XML',
   'desktop.superMemoDrafts.blend': '首次复习日期',

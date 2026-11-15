@@ -195,7 +195,7 @@ export class CodexAppServerAdapter {
     try {
       this.mkdirSync(this.launcherCwd, { recursive: true });
       const codexHome = this.env.CODEX_HOME?.trim();
-      if (this.trustConfiguredCommand && codexHome) {
+      if (codexHome) {
         this.mkdirSync(codexHome, { recursive: true });
       }
     } catch {

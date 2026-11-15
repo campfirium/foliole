@@ -7,7 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 const title = /^(SuperMemo import preview|SuperMemo 导入预览)$/;
-const open = /^(Open preview|打开预览)$/;
+const open = /^(Start migration|开始迁移)$/;
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const card = `<SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
   <Content><Question>Question</Question><Answer>Answer</Answer></Content>

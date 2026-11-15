@@ -31,10 +31,10 @@ it('shows that Aide data stays on this device and opens its location', async () 
   });
   renderSection();
 
-  expect(await screen.findByText('2.5 MB on this device.')).toBeInTheDocument();
-  expect(screen.getByText('/device/Foliole/Aide')).toBeInTheDocument();
-  expect(screen.getByText(/not included in Foliole library backups/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Open location' }));
+  expect(await screen.findByText('2.5 MB used')).toBeInTheDocument();
+  expect(screen.queryByText('/device/Foliole/Aide')).not.toBeInTheDocument();
+  expect(screen.getByText(/separately from library backups/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open folder' }));
   expect(runtime.open).toHaveBeenCalledOnce();
 });
 
@@ -60,7 +60,7 @@ it('reports an open-location failure without leaving an unhandled rejection', as
   runtime.open.mockRejectedValue(new Error('open failed'));
   renderSection();
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Open location' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder' }));
   expect(await screen.findByText('The data location could not be opened.')).toBeInTheDocument();
 });
 
@@ -71,3 +71,17 @@ function renderSection() {
     </LocalizationProvider>
   );
 }
+
+it('shows an empty state without displaying the device folder path', async () => {
+  runtime.load.mockResolvedValue({
+    bytes: 0,
+    complete: true,
+    issueCount: 0,
+    path: '/device/Foliole/Aide'
+  });
+  renderSection();
+
+  expect(await screen.findByText('No local conversation data')).toBeVisible();
+  expect(screen.queryByText('/device/Foliole/Aide')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Open folder' })).toBeEnabled();
+});

@@ -23,7 +23,7 @@ it('shows why the command cannot be installed when the packaged CLI is unavailab
   runAction.mockResolvedValue(state('unavailable'));
   renderWithLocalization(<SettingsCliSection />);
 
-  expect(await screen.findByText('This build cannot install the foliole command from Settings.')).toBeVisible();
+  expect(await screen.findByText('This build has no CLI installer.')).toBeVisible();
   expect(screen.getByRole('heading', { name: 'Foliole CLI' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Install command' })).not.toBeInTheDocument();
 });

@@ -64,6 +64,10 @@ export function useSettingsModels() {
     drafts,
     loadFailed,
     settings,
+    refreshCodexConnection: async () => {
+      setCodexConnection('checking');
+      setCodexConnection(await readCodexConnection());
+    },
     signInCodex: () => signInCodex(setCodexConnection, setCodexSigningIn)
   };
 }

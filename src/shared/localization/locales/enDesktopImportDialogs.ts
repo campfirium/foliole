@@ -1,6 +1,6 @@
 export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.title': 'SuperMemo import preview',
-  'desktop.superMemoDrafts.open': 'Open preview',
+  'desktop.superMemoDrafts.open': 'Start migration',
   'desktop.superMemoDrafts.description': 'Choose a SuperMemo XML export to preview the conversion.',
   'desktop.superMemoDrafts.chooseXml': 'Choose XML',
   'desktop.superMemoDrafts.blend': 'First review date',

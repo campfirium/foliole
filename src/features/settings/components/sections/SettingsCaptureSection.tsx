@@ -30,10 +30,11 @@ function loadToastPosition(): CaptureToastPosition {
 }
 
 function permissionDescription(capabilities: DesktopHostCapabilities | null, t: ReturnType<typeof useTranslation>) {
-  if (capabilities?.globalCaptureSupported === false) return t('settings.capture.permission.unsupported');
-  if (capabilities?.globalCapturePermission === 'granted') return t('settings.capture.permission.granted');
-  if (capabilities?.globalCapturePermission === 'denied') return t('settings.capture.permission.denied');
-  if (capabilities?.globalCapturePermission === 'unavailable') return t('settings.capture.permission.unavailable');
+  if (!capabilities) return t('settings.capture.permission.checking');
+  if (capabilities.globalCaptureSupported === false) return t('settings.capture.permission.unsupported');
+  if (capabilities.globalCapturePermission === 'granted') return t('settings.capture.permission.granted');
+  if (capabilities.globalCapturePermission === 'denied') return t('settings.capture.permission.denied');
+  if (capabilities.globalCapturePermission === 'unavailable') return t('settings.capture.permission.unavailable');
   return t('settings.capture.permission.notRequired');
 }
 
@@ -41,12 +42,15 @@ export function SettingsCaptureSection() {
   const t = useTranslation();
   const positionRow = useLocalizedSettingsSearchRow('capture-confirmation-position');
   const [capabilities, setCapabilities] = useState<DesktopHostCapabilities | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [position, setPosition] = useState<CaptureToastPosition>(loadToastPosition);
 
   useEffect(() => {
     let active = true;
     void loadDesktopHostCapabilities().then((value) => {
       if (active) setCapabilities(value);
+    }).catch(() => {
+      if (active) setCheckFailed(true);
     });
     return () => { active = false; };
   }, []);
@@ -60,7 +64,7 @@ export function SettingsCaptureSection() {
   return (
     <SettingsSection ariaLabel={t('settings.capture.sectionAria')} title={t('settings.capture.sectionTitle')}>
       <SettingsRow
-        description={permissionDescription(capabilities, t)}
+        description={checkFailed ? t('settings.capture.permission.unavailable') : permissionDescription(capabilities, t)}
         readonly
         title={t('settings.capture.permission.title')}
       />

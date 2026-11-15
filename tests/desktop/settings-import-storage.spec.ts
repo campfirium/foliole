@@ -14,7 +14,7 @@ test('shows Import before storage locations in Storage settings', async ({ deskt
   const storageHeading = dialog.getByRole('heading', { name: /^(Storage locations|存储位置)$/ });
   await expect(importHeading).toBeVisible();
   await expect(storageHeading).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Open preview|打开预览)$/ })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: /^(Inbox folder|收件箱文件夹)$/ })).toBeVisible();
   await expect(dialog.getByRole('heading', { name: /^(Import folder|导入文件夹)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Open Import folder|打开导入文件夹)$/ })).toBeVisible();

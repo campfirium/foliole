@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import { expect, it, vi } from 'vitest';
@@ -85,6 +88,38 @@ it('maps launcher directory creation failures to launch_failed without probing o
   });
   expect(probeCommand).not.toHaveBeenCalled();
   expect(spawnCommand).not.toHaveBeenCalled();
+});
+
+it('prepares a fresh Codex home before checking a locally installed command', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'foliole-codex-launcher-'));
+  const codexHome = path.join(root, 'Codex');
+  const process = new FakeCodexProcess();
+  process.stdin.on('data', (chunk) => {
+    const message = JSON.parse(String(chunk));
+    if (message.method === 'initialize') writeMessage(process, { id: message.id, result: {} });
+    if (message.method === 'account/read') {
+      writeMessage(process, { id: message.id, result: { requiresOpenaiAuth: true } });
+    }
+  });
+  const adapter = new CodexAppServerAdapter({
+    appVersion: '0.6.5-test',
+    command: 'codex',
+    env: { CODEX_HOME: codexHome },
+    launcherCwd: path.join(root, 'Workspace'),
+    probeCommand: async () => existsSync(codexHome) ? 'ready' : 'incompatible',
+    spawnCommand: () => process
+  });
+
+  try {
+    expect(existsSync(codexHome)).toBe(false);
+    await expect(adapter.getStatus()).resolves.toMatchObject({
+      failure: { category: 'auth_failed' },
+      state: 'unavailable'
+    });
+  } finally {
+    adapter.dispose();
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 it('uses a signed bundled command without running candidate discovery probes', async () => {

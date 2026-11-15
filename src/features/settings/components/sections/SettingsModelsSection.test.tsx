@@ -112,3 +112,19 @@ it('shows that ChatGPT connection continues in the browser', async () => {
   expect(await screen.findByText('Complete in browser')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Waiting...' })).toBeDisabled();
 });
+
+it('explains an unavailable ChatGPT connection and lets the user check again', async () => {
+  assistantRuntime.loadAssistantStatus.mockResolvedValueOnce({
+    capabilities: [],
+    failure: { category: 'not_configured' },
+    provider: 'codex-app-server',
+    state: 'unavailable'
+  });
+  renderWithLocalization(<SettingsModelsSection />);
+
+  expect(await screen.findByText('Codex for ChatGPT connections was not found')).toBeVisible();
+  expect(screen.getByRole('radio', { name: 'Use ChatGPT plan' })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+  expect(await screen.findByRole('button', { name: 'Connect' })).toBeEnabled();
+});

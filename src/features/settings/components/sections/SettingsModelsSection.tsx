@@ -15,6 +15,8 @@ import {
   settingsButtonClassName,
   settingsFieldClassName,
   SettingsButton,
+  SettingsControlSlot,
+  SettingsRow,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
 
@@ -32,16 +34,18 @@ export function SettingsModelsSection() {
   return (
     <>
       {state.loadFailed ? <p className="text-ui-sm text-destructive">{t('settings.models.loadFailed')}</p> : null}
-      <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.models.aria')}>
+      <ChatGptPlanRow
+        active={state.settings.selected_model_id === NATIVE_ASSISTANT_CODEX_MODEL_ID}
+        busy={state.busyId === NATIVE_ASSISTANT_CODEX_MODEL_ID}
+        connection={state.codexConnection}
+        onSelect={() => void state.select(NATIVE_ASSISTANT_CODEX_MODEL_ID)}
+        connecting={state.codexSigningIn}
+        onRetry={() => void state.refreshCodexConnection()}
+        onConnect={() => void state.signInCodex()}
+      />
+      <h4 className="px-settings-panel-x py-settings-panel-y text-ui-lg text-foreground">{t('settings.models.customSection')}</h4>
+      <div className={settingsActionTableClassName('overflow-x-auto')} role="table" aria-label={t('settings.models.aria')}>
         <ModelTableHeader />
-        <ChatGptPlanRow
-          active={state.settings.selected_model_id === NATIVE_ASSISTANT_CODEX_MODEL_ID}
-          busy={state.busyId === NATIVE_ASSISTANT_CODEX_MODEL_ID}
-          connection={state.codexConnection}
-          onSelect={() => void state.select(NATIVE_ASSISTANT_CODEX_MODEL_ID)}
-          connecting={state.codexSigningIn}
-          onConnect={() => void state.signInCodex()}
-        />
         {state.drafts.map((draft) => (
           <CustomModelRow
             active={state.settings.selected_model_id === draft.id}
@@ -91,32 +95,44 @@ function ChatGptPlanRow(props: {
   connection: SettingsCodexConnectionState;
   connecting: boolean;
   onConnect: () => void;
+  onRetry: () => void;
   onSelect: () => void;
 }) {
   const t = useTranslation();
+  const canConnect = props.connection === 'signed_out' || props.connection === 'connecting';
+  const canRetry = props.connection === 'unavailable' || props.connection === 'missing';
+  const label = t('settings.models.chatgpt.plan');
   return (
-    <div className={settingsActionTableRowClassName(MODEL_COLUMNS)}>
-      <ModelRadio active={props.active} disabled={props.busy || props.connecting} label={t('settings.models.chatgpt.plan')} onSelect={props.onSelect} />
-      <strong className="text-ui-sm font-medium">{t('settings.models.chatgpt.plan')}</strong>
-      <div className="col-span-2 flex min-w-0 items-center gap-4">
-        <span className="text-ui-sm text-foreground/60">{t('settings.models.chatgpt.allowance')}</span>
+    <SettingsRow
+      title={label}
+      description={(
         <AppStatusBadge
           label={t(`settings.models.chatgpt.status.${props.connection}`)}
           tone={codexStatusTone(props.connection)}
         />
-      </div>
-      {props.connection === 'signed_out' || props.connection === 'connecting' ? (
-        <SettingsButton
-          className="w-full px-2"
-          loading={props.connecting}
-          loadingLabel={t('settings.models.chatgpt.connecting')}
-          onClick={props.onConnect}
-        >
-          {t('settings.models.chatgpt.connect')}
-        </SettingsButton>
-      ) : <span aria-hidden />}
-      <span aria-hidden />
-    </div>
+      )}
+    >
+      <SettingsControlSlot>
+        {canConnect ? (
+          <SettingsButton
+            loading={props.connecting}
+            loadingLabel={t('settings.models.chatgpt.connecting')}
+            onClick={props.onConnect}
+          >
+            {t('settings.models.chatgpt.connect')}
+          </SettingsButton>
+        ) : null}
+        {canRetry ? (
+          <SettingsButton onClick={props.onRetry}>{t('settings.models.chatgpt.retry')}</SettingsButton>
+        ) : null}
+        <ModelRadio
+          active={props.active}
+          disabled={props.busy || props.connection !== 'connected'}
+          label={label}
+          onSelect={props.onSelect}
+        />
+      </SettingsControlSlot>
+    </SettingsRow>
   );
 }
 

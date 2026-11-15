@@ -1,4 +1,4 @@
-import type { NativeAssistantStatusResult } from '../../../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantFailureCategory, NativeAssistantStatusResult } from '../../../../../lib/platform/nativeAssistantContract';
 import {
   loadAssistantStatus,
   startAssistantChatGptLogin
@@ -9,6 +9,7 @@ export type SettingsCodexConnectionState =
   | 'connected'
   | 'connecting'
   | 'signed_out'
+  | 'missing'
   | 'unavailable';
 
 export async function signInCodex(
@@ -20,7 +21,7 @@ export async function signInCodex(
   try {
     const result = await startAssistantChatGptLogin();
     if (result?.state !== 'ready') {
-      setConnection(result?.failure?.category === 'auth_failed' ? 'signed_out' : 'unavailable');
+      setConnection(connectionFailure(result?.failure?.category));
       return;
     }
     setConnection(await readCodexConnection());
@@ -43,6 +44,11 @@ function codexConnectionFromStatus(
   status: NativeAssistantStatusResult | null
 ): SettingsCodexConnectionState {
   if (status?.state === 'ready') return 'connected';
-  if (status?.failure?.category === 'auth_failed') return 'signed_out';
+  return connectionFailure(status?.failure?.category);
+}
+
+function connectionFailure(category: NativeAssistantFailureCategory | undefined): SettingsCodexConnectionState {
+  if (category === 'auth_failed') return 'signed_out';
+  if (category === 'not_configured') return 'missing';
   return 'unavailable';
 }

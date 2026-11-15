@@ -28,7 +28,7 @@ export const EN_SETTINGS_ABOUT_TRANSLATIONS = {
   'settings.about.cli.status.conflict': 'Another item named foliole already exists in that location.',
   'settings.about.cli.status.installed': 'The foliole command is ready in Terminal.',
   'settings.about.cli.status.not_installed': 'Choose an existing command directory to install it.',
-  'settings.about.cli.status.unavailable': 'This build cannot install the foliole command from Settings.',
+  'settings.about.cli.status.unavailable': 'This build has no CLI installer.',
   'settings.about.cli.status.repair_required': 'The app moved. Repair the command to use its current location.',
   'settings.about.cli.error.conflict': 'Another item named foliole already exists in that location.',
   'settings.about.cli.error.failed': 'The command could not be updated.',

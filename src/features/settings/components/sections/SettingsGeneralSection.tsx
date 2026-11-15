@@ -177,7 +177,6 @@ export function SettingsGeneralSection({
       <SettingsCaptureSection />
       <SettingsSection
         ariaLabel={t('settings.general.aide.aria')}
-        {...(previewDesktopSettings ? {} : { description: t('settings.models.description') })}
         searchRowId={SETTINGS_MODELS_SEARCH_ROW_ID}
         title={t('settings.general.aide.section')}
       >
