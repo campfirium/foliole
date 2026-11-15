@@ -172,6 +172,19 @@ test('clicking a workspace search body hit jumps to the matched text', async ({ 
 
   const targetResult = dialog.getByRole('button', { name: new RegExp(TARGET_TITLE) });
   await expect(targetResult).toBeVisible();
+  const matchesBackground = (token: string) => targetResult.evaluate((row, token) => {
+    const swatch = document.createElement('span');
+    swatch.style.backgroundColor = `var(${token})`;
+    row.append(swatch);
+    const matches = getComputedStyle(row).backgroundColor === getComputedStyle(swatch).backgroundColor;
+    swatch.remove();
+    return matches;
+  }, token);
+  await dialog.getByLabel(/(Search workspace|搜索工作区)/).hover();
+  await expect.poll(() => matchesBackground('--app-floating-item-active-bg')).toBe(true);
+  await targetResult.hover();
+  await expect.poll(() => matchesBackground('--app-floating-item-hover-bg')).toBe(true);
+  await dialog.screenshot({ path: '.tmp/artifacts/T781/search-result-hover.png' });
   await targetResult.click();
 
   await expect

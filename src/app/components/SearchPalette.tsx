@@ -4,20 +4,16 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
-import { FloatingPaletteInput } from './FloatingPaletteInput';
-import { SearchAliasFilters } from './SearchAliasFilters';
-import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
-import { SearchPaletteIndexStatus } from './SearchPaletteIndexStatus';
+import { SearchPaletteInputAndFilters } from './SearchPaletteInputAndFilters';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList, SearchPaletteLoadingState } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
 import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './SearchPaletteShortcutsFooter';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
+import { SearchPaletteViewOptions } from './SearchPaletteViewOptions';
+import { useSearchPaletteView, type SearchPaletteView } from './searchPaletteViewPreference';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { WorkspacePaletteFrame, workspacePaletteOverlayClassName } from './WorkspacePaletteFrame';
-import {
-  WorkspaceResultHeader, workspaceResultInputClassName
-} from './WorkspaceResultPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -37,6 +33,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const [query, setQuery] = useState('');
   const [isComposingQuery, setIsComposingQuery] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [view, setView] = useSearchPaletteView();
   const shortcuts = useSearchPaletteShortcuts();
   const searchState = useSearchResults(props, query, isComposingQuery);
   const results = useOrderedSearchResults(searchState.results, props.nodesById, searchState.aliasSpellings.length > 0);
@@ -71,18 +68,19 @@ export function SearchPalette(props: SearchPaletteProps) {
           query={query}
           searchState={searchState}
           totalItems={results.length}
-        />
+        >
+          <SearchPaletteViewOptions view={view} onChange={setView} />
+        </SearchPaletteInputAndFilters>
         <SearchPaletteBody
           activeIndex={activeIndex}
           searchState={searchState}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
-          onLoadMore={searchState.loadMore}
           onSetActiveIndex={setActiveIndex}
           query={query}
           results={results}
-          selectedSpelling={searchState.selectedSpelling}
           sourceDetailsByNodeId={sourceDetailsByNodeId}
+          view={view}
         />
         <SearchPaletteShortcutsFooter collapsed={shortcuts.collapsed} onToggle={shortcuts.toggle} />
       </WorkspacePaletteFrame>
@@ -100,45 +98,6 @@ function useSearchPaletteContinuation(
     if (state.hasMore && resultCount > 0 && activeIndex >= resultCount - 2) state.loadMore();
   }, [activeIndex, resultCount, state.hasMore, state.loadMore]);
   useEffect(() => { setActiveIndex(0); }, [setActiveIndex, state.selectedSpelling]);
-}
-
-function SearchPaletteInputAndFilters(props: {
-  isOpen: boolean;
-  onClose: () => void;
-  onCompositionChange: (value: boolean) => void;
-  onQueryChange: (value: string) => void;
-  onRunActive: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
-  onSetActiveIndex: (update: (current: number) => number) => void;
-  query: string;
-  searchState: ReturnType<typeof useSearchResults>;
-  totalItems: number;
-}) {
-  const t = useTranslation();
-  return (
-    <>
-      <WorkspaceResultHeader>
-        <FloatingPaletteInput
-          className={workspaceResultInputClassName}
-          inputLabel={t('desktop.search.input')}
-          onClose={props.onClose}
-          onCompositionChange={props.onCompositionChange}
-          onQueryChange={props.onQueryChange}
-          onRunActive={props.onRunActive}
-          onSetActiveIndex={props.onSetActiveIndex}
-          placeholder={t('desktop.search.placeholder')}
-          query={props.query}
-          totalItems={props.totalItems}
-        />
-      </WorkspaceResultHeader>
-      <SearchAliasFilters
-        onSelect={props.searchState.selectSpelling}
-        selectedSpelling={props.searchState.selectedSpelling}
-        spellings={props.searchState.aliasSpellings}
-      />
-      <SearchPaletteEnhancementPrompt />
-      <SearchPaletteIndexStatus isOpen={props.isOpen} />
-    </>
-  );
 }
 
 function useOverlayClickClose(onClose: () => void) {
@@ -173,12 +132,11 @@ function SearchPaletteBody(props: {
   searchState: ReturnType<typeof useSearchResults>;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
-  onLoadMore: () => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   results: WorkspaceSearchResult[];
-  selectedSpelling: string | null;
   sourceDetailsByNodeId: ReturnType<typeof useSearchResultSourceDetails>;
+  view: SearchPaletteView;
 }) {
   if (props.searchState.error) {
     return <SearchPaletteErrorState />;
@@ -193,12 +151,13 @@ function SearchPaletteBody(props: {
       hasMore={props.searchState.hasMore}
       nodesById={props.nodesById}
       onOpenResult={props.onOpenResult}
-      onLoadMore={props.onLoadMore}
+      onLoadMore={props.searchState.loadMore}
       onSetActiveIndex={props.onSetActiveIndex}
       query={props.query}
       results={props.results}
-      selectedSpelling={props.selectedSpelling}
+      selectedSpelling={props.searchState.selectedSpelling}
       sourceDetailsByNodeId={props.sourceDetailsByNodeId}
+      view={props.view}
     />
   );
 }

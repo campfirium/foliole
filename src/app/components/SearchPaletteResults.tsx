@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import {
   AppLoadingState,
@@ -23,6 +23,7 @@ import {
   resolveSearchResultNodeBadge,
   resolveSearchResultPathLabel
 } from './searchPaletteResultPresentation';
+import type { SearchPaletteView } from './searchPaletteViewPreference';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 export function SearchPaletteEmptyState({ query }: { query: string }) {
@@ -51,7 +52,7 @@ export function SearchPaletteErrorState() {
   );
 }
 
-export function SearchPaletteList(props: {
+interface SearchPaletteListProps {
   activeIndex: number;
   hasMore: boolean;
   nodesById: WorkspaceListNodesById;
@@ -62,8 +63,12 @@ export function SearchPaletteList(props: {
   results: WorkspaceSearchResult[];
   selectedSpelling: string | null;
   sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
-}) {
-  const t = useTranslation();
+  view: SearchPaletteView;
+}
+
+export function SearchPaletteList(props: SearchPaletteListProps) {
+  const { locale, t } = useLocalization();
+  const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }), [locale]);
   const listRef = useRef<HTMLUListElement | null>(null);
   useEffect(() => {
     const activeRow = listRef.current?.querySelector('[data-search-result-active="true"]');
@@ -108,6 +113,8 @@ export function SearchPaletteList(props: {
           query={props.query}
           selectedSpelling={props.selectedSpelling}
           sourceDetails={props.sourceDetailsByNodeId[item.id]}
+          lines={props.view.lines}
+          dateFormat={props.view.showTimestamp ? dateFormat : null}
         />
       ))}
     </ul>
@@ -116,8 +123,10 @@ export function SearchPaletteList(props: {
 
 function SearchPaletteResultItem(props: {
   active: boolean;
+  dateFormat: Intl.DateTimeFormat | null;
   index: number;
   item: WorkspaceSearchResult;
+  lines: SearchPaletteView['lines'];
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
@@ -133,7 +142,9 @@ function SearchPaletteResultItem(props: {
   return (
     <li className="relative">
       <button
-        className={appFloatingItemClassName(floatingResultRowClassName)}
+        className={appFloatingItemClassName(
+          `${floatingResultRowClassName} data-[active=true]:hover:bg-[var(--app-floating-item-hover-bg)]`
+        )}
         data-active={props.active}
         data-search-result-active={props.active}
         onClick={(event) => props.onOpenResult(item, { preview: event.shiftKey })}
@@ -144,11 +155,12 @@ function SearchPaletteResultItem(props: {
         <span className="min-w-0 truncate text-[17px] font-semibold leading-[23px] text-foreground">
           {renderSearchResultText(item.title, highlightQuery, { project: projectResultText })}
         </span>
-        <span className={`${floatingResultPreviewClassName} text-foreground/60`}>
+        <span className={`${floatingResultPreviewClassName} text-foreground/60`} style={{ WebkitLineClamp: props.lines }}>
           {renderSearchResultText(resolveSearchResultContext(item), highlightQuery, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta
           item={item}
+          dateFormat={props.dateFormat}
           nodesById={props.nodesById}
           sourceDetails={props.sourceDetails}
         />
@@ -158,6 +170,7 @@ function SearchPaletteResultItem(props: {
 }
 
 function SearchPaletteResultMeta(props: {
+  dateFormat: Intl.DateTimeFormat | null;
   item: WorkspaceSearchResult;
   nodesById: WorkspaceListNodesById;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
@@ -175,7 +188,15 @@ function SearchPaletteResultMeta(props: {
           : null}
         {renderSearchResultMetaBadge(resolveSearchResultNodeBadge(props.item, props.nodesById, t))}
         {renderSearchResultSourceLabel(props.sourceDetails)}
+        {renderSearchResultTimestamp(props.item.updatedAt, props.dateFormat)}
       </span>
     </span>
   );
+}
+
+function renderSearchResultTimestamp(value: string, format: Intl.DateTimeFormat | null) {
+  if (!format) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return <time className="whitespace-nowrap tabular-nums" dateTime={value}>{format.format(date)}</time>;
 }

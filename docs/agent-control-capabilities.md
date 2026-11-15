@@ -32,6 +32,8 @@ Markdown image preview and drag resizing are editor interactions. A saved width 
 
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
+The desktop search panel remembers its preview line limit and whether to show each result's date and time. These are desktop display preferences; they do not affect Agent Control search or its results.
+
 ### Retrying material creation
 
 On a Foliole version that supports create retries, supply `request_id` in the HTTP body or `--request-id` in the CLI. Generate a unique ID for each intended creation and save it before sending. IDs are case-sensitive, 1–128 characters long, and may contain letters A–Z, digits, periods, underscores, colons, and hyphens.
