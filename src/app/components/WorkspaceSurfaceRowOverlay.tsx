@@ -33,8 +33,8 @@ export const WORKSPACE_LIST_DIVIDER_LEFT =
   'calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px) + (var(--workspace-list-splitter-width, 1px) / 2))';
 export const WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT =
   'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))';
-const WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT =
-  'calc(var(--workspace-rail-width) + var(--workspace-folder-column-width))';
+const WORKSPACE_TITLEBAR_FOLDER_TOPIC_DIVIDER_LEFT =
+  'calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))))';
 export const WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT =
   'calc(100% - var(--workspace-right-sidebar-current-width, 320px) - (var(--workspace-right-sidebar-splitter-width, 1px) / 2))';
 
@@ -116,8 +116,12 @@ function useHasFolderTopicDivider(row: WorkspaceSurfaceRow) {
 
 export function WorkspaceTitlebarDividers({
   isListCollapsed,
-  isRightSidebarCollapsed
+  isRightSidebarCollapsed,
+  isListFloating,
+  isRightSidebarFloating
 }: {
+  isListFloating?: boolean;
+  isRightSidebarFloating?: boolean;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
 }) {
@@ -134,7 +138,7 @@ export function WorkspaceTitlebarDividers({
         <WorkspaceSurfaceRowDivider
           className="max-[1080px]:hidden"
           column="folder"
-          left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
+          left={WORKSPACE_TITLEBAR_FOLDER_TOPIC_DIVIDER_LEFT}
           row="titlebar"
         />
       )}
@@ -142,7 +146,9 @@ export function WorkspaceTitlebarDividers({
         <WorkspaceSurfaceRowDivider
           className="max-[1080px]:hidden"
           column="topic"
-          left="calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, 300px))"
+          left={isListFloating
+            ? 'calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, 300px))'
+            : WORKSPACE_LIST_DIVIDER_LEFT}
           row="titlebar"
         />
       )}
@@ -150,7 +156,9 @@ export function WorkspaceTitlebarDividers({
         <WorkspaceSurfaceRowDivider
           className="max-[1279px]:hidden"
           column="sidebar"
-          left="calc(100% - var(--workspace-titlebar-sidebar-current-width, var(--workspace-right-sidebar-current-width, 320px)))"
+          left={isRightSidebarFloating
+            ? 'calc(100% - var(--workspace-titlebar-sidebar-current-width, var(--workspace-right-sidebar-current-width, 320px)))'
+            : WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
           row="titlebar"
         />
       )}
@@ -160,16 +168,18 @@ export function WorkspaceTitlebarDividers({
 
 export function WorkspaceFooterRowDividers({
   isListCollapsed,
-  isListFloating
+  isListFloating,
+  isRightSidebarDocked
 }: {
   isListCollapsed: boolean;
   isListFloating?: boolean;
+  isRightSidebarDocked?: boolean;
 }) {
   const hasFolderTopicDivider = useHasFolderTopicDivider('footer');
-  if (isListCollapsed) return null;
   return (
     <>
-      {hasFolderTopicDivider ? (
+      <WorkspaceSurfaceRowDivider column="rail" left={WORKSPACE_RAIL_DIVIDER_LEFT} row="footer" />
+      {!isListCollapsed && hasFolderTopicDivider ? (
         <WorkspaceSurfaceRowDivider
           className="max-[1080px]:hidden"
           column="folder"
@@ -177,7 +187,7 @@ export function WorkspaceFooterRowDividers({
           row="footer"
         />
       ) : null}
-      {isListFloating ? null : (
+      {isListCollapsed || isListFloating ? null : (
         <WorkspaceSurfaceRowDivider
           className="max-[1080px]:hidden"
           column="topic"
@@ -185,6 +195,14 @@ export function WorkspaceFooterRowDividers({
           row="footer"
         />
       )}
+      {isRightSidebarDocked ? (
+        <WorkspaceSurfaceRowDivider
+          className="max-[1279px]:hidden"
+          column="sidebar"
+          left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
+          row="footer"
+        />
+      ) : null}
     </>
   );
 }

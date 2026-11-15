@@ -28,6 +28,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   isImmersiveMode: boolean;
   isListCollapsed: boolean;
   isListFloating?: boolean;
+  isRightSidebarDocked?: boolean;
   followsPdfSidebars?: boolean;
   isReviewEditing: boolean;
   isStudyMode: boolean;
@@ -131,6 +132,7 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     isListCollapsed: layoutChrome.isListCollapsed || Boolean(layoutChrome.compactSidebars?.leftFloating && !layoutChrome.compactSidebars.hoverEnabled),
     followsPdfSidebars: Boolean(layoutChrome.compactSidebars?.hoverEnabled),
     isListFloating: Boolean(layoutChrome.compactSidebars?.leftFloating),
+    isRightSidebarDocked: !layoutChrome.isRightSidebarCollapsed && !layoutChrome.compactSidebars?.rightFloating,
     isReviewEditing: review.isReviewEditing,
     isStudyMode: review.isStudyMode,
     isSequentialReadingReviewTopic,
@@ -215,7 +217,13 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
         className={`${props.isImmersiveMode ? '' : 'workspace-bottom-region-grid'} relative grid min-w-0 ${props.isImmersiveMode ? 'grid-cols-1' : '[grid-template-columns:var(--workspace-rail-width)_minmax(0,1fr)]'}`}
       >
         {props.isImmersiveMode ? null : <WorkspaceSurfaceRowOverlay row="footer" />}
-        {props.isImmersiveMode ? null : <WorkspaceFooterRowDividers isListCollapsed={props.isListCollapsed} isListFloating={Boolean(props.isListFloating)} />}
+        {props.isImmersiveMode ? null : (
+          <WorkspaceFooterRowDividers
+            isListCollapsed={props.isListCollapsed}
+            isListFloating={Boolean(props.isListFloating)}
+            isRightSidebarDocked={Boolean(props.isRightSidebarDocked)}
+          />
+        )}
         {props.isImmersiveMode ? null : (
           <div className="relative z-local-raised">
             <WorkspaceStudyDockTrigger

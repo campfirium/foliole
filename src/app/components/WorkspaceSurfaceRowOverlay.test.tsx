@@ -35,7 +35,7 @@ it('hides the footer folder divider when the list sidebar is collapsed', () => {
     </AppearanceSettingsContext.Provider>
   );
 
-  expect(container.firstElementChild).toBeNull();
+  expect(container.querySelector('[data-workspace-surface-divider="folder"]')).toBeNull();
 });
 
 it('places the footer folder divider at the current list folder edge', () => {
@@ -45,7 +45,7 @@ it('places the footer folder divider at the current list folder edge', () => {
     </AppearanceSettingsContext.Provider>
   );
 
-  expect(container.firstElementChild).toHaveStyle({
+  expect(container.querySelector('[data-workspace-surface-divider="folder"]')).toHaveStyle({
     left: 'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))'
   });
 });

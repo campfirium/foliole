@@ -36,27 +36,17 @@ export function WorkspaceGridDividerOverlay({
   isRightSidebarCollapsed
 }: WorkspaceGridDividerOverlayProps) {
   return (
-    <>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay">
-        <WorkspaceGridDivider
-          column="rail"
-          hideBelowWorkspaceBreakpoint={false}
-          left={WORKSPACE_RAIL_DIVIDER_LEFT}
-        />
-        {isRightSidebarCollapsed ? null : (
-          <WorkspaceGridDivider
-            column="sidebar"
-            hideBelowWorkspaceBreakpoint={false}
-            left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
-          />
-        )}
-      </div>
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay col-span-2 col-start-1 row-span-1 row-start-1">
+      <WorkspaceGridDivider column="rail" hideBelowWorkspaceBreakpoint={false} left={WORKSPACE_RAIL_DIVIDER_LEFT} />
       {isListCollapsed ? null : (
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay col-span-2 col-start-1 row-span-1 row-start-1">
+        <>
           <WorkspaceGridDivider column="folder" left={WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT} />
           <WorkspaceGridDivider column="topic" left={WORKSPACE_LIST_DIVIDER_LEFT} />
-        </div>
+        </>
       )}
-    </>
+      {isRightSidebarCollapsed ? null : (
+        <WorkspaceGridDivider column="sidebar" left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT} />
+      )}
+    </div>
   );
 }

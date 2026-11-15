@@ -545,20 +545,6 @@ b {
 
 .window-titlebar {
   align-items: center;
-  background:
-    linear-gradient(
-      to right,
-      var(--role-frame-top-bg) 0,
-      var(--role-frame-top-bg) var(--workspace-rail-width),
-      var(--role-nav-top-bg) var(--workspace-rail-width),
-      var(--role-nav-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      var(--role-list-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      var(--role-list-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      var(--role-content-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      var(--role-content-top-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--role-sidebar-top-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--role-sidebar-top-bg) 100%
-    );
   display: grid;
   grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
   flex: 0 0 auto;

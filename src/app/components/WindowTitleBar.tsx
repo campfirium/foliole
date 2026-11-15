@@ -153,7 +153,7 @@ function getWindowTitleBarStyle(
       ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + 8}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
-    '--workspace-titlebar-folder-column-width': leftUndocked && !leftRevealed ? '0px' : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
+    '--workspace-titlebar-folder-column-width': leftUndocked && !leftRevealed ? '0px' : 'var(--workspace-effective-folder-width, min(var(--workspace-folder-column-width), var(--workspace-list-width)))',
     '--workspace-titlebar-list-current-width': leftRevealed ? `${props.listWidth}px` : leftUndocked ? '0px' : 'var(--workspace-list-current-width, 300px)'
   } as CSSProperties;
 }
@@ -225,6 +225,8 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
     >
       <WorkspaceSurfaceRowOverlay row="titlebar" />
       <WorkspaceTitlebarDividers
+        isListFloating={Boolean(props.isListFloating)}
+        isRightSidebarFloating={Boolean(props.isRightSidebarFloating)}
         isListCollapsed={props.isListCollapsed || Boolean(props.isListFloating && !props.keepFloatingSidebarControls)}
         isRightSidebarCollapsed={props.isRightSidebarCollapsed || Boolean(props.isRightSidebarFloating && !props.keepFloatingSidebarControls)}
       />
