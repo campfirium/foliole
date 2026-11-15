@@ -170,20 +170,6 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-### November 15 npm batch
-
-The proposals target `campfirium/foliole:dev`. Local implementation `f16f8b1a6`
-passed EPUB, Readwise and SuperMemo parsing checks, the enabled SuperMemo SQLite
-import regression and the Knip dependency scan. npm resolved both target
-versions, and the production audit reported zero findings. The audit does not
-enumerate the parse5 issues described in its upstream release notes.
-
-| Proposal | Verified author / reviewed head | Local target | Required QA |
-| --- | --- | --- | --- |
-| [#259](https://github.com/campfirium/foliole/pull/259) | `app/renovate` / `568aa8c1c2558916e12d65039805c24c4b29c443` | parse5 8.1.1 | Full and dependency hardening |
-| [#255](https://github.com/campfirium/foliole/pull/255) | `app/renovate` / `a2a208e551e01e6f9bf87e496ee7505423476f06` | Knip 6.44.2 | Full and dependency hardening |
-
-
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -200,6 +186,27 @@ development and CI toolchain.
 
 [Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
 and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
+
+### Completed November 16 centralized batch
+
+[Full quality run 43737670564](https://github.com/campfirium/foliole/actions/runs/43737670564)
+passed on `4d91320c3`, including dependency hardening. All 1,312 desktop source
+file executions passed without timeouts. After integration, `8c1f031ea` passed
+local fast checks, Companion type checking, and 58 targeted tests. It reached
+origin/dev, the QA workspace was released, and both proposals below are closed
+with source branches absent.
+
+The proposals target `campfirium/foliole:dev`. Local implementation `f16f8b1a6`
+passed EPUB, Readwise and SuperMemo parsing checks, the enabled SuperMemo SQLite
+import regression and the Knip dependency scan. npm resolved both target
+versions, and the production audit reported zero findings. The audit does not
+enumerate the parse5 issues described in its upstream release notes.
+
+| Proposal | Verified author / reviewed head | Local target |
+| --- | --- | --- | --- |
+| [#259](https://github.com/campfirium/foliole/pull/259) | `app/renovate` / `568aa8c1c2558916e12d65039805c24c4b29c443` | parse5 8.1.1 |
+| [#255](https://github.com/campfirium/foliole/pull/255) | `app/renovate` / `a2a208e551e01e6f9bf87e496ee7505423476f06` | Knip 6.44.2 |
+
 
 ### Completed November 14 centralized batch
 
