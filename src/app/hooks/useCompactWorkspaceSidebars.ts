@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { initializeSidebarTiers } from '../../features/settings/model/sidebarLayoutPreference';
+import { initializeSidebarTiers, resetSidebarTierWidths } from '../../features/settings/model/sidebarLayoutPreference';
 import type { SidebarRule } from '../../features/settings/model/sidebarLayoutTiers';
 import { onWindowEscape } from '../../shared/platform/keyboard';
 import {
@@ -137,11 +137,13 @@ function resolveFloatingSidebars(
 }
 
 function projectSidebarTier(chrome: WorkspaceLayoutChromeProps, rules: ReturnType<typeof useActiveSidebarTier>, width: number, resize: ReturnType<typeof useTierSidebarResize>): WorkspaceLayoutChromeProps {
-  if (!rules.tier) return chrome;
+  const { tier, percent } = rules;
+  if (!tier || percent === null) return chrome;
   return {
     ...chrome,
-    listWidth: width * (resize.draft?.side === 'left' ? resize.draft.width : rules.tier.left.width) / 100,
-    rightSidebarWidth: width * (resize.draft?.side === 'right' ? resize.draft.width : rules.tier.right.width) / 100,
+    listWidth: width * (resize.draft?.side === 'left' ? resize.draft.width : tier.left.width) / 100,
+    rightSidebarWidth: width * (resize.draft?.side === 'right' ? resize.draft.width : tier.right.width) / 100,
+    onResetLayout: () => resetSidebarTierWidths(tier.id, percent),
     onSplitterPointerDown: event => resize.start('left', event),
     onSplitterKeyDown: event => resize.keyDown('left', event),
     onRightSidebarSplitterPointerDown: event => resize.start('right', event),

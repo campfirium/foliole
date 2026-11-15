@@ -56,6 +56,17 @@ export function saveSidebarTierWidth(id: string, side: SidebarSide, width: numbe
   ));
 }
 
+export function resetSidebarTierWidths(id: string, percent: number) {
+  const current = parseSidebarTiers(readPreference());
+  const defaults = selectSidebarTier(defaultSidebarTiers, percent);
+  if (!current?.some(tier => tier.id === id) || !defaults) return;
+  void saveSidebarTiers(current.map(tier => tier.id === id ? {
+    ...tier,
+    left: { ...tier.left, width: defaults.left.width },
+    right: { ...tier.right, width: defaults.right.width }
+  } : tier));
+}
+
 export function useSidebarLayoutWindowPercent() {
   const [percent, setPercent] = useState<number | null>(null);
   useEffect(() => {

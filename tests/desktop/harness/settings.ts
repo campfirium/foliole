@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 const BACKUPS_HEADING_NAME = /^(Backups|备份)$/;
 const CATEGORY_NAMES = {
@@ -65,6 +65,16 @@ export async function setActiveSidebarTierDockedWidths(page: Page, left: number,
   }
   await page.keyboard.press('Escape');
   await expect(settings).toBeHidden();
+}
+
+export function resizeWindowToWorkAreaPercent(app: ElectronApplication, percent: number) {
+  return app.evaluate(({ BrowserWindow, screen }, ratio) => {
+    const window = BrowserWindow.getAllWindows()[0]!;
+    const { width } = screen.getDisplayMatching(window.getBounds()).workArea;
+    window.setResizable(true);
+    if (window.isMaximized()) window.unmaximize();
+    window.setSize(Math.round(width * ratio / 100), 850);
+  }, percent);
 }
 
 export async function connectAndCutoverReadwiseApi(
