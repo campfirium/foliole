@@ -1,6 +1,8 @@
+import { DEFAULT_APPEARANCE_COLORS, hexColorToRgbChannels } from '../../src/shared/config/defaultAppearanceColors';
+
 import { expect, test } from './harness/fixtures';
 import { clozeIds, dragImageCloze, openSource, OWNER_ID, readDocument, seedImageSource } from './harness/imageClozeSource';
-import { expectWorkspaceShell } from './harness/settings';
+import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 async function expectActionsBesideRange(controls: import('@playwright/test').Locator, range: import('@playwright/test').Locator) {
   await expect(controls).toBeVisible();
@@ -114,4 +116,39 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   expect(await readDocument(page, OWNER_ID)).toEqual(saved);
   await removeFocusFromSource(page, surface);
   expect((await readDocument(page, id!)).imageRegions![0]!.regions[0]).toEqual(adjusted);
+});
+
+test('uses appearance colors for focus boundaries and image controls in light and dark mode', async ({ desktopWindow: page }, info) => {
+  await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await seedImageSource(page);
+  await dragImageCloze(page, true);
+  await page.getByRole('button', { name: 'Focus image region' }).click();
+  await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');
+
+  const outline = page.locator('.cm-md-image-focus-outline');
+  const controls = page.getByRole('group', { name: 'Adjust focus' });
+  const handle = page.getByRole('button', { name: 'Left edge' });
+  const backgrounds = new Set<string>();
+  for (const mode of ['light', 'dark'] as const) {
+    const settings = await openSettingsCategory(page, 'Appearance');
+    await settings.getByRole('radio', { name: mode === 'light' ? 'Light' : 'Dark', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(settings).toBeHidden();
+    await expect(page.locator('html')).toHaveAttribute('data-resolved-base-color', mode);
+
+    const rgb = (hex: string) => `rgb(${hexColorToRgbChannels(hex).split(' ').join(', ')})`;
+    await expect(outline).toHaveCSS('border-top-color', rgb(DEFAULT_APPEARANCE_COLORS[mode].accent));
+    const bounds = (await outline.boundingBox())!;
+    await page.mouse.click(bounds.x, bounds.y + bounds.height / 2);
+    await expect(handle).toHaveCSS('color', rgb(DEFAULT_APPEARANCE_COLORS[mode].font));
+    const apply = controls.getByRole('button', { name: 'Apply' });
+    await expect(apply).toHaveCSS('color', rgb(DEFAULT_APPEARANCE_COLORS[mode].font));
+    backgrounds.add(await apply.evaluate(button => getComputedStyle(button).backgroundColor));
+    await page.screenshot({ path: info.outputPath(`image-focus-${mode}.png`) });
+    await controls.getByRole('button', { name: 'Cancel adjustment' }).click();
+  }
+  expect(backgrounds.size).toBe(2);
 });

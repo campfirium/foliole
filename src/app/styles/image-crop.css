@@ -65,8 +65,8 @@
 }
 
 .cm-md-image-crop-frame {
-  border: 1px solid white;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 80%);
+  border: 1px solid var(--role-text);
+  box-shadow: 0 0 0 1px var(--role-content-bg);
   position: absolute;
   pointer-events: none;
   z-index: var(--z-local-control);
@@ -88,7 +88,7 @@
   pointer-events: auto;
   touch-action: none;
   transform: translate(-50%, -50%);
-  color: white;
+  color: var(--role-text);
 }
 
 .cm-md-image-crop-handle::before {
@@ -97,7 +97,7 @@
   inset: 7px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 65%);
+  box-shadow: 0 0 0 1px var(--role-content-bg);
   pointer-events: none;
 }
 
@@ -147,8 +147,8 @@
 .cm-md-image-focus-outline {
   position: absolute;
   pointer-events: none;
-  border: 1px solid rgb(255 255 255 / 85%);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+  border: 1px solid var(--role-accent);
+  box-shadow: 0 0 0 1px var(--role-content-bg);
   z-index: var(--z-local-overlay);
 }
 
