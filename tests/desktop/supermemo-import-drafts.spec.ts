@@ -1,30 +1,17 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
+import { expectWorkspaceShell } from './harness/settings';
+import { card, continueXml, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
 
-const title = /^(SuperMemo import preview|SuperMemo 导入预览)$/;
-const open = /^(Start migration|开始迁移)$/;
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
-const card = `<SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
-  <Content><Question>Question</Question><Answer>Answer</Answer></Content>
-  <LearningData><LastRepetition>10.11.2026</LastRepetition><Interval>300</Interval>
-  <RepHist>ElNo=2 Rep=2 Laps=0 Date=10.11.2026 Hour=3.5 Int=1 Grade=4</RepHist></LearningData>
-</SuperMemoElement>`;
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
   <ID>4</ID><Type>Topic</Type><Ordinal>0</Ordinal><Content><Question>Welcome sample</Question></Content><SuperMemoElement>
   <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
-
-async function openPreview(page: Page) {
-  const settings = await openSettingsDialog(page);
-  await settings.getByRole('button', { name: /^(General|通用)$/ }).click();
-  await settings.getByRole('button', { name: open }).click();
-  return page.getByRole('dialog', { name: title });
-}
 
 const rules = /^(Conversion rules|转换细则)$/;
 const backToConversion = /^(Back to conversion|返回转换)$/;
@@ -40,23 +27,7 @@ async function openConversionRules(page: Page, dialog: Locator) {
   return help;
 }
 
-const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
 const backToPreview = /^(Back to preview|返回资料预览)$/;
-
-async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string) {
-  await mkdir(directory, { recursive: true });
-  const file = path.join(directory, path.basename(directory) + '.xml');
-  if (xml !== undefined) await writeFile(file, xml);
-  await app.evaluate(({ dialog }, selected) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
-  }, file);
-  await dialog.getByRole('button', { name: /^(Load XML|Load another XML|载入 XML|重新载入)$/ }).click();
-}
-
-async function continueXml(page: Page) {
-  const notice = page.getByRole('dialog', { name: /^(Collection files not found|未找到配套资料)$/ });
-  await notice.getByRole('button', { name: /^(Continue with XML|继续使用 XML)$/ }).click();
-}
 
 async function dismissLoadError(page: Page) {
   const notice = page.getByRole('dialog', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
@@ -112,32 +83,6 @@ test('previews different XML exports and changes the interval without saving a d
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('slider')).toHaveCount(0);
 });
-
-async function writeCollection(directory: string, includeTopic: boolean) {
-  const info = path.join(directory, 'info');
-  await mkdir(info, { recursive: true });
-  const tree = Buffer.alloc(2 * 37);
-  tree[0] = includeTopic ? 0 : 1;
-  const elements = Buffer.alloc(2 * 118);
-  elements[1] = 1;
-  elements[118 + 1] = 1;
-  if (includeTopic) elements.writeUInt32LE(1, 118 + 93);
-  elements.writeUInt16LE(300, 118 + 16);
-  elements.writeInt16LE(30, 118 + 18);
-  const repetitions = Buffer.alloc(8);
-  repetitions.writeInt32LE(330, 4);
-  const priorities = Buffer.from([2, 0, 0, 0]);
-  const history = Buffer.alloc(39);
-  history.writeInt32LE(2);
-  history.writeUInt16LE(2, 4);
-  history.writeDoubleLE((Date.UTC(2026, 10, 10) - Date.UTC(1899, 11, 30)) / 86_400_000, 10);
-  history[24] = 4;
-  await Promise.all(Object.entries({
-    'contents.dat': tree, 'ElementInfo.dat': elements, 'repetitions.dat': repetitions,
-    'priority.sub': priorities, 'RepetitionHistory.dat': history
-  }).map(([name, bytes]) => writeFile(path.join(info, name), bytes)));
-  return elements;
-}
 
 test('pairs the selected collection and preserves XML preview after a mismatch', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);

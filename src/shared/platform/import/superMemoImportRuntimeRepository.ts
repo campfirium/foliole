@@ -50,12 +50,13 @@ export async function previewRuntimeSuperMemoImport(xml: string, collectionDirec
 }
 
 export async function runRuntimeSuperMemoImport(filePath: string, percent: number,
-  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat) {
+  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat, updateSignature?: string) {
   const invoke = requireInvoke();
   const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
   if (!source) throw new Error('supermemo_source_changed');
   return invoke(NATIVE_COMMANDS.runSuperMemoImport,
-    { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat });
+    { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat,
+      ...(updateSignature ? { updateSignature } : {}) });
 }
 
 export function listRuntimeSuperMemoImports() {

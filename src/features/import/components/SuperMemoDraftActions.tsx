@@ -2,9 +2,10 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { AppButton, AppDialogActions } from '../../../shared/ui';
 
 export function SuperMemoDraftActions({
-  busy, showRules, canConvert, parameters, toggleRules, backToPreview, openParameters, convert
+  busy, showRules, canConvert, parameters, directoryUpdate, toggleRules, backToPreview, openParameters, convert
 }: {
   busy: boolean; showRules: boolean; canConvert: boolean; parameters: boolean;
+  directoryUpdate?: { canConfirm: boolean; } | undefined;
   toggleRules(): void; backToPreview(): void; openParameters(): void; convert(): void;
 }) {
   const t = useTranslation();
@@ -17,11 +18,11 @@ export function SuperMemoDraftActions({
         <AppButton disabled={busy} variant="ghost" onClick={() => backToPreview()}>
           {t('desktop.superMemoDrafts.backToPreview')}
         </AppButton>
-        <AppButton disabled={busy} onClick={() => convert()}>
-          {t('desktop.superMemoDrafts.import')}
+        <AppButton disabled={busy || directoryUpdate?.canConfirm === false} onClick={() => convert()}>
+          {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
         </AppButton>
       </> : (
-        <AppButton disabled={busy} onClick={() => openParameters()}>{t('desktop.superMemoDrafts.parameters')}</AppButton>
+        <AppButton disabled={busy} onClick={() => openParameters()}>{t(directoryUpdate ? 'desktop.superMemoDrafts.updateByRules' : 'desktop.superMemoDrafts.parameters')}</AppButton>
       )) : null}
     </AppDialogActions>
   );

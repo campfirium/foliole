@@ -44,6 +44,7 @@ export interface NativeSuperMemoPreview {
   referenceDay: string;
   pairedCollection?: boolean;
   previewSignature?: string;
+  directoryUpdate?: NativeSuperMemoDirectoryUpdate;
 }
 
 export interface NativeSuperMemoSource {
@@ -51,4 +52,17 @@ export interface NativeSuperMemoSource {
   name: string;
   xml: string;
   collectionDirectory: string | undefined;
+}
+
+export interface NativeSuperMemoDirectoryUpdate {
+  batchId: string;
+  signature: string;
+  pairedSourceRequired: boolean;
+  changes: Array<{
+    sourceId: number;
+    title: string;
+    from: string | null;
+    to: string | null;
+    status: 'move' | 'protected' | 'unavailable';
+  }>;
 }

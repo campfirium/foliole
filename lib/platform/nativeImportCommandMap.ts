@@ -15,7 +15,7 @@ import type {
 import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
-import type { NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource } from './nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource } from './nativeSuperMemoImportContract.js';
 import type {
   NativeWatchedFolderBinding,
   NativeWatchedFolderBindingsState,
@@ -37,8 +37,8 @@ export type NativeImportCommandMap = {
     result: { batchId: string; percent: number; updated: number; protectedItems: number };
   };
   [NATIVE_COMMANDS.runSuperMemoImport]: {
-    args: NativeSuperMemoPreviewArgs & { percent: number; previewSignature?: string };
-    result: { batchId: string; imported: number; skipped: number; unresolvedImages: number };
+    args: NativeSuperMemoPreviewArgs & { percent: number; previewSignature?: string; updateSignature?: string };
+    result: { batchId: string; imported: number; skipped: number; unresolvedImages: number; directoryUpdate?: NativeSuperMemoDirectoryUpdate };
   };
   [NATIVE_COMMANDS.previewSuperMemoImport]: {
     args: NativeSuperMemoPreviewArgs;

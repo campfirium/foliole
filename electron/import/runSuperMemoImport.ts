@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
@@ -19,6 +19,7 @@ import { replaceNodeImageResourceReferences } from '../database/nodeResources.js
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
+import { superMemoBatchKey } from './updateSuperMemoDirectories.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
 
 type Row = NativeSuperMemoPreview['rows'][number];
@@ -100,7 +101,7 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
           ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
         due, offset, row.sourceState, gradeMap);
     }
-    return { ...row, sourceExample: undefined, nodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+    return { ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] };
   });
 }
@@ -110,8 +111,7 @@ export async function runSuperMemoImport(input: {
   offset: string; collectionDirectory?: string | undefined; gradeMap: SuperMemoGradeMap; scheduler: ReviewSchedulerSettings; sourceFormat: SuperMemoSourceFormat; expectedImages: ReadonlyMap<string, string | null>;
 }) {
   const { driver } = openDatabaseConnection();
-  const fingerprint = createHash('sha256').update(JSON.stringify(input.elements)).digest('hex');
-  const key = `supermemo-import:${fingerprint}`;
+  const { batchId: fingerprint, key } = superMemoBatchKey(input.elements);
   const existing = driver.queryOne<{ value: string }>('SELECT value FROM workspace_meta WHERE key = ?', [key]);
   if (existing) {
     const stored = JSON.parse(existing.value) as {
