@@ -4,13 +4,25 @@ import { expect, it } from 'vitest';
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
+import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 
-it('retains ordered parent edges once per receive and rolls them back with a failed current apply', async () => {
+it.each([false, true])('retains ordered parent edges once and rolls them back on failure (count triggers: %s)', async countTriggers => {
   const sender = textDevice();
   const receiver = textDevice();
   try {
+    const totalChanges = receiver.sqlite.prepare('SELECT total_changes()').pluck();
+    const observe = (db: DbPort): DbPort => ({
+      ...db,
+      async run(sql, params) {
+        const before = Number(totalChanges.get());
+        const result = await db.run(sql, params);
+        return { ...result, changes: Number(totalChanges.get()) - before };
+      },
+      transaction: task => db.transaction(tx => task(observe(tx)))
+    });
+    const target = countTriggers ? observe(receiver.db) : receiver.db;
     const root = textBranch('root', 'original');
     const left = textBranch('left', 'left branch', root);
     const right = textBranch('right', 'right branch', root);
@@ -30,7 +42,7 @@ it('retains ordered parent edges once per receive and rolls them back with a fai
     `);
     const attempts = () => receiver.sqlite.prepare('SELECT parent_version_id FROM edge_attempts ORDER BY rowid')
       .pluck().all();
-    await expect(applySyncNodesWithDbPort(receiver.db, records)).rejects.toThrow('reject_current');
+    await expect(applySyncNodesWithDbPort(target, records)).rejects.toThrow('reject_current');
     expect(await receiver.current()).toBeNull();
     expect(receiver.sqlite.prepare('SELECT version_id FROM node_sync_versions').all()).toEqual([]);
     expect(attempts()).toEqual([]);
@@ -38,7 +50,7 @@ it('retains ordered parent edges once per receive and rolls them back with a fai
     receiver.sqlite.exec('DROP TRIGGER reject_current');
     for (let delivery = 0; delivery < 2; delivery++) {
       receiver.sqlite.exec('DELETE FROM edge_attempts');
-      await applySyncNodesWithDbPort(receiver.db, records);
+      await applySyncNodesWithDbPort(target, records);
       expect(await receiver.current()).toMatchObject({
         body_text: 'merged body 中文', version_id: 'head', parent_version_ids: ['left', 'right']
       });

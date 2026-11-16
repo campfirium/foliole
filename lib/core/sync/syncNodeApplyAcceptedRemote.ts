@@ -100,13 +100,14 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
   const statement = buildRemoteNodeVersionUpsert(record, undefined, compactSnapshot)!;
   const inserted = await port.run(statement.sql, statement.params);
   // Android includes inventory trigger writes in the statement change count.
-  if (compactSnapshot !== undefined && inserted.changes <= 0) {
+  const insertedVersion = inserted.changes > 0;
+  if (compactSnapshot !== undefined && !insertedVersion) {
     throw new Error(`request_sync_deleted_history_not_new:${record.version_id}`);
   }
   await retainVersionParents(port, record);
   // A complete insert already stores its main hash and validated alternative bodies.
   // Other shapes still need the post-apply identity or body-state checks.
-  if (known !== null || inserted.changes !== 1 || record.content_hash == null ||
+  if (known !== null || !insertedVersion || record.content_hash == null ||
       record.snapshot.body_deleted === true || record.snapshot.deleted_version_metadata_digest ||
       record.body_text === null || typeof incomingBody !== 'string') return null;
   return record.snapshot.body_blob_hash ? 'verify_body_hash' : 'complete';
