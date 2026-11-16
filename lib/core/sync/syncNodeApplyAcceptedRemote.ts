@@ -60,7 +60,7 @@ async function storedVersion(port: DbPort, record: NativeSyncNodeRecord, incomin
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, deferBodyRetirement = false,
   known?: StoredVersionIdentity | null) {
   assertSyncNodeTextWithinBudget(record.snapshot);
-  if (!record.version_id || !record.host_name || !record.version_created_at) return;
+  if (!record.version_id || !record.host_name || !record.version_created_at) return null;
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
   const existing = await storedVersion(port, record, incomingBody, known);
   if (existing) {
@@ -80,15 +80,25 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
         !((digest || incomingDigest) ? compactMatches : isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot))) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
-    if (compactMatches) return retainVersionParents(port, record);
+    if (compactMatches) {
+      await retainVersionParents(port, record);
+      return null;
+    }
     await repairStoredRetiredNodeBodyHash(port, record);
     if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) await applyStoredNodeVersionBodyState(port, record);
     await retainVersionParents(port, record);
-    return;
+    // Retirement can depend on which version is current when it runs.
+    return record.snapshot.body_deleted === true ? null : 'complete';
   }
   const statement = buildRemoteNodeVersionUpsert(record)!;
-  await port.run(statement.sql, statement.params);
+  const inserted = await port.run(statement.sql, statement.params);
   await retainVersionParents(port, record);
+  // A complete insert already stores its main hash and validated alternative bodies.
+  // Other shapes still need the post-apply identity or body-state checks.
+  if (known !== null || inserted.changes !== 1 || record.content_hash == null ||
+      record.snapshot.body_deleted === true || record.snapshot.deleted_version_metadata_digest ||
+      record.body_text === null || typeof incomingBody !== 'string') return null;
+  return record.snapshot.body_blob_hash ? 'verify_body_hash' : 'complete';
 }
 
 async function retainVersionParents(port: DbPort, record: NativeSyncNodeRecord) {
@@ -126,17 +136,6 @@ async function upsertRemoteNode(
   }
 }
 
-async function applyRemoteNode(
-  port: DbPort,
-  record: NativeSyncNodeRecord,
-  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>,
-  nodeExists: boolean,
-  syncDirty: number
-) {
-  await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists, syncDirty);
-  await upsertRemoteVersion(port, record);
-}
-
 export async function applyAcceptedRemoteNode(input: {
   invalidatedAt: string;
   localNode: LocalSyncNodeSearchInvalidationState | null;
@@ -147,16 +146,18 @@ export async function applyAcceptedRemoteNode(input: {
   remoteNodeIdsInBatch: ReadonlySet<string>;
   result: AcceptedRemoteNodeResult;
   tx: DbPort;
+  versionAlreadyRetained: boolean;
 }) {
   assertSyncNodeTextWithinBudget(input.record.snapshot);
   const syncState = await loadAppliedNodeMutationState(input.tx, input.record.object_id, input.operation);
-  await applyRemoteNode(
+  await upsertRemoteNode(
     input.tx,
     input.record,
     input.preparedTextBodyHashes,
     input.localNode !== null,
     0
   );
+  if (!input.versionAlreadyRetained) await upsertRemoteVersion(input.tx, input.record);
   await recordAppliedNodeLocalOrigin(input.tx, input.record.version_id, input.operation);
   const content = input.record.body_text ?? input.record.snapshot.content;
   if (!input.record.snapshot.deleted_at && typeof content === 'string') {

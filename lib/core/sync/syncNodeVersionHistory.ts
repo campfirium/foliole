@@ -67,14 +67,20 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
 
 export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
   source: SyncNodeRecordSource<M>, records: readonly M[], deferBodyRetirement = false) {
-  const ids = records.flatMap(record => record.version_id ? [record.version_id] : []);
-  // A version listed twice reads its own earlier write instead of the snapshot taken here.
-  const once = new Set(ids.filter((id, index) => ids.indexOf(id) === index && ids.lastIndexOf(id) === index));
+  const counts = new Map<string, number>();
+  for (const { version_id: id } of records) {
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  // Repeated versions must read preceding writes, including any body state changes.
+  const once = new Set([...counts].filter(([, count]) => count === 1).map(([id]) => id));
   const stored = await loadStoredVersionIdentities(port, [...once]);
+  const retained = new Map<M, 'complete' | 'verify_body_hash'>();
   for (const metadata of records) {
     const known = metadata.version_id && once.has(metadata.version_id) ? stored.get(metadata.version_id) ?? null : undefined;
-    await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement, known);
+    const reusable = await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement, known);
+    if (known !== undefined && reusable) retained.set(metadata, reusable);
   }
+  return retained;
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

@@ -2,6 +2,7 @@ import type {
   NativeSyncNodeConflictRecord,
   NativeSyncNodeRecord
 } from '../../platform/nativeSyncContract.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 
 import { hasContentEditingSession } from './contentEditingSession.js';
 import type { DbPort, DbRow } from './dbPort.js';
@@ -183,11 +184,15 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   }
   await port.transaction(async (tx) => {
     const history = await prepareIncomingNodeVersionSource(tx, source);
-    await retainIncomingNodeVersionSource(tx, source, history, options.deferBodyRetirement);
+    const retained = await retainIncomingNodeVersionSource(tx, source, history, options.deferBodyRetirement);
     for (const metadata of ordered) {
       const record = await source.load(tx, metadata);
+      const retention = retained.get(metadata);
+      const content = record.body_text ?? record.snapshot.content;
+      const versionAlreadyRetained = retention === 'complete' || (retention === 'verify_body_hash' &&
+        typeof content === 'string' && hashTextBody(content) === record.snapshot.body_blob_hash);
       if (await applyIncomingRecord({ tx, record, result, options, invalidatedAt, remoteNodeIdsInBatch,
-        preparedTextBodyHash: preparedHashes.get(metadata) })) {
+        preparedTextBodyHash: preparedHashes.get(metadata), versionAlreadyRetained })) {
         result.conflictNodes.push(metadata);
       }
     }
@@ -203,6 +208,7 @@ async function applyIncomingRecord(input: {
   tx: DbPort; record: NativeSyncNodeRecord; result: Omit<ApplySyncNodesWithDbPortResult, 'conflictNodes' | 'conflictRecords'>;
   options: ApplySyncNodesWithDbPortOptions; invalidatedAt: string; remoteNodeIdsInBatch: ReadonlySet<string>;
   preparedTextBodyHash: string | undefined;
+  versionAlreadyRetained: boolean;
 }) {
   const { tx, record, result, options } = input;
   if (await handleTombstoneGuard({ options, record, result, tx })) return false;
@@ -213,7 +219,8 @@ async function applyIncomingRecord(input: {
       record.version_id !== localNode.current_version_id) {
     if (options.editingBranch) decision = 'apply_fast_forward';
     else if (!options.operation || options.operation === 'remote_sync') {
-      await upsertRemoteVersion(tx, record); return false;
+      if (!input.versionAlreadyRetained) await upsertRemoteVersion(tx, record);
+      return false;
     }
   }
   if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
@@ -223,7 +230,7 @@ async function applyIncomingRecord(input: {
       operation: options.operation ?? 'remote_sync' });
     return false;
   }
-  await upsertRemoteVersion(tx, record);
+  if (!input.versionAlreadyRetained) await upsertRemoteVersion(tx, record);
   if (decision === 'already_applied') {
     const stateResult = await upsertAppliedNodeSyncState(tx, record);
     if (stateResult.changes > 0 || options.includeAlreadyApplied) result.appliedIds.push(record.object_id);
