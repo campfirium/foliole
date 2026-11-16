@@ -87,12 +87,14 @@ export async function respondRequestSyncRoundControl(input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody;
   signal?: AbortSignal; roundId: string; onCompleted?: (() => Promise<void>) | undefined;
   relayCleanup?: WebDavRelayCleanup | undefined;
+  onRoundConfirmed?: (attachmentsConfirmed: boolean) => void;
 }) {
   const roundId = roundBytes(input.roundId);
   const { relayCleanup, ...confirmed } = await validateRoundControl(input, roundId);
   if (confirmed.databaseConfirmed) await input.onCompleted?.();
   const relay = relayCleanup && input.relayCleanup
     ? await respondRelayCleanup(input.relayCleanup, relayCleanupSchema.parse(JSON.parse(relayCleanup))) : undefined;
+  input.onRoundConfirmed?.(confirmed.attachmentsConfirmed);
   return prepareRequestSyncWire({ ...input, messages: async function* () {
     yield { payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [], ...confirmed,
       ...(relay ? { relayCleanup: JSON.stringify(relay) } : {}) } };

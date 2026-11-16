@@ -156,11 +156,12 @@ function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionReques
 }
 
 async function runAttachmentStage(input: Parameters<typeof continueCompanionRequestSyncResources>[0]) {
+  const end = requestSyncPerformance?.begin('attachment_stage_inclusive');
   try {
     return { ...await continueCompanionRequestSyncResources(input), error: null };
   } catch (error) {
     if (input.signal?.aborted) throw error;
     return { pending: null, transferred: undefined, blocks: 0, yielded: false,
       error: error instanceof Error ? error.message : String(error) };
-  }
+  } finally { end?.(); }
 }

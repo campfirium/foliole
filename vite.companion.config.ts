@@ -61,10 +61,20 @@ function resolveCompanionSourceRevision() {
   }
 }
 
+function resolveAdoptionPerformanceLabel() {
+  const label = process.env.FOLIOLE_SYNC_PERFORMANCE_LABEL;
+  const isAcceptance = process.env.FOLIOLE_A5_APP_IDENTITY === 'test'
+    && process.env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID === 'com.campfirium.foliole.android.acceptance';
+  return isAcceptance && label && /^[a-zA-Z0-9_-]{1,64}$/u.test(label) ? label : '';
+}
+
 export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT, { pdfJsResources: true }),
   defineConfig({
-    define: { 'import.meta.env.VITE_FOLIOLE_SOURCE_REVISION': JSON.stringify(resolveCompanionSourceRevision()) },
+    define: {
+      'import.meta.env.VITE_FOLIOLE_SOURCE_REVISION': JSON.stringify(resolveCompanionSourceRevision()),
+      'import.meta.env.VITE_FOLIOLE_ADOPTION_PERFORMANCE_LABEL': JSON.stringify(resolveAdoptionPerformanceLabel())
+    },
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
     plugins: [
       companionLegacyWebViewCssPlugin(),

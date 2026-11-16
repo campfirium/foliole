@@ -1,5 +1,6 @@
 /** Optional process-local measurement for an isolated sync test window. */
-type Phase = 'inventory_prepare' | 'object_prepare' | 'receive_apply' | 'review_projection' | 'receive_http_inclusive';
+type Phase = 'inventory_prepare' | 'object_prepare' | 'receive_apply' | 'review_projection' | 'receive_http_inclusive'
+  | 'attachment_stage_inclusive';
 type Outcome = 'complete' | 'partial' | 'failed' | 'cancelled';
 type PhaseTotals = { started: number; finished: number; elapsedMsSum: number; spanMs: number };
 const adoptionMilestones = ['adoption_committed', 'adoption_followup_finished',

@@ -20,6 +20,7 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
   groupKey: Uint8Array;
   signal: AbortSignal;
+  onRoundConfirmed?: (attachmentsConfirmed: boolean) => void;
   onProgress?: () => void;
   relayCleanup?: WebDavRelayCleanup | undefined;
   payloadBudget?: FramedSyncPayloadBudget;

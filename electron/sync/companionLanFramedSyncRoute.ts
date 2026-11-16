@@ -17,6 +17,9 @@ import {
 import { requestDatabaseTiming, type RequestDatabaseTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import {
+  beginDesktopInboundSyncPerformance, completeDesktopInboundSyncPerformance, measuresDesktopInboundSyncPerformance
+} from './desktopInboundSyncPerformance.js';
 import { requestDesktopRelaySync } from './desktopMemberSyncCadence.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
@@ -48,18 +51,8 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     url.searchParams.get('peer_round_id'), url.searchParams.get('peer_round_mode'));
   const { lease, ownershipError } = acquireInboundRound(runtime, round);
   if (round.mode === 'start' || round.mode === 'single') bindSessionRound(lease, runtime.sessionSignal);
-  const disconnected = () => {
-    if (!args.response.writableFinished) controller.abort(new Error('request_sync_peer_disconnected'));
-  };
-  const completed = () => {
-    if (round && lease && (round.mode === 'finish' || round.mode === 'single')) {
-      desktopSyncPeerRoundOwner().finishInbound(runtime.auth.ok ? runtime.auth.device_id : '', round.id);
-    }
-  };
-  args.response.once('finish', completed);
-  args.request.once('aborted', disconnected);
-  args.response.once('close', disconnected);
-  if (args.request.aborted || args.response.destroyed) disconnected();
+  const lifecycle = observeInboundResponse(args, controller, round, lease,
+    runtime.auth.ok ? runtime.auth.device_id : '');
   try { await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
     payloadBudget: runtime.payloadBudget,
@@ -69,10 +62,14 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
+        if (round.mode === 'start') beginDesktopInboundSyncPerformance(lease.signal);
         const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, () => relayInboundCommit(runtime.auth), timing);
         const reply = await respondInbound(host, {
           context, consumePull, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, payloadBudget: runtime.payloadBudget, signal: AbortSignal.any([controller.signal, lease.signal]),
+          ...(round.mode === 'finish' && measuresDesktopInboundSyncPerformance(lease.signal) ? {
+            onRoundConfirmed: lifecycle.confirmAttachments
+          } : {}),
           onProgress: () => lease?.touch()
         }, lease, round.mode === 'single');
         return reply ? { ...reply, frames: touchRequestSyncStream(reply.frames, lease) } : undefined;
@@ -81,15 +78,42 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     request: args.request,
     response: args.response
   }); } finally {
-    args.response.off('finish', completed);
-    args.request.off('aborted', disconnected);
-    args.response.off('close', disconnected);
-    if (round && lease && (round.mode === 'finish' || round.mode === 'single' ||
-        controller.signal.aborted || (round.mode === 'start' && args.response.statusCode !== 200))) {
-      desktopSyncPeerRoundOwner().finishInbound(runtime.auth.ok ? runtime.auth.device_id : '', round.id);
-    }
+    lifecycle.dispose();
   }
   return true;
+}
+
+function observeInboundResponse(args: { request: http.IncomingMessage; response: http.ServerResponse },
+  controller: AbortController, round: ReturnType<typeof parseRequestSyncPeerRound>,
+  lease: SyncPeerRoundLease | undefined, peer: string) {
+  const disconnected = () => {
+    if (!args.response.writableFinished) controller.abort(new Error('request_sync_peer_disconnected'));
+  };
+  let attachmentsConfirmed: boolean | undefined;
+  const completed = () => {
+    if (lease && (round.mode === 'finish' || round.mode === 'single')) {
+      if (attachmentsConfirmed !== undefined && args.response.statusCode === 200) {
+        completeDesktopInboundSyncPerformance(lease.signal, attachmentsConfirmed);
+      }
+      desktopSyncPeerRoundOwner().finishInbound(peer, round.id);
+    }
+  };
+  args.response.once('finish', completed);
+  args.request.once('aborted', disconnected);
+  args.response.once('close', disconnected);
+  if (args.request.aborted || args.response.destroyed) disconnected();
+  return {
+    confirmAttachments(confirmed: boolean) { attachmentsConfirmed = confirmed; },
+    dispose() {
+      args.response.off('finish', completed);
+      args.request.off('aborted', disconnected);
+      args.response.off('close', disconnected);
+      if (lease && (round.mode === 'finish' || round.mode === 'single' ||
+          controller.signal.aborted || (round.mode === 'start' && args.response.statusCode !== 200))) {
+        desktopSyncPeerRoundOwner().finishInbound(peer, round.id);
+      }
+    }
+  };
 }
 
 function respondInbound(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,
