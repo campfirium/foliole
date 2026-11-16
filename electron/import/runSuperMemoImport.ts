@@ -8,7 +8,7 @@ import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImpo
 import { prepareSuperMemoParentText, type SuperMemoParentText } from '../../lib/core/import/superMemoParentText.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
-import { addSuperMemoSource, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
+import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots.js';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.js';
@@ -19,6 +19,7 @@ import { replaceNodeImageResourceReferences } from '../database/nodeResources.js
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
+import { addSuperMemoCitation, type SuperMemoCitation } from './superMemoCitation.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { formatSuperMemoMaterialSource } from './superMemoMaterialSource.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
@@ -85,6 +86,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
     let importedAnchorLink: string | null = null;
+    let importedCitation: SuperMemoCitation | null = null;
     if (nodeId && kind !== 'skipped') {
       const snapshot: Snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
         title: row.title || `#${row.id}`, isTitleManual: true, content: '', reveal: null, anchorLink: null,
@@ -93,7 +95,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
       const articleNodeId = article ? nodeIds.get(article.id) : undefined;
       const parent = parents.get(row.id);
       const placement = sourceFormat.placement;
-      const { formatted, content } = formatSuperMemoMaterialSource(row, sourceRows.get(parent ?? 0),
+      const { citation, content } = formatSuperMemoMaterialSource(row, sourceRows.get(parent ?? 0),
         article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat, body.content);
       if (kind === 'topic') {
         const shift = placement === 'metadata' || placement === 'topic-info' ? content.length - body.content.length : 0;
@@ -108,12 +110,13 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
           locator: { ...locator, from: locator.from + source.shift, to: locator.to + source.shift } };
       }
       if (snapshot.anchorLink) importedAnchorLink = JSON.stringify(snapshot.anchorLink);
-      persistElement(snapshot, element, { ...body, content },
-        kind === 'item' && answer.content && (placement === 'metadata' || placement === 'body')
-          ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
-        due, offset, row.sourceState, gradeMap);
+      const reveal = addSuperMemoCitation(answer.content, citation, 'reveal');
+      if ((citation?.field === 'content' && content !== body.content) || (citation?.field === 'reveal' && reveal !== answer.content)) {
+        importedCitation = citation;
+      }
+      persistElement(snapshot, element, { ...body, content }, { ...answer, content: reveal }, due, offset, row.sourceState, gradeMap);
     }
-    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
 }

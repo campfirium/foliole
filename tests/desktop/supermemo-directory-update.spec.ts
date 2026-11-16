@@ -104,3 +104,35 @@ for (const missingParent of [false, true]) {
       anchor: { id: before.anchor?.id, kind: 'highlight', locator: { from: newBody.indexOf(selection), originalText: selection } } });
   });
 }
+
+test('changes source information on the existing card from the saved batch', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const directory = testInfo.outputPath('SourceInformation');
+  const xml = `<SuperMemoCollection><Count>2</Count>
+    <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Source article</Title>
+    <Content><Question>Article text</Question></Content></SuperMemoElement>${card}</SuperMemoCollection>`;
+  await writeCollection(directory, true);
+  const dialog = await openPreview(desktopWindow);
+  await loadSource(desktopApp, dialog, directory, xml);
+  await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
+  await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
+  const readCard = () => desktopWindow.evaluate(async () => {
+    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const node = Object.values(nodesById).find(entry => entry.title === 'Card');
+    return node ? window.electronAPI!.invoke('load_node_document', { nodeId: node.id }) : null;
+  });
+  const before = await readCard();
+  expect(before).toMatchObject({ content: 'Question', reveal: 'Answer' });
+  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  const reopened = await openPreview(desktopWindow);
+  await loadSource(desktopApp, reopened, directory);
+  await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+  await reopened.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
+  await expect(reopened.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
+  expect(await readCard()).toEqual(before);
+  await reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(reopened.getByText(/Source information updated|已更新 1 处来源信息/)).toBeVisible();
+  const after = await readCard();
+  expect(after).toMatchObject({ nodeId: before?.nodeId, reveal: 'Answer' });
+  expect(after?.content).toMatch(/^Question\n\nSource: \[\[node-id:.+\|Source article\]\]/u);
+});

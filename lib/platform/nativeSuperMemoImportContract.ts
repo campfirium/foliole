@@ -54,10 +54,18 @@ export interface NativeSuperMemoSource {
   collectionDirectory: string | undefined;
 }
 
+export interface NativeSuperMemoCitationChange {
+  sourceId: number;
+  title: string;
+  status: 'update' | 'protected';
+}
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
   pairedSourceRequired: boolean;
+  sourceFormat?: SuperMemoSourceFormat;
+  citationChanges: NativeSuperMemoCitationChange[];
   changes: Array<{
     sourceId: number;
     title: string;

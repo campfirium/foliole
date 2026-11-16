@@ -2,14 +2,17 @@ import { createHash } from 'node:crypto';
 
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
+import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
+import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates } from './planSuperMemoCitationUpdates.js';
 import { prepareSuperMemoRows, type runSuperMemoImport, writeSuperMemoRows } from './runSuperMemoImport.js';
 import { createSuperMemoAnchorReparentPlanner, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
+import type { SuperMemoCitation } from './superMemoCitation.js';
 import { createPendingParentRenderer, type PendingParentContent } from './superMemoPendingParent.js';
 
 interface BatchEntry {
@@ -18,12 +21,15 @@ interface BatchEntry {
   outcome: NativeSuperMemoPreview['rows'][number]['outcome'];
   importedParentNodeId?: string | null;
   importedAnchorLink?: string | null;
+  importedCitation?: SuperMemoCitation | null;
   sourceChildren?: number[];
   unresolvedImages?: unknown[];
 }
 interface Batch {
   entries: BatchEntry[];
   directoryRequiresCollection?: boolean;
+  sourceFormat?: SuperMemoSourceFormat;
+  preferredSourceFormat?: SuperMemoSourceFormat;
   imported: number;
   skipped: number;
   percent: number;
@@ -190,17 +196,25 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
       Boolean(batch.directoryRequiresCollection || batch.entries.some(entry => entry.sourceChildren !== undefined));
     const plan = pairedSourceRequired ? undefined : planMoves(batch, preview, content && createPendingParentRenderer(elements, preview, content));
     const changes = plan?.changes ?? [];
+    const citations = plan && content ? planSuperMemoCitationUpdates(driver, batch, plan.rows, content.sourceFormat,
+      new Map(plan.moves.map(move => [move.nodeId, move.to])), plan.additions) : undefined;
     const signature = createHash('sha256').update(JSON.stringify({ batchId, pairedSourceRequired, changes,
-      moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
+      citations: citations?.signature, moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');
     if (confirmation && (confirmation !== signature || !plan)) throw new Error('supermemo_update_changed');
-    if (confirmation && plan && (plan.moves.length || plan.additions.size)) {
+    if (confirmation && plan && (plan.moves.length || plan.additions.size || citations?.writes.length)) {
       const now = new Date().toISOString();
       applyUpdate(batch, plan, now, writeAdditions);
+      if (citations?.writes.length && content) {
+        applySuperMemoCitationUpdates(driver, batch.entries, citations.writes, now);
+        batch.preferredSourceFormat = content.sourceFormat;
+      }
       if (preview.pairedCollection) batch.directoryRequiresCollection = true;
       driver.execute('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?', [JSON.stringify(batch), now, key]);
     }
-    return { batchId, signature, pairedSourceRequired, changes,
+    const sourceFormat = batch.preferredSourceFormat ?? batch.sourceFormat;
+    return { batchId, signature, pairedSourceRequired, changes, citationChanges: citations?.changes ?? [],
+      ...(sourceFormat ? { sourceFormat } : {}),
       imported: batch.imported, skipped: batch.skipped, unresolvedImages: batch.unresolvedImages };
   });
 }

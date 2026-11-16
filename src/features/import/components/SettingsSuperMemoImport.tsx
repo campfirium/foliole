@@ -13,7 +13,7 @@ import {
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoConversionRules } from './SuperMemoConversionRules';
-import { SuperMemoDirectoryUpdate } from './SuperMemoDirectoryUpdate';
+import { SuperMemoDirectoryUpdate, SuperMemoResult } from './SuperMemoDirectoryUpdate';
 import { SuperMemoDraftActions } from './SuperMemoDraftActions';
 import { SuperMemoDraftTable } from './SuperMemoDraftTable';
 import { SuperMemoEntryPreview } from './SuperMemoEntryPreview';
@@ -34,6 +34,15 @@ async function refreshSourceFormat(apply: () => Promise<void>, setBusy: (value: 
   }
 }
 
+async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>,
+  gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
+  const first = await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat);
+  const savedFormat = first.preview.directoryUpdate?.sourceFormat;
+  const loaded = savedFormat && (savedFormat.placement !== sourceFormat.placement || savedFormat.template !== sourceFormat.template)
+    ? await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, savedFormat) : first;
+  return { draft: loaded, sourceFormat: savedFormat ?? sourceFormat };
+}
+
 function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   const [draft, setDraft] = useState<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>>();
   const [gradeMap, setGradeMap] = useState(initialGrades);
@@ -50,7 +59,9 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     try {
       const selected = await selectRuntimeSuperMemoSource();
       if (!selected) return;
-      setDraft(await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat));
+      const loaded = await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
+      setSourceFormat(loaded.sourceFormat);
+      setDraft(loaded.draft);
       setSource(selected);
       if (!selected.collectionDirectory) setError('xml-only');
       setPercent(0);
@@ -145,16 +156,6 @@ function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; 
   );
 }
 
-function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof runRuntimeSuperMemoImport>> }) {
-  const t = useTranslation();
-  const added = result.directoryUpdate?.changes.filter(change => change.status === 'add').length ?? 0;
-  return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
-    count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
-  }) + (added ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: added }) : '') : t('desktop.superMemoDrafts.importResult', {
-    imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
-  })}</p>;
-}
-
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
   const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = useSuperMemoDraft(initialGrades);
@@ -197,12 +198,14 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             ) : null}
             {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
             {update && !parameters && !result ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
-            {update && parameters && !result ? <SuperMemoDirectoryUpdate update={update} /> : null}
+            {update && parameters && !result ? <SuperMemoDirectoryUpdate update={update} sourceFormat={sourceFormat} disabled={busy}
+              onSourceFormatChange={next => void changeSourceFormat(next)} /> : null}
             {result ? <SuperMemoResult result={result} /> : null}
           </AppDialogBody>
           <SuperMemoDraftActions
             busy={busy} showRules={showRules} canConvert={Boolean(preview && !result)} parameters={parameters}
-            directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move' || change.status === 'add') } : undefined}
+            directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move' || change.status === 'add') ||
+              update.citationChanges.some(change => change.status === 'update') } : undefined}
             toggleRules={() => setShowRules(!showRules)} backToPreview={() => setParameters(false)}
             openParameters={() => setParameters(true)} convert={() => void importSource()}
           />

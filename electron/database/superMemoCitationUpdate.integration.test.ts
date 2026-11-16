@@ -1,0 +1,79 @@
+// @vitest-environment node
+import { expect, it, vi } from 'vitest';
+
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { DEFAULT_SUPER_MEMO_GRADE_MAP } from '../../lib/core/import/superMemoSchedulePreview.js';
+import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
+import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
+import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
+import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
+import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
+
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
+
+const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
+vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection }));
+
+const elements = [1, 2].map(id => ({
+  id, parentId: null, children: [], sourceType: 'Item', title: `Card ${id}`, ordinal: null,
+  bodyOrQuestionHtml: ['Original question'], answerHtml: ['Original answer'], skippedAudioComponents: 0, learning: null
+} satisfies SuperMemoXmlDraftElement));
+const scheduler = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+const gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP;
+const offset = '+00:00';
+const rows = describeSuperMemoSource(elements, offset, scheduler, gradeMap).map(row => ({
+  ...row, sourceBibliography: { title: 'Saved source title' }
+}));
+const preview = { referenceDay: '2026-11-16', rows };
+const metadata = DEFAULT_SUPER_MEMO_SOURCE_FORMAT;
+const footer = { placement: 'content-end', template: 'Title: {title}' } as const;
+const input = { elements, preview, scheduler, gradeMap, offset, percent: 0, expectedImages: new Map<string, string | null>() };
+
+it.each(['tracked', 'legacy'])('moves source information twice while respecting edited text in a %s batch', async format => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  const bind = () => {
+    connection.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+  };
+  const node = (title: string) => peer.sqlite.prepare('SELECT id, content, reveal FROM nodes WHERE title = ?').get(title) as
+    { id: string; content: string; reveal: string };
+  const plan = (sourceFormat: SuperMemoSourceFormat) =>
+    updateSuperMemoDirectories(elements, preview, undefined, undefined, { ...input, sourceFormat })!;
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    bind();
+    const batch = await runSuperMemoImport({ ...input, sourceFormat: metadata });
+    if (format === 'legacy') peer.sqlite.prepare(`UPDATE workspace_meta SET value = (
+      SELECT json_set(workspace_meta.value, '$.entries', json_group_array(json_remove(entry.value, '$.importedCitation')))
+      FROM json_each(workspace_meta.value, '$.entries') AS entry
+    ) WHERE key = ?`).run(`supermemo-import:${batch.batchId}`);
+    const first = node('Card 1');
+    const second = node('Card 2');
+    const edited = first.reveal.replace('Original answer', 'My answer');
+    const changedCitation = second.reveal.replace('Saved source title', 'My source title');
+    applyParentContentChange({ driver: connection.driver!, nodeId: first.id, nextContent: 'My question', updatedAt: '2026-11-17' });
+    peer.sqlite.prepare('UPDATE nodes SET reveal = ?, updated_at = ? WHERE id = ?').run(edited, '2026-11-17', first.id);
+    peer.sqlite.prepare('UPDATE nodes SET reveal = ?, updated_at = ? WHERE id = ?').run(changedCitation, '2026-11-17', second.id);
+    const forward = plan(footer);
+    expect(forward.citationChanges).toMatchObject([{ sourceId: 1, status: 'update' }, { sourceId: 2, status: 'protected' }]);
+    expect(node('Card 1').reveal).toBe(edited);
+    await confirmSuperMemoDirectoryUpdate({ ...input, sourceFormat: footer }, forward.signature);
+    peer.reopen();
+    bind();
+    expect(node('Card 1')).toEqual({ ...first, content: 'My question\n\nTitle: Saved source title', reveal: 'My answer' });
+    expect(node('Card 2')).toEqual({ ...second, reveal: changedCitation });
+    const backward = plan(metadata);
+    expect(backward.citationChanges).toMatchObject([{ sourceId: 1, status: 'update' }]);
+    await confirmSuperMemoDirectoryUpdate({ ...input, sourceFormat: metadata }, backward.signature);
+    expect(node('Card 1')).toEqual({ ...first, content: 'My question', reveal: edited });
+    expect(node('Card 2')).toEqual({ ...second, reveal: changedCitation });
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
