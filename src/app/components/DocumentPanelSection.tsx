@@ -117,7 +117,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   const draftProps = useDocumentPanelDraftProps(props);
   const model = useDocumentPanelSectionModel(draftProps);
   const interactions = useDocumentPanelInteractions(draftProps);
-  const nodeLinkPreview = useNodeLinkHoverPreview(draftProps);
+  const { handlePreviewNodeLink, preview } = useNodeLinkHoverPreview(draftProps);
   const resolvedProps = buildResolvedDocumentPanelProps(draftProps);
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
   const topicBacklinks = buildTopicBacklinks({
@@ -133,7 +133,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onOpenExternalLink: handleOpenExternalLink,
           textAnchorDecorations: model.textAnchorState,
           onOpenNodeLink: interactions.handleOpenNodeLink,
-          onPreviewNodeLink: nodeLinkPreview.handlePreviewNodeLink,
+          onPreviewNodeLink: handlePreviewNodeLink,
           emptyContent: model.emptyContent,
           ...definedProps({
             onEditorReady: interactions.handleEditorReady
@@ -160,7 +160,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         textAlternativeCount={model.sourceUpdatePreview?.alternatives?.length ?? 0}
         showSourceUpdateAction={model.canOpenComparisonView && Boolean(model.sourceUpdatePreview)}
       />
-      <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
+      <NodeLinkHoverPreviewPanel onDismiss={() => handlePreviewNodeLink(null)} preview={preview} />
       <DocumentPanelSectionOverlayHost
         editorAdapter={interactions.editorAdapter}
         model={model}

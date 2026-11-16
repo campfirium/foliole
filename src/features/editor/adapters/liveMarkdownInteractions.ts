@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 
 import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
-import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
+import { NODE_LINK_PREVIEW_SELECTOR, type EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { createClipboardExportFromView, FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
@@ -48,7 +48,7 @@ function resolveElement(target: EventTarget | null) {
   return element instanceof HTMLElement ? element : null;
 }
 
-function clearNodeLinkPreview(editorView: EditorView | null) {
+function clearNodeLinkPreview(editorView: EditorView | null, relatedTarget: EventTarget | null = null) {
   if (!editorView) {
     return;
   }
@@ -57,7 +57,9 @@ function clearNodeLinkPreview(editorView: EditorView | null) {
     return;
   }
   previewKeyByView.delete(editorView);
-  onPreviewNodeLink(null);
+  if (!resolveElement(relatedTarget)?.closest(NODE_LINK_PREVIEW_SELECTOR)) {
+    onPreviewNodeLink(null);
+  }
 }
 
 function buildPreviewRequest(wikiLinkElement: HTMLElement): EditorNodeLinkPreviewRequest | null {
@@ -160,7 +162,7 @@ export const markdownInteractionHandlers = EditorView.domEventHandlers({
     return false;
   },
   mouseleave(event) {
-    clearNodeLinkPreview(resolveEditorView(event.currentTarget));
+    clearNodeLinkPreview(resolveEditorView(event.currentTarget), event.relatedTarget);
     return false;
   },
   mouseout(event) {
@@ -169,7 +171,7 @@ export const markdownInteractionHandlers = EditorView.domEventHandlers({
     if (currentTarget && relatedTarget instanceof Node && currentTarget.contains(relatedTarget)) {
       return false;
     }
-    clearNodeLinkPreview(resolveEditorView(event.currentTarget));
+    clearNodeLinkPreview(resolveEditorView(event.currentTarget), relatedTarget);
     return false;
   },
   copy(event, view) {

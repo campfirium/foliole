@@ -4,29 +4,48 @@ import { AppEmptyState, appFloatingSurfaceClassName } from '../../shared/ui';
 import type { ResolvedNodeLinkPreview } from './useNodeLinkHoverPreview';
 
 interface NodeLinkHoverPreviewPanelProps {
+  onDismiss: () => void;
   preview: ResolvedNodeLinkPreview | null;
 }
 
-function resolvePanelStyle(preview: ResolvedNodeLinkPreview) {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const panelWidth = Math.min(560, Math.max(320, viewportWidth - 24));
-  const panelHeight = Math.min(520, Math.max(220, viewportHeight - 24));
-  const preferredLeft = preview.request.anchorRect.right + 12;
-  const fallbackLeft = preview.request.anchorRect.left - panelWidth - 12;
-  const left =
-    preferredLeft + panelWidth <= viewportWidth - 12
-      ? preferredLeft
-      : Math.max(12, Math.min(fallbackLeft, viewportWidth - panelWidth - 12));
-  const fitsBelow = preview.request.anchorRect.top + panelHeight <= viewportHeight - 12;
-  const top = fitsBelow
-    ? Math.max(12, Math.min(preview.request.anchorRect.top, viewportHeight - panelHeight - 12))
-    : Math.max(12, viewportHeight - panelHeight - 12);
+const PANEL_MARGIN = 12;
+const PANEL_GAP = 12;
+
+function resolvePreviewLayout({ request: { anchorRect: anchor } }: ResolvedNodeLinkPreview) {
+  const rightEdge = window.innerWidth - PANEL_MARGIN;
+  const bottomEdge = window.innerHeight - PANEL_MARGIN;
+  const width = Math.min(560, rightEdge - PANEL_MARGIN);
+  const height = Math.min(520, bottomEdge - PANEL_MARGIN);
+  const right = anchor.right + PANEL_GAP;
+  const left = anchor.left - PANEL_GAP - width;
+  if (right + width <= rightEdge || left >= PANEL_MARGIN) {
+    const placeRight = right + width <= rightEdge;
+    const top = Math.max(PANEL_MARGIN, Math.min(anchor.top, bottomEdge - height));
+    return {
+      panel: { height, left: placeRight ? right : left, top, width },
+      gap: {
+        height: Math.min(anchor.bottom, top + height) - Math.max(anchor.top, top),
+        left: placeRight ? anchor.right : left + width,
+        top: Math.max(anchor.top, top),
+        width: PANEL_GAP
+      }
+    };
+  }
+
+  const below = anchor.bottom + PANEL_GAP;
+  const above = anchor.top - PANEL_GAP;
+  const placeBelow = bottomEdge - below >= Math.min(height, above - PANEL_MARGIN);
+  const availableHeight = placeBelow ? bottomEdge - below : above - PANEL_MARGIN;
+  const panelHeight = Math.min(height, availableHeight);
+  const panelLeft = Math.max(PANEL_MARGIN, Math.min(anchor.left, rightEdge - width));
   return {
-    height: panelHeight,
-    left,
-    top,
-    width: panelWidth
+    panel: { height: panelHeight, left: panelLeft, top: placeBelow ? below : above - panelHeight, width },
+    gap: {
+      height: PANEL_GAP,
+      left: Math.max(anchor.left, panelLeft),
+      top: placeBelow ? anchor.bottom : above,
+      width: Math.min(anchor.right, panelLeft + width) - Math.max(anchor.left, panelLeft)
+    }
   };
 }
 
@@ -58,11 +77,9 @@ function PreviewBody({ preview }: { preview: ResolvedNodeLinkPreview }) {
     );
   }
   return (
-    <article className="h-full overflow-hidden px-4 py-3">
-      <pre className="h-full overflow-auto whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground">
-        {preview.content}
-      </pre>
-    </article>
+    <pre className="px-4 py-3 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground">
+      {preview.content}
+    </pre>
   );
 }
 
@@ -73,14 +90,19 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
     return null;
   }
 
-  const panelStyle = resolvePanelStyle(props.preview);
+  const { panel, gap } = resolvePreviewLayout(props.preview);
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-workspace-overlay">
+    <div
+      className="pointer-events-none fixed inset-0 z-workspace-overlay"
+      data-node-link-preview
+      onMouseLeave={props.onDismiss}
+    >
+      <div aria-hidden="true" className="pointer-events-auto absolute" style={gap} />
       <section
         aria-label={t('desktop.linkPreview.region')}
-        className={appFloatingSurfaceClassName('panel', 'absolute flex flex-col overflow-hidden')}
-        style={panelStyle}
+        className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')}
+        style={panel}
       >
         <header className="border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-muted-bg)] px-4 py-3">
           <div className="truncate text-sm font-semibold text-foreground">{props.preview.title}</div>
@@ -88,7 +110,7 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
             <div className="mt-1 text-xs text-foreground/60">{t('desktop.linkPreview.subtitle')}</div>
           ) : null}
         </header>
-        <div className="min-h-0 flex-1 bg-canvas">
+        <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain bg-canvas [--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]">
           <PreviewBody preview={props.preview} />
         </div>
       </section>

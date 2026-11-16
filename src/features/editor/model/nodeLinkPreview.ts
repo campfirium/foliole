@@ -1,3 +1,5 @@
+export const NODE_LINK_PREVIEW_SELECTOR = '[data-node-link-preview]';
+
 interface EditorNodeLinkPreviewRect {
   bottom: number;
   height: number;
