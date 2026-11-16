@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { FramedSyncSessionExpiredError } from '../../lib/core/sync/framedSyncHttpContract.js';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
   hydrateCompanionSyncGroupAdoptionRun,
@@ -63,9 +64,21 @@ it('keeps receiving while a busy provider round is retried in the foreground', a
   runtime.adopt.mockRejectedValueOnce(new Error('framed_sync_http_400:sync_round_busy'));
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('failed');
   expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving',
-    error: 'sync_receive_failed' });
+    error: 'sync_round_busy' });
   runtime.adopt.mockImplementationOnce(async () => { runtime.adoption = null; });
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('completed');
+});
+
+it('keeps first-time receiving active without an error when its notification session ends', async () => {
+  await hydrateCompanionSyncGroupAdoptionRun();
+  runtime.adopt.mockRejectedValueOnce(new FramedSyncSessionExpiredError());
+  await expect(runCompanionSyncCoordinator(args())).resolves.toBe('pending');
+  expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving', error: null });
+  expect(runtime.flow).not.toHaveBeenCalled();
+
+  runtime.adopt.mockImplementationOnce(async () => { runtime.adoption = null; });
+  await expect(runCompanionSyncCoordinator(args())).resolves.toBe('completed');
+  expect(readCompanionSyncGroupAdoptionRun()).toEqual({ phase: 'none' });
 });
 
 it('starts a scheduled run for a pending adoption even without a saved sync endpoint', async () => {

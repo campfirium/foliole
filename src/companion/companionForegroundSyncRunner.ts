@@ -12,7 +12,7 @@ import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
-export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'pending' | 'skipped';
+export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'pending' | 'session-ended' | 'skipped';
 export type ForegroundSyncReason =
   | 'endpoint-ready' | 'foreground' | 'freshness' | 'mutation' | 'retry';
 export type CompanionSyncContinuationMode = 'full' | 'resources-only';
@@ -156,14 +156,14 @@ function startForegroundSync(
         args.retryAttemptRef.current = 0;
         args.resourceContinuationModeRef.current = 'full';
         clearRetryTimer(args.retryTimerRef);
-      } else if (outcome === 'backlog' || outcome === 'failed' || outcome === 'pending') {
+      } else if (outcome === 'backlog' || outcome === 'failed' || outcome === 'pending' || outcome === 'session-ended') {
         if (!args.isSyncGroupReadyRef.current) {
           args.retryAttemptRef.current = 0;
           args.resourceContinuationModeRef.current = 'full';
           clearRetryTimer(args.retryTimerRef);
           return;
         }
-        retryOutcome = outcome;
+        retryOutcome = outcome === 'session-ended' ? 'pending' : outcome;
         if (outcome === 'backlog') args.setStatus('syncing');
       } else {
         args.retryAttemptRef.current = 0;

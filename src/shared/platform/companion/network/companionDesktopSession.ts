@@ -1,3 +1,4 @@
+import type { FramedSyncSessionExpiredError } from '../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { syncSessionReplySchema, type SyncSessionReply } from '../../../../../lib/platform/syncSessionContract.js';
 import { sameWebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
 import {
@@ -39,6 +40,10 @@ export async function recoverCompanionDesktopRound(peer: string, sessionId: stri
   if (current?.peer !== peer || current.reply.session !== sessionId) return;
   await closeCompanionDesktopSession();
   void wake?.().catch(() => undefined);
+}
+
+export function expireCompanionDesktopRound(peer: string, sessionId: string, reason: FramedSyncSessionExpiredError) {
+  if (current?.peer === peer && current.reply.session === sessionId) detachCompanionDesktopSession(reason);
 }
 
 export function captureCompanionDesktopRound(endpoint: string) {
@@ -138,13 +143,19 @@ async function wait(session: Session) {
 }
 
 export async function closeCompanionDesktopSession() {
+  const previous = detachCompanionDesktopSession(new Error('sync_session_cancelled'));
+  if (!previous) return;
+  await requestCompanionSyncSession(previous.endpoint, { operation: 'close', session: previous.reply.session })
+    .catch(() => undefined);
+}
+
+function detachCompanionDesktopSession(reason: Error) {
   generation += 1;
   clearCompanionWebDavCredentialDelivery();
   const previous = current;
   current = null;
   if (!previous) return;
   previous.active = false;
-  previous.controller.abort(new Error('sync_session_cancelled'));
-  await requestCompanionSyncSession(previous.endpoint, { operation: 'close', session: previous.reply.session })
-    .catch(() => undefined);
+  previous.controller.abort(reason);
+  return previous;
 }

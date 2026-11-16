@@ -1,3 +1,4 @@
+import { FramedSyncSessionExpiredError } from '../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { isSyncPeerRoundRetryableError } from '../../../../../lib/core/sync/runSyncPeerRound';
 import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgroundWork';
@@ -79,6 +80,10 @@ export function runPendingCompanionSyncGroupAdoption() {
         return false;
       }
     } catch (error) {
+      if (error instanceof FramedSyncSessionExpiredError) {
+        active('receiving', { rejection });
+        return false;
+      }
       const code = errorCode(error);
       // Backgrounding pauses; a busy or expired provider round is retried by the scheduler while visible.
       const phase = code.includes('request_sync_foreground_ended') ? 'paused'

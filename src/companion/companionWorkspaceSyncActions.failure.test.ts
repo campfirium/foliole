@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { FramedSyncSessionExpiredError } from '../../lib/core/sync/framedSyncHttpContract.js';
+
 import {
   createActions,
   createSyncResult,
@@ -13,6 +15,15 @@ const workspaceSyncMock = getWorkspaceSyncMock();
 
 describe('companion workspace manual sync failures', () => {
   beforeEach(resetSyncActionMocks);
+
+  it('lets a manual sync end quietly when its session has expired', async () => {
+    const { actions } = createActions();
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new FramedSyncSessionExpiredError());
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
+    expect(workspaceSyncMock.recordCompanionWorkspaceSyncEvent).toHaveBeenLastCalledWith(expect.objectContaining({
+      status: 'skipped', result: 'partial', triggerReason: 'manual'
+    }));
+  });
 
   it('records the real structure apply cause and leaves the manual sync idle', async () => {
     const { actions, callbacks } = createActions();

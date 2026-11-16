@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
+import { FramedSyncSessionExpiredError } from './framedSyncHttpContract.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import type { SyncPeerRoundLease } from './syncPeerRoundOwnership.js';
@@ -55,7 +56,13 @@ export async function withRequestSyncPeerRound<T>(exchange: RequestSyncExchange,
       round.databaseConfirmed = false;
       round.attachmentsConfirmed = false;
       await roundControl(exchange, round.id, { databaseConfirmed, attachmentsConfirmed }, cleanup)
-        .catch(() => round.onUnconfirmedFinish?.());
+        .catch(error => {
+          if (error instanceof FramedSyncSessionExpiredError) {
+            if (finished) throw error;
+            return;
+          }
+          return round.onUnconfirmedFinish?.();
+        });
     }
   }
 }

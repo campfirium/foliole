@@ -131,6 +131,15 @@ final class FolioleFramedSyncHTTPTransportTests: XCTestCase {
         ), "framed_sync_http_400")
     }
 
+    func testSessionExpiryDetailsAreSpecificToConflict() {
+        let expired = Data(#"{"error":"sync_session_expired"}"#.utf8)
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(statusCode: 409, body: expired),
+                       "framed_sync_http_409:sync_session_expired")
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(statusCode: 400, body: expired), "framed_sync_http_400")
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(statusCode: 409,
+            body: Data(#"{"error":"framed_sync_responder_identity_mismatch"}"#.utf8)), "framed_sync_http_409")
+    }
+
     private func peer() -> FolioleFramedSyncHTTPPeer {
         FolioleFramedSyncHTTPPeer(
             groupID: "group-a",

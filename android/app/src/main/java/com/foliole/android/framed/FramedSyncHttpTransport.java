@@ -108,7 +108,7 @@ public final class FramedSyncHttpTransport {
             FramedSyncHttpRequestTiming.send(connection, requestBody, timing);
             int status = FramedSyncHttpRequestTiming.responseCode(connection, timing);
             if (status != 200) {
-                String detail = readSafeErrorDetail(connection.getErrorStream());
+                String detail = readSafeErrorDetail(connection.getErrorStream(), status);
                 throw new IllegalStateException(
                     "framed_sync_http_" + status + (detail == null ? "" : ":" + detail));
             }
@@ -121,7 +121,7 @@ public final class FramedSyncHttpTransport {
         }
     }
 
-    private static String readSafeErrorDetail(InputStream input) {
+    private static String readSafeErrorDetail(InputStream input, int status) {
         if (input == null) return null;
         try (InputStream stream = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[512];
@@ -133,6 +133,7 @@ public final class FramedSyncHttpTransport {
             String prefix = "{\"error\":\"";
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);
+            if (status == 409 && "sync_session_expired".equals(error)) return error;
             if ("sync_round_busy".equals(error) || "sync_round_expired".equals(error) ||
                 SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error) ||
                 "framed_sync_resource_source_unavailable".equals(error) || "node_version_graph_cycle".equals(error)) return error;

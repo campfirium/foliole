@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { FramedSyncSessionExpiredError } from '../../../../../lib/core/sync/framedSyncHttpContract.js';
+
 const runtime = vi.hoisted(() => ({ discover: vi.fn(), request: vi.fn(), group: vi.fn() }));
 vi.mock('../../companionWorkspaceDiscovery', () => ({ discoverCompanionDesktops: runtime.discover }));
 vi.mock('./companionSyncSessionHttp.js', () => ({ requestCompanionSyncSession: runtime.request }));
@@ -8,8 +10,8 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
 }));
 vi.mock('../sync/syncGroupStore', () => ({ loadCompanionSyncGroup: runtime.group }));
 
-import { closeCompanionDesktopSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
-  invalidateCompanionDesktopSession, subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession';
+import { closeCompanionDesktopSession, companionDesktopRoundSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
+  expireCompanionDesktopRound, invalidateCompanionDesktopSession, subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession';
 import { resolveReachableCompanionWorkspaceSyncEndpoints } from './companionWorkspaceEndpoint';
 
 const target = { endpointUrl: 'http://mac:38641', deviceId: 'mac', groupId: 'group',
@@ -51,6 +53,26 @@ it('reopens the desktop session when the authenticated library epoch changes', a
   await connect();
   await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId, { target, libraryEpoch: 'epoch-b' });
   expect(runtime.request.mock.calls.map(([, input]) => input.operation)).toEqual(['open', 'close', 'open']);
+});
+
+it('discards only the session that ended and never closes its replacement', async () => {
+  await connect();
+  const old = companionDesktopRoundSession(target.deviceId)!;
+  const marker = { instance: '00000000-0000-4000-8000-000000000002', sequence: 0 };
+  runtime.request.mockResolvedValue({ session: '00000000-0000-4000-8000-000000000003', marker, changed: false });
+  await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId, { target, libraryEpoch: 'epoch-b' });
+  const replacement = companionDesktopRoundSession(target.deviceId)!;
+  expect(replacement.id).not.toBe(old.id);
+  runtime.request.mockClear();
+
+  const expired = new FramedSyncSessionExpiredError();
+  expireCompanionDesktopRound(target.deviceId, old.id, expired);
+  expect(replacement.signal.aborted).toBe(false);
+  expect(companionDesktopRoundSession(target.deviceId)).toEqual(replacement);
+  expireCompanionDesktopRound(target.deviceId, replacement.id, expired);
+  expect(replacement.signal.reason).toBe(expired);
+  expect(companionDesktopRoundSession(target.deviceId)).toBeUndefined();
+  expect(runtime.request).not.toHaveBeenCalled();
 });
 
 it('keeps independently triggered mobile discovery available with a healthy desktop session', async () => {

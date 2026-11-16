@@ -178,9 +178,11 @@ function configureAttachmentReads(stateRoot: string) {
       return {};
     }
     if (input.action === 'append') {
-      const info = await fs.stat(partial);
-      if (info.size !== input.offset) throw new Error('fixture_attachment_offset_mismatch');
-      await fs.appendFile(partial, Buffer.from(input.base64 ?? '', 'base64'));
+      const file = await fs.open(partial, 'a');
+      try {
+        if ((await file.stat()).size !== input.offset) throw new Error('fixture_attachment_offset_mismatch');
+        await file.writeFile(Buffer.from(input.base64 ?? '', 'base64'));
+      } finally { await file.close(); }
       return {};
     }
     if (input.action === 'hash') return { hash: createHash('sha256').update(await fs.readFile(partial)).digest('hex') };

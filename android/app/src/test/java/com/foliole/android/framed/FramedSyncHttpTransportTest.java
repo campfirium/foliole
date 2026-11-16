@@ -101,9 +101,20 @@ public final class FramedSyncHttpTransportTest {
     }
 
     private static void assertPreservedError(String detail) throws Exception {
+        assertErrorResponse(400, detail, "framed_sync_http_400:" + detail);
+    }
+
+    @Test
+    public void preservesSessionExpiryOnlyForAConflict() throws Exception {
+        assertErrorResponse(409, "sync_session_expired", "framed_sync_http_409:sync_session_expired");
+        assertErrorResponse(400, "sync_session_expired", "framed_sync_http_400");
+        assertErrorResponse(409, "framed_sync_responder_identity_mismatch", "framed_sync_http_409");
+    }
+
+    private static void assertErrorResponse(int status, String detail, String expected) throws Exception {
         AtomicReference<Throwable> failure = new AtomicReference<>();
         try (ServerSocket server = new ServerSocket(0)) {
-            Thread thread = new Thread(() -> serveError(server, failure, detail));
+            Thread thread = new Thread(() -> serveError(server, failure, status, detail));
             thread.start();
             try {
                 FramedSyncHttpTransport.post(new URL("http://127.0.0.1:" +
@@ -111,7 +122,7 @@ public final class FramedSyncHttpTransportTest {
                     "desktop-b", "epoch-b", memberAuth(), writer -> {}, reader -> null);
                 throw new AssertionError("Expected the recoverable response to fail.");
             } catch (IllegalStateException error) {
-                assertEquals("framed_sync_http_400:" + detail, error.getMessage());
+                assertEquals(expected, error.getMessage());
             }
             thread.join(2_000);
             if (failure.get() != null) throw new AssertionError(failure.get());
@@ -163,7 +174,7 @@ public final class FramedSyncHttpTransportTest {
     }
 
     private static void serveError(
-        ServerSocket server, AtomicReference<Throwable> failure, String detail
+        ServerSocket server, AtomicReference<Throwable> failure, int status, String detail
     ) {
         try (Socket socket = server.accept()) {
             BufferedInputStream input = new BufferedInputStream(socket.getInputStream());
@@ -171,7 +182,7 @@ public final class FramedSyncHttpTransportTest {
             for (String value = line(input); !value.isEmpty(); value = line(input)) {}
             readChunked(input);
             byte[] response = ("{\"error\":\"" + detail + "\"}").getBytes(StandardCharsets.UTF_8);
-            String headers = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json" +
+            String headers = "HTTP/1.1 " + status + " Error\r\nContent-Type: application/json" +
                 "\r\nContent-Length: " + response.length + "\r\nConnection: close\r\n\r\n";
             OutputStream output = socket.getOutputStream();
             output.write(headers.getBytes(StandardCharsets.US_ASCII));

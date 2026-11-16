@@ -88,6 +88,7 @@ enum FolioleFramedSyncHTTPTransport {
         guard body.count <= 4 * 1024,
               let object = try? JSONSerialization.jsonObject(with: body) as? [String: String],
               let detail = object["error"] else { return fallback }
+        if statusCode == 409 && detail == "sync_session_expired" { return "\(fallback):\(detail)" }
         if ["sync_round_busy", "sync_round_expired", "framed_sync_source_changed", "framed_sync_difference_request_source_changed",
             "framed_sync_resource_source_unavailable", "node_version_graph_cycle"].contains(detail) { return "\(fallback):\(detail)" }
         for prefix in ["node_version_missing_parents:", "node_version_parent_identity_mismatch:"] where detail.hasPrefix(prefix) {

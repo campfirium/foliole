@@ -4,13 +4,14 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { AttachmentReceivePaused } from '../../../../../../lib/core/sync/attachmentBlockTransfer.js';
 import { attachmentDataYield, onAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { encodeFramedSyncStream, readFramedSyncStream, type FramedSyncStreamBody } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
-import { framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
+import { FRAMED_SYNC_SESSION_EXPIRED, FramedSyncSessionExpiredError, framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { withRequestSyncFiles, type RequestSyncFilePort, type RequestSyncFiles } from '../../../../../../lib/core/sync/requestSyncFiles.js';
 import { requestSyncPeerRoundPath, touchRequestSyncStream, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { requestSyncPerformance } from '../../../../../../lib/core/sync/requestSyncPerformance.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
+import { expireCompanionDesktopRound } from '../../network/companionDesktopSession.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
@@ -64,7 +65,10 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     let yielded = false;
     const stopYield = input.attachmentReceive ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
     try {
-      const response = await operation;
+      const response = await operation.catch(error => {
+        input.signal?.removeEventListener('abort', cancel);
+        return rejectCompanionRequest(input, error);
+      });
       endHttp?.();
       measurement?.add('receivedWireBytes', response.response_byte_length);
       input.signal?.throwIfAborted();
@@ -83,6 +87,18 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
       await cancellation;
     }
   }, input.signal);
+}
+
+function rejectCompanionRequest(input: CompanionRequestSyncHttpInput, error: unknown): never {
+  const sessionId = input.peerRound?.sessionId;
+  if (sessionId && error && typeof error === 'object' && 'message' in error &&
+      error.message === FRAMED_SYNC_SESSION_EXPIRED) {
+    input.signal?.throwIfAborted();
+    const expired = new FramedSyncSessionExpiredError({ cause: error });
+    expireCompanionDesktopRound(input.context.responderDeviceId, sessionId, expired);
+    throw expired;
+  }
+  throw error;
 }
 
 async function prepareHttpRequest(temporary: RequestSyncFiles, input: CompanionRequestSyncHttpInput) {

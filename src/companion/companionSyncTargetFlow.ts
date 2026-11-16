@@ -1,4 +1,5 @@
 import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
+import { FramedSyncSessionExpiredError } from '../../lib/core/sync/framedSyncHttpContract.js';
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
@@ -55,12 +56,14 @@ async function recordRetryableTarget(args: Parameters<typeof recordTargetFailure
   const { endpointUrl, runId, startedAt, syncArgs, syncError, triggerReason } = args;
   syncArgs.setSyncProgress(null);
   syncArgs.setError(null);
+  const sessionEnded = syncError instanceof FramedSyncSessionExpiredError;
+  const message = sessionEnded ? 'Sync will continue.' : formatCompanionSyncDiagnosticMessage(syncError);
   const pending = await writeCompanionSyncActivity({
-    endpointUrl, kind: 'run_finished', message: formatCompanionSyncDiagnosticMessage(syncError), result: 'partial',
+    endpointUrl, kind: 'run_finished', message, result: 'partial',
     runId, startedAt, status: 'skipped', triggerReason
   }, syncArgs.setError);
   if (pending) syncArgs.setState(current => ({ ...current, ...pending }));
-  return 'pending';
+  return sessionEnded ? 'session-ended' : 'pending';
 }
 
 type OwnedTargetArgs = {
@@ -122,7 +125,7 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
       const outcome = await runCompanionWebDavAfterLanFailure(args.syncArgs, runId, args.target.deviceId, syncError);
       if (outcome) return outcome;
     }
-    if (isSyncPeerRoundRetryableError(syncError)) {
+    if (syncError instanceof FramedSyncSessionExpiredError || isSyncPeerRoundRetryableError(syncError)) {
       return recordRetryableTarget({
         endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason
       });

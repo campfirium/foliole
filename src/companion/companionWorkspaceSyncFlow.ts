@@ -154,6 +154,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
 function combineForegroundSyncOutcomes(outcomes: ForegroundAutoSyncOutcome[]) {
   if (outcomes.includes('failed')) return 'failed';
   if (outcomes.includes('pending')) return 'pending';
+  if (outcomes.includes('session-ended')) return 'session-ended';
   if (outcomes.includes('backlog')) return 'backlog';
   if (outcomes.includes('completed')) return 'completed';
   return 'skipped';

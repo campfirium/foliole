@@ -75,6 +75,10 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
         state: { ...args.state, endpoint_url: endpointUrl },
         triggerReason: 'manual'
       });
+      if (outcome === 'session-ended') {
+        args.setManualSyncAction?.(null);
+        return;
+      }
       if (outcome === 'failed' || outcome === 'skipped' || outcome === 'pending') {
         throw new Error(syncFailure ?? 'Manual sync did not complete.');
       }
