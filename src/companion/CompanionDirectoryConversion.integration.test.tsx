@@ -57,9 +57,9 @@ it('converts an existing Dive to a manual virtual directory and back from the mo
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    expect(screen.getByRole('heading', { name: 'Dive', exact: true })).toBeVisible();
+    expect(screen.getByRole('heading', { name: /^Dive$/ })).toBeVisible();
     await convert('Probability', 'Convert to Virtual');
-    expect(screen.queryByRole('heading', { name: 'Dive', exact: true })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Dive$/ })).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Open folder Probability' })).toHaveLength(1);
     await peers.exchange();
     expect(listDives(peers.desktop.db)).toEqual([]);
@@ -70,7 +70,7 @@ it('converts an existing Dive to a manual virtual directory and back from the mo
     expect(isManualVirtualNodeFilter(indexSnapshot.nodesById[dive.id]?.virtualFilter)).toBe(true);
     expect(await loadCompanionVirtualFolderResultIds(indexSnapshot, dive.id)).toEqual(['Primer']);
     await convert('Probability', 'Convert to Dive');
-    expect(screen.getByRole('heading', { name: 'Dive', exact: true })).toBeVisible();
+    expect(screen.getByRole('heading', { name: /^Dive$/ })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Open folder Probability' }));
     expect(screen.getByRole('button', { name: 'Open folder Shelf' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Open topic Primer' })).toBeVisible();
