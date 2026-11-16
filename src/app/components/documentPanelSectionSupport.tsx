@@ -1,12 +1,15 @@
 import { useRef, useState } from 'react';
 
+import { isNodeTitleTruncated } from '../../../lib/core/nodes/nodeTitleBudget';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSearchDecorations, EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
-import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
+import { readInternalLinkNodeId, resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
+import { showNodeTextLimitNotice } from '../../shared/ui/nodeTextSaveBudget';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { DocumentPanelDocumentStatusContent } from './DocumentPanelDocumentStatusContent';
 import { DocumentPanelLoadingContent } from './DocumentPanelLoadingContent';
@@ -22,9 +25,41 @@ export function buildResolvedDocumentPanelProps(props: DocumentPanelSectionProps
   };
 }
 
+function useOpenNodeLink(onSelectNode: DocumentPanelSectionProps['onSelectNode']) {
+  const pendingTitle = useRef<string | null>(null);
+
+  return async (rawTitle: string) => {
+    const title = rawTitle.trim();
+    const titleKey = title.toLocaleLowerCase();
+    if (!title || pendingTitle.current === titleKey) return;
+    const state = useWorkspaceStore.getState();
+    const targetNodeId = resolveInternalLinkTargetId({ ...state, title });
+    if (targetNodeId) {
+      onSelectNode(targetNodeId);
+      return;
+    }
+    if (readInternalLinkNodeId(title) || pendingTitle.current) return;
+    if (isNodeTitleTruncated(title)) {
+      showNodeTextLimitNotice();
+      return;
+    }
+
+    pendingTitle.current = titleKey;
+    try {
+      const createdNodeId = await state.createRootNode('', 'topic', { activate: false, title });
+      if (createdNodeId && useWorkspaceStore.getState().activeNodeId === state.activeNodeId) {
+        onSelectNode(createdNodeId);
+      }
+    } finally {
+      pendingTitle.current = null;
+    }
+  };
+}
+
 export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
   const editorAdapterRef = useRef<EditorAdapter | null>(null);
   const [editorAdapter, setEditorAdapter] = useState<EditorAdapter | null>(null);
+  const handleOpenNodeLink = useOpenNodeLink(props.onSelectNode);
 
   const handleEditorReady = (adapter: EditorAdapter | null) => {
     editorAdapterRef.current = adapter;
@@ -38,17 +73,7 @@ export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
     handleOpenExternalLink: (request: ExternalLinkOpenRequest) => {
       props.onOpenExternalLink?.(request);
     },
-    handleOpenNodeLink: (title: string) => {
-      const targetNodeId = resolveInternalLinkTargetId({
-        title,
-        nodeOrder: props.nodeOrder,
-        nodesById: props.nodesById,
-        trashedNodeIds: props.trashedNodeIds
-      });
-      if (targetNodeId) {
-        props.onSelectNode(targetNodeId);
-      }
-    },
+    handleOpenNodeLink,
     handlePreviewDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => {
       if (targetViewportMode === 'center' && editorAdapterRef.current?.revealSelectionCentered) {
         editorAdapterRef.current.revealSelectionCentered(selection, { preserveFocus: true });

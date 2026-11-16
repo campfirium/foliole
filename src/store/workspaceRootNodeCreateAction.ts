@@ -54,12 +54,11 @@ function createRootNodeRecord(args: {
   priority?: number | null;
   state: WorkspaceState;
   timestamp: string;
+  title?: string;
 }) {
-  const untitledState = resolveCreatedNodeTitleState(
-    deriveNodeTitleFromContent(args.content),
-    args.parentNodeId,
-    args.state
-  );
+  const untitledState = args.title
+    ? { title: args.title, untitledSequenceByParent: args.state.untitledSequenceByParent }
+    : resolveCreatedNodeTitleState(deriveNodeTitleFromContent(args.content), args.parentNodeId, args.state);
   const reviewProfiles = args.kind === 'item'
     ? createNewItemReviewProfiles({ batchSize: 1, nodesById: args.state.nodesById, now: args.timestamp })
     : [];
@@ -71,6 +70,7 @@ function createRootNodeRecord(args: {
       ? { priority: args.priority === null ? null : normalizePushQueuePriority(args.priority) }
       : {}),
     title: untitledState.title,
+    ...(args.title ? { isTitleManual: true } : {}),
     hasContent: args.content.trim().length > 0,
     content: args.content,
     anchorLink: null,
@@ -84,6 +84,7 @@ function createRootNodeRecord(args: {
 }
 
 async function persistRootNodeCreation(args: {
+  activate: boolean;
   createdNode: WorkspaceNode;
   get?: () => WorkspaceState;
   handlers: RuntimeSyncHandlers;
@@ -93,7 +94,7 @@ async function persistRootNodeCreation(args: {
 }) {
   markNodeCreatePending(args.nodeId);
   const result = await args.handlers.syncNodeCreation(
-    args.createdNode, args.nodeId
+    args.createdNode, args.activate ? args.nodeId : undefined
   );
   const succeeded = didRuntimeConfirmNodeCreation(result, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
   if (result && succeeded) args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
@@ -122,7 +123,8 @@ function prepareRootNodeCreation(args: {
   const parentNodeId = resolveRootCreationParentId(args.kind, args.state);
   const created = createRootNodeRecord({
     content: args.content, kind: args.kind, nodeId: args.nodeId, parentNodeId,
-    ...resolveCreationPriority(args.options), state: args.state, timestamp: args.timestamp
+    ...resolveCreationPriority(args.options), state: args.state, timestamp: args.timestamp,
+    ...(args.options?.title ? { title: args.options.title } : {})
   });
   if (args.options?.newImageReferences?.length) created.node.pendingImageReferences = args.options.newImageReferences;
   const nodeOrder = parentNodeId === INBOX_NODE_ID
@@ -168,6 +170,7 @@ export function createRootNodeAction(
     if (createdNode && nextNodeOrder) {
       const nodeForPersist = createdNode as WorkspaceNode;
       const succeeded = await persistRootNodeCreation({
+        activate: options?.activate !== false,
         createdNode: nodeForPersist,
         ...(get ? { get } : {}),
         handlers,

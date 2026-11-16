@@ -95,7 +95,7 @@ export interface WorkspaceState {
   restoreNode: (nodeId: string) => Promise<string | null>;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
-  createRootNode: (content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
+  createRootNode: (content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions & { title?: string }) => Promise<string | null>;
   createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind, options?: WorkspaceNodeCreationOptions) => Promise<string | null>;
   createVirtualNode: (options?: { mode?: 'manual' | 'saved-search'; parentNodeId?: string }) => Promise<string | null>;
   createHighlightNodeFromSelection: (parentNodeId: string, content: string, anchorId?: string, anchorLink?: NodeAnchorLink, imageRegions?: NodeImageRegionGroup[] | null) => Promise<string | null>;

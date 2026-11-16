@@ -59,13 +59,17 @@ export function collectWikiLinkMatches(content: string): WikiLinkMatch[] {
   return matches;
 }
 
+export function readInternalLinkNodeId(title: string) {
+  return /^node-id:([a-z0-9:-]+)$/iu.exec(title.trim())?.[1];
+}
+
 export function resolveInternalLinkTargetId(args: {
   title: string;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
-  const target = /^node-id:([a-z0-9:-]+)$/iu.exec(args.title.trim())?.[1];
+  const target = readInternalLinkNodeId(args.title);
   if (target) return args.nodesById[target] && !args.trashedNodeIds.includes(target) ? target : null;
   const normalizedTitle = normalizeTitle(args.title);
   if (!normalizedTitle) {

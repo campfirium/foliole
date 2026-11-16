@@ -27,6 +27,8 @@ SuperMemo batch preview and import are available in desktop **Settings → Gener
 
 Aide history shows material links for desktop conversation navigation. The linked material titles and IDs are included in Aide turn context. A linked material open at send time becomes the active material. Aide reads bodies through existing material permissions. Agent Control has no conversation-link routes.
 
+Clicking an unresolved title-based wiki link in the desktop editor creates and opens a Topic in Inbox. This is an editor interaction. Agent Control clients can create the same Topic with its title and the Inbox parent ID.
+
 Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.
 
 Markdown image preview and drag resizing are editor interactions. A saved width is part of the material Markdown returned by a full material read.
