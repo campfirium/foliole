@@ -11,6 +11,7 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import type { WorkspaceActionHistoryState } from './workspaceActionHistory';
 import type { WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
+import type { WorkspaceDeleteContinuation } from './workspaceDeleteContinuation';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
 
 export interface WorkspaceState {
@@ -89,9 +90,9 @@ export interface WorkspaceState {
   revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
   dismissReviewTopic: (now?: string) => Promise<boolean>;
   exitReviewSession: () => void;
-  deleteNode: (nodeId: string) => void;
+  deleteNode: (nodeId: string, continuation?: WorkspaceDeleteContinuation) => void;
   deleteImageClozeRegion: (parentNodeId: string, attachmentId: string, regionId: string) => void;
-  deleteNodes: (nodeIds: string[]) => void;
+  deleteNodes: (nodeIds: string[], continuation?: WorkspaceDeleteContinuation) => void;
   restoreNode: (nodeId: string) => Promise<string | null>;
   deleteNodePermanently: (nodeId: string) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;

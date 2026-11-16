@@ -80,7 +80,7 @@ export function createWorkspaceTrashActions(
 
   return {
     deleteImageClozeRegion: createDeleteImageClozeRegionAction(set, runtimeHandlers, get),
-    deleteNode: (nodeId) => deleteNodes([nodeId]),
+    deleteNode: (nodeId, continuation) => deleteNodes([nodeId], continuation),
     deleteNodes,
     restoreNode: createRestoreNodeAction(set, runtimeHandlers),
     deleteNodePermanently: (nodeId) => deleteNodesPermanently([nodeId]),

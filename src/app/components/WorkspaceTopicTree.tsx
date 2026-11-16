@@ -8,6 +8,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useDismissedTopicVisibility } from '../../shared/platform/runtime/useDismissedTopicVisibility';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useWorkspaceTopicDeleteContext } from './useWorkspaceTopicDeleteContext';
 import { useWorkspaceTopicTreeContentSort } from './useWorkspaceTopicTreeContentSort';
 import {
   type CreateTopicTreeNode,
@@ -34,6 +35,7 @@ export interface WorkspaceTopicTreeProps {
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
   creationParentNodeId?: string;
+  continueAfterDelete?: boolean;
   emptyState?: { description: string; title: string };
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
@@ -149,6 +151,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
   const { scrollContainerRef, t, treeData } = useWorkspaceTopicTreeContext(props);
   const { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility } = treeData;
   const { collapsedNodeIds, collapsibleNodeIds, rows: visibleRows, searchQuery, setCollapsedNodeIds, setSearchQuery } = lazyModel;
+  useWorkspaceTopicDeleteContext(Boolean(props.continueAfterDelete), props.activeFolderId, props.activeNodeId, visibleRows);
   const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
     activeNodeId: props.activeNodeId,
     nodeViewState: props.activeNodeId ? nodeViewById[props.activeNodeId] : undefined,

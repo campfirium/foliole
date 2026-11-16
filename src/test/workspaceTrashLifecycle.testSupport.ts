@@ -38,18 +38,22 @@ vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({
 vi.mock('../../electron/ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../../electron/foliolePublish/foliolePublishManagement.js', () => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
 
-export function createTrashLifecycleHarness(application = false, subtree = false, persistedTrash = false) {
+type Seed = [id: string, parent: string | null, kind?: 'folder' | 'topic' | 'item'];
+
+export function createTrashLifecycleHarness(
+  application = false, subtree = false, persistedTrash = false, extraSeeds: Seed[] = []
+) {
   const directory = mkdtempSync(path.join(tmpdir(), 'foliole-trash-lifecycle-'));
   appDataDir = directory;
   initializeDatabase();
   const { driver, dbPath: file } = openDatabaseConnection();
   driver.execute("INSERT OR REPLACE INTO settings VALUES ('host_name', ?, ?)", ['"trash-lifecycle"', now]);
   bindParentOrderWriter(driver, { deviceAnchor: 'trash-lifecycle', libraryPath: file });
-  const seeds: Array<[string, string | null]> = [['deleted', null], ['source', null], ['target', null]];
+  const seeds: Seed[] = [['deleted', null], ['source', null], ['target', null]];
   if (subtree) seeds.push(['child', 'deleted']);
-  for (const [id, parent] of seeds) driver.execute(`INSERT INTO nodes
+  for (const [id, parent, kind = 'folder'] of [...seeds, ...extraSeeds]) driver.execute(`INSERT INTO nodes
     (id, parent_id, kind, title, content, created_at, updated_at, deleted_at)
-    VALUES (?, ?, 'folder', ?, '', ?, ?, ?)`, [id, parent, id, now, now,
+    VALUES (?, ?, ?, ?, '', ?, ?, ?)`, [id, parent, kind, id, now, now,
     persistedTrash && id === 'deleted' ? now : null]);
   const snapshot = loadWorkspaceSnapshot(driver)!;
   let state: WorkspaceState = { ...useWorkspaceStore.getState(), ...createInitialWorkspaceState(),

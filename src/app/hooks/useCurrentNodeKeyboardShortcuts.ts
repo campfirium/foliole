@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
+import { requestNodeListDelete } from '../../features/nodes/components/nodeListDeleteAction';
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
-import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
@@ -146,7 +146,15 @@ function useCurrentNodeDeleteShortcut(
         return;
       }
       event.preventDefault();
-      requestFoliolePublishedDelete({ nodeIds: [nodeId], onAllowed: () => args.ws.deleteNode(nodeId) });
+      requestNodeListDelete({
+        continueInItemColumn: true,
+        deleteNodes: (_nodeIds, continuation) => {
+          if (continuation) args.ws.deleteNode(nodeId, continuation);
+          else args.ws.deleteNode(nodeId);
+        },
+        nodeIds: [nodeId],
+        visibleNodeIds: [nodeId]
+      });
     });
   }, [args.ws, blocked, isEditing]);
 }

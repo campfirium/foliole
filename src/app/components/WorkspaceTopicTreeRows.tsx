@@ -148,6 +148,7 @@ function useWorkspaceTopicTreeKeydown(props: WorkspaceTopicTreeRowsProps) {
           const nodeIds = props.selectedNodeIds.includes(nodeId) ? props.selectedNodeIds : [nodeId];
           event.preventDefault();
           requestNodeListDelete({
+            continueInItemColumn: true,
             deleteNodes: props.onDeleteNodes,
             nodeIds,
             visibleNodeIds: props.rows.map((row) => row.node.id)

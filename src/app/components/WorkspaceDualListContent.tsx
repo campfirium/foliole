@@ -105,6 +105,7 @@ function renderStandardContentColumn(
       activeFolderId={topicRootId}
       activeNodeId={props.activeNodeId}
       childrenByParent={dualListState.topicChildrenByParent}
+      continueAfterDelete={!props.isStudyMode}
       creationParentNodeId={topicRootId === HOME_NODE_ID ? INBOX_NODE_ID : topicRootId}
       forceVisibleNodeId={props.isStudyMode ? props.reviewCurrentNodeId : null}
       itemIds={dualListState.topicNodeOrder}

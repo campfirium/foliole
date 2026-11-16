@@ -217,6 +217,7 @@ function buildNodeListContextMenuProps(
     },
     onDeleteNode: () => {
       requestNodeListDelete({
+        continueInItemColumn: props.createMenuSurface === 'topics' || props.createMenuSurface === 'virtual-topics',
         deleteNodes: props.deleteNodes,
         nodeIds: menuState.contextTargets,
         visibleNodeIds: props.state.noteRowIds

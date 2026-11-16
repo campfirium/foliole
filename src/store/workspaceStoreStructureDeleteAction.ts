@@ -9,9 +9,13 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { settleApplicationAction } from './workspaceApplicationActionAdmission';
+import {
+  applyWorkspaceDeleteContinuation, captureSettledDeleteContext, type WorkspaceDeleteContinuation
+} from './workspaceDeleteContinuation';
 import { createWorkspaceDeleteHistoryEntry, type WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import type { WorkspaceState } from './workspaceStore';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
 import { commitSoftDeleteMutation, createTrashParentUpdates, type TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
 
@@ -83,6 +87,7 @@ function createDeleteEntry(snapshot: WorkspaceState, mutation: DeleteNodeMutatio
 }
 
 async function deleteWithWorkspaceHistory(args: {
+  continuation: WorkspaceDeleteContinuation | undefined;
   get: () => WorkspaceState;
   nodeIds: string[];
   runtimeHandlers: TrashRuntimeHandlers;
@@ -98,19 +103,23 @@ async function deleteWithWorkspaceHistory(args: {
   acceptWorkspaceHistoryCommand(args.set, 'workspace', (state) => ({
     appActionHistory: beginWorkspaceAction(state.appActionHistory, entry)
   }));
-  let result: Awaited<ReturnType<typeof commitWorkspaceDelete>>;
-  try {
-    result = await commitWorkspaceDelete(args.runtimeHandlers, mutation);
-  } catch {
-    result = { status: 'failed' };
-  }
+  const result = await commitWorkspaceDelete(args.runtimeHandlers, mutation);
   let committed = false;
   let undoRequested = false;
+  let openedId: string | null = null;
+  const settleContinuation = (state: WorkspaceState, current: DeleteNodeMutationResult) => {
+    const patch = applyWorkspaceDeleteContinuation(state, current, args.continuation);
+    if (patch === current.patch) return { patch, historyEntry: entry };
+    const id = patch.activeNodeId;
+    if (id && state.nodesById[id]?.kind !== 'folder') openedId = id;
+    return { patch, historyEntry: captureSettledDeleteContext(entry, state, patch) };
+  };
   args.set((state) => {
     if (state.appActionHistory.application && result.status === 'applied') {
       committed = true;
       const exact = computeDeleteNodesMutation(state, result.deletedNodeIds, mutation.deletedAt, 'receipt');
-      return { ...(exact?.patch ?? {}), ...settleApplicationAction(state, entry.id, entry) };
+      const settled = exact ? settleContinuation(state, exact) : null;
+      return { ...(settled?.patch ?? {}), ...settleApplicationAction(state, entry.id, settled?.historyEntry ?? entry) };
     }
     const pendingMatches = state.appActionHistory.pendingAction?.entry.id === entry.id;
     if (!pendingMatches || result.status === 'invalid') {
@@ -123,15 +132,17 @@ async function deleteWithWorkspaceHistory(args: {
     if (!currentMutation || !isExactNodeSet(mutation.nodeIds, currentMutation.nodeIds)) {
       return { appActionHistory: createEmptyWorkspaceActionHistory() };
     }
-    const settled = settleWorkspaceAction(state.appActionHistory, entry.id);
+    const { patch, historyEntry } = settleContinuation(state, currentMutation);
+    const settled = settleWorkspaceAction(state.appActionHistory, entry.id, historyEntry);
     committed = true;
     undoRequested = settled.undoRequested;
-    return { ...currentMutation.patch, appActionHistory: settled.history };
+    return { ...patch, appActionHistory: settled.history };
   });
   if (!committed) {
     showAppRuntimeNotice(translate(getStoredAppLocale(), 'desktop.feedback.moveToTrashFailed'), 'error');
     return;
   }
+  if (openedId) void persistNodeOpened(args.set, openedId, new Date().toISOString());
   showTrashUndoNotice(entry, args.get);
   if (undoRequested) args.get().undoWorkspaceAction(entry.id);
 }
@@ -159,8 +170,8 @@ export function createDeleteNodesAction(
   runtimeHandlers: TrashRuntimeHandlers,
   get?: () => WorkspaceState
 ): WorkspaceState['deleteNodes'] {
-  return async (nodeIds) => {
-    if (get) await deleteWithWorkspaceHistory({ get, nodeIds, runtimeHandlers, set });
+  return async (nodeIds, continuation) => {
+    if (get) await deleteWithWorkspaceHistory({ continuation, get, nodeIds, runtimeHandlers, set });
     else await deleteWithoutWorkspaceHistory(set, runtimeHandlers, nodeIds);
   };
 }

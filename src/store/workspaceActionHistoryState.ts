@@ -49,12 +49,14 @@ export function failWorkspaceAction(history: WorkspaceActionHistoryState, entryI
   return next.application ? removeWorkspaceApplication(next, entryId) : next;
 }
 
-export function settleWorkspaceAction(history: WorkspaceActionHistoryState, entryId: string) {
+export function settleWorkspaceAction(
+  history: WorkspaceActionHistoryState, entryId: string, entry?: WorkspaceActionHistoryEntry
+) {
   const pending = history.pendingAction;
   if (!pending || pending.entry.id !== entryId) return { history, undoRequested: false };
   return {
     history: history.application && !history.application.undo.some(value => value.id === entryId)
-      ? { ...history, pendingAction: null } : pushWorkspaceUndoEntry({ ...history, pendingAction: null }, pending.entry),
+      ? { ...history, pendingAction: null } : pushWorkspaceUndoEntry({ ...history, pendingAction: null }, entry ?? pending.entry),
     undoRequested: pending.undoRequested
   };
 }
