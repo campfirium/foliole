@@ -17,8 +17,11 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { groupKey, record, state, syncServer, type Peer } from './requestSyncDatabaseHttp.testSupport.js';
+import { observeSavepointBridge } from './requestSyncSavepointBridge.testSupport.js';
 
-it.each(['push', 'pull'] as const)('commits objects before and after an oversized body and leaves only that object pending (%s)', async direction => {
+it.each([
+  ['push', false], ['pull', false], ['pull', true]
+] as const)('commits objects before and after an oversized body (%s, control failure %s)', async (direction, failHandoff) => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source');
   const target = fixture.peer('target');
@@ -26,6 +29,7 @@ it.each(['push', 'pull'] as const)('commits objects before and after an oversize
   const receiver = direction === 'push' ? target : source;
   const server = syncServer(source, target);
   const rejected: string[] = [];
+  const bridge = observeSavepointBridge(receiver, failHandoff);
   try {
     const body = textBranch('b-v1', 'x'.repeat(1_048_577));
     const oversized = { ...body, object_id: 'b', snapshot: { ...body.snapshot, id: 'b' } };
@@ -33,20 +37,18 @@ it.each(['push', 'pull'] as const)('commits objects before and after an oversize
     dependent.snapshot.parent_id = 'b';
     await applyConvergentSyncNodesWithDbPort(sender.db, [record('a', 'a-v1'),
       oversized, record('c', 'c-v1'), dependent]);
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('missing_address');
-    const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-      initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
-      responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
-    const exchange = createDesktopRequestSyncExchange({ context, groupKey,
-      groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
-    const run = () => runRequestSyncDatabaseRound({
-      exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
-      transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
-      reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
-    });
+    const run = await startSyncRound(server, source, target, rejected);
+    if (failHandoff) {
+      await expect(run()).rejects.toThrow('request_sync_object_savepoint_failed');
+      expect(bridge.controls).toEqual([['SAVEPOINT'], ['RELEASE', 'SAVEPOINT']]);
+      expect(bridge.applied).not.toHaveBeenCalled();
+      receiver.reopen();
+      expect(await receiver.db.query('SELECT id FROM nodes')).toEqual([]);
+      expect(await receiver.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
+      bridge.controls.length = 0;
+    }
     expect(await run()).toMatchObject({ complete: false, pending: 2, transferred: 2, onlyRejectedObjectsPending: true });
+    expect(bridge.controls).toEqual([['SAVEPOINT'], ['RELEASE', 'SAVEPOINT'], ['RELEASE']]);
     expect(rejected).toEqual(['b:prepare:request_sync_body_too_large']);
     receiver.reopen();
     expect(await receiver.db.query("SELECT id, current_version_id FROM nodes WHERE id IN ('a', 'b', 'c', 'd') ORDER BY id"))
@@ -60,6 +62,7 @@ it.each(['push', 'pull'] as const)('commits objects before and after an oversize
     expect(await receiver.db.query("SELECT parent_id FROM nodes WHERE id = 'd'")).toEqual([{ parent_id: 'b' }]);
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
+    bridge.restore();
     await fixture.close();
   }
 });
@@ -75,6 +78,7 @@ it.each([
   const receiver = direction === 'push' ? target : source;
   const server = syncServer(source, target);
   const rejected: string[] = [];
+  let bridge: ReturnType<typeof observeSavepointBridge> | undefined;
   try {
     const dependent = record('aa', 'aa-v1');
     dependent.snapshot.parent_id = 'b';
@@ -83,25 +87,17 @@ it.each([
       record('c', 'c-v1'), dependent, ...(earlier ? [earlier] : [])]);
     if (withHistory) await seedStoredHead(sender, receiver);
     const observation = observeRejectedWrite(receiver, fault);
-    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('missing_address');
-    const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-      initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
-      responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
-    const exchange = createDesktopRequestSyncExchange({ context, groupKey,
-      groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
-    const run = () => runRequestSyncDatabaseRound({
-      exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
-      transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
-      reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
-    });
+    if (fault === 'object') bridge = observeSavepointBridge(receiver);
+    const run = await startSyncRound(server, source, target, rejected);
     if (fault !== 'object') {
       await assertFailedWriteTransaction(receiver, run, observation, fault);
       return;
     }
     expect(await run()).toMatchObject({ complete: false, pending: withHistory ? 3 : 2, transferred: withHistory ? 3 : 2, onlyRejectedObjectsPending: true });
     expect(rejected).toEqual(['b:apply:sync_node_apply_blocked:b']);
+    expect(bridge?.controls).toContainEqual(['RELEASE', 'SAVEPOINT']);
+    expect(bridge?.controls).toContainEqual(['ROLLBACK']);
+    expect(bridge?.applied.mock.calls.map(([object]) => object.globalId)).not.toContain('b');
     receiver.reopen();
     expect(await receiver.db.query("SELECT id FROM nodes WHERE id IN ('a','aa','b','c') ORDER BY id"))
       .toEqual([{ id: 'a' }, { id: 'c' }]);
@@ -121,9 +117,54 @@ it.each([
     if (withHistory) expect(loadDesktopReadingResume(createBetterSqlite3Driver(receiver.sqlite), 'b')?.offset).toBe(2);
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
+    bridge?.restore();
     await fixture.close();
   }
 });
+
+it('uses one fewer bridge call per adjacent success across a 200-object HTTP transfer', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  const target = fixture.peer('target');
+  const server = syncServer(source, target);
+  const bridge = observeSavepointBridge(target);
+  const nodes = Array.from({ length: 200 }, (_, index) => record(`node-${index}`, `version-${index}`));
+  try {
+    await applyConvergentSyncNodesWithDbPort(source.db, nodes);
+    const run = await startSyncRound(server, source, target, []);
+    expect(await run()).toMatchObject({ complete: true, pending: 0, transferred: nodes.length });
+    const starts = bridge.controls.filter(operations => operations.length === 1 && operations[0] === 'SAVEPOINT');
+    const handoffs = bridge.controls.filter(operations => operations.length === 2);
+    expect(starts.length).toBeGreaterThan(0);
+    expect(handoffs.length).toBeGreaterThan(0);
+    expect(starts.length + handoffs.length).toBe(nodes.length);
+    expect(bridge.controls).toHaveLength(nodes.length + starts.length);
+    expect(bridge.applied).toHaveBeenCalledTimes(nodes.length);
+    target.reopen();
+    expect(await target.db.query('SELECT count(*) AS count FROM nodes')).toEqual([{ count: nodes.length }]);
+    expect(await target.db.query('SELECT count(*) AS count FROM node_sync_versions')).toEqual([{ count: nodes.length }]);
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    bridge.restore();
+    await fixture.close();
+  }
+});
+
+async function startSyncRound(server: ReturnType<typeof syncServer>, source: Peer, target: Peer, rejected: string[]) {
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('missing_address');
+  const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
+    responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
+  const exchange = createDesktopRequestSyncExchange({ context, groupKey,
+    groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
+  return () => runRequestSyncDatabaseRound({
+    exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
+    transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
+    reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
+  });
+}
 
 async function seedStoredHead(sender: Peer, receiver: Peer) {
   const held = record('held', 'held-v1');

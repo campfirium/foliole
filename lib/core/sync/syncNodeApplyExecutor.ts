@@ -37,7 +37,10 @@ export interface ApplySyncNodesWithDbPortOptions {
   includeAlreadyApplied?: boolean;
   operation?: SyncNodeApplyOperation;
   visibilityPruning?: DeferredVisibilityPruning;
-  isolateNodeWrites?: (tx: DbPort, nodeId: string, write: () => Promise<void>) => Promise<boolean>;
+  isolateNodeWrites?: {
+    write(tx: DbPort, nodeId: string, write: () => Promise<void>): Promise<boolean>;
+    finish(tx: DbPort): Promise<void>;
+  };
   attachmentOnlyNodeIds?: Iterable<string>;
   resolveNodeConflicts?: (tx: DbPort, conflicts: readonly SyncNodeRecordMetadata[]) => Promise<void>;
 }
@@ -154,7 +157,7 @@ async function applyPreparedNodeGroups<M extends SyncNodeRecordMetadata>(tx: DbP
   const versions = byNode(history);
   for (const id of new Set([...projections.keys(), ...versions.keys(), ...options.attachmentOnlyNodeIds ?? []])) {
     const target = emptyNodeApplyResult<M>();
-    const success = await isolate(tx, id, async () => {
+    const success = await isolate.write(tx, id, async () => {
       await write(projections.get(id) ?? [], versions.get(id) ?? [], target);
       if (target.blockedIds.length) throw new Error(`sync_node_apply_blocked:${id}`);
       if (target.conflictNodes.length) await options.resolveNodeConflicts?.(tx, target.conflictNodes);
@@ -168,4 +171,5 @@ async function applyPreparedNodeGroups<M extends SyncNodeRecordMetadata>(tx: DbP
     result.anchorRepairRecords.push(...target.anchorRepairRecords);
     result.unmappedAnchorRecords.push(...target.unmappedAnchorRecords);
   }
+  await isolate.finish(tx);
 }

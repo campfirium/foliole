@@ -12,7 +12,7 @@ import {
   type RequestSyncDatabaseHost
 } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
-import { isolateRequestSyncObjectWrite } from './requestSyncObjectWriteIsolation.js';
+import { createRequestSyncObjectWriteIsolation } from './requestSyncObjectWriteIsolation.js';
 import { hasLearningRowsToCheck, pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 export type StagedRequestSyncObject = { header: RequestSyncObjectHeader; files: RequestSyncFiles };
@@ -59,10 +59,11 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
     const nodeResults = await applyRequestSyncNodeBatch(tx, nodes);
     nodes.forEach((objectInput, index) => applied.set(objectInput, nodeResults[index]!));
   }
+  const isolation = createRequestSyncObjectWriteIsolation();
   for (const objectInput of inputs) {
     if (objectInput.objectType === 'node') continue;
     const visibilityPruning = { requested: false };
-    const result = await isolateRequestSyncObjectWrite(tx, () => applyRequestSyncObject(tx, {
+    const result = await isolation.write(tx, () => applyRequestSyncObject(tx, {
       ...objectInput, batch, visibilityPruning
     }));
     if (result.ok) {
@@ -72,6 +73,7 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
       applied.set(objectInput, { workspaceScope: { kind: 'nodes', nodeIds: [] }, error: result.error });
     }
   }
+  await isolation.finish(tx);
   const results = inputs.map(objectInput => applied.get(objectInput)!);
   const firstAccepted = inputs.find(objectInput => !applied.get(objectInput)!.error);
   if (firstAccepted) await recordRequestSyncInbound(tx, firstAccepted.context, firstAccepted.requestId);
