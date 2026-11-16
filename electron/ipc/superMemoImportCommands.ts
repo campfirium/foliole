@@ -55,7 +55,7 @@ async function finishSuperMemoImport(input: Parameters<typeof runSuperMemoImport
   previewSignature?: string, updateSignature?: string) {
   const { elements, preview } = input;
   if (!write) {
-    const update = updateSuperMemoDirectories(elements, preview);
+    const update = updateSuperMemoDirectories(elements, preview, undefined, undefined, input);
     return update ? { ...preview, directoryUpdate: update } : preview;
   }
   if (!updateSignature) return runSuperMemoImport(input);

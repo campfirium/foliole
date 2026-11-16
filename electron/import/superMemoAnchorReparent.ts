@@ -34,7 +34,7 @@ function readSimpleAnchor(raw: string) {
   }
 }
 
-export function createSuperMemoAnchorReparentPlanner(driver: DatabaseDriver) {
+export function createSuperMemoAnchorReparentPlanner(driver: DatabaseDriver, pendingBodies?: ReadonlyMap<string, string>) {
   const documents = new Map<string, ReturnType<typeof loadWorkspaceNodeDocument>>();
   const parentTexts = new Map<string, ReturnType<typeof prepareSuperMemoParentText>>();
   function load(id: string) {
@@ -48,18 +48,19 @@ export function createSuperMemoAnchorReparentPlanner(driver: DatabaseDriver) {
     if (!('from' in locator) || typeof locator.from !== 'number' ||
         typeof locator.to !== 'number' || typeof locator.originalText !== 'string' || !locator.originalText.trim()) return null;
     const before = load(previousParent);
-    const after = load(nextParent);
-    if (before?.kind !== 'topic' || after?.kind !== 'topic' ||
+    const pending = pendingBodies?.get(nextParent);
+    const after = pending === undefined ? load(nextParent) : null;
+    if (before?.kind !== 'topic' || (pending === undefined && after?.kind !== 'topic') ||
         before.content.slice(locator.from, locator.to) !== locator.originalText) return null;
     let parentText = parentTexts.get(nextParent);
     if (!parentText) {
-      parentText = prepareSuperMemoParentText(after.content);
+      parentText = prepareSuperMemoParentText(pending ?? after!.content);
       parentTexts.set(nextParent, parentText);
     }
     const nextLocator = findUniqueAnchorText(parentText, locator.originalText);
     if (!nextLocator) return null;
-    const clean = driver.queryOne('SELECT id FROM nodes WHERE id = ? AND sync_dirty = 0', [nextParent]);
+    const clean = after && driver.queryOne('SELECT id FROM nodes WHERE id = ? AND sync_dirty = 0', [nextParent]);
     return { link: { id: link.id, kind: link.kind, locator: nextLocator },
-      sourceVersionId: clean ? after.currentVersionId : null };
+      sourceVersionId: clean ? after?.currentVersionId ?? null : null };
   };
 }

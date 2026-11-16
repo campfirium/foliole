@@ -67,37 +67,40 @@ test('shows and confirms a missing parent and its existing child as one update',
   expect(placed).toBe('Missing parent');
 });
 
-test('confirms a corrected parent and links the existing highlight to its passage', async ({ desktopWindow, desktopApp }, testInfo) => {
-  const selection = 'The selected sentence.';
-  const newBody = 'Different introduction. ' + selection;
-  const xml = `<SuperMemoCollection><Count>3</Count>
-    <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Previous parent</Title>
-    <Content><Question>${selection}</Question></Content></SuperMemoElement>
-    <SuperMemoElement><ID>2</ID><Type>Topic</Type><Title>Corrected parent</Title>
-    <Content><Question>${newBody}</Question></Content>
-    <SuperMemoElement><ID>3</ID><Type>Topic</Type><Title>Existing highlight</Title>
-    <Content><Question>${selection}</Question></Content></SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
-  const fields = { parentId: null, children: [], sourceType: 'Topic', ordinal: null,
-    answerHtml: [], skippedAudioComponents: 0, learning: null };
-  await seedHistoricalSuperMemoBatch(desktopApp, [
-    { ...fields, id: 1, title: 'Previous parent', bodyOrQuestionHtml: [selection] },
-    { ...fields, id: 2, children: [3], title: 'Corrected parent', bodyOrQuestionHtml: [newBody] },
-    { ...fields, id: 3, parentId: 2, title: 'Existing highlight', bodyOrQuestionHtml: [selection] }
-  ], { 3: { parentId: 1 } });
-  const readLink = () => desktopWindow.evaluate(async () => {
-    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
-    const node = Object.values(nodesById).find(entry => entry.title === 'Existing highlight');
-    return { id: node?.id, parent: node?.parentNodeId ? nodesById[node.parentNodeId]?.title : undefined, anchor: node?.anchorLink };
+for (const missingParent of [false, true]) {
+  test(`confirms an existing highlight against a ${missingParent ? 'missing' : 'present'} corrected parent`, async ({ desktopWindow, desktopApp }, testInfo) => {
+    const selection = 'The selected sentence.';
+    const newBody = 'Different introduction. ' + selection;
+    const xml = `<SuperMemoCollection><Count>3</Count>
+      <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Previous parent</Title>
+      <Content><Question>${selection}</Question></Content></SuperMemoElement>
+      <SuperMemoElement><ID>2</ID><Type>Topic</Type><Title>Corrected parent</Title>
+      <Content><Question>${newBody}</Question></Content>
+      <SuperMemoElement><ID>3</ID><Type>Topic</Type><Title>Existing highlight</Title>
+      <Content><Question>${selection}</Question></Content></SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
+    const fields = { parentId: null, children: [], sourceType: 'Topic', ordinal: null,
+      answerHtml: [], skippedAudioComponents: 0, learning: null };
+    await seedHistoricalSuperMemoBatch(desktopApp, [
+      { ...fields, id: 1, title: 'Previous parent', bodyOrQuestionHtml: [selection] },
+      { ...fields, id: 2, children: [3], title: 'Corrected parent', bodyOrQuestionHtml: [newBody] },
+      { ...fields, id: 3, parentId: 2, title: 'Existing highlight', bodyOrQuestionHtml: [selection] }
+    ], { 3: { parentId: 1 }, ...(missingParent ? { 2: { outcome: 'skipped' } } : {}) });
+    const readLink = () => desktopWindow.evaluate(async () => {
+      const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+      const node = Object.values(nodesById).find(entry => entry.title === 'Existing highlight');
+      return { id: node?.id, parent: node?.parentNodeId ? nodesById[node.parentNodeId]?.title : undefined, anchor: node?.anchorLink };
+    });
+    const before = await readLink();
+    expect(before).toMatchObject({ parent: 'Previous parent', anchor: { kind: 'highlight', locator: { from: 0 } } });
+    const dialog = await openPreview(desktopWindow);
+    await loadSource(desktopApp, dialog, testInfo.outputPath('ExistingHighlight'), xml);
+    await continueXml(desktopWindow);
+    await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+    if (missingParent) await expect(dialog.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
+    await expect(dialog.getByText(/Update the text anchor|同时更新文字定位/)).toBeVisible();
+    await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+    await expect(dialog.getByText(/Updated directory locations|已更新 1 个条目的位置/)).toBeVisible();
+    expect(await readLink()).toMatchObject({ id: before.id, parent: 'Corrected parent',
+      anchor: { id: before.anchor?.id, kind: 'highlight', locator: { from: newBody.indexOf(selection), originalText: selection } } });
   });
-  const before = await readLink();
-  expect(before).toMatchObject({ parent: 'Previous parent', anchor: { kind: 'highlight', locator: { from: 0 } } });
-  const dialog = await openPreview(desktopWindow);
-  await loadSource(desktopApp, dialog, testInfo.outputPath('ExistingHighlight'), xml);
-  await continueXml(desktopWindow);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByText(/Update the text anchor|同时更新文字定位/)).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/Updated directory locations|已更新 1 个条目的位置/)).toBeVisible();
-  expect(await readLink()).toMatchObject({ id: before.id, parent: 'Corrected parent',
-    anchor: { id: before.anchor?.id, kind: 'highlight', locator: { from: newBody.indexOf(selection), originalText: selection } } });
-});
+}
