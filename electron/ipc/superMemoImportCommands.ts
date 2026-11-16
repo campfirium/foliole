@@ -12,7 +12,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { adjustSuperMemoImport, listSuperMemoImports } from '../import/adjustSuperMemoImport.js';
 import { inspectSuperMemoImageSources } from '../import/prepareSuperMemoTopicContent.js';
 import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
-import { updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
+import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { readSuperMemoCollection } from './readSuperMemoCollection.js';
@@ -51,7 +51,7 @@ function sourceOffset(now: Date) {
   return `${offset < 0 ? '-' : '+'}${hours}:${minutes}`;
 }
 
-function finishSuperMemoImport(input: Parameters<typeof runSuperMemoImport>[0], write: boolean,
+async function finishSuperMemoImport(input: Parameters<typeof runSuperMemoImport>[0], write: boolean,
   previewSignature?: string, updateSignature?: string) {
   const { elements, preview } = input;
   if (!write) {
@@ -60,7 +60,7 @@ function finishSuperMemoImport(input: Parameters<typeof runSuperMemoImport>[0], 
   }
   if (!updateSignature) return runSuperMemoImport(input);
   if (!previewSignature) throw new Error('supermemo_update_preview_required');
-  const update = updateSuperMemoDirectories(elements, preview, updateSignature);
+  const update = await confirmSuperMemoDirectoryUpdate(input, updateSignature);
   if (!update) throw new Error('supermemo_update_source_changed');
   return { batchId: update.batchId, imported: update.imported, skipped: update.skipped,
     unresolvedImages: update.unresolvedImages, directoryUpdate: update };

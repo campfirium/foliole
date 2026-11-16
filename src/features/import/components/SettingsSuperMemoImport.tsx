@@ -147,9 +147,10 @@ function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; 
 
 function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof runRuntimeSuperMemoImport>> }) {
   const t = useTranslation();
+  const added = result.directoryUpdate?.changes.filter(change => change.status === 'add').length ?? 0;
   return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
     count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
-  }) : t('desktop.superMemoDrafts.importResult', {
+  }) + (added ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: added }) : '') : t('desktop.superMemoDrafts.importResult', {
     imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
   })}</p>;
 }
@@ -201,7 +202,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           </AppDialogBody>
           <SuperMemoDraftActions
             busy={busy} showRules={showRules} canConvert={Boolean(preview && !result)} parameters={parameters}
-            directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move') } : undefined}
+            directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move' || change.status === 'add') } : undefined}
             toggleRules={() => setShowRules(!showRules)} backToPreview={() => setParameters(false)}
             openParameters={() => setParameters(true)} convert={() => void importSource()}
           />

@@ -8,19 +8,24 @@ import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT } from '../../lib/core/import/superMem
 import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
 import { updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
+import { handleSuperMemoImportCommand } from '../ipc/superMemoImportCommands.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { moveNodes } from './nodeMutations.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
-vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection }));
+vi.mock('./connection.js', () => ({
+  openDatabaseConnection: () => connection,
+  runWithDatabaseConnectionOwner: (fn: () => unknown) => fn()
+}));
 
 const topic: SuperMemoXmlDraftElement = {
-  id: 1, parentId: null, children: [], title: 'Source A', sourceType: 'Topic', ordinal: null,
+  id: 1, parentId: null, children: [], sourceType: 'Topic', title: 'Source A', ordinal: null,
   bodyOrQuestionHtml: ['A separate source text.'], answerHtml: [], skippedAudioComponents: 0, learning: null
 };
 const elements: SuperMemoXmlDraftElement[] = [topic, { ...topic, id: 2, title: 'Source B' },
@@ -91,6 +96,58 @@ it.each(['current', 'legacy'])('updates the same nodes across rule changes in a 
     updateSuperMemoDirectories(elements, preview(1), third.signature);
     expect(node('Card 3')).toEqual({ ...original, parent_id: node('Source A').id });
     expect(node('Card 4').parent_id).toBe(node('Source B').id);
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
+
+
+it('imports a previously skipped parent before moving its existing child, without creating a duplicate', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  const bind = () => {
+    connection.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+  };
+  const originalElements = [
+    { ...topic, children: [3] },
+    { ...elements[2]!, parentId: 1 }
+  ];
+  const args = { elements: originalElements, percent: 0 };
+  const load = async () => {
+    const result = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, args);
+    if (!result || !('rows' in result)) throw new Error('missing import preview');
+    return result;
+  };
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    bind();
+    const before = await load();
+    // Exercise the real writer with the old rule's outcome for the same export.
+    await runSuperMemoImport({ ...args, preview: { ...before, rows: before.rows.map(row => row.id === 1
+      ? { ...row, outcome: 'skipped' } : row) }, offset: '+00:00', gradeMap, scheduler,
+    sourceFormat: DEFAULT_SUPER_MEMO_SOURCE_FORMAT, expectedImages: new Map() });
+    const nodes = () => peer.sqlite.prepare('SELECT id, title, parent_id, reveal FROM nodes WHERE title IN (?, ?) ORDER BY title')
+      .all('Card 3', 'Source A') as Array<{ id: string; title: string; parent_id: string; reveal: string | null }>;
+    const [originalCard] = nodes();
+    expect(originalCard?.title).toBe('Card 3');
+    const next = await load();
+    expect(next.directoryUpdate?.changes).toMatchObject([
+      { sourceId: 1, title: 'Source A', status: 'add' }, { sourceId: 3, to: 'Source A', status: 'move' }
+    ]);
+    expect(nodes()).toEqual([originalCard]);
+    const update = { ...args, previewSignature: next.previewSignature, updateSignature: next.directoryUpdate?.signature };
+    expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, update)).toMatchObject({ imported: 2, skipped: 0 });
+    peer.reopen();
+    bind();
+    const [card, parent] = nodes();
+    expect(parent?.title).toBe('Source A');
+    expect(card).toEqual({ ...originalCard, parent_id: parent?.id });
+    expect((await load()).directoryUpdate?.changes).toEqual([]);
+    await expect(handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, update)).rejects.toThrow('supermemo_update_changed');
+    expect(nodes()).toEqual([card, parent]);
   } finally {
     connection.driver = null;
     await fixture.close();

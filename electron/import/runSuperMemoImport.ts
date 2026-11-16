@@ -18,8 +18,8 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { replaceNodeImageResourceReferences } from '../database/nodeResources.js';
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
+import { superMemoBatchKey } from './superMemoBatchKey.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
-import { superMemoBatchKey } from './updateSuperMemoDirectories.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
 
 type Row = NativeSuperMemoPreview['rows'][number];
@@ -43,7 +43,7 @@ function persistElement(snapshot: Snapshot, element: SuperMemoXmlDraftElement, b
   }
 }
 
-async function prepareRows(rows: Row[], elements: Map<number, SuperMemoXmlDraftElement>, directory?: string,
+export async function prepareSuperMemoRows(rows: Row[], elements: Map<number, SuperMemoXmlDraftElement>, directory?: string,
   expectedImages?: ReadonlyMap<string, string | null>) {
   const empty: Prepared = { content: '', resourceReferences: [], unresolvedImages: [] };
   const prepared = [];
@@ -57,15 +57,27 @@ async function prepareRows(rows: Row[], elements: Map<number, SuperMemoXmlDraftE
   return prepared;
 }
 
-function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: number, offset: string, now: string, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
-  const parents = planSuperMemoImportParents(prepared.map(({ row }) => row));
-  const nodeIds = new Map(prepared.flatMap(({ row }) => row.outcome === 'skipped' ? [] :
-    [[row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`] as const]));
-  const sourceRows = new Map(prepared.map(({ row }) => [row.id, row]));
+type PreparedRows = Awaited<ReturnType<typeof prepareSuperMemoRows>>;
+
+export function writeSuperMemoRows(prepared: PreparedRows, options: {
+  percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
+  allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
+}) {
+  const { percent, offset, now, gradeMap, sourceFormat, allRows = prepared.map(({ row }) => row) } = options;
+  const parents = planSuperMemoImportParents(allRows);
+  const nodeIds = new Map(options.existingNodeIds);
+  for (const { row } of prepared) {
+    if (row.outcome !== 'skipped') nodeIds.set(row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`);
+  }
+  const sourceRows = new Map(allRows.map(row => [row.id, row]));
   const parentBodies = new Map<number, { body: string; shift: number; search?: SuperMemoParentText }>();
-  const priorities = prepared.filter(({ row }) => row.sourceRank != null).sort((a, b) => a.row.sourceRank! - b.row.sourceRank!);
-  const priorityById = new Map(priorities.map(({ row }, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
-  return orderSuperMemoImportWrites(prepared, parents).map(({ row, element, body, answer }) => {
+  const priorities = allRows.filter(row => row.sourceRank != null).sort((a, b) => a.sourceRank! - b.sourceRank!);
+  const priorityById = new Map(priorities.map((row, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
+  const preparedById = new Map(prepared.map(entry => [entry.row.id, entry]));
+  return orderSuperMemoImportWrites(allRows.map(row => ({ row })), parents).flatMap(({ row }) => {
+    const entry = preparedById.get(row.id);
+    if (!entry) return [];
+    const { element, body, answer } = entry;
     const kind = row.outcome;
     const parentNodeId = nodeIds.get(parents.get(row.id) ?? 0) ?? (kind === 'folder' ? null : INBOX_NODE_ID);
     const nodeId = nodeIds.get(row.id) ?? null;
@@ -101,8 +113,8 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
           ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
         due, offset, row.sourceState, gradeMap);
     }
-    return { ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
-      lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] };
+    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+      lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
 }
 
@@ -123,11 +135,11 @@ export async function runSuperMemoImport(input: {
     return { batchId: fingerprint, imported: stored.imported, skipped: stored.skipped,
       unresolvedImages: stored.unresolvedImages };
   }
-  const prepared = await prepareRows(orderSuperMemoSourceRows(input.preview.rows),
+  const prepared = await prepareSuperMemoRows(orderSuperMemoSourceRows(input.preview.rows),
     new Map(input.elements.map(element => [element.id, element])), input.collectionDirectory, input.expectedImages);
   const now = new Date().toISOString();
   return driver.transaction(() => {
-    const entries = writeRows(prepared, input.percent, input.offset, now, input.gradeMap, input.sourceFormat);
+    const entries = writeSuperMemoRows(prepared, { ...input, now });
     const imported = entries.filter(entry => entry.nodeId).length;
     const result = { batchId: fingerprint, imported, skipped: entries.length - imported,
       unresolvedImages: entries.reduce((sum, entry) => sum + entry.unresolvedImages.length, 0) };

@@ -59,6 +59,8 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.directoryMove': '{from} → {to}',
   'desktop.superMemoDrafts.directoryProtected': '保留当前位置。条目有修改、移动或摘录定位，或者无法核实其原位置。',
   'desktop.superMemoDrafts.directoryUnavailable': '保留当前位置。目标目录不可用。',
+  'desktop.superMemoDrafts.directoryAdd': '补入漏导的父项，放在{to}',
+  'desktop.superMemoDrafts.directoryAdded': '已补入 {count} 个漏导的父项',
   'desktop.superMemoDrafts.directoryUpdated': '已更新 {count} 个条目的位置。',
   'desktop.superMemoDrafts.reapplyNote': '转换后可以重新调整首次到期日期。已在 Foliole 复习过的卡片会保留当前排程。',
   'desktop.superMemoDrafts.scheduleTitle': '卡片首次到期',

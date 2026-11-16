@@ -63,6 +63,6 @@ export interface NativeSuperMemoDirectoryUpdate {
     title: string;
     from: string | null;
     to: string | null;
-    status: 'move' | 'protected' | 'unavailable';
+    status: 'add' | 'move' | 'protected' | 'unavailable';
   }>;
 }
