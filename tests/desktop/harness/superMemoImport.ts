@@ -68,7 +68,7 @@ export async function writeCollection(directory: string, includeTopic: boolean) 
 }
 
 export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements: SuperMemoXmlDraftElement[],
-  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'sourceDue' | 'recalculatedDue'>>>,
+  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'issue' | 'sourceDue' | 'recalculatedDue'>>>,
   oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>) {
   return app.evaluate(async ({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);

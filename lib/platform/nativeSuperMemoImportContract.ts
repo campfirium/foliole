@@ -74,6 +74,13 @@ export interface NativeSuperMemoFirstReviewChange {
   status: 'update' | 'basis' | 'protected' | 'unavailable';
 }
 
+export interface NativeSuperMemoWithdrawal {
+  sourceId: number;
+  title: string;
+  issue: 'empty-topic' | 'empty-item' | 'unsupported-type';
+  protectedBy?: 'children' | 'modified' | 'published';
+}
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
@@ -82,6 +89,8 @@ export interface NativeSuperMemoDirectoryUpdate {
   citationChanges: NativeSuperMemoCitationChange[];
   textChanges: NativeSuperMemoTextChange[];
   firstReviewChanges: NativeSuperMemoFirstReviewChange[];
+  withdrawals: NativeSuperMemoWithdrawal[];
+  withdrawnSourceIds: number[];
   changes: Array<{
     sourceId: number;
     title: string;

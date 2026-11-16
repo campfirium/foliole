@@ -52,8 +52,11 @@ async function persistDeleteTransition(args: {
   const repository = getWorkspaceMutationRepository();
   let result;
   try {
+    const savedMembers = new Set(args.entry.parentOrders.flatMap(order => order.childIds));
+    const hasSavedPositions = args.entry.nodeIds.every(nodeId => savedMembers.has(nodeId));
     result = args.mode === 'undo'
-      ? await repository.syncRestoreNodes({ nodeIds: args.entry.nodeIds, parentOrders: args.entry.parentOrders,
+      ? await repository.syncRestoreNodes({ nodeIds: args.entry.nodeIds,
+        ...(hasSavedPositions ? { parentOrders: args.entry.parentOrders } : {}),
         ...createTrashParentUpdates(args.parentNodes) })
       : await repository.syncSoftDeleteNodes({ nodeIds: args.entry.nodeIds, deletedAt: args.mutationTimestamp, ...createTrashParentUpdates(args.parentNodes) });
   } catch {

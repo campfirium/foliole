@@ -2,10 +2,9 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
-import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
+import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { loadSuperMemoGradeMap, previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport,
-  saveSuperMemoGradeMap, selectRuntimeSuperMemoSource } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+import { loadSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 import {
   AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription,
   AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow
@@ -20,97 +19,11 @@ import { SuperMemoEntryPreview } from './SuperMemoEntryPreview';
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 import { SuperMemoSourceSettings } from './SuperMemoSourceSettings';
-
-async function refreshSourceFormat(apply: () => Promise<void>, setBusy: (value: boolean) => void,
-  setError: (value: boolean) => void) {
-  setBusy(true);
-  setError(false);
-  try {
-    await apply();
-  } catch {
-    setError(true);
-  } finally {
-    setBusy(false);
-  }
-}
-
-async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>,
-  gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
-  const first = await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat);
-  const savedFormat = first.preview.directoryUpdate?.sourceFormat;
-  const loaded = savedFormat && (savedFormat.placement !== sourceFormat.placement || savedFormat.template !== sourceFormat.template)
-    ? await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, savedFormat) : first;
-  return { draft: loaded, sourceFormat: savedFormat ?? sourceFormat };
-}
-
-function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
-  const [draft, setDraft] = useState<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>>();
-  const [gradeMap, setGradeMap] = useState(initialGrades);
-  const [sourceFormat, setSourceFormat] = useState<SuperMemoSourceFormat>({ ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' });
-  const [percent, setPercent] = useState(0);
-  const [source, setSource] = useState<NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>>();
-  const [result, setResult] = useState<Awaited<ReturnType<typeof runRuntimeSuperMemoImport>>>();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<boolean | 'xml-only'>(false);
-
-  async function loadSource() {
-    setBusy(true);
-    setError(false);
-    try {
-      const selected = await selectRuntimeSuperMemoSource();
-      if (!selected) return;
-      const loaded = await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
-      setSourceFormat(loaded.sourceFormat);
-      setDraft(loaded.draft);
-      setSource(selected);
-      if (!selected.collectionDirectory) setError('xml-only');
-      setPercent(0);
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function changeGrades(next: SuperMemoGradeMap) {
-    setBusy(true);
-    setError(false);
-    try {
-      const nextPreview = source && !result ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat) : undefined;
-      await saveSuperMemoGradeMap(next);
-      setGradeMap(next);
-      if (nextPreview) setDraft(nextPreview);
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const changeSourceFormat = (next: SuperMemoSourceFormat) => refreshSourceFormat(async () => {
-    if (source && !result) setDraft(await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next));
-    setSourceFormat(next);
-  }, setBusy, setError);
-
-  async function importSource() {
-    if (!source || !draft?.preview.previewSignature) return;
-    setBusy(true);
-    setError(false);
-    try {
-      setResult(await runRuntimeSuperMemoImport(source.filePath, percent, gradeMap, draft.preview.previewSignature, sourceFormat,
-        draft.preview.directoryUpdate?.signature));
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource };
-}
+import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
+import { useSuperMemoDraft } from './useSuperMemoDraft';
 
 function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }: {
-  preview: NonNullable<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>['preview']>;
+  preview: NonNullable<ReturnType<typeof useSuperMemoDraft>['draft']>['preview'];
   percent: number; setPercent(value: number): void; gradeMap: SuperMemoGradeMap;
   changeGrades(value: SuperMemoGradeMap): Promise<void>; sourceFormat: SuperMemoSourceFormat;
   changeSourceFormat(value: SuperMemoSourceFormat): Promise<void>; busy: boolean;
@@ -156,6 +69,17 @@ function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; 
   );
 }
 
+function DraftSourcePicker({ name, disabled, onLoad }: { name: string | undefined; disabled: boolean; onLoad(): void }) {
+  const t = useTranslation();
+  return <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/15 px-4 py-3">
+    <div className="min-w-0">
+      <h2 className="text-sm font-semibold">{name ?? t('desktop.superMemoDrafts.sourceTitle')}</h2>
+      {!name ? <p className="mt-1 max-w-prose text-sm text-foreground/70">{t('desktop.superMemoDrafts.prepareSource')}</p> : null}
+    </div>
+    <AppButton disabled={disabled} onClick={onLoad}>{t(name ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}</AppButton>
+  </div>;
+}
+
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
   const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = useSuperMemoDraft(initialGrades);
@@ -163,6 +87,8 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
   const [showRules, setShowRules] = useState(false);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
+  const [selection, setSelection] = useState<{ signature: string; ids: number[] }>();
+  const selected = selection && selection.signature === update?.signature ? selection.ids : [];
   return (
     <AppDialog open onOpenChange={open => { if (!open && !busy) close(); }}>
       <AppDialogPortal>
@@ -180,17 +106,8 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           </AppDialogDescription>
           {showRules ? <SuperMemoConversionRules /> : null}
           <AppDialogBody className={showRules ? 'hidden' : 'flex min-h-0 flex-col gap-3 overflow-y-auto'}>
-            {(!parameters || update) && !result ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/15 px-4 py-3">
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold">{source?.name ?? t('desktop.superMemoDrafts.sourceTitle')}</h2>
-                <p className="mt-1 max-w-prose text-sm text-foreground/70">
-                  {!source ? t('desktop.superMemoDrafts.prepareSource') : null}
-                </p>
-              </div>
-              <AppButton disabled={busy} onClick={() => void loadSource()}>
-                {t(source ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
-              </AppButton>
-            </div> : null}
+            {(!parameters || update) && !result ? <DraftSourcePicker name={source?.name} disabled={busy}
+              onLoad={() => { setSelection(undefined); void loadSource(); }} /> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
             {!result && !update ? <div hidden={parameters}><SuperMemoEntryPreview key={source?.filePath} preview={preview} elements={draft?.elements} /></div> : null}
             {parameters && preview && !result && !update ? (
@@ -200,15 +117,17 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             {update && !parameters && !result ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
             {update && parameters && !result ? <SuperMemoDirectoryUpdate update={update} sourceFormat={sourceFormat} disabled={busy}
               onSourceFormatChange={next => void changeSourceFormat(next)} /> : null}
+            {update && parameters && !result ? <SuperMemoWithdrawals candidates={update.withdrawals} selected={selected}
+              disabled={busy} onChange={ids => setSelection({ signature: update.signature, ids })} /> : null}
             {result ? <SuperMemoResult result={result} /> : null}
           </AppDialogBody>
           <SuperMemoDraftActions
             busy={busy} showRules={showRules} canConvert={Boolean(preview && !result)} parameters={parameters}
-            directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move' || change.status === 'add') ||
+            directoryUpdate={update ? { canConfirm: selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
               update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
               update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
-            toggleRules={() => setShowRules(!showRules)} backToPreview={() => setParameters(false)}
-            openParameters={() => setParameters(true)} convert={() => void importSource()}
+            toggleRules={() => setShowRules(!showRules)} backToPreview={() => { setParameters(false); setSelection(undefined); }}
+            openParameters={() => setParameters(true)} convert={() => void importSource(selected)}
           />
         </AppDialogContent>
       </AppDialogPortal>

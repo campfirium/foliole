@@ -99,13 +99,15 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
   const citations = result.directoryUpdate?.citationChanges.filter(change => change.status === 'update').length ?? 0;
   const text = result.directoryUpdate?.textChanges.filter(change => change.status === 'update').length ?? 0;
   const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
+  const withdrawn = result.directoryUpdate?.withdrawnSourceIds.length ?? 0;
   return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
     count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
   }) + (addedParents ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }) : '')
     + (addedMaterials ? ' · ' + t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }) : '')
     + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
     + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
-    + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '') : t('desktop.superMemoDrafts.importResult', {
+    + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '')
+    + (withdrawn ? ' · ' + t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }) : '') : t('desktop.superMemoDrafts.importResult', {
     imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
   })}</p>;
 }
