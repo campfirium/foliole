@@ -1,4 +1,5 @@
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
@@ -11,14 +12,14 @@ import {
 } from './importSourcePipeline.js';
 import { toNativeTextImportResult } from './importTextFile.js';
 
-export function runTextCaptureToInbox(text: string, args?: NativeTextImportArgs) {
+export async function runTextCaptureToInbox(text: string, args?: NativeTextImportArgs) {
   const content = text.trim();
   if (!content) {
     return null;
   }
   const importedAt = new Date().toISOString();
   const sourceName = resolveClipboardTextSourceName(content);
-  const result = withTextImportNodeMutationPatch(toNativeTextImportResult(
+  const result = await runWithDatabaseConnectionOwner(() => withTextImportNodeMutationPatch(toNativeTextImportResult(
     runPreparedImport(
       buildPreparedImportRecord(
         {
@@ -37,7 +38,7 @@ export function runTextCaptureToInbox(text: string, args?: NativeTextImportArgs)
         }
       )
     )
-  ));
+  )));
   notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
   return result;
 }

@@ -30,8 +30,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('imports typed capture text into Inbox and notifies the managed Inbox', () => {
-  const result = runTextCaptureToInbox('  quick thought  ');
+it('imports typed capture text into Inbox and notifies the managed Inbox', async () => {
+  const result = await runTextCaptureToInbox('  quick thought  ');
 
   expect(result).toMatchObject({ import_id: 'import-1', node_id: 'node-1' });
   expect(runPreparedImport).toHaveBeenCalledWith(expect.objectContaining({
@@ -42,16 +42,16 @@ it('imports typed capture text into Inbox and notifies the managed Inbox', () =>
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toBe('import-1');
 });
 
-it('names long typed capture text from a truncated content preview', () => {
-  runTextCaptureToInbox('This is a long typed capture that should become a compact topic title with an ellipsis.');
+it('names long typed capture text from a truncated content preview', async () => {
+  await runTextCaptureToInbox('This is a long typed capture that should become a compact topic title with an ellipsis.');
 
   expect(runPreparedImport).toHaveBeenCalledWith(expect.objectContaining({
     sourceName: 'This is a long typed capture that should become...'
   }));
 });
 
-it('ignores empty typed capture text', () => {
-  expect(runTextCaptureToInbox('   ')).toBeNull();
+it('ignores empty typed capture text', async () => {
+  await expect(runTextCaptureToInbox('   ')).resolves.toBeNull();
   expect(runPreparedImport).not.toHaveBeenCalled();
   expect(notifyManagedInboxUpdated).not.toHaveBeenCalled();
 });
