@@ -1,7 +1,14 @@
 // @vitest-environment node
+import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import { createBetterSqlite3Driver } from '../../../../../../electron/database/betterSqlite3Driver.js';
+import { flushNodeSyncVersionWithDriver } from '../../../../../../electron/database/nodeSyncVersionFromDriver.js';
+import { restoreNodes, softDeleteNodes } from '../../../../../../lib/core/database/nodeMutations.js';
+import { saveNodeReadingStateWithSync } from '../../../../../../lib/core/database/nodeReadingSyncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../../lib/core/database/syncStateSequenceSchemaStatements.js';
+import { initializeWorkspaceSearchSidecar } from '../../../../../../lib/core/database/workspaceSearchSidecar.js';
+import { VISIBLE_NODES_CTE_SQL } from '../../../../../../lib/core/database/workspaceVisibleNodesSql.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
@@ -96,4 +103,66 @@ it('repairs an orphaned sync fact without learning rows and preserves its neighb
   expect(receiver.sqlite.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'legacy-absent'").get()).toBeUndefined();
   expect(receiver.sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_id = 'legacy-deleted'").pluck().get())
     .toBe('2026-10-07T00:00:00.000Z');
+});
+
+const changedAt = '2026-10-12T00:00:00.000Z';
+
+function withSourceDatabase(receiver: NonNullable<typeof host>, apply: (driver: ReturnType<typeof createBetterSqlite3Driver>) => void) {
+  const sqlite = new Database(receiver.fixture.rightSnapshot.databasePath);
+  try {
+    const driver = createBetterSqlite3Driver(sqlite);
+    sqlite.exec("ATTACH DATABASE ':memory:' AS search");
+    initializeWorkspaceSearchSidecar({ sqlite, driver });
+    apply(driver);
+  } finally { sqlite.close(); }
+}
+
+function sourceParentVisibility(receiver: NonNullable<typeof host>, deleted: boolean) {
+  withSourceDatabase(receiver, driver => {
+    const nodeId = 'learning-parent';
+    const nodeIds = [nodeId];
+    const now = new Date().toISOString();
+    if (deleted) softDeleteNodes(driver, { nodeIds, deletedAt: now });
+    else restoreNodes(driver, { nodeIds });
+    driver.execute('UPDATE nodes SET sync_dirty = 1 WHERE id = ?', [nodeId]);
+    const hostName = driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key = 'host_name'");
+    expect(flushNodeSyncVersionWithDriver(driver, nodeId, JSON.parse(hostName!.value), now)).not.toBeNull();
+  });
+}
+
+it('preserves reading through a remote move, ancestor Trash, restore and restart', async () => {
+  const receiver = await adopt();
+  const { right } = receiver.fixture;
+  await right.seed({ nodeId: 'learning-parent', kind: 'folder', title: 'Parent', content: '' });
+  const topic = { nodeId: 'learning-topic', title: 'Topic', content: 'Reading material' };
+  await right.seed(topic);
+  withSourceDatabase(receiver, driver => saveNodeReadingStateWithSync(driver, {
+    nodeId: topic.nodeId, hostName: 'Provider', updatedAt: changedAt,
+    reading: { intervalDurationMs: 1000, intervalGrowthFactor: 1.5, lastHandledAt: changedAt,
+      nextAt: '2026-10-13T00:00:00.000Z', priority: 3, readingPosition: 120, repetitionCount: 2, state: 'active' }
+  }));
+  await receiver.sync();
+  const expectReading = (visible: boolean) => {
+    const sqlite = receiver.sqlite;
+    expect(sqlite.prepare('SELECT next_at, repetition_count FROM node_reading WHERE node_id = ?').get(topic.nodeId))
+      .toEqual({ next_at: '2026-10-13T00:00:00.000Z', repetition_count: 2 });
+    expect(sqlite.prepare(`${VISIBLE_NODES_CTE_SQL} SELECT EXISTS (SELECT 1 FROM visible_nodes WHERE id = ?)`)
+      .pluck().get(topic.nodeId)).toBe(Number(visible));
+    expect(sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = ?")
+      .pluck().get(topic.nodeId)).toBeNull();
+  };
+  expectReading(true);
+  await right.seed({ ...topic, parentNodeId: 'learning-parent', updatedAt: changedAt });
+  await right.seed({ nodeId: 'moved-alongside', title: 'Additional topic', content: 'Body' });
+  await receiver.sync();
+  expect(receiver.sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck().get(topic.nodeId)).toBe('learning-parent');
+  sourceParentVisibility(receiver, true);
+  await right.seed({ nodeId: 'trashed-alongside', title: 'Additional topic', content: 'Body' });
+  await receiver.sync();
+  expectReading(false);
+  sourceParentVisibility(receiver, false);
+  await right.seed({ nodeId: 'restored-alongside', title: 'Additional topic', content: 'Body' });
+  await receiver.sync();
+  await receiver.restart();
+  expectReading(true);
 });
