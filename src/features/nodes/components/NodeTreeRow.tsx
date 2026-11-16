@@ -58,9 +58,8 @@ interface NodeTreeRowProps {
   onToggleCollapse: (nodeId: string) => void;
 }
 
-function resolveNodeRowStyle(depth: number, rowSpacing: number) {
+function resolveNodeRowStyle(rowSpacing: number) {
   return {
-    '--node-depth': depth,
     paddingBottom: `${rowSpacing}px`,
     paddingTop: `${rowSpacing}px`
   } as CSSProperties;
@@ -104,12 +103,14 @@ function renderNodeTreeRowButton(props: {
 function NodeTreeRowImpl(props: NodeTreeRowProps) {
   recordNodeListRowRender(props.nodeId);
   const rename = useRenameState(props.label, props.nodeId, props.onRename);
-  const style = resolveNodeRowStyle(props.depth, props.rowSpacing);
+  const style = resolveNodeRowStyle(props.rowSpacing);
   return (
     <NodeTreeRowFrame
+      depth={props.depth}
       dropIntent={props.dropIntent ?? null}
       isDragDisabled={(props.isDragDisabled ?? false) || rename.isRenaming}
       isDropTarget={props.isDropTarget ?? false}
+      label={props.label}
       nodeId={props.nodeId}
       {...(props.rowAction !== undefined ? { rowAction: props.rowAction } : {})}
       {...(props.onDragEnd ? { onDragEnd: props.onDragEnd } : {})}

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { Locator, Page } from '@playwright/test';
 
+import { cycleRailAppearanceTo } from './appearance-mode-rail-support';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -23,12 +24,16 @@ async function seedFolders(page: Page) {
 }
 
 async function beginDrag(page: Page, source: Locator, target: Locator, ratio = 0.5) {
-  const sourceBox = await source.locator('..').boundingBox();
-  const targetBox = await target.locator('..').boundingBox();
+  const sourceFrame = source.locator('..');
+  const targetFrame = target.locator('..');
+  await targetFrame.hover({ trial: true });
+  const sourceBox = await sourceFrame.boundingBox();
+  const targetBox = await targetFrame.boundingBox();
   if (!sourceBox || !targetBox) throw new Error('Missing folder row bounds');
-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+  const sourceY = sourceBox.y + sourceBox.height / 2;
+  await sourceFrame.hover({ position: { x: sourceBox.width * 0.8, y: sourceBox.height / 2 } });
   await page.mouse.down();
-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y - 8, { steps: 4 });
+  await page.mouse.move(sourceBox.x + sourceBox.width * 0.55, sourceY, { steps: 4 });
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height * ratio, { steps: 8 });
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height * ratio);
 }
@@ -48,7 +53,7 @@ test('keeps passing folders stable and commits early and sustained folder drops'
   await seedFolders(page);
   const row = (name: string) => page.getByRole('treeitem', { name, exact: true });
   const target = row('Hover target');
-  await beginDrag(page, row('Hover second'), target, 0.05);
+  await beginDrag(page, row('Hover second'), target, 0.125);
   await screenshot(page, 'initial-native-drag');
   await expect(target.locator('..')).toHaveAttribute('data-drop-intent', 'before');
   await page.waitForTimeout(650);
@@ -94,12 +99,12 @@ test('cancels receiving-tree expansion when a cross-tree drag ends with Escape',
   const source = page.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ })
     .getByRole('treeitem', { name: 'Hover topic', exact: true });
   const target = page.getByRole('treeitem', { name: 'Hover target', exact: true });
-  await beginDrag(page, source, target, 0.05);
+  await beginDrag(page, source, target, 0.125);
   await expect(target.locator('..')).toHaveAttribute('data-drop-intent', 'child');
   await cancelDrag(page);
   await page.waitForTimeout(650);
   await expect(target).toHaveAttribute('aria-expanded', 'false');
-  await beginDrag(page, source, target, 0.05);
+  await beginDrag(page, source, target, 0.125);
   await expect(target.locator('..')).toHaveAttribute('data-drop-intent', 'child');
   await expect(target).toHaveAttribute('aria-expanded', 'true');
   await screenshot(page, 'cross-tree-sustained-expansion');
@@ -107,3 +112,45 @@ test('cancels receiving-tree expansion when a cross-tree drag ends with Escape',
   expect(await page.evaluate(() => window.__folioleWorkspaceDebug!
     .getNode('hover-topic')?.parentNodeId)).toBe('hover-source');
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`distinguishes moving into a folder from sibling insertion in ${theme} mode`, async ({ desktopWindow: page }) => {
+    await expectWorkspaceShell(page);
+    await cycleRailAppearanceTo(page, theme);
+    await seedFolders(page);
+    await expect(page.locator('html')).toHaveAttribute('data-resolved-base-color', theme);
+
+    const row = (name: string) => page.getByRole('treeitem', { name, exact: true });
+    const folder = row('Hover target');
+    await folder.press('ArrowRight');
+    const nested = row('Hover child');
+    const frame = nested.locator('..');
+    const destination = page.getByRole('tooltip', { name: 'Move into “Hover child”' });
+
+    await beginDrag(page, row('Hover second'), nested);
+    await expect(destination).toBeVisible();
+    const box = await frame.boundingBox();
+    if (!box) throw new Error('Missing nested folder row bounds');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.125);
+    await expect(frame).toHaveAttribute('data-drop-intent', 'before');
+    await expect(destination).toHaveCount(0);
+    await screenshot(page, `feedback-${theme}-sort-before`);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.5);
+    await expect(destination).toBeVisible();
+    const hint = page.locator('[data-node-drop-hint]');
+    await expect(hint).toBeVisible();
+    expect(await hint.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      const underneath = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      return underneath !== null &&
+        underneath.closest('[data-radix-popper-content-wrapper]') !== element.parentElement;
+    })).toBe(true);
+    await screenshot(page, `feedback-${theme}-move-into`);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.92);
+    await expect(frame).toHaveAttribute('data-drop-intent', 'after');
+    await expect(destination).toHaveCount(0);
+    await screenshot(page, `feedback-${theme}-sort-after`);
+    await cancelDrag(page);
+    await expect(frame).not.toHaveAttribute('data-drop-intent', /.+/);
+  });
+}

@@ -1,0 +1,3 @@
+[data-radix-popper-content-wrapper]:has(> [data-node-drop-hint]) {
+  pointer-events: none;
+}

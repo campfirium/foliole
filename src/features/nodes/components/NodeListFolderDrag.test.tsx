@@ -94,6 +94,7 @@ it('keeps cross-tree edge drops as child and cancels on the source tree ending',
   const drag = renderFolderDrag(true);
   drag.hover('Target', 0);
   expect(drag.row('Target')).toHaveAttribute('data-drop-intent', 'child');
+  expect(screen.getByRole('tooltip', { name: 'Move into “Target”' })).toBeInTheDocument();
   advance(300);
   fireEvent.dragEnd(drag.source);
   advance(1000);
@@ -107,4 +108,24 @@ it('expands a cross-tree child target after waiting at its geometric edge', () =
   expectCollapsed();
   advance(1);
   expect(screen.getByRole('treeitem', { name: 'Target child' })).toBeVisible();
+});
+
+it('shows the destination only for an eligible move into a folder', () => {
+  const drag = renderFolderDrag();
+  const destination = () => screen.queryByRole('tooltip', { name: 'Move into “Target”' });
+  expect(destination()).not.toBeInTheDocument();
+  drag.hover('Target', 0);
+  expect(drag.row('Target')).toHaveAttribute('data-drop-intent', 'before');
+  expect(destination()).not.toBeInTheDocument();
+  drag.hover();
+  expect(destination()).toBeInTheDocument();
+  drag.hover('Target', 100);
+  expect(drag.row('Target')).toHaveAttribute('data-drop-intent', 'after');
+  expect(destination()).not.toBeInTheDocument();
+  drag.hover();
+  drag.hover('Descendant');
+  expect(destination()).not.toBeInTheDocument();
+  drag.hover();
+  fireEvent.dragEnd(drag.source);
+  expect(destination()).not.toBeInTheDocument();
 });
