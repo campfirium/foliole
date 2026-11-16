@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { releaseDeletedNodeBodiesWithPort } from '../../lib/core/database/deletedNodeBodyRelease.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
@@ -65,15 +65,22 @@ it('compacts on a real local delete and retains the deletion through two forward
   } finally { await fixture.close(); }
 });
 
-it('compacts a previously unknown old version on replay without reviving the deleted node', async () => {
+it('compacts previously unknown old versions with bounded writes without reviving the deleted node', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
-    await applySyncNodesWithDbPort(source.db, [base]);
+    const draft = textBranch('draft', 'Unseen draft', base, '2026-10-01T03:00:00Z');
+    await applySyncNodesWithDbPort(source.db, [base, draft]);
     await remove(target);
+    const prepareStatement = vi.spyOn(target.sqlite, 'prepare');
     await send(source, target);
+    expect(prepareStatement.mock.calls.filter(([sql]) =>
+      sql.includes('UPDATE node_sync_versions SET body_text = NULL, snapshot_json ='))).toHaveLength(1);
     target.reopen();
-    expect(target.sqlite.prepare("SELECT json_type(snapshot_json, '$.deleted_version_metadata_digest') FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBe('text');
+    expect(target.sqlite.prepare(`SELECT version_id FROM node_sync_versions
+      WHERE version_id IN ('draft', 'original') AND body_text IS NULL
+      AND json_type(snapshot_json, '$.deleted_version_metadata_digest') = 'text' ORDER BY version_id`).pluck().all())
+      .toEqual(['draft', 'original']);
     expect(target.sqlite.prepare("SELECT count(*) FROM nodes WHERE id='topic'").pluck().get()).toBe(0);
     expect(target.sqlite.prepare("SELECT version_id FROM node_sync_tombstones WHERE node_id='topic'").pluck().get()).toBe('deleted');
     const before = facts(target);

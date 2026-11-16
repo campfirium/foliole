@@ -14,6 +14,9 @@ type ReceivedDeletedVersion = DeletedVersion & ReleasedVersionBodyDescriptor & {
 const VERSION_FIELDS = `node_sync_versions.version_id, json_remove(node_sync_versions.snapshot_json, '$.content', '$.text_alternative_bodies') AS snapshot_metadata`;
 const UNCOMPACTED = "json_type(node_sync_versions.snapshot_json, '$.deleted_version_metadata_digest') IS NULL";
 const COMPACT_VERSION_SQL = 'UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?';
+const COMPACT_VERSION_BATCH_SQL = `UPDATE node_sync_versions SET body_text = NULL, snapshot_json = patch.value ->> 1
+  FROM json_each(?) AS patch WHERE version_id = patch.value ->> 0`;
+const COMPACT_VERSION_BATCH_SIZE = 128;
 
 export function markCompactDeletionSnapshot(snapshot: object) {
   return JSON.stringify({ ...snapshot, compact_version_history: true });
@@ -63,6 +66,7 @@ export async function releaseDeletedNodeBodiesForBatch(port: DbPort, nodeIds: re
     FROM node_sync_versions LEFT JOIN node_sync_tombstones tomb ON tomb.node_id = node_sync_versions.object_id
     WHERE node_sync_versions.object_id IN (SELECT value FROM json_each(?))
     AND ${UNCOMPACTED} ORDER BY node_sync_versions.object_id, node_sync_versions.version_id`, [ids]);
+  const compactVersions: [versionId: string, snapshotJson: string][] = [];
   for (const version of versions) {
     const id = version.version_id;
     const known = version.alternative_hashes === null ? undefined : {
@@ -71,14 +75,23 @@ export async function releaseDeletedNodeBodiesForBatch(port: DbPort, nodeIds: re
     const released = await releasedVersionBodyHashesWithPort(port, id, known);
     for (const hash of released.hashes) hashes.add(hash);
     if (version.compact_history) {
-      await port.run(COMPACT_VERSION_SQL, [compactDeletedVersionSnapshot(JSON.parse(version.snapshot_metadata)), id]);
+      compactVersions.push([id, compactDeletedVersionSnapshot(JSON.parse(version.snapshot_metadata))]);
+      if (compactVersions.length === COMPACT_VERSION_BATCH_SIZE) await flushCompactVersions(port, compactVersions);
     } else {
+      await flushCompactVersions(port, compactVersions);
       await releaseLegacyVersionBody(port, id, released.mainBodyHash);
     }
   }
+  await flushCompactVersions(port, compactVersions);
   await port.run(`${STRIP_TOMBSTONE_BODY_SQL} WHERE node_id IN (SELECT value FROM json_each(?))
     AND snapshot_json IS NOT ${RELEASED_TOMBSTONE_SNAPSHOT_SQL}`, [ids]);
   return [...hashes];
+}
+
+async function flushCompactVersions(port: DbPort, versions: [string, string][]) {
+  if (!versions.length) return;
+  await port.run(COMPACT_VERSION_BATCH_SQL, [JSON.stringify(versions)]);
+  versions.length = 0;
 }
 
 async function releaseLegacyVersionBody(port: DbPort, versionId: string, mainBodyHash: string | null) {
