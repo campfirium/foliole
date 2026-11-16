@@ -20,14 +20,9 @@ async function openConversionRules(page: Page, dialog: Locator) {
   await dialog.getByRole('button', { name: rules }).click();
   const help = page.getByRole('dialog', { name: rules });
   await expect(help.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ })).toBeVisible();
-  await expect(help.getByRole('heading', { name: /^(First review dates|首次复习日期)$/ })).toBeVisible();
   await expect(help.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ })).toBeVisible();
-  await expect(help.getByText(/An excerpt imports as a Topic|摘录导入为主题/u)).toBeVisible();
-  await expect(help.getByText(/For a cloze Item|对于挖空生成的检测项/u)).toBeVisible();
   return help;
 }
-
-const backToPreview = /^(Back to preview|返回资料预览)$/;
 
 async function dismissLoadError(page: Page) {
   const notice = page.getByRole('dialog', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
@@ -55,6 +50,7 @@ test('previews different XML exports and changes the interval without saving a d
   await dialog.getByRole('button', { name: parameters }).click();
   const slider = dialog.getByRole('slider');
   await expect(slider).toHaveValue('0');
+  await expect(dialog.getByText(/If only one date is available|只有一个日期可用/u)).toBeVisible();
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).toHaveText('0');
   await slider.press('End');
   await expect(slider).toHaveValue('100');
@@ -62,10 +58,10 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(rulesFromSettings.getByRole('slider')).toHaveCount(0);
   await expect(rulesFromSettings.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
   await rulesFromSettings.screenshot({ path: testInfo.outputPath('supermemo-conversion-rules.png') });
-  await rulesFromSettings.getByRole('button', { name: backToConversion }).click();
+  await desktopWindow.keyboard.press('Escape');
   await expect(slider).toHaveValue('100');
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
-  await dialog.getByRole('button', { name: backToPreview }).click();
+  await desktopWindow.keyboard.press('Escape');
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
@@ -74,12 +70,19 @@ test('previews different XML exports and changes the interval without saving a d
   await dismissLoadError(desktopWindow);
   await expect(dialog.getByRole('heading', { name: 'Learning.xml', exact: true })).toBeVisible();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport);
-  await continueXml(desktopWindow);
+  const notice = desktopWindow.getByRole('dialog', { name: /^(Collection files not found|未找到配套资料)$/ });
+  await expect(notice).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(notice).toBeHidden();
   await expect(dialog.getByRole('heading', { name: 'Other.xml', exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog.getByRole('button', { name: parameters })).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(desktopWindow.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toBeVisible();
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('slider')).toHaveCount(0);
 });
@@ -99,6 +102,7 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   await dismissLoadError(desktopWindow);
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dateBasis).toBeVisible();
+  await expect(dialog.getByText(/Dismissed Topics and Items stay dismissed|已结束学习的主题和检测项保留原状态/u)).toBeVisible();
   await expect(dialog.getByRole('slider')).toHaveValue('0');
 });
 

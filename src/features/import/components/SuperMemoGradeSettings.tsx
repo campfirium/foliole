@@ -11,8 +11,9 @@ const ratings = [
   [4, 'desktop.reviewActions.grade.easy']
 ] as const;
 
-export function SuperMemoGradeSettings({ value, onChange, disabled }: {
+export function SuperMemoGradeSettings({ value, onChange, disabled, hasPairedCollection }: {
   value: SuperMemoGradeMap; onChange(value: SuperMemoGradeMap): void; disabled: boolean;
+  hasPairedCollection: boolean;
 }) {
   const t = useTranslation();
   const group = useId();
@@ -25,6 +26,9 @@ export function SuperMemoGradeSettings({ value, onChange, disabled }: {
           {t('desktop.superMemoDrafts.resetGrades')}
         </AppButton>
       </div>
+      {hasPairedCollection ? <p className="mb-2 text-xs text-foreground/65">
+        {t('desktop.superMemoDrafts.pairedLearningHelp')}
+      </p> : null}
       <table className="w-full border-collapse text-center tabular-nums">
         <thead className="bg-foreground/5"><tr><th scope="col">SuperMemo</th>
           {ratings.map(([id, label]) => <th className="px-1 py-1 font-medium" scope="col" key={id}>{t(label)}</th>)}

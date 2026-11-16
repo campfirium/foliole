@@ -11,6 +11,7 @@ export function SuperMemoPreviewOptionFields({ percent, onChange }: {
       <input className="accent-[var(--role-accent)]" type="range" min={0} max={100} value={percent}
         onChange={event => onChange(event.currentTarget.valueAsNumber)} />
       <span className="flex justify-between text-xs text-foreground/70"><span>0% · SuperMemo</span><span>100% · Foliole</span></span>
+      <span className="text-xs text-foreground/65">{t('desktop.superMemoDrafts.blendHelp')}</span>
     </label>
   );
 }

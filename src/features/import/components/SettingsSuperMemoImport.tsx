@@ -9,6 +9,7 @@ import {
   AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription,
   AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow
 } from '../../../shared/ui';
+import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface';
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoConversionRules } from './SuperMemoConversionRules';
@@ -42,7 +43,8 @@ function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGra
           {t(preview.pairedCollection ? 'desktop.superMemoDrafts.pairedLimitations' : 'desktop.superMemoDrafts.xmlLimitations')}
         </p>
       </section>
-      <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />
+      <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)}
+        hasPairedCollection={preview.pairedCollection === true} />
     </div>
     <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)} disabled={busy} />
   </div>);
@@ -85,20 +87,51 @@ function DraftSourcePicker({ name, disabled, onLoad, onLoadNew }: {
   </div>;
 }
 
-function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
-  const t = useTranslation();
-  const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = useSuperMemoDraft(initialGrades);
+function useSuperMemoDraftNavigation(
+  { busy, error, setError, result }: Pick<ReturnType<typeof useSuperMemoDraft>, 'busy' | 'error' | 'setError' | 'result'>,
+  close: () => void
+) {
   const [parameters, setParameters] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [selection, setSelection] = useState<{ signature: string; ids: number[] }>();
+
+  function backToPreview() {
+    setParameters(false);
+    setSelection(undefined);
+  }
+
+  function dismissDialog() {
+    if (busy) return;
+    if (showRules) setShowRules(false);
+    else close();
+  }
+
+  useDismissibleSurface({
+    onDismiss: () => {
+      if (error) setError(false);
+      else if (!busy && parameters && !showRules && !result) backToPreview();
+      else dismissDialog();
+    }
+  });
+
+  return { parameters, setParameters, showRules, setShowRules, selection, setSelection, backToPreview, dismissDialog };
+}
+
+function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
+  const t = useTranslation();
+  const model = useSuperMemoDraft(initialGrades);
+  const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = model;
+  const { parameters, setParameters, showRules, setShowRules, selection, setSelection, backToPreview, dismissDialog } = useSuperMemoDraftNavigation(model, close);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
-  const [selection, setSelection] = useState<{ signature: string; ids: number[] }>();
   const selected = selection && selection.signature === update?.signature ? selection.ids : [];
   return (
-    <AppDialog open onOpenChange={open => { if (!open && !busy) close(); }}>
+    <AppDialog open onOpenChange={open => { if (!open) dismissDialog(); }}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent layout="task" className="max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]">
+        <AppDialogContent layout="task" className={showRules
+          ? 'max-h-[calc(100dvh-32px)] w-dialog-notice'
+          : 'max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]'}>
           <AppDialogTitle>{t(showRules ? 'desktop.superMemoRules.title' : 'desktop.superMemoDrafts.title')}</AppDialogTitle>
           <AppDialogClose asChild>
             <AppButton className="absolute right-4 top-3" variant="ghost" disabled={busy}
@@ -132,7 +165,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             directoryUpdate={update ? { canConfirm: (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
               update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
               update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
-            toggleRules={() => setShowRules(!showRules)} backToPreview={() => { setParameters(false); setSelection(undefined); }}
+            toggleRules={() => setShowRules(!showRules)} backToPreview={backToPreview}
             openParameters={() => setParameters(true)} convert={() => void importSource(selected)}
           />
         </AppDialogContent>
