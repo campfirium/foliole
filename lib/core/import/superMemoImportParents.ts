@@ -34,7 +34,13 @@ function hasAncestor(parents: Parents, id: number, target: number) {
 export function planSuperMemoImportParents(rows: readonly Row[]): Parents {
   const parents = directoryParents(rows);
   const topics = new Set(rows.filter(row => row.outcome === 'topic').map(row => row.id));
+  const directTopicChildren = new Set(rows.filter(row => (row.outcome === 'item' || row.outcome === 'topic') &&
+    row.parentId != null && topics.has(row.parentId)).map(row => row.id));
   for (const row of rows) {
+    if (directTopicChildren.has(row.id)) parents.set(row.id, row.parentId);
+  }
+  for (const row of rows) {
+    if (directTopicChildren.has(row.id)) continue;
     const article = row.sourceArticleId;
     if ((row.outcome !== 'topic' && row.outcome !== 'item') || article == null || article === row.id ||
         !topics.has(article) || hasAncestor(parents, row.id, article) || hasAncestor(parents, article, row.id)) {

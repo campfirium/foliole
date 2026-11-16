@@ -2,7 +2,10 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { findSuperMemoClozeLocator } from '../../lib/core/import/superMemoClozeLocator.js';
+import { findSuperMemoHighlightLocator } from '../../lib/core/import/superMemoHighlightLocator.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
+import { prepareSuperMemoParentText, type SuperMemoParentText } from '../../lib/core/import/superMemoParentText.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import { addSuperMemoSource, formatSuperMemoSource, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
@@ -58,6 +61,7 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
   const nodeIds = new Map(prepared.flatMap(({ row }) => row.outcome === 'skipped' ? [] :
     [[row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`] as const]));
   const sourceRows = new Map(prepared.map(({ row }) => [row.id, row]));
+  const parentBodies = new Map<number, { body: string; shift: number; search?: SuperMemoParentText }>();
   const priorities = prepared.filter(({ row }) => row.sourceRank != null).sort((a, b) => a.row.sourceRank! - b.row.sourceRank!);
   const priorityById = new Map(priorities.map(({ row }, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
   return orderSuperMemoImportWrites(prepared, parents).map(({ row, element, body, answer }) => {
@@ -67,7 +71,7 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
     if (nodeId && kind !== 'skipped') {
-      const snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
+      const snapshot: Snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
         title: row.title || `#${row.id}`, isTitleManual: true, content: '', reveal: null, anchorLink: null,
         position: null, createdAt: now, updatedAt: now };
       const article = row.sourceArticleId ? sourceRows.get(row.sourceArticleId) : undefined;
@@ -78,8 +82,20 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
       const placement = sourceFormat.placement;
       const inBody = placement === 'content-end' || (kind === 'topic' &&
         (placement !== 'topic-info' || parent == null || sourceRows.get(parent)?.outcome !== 'topic'));
-      persistElement(snapshot, element,
-        inBody && body.content ? { ...body, content: addSuperMemoSource(body.content, formatted, placement) } : body,
+      const content = inBody && body.content ? addSuperMemoSource(body.content, formatted, placement) : body.content;
+      if (kind === 'topic') {
+        const shift = placement === 'metadata' || placement === 'topic-info' ? content.length - body.content.length : 0;
+        parentBodies.set(row.id, { body: body.content, shift });
+      }
+      const source = parent != null && parent === row.parentId ? parentBodies.get(parent) : undefined;
+      if (source && (kind === 'topic' || kind === 'item')) {
+        const search = source.search ??= prepareSuperMemoParentText(source.body);
+        const locator = kind === 'topic' ? findSuperMemoHighlightLocator(search, element.bodyOrQuestionHtml)
+          : findSuperMemoClozeLocator(search, element.bodyOrQuestionHtml, answer.content);
+        if (locator) snapshot.anchorLink = { id: `anchor-${randomUUID()}`, kind: kind === 'topic' ? 'highlight' : 'cloze',
+          locator: { ...locator, from: locator.from + source.shift, to: locator.to + source.shift } };
+      }
+      persistElement(snapshot, element, { ...body, content },
         kind === 'item' && answer.content && (placement === 'metadata' || placement === 'body')
           ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
         due, offset, row.sourceState, gradeMap);

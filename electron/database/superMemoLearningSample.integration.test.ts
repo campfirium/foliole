@@ -88,20 +88,35 @@ function verifyArticleHierarchy(
 ) {
   const nodeId = (id: number) => entries.find(entry => entry.id === id)!.nodeId;
   const parent = sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck();
-  expect(parent.get(nodeId(3517))).toBe(nodeId(825));
-  expect(parent.get(nodeId(634))).toBe(nodeId(825));
+  expect(parent.get(nodeId(3517))).toBe(nodeId(3302));
+  expect(entries.find(entry => entry.id === 3517)?.sourceArticleId).toBe(825);
+  expect(parent.get(nodeId(634))).toBe(nodeId(3302));
   expect(parent.get(nodeId(277))).toBe(nodeId(634));
   expect(parent.get(nodeId(797))).toBe(nodeId(1148));
+  expect(parent.get(nodeId(833))).toBe(nodeId(638));
+  const anchor = sqlite.prepare('SELECT anchor_link FROM nodes WHERE id = ?').pluck();
+  const body = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck();
+  for (const [child, source, expectedKind, expectedText] of [
+    [797, 1148, 'cloze', '想采取的行动'], [139, 138, 'highlight', '我们要写下那些我们担心忘记的东西']
+  ] as const) {
+    expect(parent.get(nodeId(child))).toBe(nodeId(source));
+    const stored = JSON.parse(anchor.get(nodeId(child)) as string) as {
+      kind: string; locator: { from: number; to: number; originalText: string }
+    };
+    expect(stored.kind).toBe(expectedKind);
+    expect(stored.locator.originalText).toContain(expectedText);
+    expect((body.get(nodeId(source)) as string).slice(stored.locator.from, stored.locator.to)).toBe(stored.locator.originalText);
+  }
   expect(parent.get(nodeId(1148))).toBe(nodeId(3302));
   expect(entries.find(entry => entry.id === 3517)?.parentId).toBe(3302);
+  const kind = sqlite.prepare('SELECT kind FROM nodes WHERE id = ?').pluck();
+  const entriesById = new Map(entries.map(entry => [entry.id, entry]));
   for (const entry of entries) {
-    if (!entry.nodeId || !entry.sourceArticleId) continue;
-    const article = nodeId(entry.sourceArticleId);
-    const ancestors = new Set<unknown>();
-    for (let id = parent.get(entry.nodeId); id && !ancestors.has(id); id = parent.get(id)) {
-      ancestors.add(id);
+    if (!entry.nodeId || entry.parentId == null || !['item', 'topic'].includes(String(kind.get(entry.nodeId)))) continue;
+    const originalParent = entriesById.get(entry.parentId)?.nodeId;
+    if (originalParent && kind.get(originalParent) === 'topic') {
+      expect(parent.get(entry.nodeId), `original parent for #${entry.id}`).toBe(originalParent);
     }
-    expect(ancestors.has(article), `source article ancestry for #${entry.id}`).toBe(true);
   }
 }
 

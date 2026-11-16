@@ -84,3 +84,87 @@ if (!xml || !collectionDirectory) {
     await fixture.close();
   }
 });
+
+it('restores answer-only cloze anchors in the direct parent and leaves ambiguous cards usable', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    connection.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+    const body = 'The milestone arrived. A second milestone with clear context. A candid review.';
+    const item = (id: number, question: string, answer: string) =>
+      '<SuperMemoElement><ID>' + id + '</ID><Type>Item</Type><Title>Card ' + id + '</Title><Content><Question><![CDATA['
+      + question + ']]></Question><Answer>' + answer + '</Answer></Content></SuperMemoElement>';
+    const blank = '<span class="cloze">[...]</span>';
+    const xml = '<SuperMemoCollection><Count>6</Count><SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Parent</Title>'
+      + '<Content><Question>' + body + '</Question></Content>'
+      + item(2, 'Rewritten sentence with ' + blank, 'review')
+      + item(3, 'A second ' + blank + ' with clear context.', 'milestone')
+      + item(4, 'a ' + blank, 'milestone')
+      + item(5, 'Already answered', 'review')
+      + item(6, 'The ' + blank, 'did')
+      + '</SuperMemoElement></SuperMemoCollection>';
+    const elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+    const args = { elements, percent: 0 };
+    const result = await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args);
+    expect(result).toMatchObject({ imported: 6 });
+    expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args)).toEqual(result);
+    peer.reopen();
+    const parent = peer.sqlite.prepare('SELECT id, content FROM nodes WHERE title = ?').get('Parent') as { id: string; content: string };
+    const card = (id: number) => peer.sqlite.prepare('SELECT parent_id, anchor_link, reveal FROM nodes WHERE title = ?')
+      .get('Card ' + id) as { parent_id: string; anchor_link: string | null; reveal: string };
+    for (const [id, answer, from] of [[2, 'review', body.indexOf('review')], [3, 'milestone', body.lastIndexOf('milestone')]] as const) {
+      expect(card(id)).toMatchObject({ parent_id: parent.id, reveal: answer });
+      expect(JSON.parse(card(id).anchor_link!)).toMatchObject({
+        kind: 'cloze', locator: { from, to: from + answer.length, originalText: parent.content.slice(from, from + answer.length) }
+      });
+    }
+    for (const id of [4, 5, 6]) expect(card(id)).toMatchObject({ parent_id: parent.id, anchor_link: null });
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
+
+it('restores Topic highlights in the original parent when the selection can be located', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    connection.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+    const revised = 'The first boundary remains, the wording in the middle changed, the last boundary remains.';
+    const topic = (id: number, body: string, children = '') =>
+      '<SuperMemoElement><ID>' + id + '</ID><Type>Topic</Type><Title>Topic ' + id + '</Title><Content><Question><![CDATA['
+      + body + ']]></Question></Content>' + children + '</SuperMemoElement>';
+    const parent = '<p>' + revised + '</p><p>A second distinct selection.</p>'
+      + '<p>A repeated passage.</p><p>A repeated passage.</p>';
+    const children = topic(2, 'The first boundary remains, a brief paraphrase, the last boundary remains.')
+      + topic(3, 'A second distinct selection.<hr SuperMemo><SuperMemoReference>#Title: Parent</SuperMemoReference>')
+      + topic(4, 'A repeated passage.') + topic(5, 'Text that has no surviving evidence.');
+    const xml = '<SuperMemoCollection><Count>5</Count>' + topic(1, parent, children) + '</SuperMemoCollection>';
+    const elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+    const args = { elements, percent: 0 };
+    const result = await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args);
+    expect(result).toMatchObject({ imported: 5 });
+    expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args)).toEqual(result);
+    peer.reopen();
+    const get = peer.sqlite.prepare('SELECT id, parent_id, content, anchor_link FROM nodes WHERE title = ?');
+    const node = (id: number) => get.get('Topic ' + id) as { id: string; parent_id: string; content: string; anchor_link: string | null };
+    const parentNode = node(1);
+    for (const [id, originalText] of [[2, revised], [3, 'A second distinct selection.']] as const) {
+      const from = parentNode.content.indexOf(originalText);
+      expect(node(id).parent_id).toBe(parentNode.id);
+      expect(JSON.parse(node(id).anchor_link!)).toMatchObject({
+        kind: 'highlight', locator: { from, to: from + originalText.length, originalText }
+      });
+    }
+    for (const id of [4, 5]) expect(node(id)).toMatchObject({ parent_id: parentNode.id, anchor_link: null });
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});

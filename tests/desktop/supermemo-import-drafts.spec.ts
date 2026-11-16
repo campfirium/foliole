@@ -34,6 +34,9 @@ async function openConversionRules(page: Page, dialog: Locator) {
   const help = page.getByRole('dialog', { name: rules });
   await expect(help.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ })).toBeVisible();
   await expect(help.getByRole('heading', { name: /^(First review dates|首次复习日期)$/ })).toBeVisible();
+  await expect(help.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ })).toBeVisible();
+  await expect(help.getByText(/An excerpt imports as a Topic|摘录导入为主题/u)).toBeVisible();
+  await expect(help.getByText(/For a cloze Item|对于挖空生成的检测项/u)).toBeVisible();
   return help;
 }
 

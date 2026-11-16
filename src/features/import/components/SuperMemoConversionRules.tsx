@@ -1,7 +1,7 @@
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialogBody } from '../../../shared/ui';
 
-const sections = ['materials', 'media', 'learning', 'dates', 'sources'] as const;
+const sections = ['materials', 'annotations', 'media', 'learning', 'dates', 'sources'] as const;
 
 export function SuperMemoConversionRules() {
   const t = useTranslation();
