@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { DiveDirectoryConversionTarget } from '../../lib/core/nodes/diveDirectoryConversion';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
 import { addCompanionDiveSource } from '../shared/platform/companion/runtime/companionDiveSources';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
@@ -19,6 +21,7 @@ type Mode = 'undo' | 'redo';
 type Actions = {
   snapshot: WorkspaceSnapshot | null; currentNodeId: string | null; flowActive: boolean; busy: boolean; pending: boolean; error: boolean; canUndo: boolean; canRedo: boolean;
   open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand, onSaved?: () => void): Promise<void>;
+  convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
   replay(mode: Mode): void;
   retryRefresh(): void;
@@ -52,6 +55,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     });
   }
   const actions: Actions = { snapshot: props.snapshot, currentNodeId: props.currentNodeId ?? null, flowActive: props.flowActive, busy, pending, error, ...availability, open: setSheet,
+    convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter)),
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId)),
     retryRefresh: () => void run(async () => {}),
     execute: (command, onSaved) => run(async () => {

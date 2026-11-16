@@ -50,6 +50,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.directory.row.trash': 'Removed topics and folders',
   'companion.directory.row.virtual': 'Smart view',
   'companion.directory.section.external': 'External',
+  'companion.directory.convertMatchingToDive': 'The Dive will keep the topics that match now. Future matches won’t be added automatically.',
   'companion.directory.section.virtual': 'Virtual',
   'companion.directory.section.trash': 'Trash',
   'companion.directory.title': 'Directory',

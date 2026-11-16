@@ -1,8 +1,9 @@
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import { VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import { isManualVirtualNodeFilter } from '../../../../../lib/core/nodes/virtualNodeFilter';
-import { applyVirtualNodeManualOrder } from '../../../../../lib/core/nodes/virtualNodeResults';
+import { applyVirtualNodeManualOrder, resolveVirtualNodeResultIds } from '../../../../../lib/core/nodes/virtualNodeResults';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { selectCanonicalVisibleNodeIds } from '../../../workspaceCanonicalSelectors';
 import { listCompanionOpenVirtualFolders } from '../browse/companionOpenVirtualFolders';
 
 import { readIosCompanionDatabase } from './iosCompanionActiveDatabase';
@@ -27,12 +28,18 @@ export async function loadCompanionVirtualFolderResultIds(
   const filter = folder?.virtualFilter;
   if (!folder || !filter) return [];
   if (isManualVirtualNodeFilter(filter)) {
-    return (folder.manualChildOrder ?? []).filter((nodeId) => isVirtualResultCandidate(snapshot, folderNodeId, nodeId));
+    return resolveVirtualNodeResultIds({
+      activeNodeId: folderNodeId,
+      filter,
+      manualChildOrder: folder.manualChildOrder,
+      nodeOrder: selectCanonicalVisibleNodeIds(snapshot),
+      nodesById: snapshot.nodesById
+    });
   }
   const conditions = filter.conditions
     .map((condition) => ({ ...condition, value: condition.value.trim() }))
     .filter((condition) => condition.value.length > 0);
-  if (conditions.length === 0) return [];
+  if (conditions.length === 0 || conditions.some(condition => condition.field === 'manual')) return [];
   const textValues = conditions.filter((condition) => condition.field === 'text').map((condition) => condition.value);
   const textCandidateIds = textValues.length > 0
     ? new Set(await queryTextCandidateIds(folderNodeId, textValues, db))

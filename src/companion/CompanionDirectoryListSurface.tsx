@@ -9,6 +9,7 @@ import {
 } from '../shared/localization/systemEntryNames';
 import { AppEmptyState } from '../shared/ui';
 
+import { CompanionDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
 import {
   type DirectorySection,
   type DirectoryListItem
@@ -73,6 +74,7 @@ function DirectoryRow(props: DirectoryRowProps) {
         className="h-4 w-4 shrink-0 text-companion-text-tertiary"
       />
     </button>
+    {props.item.source === 'virtual' && <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title} />}
     {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title} metadata={meta ?? ''} onOpen={() => props.onSelectItem(props.item)} />}
     </div>
   );

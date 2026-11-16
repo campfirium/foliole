@@ -52,6 +52,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.directory.row.trash': '已移除的主题和文件夹',
   'companion.directory.row.virtual': '智能视图',
   'companion.directory.section.external': '参考',
+  'companion.directory.convertMatchingToDive': '专题将保留当前匹配且可加入专题的主题，之后符合条件的新主题不会自动加入。',
   'companion.directory.section.virtual': '索引',
   'companion.directory.section.trash': '回收站',
   'companion.directory.title': '目录',
