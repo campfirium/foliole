@@ -7,7 +7,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
-import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from '../../../electron/database/historicalMigration.test-support.js';
 import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
 
 import { bootstrapCompanionDatabase } from './companionDatabaseLifecycle.js';
@@ -17,6 +17,7 @@ import { hashTextBody } from './textBodyHash.js';
 
 function legacyPosition(db: Database.Database, version: number) {
   restoreEmptyLegacyDailyFlowSchema(db);
+  restoreLegacyParentOrderTable(db);
   for (const sql of NODE_VERSION_MEMBER_POSITION_SCHEMA) db.exec(sql);
   db.exec(`INSERT INTO nodes (id, kind, title, content, body_blob_hash, current_version_id, created_at, updated_at)
     VALUES ('topic', 'topic', 'Retained', 'Original content', '${hashTextBody('Original content')}', 'version', 'now', 'now');

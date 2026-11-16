@@ -63,7 +63,7 @@ it('keeps receiving while a busy provider round is retried in the foreground', a
   runtime.adopt.mockRejectedValueOnce(new Error('framed_sync_http_400:sync_round_busy'));
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('failed');
   expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving',
-    error: 'sync_receive_failed' });
+    error: 'sync_round_busy' });
   runtime.adopt.mockImplementationOnce(async () => { runtime.adoption = null; });
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('completed');
 });

@@ -117,7 +117,7 @@ it('executes full and scoped learning reads using only learning, identity and or
   } };
   await persistence.learningSnapshot(audited);
   await scopedDailyLearningSnapshot(audited, persistence, ['article']);
-  expect([...tables].sort()).toEqual(['companion_meta', 'node_reading', 'node_reading_host_state', 'node_review', 'nodes', 'parent_child_order']);
+  expect([...tables].sort()).toEqual(['companion_meta', 'node_reading', 'node_reading_host_state', 'node_review', 'nodes']);
 });
 
 it('rejects a stale host reading position committed by a separate connection before Soon', async () => {

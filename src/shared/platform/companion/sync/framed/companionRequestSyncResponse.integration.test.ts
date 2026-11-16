@@ -178,7 +178,8 @@ it.each(['push', 'pull', 'cancel-pull', 'lost-push'])('isolates objects through 
         { ...exchange, request: nativeBatchExchange(modes) }, differences, options), source.db, target.db);
     } else if (mode === 'cancel-pull') {
       await expect(transfer).rejects.toThrow('test_background_cancel');
-      expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'a-good' }]);
+      // Notifications follow the batch commit, so cancellation preserves both accepted objects.
+      expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'a-good' }, { id: 'c-good' }]);
     } else {
       const results = await transfer;
       expect(results.map(result => [result.globalId, result.error === ''])).toEqual([

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ATTACHMENT_DEMAND_SCHEMA } from '../../lib/core/database/attachmentDemandSchema.ts';
+import { PARENT_ORDER_FACT_SCHEMA } from '../../lib/core/database/currentParentOrderSchema.ts';
 import { DAILY_FLOW_CURRENT_SCHEMA } from '../../lib/core/database/dailyFlowSchema.ts';
 import { READING_RESUME_SCHEMA } from '../../lib/core/database/readingResumeSchema.ts';
 import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.ts';
@@ -37,7 +38,6 @@ const DESKTOP_SCHEMA_FILES = {
   FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',
   TOPIC_DAILY_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
   NODE_CHILD_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
-  PARENT_CHILD_ORDER_MEMBER_SCHEMA: 'lib/core/database/parentChildOrderMembers.ts',
   FRAMED_SYNC_INVENTORY_TABLES: 'lib/core/database/framedSyncInventorySchema.ts',
   FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES: 'lib/core/database/framedSyncInventorySchema.ts',
   FRAMED_SYNC_INVENTORY_SCHEMA: 'lib/core/database/framedSyncInventorySchema.ts',
@@ -92,7 +92,7 @@ export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {
 }
 
 export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
-  const arrays = { ATTACHMENT_DEMAND_SCHEMA, DAILY_FLOW_CURRENT_SCHEMA };
+  const arrays = { ATTACHMENT_DEMAND_SCHEMA, DAILY_FLOW_CURRENT_SCHEMA, PARENT_ORDER_FACT_SCHEMA };
   for (const [name, relativePath] of Object.entries(DESKTOP_SCHEMA_FILES)) {
     arrays[name] = extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name, arrays);
   }
@@ -103,8 +103,6 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
     readRepoFile(repoRoot, 'lib/core/database/importRunSchema.ts'), arrays));
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/sync/pdfTextArtifact.ts'), arrays));
-  statements.push(...extractStatementsFromBody(
-    readRepoFile(repoRoot, 'lib/core/database/numberedMigrationParentChildOrder.ts'), arrays));
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/database/nodeVersionConfirmationSchema.ts'), arrays));
   statements.push(...extractStatementsFromBody(

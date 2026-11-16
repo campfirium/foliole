@@ -93,7 +93,8 @@ it('resumes companion request restore after an object fails without erasing the 
     libraryEpoch: event.restore_id, protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version } };
   bridge.sqlite.exec(`CREATE TRIGGER reject_second BEFORE INSERT ON nodes
     WHEN NEW.id = 't326-b' BEGIN SELECT RAISE(ABORT, 'second_object_failed'); END`);
-  await expect(syncCompanionIdentityObjects(fixture.rightSnapshot.origin, options)).rejects.toThrow('second_object_failed');
+  const partial = await syncCompanionIdentityObjects(fixture.rightSnapshot.origin, options);
+  expect(partial.remainingStructureChangeCount).toBeGreaterThan(0);
   expect(await loadSyncGroupOverwriteProgress(bridge.db)).not.toBeNull();
   expect(await bridge.db.query("SELECT id, content FROM nodes WHERE id IN ('t326-a', 't326-b', 't326-old')"))
     .toEqual([{ id: 't326-a', content: 'First restored body' }]);

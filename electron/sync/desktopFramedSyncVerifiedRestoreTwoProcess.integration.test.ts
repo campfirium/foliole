@@ -35,7 +35,7 @@ it.each(['restore', 'adoption'] as const)(
     });
       expect(await fixture.right.invoke('begin_identity_restore', args)).toEqual({ directory });
       installObjectCommitFailure(fixture.rightSnapshot.databasePath, 1);
-      await expect(fixture.right.invoke('identity_restore_round', args)).rejects.toThrow('identity_restore_object_rejected');
+      await expect(fixture.right.invoke('identity_restore_round', args)).resolves.toMatchObject({ complete: false });
       assertReceiverConfiguration(fixture.rightSnapshot.databasePath, settings, sources);
       expect(await verifiedReceiverArticle(fixture.rightSnapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
       const failed = verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, secondId);

@@ -3,6 +3,8 @@ import { controlledVersionSqliteTests } from './native-sqlite-version-tests.mjs'
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  'electron/database/retireParentOrderProjection.integration.test.ts',
+  'electron/sync/requestSyncObjectRejectionHttp.integration.test.ts',
   ...controlledRuntimeSqliteTests,
   ...controlledVersionSqliteTests,
   'src/app/hooks/ambientWorkspaceRefresh.integration.test.tsx',

@@ -24,7 +24,7 @@ it.each(['restore', 'adoption'] as const)('resumes production %s after an object
       peer: { deviceId: fixture.leftSnapshot.deviceId, libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch` } } };
     withDb(fixture.rightSnapshot.databasePath, db => db.exec(`CREATE TRIGGER reject_second_object
       BEFORE INSERT ON nodes WHEN NEW.id = 'b' BEGIN SELECT RAISE(ABORT, 'second_object_failed'); END`));
-    await expect(fixture.right.invoke('round', request)).rejects.toThrow('second_object_failed');
+    await expect(fixture.right.invoke('round', request)).resolves.toMatchObject({ complete: false });
     expect(bodies(fixture.rightSnapshot.databasePath)).toEqual([{ id: 'a', parent_id: null, content: 'First complete body' }]);
     const progress = overwriteProgressRow(fixture.rightSnapshot.databasePath);
     expect(progress).toBeDefined();

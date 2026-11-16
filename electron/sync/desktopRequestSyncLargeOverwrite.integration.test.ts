@@ -23,7 +23,7 @@ it.each(modes)(
       const { workload, source, request } = await prepare(fixture, mode);
       const transferStarted = performance.now();
       installObjectCommitFailure(fixture.rightSnapshot.databasePath, 400);
-      await expect(fixture.right.invoke('round', request)).rejects.toThrow('identity_restore_object_rejected');
+      await expect(fixture.right.invoke('round', request)).resolves.toMatchObject({ complete: false });
       const failed = largeOverwriteState(fixture.rightSnapshot.databasePath);
       expect(failed.nodes).toHaveLength(400); expect(failed.versions).toHaveLength(2400);
       expect(failed.parents).toHaveLength(2800);

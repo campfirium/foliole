@@ -19,7 +19,7 @@ it('rolls back a failed object and receives it after an actual receiver restart'
       receiver.exec(`CREATE TRIGGER reject_ready_node BEFORE INSERT ON nodes
         WHEN new.id = 't326-rollback-ready' BEGIN SELECT RAISE(ABORT, 'ready_business_rejected'); END`);
     } finally { receiver.close(); }
-    await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).rejects.toThrow('ready_business_rejected');
+    await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).resolves.toMatchObject({ complete: false });
     const failed = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
     expect(failed.nodes).toEqual([]);
     expect(failed.versions).toEqual([]);

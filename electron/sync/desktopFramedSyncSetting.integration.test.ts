@@ -32,7 +32,7 @@ it.each([
       try { target.exec(`CREATE TRIGGER reject_setting_projection BEFORE INSERT ON settings
         WHEN NEW.key = 'review_scheduler_settings' BEGIN SELECT RAISE(ABORT, 'projection_write_rejected'); END`); }
       finally { target.close(); }
-      await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).rejects.toThrow('projection_write_rejected');
+      await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).resolves.toMatchObject({ complete: false });
       const failed = new Database(fixture.rightSnapshot.databasePath);
       try {
         expect(failed.prepare("SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'").get()).toBeUndefined();
