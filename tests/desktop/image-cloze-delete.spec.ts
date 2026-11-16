@@ -85,23 +85,6 @@ async function clickRegionBorder(desktopWindow: Page) {
   await desktopWindow.mouse.click(bounds.x + bounds.width - 4, bounds.y + bounds.height - 4);
 }
 
-async function collectSelectionDebugState(desktopWindow: Page) {
-  return desktopWindow.evaluate(() => {
-    const region = document.querySelector('.cm-md-image-cloze-region') as HTMLElement | null;
-    const overlay = document.querySelector('.cm-md-image-cloze-overlay') as HTMLElement | null;
-    const deleteControl = document.querySelector('.cm-md-image-cloze-delete') as HTMLElement | null;
-    const wrapper = document.querySelector('.cm-md-image-surface-block') as HTMLElement | null;
-    return {
-      deleteControlHidden: deleteControl?.hidden ?? null,
-      deleteControlStyle: deleteControl ? { left: deleteControl.style.left, top: deleteControl.style.top } : null,
-      overlayHidden: overlay?.hidden ?? null,
-      overlayHover: overlay?.dataset.mdImageRegionHover ?? null,
-      regionState: region?.dataset.regionState ?? null,
-      wrapperClasses: wrapper?.className ?? null
-    };
-  });
-}
-
 async function verifyImageDeletionReplay(desktopWindow: Page, childId: string,
   createdRegions: unknown,
   testInfo: import('@playwright/test').TestInfo) {
@@ -145,9 +128,9 @@ test('creates and deletes an image cloze region without leaving it on the image'
   expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions).toEqual(createdRegions);
 
   await clickRegionBorder(desktopWindow);
-  console.log(JSON.stringify(await collectSelectionDebugState(desktopWindow), null, 2));
-  await expect(desktopWindow.getByRole('button', { name: 'Delete image cloze' })).toBeVisible();
-  await desktopWindow.getByRole('button', { name: 'Delete image cloze' }).click();
+  await expect(desktopWindow.locator('.cm-md-image-cloze-delete')).toHaveCount(0);
+  const edit = desktopWindow.locator('.cm-md-image-region-controls');
+  await edit.getByRole('button', { name: /^(Delete image cloze|删除图片挖空)$/ }).click();
   const invocation = await desktopWindow.evaluate(() => window.__FOLIOLE_DESKTOP_DEBUG_PROBE__?.getSnapshot());
   try {
     await expect(regions).toHaveCount(0);

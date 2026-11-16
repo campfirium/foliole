@@ -72,7 +72,7 @@ test('saves image focus for one occurrence and preserves it when creating a cloz
   await page.getByRole('button', { name: 'Focus image region' }).click();
   const masks = page.locator('.cm-md-image-focus-mask');
   await expect(masks).toHaveCount(1);
-  await expect(masks.first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.3)');
+  await expect(masks.first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.5)');
   await expect(masks.first()).toHaveCSS('clip-path', /^polygon\(evenodd,/u);
   await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');
   const saved = (await readDocument(page, OWNER_ID)).content;
@@ -103,10 +103,10 @@ test('applies focus transparency immediately and saves it in appearance settings
   await page.getByRole('button', { name: 'Focus image region' }).click();
   await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');
   const mask = page.locator('.cm-md-image-focus-mask');
-  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.3)');
+  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.5)');
   const settings = await openSettingsCategory(page, 'Appearance');
   const slider = settings.getByRole('slider', { name: 'Focus transparency' });
-  await expect(slider).toHaveValue('70');
+  await expect(slider).toHaveValue('50');
   await slider.press('Home');
   await expect(mask).toHaveCSS('background-color', 'rgb(0, 0, 0)');
   await slider.press('End');

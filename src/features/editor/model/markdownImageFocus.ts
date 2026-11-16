@@ -4,7 +4,7 @@ import {
 
 export type ImageFocusRect = MarkdownImageRect;
 
-export const DEFAULT_IMAGE_FOCUS_TRANSPARENCY_PERCENT = 70;
+export const DEFAULT_IMAGE_FOCUS_TRANSPARENCY_PERCENT = 50;
 
 export function parseMarkdownImageFocusLabel(label: string) {
   const { label: base, rect } = parseMarkdownImageRectLabel(label, MARKDOWN_IMAGE_FOCUS_MARKER);

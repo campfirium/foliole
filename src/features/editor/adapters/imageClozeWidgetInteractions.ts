@@ -1,3 +1,4 @@
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 
@@ -34,7 +35,7 @@ function createSelectionSync(args: Pick<Parameters<typeof createSelectionHandler
     args.overlay.dataset.mdImageRegionHover = hoverRegionId === 'focus' ? 'focus' : String(Boolean(hoverRegionId));
     args.overlay.hidden = false;
     syncSavedRegionLayerState(args.regionLayer, args.presentation ?? null, selectedRegionId);
-    positionDeleteControl(args.deleteControl, selectedAnchorPoint);
+    if (args.deleteControl) positionDeleteControl(args.deleteControl, selectedAnchorPoint);
   };
 }
 
@@ -88,7 +89,7 @@ function createSelectionPointerHandlers(args: {
 
 function createSelectionHandlers(args: {
   attachmentId: string;
-  deleteControl: ImageClozeDeleteControl;
+  deleteControl: ImageClozeDeleteControl | null;
   draft: ImageClozeDraftController;
   host: HTMLElement;
   focus?: ImageFocusRect;
@@ -194,7 +195,7 @@ function attachSavedRegionPointerHandlers(args: {
 export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs) {
   const host = args.overlay.parentElement ?? args.wrapper;
   const draft = createDraftControllerForOverlay(args, host);
-  const deleteControl = createDeleteControl((event) => {
+  const deleteControl = isDesktopRuntime() ? null : createDeleteControl((event) => {
     event.preventDefault();
     event.stopPropagation();
     selection.deleteSelection();
@@ -210,7 +211,8 @@ export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs
     regionLayer: args.regionLayer
   });
   attachSavedRegionPointerHandlers({ regionLayer: args.regionLayer, selection });
-  args.overlay.append(draft.draftActions, deleteControl.container);
+  args.overlay.append(draft.draftActions);
+  if (deleteControl) args.overlay.append(deleteControl.container);
   return {
     clearSelection: selection.clearSelection,
     handlePointerDown: selection.handlePointerDown,
