@@ -8,7 +8,7 @@ import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInven
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 
-const DIGEST_READ_BATCH = 256;
+const DIGEST_BATCH_SIZE = 256;
 type DigestRow = DbRow & { object_id: string; shared_state_hash: string; unready: number };
 
 async function* readDigestBatches(db: DbPort, nodeIds?: readonly string[]) {
@@ -27,9 +27,9 @@ async function* readDigestBatches(db: DbPort, nodeIds?: readonly string[]) {
     }
     const rows = await db.query<DigestRow>(`SELECT object_id, shared_state_hash, unready FROM framed_sync_node_digest
       ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''} ORDER BY object_id LIMIT ?`,
-    [...params, DIGEST_READ_BATCH]);
+    [...params, DIGEST_BATCH_SIZE]);
     if (rows.length) yield rows;
-    if (rows.length < DIGEST_READ_BATCH) return;
+    if (rows.length < DIGEST_BATCH_SIZE) return;
     after = rows[rows.length - 1]!.object_id;
   }
 }
@@ -43,9 +43,12 @@ async function missingDigests(db: DbPort, nodeIds?: readonly string[]) {
 }
 
 export async function flushRequestSyncInventoryDigests(db: DbPort, nodeIds?: readonly string[]) {
-  for (const entry of await missingDigests(db, nodeIds)) {
+  const entries = await missingDigests(db, nodeIds);
+  for (let offset = 0; offset < entries.length; offset += DIGEST_BATCH_SIZE) {
+    const batch = entries.slice(offset, offset + DIGEST_BATCH_SIZE).map(entry =>
+      [entry.globalId, bytesToHex(entry.sharedStateHash), entry.unready ? 1 : 0]);
     await db.run(`INSERT OR REPLACE INTO framed_sync_node_digest (object_id, shared_state_hash, unready)
-      VALUES (?, ?, ?)`, [entry.globalId, bytesToHex(entry.sharedStateHash), entry.unready ? 1 : 0]);
+      SELECT value ->> 0, value ->> 1, value ->> 2 FROM json_each(?)`, [JSON.stringify(batch)]);
   }
 }
 

@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { expect, it, vi } from 'vitest';
+import Database from 'better-sqlite3';
+import { expect, it } from 'vitest';
 
 import { releaseDeletedNodeBodiesWithPort } from '../../lib/core/database/deletedNodeBodyRelease.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
@@ -72,10 +73,12 @@ it('compacts previously unknown old versions with bounded writes without revivin
     const draft = textBranch('draft', 'Unseen draft', base, '2026-10-01T03:00:00Z');
     await applySyncNodesWithDbPort(source.db, [base, draft]);
     await remove(target);
-    const prepareStatement = vi.spyOn(target.sqlite, 'prepare');
+    const statements: string[] = [];
+    target.sqlite.close();
+    target.sqlite = new Database(target.file, { verbose: sql => statements.push(String(sql)) });
     await send(source, target);
-    expect(prepareStatement.mock.calls.filter(([sql]) =>
-      sql.includes('UPDATE node_sync_versions SET body_text = NULL, snapshot_json ='))).toHaveLength(1);
+    expect(statements.filter(sql =>
+      /\bUPDATE node_sync_versions SET body_text = NULL, snapshot_json =/iu.test(sql))).toHaveLength(1);
     target.reopen();
     expect(target.sqlite.prepare(`SELECT version_id FROM node_sync_versions
       WHERE version_id IN ('draft', 'original') AND body_text IS NULL

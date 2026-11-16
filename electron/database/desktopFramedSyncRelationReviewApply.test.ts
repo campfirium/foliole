@@ -79,6 +79,21 @@ it.each([
     .toEqual([{ ordinal: 0, parent_version_id: 'version-parent-a' }]);
 });
 
+it('validates an edge and its replay with one SQLite read each', async () => {
+  const edge = parent('version-parent-a', 0);
+  let reads = 0;
+  await port.transaction(async tx => {
+    const observed = { ...tx, query: <T extends Record<string, unknown>>(sql: string, params?: Parameters<DbPort['query']>[1]) => {
+      reads++;
+      return tx.query<T>(sql, params);
+    } };
+    await applyDesktopFramedSyncRelationReviewFactsWithDbPort(observed, [edge, edge]);
+  });
+  expect(sqlite.prepare('SELECT parent_version_id, ordinal FROM node_sync_version_parents').all())
+    .toEqual([{ ordinal: 0, parent_version_id: 'version-parent-a' }]);
+  expect(reads).toBe(2);
+});
+
 it('requires every shared review field to match for an op replay', async () => {
   await apply([projectDesktopFramedSyncReview(baseReview)]);
   const variants: DesktopFramedSyncReviewSource[] = [

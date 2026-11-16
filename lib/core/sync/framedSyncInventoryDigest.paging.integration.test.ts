@@ -25,10 +25,17 @@ async function fixture() {
     for (const id of ids) insert.run(id, JSON.stringify(['1'.repeat(64), 'v1', []]));
   })();
   const write = createBetterSqliteDbPort(writer);
-  await write.transaction(flushRequestSyncInventoryDigests);
+  let digestWriteCount = 0;
+  await write.transaction(tx => flushRequestSyncInventoryDigests({
+    ...tx,
+    run(sql, params) {
+      if (sql.includes('INSERT OR REPLACE INTO framed_sync_node_digest')) digestWriteCount++;
+      return tx.run(sql, params);
+    }
+  }));
   const reader = new Database(file, { readonly: true });
   const read = createBetterSqliteDbPort(reader, { transactionMode: 'deferred' });
-  return { ids, write, read, writer, close() {
+  return { ids, write, read, writer, digestWriteCount, close() {
     reader.close(); writer.close(); rmSync(root, { recursive: true });
   } };
 }
@@ -48,6 +55,15 @@ function observeDigestPayloads(db: DbPort, sizes: number[], afterFirst?: () => P
     }
   };
 }
+
+it('persists inventory digests with one write per bounded group', async () => {
+  const library = await fixture();
+  try {
+    const cached = library.writer.prepare('SELECT object_id FROM framed_sync_node_digest ORDER BY object_id').pluck().all();
+    expect(cached).toEqual(library.ids);
+    expect(library.digestWriteCount).toBeLessThanOrEqual(4);
+  } finally { library.close(); }
+});
 
 it.each([false, true])('bounds each digest return while preserving the full snapshot (scoped=%s)', async scoped => {
   const library = await fixture();

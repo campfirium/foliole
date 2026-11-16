@@ -9,7 +9,13 @@ import {
   type FramedSyncReviewSource
 } from './framedSyncRelationReviewFact.js';
 
-type ParentRow = FramedSyncParentRelationSource & DbRow;
+type ParentResolutionRow = DbRow & {
+  child_owner: string | null;
+  parent_owner: string | null;
+  tombstone: string | null;
+  existing_parent: string | null;
+  existing_ordinal: number | null;
+};
 type ReviewRow = FramedSyncReviewSource & DbRow;
 type DecodedFact =
   | Readonly<{ factId: string; kind: 'parent'; row: FramedSyncParentRelationSource }>
@@ -30,39 +36,29 @@ function decodeFact(fact: CanonicalFact): DecodedFact {
   throw new Error(`framed_sync_relation_review_fact_kind_invalid:${fact.kind}`);
 }
 
-async function assertVersionOwner(tx: DbPort, versionId: string, objectId: string, reclaimable = false) {
-  const [version] = await tx.query<{ object_id: string }>(
-    'SELECT object_id FROM node_sync_versions WHERE version_id = ? LIMIT 1', [versionId]
-  );
-  // A parent the group already reclaimed is a valid gap; the edge still records the original identity.
-  if (!version && reclaimable) return;
-  if (!version) throw new Error(`framed_sync_parent_relation_version_missing:${versionId}`);
-  if (version.object_id !== objectId) {
-    throw new Error(`framed_sync_parent_relation_node_mismatch:${versionId}`);
-  }
-}
-
-/** A deletion received without its text is kept only as the tombstone, which already names its parent. */
-async function isTombstoneOnlyVersion(tx: DbPort, row: FramedSyncParentRelationSource) {
-  const [tomb] = await tx.query(`SELECT 1 AS present FROM node_sync_tombstones WHERE version_id = ? AND node_id = ?
-    AND NOT EXISTS (SELECT 1 FROM node_sync_versions WHERE version_id = ?)`, [row.version_id, row.object_id, row.version_id]);
-  return Boolean(tomb);
-}
-
 async function applyParent(tx: DbPort, factId: string, row: FramedSyncParentRelationSource) {
-  if (await isTombstoneOnlyVersion(tx, row)) return;
-  await assertVersionOwner(tx, row.version_id, row.object_id);
-  await assertVersionOwner(tx, row.parent_version_id, row.object_id, true);
-  const existing = await tx.query<ParentRow>(
-    `SELECT version.object_id, parent.version_id, parent.parent_version_id, parent.ordinal
-     FROM node_sync_version_parents parent
-     JOIN node_sync_versions version ON version.version_id = parent.version_id
-     WHERE parent.version_id = ? AND (parent.parent_version_id = ? OR parent.ordinal = ?)`,
-    [row.version_id, row.parent_version_id, row.ordinal]
+  const resolved = await tx.query<ParentResolutionRow>(
+    `WITH incoming(version_id, parent_version_id, object_id, ordinal) AS (VALUES (?, ?, ?, ?))
+     SELECT child.object_id AS child_owner, parent.object_id AS parent_owner, tomb.version_id AS tombstone,
+       edge.parent_version_id AS existing_parent, edge.ordinal AS existing_ordinal
+     FROM incoming
+     LEFT JOIN node_sync_versions child ON child.version_id = incoming.version_id
+     LEFT JOIN node_sync_versions parent ON parent.version_id = incoming.parent_version_id
+     LEFT JOIN node_sync_tombstones tomb ON tomb.node_id = incoming.object_id AND tomb.version_id = incoming.version_id
+     LEFT JOIN node_sync_version_parents edge ON edge.version_id = incoming.version_id
+       AND (edge.parent_version_id = incoming.parent_version_id OR edge.ordinal = incoming.ordinal)`,
+    [row.version_id, row.parent_version_id, row.object_id, row.ordinal]
   );
-  if (existing.length > 0) {
-    if (existing.length === 1 && existing[0]!.parent_version_id === row.parent_version_id &&
-        existing[0]!.ordinal === row.ordinal && existing[0]!.object_id === row.object_id) return;
+  const match = resolved[0]!;
+  // A standalone tombstone already names its parent. A reclaimed parent is a valid gap.
+  if (match.child_owner === null && match.tombstone !== null) return;
+  if (match.child_owner === null) throw new Error(`framed_sync_parent_relation_version_missing:${row.version_id}`);
+  if (match.child_owner !== row.object_id) throw new Error(`framed_sync_parent_relation_node_mismatch:${row.version_id}`);
+  if (match.parent_owner !== null && match.parent_owner !== row.object_id) {
+    throw new Error(`framed_sync_parent_relation_node_mismatch:${row.parent_version_id}`);
+  }
+  if (match.existing_parent !== null) {
+    if (resolved.length === 1 && match.existing_parent === row.parent_version_id && match.existing_ordinal === row.ordinal) return;
     throw new Error(`framed_sync_parent_relation_conflict:${factId}`);
   }
   await tx.run(
