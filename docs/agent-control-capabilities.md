@@ -35,6 +35,8 @@ Markdown image preview and drag resizing are editor interactions. A saved width 
 
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
+The desktop file import picker imports every selected file, with a separate post-import reading-mode choice for each EPUB. This OS picker flow stays internal to the desktop app; Agent Control text creation does not expose local file selection.
+
 The desktop search panel remembers its preview line limit and whether to show each result's date and time. These are desktop display preferences. Agent Control search returns bounded excerpts independently of the panel's preview line limit.
 
 ### Retrying material creation

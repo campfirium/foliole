@@ -64,12 +64,12 @@ beforeEach(() => {
 });
 
 it('routes EPUB previews and imports through the dedicated extractor', async () => {
-  await expect(selectImportTextFile()).resolves.toEqual({
+  await expect(selectImportTextFile()).resolves.toEqual([{
     content: '# Sample Book\n\n# Chapter 1\n\nBody',
     file_name: 'book.epub',
     file_path: '/tmp/book.epub',
     kind: 'epub'
-  });
+  }]);
 
   await expect(runTextFileImport()).resolves.toEqual({
     content_fingerprint: 'epub-content-fingerprint',

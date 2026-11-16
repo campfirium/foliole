@@ -94,12 +94,12 @@ export function createImportedNodeRuntimeInvoke(options?: {
     if (command === 'load_node_backlinks') return [];
     if (command === 'load_readwise_books_inventory') return { books: [] };
     if (command === 'select_import_text_file') {
-      return {
+      return [{
         content: '',
         file_name: importResult.source_name,
         file_path: importResult.source_locator,
         kind: importResult.source_kind
-      };
+      }];
     }
     if (command === 'load_node_document' && payload?.nodeId === 'special-inbox') {
       return { nodeId: 'special-inbox', kind: 'folder', content: '', hideTitleHeading: false, reveal: null };

@@ -66,13 +66,32 @@ beforeEach(() => {
 it('returns the selected HTML file without preloading the full content', async () => {
   readFile.mockResolvedValue(Buffer.from(DEGRADED_HTML));
 
-  await expect(selectImportTextFile()).resolves.toEqual({
+  await expect(selectImportTextFile()).resolves.toEqual([{
     content: '',
     file_name: 'inbox.html',
     file_path: '/tmp/inbox.html',
     kind: 'html'
-  });
+  }]);
   expect(readFile).not.toHaveBeenCalled();
+});
+
+it('preserves every selected chapter through the manual file selection entry', async () => {
+  showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/first.md', '/tmp/second.txt'] });
+  await expect(selectImportTextFile()).resolves.toEqual([
+    { content: '', file_name: 'first.md', file_path: '/tmp/first.md', kind: 'markdown' },
+    { content: '', file_name: 'second.txt', file_path: '/tmp/second.txt', kind: 'text' }
+  ]);
+  expect(readFile).not.toHaveBeenCalled();
+});
+
+it.each([
+  { canceled: true, filePaths: ['/tmp/ignored.md'] },
+  { canceled: false, filePaths: [] }
+])('does not import when selection is canceled or empty: %j', async (selection) => {
+  showOpenDialog.mockResolvedValue(selection);
+  await expect(selectImportTextFile()).resolves.toBeNull();
+  expect(readFile).not.toHaveBeenCalled();
+  expect(runPreparedImport).not.toHaveBeenCalled();
 });
 
 it('marks HTML file imports as degraded when conversion had to fall back', async () => {

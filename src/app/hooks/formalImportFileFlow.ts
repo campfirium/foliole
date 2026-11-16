@@ -14,13 +14,14 @@ export interface FormalImportFileFlowOptions {
   onImportStarted?: () => void;
 }
 
-async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, result: RuntimeTextImportResult) {
+async function applyImportedFile(file: RuntimeImportedTextFile, result: RuntimeTextImportResult) {
   if (!result.nodeId || result.resultStatus === 'failed') {
     return;
   }
   if (!applyImportWorkspacePatch(result.importId, result.nodeMutationPatch)) {
     await refreshImportWorkspaceOnce(result.importId, () => refreshWorkspaceState('formal-import'));
   }
+  if (file.kind !== 'epub') return;
   const mode = await requestEpubImportReleaseMode(file);
   if (!mode) {
     return;
@@ -29,17 +30,19 @@ async function applyPostImportEpubReadingMode(file: RuntimeImportedTextFile, res
 }
 
 export async function runFormalImportFileFlow(options: FormalImportFileFlowOptions = {}): Promise<RuntimeTextImportResult | null> {
-  const selectedFile = await selectRuntimeImportTextFile();
-  if (!selectedFile) {
+  const selectedFiles = await selectRuntimeImportTextFile();
+  if (!selectedFiles?.length) {
     return null;
   }
   options.onImportStarted?.();
-  if (selectedFile.kind !== 'epub') {
-    return runRuntimeTextFileImport(undefined, undefined, { filePath: selectedFile.filePath });
+  let lastResult: RuntimeTextImportResult | null = null;
+  let failedResult: RuntimeTextImportResult | null = null;
+  for (const selectedFile of selectedFiles) {
+    const result = await runRuntimeTextFileImport(undefined, undefined, { filePath: selectedFile.filePath });
+    if (!result) continue;
+    lastResult = result;
+    if (result.resultStatus === 'failed') failedResult ??= result;
+    await applyImportedFile(selectedFile, result);
   }
-  const result = await runRuntimeTextFileImport(undefined, undefined, { filePath: selectedFile.filePath });
-  if (result) {
-    await applyPostImportEpubReadingMode(selectedFile, result);
-  }
-  return result;
+  return failedResult ?? lastResult;
 }

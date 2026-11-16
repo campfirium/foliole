@@ -134,20 +134,22 @@ export function runImportForMirrorDocument(documentId: string, args?: NativeText
   });
 }
 
-export async function selectImportTextFile(window?: BrowserWindow | null): Promise<NativeImportedTextFile | null> {
-  const filePath = await selectImportFilePath(window);
-  if (!filePath) {
+export async function selectImportTextFile(window?: BrowserWindow | null): Promise<NativeImportedTextFile[] | null> {
+  const filePaths = await selectImportFilePaths(window);
+  if (!filePaths) {
     return null;
   }
-  const source = resolveSingleFileImportSource(filePath);
-  const content = source.kind === 'epub' ? await loadEpubPreview(source) : '';
-
-  return {
-    content,
-    file_name: path.basename(filePath),
-    file_path: filePath,
-    kind: source.kind
-  };
+  const files: NativeImportedTextFile[] = [];
+  for (const filePath of filePaths) {
+    const source = resolveSingleFileImportSource(filePath);
+    files.push({
+      content: source.kind === 'epub' ? await loadEpubPreview(source) : '',
+      file_name: path.basename(filePath),
+      file_path: filePath,
+      kind: source.kind
+    });
+  }
+  return files;
 }
 
 export async function runTextFileImport(

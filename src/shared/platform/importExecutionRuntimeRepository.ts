@@ -38,7 +38,7 @@ function toImportArgs(
 export async function selectRuntimeImportTextFile(
   highlightPolicy?: ImportHighlightPolicy,
   titleStrategy?: ImportNodeTitleStrategy
-): Promise<RuntimeImportedTextFile | null> {
+): Promise<RuntimeImportedTextFile[] | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
@@ -49,7 +49,10 @@ export async function selectRuntimeImportTextFile(
     if (result === null) {
       return null;
     }
-    const importedFile = toRuntimeImportedTextFile(result);
+    const importedFiles = Array.isArray(result) ? result.map(toRuntimeImportedTextFile) : null;
+    const importedFile = importedFiles?.length && importedFiles.every((file) => file !== null)
+      ? importedFiles as RuntimeImportedTextFile[]
+      : null;
     if (!importedFile) {
       logRuntimeWarning('native import file payload invalid', {
         action: 'select_runtime_import_text_file',

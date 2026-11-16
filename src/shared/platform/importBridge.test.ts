@@ -122,20 +122,20 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 it('normalizes the native import file payload', async () => {
-  const invoke = vi.fn().mockResolvedValue({
+  const invoke = vi.fn().mockResolvedValue([{
     content: '# Imported',
     file_name: 'note.md',
     file_path: '/tmp/note.md',
     kind: 'markdown'
-  });
+  }]);
   window.electronAPI = createMockElectronApi(invoke);
 
-  await expect(selectRuntimeImportTextFile()).resolves.toEqual({
+  await expect(selectRuntimeImportTextFile()).resolves.toEqual([{
     content: '# Imported',
     fileName: 'note.md',
     filePath: '/tmp/note.md',
     kind: 'markdown'
-  });
+  }]);
   expect(invoke).toHaveBeenCalledWith('select_import_text_file', {});
 });
 it('returns the selected folder path from the runtime bridge', async () => {

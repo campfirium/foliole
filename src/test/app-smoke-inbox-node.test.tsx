@@ -73,12 +73,12 @@ it('routes import from the left toolbar through the runtime bridge', async () =>
   const invoke = vi.fn(async (...args: [string, Record<string, unknown>?]) => {
     const [command] = args;
     if (command === 'select_import_text_file') {
-      return {
+      return [{
         content: '# Note',
         file_name: 'note.md',
         file_path: '/tmp/note.md',
         kind: 'markdown'
-      };
+      }];
     }
     if (command === 'run_text_file_import') {
       return {
