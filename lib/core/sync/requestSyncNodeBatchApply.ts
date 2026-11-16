@@ -29,7 +29,8 @@ export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly Req
     if (!owner) throw new Error('request_sync_batch_body_owner_missing');
     return owner.loadBody(db, blob);
   };
-  const result = await applyFramedFactSources(tx, sources, { loadBody,
+  const deletedHistoryReleaseHashes = new Map<string, ReadonlySet<string>>();
+  const result = await applyFramedFactSources(tx, sources, { deletedHistoryReleaseHashes, loadBody,
     ...(first.objectOptions ? { objectOptions: first.objectOptions } : {}),
     currentVersions: { sourceIds: inputs.map(input => input.globalId), references: inputs.flatMap(input =>
       input.currentVersionId ? [{ globalId: input.globalId, versionId: input.currentVersionId }] : []) },
@@ -38,7 +39,7 @@ export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly Req
     requireCompleteVersionGraph: true, enqueueSearchInvalidations: first.enqueueSearchInvalidations ?? true });
   first.signal?.throwIfAborted();
   const accepted = inputs.filter(input => !rejectedNodes.has(input.globalId));
-  await finishReceivedNodes(tx, accepted, collect);
+  await finishReceivedNodes(tx, accepted, collect, deletedHistoryReleaseHashes);
   const workspaceScope = result.workspaceScope.kind === 'nodes'
     ? { ...result.workspaceScope, nodeIds: [...new Set([...result.workspaceScope.nodeIds, ...accepted.map(input => input.globalId)])] }
     : result.workspaceScope;

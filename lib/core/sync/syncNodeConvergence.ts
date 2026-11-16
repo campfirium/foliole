@@ -14,6 +14,7 @@ import { expireTopicText, findTopicsWithExpiredText } from './topicTextExpiry.js
 type ConvergeOptions = { deferAlternativeSettlement?: boolean; collectVersionPayloads?: boolean;
   visibilityPruning?: DeferredVisibilityPruning; isolateNodeWrites?: ApplySyncNodesWithDbPortOptions['isolateNodeWrites'];
   attachmentOnlyNodeIds?: Iterable<string>;
+  deletedHistoryReleaseHashes?: Map<string, ReadonlySet<string>>;
   rejectedNodes?: ReadonlyMap<string, string> };
 
 export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: NativeSyncNodeRecord[],
@@ -32,6 +33,7 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
   const resolved = new Map<string, string>();
   const result = await applySyncNodeSourceWithDbPort(port, source, {
     enqueueSearchInvalidations: false, deferBodyRetirement: options.collectVersionPayloads === false,
+    ...(options.deletedHistoryReleaseHashes ? { deletedHistoryReleaseHashes: options.deletedHistoryReleaseHashes } : {}),
     ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}),
     ...(options.isolateNodeWrites ? { isolateNodeWrites: options.isolateNodeWrites,
       resolveNodeConflicts: async (tx, conflicts) => {

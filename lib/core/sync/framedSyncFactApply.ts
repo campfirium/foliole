@@ -35,6 +35,7 @@ type FramedApplyOptions = {
   currentVersions?: { sourceIds: readonly string[]; references: readonly RequestSyncCurrentVersion[] };
   visibilityPruning?: DeferredVisibilityPruning;
   rejectedNodes?: Map<string, string>;
+  deletedHistoryReleaseHashes?: Map<string, ReadonlySet<string>>;
 };
 
 export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: FramedApplyOptions) {
@@ -54,6 +55,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
       else {
         const rejected = options.rejectedNodes;
         const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false, deferAlternativeSettlement: true,
+          ...(options.deletedHistoryReleaseHashes ? { deletedHistoryReleaseHashes: options.deletedHistoryReleaseHashes } : {}),
           ...(associated && rejected ? { rejectedNodes: rejected, attachmentOnlyNodeIds: attached.keys(),
             isolateNodeWrites: isolateRequestSyncNodeWrites(nodeSource.records, rejected, associated.apply) } : {}),
           ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) }, historySource);

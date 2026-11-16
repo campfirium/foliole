@@ -140,7 +140,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord,
-  preparedBodyHashes?: ReadonlyMap<string, string>): SyncNodeStatement | null {
+  preparedBodyHashes?: ReadonlyMap<string, string>, compactSnapshot?: string): SyncNodeStatement | null {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) {
     return null;
@@ -155,7 +155,7 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord,
       record.content_hash ?? '',
       record.body_text === null && record.snapshot.content === null
         ? null : record.body_text ?? record.snapshot.content ?? '',
-      serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot, content: null,
+      compactSnapshot ?? serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot, content: null,
         body_blob_hash: versionBodyHash(record, preparedBodyHashes) } }, preparedBodyHashes)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL

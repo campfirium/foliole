@@ -6,16 +6,23 @@ import type { DbPort } from '../sync/dbPort.js';
 import { BODY_READ_CHUNK_BYTES } from './bodyReadBudget.js';
 import type { DatabaseDriver } from './driver.js';
 
-const SNAPSHOT_BODY = "CASE WHEN json_type(snapshot_json, '$.content') = 'text' THEN json_extract(snapshot_json, '$.content') END";
-const DESCRIPTOR_SQL = `SELECT length(CAST(body_text AS BLOB)) AS body_length,
+const SNAPSHOT_BODY = "CASE WHEN json_type(node_sync_versions.snapshot_json, '$.content') = 'text' THEN json_extract(node_sync_versions.snapshot_json, '$.content') END";
+export const RELEASED_VERSION_BODY_DESCRIPTOR_FIELDS = `length(CAST(body_text AS BLOB)) AS body_length,
   length(CAST(${SNAPSHOT_BODY} AS BLOB)) AS snapshot_length,
-  json_extract(snapshot_json, '$.body_blob_hash') AS body_hash,
-  json_type(snapshot_json, '$.text_alternatives') AS alternative_type
-  FROM node_sync_versions WHERE version_id = ?`;
-const ALTERNATIVES_SQL = `SELECT json_extract(alternative.value, '$.body_blob_hash') AS hash
+  json_extract(node_sync_versions.snapshot_json, '$.body_blob_hash') AS body_hash,
+  json_type(node_sync_versions.snapshot_json, '$.text_alternatives') AS alternative_type`;
+const DESCRIPTOR_SQL = `SELECT ${RELEASED_VERSION_BODY_DESCRIPTOR_FIELDS} FROM node_sync_versions WHERE version_id = ?`;
+const ALTERNATIVE_HASH_SQL = "json_extract(alternative.value, '$.body_blob_hash')";
+export const RELEASED_VERSION_ALTERNATIVE_HASHES_SQL = `CASE json_type(node_sync_versions.snapshot_json, '$.text_alternatives')
+  WHEN 'array' THEN (SELECT json_group_array(hash) FROM (
+    SELECT ${ALTERNATIVE_HASH_SQL} AS hash
+    FROM json_each(node_sync_versions.snapshot_json, '$.text_alternatives') alternative ORDER BY alternative.key))
+  ELSE CASE WHEN json_type(node_sync_versions.snapshot_json, '$.text_alternatives') IS NULL THEN '[]' END
+  END`;
+const ALTERNATIVES_SQL = `SELECT ${ALTERNATIVE_HASH_SQL} AS hash
   FROM node_sync_versions version, json_each(version.snapshot_json, '$.text_alternatives') alternative
   WHERE version.version_id = ? ORDER BY alternative.key`;
-type Descriptor = { body_length: number | null; snapshot_length: number | null;
+export type ReleasedVersionBodyDescriptor = { body_length: number | null; snapshot_length: number | null;
   body_hash: string | null; alternative_type: string | null };
 type Source = 'body' | 'snapshot';
 
@@ -35,7 +42,7 @@ function checkedBytes(row: { data: Uint8Array } | undefined, length: number) {
   return new Uint8Array(row.data.buffer, row.data.byteOffset, row.data.byteLength);
 }
 
-function sources(row: Descriptor) {
+function sources(row: ReleasedVersionBodyDescriptor) {
   if (row.alternative_type !== null && row.alternative_type !== 'null' && row.alternative_type !== 'array') {
     throw new Error('released_version_alternatives_invalid');
   }
@@ -44,7 +51,7 @@ function sources(row: Descriptor) {
 
 /** Discover release candidates before stripping the version, without returning historical text. */
 export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, versionId: string) {
-  const row = driver.queryOne<Descriptor>(DESCRIPTOR_SQL, [versionId]);
+  const row = driver.queryOne<ReleasedVersionBodyDescriptor>(DESCRIPTOR_SQL, [versionId]);
   if (!row) return { hashes: new Array<string>(), mainBodyHash: null };
   const hashes = new Set<string>();
   let snapshotHash: string | null = null;
@@ -71,8 +78,9 @@ export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, vers
   return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash };
 }
 
-export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId: string) {
-  const [row] = await port.query<Descriptor>(DESCRIPTOR_SQL, [versionId]);
+export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId: string,
+  known?: { descriptor: ReleasedVersionBodyDescriptor; alternativeHashes: readonly string[] }) {
+  const row = known?.descriptor ?? (await port.query<ReleasedVersionBodyDescriptor>(DESCRIPTOR_SQL, [versionId]))[0];
   if (!row) return { hashes: new Array<string>(), mainBodyHash: null, hasStoredMainBodyHash: false };
   const hashes = new Set<string>();
   let snapshotHash: string | null = null;
@@ -93,7 +101,9 @@ export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId:
       } else snapshotHash = hash;
     } finally { digest.destroy(); }
   }
-  for (const alternative of await port.query<{ hash: string }>(ALTERNATIVES_SQL, [versionId])) hashes.add(alternative.hash);
+  const alternatives = known?.alternativeHashes ??
+    (await port.query<{ hash: string }>(ALTERNATIVES_SQL, [versionId])).map(alternative => alternative.hash);
+  for (const hash of alternatives) hashes.add(hash);
   if (row.body_hash) hashes.add(row.body_hash);
   if (snapshotHash !== null) hashes.add(snapshotHash);
   return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash, hasStoredMainBodyHash: row.body_hash != null };

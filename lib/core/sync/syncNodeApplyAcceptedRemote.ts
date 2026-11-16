@@ -60,7 +60,7 @@ async function storedVersion(port: DbPort, record: NativeSyncNodeRecord, incomin
 }
 
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, deferBodyRetirement = false,
-  known?: StoredVersionIdentity | null) {
+  known?: StoredVersionIdentity | null, compactSnapshot?: string) {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) return null;
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
@@ -97,8 +97,11 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
     // Retirement can depend on which version is current when it runs.
     return record.snapshot.body_deleted === true ? null : 'complete';
   }
-  const statement = buildRemoteNodeVersionUpsert(record)!;
+  const statement = buildRemoteNodeVersionUpsert(record, undefined, compactSnapshot)!;
   const inserted = await port.run(statement.sql, statement.params);
+  if (compactSnapshot !== undefined && inserted.changes !== 1) {
+    throw new Error(`request_sync_deleted_history_not_new:${record.version_id}`);
+  }
   await retainVersionParents(port, record);
   // A complete insert already stores its main hash and validated alternative bodies.
   // Other shapes still need the post-apply identity or body-state checks.

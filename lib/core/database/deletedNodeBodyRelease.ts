@@ -3,20 +3,23 @@ import { chainMutationStatements } from '../sync/nodeVersionChainSql.js';
 import { deletedVersionMetadataDigest } from '../sync/syncNodeSnapshotIdentity.js';
 
 import type { DatabaseDriver } from './driver.js';
-import { PRESERVE_RELEASED_MAIN_HASH_SQL, releasedVersionBodyHashesWithDriver,
-  releasedVersionBodyHashesWithPort } from './releasedVersionBodyHashes.js';
+import { PRESERVE_RELEASED_MAIN_HASH_SQL, RELEASED_VERSION_ALTERNATIVE_HASHES_SQL, RELEASED_VERSION_BODY_DESCRIPTOR_FIELDS,
+  releasedVersionBodyHashesWithDriver,
+  releasedVersionBodyHashesWithPort, type ReleasedVersionBodyDescriptor } from './releasedVersionBodyHashes.js';
 
 type DeletedVersion = { version_id: string; snapshot_metadata: string };
-const VERSION_FIELDS = `version_id, json_remove(snapshot_json, '$.content', '$.text_alternative_bodies') AS snapshot_metadata`;
-const UNCOMPACTED = "json_type(snapshot_json, '$.deleted_version_metadata_digest') IS NULL";
+type ReceivedDeletedVersion = DeletedVersion & ReleasedVersionBodyDescriptor & {
+  compact_history: number; alternative_hashes: string | null;
+};
+const VERSION_FIELDS = `node_sync_versions.version_id, json_remove(node_sync_versions.snapshot_json, '$.content', '$.text_alternative_bodies') AS snapshot_metadata`;
+const UNCOMPACTED = "json_type(node_sync_versions.snapshot_json, '$.deleted_version_metadata_digest') IS NULL";
 const COMPACT_VERSION_SQL = 'UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?';
 
 export function markCompactDeletionSnapshot(snapshot: object) {
   return JSON.stringify({ ...snapshot, compact_version_history: true });
 }
 
-function compactVersion(json: string) {
-  const snapshot = JSON.parse(json) as Record<string, unknown>;
+export function compactDeletedVersionSnapshot(snapshot: Record<string, unknown>) {
   return JSON.stringify({
     id: snapshot.id, updated_at: snapshot.updated_at, content: null, body_deleted: true,
     deleted_version_metadata_digest: deletedVersionMetadataDigest(snapshot)
@@ -39,7 +42,7 @@ export function releaseDeletedNodeBodiesWithDriver(driver: DatabaseDriver, nodeI
   for (const version of versions) {
     const released = releasedVersionBodyHashesWithDriver(driver, version.version_id);
     for (const hash of released.hashes) hashes.add(hash);
-    driver.execute(COMPACT_VERSION_SQL, [compactVersion(version.snapshot_metadata), version.version_id]);
+    driver.execute(COMPACT_VERSION_SQL, [compactDeletedVersionSnapshot(JSON.parse(version.snapshot_metadata)), version.version_id]);
   }
   driver.execute(`${STRIP_TOMBSTONE_BODY_SQL} WHERE node_id = ?`, [nodeId]);
   return [...hashes];
@@ -53,17 +56,22 @@ export async function releaseDeletedNodeBodiesForBatch(port: DbPort, nodeIds: re
   if (!nodeIds.length) return [];
   const ids = JSON.stringify(nodeIds);
   const hashes = new Set<string>();
-  const versions = await port.query<DeletedVersion & { compact_history: number }>(`SELECT ${VERSION_FIELDS},
-    EXISTS (SELECT 1 FROM node_sync_tombstones tomb WHERE tomb.node_id = node_sync_versions.object_id
-      AND json_extract(tomb.snapshot_json, '$.compact_version_history') = 1) AS compact_history
-    FROM node_sync_versions WHERE object_id IN (SELECT value FROM json_each(?))
-    AND ${UNCOMPACTED} ORDER BY object_id, version_id`, [ids]);
+  const versions = await port.query<ReceivedDeletedVersion>(`SELECT ${VERSION_FIELDS}, ${RELEASED_VERSION_BODY_DESCRIPTOR_FIELDS},
+    CASE WHEN json_extract(tomb.snapshot_json, '$.compact_version_history') = 1
+      THEN ${RELEASED_VERSION_ALTERNATIVE_HASHES_SQL} END AS alternative_hashes,
+    coalesce(json_extract(tomb.snapshot_json, '$.compact_version_history') = 1, 0) AS compact_history
+    FROM node_sync_versions LEFT JOIN node_sync_tombstones tomb ON tomb.node_id = node_sync_versions.object_id
+    WHERE node_sync_versions.object_id IN (SELECT value FROM json_each(?))
+    AND ${UNCOMPACTED} ORDER BY node_sync_versions.object_id, node_sync_versions.version_id`, [ids]);
   for (const version of versions) {
     const id = version.version_id;
-    const released = await releasedVersionBodyHashesWithPort(port, id);
+    const known = version.alternative_hashes === null ? undefined : {
+      descriptor: version, alternativeHashes: JSON.parse(version.alternative_hashes) as string[]
+    };
+    const released = await releasedVersionBodyHashesWithPort(port, id, known);
     for (const hash of released.hashes) hashes.add(hash);
     if (version.compact_history) {
-      await port.run(COMPACT_VERSION_SQL, [compactVersion(version.snapshot_metadata), id]);
+      await port.run(COMPACT_VERSION_SQL, [compactDeletedVersionSnapshot(JSON.parse(version.snapshot_metadata)), id]);
     } else {
       await releaseLegacyVersionBody(port, id, released.mainBodyHash);
     }

@@ -5,6 +5,7 @@ import type {
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbPort } from './dbPort.js';
+import { canApplyDeletionBeforeHistory } from './requestSyncNewDeletedHistory.js';
 import type { SyncNodeAnchorRepairRecord, SyncNodeAnchorUnmappedRecord } from './syncNodeAnchorRepair.js';
 import { applyIncomingRecord, loadLocalNodeSyncState } from './syncNodeApplyProjection.js';
 import { decideIncomingNodeApply, latestBranchHeadRecords, orderNodesForApply, type SyncNodeApplyOperation } from './syncNodeApplyRules.js';
@@ -31,6 +32,7 @@ export interface ApplySyncNodesWithDbPortOptions {
   editingBranch?: boolean;
   enqueueSearchInvalidations?: boolean;
   deferBodyRetirement?: boolean;
+  deletedHistoryReleaseHashes?: Map<string, ReadonlySet<string>>;
   hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
   operation?: SyncNodeApplyOperation;
@@ -96,7 +98,18 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
     const history = await prepareIncomingNodeVersionSource(tx, historySource);
     const retain = await prepareIncomingVersionRetention(tx, history);
     async function applyRecords(records: readonly M[], versions: readonly M[], target: ApplySyncNodeSourceResult<M>) {
-      const retained = await retain(tx, historySource, versions, options.deferBodyRetirement ?? false);
+      const releaseHashes = options.deletedHistoryReleaseHashes;
+      if (releaseHashes && await canApplyDeletionBeforeHistory(tx, records, versions, historySource, retain.isNew)) {
+        const record = await source.load(tx, records[0]!);
+        await applyIncomingRecord({ tx, record, result: target, options, invalidatedAt, remoteNodeIdsInBatch,
+          preparedTextBodyHash: undefined, versionAlreadyRetained: false });
+        if (!target.appliedIds.includes(record.object_id)) throw new Error('request_sync_new_deletion_not_applied');
+        const hashes = new Set<string>();
+        await retain.write(tx, historySource, versions, options.deferBodyRetirement ?? false, hashes);
+        releaseHashes.set(record.object_id, hashes);
+        return;
+      }
+      const retained = await retain.write(tx, historySource, versions, options.deferBodyRetirement ?? false);
       for (const metadata of records) {
         const record = await source.load(tx, metadata);
         const retention = retained.get(metadata);

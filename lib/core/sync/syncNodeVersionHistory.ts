@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { canCompactIncomingHistory, prepareCompressedHistory } from './requestSyncNewDeletedHistory.js';
 import { loadStoredVersionIdentities, upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
@@ -68,7 +69,7 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
 export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
   source: SyncNodeRecordSource<M>, records: readonly M[], deferBodyRetirement = false) {
   const retain = await prepareIncomingVersionRetention(port, records);
-  return retain(port, source, records, deferBodyRetirement);
+  return retain.write(port, source, records, deferBodyRetirement);
 }
 
 /** Read version identities once while preserving live reads for repeated versions. */
@@ -80,16 +81,22 @@ export async function prepareIncomingVersionRetention<M extends SyncNodeRecordMe
   // Repeated versions must read preceding writes, including any body state changes.
   const once = new Set([...counts].filter(([, count]) => count === 1).map(([id]) => id));
   const stored = await loadStoredVersionIdentities(port, [...once]);
-  return async (tx: DbPort, source: SyncNodeRecordSource<M>, selected: readonly M[], deferBodyRetirement: boolean) => {
+  const isNew = (record: M) => Boolean(record.version_id && once.has(record.version_id) && !stored.has(record.version_id));
+  const write = async (tx: DbPort, source: SyncNodeRecordSource<M>, selected: readonly M[], deferBodyRetirement: boolean,
+    releaseHashes?: Set<string>) => {
     const retained = new Map<M, 'complete' | 'verify_body_hash'>();
     for (const metadata of selected) {
       const id = metadata.version_id;
       const known = id && once.has(id) ? stored.get(id) ?? null : undefined;
-      const reusable = await upsertRemoteVersion(tx, await source.load(tx, metadata), deferBodyRetirement, known);
+      const record = await source.load(tx, metadata);
+      const compactSnapshot = releaseHashes && known === null && canCompactIncomingHistory(metadata)
+        ? prepareCompressedHistory(record, releaseHashes) : undefined;
+      const reusable = await upsertRemoteVersion(tx, record, deferBodyRetirement, known, compactSnapshot);
       if (known !== undefined && reusable) retained.set(metadata, reusable);
     }
     return retained;
   };
+  return { isNew, write };
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

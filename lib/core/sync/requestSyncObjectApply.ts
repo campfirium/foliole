@@ -73,14 +73,15 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     }
     let collectBodies = await changesCurrentVersion(tx, input);
     const source = receivedObjectFacts(input, () => { collectBodies = true; });
-    const result = await applyFramedFactSources(tx, [source], { loadBody: input.loadBody,
+    const deletedHistoryReleaseHashes = new Map<string, ReadonlySet<string>>();
+    const result = await applyFramedFactSources(tx, [source], { deletedHistoryReleaseHashes, loadBody: input.loadBody,
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
       ...(input.objectType === 'node' && input.currentVersionId
         ? { currentVersion: { globalId: input.globalId, versionId: input.currentVersionId } } : {}),
       ...(input.visibilityPruning ? { visibilityPruning: input.visibilityPruning } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (!input.batch) await recordRequestSyncInbound(tx, input.context, input.requestId);
-    await finishReceivedNode(tx, input, collectBodies);
+    await finishReceivedNode(tx, input, collectBodies, deletedHistoryReleaseHashes);
     // A batch reports per-object success only; the single-object path returns the applied state.
     const sharedStateHash = input.batch ? undefined : await readAppliedStateHash(tx, input);
     input.signal?.throwIfAborted();

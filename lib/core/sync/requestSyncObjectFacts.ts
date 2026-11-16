@@ -36,11 +36,12 @@ export async function changesCurrentVersion(db: DbPort, input: ReceivedObject) {
 }
 
 /** Projection checks and body bookkeeping that follow applying one received node. */
-export async function finishReceivedNode(tx: DbPort, input: ReceivedObject, collectBodies: boolean) {
+export async function finishReceivedNode(tx: DbPort, input: ReceivedObject, collectBodies: boolean,
+  directReleaseHashes: ReadonlyMap<string, ReadonlySet<string>>) {
   if (input.objectType === 'node') {
     await assertCurrentNodeParentChain(tx, input.globalId);
     await reconcileCurrentNodeBody(tx, input.globalId, input.enqueueSearchInvalidations ?? true);
-    await releaseReceivedDeletionBodies(tx, input.globalId);
+    await releaseReceivedDeletionBodies(tx, input.globalId, directReleaseHashes);
   }
   if (collectBodies) await collectNodeVersionPayloads(tx, input.globalId, Number.MAX_SAFE_INTEGER);
 }
@@ -59,24 +60,27 @@ export async function changedCurrentVersions(db: DbPort, inputs: readonly Receiv
 }
 
 /** The same follow-up as finishReceivedNode for a batch of nodes, with each check read once for all of them. */
-export async function finishReceivedNodes(tx: DbPort, inputs: readonly ReceivedObject[], collect: ReadonlyMap<string, boolean>) {
+export async function finishReceivedNodes(tx: DbPort, inputs: readonly ReceivedObject[], collect: ReadonlyMap<string, boolean>,
+  directReleaseHashes: ReadonlyMap<string, ReadonlySet<string>>) {
   const ids = inputs.map(input => input.globalId);
   await assertCurrentNodeParentChains(tx, ids);
   await reconcileCurrentNodeBodies(tx, ids, inputs[0]?.enqueueSearchInvalidations ?? true);
   const deleted = ids.length ? await tx.query<{ node_id: string }>(`SELECT tomb.node_id FROM node_sync_tombstones tomb
     WHERE tomb.node_id IN (SELECT value FROM json_each(?)) AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = tomb.node_id)`,
   [JSON.stringify(ids)]) : [];
-  await releaseDeletedNodeBodies(tx, deleted.map(row => row.node_id));
+  await releaseDeletedNodeBodies(tx, deleted.map(row => row.node_id), directReleaseHashes);
   await collectRequestSyncBodiesForNodes(tx, ids.filter(id => collect.get(id)), Number.MAX_SAFE_INTEGER);
 }
 
 /** A received permanent deletion leaves no copy of the note's text on this device either. */
-async function releaseReceivedDeletionBodies(tx: DbPort, nodeId: string) {
+async function releaseReceivedDeletionBodies(tx: DbPort, nodeId: string, directReleaseHashes: ReadonlyMap<string, ReadonlySet<string>>) {
   if (!(await tx.query(DELETED_NODE_SQL, [nodeId])).length) return;
-  await releaseDeletedNodeBodies(tx, [nodeId]);
+  await releaseDeletedNodeBodies(tx, [nodeId], directReleaseHashes);
 }
 
-async function releaseDeletedNodeBodies(tx: DbPort, nodeIds: readonly string[]) {
-  const hashes = await releaseDeletedNodeBodiesForBatch(tx, nodeIds);
-  if (hashes.length) await collectTextBodyBlobCandidatesWithPort(tx, hashes);
+async function releaseDeletedNodeBodies(tx: DbPort, nodeIds: readonly string[],
+  directReleaseHashes: ReadonlyMap<string, ReadonlySet<string>>) {
+  const hashes = new Set(await releaseDeletedNodeBodiesForBatch(tx, nodeIds));
+  for (const nodeId of nodeIds) for (const hash of directReleaseHashes.get(nodeId) ?? []) hashes.add(hash);
+  if (hashes.size) await collectTextBodyBlobCandidatesWithPort(tx, [...hashes]);
 }
