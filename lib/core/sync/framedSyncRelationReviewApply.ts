@@ -1,4 +1,4 @@
-import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
+import { recomputeReceivedReviewsWithDb } from '../database/reviewProjection.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
@@ -81,7 +81,7 @@ async function applyReview(tx: DbPort, row: FramedSyncReviewSource) {
     [row.op_id, row.id]
   );
   if (existing.length > 0) {
-    if (existing.length === 1 && existing[0]!.op_id === row.op_id && sameReview(existing[0]!, row)) return;
+    if (existing.length === 1 && existing[0]!.op_id === row.op_id && sameReview(existing[0]!, row)) return false;
     throw new Error(`framed_sync_review_conflict:${row.op_id}`);
   }
   const [node] = await tx.query('SELECT 1 FROM nodes WHERE id = ? LIMIT 1', [row.node_id]);
@@ -90,17 +90,20 @@ async function applyReview(tx: DbPort, row: FramedSyncReviewSource) {
     `INSERT INTO review_log (${REVIEW_COLUMNS.join(', ')}) VALUES (${REVIEW_COLUMNS.map(() => '?').join(', ')})`,
     REVIEW_COLUMNS.map((column) => row[column])
   );
-  await recomputeNodeReviewWithDb(tx, row.node_id);
+  return true;
 }
 
 /** Apply inside the caller's business transaction so facts and its receipt commit atomically. */
 export async function applyFramedSyncRelationReviewFactsWithDbPort(
   tx: DbPort,
-  facts: readonly CanonicalFact[]
+  facts: readonly CanonicalFact[],
+  pendingReviews?: Set<string>
 ) {
+  const affected = pendingReviews ?? new Set<string>();
   const decoded = facts.map(decodeFact);
   for (const fact of decoded) {
     if (fact.kind === 'parent') await applyParent(tx, fact.factId, fact.row);
-    else await applyReview(tx, fact.row);
+    else if (await applyReview(tx, fact.row)) affected.add(fact.row.node_id);
   }
+  if (!pendingReviews) await recomputeReceivedReviewsWithDb(tx, affected);
 }

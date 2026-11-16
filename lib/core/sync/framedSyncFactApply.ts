@@ -1,5 +1,6 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { recomputeReceivedReviewsWithDb } from '../database/reviewProjection.js';
 import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
@@ -68,10 +69,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
       }
     }
     await assertCompactHistoryHasDeletion(tx, restoredSource.records);
-    for (const source of sources) for await (const fact of source(tx, [3, 4])) {
-      if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
-      if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
-    }
+    workspaceScope = await applyRelationReviewPhase(tx, sources, workspaceScope);
     const nodeIds = new Set(nodeSource.records.map(record => record.object_id));
     for (const source of sources) for await (const fact of source(tx, [1])) {
       if (fact.kind === 1 && fact.objectType === 'node' &&
@@ -86,6 +84,16 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
   });
+}
+
+async function applyRelationReviewPhase(tx: DbPort, sources: readonly FramedFactSource[], workspaceScope: WorkspaceRefreshScope) {
+  const pendingReviews = new Set<string>();
+  for (const source of sources) for await (const fact of source(tx, [3, 4])) {
+    if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact], pendingReviews);
+    if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
+  }
+  await recomputeReceivedReviewsWithDb(tx, pendingReviews);
+  return workspaceScope;
 }
 
 async function collectNodeFacts(tx: DbPort, sources: readonly FramedFactSource[],

@@ -30,7 +30,10 @@ export function parseReviewSchedulerSettingsRow(row: unknown) {
 
 /** Node-scoped parameter boundary. Retention inherits from the nearest explicit ancestor; trained weights resolve independently from folder ownership. */
 export function parametersForNode(nodeId: string, settings: unknown[], ancestors: unknown[]) {
-  const global = parseReviewSchedulerSettingsRow(settings[0]);
+  return resolveNodeReviewParameters(nodeId, parseReviewSchedulerSettingsRow(settings[0]), ancestors);
+}
+
+function resolveNodeReviewParameters(nodeId: string, global: ReturnType<typeof parseReviewSchedulerSettingsRow>, ancestors: unknown[]) {
   const nodesById = Object.fromEntries(ancestors.map(value => {
     const node = nodeRow.parse(value);
     return [node.id, { parentNodeId: node.parent_id, desiredRetention: node.desired_retention, enableShortTerm: node.enable_short_term === null
@@ -61,8 +64,8 @@ export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
 }
 
 /** Caller owns the application transaction, including the fact insert and this projection. */
-export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string) {
-  const { events, parameters } = await readNodeReviewHistoryWithDb(db, nodeId);
+export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string, shared?: SharedReviewParameters) {
+  const { events, parameters } = await readNodeReviewHistoryWithDb(db, nodeId, shared);
   const [initial] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
   const card = projectInitialReviewDue(recomputeReview(events, parameters, nodeId), initial?.initial_review_due, events);
   if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
@@ -70,13 +73,28 @@ export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string) {
   return card;
 }
 
-/** Read through the caller's database owner so scheduling and durable projection share parameters. */
-export async function readNodeReviewHistoryWithDb(db: DbPort, nodeId: string) {
-  const events = (await db.query(EVENTS, [nodeId])).map(row => identityReviewRowSchema.parse(row));
+async function readSharedReviewParameters(db: DbPort) {
   const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+  const [settings] = await db.query(REVIEW_SCHEDULER_SETTINGS_SQL);
+  return { models, global: parseReviewSchedulerSettingsRow(settings) };
+}
+
+type SharedReviewParameters = Awaited<ReturnType<typeof readSharedReviewParameters>>;
+
+/** Reuse the settings visible at this phase of the caller's write transaction. */
+export async function recomputeReceivedReviewsWithDb(db: DbPort, nodeIds: ReadonlySet<string>) {
+  if (!nodeIds.size) return;
+  const shared = await readSharedReviewParameters(db);
+  for (const nodeId of nodeIds) await recomputeNodeReviewWithDb(db, nodeId, shared);
+}
+
+/** Read through the caller's database owner so scheduling and durable projection share parameters. */
+export async function readNodeReviewHistoryWithDb(db: DbPort, nodeId: string, shared?: SharedReviewParameters) {
+  const events = (await db.query(EVENTS, [nodeId])).map(row => identityReviewRowSchema.parse(row));
+  const { models, global } = shared ?? await readSharedReviewParameters(db);
   const modelNodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_ANCESTORS_SQL, [nodeId]);
   return { events, parameters: {
-    ...parametersForNode(nodeId, await db.query(REVIEW_SCHEDULER_SETTINGS_SQL), await db.query(ANCESTORS, [nodeId])),
+    ...resolveNodeReviewParameters(nodeId, global, await db.query(ANCESTORS, [nodeId])),
     weights: resolveReviewWeights(nodeId, modelNodes, models)
   } };
 }

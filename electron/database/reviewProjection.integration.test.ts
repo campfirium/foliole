@@ -53,6 +53,27 @@ it.each(['relay', 'offline', 'late-history'])('converges all durable card fields
   } finally { await f.close(); }
 });
 
+it('writes the final schedule once for a received history with an offline score and a late undo', async () => {
+  const f = await restoreFixture(); const a = f.peer('source'); const b = f.peer('target');
+  try {
+    await seedReviewPeer(a); await seedReviewPeer(b);
+    score(a, 'first', firstAt); score(a, 'second', secondAt);
+    history(a, 'undo', 'first', '2026-10-04T08:00:00.000Z');
+    score(b, 'offline', '2026-10-09T08:00:00.000Z', 4);
+    await sendReviews(b, a);
+    b.sqlite.exec(`CREATE TABLE projection_writes (node_id TEXT);
+      CREATE TRIGGER count_projection AFTER UPDATE ON node_review
+      BEGIN INSERT INTO projection_writes VALUES (NEW.node_id); END`);
+    await sendReviews(a, b);
+    await sendReviews(a, b);
+    b.reopen();
+    expect(reviewFacts(b)).toEqual(reviewFacts(a));
+    expect(reviewState(b)).toEqual(reviewState(a));
+    expect(b.sqlite.prepare('SELECT reps FROM node_review').get()).toEqual({ reps: 2 });
+    expect(b.sqlite.prepare('SELECT node_id FROM projection_writes').all()).toEqual([{ node_id: 'topic' }]);
+  } finally { await f.close(); }
+});
+
 it.each(['2026-10-02T08:00:00.000Z', '2026-10-04T08:00:00.000Z'])('orders reset and offline scoring by fact time: %s', async at => {
   const f = await restoreFixture(); const a = f.peer('source'); const b = f.peer('target');
   try {

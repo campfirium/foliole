@@ -1,17 +1,22 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { requestSyncBatchEnd } from '../../lib/core/sync/requestSyncBatchContract.js';
 import { receiveRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchReceiver.js';
+import { requestSyncBatchMessages, withRequestSyncBatchSnapshot } from '../../lib/core/sync/requestSyncBatchSnapshot.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { requestSyncObjectMessages, type RequestSyncMessage } from '../../lib/core/sync/requestSyncObjectMessages.js';
 import { prepareRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { activateBatchReceiver, batchFixture, batchId, batchRecord, context, groupKey, peerState } from './requestSyncBatch.testSupport.js';
+import { firstAt, secondAt, score } from './reviewProjection.testSupport.js';
 
 const fixtures: Awaited<ReturnType<typeof batchFixture>>[] = [];
 afterEach(async () => { for (const fixture of fixtures.splice(0)) await fixture.close(); });
@@ -19,6 +24,58 @@ afterEach(async () => { for (const fixture of fixtures.splice(0)) await fixture.
 async function receiver() {
   const fixture = await batchFixture(); fixtures.push(fixture); activateBatchReceiver(fixture); return fixture;
 }
+
+async function publishReviewSettings(source: Awaited<ReturnType<typeof batchFixture>>) {
+  const payload = { key: 'review_scheduler_settings', scope: 'user_space', platform: 'mac',
+    form_factor: 'desktop', host_name: '*', value_json: '{"desiredRetention":0.99}' };
+  await source.device.db.transaction(tx => applySyncObjectInTransaction(tx, {
+    object_type: 'setting', object_id: 'user_space:mac:desktop:*:review_scheduler_settings',
+    content_hash: computeSyncContentHash('setting', payload), payload_json: JSON.stringify(payload),
+    updated_at: secondAt, deleted_at: null
+  }));
+}
+
+it.each([false, true])('publishes committed review schedules and isolates projection failures (%s)', async reject => {
+  const source = await batchFixture(); fixtures.push(source);
+  const target = await receiver();
+  const records = ['card-a', 'card-b'].map(id => {
+    const record = batchRecord(id, id);
+    record.snapshot.kind = 'item';
+    return record;
+  });
+  await source.device.receive(records);
+  for (const { object_id } of records) {
+    score({ id: 'peer', sqlite: source.device.sqlite }, `${object_id}-first`, firstAt, 3, object_id);
+    score({ id: 'peer', sqlite: source.device.sqlite }, `${object_id}-second`, secondAt, 4, object_id);
+  }
+  if (!reject) await publishReviewSettings(source);
+  const differences = compareFramedSyncInventories({
+    local: (await readFramedSyncInventory(source.device.db))
+      .filter(entry => entry.objectType === 'node' || entry.globalId.endsWith(':review_scheduler_settings')), remote: []
+  });
+  const expected = differences.map((difference, index) => ({ globalId: difference.globalId, objectType: difference.objectType,
+    requestId: new Uint8Array(16).fill(index + 1), resolve: async () => difference }));
+  if (reject) target.device.sqlite.exec(`CREATE TRIGGER reject_schedule BEFORE INSERT ON node_review
+    WHEN NEW.node_id = 'card-b' BEGIN SELECT RAISE(ABORT, 'injected_review_failure'); END`);
+  const schedules = () => target.device.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
+  const published: unknown[] = [];
+  target.host.objectApplied = object => { if (object.objectType === 'node') published.push(schedules()); };
+  const result = await withRequestSyncBatchSnapshot(source.host, expected, undefined, async objects => {
+    const wire = await prepareRequestSyncWire({ context, groupKey,
+      messages: contextId => requestSyncBatchMessages(objects, contextId, batchId) });
+    return receiveRequestSyncBatch(target.host, { ...wire, context, groupKey, peerState,
+      author: 'initiator', requestId: batchId, expected });
+  });
+  const acceptedIds = reject ? ['card-a'] : ['card-a', 'card-b'];
+  expect(result.results.map(entry => entry.error)).toEqual(reject ? ['', 'injected_review_failure'] : ['', '', '']);
+  expect(schedules()).toEqual(source.device.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all()
+    .filter(row => acceptedIds.includes((row as { node_id: string }).node_id)));
+  expect(await target.device.db.query('SELECT node_id, COUNT(*) AS count FROM review_log GROUP BY node_id ORDER BY node_id'))
+    .toEqual(acceptedIds.map(node_id => ({ node_id, count: 2 })));
+  expect(published).toEqual(acceptedIds.map(() => schedules()));
+  if (!reject) expect(await target.device.db.query("SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'"))
+    .toEqual([{ value_json: '{"desiredRetention":0.99}' }]);
+});
 
 async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, records: NativeSyncNodeRecord[],
   options: { truncate?: boolean; wrongId?: boolean; wrongObjectId?: boolean; wrongGlobalId?: boolean; truncateSecond?: boolean;
