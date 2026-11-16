@@ -5,6 +5,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE, sanitizeNavigationState } from './workspaceNavigation';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import {
   collectDeletedNodeIds,
   collectRootDeleteTargets,
@@ -175,14 +176,15 @@ export function computeDeleteNodesMutation(
     deletedAt,
     nodeIds: [...deletedNodeIds],
     parentNodesToSync: [...parentNodesToSync.values()],
-    patch: buildDeleteNodePatch({
+    patch: { ...buildDeleteNodePatch({
       state,
       nextActiveNodeId,
       nextNavigation,
       nextNodesById,
       nextTrashedNodeDeletedAtById,
       nextTrashedNodeIds
-    })
+    }), ...applyWorkspaceTrashLifecycle({ ...state, activeNodeId: nextActiveNodeId,
+      nodesById: nextNodesById }, deletedNodeIds, deletedAt), nodeOrder: state.nodeOrder }
   };
 }
 

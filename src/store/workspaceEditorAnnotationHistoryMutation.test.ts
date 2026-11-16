@@ -9,6 +9,7 @@ import {
 } from '../features/editor/model/editorOperationHistory';
 import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
 
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { startEditorAnnotationHistoryMutation } from './workspaceEditorAnnotationHistoryMutation';
 import { hasWorkspaceNodeMutationRuntime, syncRestoreNodesToRuntime, syncSoftDeleteNodesToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActionsFixture, createWorkspaceNodeActionsSetStateHarness } from './workspaceStoreNodeActions.test-support';
@@ -108,4 +109,21 @@ it('applies a late canonical delete without replaying or replacing newer topic h
     redoStack: [],
     undoStack: [expect.objectContaining({ type: 'text.edit' })]
   });
+});
+
+it('publishes annotation lifecycle facts through delete undo and restore redo', async () => {
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async payload => ({ deletedNodeIds: payload.nodeIds }));
+  vi.mocked(syncRestoreNodesToRuntime).mockImplementation(async payload => ({ restoredNodeIds: payload.nodeIds, skippedConflicts: [] }));
+  const harness = createHarness();
+  expect(startEditorAnnotationHistoryMutation({ entry: ENTRY, get: harness.getState,
+    mode: 'undo', set: harness.setState })).toBe(true);
+  await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack).toHaveLength(1));
+  expect(harness.getState().nodesById['highlight-1']?.deletedAt).toBeTruthy();
+  expect(isCanonicalVisibleNodeId(harness.getState(), 'highlight-1')).toBe(false);
+  const entry = getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack[0] as EditorAnnotationOperationEntry;
+  expect(startEditorAnnotationHistoryMutation({ entry, get: harness.getState,
+    mode: 'redo', set: harness.setState })).toBe(true);
+  await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack).toHaveLength(0));
+  expect(harness.getState().nodesById['highlight-1']?.deletedAt).toBeNull();
+  expect(isCanonicalVisibleNodeId(harness.getState(), 'highlight-1')).toBe(true);
 });

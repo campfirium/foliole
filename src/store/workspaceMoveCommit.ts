@@ -2,9 +2,16 @@ import { moveOrderChildren, retainFixedRootSlots } from '../../lib/core/nodes/st
 import type { NativeMoveNodesArgs, NativeMoveNodesResult } from '../../lib/platform/nativeMoveContract';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import type { WorkspaceState } from './workspaceStore';
 import { restoreStructureParentOrders } from './workspaceStructureParentOrders';
+
+export function visibleMoveChildren(state: Pick<WorkspaceState,
+  'nodeOrder' | 'nodesById' | 'trashedNodeIds' | 'trashedNodeDeletedAtById'>, parentNodeId: string | null) {
+  return moveOrderChildren(parentNodeId, state.nodeOrder.filter(id =>
+    state.nodesById[id]?.parentNodeId === parentNodeId && isCanonicalVisibleNodeId(state, id)));
+}
 
 export function buildMoveRuntimePayload(
   before: WorkspaceState, patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>,
@@ -18,10 +25,8 @@ export function buildMoveRuntimePayload(
   return { nodes, maintainSequentialReading,
     defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
     parentOrders: parents.map((parentNodeId) => ({ parentNodeId,
-      expectedChildIds: moveOrderChildren(parentNodeId,
-        before.nodeOrder.filter((id) => before.nodesById[id]?.parentNodeId === parentNodeId)),
-      childIds: moveOrderChildren(parentNodeId,
-        patch.nodeOrder.filter((id) => patch.nodesById[id]?.parentNodeId === parentNodeId)) })) };
+      expectedChildIds: visibleMoveChildren(before, parentNodeId),
+      childIds: visibleMoveChildren({ ...before, ...patch }, parentNodeId) })) };
 }
 
 export function mergeMoveResult(
@@ -29,8 +34,7 @@ export function mergeMoveResult(
 ) {
   const same = (left: string[], right: string[]) => left.length === right.length && left.every((id, i) => id === right[i]);
   const applicable = result.parentOrders.every((order) => {
-    const current = moveOrderChildren(order.parentNodeId,
-      latest.nodeOrder.filter((id) => latest.nodesById[id]?.parentNodeId === order.parentNodeId));
+    const current = visibleMoveChildren(latest, order.parentNodeId);
     const expected = payload.parentOrders.find((parent) => parent.parentNodeId === order.parentNodeId);
     return expected && (same(current, expected.expectedChildIds) || same(current, order.childIds));
   }) && result.nodes.every((node) => {

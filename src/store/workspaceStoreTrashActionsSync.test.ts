@@ -164,7 +164,7 @@ describe('createWorkspaceNodeActions annotated excerpt lifecycle sync', () => {
     vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: [excerpt.id], skippedConflicts: [] });
     await actions.restoreNode(excerpt.id);
 
-    expect(harness.getState().nodesById[excerpt.id]).toEqual(excerpt);
+    expect(harness.getState().nodesById[excerpt.id]).toEqual({ ...excerpt, deletedAt: null });
     expect(harness.getState().trashedNodeIds).not.toContain(excerpt.id);
   });
 });

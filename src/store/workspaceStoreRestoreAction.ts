@@ -4,6 +4,7 @@ import type { WorkspaceRestoreNodesResult } from '../shared/platform/workspaceRu
 import { collectNodeSubtreeIds } from './workspaceHelpers';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import { collectTrashRootActionTargets } from './workspaceTrashMutationTargets';
 
 type WorkspaceSet = (
@@ -61,12 +62,10 @@ function applyRestoreResult(
     trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
     trashedNodeIds: nextTrashedNodeIds
   };
+  const lifecycle = applyWorkspaceTrashLifecycle(nextState, result.restoredNodeIds, null);
   return {
-    activeNodeId: targetNodeId,
-    nodeOrder: nextState.nodeOrder,
-    reviewSession: reconcileReviewSession(nextState, targetNodeId),
-    trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
-    trashedNodeIds: nextTrashedNodeIds
+    ...lifecycle,
+    reviewSession: reconcileReviewSession({ ...nextState, ...lifecycle }, targetNodeId)
   };
 }
 

@@ -148,7 +148,8 @@ async function deleteWithoutWorkspaceHistory(
   });
   const result = await commitSoftDeleteMutation(runtimeHandlers, mutation);
   set((state) => {
-    const committed = result ? computeDeleteNodesMutation(state, result.deletedNodeIds) : null;
+    const committed = result && mutation
+      ? computeDeleteNodesMutation(state, result.deletedNodeIds, mutation.deletedAt, 'receipt') : null;
     return committed?.patch ?? state;
   });
 }

@@ -1,9 +1,8 @@
-import { moveOrderChildren } from '../../lib/core/nodes/structureMoveOrder';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 import type { WorkspaceMoveNodesPayload, WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { admitApplicationAction, settleApplicationAction } from './workspaceApplicationActionAdmission';
-import { buildMoveRuntimePayload, moveResultMatchesRequest } from './workspaceMoveCommit';
+import { buildMoveRuntimePayload, moveResultMatchesRequest, visibleMoveChildren } from './workspaceMoveCommit';
 import { confirmMoveReadingContent } from './workspaceMoveContentBarrier';
 import { commitMoveTransaction } from './workspaceMoveHistoryCommit';
 import {
@@ -195,8 +194,7 @@ export function createMoveNodesAction(
     let latest: WorkspaceState = preparedTransaction.before;
     set((state) => { latest = state; return state; });
     if (preparedTransaction.runtimePayload.parentOrders.some((order) =>
-      moveOrderChildren(order.parentNodeId, latest.nodeOrder.filter((id) =>
-        latest.nodesById[id]?.parentNodeId === order.parentNodeId)).join('\0') !== order.expectedChildIds.join('\0')) ||
+      visibleMoveChildren(latest, order.parentNodeId).join('\0') !== order.expectedChildIds.join('\0')) ||
       preparedTransaction.runtimePayload.nodes.some((node) =>
         latest.nodesById[node.nodeId]?.parentNodeId !== node.expectedParentNodeId)) return fail();
     // Saving related content can change node objects without changing the intended structural operation.

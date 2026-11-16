@@ -12,6 +12,7 @@ import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 import { commitAnnotationDelete as commitDelete, commitAnnotationRestore as commitRestore } from './workspaceEditorAnnotationTrash';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
@@ -37,8 +38,7 @@ function createRestorePatch(state: WorkspaceState, restoredNodeIds: string[]) {
   const trashedNodeIds = state.trashedNodeIds.filter((id) => !restored.has(id));
   return {
     reviewSession: reconcileReviewSession({ ...state, trashedNodeDeletedAtById, trashedNodeIds }, state.activeNodeId),
-    trashedNodeDeletedAtById,
-    trashedNodeIds
+    ...applyWorkspaceTrashLifecycle({ ...state, trashedNodeDeletedAtById, trashedNodeIds }, restoredNodeIds, null)
   };
 }
 
@@ -108,8 +108,7 @@ function finishRestore(
       current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
     );
     return {
-      ...createRestorePatch(state, restoredNodeIds),
-      nodesById: applyRestoredParentRegions(state, entry),
+      ...createRestorePatch({ ...state, nodesById: applyRestoredParentRegions(state, entry) }, restoredNodeIds),
       editorOperationHistory: finishSuccessfulHistory(state, entry, mode, current)
     };
   });

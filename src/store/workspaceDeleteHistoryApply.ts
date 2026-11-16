@@ -8,6 +8,7 @@ import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type Workspa
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import type { WorkspaceState } from './workspaceStore';
+import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import { createTrashParentUpdates } from './workspaceTrashRuntimeCommit';
 
 function isExactIdSet(left: string[], right: string[]) {
@@ -148,10 +149,9 @@ export async function applyWorkspaceDeleteHistory(args: {
     {
       ...applyWorkspaceHistoryContext(context),
       navigation: { backStack: [...navigation.backStack], forwardStack: [...navigation.forwardStack] },
-      nodeOrder,
-      nodesById,
-      trashedNodeDeletedAtById: applyDeletedAtSnapshots(latest, args.entry, args.mode, args.mutationTimestamp),
-      trashedNodeIds: [...trashed]
+      ...applyWorkspaceTrashLifecycle({ ...latest, activeNodeId: context.activeNodeId, nodeOrder, nodesById,
+        trashedNodeDeletedAtById: applyDeletedAtSnapshots(latest, args.entry, args.mode, args.mutationTimestamp),
+        trashedNodeIds: [...trashed] }, args.entry.nodeIds, args.mode === 'undo' ? null : args.mutationTimestamp)
     }
   );
 }

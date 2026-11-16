@@ -11,6 +11,7 @@ import { commitAnnotationRestore } from './workspaceEditorAnnotationTrash';
 import { collectNodeSubtreeIds } from './workspaceHelpers';
 import type { WorkspaceRestoreHistoryEntry } from './workspaceRestoreHistory';
 import type { WorkspaceState } from './workspaceStoreTypes';
+import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 import { collectTrashRootActionTargets } from './workspaceTrashMutationTargets';
 
@@ -45,8 +46,9 @@ export async function restoreApplicationNode(set: Set, get: () => WorkspaceState
           const node = nodesById[parent.nodeId];
           if (node && hashAnnotationValue(node.imageRegions) === hashAnnotationValue(parent.after)) nodesById[parent.nodeId] = { ...node, imageRegions: parent.before };
         }
-        return { nodesById, trashedNodeIds: state.trashedNodeIds.filter(id => !restored.includes(id)),
-          trashedNodeDeletedAtById: deleted, editorOperationHistory:
+        return { ...applyWorkspaceTrashLifecycle({ ...state, nodesById,
+          trashedNodeIds: state.trashedNodeIds.filter(id => !restored.includes(id)),
+          trashedNodeDeletedAtById: deleted }, restored, null), editorOperationHistory:
             confirmPendingEditorAnnotationEntry(state, original.nodeId, original.annotations.map(value => value.nodeId))?.history ?? state.editorOperationHistory };
       });
       return rootNodeId;
@@ -64,12 +66,13 @@ async function restoreWorkspaceNode(set: Set, get: () => WorkspaceState, before:
   const owner = before.appActionHistory.application!;
   const existing = owner.undo.findLast(operation => operation.domain === 'workspace' && operation.entry.type === 'workspace.delete'
     && operation.entry.nodeIds.includes(rootNodeId));
-  const live = { ...before, trashedNodeIds: before.trashedNodeIds.filter(id => !nodeIds.includes(id)),
-    trashedNodeDeletedAtById: Object.fromEntries(Object.entries(before.trashedNodeDeletedAtById).filter(([id]) => !nodeIds.includes(id))) };
+  const live = { ...before, ...applyWorkspaceTrashLifecycle(before, nodeIds, null) };
   const mutation = computeDeleteNodesMutation(live, nodeIds, before.trashedNodeDeletedAtById[rootNodeId]);
   if (!mutation) return null;
   const deletion = existing?.domain === 'workspace' && existing.entry.type === 'workspace.delete' ? existing.entry
     : createWorkspaceDeleteHistoryEntry({ beforeState: live, afterState: before, kind: before.nodesById[rootNodeId]!.kind, mutation, rootNodeId });
+  if (!existing) deletion.parentOrders = deletion.parentOrders.map(order => ({ ...order,
+    childIds: order.childIds.filter(id => !nodeIds.includes(id)) }));
   const entry: WorkspaceRestoreHistoryEntry = { id: createWorkspaceActionHistoryEntryId(), title: 'Restore Item', type: 'workspace.restore', deletion };
   admitApplicationAction(set, entry);
   try {
