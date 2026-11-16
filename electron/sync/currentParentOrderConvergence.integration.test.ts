@@ -2,6 +2,9 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
+
 import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, type DesktopFramedSyncFixtureProcess,
   type DesktopFramedSyncFixtureSnapshot } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -15,8 +18,7 @@ const parent = 'parent-child-order:root';
 function evidence(file: string) {
   const db = new Database(file, { readonly: true, fileMustExist: true });
   try {
-    const order = JSON.parse(String(db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-      .pluck().get(parent))) as string[];
+    const order = readParentChildOrder(createBetterSqlite3Driver(db), null).childIds;
     return { order: order.filter((id) => !id.startsWith('special-')),
       sources: db.prepare('SELECT author_id, counter, child_ids_json FROM parent_order_sources WHERE parent_id = ? ORDER BY author_id').all(parent),
       writer: db.prepare('SELECT author_id FROM parent_order_writer').pluck().get(),

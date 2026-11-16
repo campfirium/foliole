@@ -150,8 +150,8 @@ export function upsertNodeSnapshot(
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
 ): void {
-  const previousTitle = driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [input.nodeId]);
-  if (previousTitle?.title !== input.title) input = { ...input, title: normalizeNodeTitle(input.title) };
+  const previousNode = driver.queryOne<{ title: string; parent_id: string | null }>('SELECT title, parent_id FROM nodes WHERE id = ?', [input.nodeId]);
+  if (previousNode?.title !== input.title) input = { ...input, title: normalizeNodeTitle(input.title) };
   assertNodeTextFieldsWithinBudget(input);
   const statements = getUpsertNodeSnapshotStatements(driver);
 
@@ -166,8 +166,10 @@ export function upsertNodeSnapshot(
       'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
     const bodyBlobHash = hashTextBody(input.content);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
-    if (!previousTitle && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
-    ensureNodeParentMembership(driver, input.nodeId, options.parentMembership);
+    if (!previousNode && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
+    if (!previousNode || previousNode.parent_id !== input.parentNodeId) {
+      ensureNodeParentMembership(driver, input.nodeId, options.parentMembership);
+    }
     if (input.reading !== undefined) writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
       deleteReading: statements.deleteNodeReading.run,
@@ -227,9 +229,6 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
 
   return driver.transaction(() => {
     const result = resolveRestoreNodesResult(driver, input.nodeIds);
-    for (const nodeId of result.restoredNodeIds) {
-      ensureNodeParentMembership(driver, nodeId);
-    }
     for (const nodeId of result.restoredNodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
     }

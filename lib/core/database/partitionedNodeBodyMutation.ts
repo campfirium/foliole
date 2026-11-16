@@ -61,11 +61,11 @@ function moveAnchor(driver: DatabaseDriver, id: string, parentId: string, anchor
 
 function writePart(driver: DatabaseDriver, node: PartitionNode, content: string, index: number, now: string) {
   const id = bodyPartNodeId(node.id, index);
-  const existing = driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [id]);
+  const existing = driver.queryOne<{ title: string; parent_id: string | null }>('SELECT title, parent_id FROM nodes WHERE id = ?', [id]);
   if (existing) {
     driver.execute('UPDATE nodes SET parent_id = ?, deleted_at = NULL, sync_dirty = 1 WHERE id = ?', [node.id, id]);
     writeNodeBody({ driver, nodeId: id, title: existing.title, content, updatedAt: now });
-    ensureNodeParentMembership(driver, id);
+    if (existing.parent_id !== node.id) ensureNodeParentMembership(driver, id);
   } else {
     upsertNodeSnapshot(driver, {
       nodeId: id, parentNodeId: node.id, kind: 'topic', title: `${node.title} (${index + 1})`,

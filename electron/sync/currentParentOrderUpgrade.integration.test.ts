@@ -5,7 +5,9 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { restoreEmptyLegacyDailyFlowSchema } from '../database/historicalMigration.test-support.js';
 
@@ -16,7 +18,7 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 function business(file: string, serialized = true) {
   const db = new Database(file, { readonly: true });
   try { return { versions: db.prepare(`SELECT ${serialized ? '*' : 'version_id, object_id, parent_version_id, content_hash, body_text, host_name, created_at'} FROM node_sync_versions WHERE object_id = 'original'`).all(),
-    order: db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order ORDER BY parent_id').all() }; }
+    order: loadDerivedNodeOrder(createBetterSqlite3Driver(db)) }; }
   finally { db.close(); }
 }
 

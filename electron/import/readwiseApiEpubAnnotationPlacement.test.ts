@@ -15,7 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
@@ -75,7 +75,7 @@ it.each(['unique', 'first'] as const)('routes overlap rejection to the final ded
   expect(rows.filter((row) => row.anchor_link === null).map((row) => row.parent_title)).toEqual(['※']);
   expect(rows.map((row) => row.content)).toEqual(['Exact excerpt.', 'Exact excerpt.']);
   const driver = openDatabaseConnection().driver;
-  const lastChild = readParentChildOrders(driver).get('book')?.at(-1);
+  const lastChild = readParentChildOrder(driver, 'book').childIds.at(-1);
   expect(driver.queryOne<{ title: string }>(
     "SELECT title FROM nodes WHERE id=? AND parent_id='book'", [lastChild ?? null]
   )).toEqual({ title: '※' });

@@ -4,9 +4,11 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord } from '../../lib/core/sync/currentParentOrderStore.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.testSupport.js';
@@ -19,8 +21,7 @@ function evidence(file: string) {
     return {
       writer: db.prepare('SELECT author_id FROM parent_order_writer').pluck().get(),
       sources: db.prepare('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id').all(),
-      order: JSON.parse(db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-        .pluck().get('parent-child-order:root') as string) as string[]
+      order: readParentChildOrder(createBetterSqlite3Driver(db), null).childIds
     };
   } finally { db.close(); }
 }

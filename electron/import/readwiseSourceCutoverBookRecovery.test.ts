@@ -45,7 +45,7 @@ vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret'
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
-import { readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import {
   clearAttachmentLibraryPathSnapshot,
   publishAttachmentLibraryPathSnapshot
@@ -131,7 +131,7 @@ it('rebuilds a bound EPUB from frozen Reader HTML and keeps unlocated highlights
   ).flatMap((row) => JSON.parse(row.resource_references))).toEqual([]);
   expect(driver.queryOne<{ title: string }>(`SELECT parent.title FROM nodes child
     JOIN nodes parent ON parent.id=child.parent_id WHERE child.id='local-unlocated'`)).toEqual({ title: '※' });
-  const lastChild = readParentChildOrders(driver).get('topic-1')?.at(-1);
+  const lastChild = readParentChildOrder(driver, 'topic-1').childIds.at(-1);
   expect(driver.queryOne<{ title: string }>(
     "SELECT title FROM nodes WHERE id=? AND parent_id='topic-1' AND deleted_at IS NULL", [lastChild ?? null]))
     .toEqual({ title: '※' });

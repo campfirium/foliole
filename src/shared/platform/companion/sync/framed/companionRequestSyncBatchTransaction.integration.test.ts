@@ -6,6 +6,7 @@ import { createBetterSqlite3Driver } from '../../../../../../electron/database/b
 import { prepareImportedNodeDeletionVersions } from '../../../../../../electron/database/importedNodeDeletionVersions.js';
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { deleteNodesPermanently } from '../../../../../../lib/core/database/nodePermanentDeleteMutations.js';
+import { readParentChildOrder } from '../../../../../../lib/core/database/parentChildOrder.js';
 import { initializeWorkspaceSearchSidecar } from '../../../../../../lib/core/database/workspaceSearchSidecar.js';
 import type { DbParams, DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -59,6 +60,43 @@ function receivedIds(adoption: NonNullable<typeof host>) {
   return readDesktopFramedSyncLibraryEvidence(adoption.fixture.leftSnapshot.databasePath).nodes
     .map(node => (node as { id: string }).id).filter(id => id.startsWith('t326-complete-'));
 }
+
+it('resumes a folder split over pulls without reading or writing a materialized order', async () => {
+  const adoption = await adopt(NODES);
+  const parentId = 't326-complete-00000';
+  const readOrder = () => readParentChildOrder(createBetterSqlite3Driver(adoption.sqlite), parentId).childIds;
+  const observed: string[] = [];
+  const materialization = /SELECT id, title, created_at AS createdAt FROM nodes|INSERT INTO parent_child_orders/u;
+  const observe = (db: DbPort): DbPort => ({
+    run: (sql, params) => { if (materialization.test(sql)) observed.push(sql); return db.run(sql, params); },
+    query: (sql, params) => { if (materialization.test(sql)) observed.push(sql); return db.query(sql, params) as never; },
+    transaction: execute => db.transaction(tx => execute(observe(tx)))
+  });
+  let pulls = 0;
+  native.post.mockImplementation(input => {
+    if (input.url.includes('request=pulls') && ++pulls === 2) throw new Error('fixture_stop_after_one_batch');
+    return adoption.post(input);
+  });
+  const first = native.db!;
+  native.db = observe(first);
+  try { await expect(adoption.sync()).rejects.toThrow('fixture_stop_after_one_batch'); }
+  finally { native.db = first; }
+  const partial = readOrder();
+  expect(partial.length).toBeGreaterThan(0);
+  expect(partial.length).toBeLessThan(NODES - 1);
+  await adoption.restart();
+  expect(readOrder()).toEqual(partial);
+  native.post.mockImplementation(adoption.post);
+  const reopened = native.db!;
+  native.db = observe(reopened);
+  try { await adoption.sync(); }
+  finally { native.db = reopened; }
+  const source = new Database(adoption.fixture.rightSnapshot.databasePath, { readonly: true });
+  try { expect(readOrder()).toEqual(readParentChildOrder(createBetterSqlite3Driver(source), parentId).childIds); }
+  finally { source.close(); }
+  expect(readOrder()).toHaveLength(NODES - 1);
+  expect(observed).toEqual([]);
+});
 
 function permanentlyDeleteSourceNodes(adoption: NonNullable<typeof host>, nodeIds: string[]) {
   const source = new Database(adoption.fixture.rightSnapshot.databasePath);

@@ -1,6 +1,5 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort, DbRow, DbValue } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { inventoryColumns, inventoryEntryFromRow, type InventoryRow } from './framedSyncInventoryRead.js';
@@ -44,7 +43,6 @@ async function missingDigests(db: DbPort, nodeIds?: readonly string[]) {
 }
 
 export async function flushRequestSyncInventoryDigests(db: DbPort, nodeIds?: readonly string[]) {
-  await flushCurrentParentOrderProjectionsWithDbPort(db);
   for (const entry of await missingDigests(db, nodeIds)) {
     await db.run(`INSERT OR REPLACE INTO framed_sync_node_digest (object_id, shared_state_hash, unready)
       VALUES (?, ?, ?)`, [entry.globalId, bytesToHex(entry.sharedStateHash), entry.unready ? 1 : 0]);

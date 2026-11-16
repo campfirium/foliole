@@ -10,7 +10,7 @@ import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.j
 import { rewriteParentChildOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { bindParentOrderWriter, requireParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
-import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord, flushCurrentParentOrderProjectionsWithDbPort,
   saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
@@ -42,9 +42,10 @@ function fixture() {
   const node = (id: string) => insert.run(id, id, now, now);
   const save = (childIds: string[]) => saveLocalCurrentParentOrder(driver,
     { parentId: 'parent', childIds, now, hostName: 'same-host' });
-  const order = () => JSON.parse(String(db.prepare(
+  const storedOrder = () => JSON.parse(String(db.prepare(
     "SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent'").pluck().get()));
-  return { db, driver, port, node, save, order };
+  const order = () => readParentChildOrder(driver, 'parent').childIds;
+  return { db, driver, port, node, save, order, storedOrder };
 }
 
 function record(sources: ParentOrderSource[]) {
@@ -65,13 +66,14 @@ it('reads current move and reorder positions without writing the directory order
   await applyCurrentParentOrderRecord(host.port, record([
     { authorId: 'remote', counter: 1, childIds: ['b', 'late', 'a'] }
   ]));
+  host.db.prepare(`INSERT INTO parent_child_order VALUES ('parent', '["b","a"]', 'now')`).run();
   host.node('late');
   host.db.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'b');
   host.db.pragma('query_only = ON');
 
   expect(readParentChildOrder(host.driver, 'parent').childIds).toEqual(['b', 'late', 'a']);
   expect(readMoveParentOrder(host.driver, 'parent').visibleIds).toEqual(['late', 'a']);
-  expect(host.order()).toEqual(['b', 'a']);
+  expect(host.storedOrder()).toEqual(['b', 'a']);
 });
 
 it('saves an explicit rearrangement that matches the stale materialized order', async () => {
@@ -97,8 +99,7 @@ it('saves an explicit rearrangement that matches the stale materialized order', 
 it('preserves root membership when a child moves out of a folder through either storage adapter', async () => {
   const host = fixture();
   host.node('a');
-  const rootOrder = () => JSON.parse(String(host.db.prepare(
-    "SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent-child-order:root'").pluck().get()));
+  const rootOrder = () => readParentChildOrder(host.driver, null).childIds;
   await flushCurrentParentOrderProjectionsWithDbPort(host.port);
   expect(rootOrder()).toEqual(['other', 'parent']);
   host.db.prepare("UPDATE nodes SET parent_id = NULL WHERE id = 'a'").run();
@@ -135,6 +136,16 @@ it('persists one latest snapshot per author and leaves no-op saves unchanged', (
   expect(typeof payload.sources_json).toBe('string');
   expect(computeSyncContentHash('parent_child_order', payload)).toBe(record(
     readCurrentParentOrderSources(host.driver, 'parent')).content_hash);
+});
+
+it('publishes an empty source object from its state without an order projection', () => {
+  const host = fixture();
+  const contentHash = currentParentOrderHash('parent', []);
+  upsertSyncObjectState(host.driver, { objectType: 'parent_child_order', objectId: 'parent', contentHash,
+    lastModifiedByHostName: 'fixture', updatedAt: now });
+  const payload = JSON.parse(String(host.db.prepare(PARENT_ORDER_PAYLOAD_SQL).pluck().get('parent')));
+  expect(payload).toEqual(currentParentOrderPayload('parent', []));
+  expect(computeSyncContentHash('parent_child_order', payload)).toBe(contentHash);
 });
 
 it('joins a remote source without creating a local edit, then orders the next edit after it', async () => {

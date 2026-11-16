@@ -29,14 +29,17 @@ export function preserveReadwiseBookExcerpts(input: {
     connectionRef: 'local-books', documentId: input.bookKey, driver: input.driver,
     importedAt: input.importedAt, rootNodeId: input.rootNodeId
   });
+  const moved: string[] = [];
   for (const row of excerpts) {
     const anchor = parseStoredAnchorLink(row.anchor_link);
+    const parentId = retained.has(row.parent_id) ? row.parent_id : unlocatedId;
+    if (parentId !== row.parent_id) moved.push(row.id);
     input.driver.execute(`UPDATE nodes SET parent_id=?,anchor_link=?,image_regions=NULL,updated_at=?,sync_dirty=1 WHERE id=?`,
-      [retained.has(row.parent_id) ? row.parent_id : unlocatedId,
+      [parentId,
         anchor ? JSON.stringify({ id: anchor.id, kind: anchor.kind }) : null, input.importedAt, row.id]);
   }
   retained.add(unlocatedId);
-  ensureNodesParentMembership(input.driver, [...retained]);
+  ensureNodesParentMembership(input.driver, moved);
   placeReadwiseUnlocatedNodeLast(input.driver, input.rootNodeId, unlocatedId);
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [...retained]);
   return retained;

@@ -39,13 +39,11 @@ export function saveLocalCurrentParentOrder(driver: DatabaseDriver, input: {
 }) {
   return driver.transaction(() => {
     const { parentId, childIds, previousChildIds, now, hostName } = input;
-    const previous = previousChildIds === undefined
-      ? driver.queryOne<{ child_ids_json: string }>(
-        'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId])?.child_ids_json ?? '[]'
-      : JSON.stringify(previousChildIds);
-    if (previous === JSON.stringify(childIds)) return false;
-    const authorId = requireParentOrderWriter(driver);
     const sources = readCurrentParentOrderSources(driver, parentId);
+    const previous = previousChildIds ?? (sources.length ? projectCurrentParentOrder(sources,
+      driver.queryAll<CurrentOrderMember & DatabaseRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId])) : []);
+    if (JSON.stringify(previous) === JSON.stringify(childIds)) return false;
+    const authorId = requireParentOrderWriter(driver);
     const counter = Math.max(0, ...sources.map((source) => source.counter)) + 1;
     const [next] = parseParentOrderSources([{ authorId, counter, childIds }]);
     if (!next) throw new Error('parent_order_local_source_missing');

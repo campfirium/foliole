@@ -34,9 +34,9 @@ export const PARENT_ORDER_MATERIALIZE_SQL = `INSERT INTO parent_child_order
   (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(parent_id) DO UPDATE SET
     child_ids_json = excluded.child_ids_json, updated_at = excluded.updated_at
   WHERE parent_child_order.child_ids_json <> excluded.child_ids_json`;
-export const PARENT_ORDER_PAYLOAD_SQL = `SELECT json_object('parent_id', parent_id,
+export const PARENT_ORDER_PAYLOAD_SQL = `SELECT json_object('parent_id', state.object_id,
   'sources_json', COALESCE((SELECT json_group_array(json(source)) FROM (
     SELECT json_object('authorId', author_id, 'counter', counter,
       'childIds', json(child_ids_json)) AS source FROM parent_order_sources
-    WHERE parent_id = parent_child_order.parent_id ORDER BY author_id)), '[]') || '') AS payload_json
-  FROM parent_child_order WHERE parent_id = ?`;
+    WHERE parent_id = state.object_id ORDER BY author_id)), '[]') || '') AS payload_json
+  FROM sync_object_state state WHERE state.object_type = 'parent_child_order' AND state.object_id = ?`;

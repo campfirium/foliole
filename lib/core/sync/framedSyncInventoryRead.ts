@@ -2,7 +2,6 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { FRAMED_SYNC_LIMITS, type FramedSyncContext } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
@@ -87,7 +86,6 @@ async function readNodes(port: DbPort, key: InventoryKey | undefined) {
 export function readFramedSyncInventory(port: DbPort) {
   return port.transaction(async (tx) => {
     if (await syncGroupLocalPublicationBlockReason(tx)) return [];
-    await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return read(tx, undefined);
   });
 }

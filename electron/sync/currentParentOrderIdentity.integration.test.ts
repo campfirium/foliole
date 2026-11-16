@@ -4,6 +4,9 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
+
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
@@ -11,7 +14,7 @@ function state(file: string) {
   const db = new Database(file, { readonly: true });
   try { return { writer: db.prepare('SELECT author_id FROM parent_order_writer').pluck().get(),
     sources: db.prepare('SELECT author_id, counter, child_ids_json FROM parent_order_sources ORDER BY parent_id, author_id').all(),
-    order: db.prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent-child-order:root'").pluck().get() }; }
+    order: readParentChildOrder(createBetterSqlite3Driver(db), null).childIds }; }
   finally { db.close(); }
 }
 
@@ -44,8 +47,8 @@ it.each(['clone', 'restore'] as const)('rejoins after the first offline %s edit 
     await reconnectFixturePeer(fixture.right, left);
     expect(state(file).writer).toBe(writer);
     expect(state(left.databasePath).sources).toEqual(state(right.databasePath).sources);
-    expect(state(left.databasePath).order).toBe(state(right.databasePath).order);
-    expect(JSON.parse(String(state(file).order)).filter((id: string) => ['a', 'b', 'c'].includes(id)))
+    expect(state(left.databasePath).order).toEqual(state(right.databasePath).order);
+    expect(state(file).order.filter(id => ['a', 'b', 'c'].includes(id)))
       .toEqual(['c', 'b', 'a']);
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

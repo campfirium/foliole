@@ -23,28 +23,15 @@ export function parentOrderId(parentId: string | null) {
   return parentId ?? ROOT_CHILD_ORDER_ID;
 }
 
-export function readParentChildOrders(driver: DatabaseDriver) {
-  const rows = driver.queryAll<ChildOrderRow>('SELECT parent_id, child_ids_json FROM parent_child_order');
-  return new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
-}
-
-/** The orders of the given parents plus every other stored order that still lists one of the nodes, in table order. */
-export function readOrdersAroundNodes(driver: DatabaseDriver, parentIds: string[], nodeIds: string[]) {
-  const rows = driver.queryAll<ChildOrderRow>(`SELECT parent_id, child_ids_json FROM parent_child_order
-    WHERE parent_id IN (SELECT value FROM json_each(?)) OR parent_id IN (
-      SELECT parent_id FROM parent_child_order_members WHERE child_id IN (SELECT value FROM json_each(?)))
-    ORDER BY rowid`, [JSON.stringify(parentIds), JSON.stringify(nodeIds)]);
-  return new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
-}
-
 /** Reads the current order and membership of one parent, including hidden slots. */
-export function readParentChildOrder(driver: DatabaseDriver, parentNodeId: string) {
+export function readParentChildOrder(driver: DatabaseDriver, parentNodeId: string | null, excluded?: ReadonlySet<string>) {
   return driver.transaction(tx => {
     const members = tx.queryAll<NodeOrderMember & { title: string; createdAt: string }>(
-      'SELECT id, parent_id, title, created_at, created_at AS createdAt, deleted_at FROM nodes WHERE parent_id = ?',
+      'SELECT id, parent_id, title, created_at, created_at AS createdAt, deleted_at FROM nodes WHERE parent_id IS ?',
       [parentNodeId]);
-    const byId = new Map(members.map((member) => [member.id, member]));
-    return { childIds: readCurrentParentOrder(tx, parentNodeId, members), byId };
+    const included = excluded ? members.filter(member => !excluded.has(member.id)) : members;
+    const byId = new Map(included.map(member => [member.id, member]));
+    return { childIds: readCurrentParentOrder(tx, parentOrderId(parentNodeId), included), byId };
   });
 }
 
