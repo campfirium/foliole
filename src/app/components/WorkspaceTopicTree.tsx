@@ -35,7 +35,7 @@ export interface WorkspaceTopicTreeProps {
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
   creationParentNodeId?: string;
-  continueAfterDelete?: boolean;
+  deleteBrowseRootId?: string;
   emptyState?: { description: string; title: string };
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
@@ -151,7 +151,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
   const { scrollContainerRef, t, treeData } = useWorkspaceTopicTreeContext(props);
   const { contentSort, lazyModel, nodeViewById, dismissedTopicVisibility } = treeData;
   const { collapsedNodeIds, collapsibleNodeIds, rows: visibleRows, searchQuery, setCollapsedNodeIds, setSearchQuery } = lazyModel;
-  useWorkspaceTopicDeleteContext(Boolean(props.continueAfterDelete), props.activeFolderId, props.activeNodeId, visibleRows);
+  useWorkspaceTopicDeleteContext(props.deleteBrowseRootId, props.activeNodeId, visibleRows);
   const focusedNodeId = resolveWorkspaceTopicTreeFocusNodeId({
     activeNodeId: props.activeNodeId,
     nodeViewState: props.activeNodeId ? nodeViewById[props.activeNodeId] : undefined,

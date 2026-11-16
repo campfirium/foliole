@@ -46,7 +46,7 @@ export function createTrashLifecycleHarness(
   const directory = mkdtempSync(path.join(tmpdir(), 'foliole-trash-lifecycle-'));
   appDataDir = directory;
   initializeDatabase();
-  const { driver, dbPath: file } = openDatabaseConnection();
+  const { driver, sqlite, dbPath: file } = openDatabaseConnection();
   driver.execute("INSERT OR REPLACE INTO settings VALUES ('host_name', ?, ?)", ['"trash-lifecycle"', now]);
   bindParentOrderWriter(driver, { deviceAnchor: 'trash-lifecycle', libraryPath: file });
   const seeds: Seed[] = [['deleted', null], ['source', null], ['target', null]];
@@ -80,7 +80,7 @@ export function createTrashLifecycleHarness(
       createApplicationHistory()) } : {}) });
   const restore = createRestoreNodeAction(set, handlers);
   set({ restoreNode: restore });
-  return { driver, get, set, handlers, applicationActions,
+  return { driver, sqlite, get, set, handlers, applicationActions,
     remove: createDeleteNodesAction(set, handlers, get), restore,
     removeWithoutHistory: createDeleteNodesAction(set, handlers),
     move: createMoveNodesAction(set, handlers.syncMoveNodes),

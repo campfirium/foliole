@@ -36,7 +36,7 @@ export function areWorkspaceTopicTreePropsEqual(
     activeFolderId: previous.activeFolderId !== next.activeFolderId,
     activeNodeId: previous.activeNodeId !== next.activeNodeId,
     childrenByParent: previous.childrenByParent !== next.childrenByParent,
-    continueAfterDelete: previous.continueAfterDelete !== next.continueAfterDelete,
+    deleteBrowseRootId: previous.deleteBrowseRootId !== next.deleteBrowseRootId,
     creationParentNodeId: previous.creationParentNodeId !== next.creationParentNodeId,
     emptyState: previous.emptyState !== next.emptyState,
     forceVisibleNodeId: previous.forceVisibleNodeId !== next.forceVisibleNodeId,

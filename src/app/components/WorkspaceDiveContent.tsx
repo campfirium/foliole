@@ -14,6 +14,7 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 export function WorkspaceDiveContent(props: {
   dive: Dive;
   activeNodeId: string | null;
+  continueAfterDelete: boolean;
   forceVisibleNodeId?: string | null;
   childrenByParent: Map<string | null, string[]>;
   nodesById: WorkspaceListNodesById;
@@ -33,6 +34,7 @@ export function WorkspaceDiveContent(props: {
       activeFolderId={`dive:${dive.id}`}
       activeNodeId={props.activeNodeId}
       childrenByParent={childrenByParent}
+      {...definedProps({ deleteBrowseRootId: props.continueAfterDelete ? dive.id : undefined })}
       emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
       {...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })}
       getDiveTopicRemoval={([topicId, ...otherIds]) => {

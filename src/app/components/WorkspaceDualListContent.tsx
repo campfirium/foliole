@@ -105,7 +105,7 @@ function renderStandardContentColumn(
       activeFolderId={topicRootId}
       activeNodeId={props.activeNodeId}
       childrenByParent={dualListState.topicChildrenByParent}
-      continueAfterDelete={!props.isStudyMode}
+      {...definedProps({ deleteBrowseRootId: props.isStudyMode ? undefined : topicRootId })}
       creationParentNodeId={topicRootId === HOME_NODE_ID ? INBOX_NODE_ID : topicRootId}
       forceVisibleNodeId={props.isStudyMode ? props.reviewCurrentNodeId : null}
       itemIds={dualListState.topicNodeOrder}
@@ -182,6 +182,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
             activeNodeId={props.activeNodeId}
             childrenByParent={dualListState.topicChildrenByParent}
             dive={dive.activeDive}
+            continueAfterDelete={!props.isStudyMode}
             {...definedProps({ forceVisibleNodeId: followsStudyCursor && studyDiveId ? props.reviewCurrentNodeId : undefined })}
             nodesById={props.listNodesById}
             onSelectNode={topicCallbacks.onSelectNode}

@@ -4,15 +4,14 @@ import { registerWorkspaceTopicDeleteContext } from '../../features/nodes/compon
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 
 export function useWorkspaceTopicDeleteContext(
-  enabled: boolean,
-  folderId: string,
+  folderId: string | undefined,
   activeNodeId: string | null,
   rows: readonly NodeTreeRow[]
 ) {
   const rowsRef = useRef(rows);
   useLayoutEffect(() => { rowsRef.current = rows; }, [rows]);
   useLayoutEffect(() => {
-    if (!enabled || !activeNodeId) return;
+    if (!folderId || !activeNodeId) return;
     let current = true;
     const unregister = registerWorkspaceTopicDeleteContext(nodeIds => {
       if (!nodeIds.includes(activeNodeId)) return;
@@ -32,5 +31,5 @@ export function useWorkspaceTopicDeleteContext(
       current = false;
       unregister();
     };
-  }, [activeNodeId, enabled, folderId]);
+  }, [activeNodeId, folderId]);
 }

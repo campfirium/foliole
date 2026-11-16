@@ -137,7 +137,7 @@ Each request reads the live directory. Inserts, removals, moves, or changes to s
 
 ### Finding a material in the trash
 
-In desktop folder browsing, item-column selection after moving the active material to Trash follows the displayed order. Agent Control trash operations have no desktop item-column context and retain their existing material and revision contract.
+In desktop folder and Dive browsing, item-column selection after moving the active material to Trash follows the displayed order. Agent Control trash operations have no desktop item-column context and retain their existing material and revision contract.
 
 Use `POST /agent-control/v1/materials/list-trash` or `foliole materials/list-trash --query "Title"`. Omit the query to browse all trash roots. Title matching is case-insensitive and uses substrings. A match on a trashed descendant returns its subtree root once, just as in the desktop trash.
 

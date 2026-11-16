@@ -1,4 +1,6 @@
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import { HOME_NODE_ID, isHomeNode } from '../features/nodes/model/specialNodes';
+import { resolveDiveMembership } from '../shared/diveMembership';
 
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import type { WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
@@ -25,6 +27,18 @@ function isTopLevelInFolder(state: WorkspaceState, folderId: string, id: string)
   return parentId === folderId;
 }
 
+function resolveListedSuccessor(state: WorkspaceState, continuation: WorkspaceDeleteContinuation) {
+  const { candidates, folderId } = continuation;
+  if (!isCanonicalVisibleNodeId(state, folderId)) return null;
+
+  const listedIds = continuation.getListedIds();
+  const dive = readDiveNode(state.nodesById[folderId]);
+  const diveMembers = dive ? new Set(resolveDiveMembership(state, dive).topics) : null;
+  return candidates.find(id => listedIds.has(id) && (diveMembers
+    ? diveMembers.has(id)
+    : isTopLevelInFolder(state, folderId, id) && isCanonicalVisibleNodeId(state, id))) ?? folderId;
+}
+
 export function applyWorkspaceDeleteContinuation(
   state: WorkspaceState,
   mutation: DeleteNodeMutationResult,
@@ -36,12 +50,7 @@ export function applyWorkspaceDeleteContinuation(
   const next = { ...state, ...mutation.patch };
   const { folderId } = continuation;
   const stillBrowsing = continuation.isCurrent() && state.browseRootNodeId === folderId;
-  const listedIds = stillBrowsing ? continuation.getListedIds() : null;
-  const activeNodeId = listedIds
-    ? continuation.candidates.find(id => listedIds.has(id) &&
-        isTopLevelInFolder(next, folderId, id) && isCanonicalVisibleNodeId(next, id)) ??
-        (isCanonicalVisibleNodeId(next, folderId) ? folderId : null)
-    : null;
+  const activeNodeId = stillBrowsing ? resolveListedSuccessor(next, continuation) : null;
   return { ...mutation.patch, activeNodeId, reviewSession: reconcileReviewSession(next, activeNodeId) };
 }
 
