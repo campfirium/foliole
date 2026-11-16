@@ -106,6 +106,35 @@ it('commits successful transactions and rolls back failed transactions', async (
   expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
 });
 
+it.each(['android', 'ios'])('routes a savepoint rollback through the existing %s transaction', async platform => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never, platform);
+  await db.transaction(async tx => {
+    await tx.run('SAVEPOINT received_object');
+    await tx.run('ROLLBACK TO received_object');
+    await tx.run('RELEASE received_object');
+  });
+  const rollback = platform === 'android' ? '/* savepoint rollback */ ROLLBACK TO received_object' : 'ROLLBACK TO received_object';
+  expect(connection.run.mock.calls).toEqual([
+    ['SAVEPOINT received_object', [], false], [rollback, [], false], ['RELEASE received_object', [], false]
+  ]);
+  expect(connection.beginTransaction).toHaveBeenCalledOnce();
+  expect(connection.commitTransaction).toHaveBeenCalledOnce();
+  expect(connection.rollbackTransaction).not.toHaveBeenCalled();
+});
+
+it('preserves a write failure when the native transaction already ended', async () => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never, 'android');
+  const interrupted = new Error('object savepoint disappeared');
+  const rollback = new Error('no transaction in progress');
+  connection.rollbackTransaction.mockRejectedValueOnce(rollback);
+  await expect(db.transaction(async () => { throw interrupted; })).rejects.toMatchObject({
+    message: interrupted.message, cause: interrupted, rollbackError: rollback
+  });
+  expect(connection.commitTransaction).not.toHaveBeenCalled();
+});
+
 it('reuses the active transaction for nested shared-core apply helpers', async () => {
   const connection = createFakeConnection();
   const db = createCapacitorSqliteDbPort(connection as never);

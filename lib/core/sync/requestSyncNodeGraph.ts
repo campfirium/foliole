@@ -48,7 +48,7 @@ export async function readRequestSyncNodeGraph(db: DbPort, nodeId: string) {
 }
 
 async function objectGraph(db: DbPort, nodeId: string, records: readonly SyncNodeRecordMetadata[],
-  preloaded: StoredGraphRows) {
+  preloaded: StoredGraphRows, incomingOwners: ReadonlyMap<string, ReadonlySet<string>>) {
   const parents = await storedParents(db, nodeId, preloaded);
   for (const record of records) {
     if (!record.version_id) throw new Error('node_version_identity_missing');
@@ -62,13 +62,19 @@ async function objectGraph(db: DbPort, nodeId: string, records: readonly SyncNod
   }
   const graph = new NodeVersionGraph(parents);
   graph.assertAcyclic();
-  await assertNoForeignParents(db, graph);
+  await assertNoForeignParents(db, graph, nodeId, incomingOwners);
   return graph;
 }
 
 /** A reclaimed parent is simply absent; a parent stored under another object is a broken identity. */
-async function assertNoForeignParents(db: DbPort, graph: NodeVersionGraph) {
+async function assertNoForeignParents(db: DbPort, graph: NodeVersionGraph, nodeId: string,
+  incomingOwners: ReadonlyMap<string, ReadonlySet<string>>) {
   const absent = [...new Set([...graph.parents.values()].flat())].filter(id => !graph.parents.has(id));
+  const incomingForeign = absent.find(id => {
+    const owners = incomingOwners.get(id);
+    return owners && !owners.has(nodeId);
+  });
+  if (incomingForeign) throw new Error(`node_version_cross_object_parent:${incomingForeign}`);
   for (let offset = 0; offset < absent.length; offset += 400) {
     const ids = absent.slice(offset, offset + 400);
     const [foreign] = await db.query<{ version_id: string }>(`SELECT version_id FROM node_sync_versions
@@ -78,29 +84,62 @@ async function assertNoForeignParents(db: DbPort, graph: NodeVersionGraph) {
 }
 
 /** Validate before any object writes and bind ancestry queries to this transaction's object graph. */
-export async function requestSyncNodeSource(db: DbPort, source: SyncNodeRecordSource): Promise<SyncNodeRecordSource> {
+export async function requestSyncNodeSource(db: DbPort, source: SyncNodeRecordSource,
+  rejected?: Map<string, string>): Promise<SyncNodeRecordSource> {
+  const prepared = await prepareRequestSyncNodeGraphs(db, source);
+  const originals = new Map<SyncNodeRecordMetadata, SyncNodeRecordMetadata>();
+  for (const nodeId of prepared.nodeIds) {
+    try {
+      for (const [validated, original] of await prepared.validate(nodeId)) originals.set(validated, original);
+    } catch (error) {
+      if (!rejected || !(error instanceof Error) || !isRejectedNodeGraph(error.message)) throw error;
+      rejected.set(nodeId, error.message);
+    }
+  }
+  return withValidatedAncestry(source, originals);
+}
+
+function isRejectedNodeGraph(message: string) {
+  return message === 'node_version_graph_cycle' || message.startsWith('node_version_parent_identity_mismatch:') ||
+    message.startsWith('node_version_cross_object_parent:');
+}
+
+/** Preload committed ancestry for the whole batch, then validate each object's incoming versions. */
+export async function prepareRequestSyncNodeGraphs(db: DbPort, source: SyncNodeRecordSource) {
   const groups = new Map<string, SyncNodeRecordMetadata[]>();
+  const incomingOwners = new Map<string, Set<string>>();
   for (const record of source.records) {
     const group = groups.get(record.object_id) ?? [];
     group.push(record);
     groups.set(record.object_id, group);
+    if (record.version_id) {
+      const owners = incomingOwners.get(record.version_id) ?? new Set<string>();
+      owners.add(record.object_id);
+      incomingOwners.set(record.version_id, owners);
+    }
   }
-  const originals = new Map<SyncNodeRecordMetadata, SyncNodeRecordMetadata>();
   const preloaded = await loadStoredGraphRows(db, [...groups.keys()]);
-  for (const [nodeId, records] of groups) {
-    // A standalone deletion preserves metadata without claiming a complete original version.
-    const versions = [];
-    for (const record of records) {
-      if (!record.is_tombstone || source.isIdentityOnly(record) ||
-          hasCompleteTombstoneVersion(await source.load(db, record))) versions.push(record);
+  return {
+    nodeIds: groups.keys(),
+    async validate(nodeId: string) {
+      const records = groups.get(nodeId)!;
+      // A standalone deletion preserves metadata without claiming a complete original version.
+      const versions = [];
+      for (const record of records) {
+        if (!record.is_tombstone || source.isIdentityOnly(record) ||
+            hasCompleteTombstoneVersion(await source.load(db, record))) versions.push(record);
+      }
+      const graph = await objectGraph(db, nodeId, versions, preloaded, incomingOwners);
+      return records.map(record => {
+        if (!record.version_id) throw new Error('node_version_identity_missing');
+        return [{ ...record, ancestor_version_ids: new GraphNodeVersionAncestry(graph, record.version_id) }, record] as const;
+      });
     }
-    const graph = await objectGraph(db, nodeId, versions, preloaded);
-    for (const record of records) {
-      if (!record.version_id) throw new Error('node_version_identity_missing');
-      originals.set({ ...record,
-        ancestor_version_ids: new GraphNodeVersionAncestry(graph, record.version_id) }, record);
-    }
-  }
+  };
+}
+
+function withValidatedAncestry(source: SyncNodeRecordSource,
+  originals: ReadonlyMap<SyncNodeRecordMetadata, SyncNodeRecordMetadata>): SyncNodeRecordSource {
   const original = (record: SyncNodeRecordMetadata) => {
     const value = originals.get(record);
     if (!value) throw new Error('node_version_source_changed');

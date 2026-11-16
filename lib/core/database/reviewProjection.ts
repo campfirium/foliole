@@ -89,9 +89,17 @@ type SharedReviewParameters = Awaited<ReturnType<typeof readSharedReviewParamete
 
 /** Reuse the settings visible at this phase of the caller's write transaction. */
 export async function recomputeReceivedReviewsWithDb(db: DbPort, nodeIds: ReadonlySet<string>) {
-  if (!nodeIds.size) return;
-  const shared = await readSharedReviewParameters(db);
-  for (const nodeId of nodeIds) await recomputeNodeReviewWithDb(db, nodeId, shared);
+  await prepareReceivedReviewProjection(db)(nodeIds);
+}
+
+/** One batch can reuse its settings while each card projects inside its own savepoint. */
+export function prepareReceivedReviewProjection(db: DbPort) {
+  let shared: SharedReviewParameters | undefined;
+  return async (nodeIds: ReadonlySet<string>) => {
+    if (!nodeIds.size) return;
+    shared ??= await readSharedReviewParameters(db);
+    for (const nodeId of nodeIds) await recomputeNodeReviewWithDb(db, nodeId, shared);
+  };
 }
 
 /** Read through the caller's database owner so scheduling and durable projection share parameters. */

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import Database from 'better-sqlite3';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../../../../../electron/database/betterSqlite3Driver.js';
 import { prepareImportedNodeDeletionVersions } from '../../../../../../electron/database/importedNodeDeletionVersions.js';
@@ -12,23 +12,11 @@ import type { DbParams, DbPort } from '../../../../../../lib/core/sync/dbPort.js
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
 
-const bad = vi.hoisted(() => ({ globalId: null as string | null }));
-vi.mock('../../../../../../lib/core/sync/requestSyncObjectFacts.js', async original => {
-  const actual = await original<typeof import('../../../../../../lib/core/sync/requestSyncObjectFacts.js')>();
-  return { ...actual, finishReceivedNode: (...args: Parameters<typeof actual.finishReceivedNode>) => {
-    if (args[1].globalId === bad.globalId) throw new Error('test_object_rejected');
-    return actual.finishReceivedNode(...args);
-  }, finishReceivedNodes: (...args: Parameters<typeof actual.finishReceivedNodes>) => {
-    if (args[1].some(input => input.globalId === bad.globalId)) throw new Error('test_object_rejected');
-    return actual.finishReceivedNodes(...args);
-  } };
-});
-
 const NODES = 60;
 const PRUNE = /DELETE FROM node_reading_host_state\s+WHERE node_id NOT IN \(SELECT id FROM nodes\)/u;
 const SHARED = [/INSERT INTO node_version_local_proof_state/u, /SELECT 1 FROM sync_group_devices peer JOIN sync_group_local_state/u];
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
-afterEach(async () => { bad.globalId = null; await host?.close(); host = undefined; });
+afterEach(async () => { await host?.close(); host = undefined; });
 
 function counted(inner: DbPort, counts: { transactions: number; prunes: number; shared: number }): DbPort {
   const inside = (tx: DbPort): DbPort => ({
@@ -181,12 +169,18 @@ it('applies each pulled batch in one transaction and prunes visibility once per 
 
 it('keeps the rest of a batch when one received object cannot be applied', { meta: { calibratedMs: 20000 } }, async () => {
   const adoption = await adopt();
-  bad.globalId = 't326-complete-00007';
-  await expect(adoption.sync()).rejects.toThrow('test_object_rejected');
+  adoption.sqlite.exec(`CREATE TRIGGER reject_received_note BEFORE INSERT ON nodes
+    WHEN NEW.id = 't326-complete-00007' BEGIN SELECT RAISE(ABORT, 'received_note_rejected'); END`);
+  await adoption.sync();
   const received = receivedIds(adoption);
   expect(received).not.toContain('t326-complete-00007');
   expect(received).toHaveLength(NODES - 1);
   expect(await loadSyncGroupLocalAdoption(adoption.db)).not.toBeNull();
+  adoption.sqlite.exec('DROP TRIGGER reject_received_note');
+  await adoption.restart();
+  await adoption.sync();
+  expect(receivedIds(adoption)).toHaveLength(NODES);
+  expect(await loadSyncGroupLocalAdoption(adoption.db)).toBeNull();
 });
 
 it('receives a large first adoption in at most twelve database calls per node', { meta: { calibratedMs: 20000 } }, async () => {

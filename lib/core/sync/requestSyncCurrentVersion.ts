@@ -5,16 +5,36 @@ import { isNodeVersionIdentityOnly, prepareIncomingNodeVersionSource, retainInco
 
 export type RequestSyncCurrentVersion = { globalId: string; versionId: string };
 
+/** These references already describe the local projection and need no version writes to resolve. */
+export async function alreadyProjectedRequestSyncVersions(db: DbPort, references: readonly RequestSyncCurrentVersion[]) {
+  if (!references.length) return true;
+  const rows = await db.query<{ available: number }>(`WITH requested AS (
+      SELECT json_extract(value, '$.globalId') AS object_id, json_extract(value, '$.versionId') AS version_id
+      FROM json_each(?)
+    ), available AS (
+      SELECT node.id AS object_id, version.version_id FROM requested
+      JOIN nodes node ON node.id = requested.object_id AND node.current_version_id = requested.version_id
+      JOIN node_sync_versions version ON version.version_id = requested.version_id AND version.object_id = requested.object_id
+      WHERE version.body_text IS NOT NULL OR json_type(version.snapshot_json, '$.content') = 'text'
+      UNION
+      SELECT tomb.node_id, tomb.version_id FROM requested JOIN node_sync_tombstones tomb
+      ON tomb.node_id = requested.object_id AND tomb.version_id = requested.version_id
+    ) SELECT COUNT(*) AS available FROM available`, [JSON.stringify(references)]);
+  return rows[0]?.available === references.length;
+}
+
 /** A trusted reference reuses stored content through the ordinary conflict rules. */
 export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNodeRecordSource,
-  reference?: RequestSyncCurrentVersion): Promise<SyncNodeRecordSource> {
+  reference?: RequestSyncCurrentVersion, deferHistory = false): Promise<SyncNodeRecordSource> {
   if (!reference) return source;
   const sole = source.records.length === 1 ? source.records[0] : undefined;
   // An unchanged source is validated and retained by the ordinary apply transaction.
   if (sole?.version_id === reference.versionId && sole.object_id === reference.globalId &&
       !source.isIdentityOnly(sole)) return source;
-  const history = await prepareIncomingNodeVersionSource(db, source);
-  await retainIncomingNodeVersionSource(db, source, history, true);
+  if (!deferHistory) {
+    const history = await prepareIncomingNodeVersionSource(db, source);
+    await retainIncomingNodeVersionSource(db, source, history, true);
+  }
   const incoming = source.records.find(record => record.version_id === reference.versionId);
   if (incoming) {
     if (incoming.object_id !== reference.globalId || source.isIdentityOnly(incoming)) {
@@ -35,8 +55,8 @@ export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNode
       FROM node_sync_tombstones WHERE version_id = ? LIMIT 1`, [reference.versionId, reference.versionId]);
   // An older version of a permanently deleted node is an ancestor of its deletion: nothing to apply.
   if (stored?.object_id === reference.globalId && stored.current_version_id && stored.sync_dirty === 0 &&
-      stored.current_version_id !== reference.versionId &&
-      await isStoredAncestorVersion(db, reference.versionId, stored.current_version_id)) return { ...source, records: [] };
+      stored.current_version_id !== reference.versionId && await isStoredAncestorVersion(db, reference.versionId,
+        stored.current_version_id, deferHistory ? await pendingVersionParents(db, source) : undefined)) return { ...source, records: [] };
   if (!stored || stored.object_id !== reference.globalId || !stored.available) {
     throw new Error('request_sync_current_version_unavailable');
   }
@@ -50,16 +70,29 @@ export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNode
     load: (tx, metadata) => metadata === record ? Promise.resolve(record) : source.load(tx, metadata) };
 }
 
+async function pendingVersionParents(db: DbPort, source: SyncNodeRecordSource) {
+  if (!source.records.length) return [];
+  return (await prepareIncomingNodeVersionSource(db, source)).flatMap(record =>
+    (record.parent_version_ids ?? (record.parent_version_id ? [record.parent_version_id] : []))
+      .map(parentId => [record.version_id!, parentId] as const));
+}
+
 /** Selects each object's trusted reference separately when one call applies several received objects. */
 export async function withRequestSyncCurrentVersions(db: DbPort, source: SyncNodeRecordSource,
-  references: readonly RequestSyncCurrentVersion[]): Promise<SyncNodeRecordSource> {
+  references: readonly RequestSyncCurrentVersion[], rejected?: Map<string, string>): Promise<SyncNodeRecordSource> {
   const byObject = new Map<string, typeof source.records[number][]>();
   for (const record of source.records) byObject.set(record.object_id, [...byObject.get(record.object_id) ?? [], record]);
   const reference = new Map(references.map(value => [value.globalId, value]));
   const owners = new Map<typeof source.records[number], SyncNodeRecordSource>();
   for (const objectId of new Set([...byObject.keys(), ...reference.keys()])) {
     const part = { ...source, records: byObject.get(objectId) ?? [] };
-    const selected = await withRequestSyncCurrentVersion(db, part, reference.get(objectId));
+    let selected;
+    try { selected = await withRequestSyncCurrentVersion(db, part, reference.get(objectId), Boolean(rejected)); }
+    catch (error) {
+      if (!rejected || !(error instanceof Error) || error.message !== 'request_sync_current_version_unavailable') throw error;
+      rejected.set(objectId, error.message);
+      continue;
+    }
     for (const record of selected.records) owners.set(record, selected);
   }
   const owner = (record: typeof source.records[number]) => {

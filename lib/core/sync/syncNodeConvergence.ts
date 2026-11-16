@@ -5,13 +5,16 @@ import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
 import { resolveFolderSourceConflict } from './syncFolderResolution.js';
 import { resolveItemSourceConflict } from './syncItemResolution.js';
-import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
+import { applySyncNodeSourceWithDbPort, type ApplySyncNodesWithDbPortOptions } from './syncNodeApplyExecutor.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import { resolveTopicSourceConflict } from './syncTopicConflict.js';
 import { expireTopicText, findTopicsWithExpiredText } from './topicTextExpiry.js';
 
-type ConvergeOptions = { deferAlternativeSettlement?: boolean; collectVersionPayloads?: boolean; visibilityPruning?: DeferredVisibilityPruning };
+type ConvergeOptions = { deferAlternativeSettlement?: boolean; collectVersionPayloads?: boolean;
+  visibilityPruning?: DeferredVisibilityPruning; isolateNodeWrites?: ApplySyncNodesWithDbPortOptions['isolateNodeWrites'];
+  attachmentOnlyNodeIds?: Iterable<string>;
+  rejectedNodes?: ReadonlyMap<string, string> };
 
 export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: NativeSyncNodeRecord[],
   options: ConvergeOptions = {}) {
@@ -19,21 +22,32 @@ export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: Native
 }
 
 export function applyConvergentSyncNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, options: ConvergeOptions = {}) {
-  return port.transaction(tx => convergeNodeSource(tx, source, options));
+  source: SyncNodeRecordSource<M>, options: ConvergeOptions = {}, historySource = source) {
+  return port.transaction(tx => convergeNodeSource(tx, source, options, historySource));
 }
 
 async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, options: ConvergeOptions) {
-  const records = source.records;
-  const knownNodeIds = await loadKnownNodeStateIds(port, records);
+  source: SyncNodeRecordSource<M>, options: ConvergeOptions, historySource: SyncNodeRecordSource<M>) {
+  const knownNodeIds = await loadKnownNodeStateIds(port, source.records);
+  const resolved = new Map<string, string>();
   const result = await applySyncNodeSourceWithDbPort(port, source, {
     enqueueSearchInvalidations: false, deferBodyRetirement: options.collectVersionPayloads === false,
-    ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {})
-  });
+    ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}),
+    ...(options.isolateNodeWrites ? { isolateNodeWrites: options.isolateNodeWrites,
+      resolveNodeConflicts: async (tx, conflicts) => {
+        const ids = new Set(conflicts);
+        const records = source.records.filter(record => ids.has(record));
+        const changed = await resolveGroup(tx, { ...source, records }, options.deferAlternativeSettlement);
+        resolved.set(conflicts[0]!.object_id, changed);
+      } } : {}),
+    ...(options.attachmentOnlyNodeIds ? { attachmentOnlyNodeIds: options.attachmentOnlyNodeIds } : {})
+  }, historySource);
+  const records = source.records.filter(record => !options.rejectedNodes?.has(record.object_id));
   const conflicts = groupByObjectId(result.conflictNodes);
-  const resolvedNodeIds: string[] = [];
-  for (const group of conflicts) resolvedNodeIds.push(await resolveGroup(port, { ...source, records: group }, options.deferAlternativeSettlement));
+  const resolvedNodeIds = [...resolved].filter(([id]) => !options.rejectedNodes?.has(id)).map(([, changed]) => changed);
+  if (!options.isolateNodeWrites) {
+    for (const group of conflicts) resolvedNodeIds.push(await resolveGroup(port, { ...source, records: group }, options.deferAlternativeSettlement));
+  }
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }

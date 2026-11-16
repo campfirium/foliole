@@ -1,6 +1,6 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { recomputeReceivedReviewsWithDb } from '../database/reviewProjection.js';
+import { prepareReceivedReviewProjection, recomputeReceivedReviewsWithDb } from '../database/reviewProjection.js';
 import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
@@ -9,14 +9,14 @@ import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { applyFramedSyncNodeChildFact, parseFramedSyncNodeChildIdentity } from './framedSyncNodeChildFact.js';
-import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDependencies.js';
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
 import { appliedStateWorkspaceScope, joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
 import { completeTopicAlternativeBody } from './framedTopicAlternativeBody.js';
-import { withRequestSyncCurrentVersion, withRequestSyncCurrentVersions, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
-import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
+import type { RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
+import { prepareFramedNodeApplication } from './requestSyncNodeProjectionPreparation.js';
+import { isolateRequestSyncNodeWrites } from './requestSyncObjectWriteIsolation.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
@@ -27,7 +27,7 @@ import { settleTopicAlternativesForNodes } from './topicAlternativeStore.js';
 export type FramedFactSource = (db: DbPort, kinds?: readonly number[]) => AsyncIterable<CanonicalFact>;
 
 /** The ready owner fixes metadata and body bytes throughout the existing business transaction. */
-export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: {
+type FramedApplyOptions = {
   operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; loadBody: FramedBodyLoader;
   enqueueSearchInvalidations?: boolean;
   requireCompleteVersionGraph?: boolean;
@@ -37,29 +37,29 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   visibilityPruning?: DeferredVisibilityPruning;
   /** Set by a batch that projects parent child orders once after all its objects. */
   parentOrderFlush?: { requested: boolean };
-}) {
+  rejectedNodes?: Map<string, string>;
+};
+
+export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: FramedApplyOptions) {
   return db.transaction(async (tx) => {
-    const nodes = await collectNodeFacts(tx, sources, options);
+    const { nodes, attached } = await collectNodeFacts(tx, sources, options);
     const restoredSource = framedSyncNodeRecordSource(nodes, options.loadBody);
-    const validated = options.requireCompleteVersionGraph
-      ? await requestSyncNodeSource(tx, restoredSource) : restoredSource;
-    await assertFramedSyncNodeParentDependencies(tx, validated.records.filter(record => !validated.isIdentityOnly(record)));
-    const selected = options.currentVersions
-      ? await withRequestSyncCurrentVersions(tx, validated, options.currentVersions.references)
-      : await withRequestSyncCurrentVersion(tx, validated, options.currentVersion);
-    const hasStoredReference = selected.records.some(record => !validated.records.includes(record));
-    const nodeSource = hasStoredReference ? await requestSyncNodeSource(tx, selected) : selected;
-    if (hasStoredReference) await assertFramedSyncNodeParentDependencies(tx, nodeSource.records);
+    const isolate = options.rejectedNodes && options.currentVersions;
+    const { nodeSource, historySource } = await prepareFramedNodeApplication(tx, restoredSource, options);
+    const associated = isolate ? prepareAssociatedNodeFacts(tx, attached, options) : null;
     let generatedChanges = false;
     let workspaceScope: WorkspaceRefreshScope = { kind: 'nodes', nodeIds: [] };
-    if (nodeSource.records.length) {
+    if (nodeSource.records.length || historySource.records.length || (associated && attached.size)) {
       if (options.operation === 'local_restore') {
         await applySyncNodeSourceWithDbPort(tx, nodeSource, { operation: 'local_restore' });
         workspaceScope = { kind: 'full' };
       }
       else {
+        const rejected = options.rejectedNodes;
         const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false, deferAlternativeSettlement: true,
-          ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) });
+          ...(associated && rejected ? { rejectedNodes: rejected, attachmentOnlyNodeIds: attached.keys(),
+            isolateNodeWrites: isolateRequestSyncNodeWrites(nodeSource.records, rejected, associated.apply) } : {}),
+          ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) }, historySource);
         generatedChanges = result.handledConflictCount > 0;
         workspaceScope = result.workspaceScopeExpanded ? { kind: 'full' }
           : { kind: 'nodes', nodeIds: result.workspaceNodeIds };
@@ -68,16 +68,15 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         }
       }
     }
-    await assertCompactHistoryHasDeletion(tx, restoredSource.records);
-    workspaceScope = await applyRelationReviewPhase(tx, sources, workspaceScope);
-    const nodeIds = new Set(nodeSource.records.map(record => record.object_id));
-    for (const source of sources) for await (const fact of source(tx, [1])) {
-      if (fact.kind === 1 && fact.objectType === 'node' &&
-          parseFramedSyncNodeChildIdentity(fact.factId).objectType === 'node_text_alternative') nodeIds.add(fact.globalId);
-      if (fact.kind === 1 && await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions)) {
-        workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
-      }
-    }
+    const accepted = (nodeId: string) => !options.rejectedNodes?.has(nodeId);
+    await assertCompactHistoryHasDeletion(tx, restoredSource.records.filter(record => accepted(record.object_id)));
+    const acceptedSources = associated ? [] : options.currentVersions?.sourceIds.length === sources.length
+      ? sources.filter((_source, index) => accepted(options.currentVersions!.sourceIds[index]!)) : sources;
+    workspaceScope = await applyRelationReviewPhase(tx, acceptedSources, workspaceScope);
+    const nodeIds = new Set(nodeSource.records.map(record => record.object_id).filter(accepted));
+    for (const id of associated?.alternativeIds ?? []) nodeIds.add(id);
+    if (associated) workspaceScope = joinWorkspaceScopes(workspaceScope, associated.scope());
+    workspaceScope = await applyStatePhase(tx, acceptedSources, options, nodeIds, workspaceScope);
     const topics = await tx.query<{ id: string; body_blob_hash: string }>(`SELECT id, body_blob_hash FROM nodes
       WHERE kind = 'topic' AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...nodeIds])]);
     await settleTopicAlternativesForNodes(tx, topics, new Date().toISOString());
@@ -86,19 +85,49 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   });
 }
 
-async function applyRelationReviewPhase(tx: DbPort, sources: readonly FramedFactSource[], workspaceScope: WorkspaceRefreshScope) {
+function prepareAssociatedNodeFacts(tx: DbPort, attached: ReadonlyMap<string, FramedFactSource>, options: FramedApplyOptions) {
+  const alternativeIds = new Set<string>();
+  const recompute = prepareReceivedReviewProjection(tx);
+  let applied: WorkspaceRefreshScope = { kind: 'nodes', nodeIds: [] };
+  return { alternativeIds, scope: () => applied, async apply(db: DbPort, nodeId: string) {
+    const source = attached.get(nodeId);
+    if (!source) return;
+    const ids = new Set<string>();
+    const scope = await applyRelationReviewPhase(db, [source], { kind: 'nodes', nodeIds: [] }, recompute);
+    applied = joinWorkspaceScopes(applied, await applyStatePhase(db, [source], options, ids, scope));
+    for (const id of ids) alternativeIds.add(id);
+  } };
+}
+
+async function applyStatePhase(tx: DbPort, sources: readonly FramedFactSource[], options: FramedApplyOptions,
+  nodeIds: Set<string>, workspaceScope: WorkspaceRefreshScope) {
+  for (const source of sources) for await (const fact of source(tx, [1])) {
+    if (fact.kind !== 1) continue;
+    if (fact.objectType === 'node' && parseFramedSyncNodeChildIdentity(fact.factId).objectType === 'node_text_alternative') {
+      nodeIds.add(fact.globalId);
+    }
+    if (await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions)) {
+      workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
+    }
+  }
+  return workspaceScope;
+}
+
+async function applyRelationReviewPhase(tx: DbPort, sources: readonly FramedFactSource[], workspaceScope: WorkspaceRefreshScope,
+  recompute = (ids: ReadonlySet<string>) => recomputeReceivedReviewsWithDb(tx, ids)) {
   const pendingReviews = new Set<string>();
   for (const source of sources) for await (const fact of source(tx, [3, 4])) {
     if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact], pendingReviews);
     if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
   }
-  await recomputeReceivedReviewsWithDb(tx, pendingReviews);
+  await recompute(pendingReviews);
   return workspaceScope;
 }
 
 async function collectNodeFacts(tx: DbPort, sources: readonly FramedFactSource[],
   options: Pick<Parameters<typeof applyFramedFactSources>[2], 'currentVersion' | 'currentVersions'>) {
   const nodes: CanonicalFact[] = [];
+  const attached = new Map<string, FramedFactSource>();
   for (const [index, source] of sources.entries()) {
     let identity: Pick<CanonicalFact, 'globalId' | 'objectType'> | undefined;
     for await (const fact of source(tx)) {
@@ -106,13 +135,14 @@ async function collectNodeFacts(tx: DbPort, sources: readonly FramedFactSource[]
       if (fact.globalId !== identity.globalId || fact.objectType !== identity.objectType ||
           ![1, 2, 3, 4].includes(fact.kind)) throw new Error('framed_sync_process_fact_set_invalid');
       if (fact.kind === 2) nodes.push(fact);
+      else if (fact.objectType === 'node') attached.set(fact.globalId, source);
     }
     if (!identity && !options.currentVersion && !options.currentVersions?.references
       .some(reference => reference.globalId === options.currentVersions?.sourceIds[index])) {
       throw new Error('framed_sync_process_fact_set_invalid');
     }
   }
-  return nodes;
+  return { nodes, attached };
 }
 
 async function flushParentOrders(tx: DbPort, scope: WorkspaceRefreshScope, deferred?: { requested: boolean }) {

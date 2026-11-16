@@ -40,7 +40,7 @@ it.each(['before-write', 'after-write'])('recovers durable demand after reopenin
   } finally { f.sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-it('prepares only committed replay objects after a whole batch rolls back', async () => {
+it('prepares only committed articles after one object rolls back', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {

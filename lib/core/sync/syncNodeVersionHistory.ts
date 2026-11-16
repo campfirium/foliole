@@ -67,6 +67,12 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
 
 export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
   source: SyncNodeRecordSource<M>, records: readonly M[], deferBodyRetirement = false) {
+  const retain = await prepareIncomingVersionRetention(port, records);
+  return retain(port, source, records, deferBodyRetirement);
+}
+
+/** Read version identities once while preserving live reads for repeated versions. */
+export async function prepareIncomingVersionRetention<M extends SyncNodeRecordMetadata>(port: DbPort, records: readonly M[]) {
   const counts = new Map<string, number>();
   for (const { version_id: id } of records) {
     if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -74,13 +80,16 @@ export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMe
   // Repeated versions must read preceding writes, including any body state changes.
   const once = new Set([...counts].filter(([, count]) => count === 1).map(([id]) => id));
   const stored = await loadStoredVersionIdentities(port, [...once]);
-  const retained = new Map<M, 'complete' | 'verify_body_hash'>();
-  for (const metadata of records) {
-    const known = metadata.version_id && once.has(metadata.version_id) ? stored.get(metadata.version_id) ?? null : undefined;
-    const reusable = await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement, known);
-    if (known !== undefined && reusable) retained.set(metadata, reusable);
-  }
-  return retained;
+  return async (tx: DbPort, source: SyncNodeRecordSource<M>, selected: readonly M[], deferBodyRetirement: boolean) => {
+    const retained = new Map<M, 'complete' | 'verify_body_hash'>();
+    for (const metadata of selected) {
+      const id = metadata.version_id;
+      const known = id && once.has(id) ? stored.get(id) ?? null : undefined;
+      const reusable = await upsertRemoteVersion(tx, await source.load(tx, metadata), deferBodyRetirement, known);
+      if (known !== undefined && reusable) retained.set(metadata, reusable);
+    }
+    return retained;
+  };
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

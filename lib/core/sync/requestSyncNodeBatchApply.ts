@@ -15,6 +15,7 @@ export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly Req
   batch: RequestSyncBatchScope) {
   const first = inputs[0]!;
   const collect = await changedCurrentVersions(tx, inputs);
+  const rejectedNodes = new Map<string, string>();
   const bodyOwners = new Map<string, RequestSyncObjectInput>();
   const sources = inputs.map(input => {
     const facts = receivedObjectFacts(input, () => collect.set(input.globalId, true));
@@ -36,11 +37,13 @@ export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly Req
       input.currentVersionId ? [{ globalId: input.globalId, versionId: input.currentVersionId }] : []) },
     ...(first.visibilityPruning ? { visibilityPruning: first.visibilityPruning } : {}),
     parentOrderFlush: batch.parentOrder,
+    rejectedNodes,
     requireCompleteVersionGraph: true, enqueueSearchInvalidations: first.enqueueSearchInvalidations ?? true });
   first.signal?.throwIfAborted();
-  await finishReceivedNodes(tx, inputs, collect);
+  const accepted = inputs.filter(input => !rejectedNodes.has(input.globalId));
+  await finishReceivedNodes(tx, accepted, collect);
   const workspaceScope = result.workspaceScope.kind === 'nodes'
-    ? { ...result.workspaceScope, nodeIds: [...new Set([...result.workspaceScope.nodeIds, ...inputs.map(input => input.globalId)])] }
+    ? { ...result.workspaceScope, nodeIds: [...new Set([...result.workspaceScope.nodeIds, ...accepted.map(input => input.globalId)])] }
     : result.workspaceScope;
-  return inputs.map(() => ({ ...result, sharedStateHash: undefined, workspaceScope }));
+  return inputs.map(input => ({ ...result, sharedStateHash: undefined, workspaceScope, error: rejectedNodes.get(input.globalId) ?? '' }));
 }

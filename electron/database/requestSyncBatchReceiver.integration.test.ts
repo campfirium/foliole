@@ -4,18 +4,14 @@ import { afterEach, expect, it } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
-import { requestSyncBatchEnd } from '../../lib/core/sync/requestSyncBatchContract.js';
 import { receiveRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchReceiver.js';
 import { requestSyncBatchMessages, withRequestSyncBatchSnapshot } from '../../lib/core/sync/requestSyncBatchSnapshot.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
-import { RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
-import { requestSyncObjectMessages, type RequestSyncMessage } from '../../lib/core/sync/requestSyncObjectMessages.js';
+import { REQUEST_SYNC_WRITE_REJECTED } from '../../lib/core/sync/requestSyncObjectWriteIsolation.js';
 import { prepareRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { activateBatchReceiver, batchFixture, batchId, batchRecord, context, groupKey, peerState } from './requestSyncBatch.testSupport.js';
+import { activateBatchReceiver, batchFixture, batchId, batchRecord, context, groupKey, peerState, transferReceivedBatch } from './requestSyncBatch.testSupport.js';
 import { firstAt, secondAt, score } from './reviewProjection.testSupport.js';
 
 const fixtures: Awaited<ReturnType<typeof batchFixture>>[] = [];
@@ -35,7 +31,8 @@ async function publishReviewSettings(source: Awaited<ReturnType<typeof batchFixt
   }));
 }
 
-it.each([false, true])('publishes committed review schedules and isolates projection failures (%s)', async reject => {
+it.each(['none', 'generic', 'object'] as const)('publishes committed review schedules and isolates projection failures (%s)', async fault => {
+  const reject = fault !== 'none';
   const source = await batchFixture(); fixtures.push(source);
   const target = await receiver();
   const records = ['card-a', 'card-b'].map(id => {
@@ -55,8 +52,8 @@ it.each([false, true])('publishes committed review schedules and isolates projec
   });
   const expected = differences.map((difference, index) => ({ globalId: difference.globalId, objectType: difference.objectType,
     requestId: new Uint8Array(16).fill(index + 1), resolve: async () => difference }));
-  if (reject) target.device.sqlite.exec(`CREATE TRIGGER reject_schedule BEFORE INSERT ON node_review
-    WHEN NEW.node_id = 'card-b' BEGIN SELECT RAISE(ABORT, 'injected_review_failure'); END`);
+  const rejected = fault === 'object' ? 'sync_node_apply_blocked:card-b' : 'injected_review_failure';
+  const progress = observeReviewProjectionWrites(target, reject ? rejected : null);
   const schedules = () => target.device.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   const published: unknown[] = [];
   target.host.objectApplied = object => { if (object.objectType === 'node') published.push(schedules()); };
@@ -67,55 +64,31 @@ it.each([false, true])('publishes committed review schedules and isolates projec
       author: 'initiator', requestId: batchId, expected });
   });
   const acceptedIds = reject ? ['card-a'] : ['card-a', 'card-b'];
-  expect(result.results.map(entry => entry.error)).toEqual(reject ? ['', 'injected_review_failure'] : ['', '', '']);
+  expect(result.results.map(entry => entry.error)).toEqual(reject
+    ? ['', fault === 'generic' ? `${REQUEST_SYNC_WRITE_REJECTED}${rejected}` : rejected] : ['', '', '']);
   expect(schedules()).toEqual(source.device.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all()
     .filter(row => acceptedIds.includes((row as { node_id: string }).node_id)));
   expect(await target.device.db.query('SELECT node_id, COUNT(*) AS count FROM review_log GROUP BY node_id ORDER BY node_id'))
     .toEqual(acceptedIds.map(node_id => ({ node_id, count: 2 })));
   expect(published).toEqual(acceptedIds.map(() => schedules()));
+  if (reject) expect(progress.toSorted()).toEqual(['card-a', 'card-b']);
   if (!reject) expect(await target.device.db.query("SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'"))
     .toEqual([{ value_json: '{"desiredRetention":0.99}' }]);
 });
 
-async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, records: NativeSyncNodeRecord[],
-  options: { truncate?: boolean; wrongId?: boolean; wrongObjectId?: boolean; wrongGlobalId?: boolean; truncateSecond?: boolean;
-    duplicate?: boolean; selection?: 'missing' | 'extra' | 'duplicate' | 'exact'; legacy?: boolean } = {}) {
-  const files = records.map(() => new RequestSyncFiles(fixture.host.files, `requests/${crypto.randomUUID()}`));
-  const identities = records.map((record, i) => ({ requestId: new Uint8Array(16).fill(i + 1), objectType: 'node', globalId: record.object_id }));
-  try {
-    const headers = await Promise.all(records.map(async (record, i) => {
-      const projection = projectFramedSyncNodeRecord(record);
-      const file = files[i]!;
-      const fact = projection.manifest.facts[0]!;
-      for (const blob of fact.blobs) await file.writeBody(blob, projection.bodyBlob);
-      await file.writeFact(fact);
-      if (options.selection === 'duplicate') await file.writeFact(fact);
-      return { ...identities[i]!, currentVersionId: record.version_id ?? '', sourceStateHash: fact.sharedStateHash };
-    }));
-    const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* (contextId): AsyncGenerator<RequestSyncMessage> {
-      for (const [i, header] of headers.entries()) {
-        for await (const message of requestSyncObjectMessages(header, contextId, files[i]!)) {
-          yield message;
-          if (options.truncateSecond && i === 1 && message.payloadCase === 'blob_chunk') return;
-        }
-        if (options.duplicate) yield* requestSyncObjectMessages(header, contextId, files[i]!);
-      }
-      if (!options.truncate) yield requestSyncBatchEnd(batchId, records.length);
-    } });
-    if (options.legacy) new DataView(wire.preamble.buffer, wire.preamble.byteOffset).setUint16(10, 25);
-    const expected = identities.map((identity, index) => ({ ...identity,
-      ...(options.selection ? { need: { frontierFactIds: options.selection === 'extra' ? [] :
-        [records[index]!.version_id!, ...(options.selection === 'missing' ? ['missing-version'] : [])],
-      requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], resourceHashes: [], sharedState: true } } : {}) }));
-    return await receiveRequestSyncBatch(fixture.host, { ...wire, context, groupKey, peerState,
-      author: 'initiator', requestId: options.wrongId ? new Uint8Array(16).fill(99) : batchId,
-      expected: options.wrongObjectId ? identities.map(identity => ({ ...identity, requestId: new Uint8Array(16).fill(99) })) : options.wrongGlobalId ? identities.map(identity => ({ ...identity, globalId: 'another-object' })) : expected });
-  } finally { await Promise.all(files.map(file => file.close())); }
+function observeReviewProjectionWrites(target: Awaited<ReturnType<typeof batchFixture>>, rejection: string | null) {
+  const writes: string[] = [];
+  target.device.sqlite.function('observe_received_card', (id: string) => { writes.push(id); return null; });
+  target.device.sqlite.exec(`CREATE TRIGGER observe_received_card BEFORE INSERT ON nodes
+    WHEN NEW.id IN ('card-a', 'card-b') BEGIN SELECT observe_received_card(NEW.id); END`);
+  if (rejection) target.device.sqlite.exec(`CREATE TRIGGER reject_schedule BEFORE INSERT ON node_review
+    WHEN NEW.node_id = 'card-b' BEGIN SELECT RAISE(ABORT, '${rejection}'); END`);
+  return writes;
 }
 
 it.each(['missing', 'extra', 'duplicate', 'exact'] as const)('commits only the exact requested fact set: %s', async selection => {
   const fixture = await receiver();
-  const result = transfer(fixture, [batchRecord('selected', 'Body')], { selection });
+  const result = transferReceivedBatch(fixture, [batchRecord('selected', 'Body')], { selection });
   if (selection === 'exact') await expect(result).resolves.toMatchObject({ results: [{ error: '' }] });
   else await expect(result).rejects.toThrow();
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual(selection === 'exact' ? [{ id: 'selected' }] : []);
@@ -125,7 +98,7 @@ it.each(['missing', 'extra', 'duplicate', 'exact'] as const)('commits only the e
 
 it('rejects framed 25 before applying any business facts', async () => {
   const fixture = await receiver();
-  await expect(transfer(fixture, [batchRecord('old', 'Body')], { legacy: true }))
+  await expect(transferReceivedBatch(fixture, [batchRecord('old', 'Body')], { legacy: true }))
     .rejects.toThrow('framed_sync_protocol_version_unsupported');
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([]);
   expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
@@ -135,7 +108,7 @@ it('rolls back a bad graph object while committing the following valid object an
   const fixture = await receiver();
   // A reclaimed parent is a valid gap; a version that is its own ancestor is not.
   const cyclic = { ...batchRecord('bad', 'bad'), parent_version_id: 'version-bad', parent_version_ids: ['version-bad'] };
-  const result = await transfer(fixture, [cyclic, batchRecord('good', 'good')]);
+  const result = await transferReceivedBatch(fixture, [cyclic, batchRecord('good', 'good')]);
   expect(result.results).toMatchObject([{ globalId: 'bad', error: 'node_version_graph_cycle' },
     { globalId: 'good', error: '' }]);
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([{ id: 'good' }]);
@@ -145,12 +118,31 @@ it('rolls back a bad graph object while committing the following valid object an
     .toEqual([{ version_id: 'version-good' }]);
 });
 
+it('defers cyclic structural parents and keeps the independent content', async () => {
+  const fixture = await receiver();
+  const a = batchRecord('a', 'A');
+  const b = batchRecord('b', 'B');
+  a.snapshot.parent_id = 'b';
+  b.snapshot.parent_id = 'a';
+  const result = await transferReceivedBatch(fixture, [a, b, batchRecord('good', 'Good')]);
+  expect(result.results.map(value => value.error)).toEqual(['framed_sync_node_parent_cycle', 'framed_sync_node_parent_cycle', '']);
+  expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([{ id: 'good' }]);
+});
+
+it('leaves a cross-object version edge unapplied and keeps its legitimate owner', async () => {
+  const fixture = await receiver();
+  const wrong = { ...batchRecord('wrong', 'Wrong'), parent_version_id: 'version-good', parent_version_ids: ['version-good'] };
+  const result = await transferReceivedBatch(fixture, [wrong, batchRecord('good', 'Good')]);
+  expect(result.results.map(value => value.error)).toEqual(['node_version_cross_object_parent:version-good', '']);
+  expect(await fixture.device.db.query('SELECT object_id FROM node_sync_versions')).toEqual([{ object_id: 'good' }]);
+});
+
 it('keeps earlier object commits when a later object transaction fails', async () => {
   const fixture = await receiver();
   fixture.device.sqlite.exec(`CREATE TRIGGER reject_bad_version BEFORE INSERT ON node_sync_versions
     WHEN NEW.version_id = 'version-bad' BEGIN SELECT RAISE(ABORT, 'injected_version_failure'); END`);
-  const result = await transfer(fixture, [batchRecord('good', 'good'), batchRecord('bad', 'bad'), batchRecord('last', 'last')]);
-  expect(result.results.map(result => result.error)).toEqual(['', 'injected_version_failure', '']);
+  const result = await transferReceivedBatch(fixture, [batchRecord('good', 'good'), batchRecord('bad', 'bad'), batchRecord('last', 'last')]);
+  expect(result.results.map(result => result.error)).toEqual(['', `${REQUEST_SYNC_WRITE_REJECTED}injected_version_failure`, '']);
   expect(await fixture.device.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'good' }, { id: 'last' }]);
   expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions ORDER BY version_id'))
     .toEqual([{ version_id: 'version-good' }, { version_id: 'version-last' }]);
@@ -159,15 +151,15 @@ it('keeps earlier object commits when a later object transaction fails', async (
 it('keeps two siblings and their original versions when their parent already exists', async () => {
   const fixture = await receiver();
   const parent = batchRecord('parent', 'Parent original');
-  expect((await transfer(fixture, [parent])).results.map(result => result.error)).toEqual(['']);
+  expect((await transferReceivedBatch(fixture, [parent])).results.map(result => result.error)).toEqual(['']);
   const children = ['child-a', 'child-b'].map(id => {
     const record = batchRecord(id, `Original ${id}`);
     record.snapshot.parent_id = 'parent';
     return record;
   });
-  expect((await transfer(fixture, children)).results.map(result => result.error)).toEqual(['', '']);
+  expect((await transferReceivedBatch(fixture, children)).results.map(result => result.error)).toEqual(['', '']);
   const saved = await fixture.device.db.query('SELECT * FROM node_sync_versions ORDER BY version_id');
-  await transfer(fixture, children);
+  await transferReceivedBatch(fixture, children);
   expect(await fixture.device.db.query('SELECT * FROM node_sync_versions ORDER BY version_id')).toEqual(saved);
   expect(await fixture.device.db.query('SELECT id, parent_id, content FROM nodes ORDER BY id')).toEqual([
     { id: 'child-a', parent_id: 'parent', content: 'Original child-a' },
@@ -183,13 +175,13 @@ it.each([
   { options: { duplicate: true }, error: 'request_sync_batch_identity_duplicate' }
 ])('rejects $error even after a complete object, preserving that object commit', async ({ options, error }) => {
   const fixture = await receiver();
-  await expect(transfer(fixture, [batchRecord('good', 'good')], options)).rejects.toThrow(error);
+  await expect(transferReceivedBatch(fixture, [batchRecord('good', 'good')], options)).rejects.toThrow(error);
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([{ id: 'good' }]);
 });
 
 it.each(['wrongObjectId', 'wrongGlobalId'] as const)('rejects mismatched %s before applying any facts', async fault => {
   const fixture = await receiver();
-  await expect(transfer(fixture, [batchRecord('good', 'good')], { [fault]: true }))
+  await expect(transferReceivedBatch(fixture, [batchRecord('good', 'good')], { [fault]: true }))
     .rejects.toThrow('request_sync_batch_identity_mismatch');
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([]);
 });
@@ -213,7 +205,7 @@ it('applies a child whose structural parent arrives in the same real SQLite roun
         if (!record) throw new Error('test_record_missing');
         return record;
       });
-      return (await transfer(fixture, selected)).results;
+      return (await transferReceivedBatch(fixture, selected)).results;
     },
     reportObjectError: (_difference, error) => { throw error; }
   });
@@ -236,13 +228,13 @@ it('preserves the first full object when the second body is truncated and conver
   const originals = () => ['nodes', 'node_sync_versions', 'node_sync_version_parents'].map(table => fixture.device.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
   let first: ReturnType<typeof originals> | undefined;
   fixture.host.objectApplied = object => { if (object.globalId === 'first') first = originals(); };
-  await expect(transfer(fixture, records, { truncateSecond: true })).rejects.toThrow('request_sync_object_incomplete');
+  await expect(transferReceivedBatch(fixture, records, { truncateSecond: true })).rejects.toThrow('request_sync_object_incomplete');
   expect(first).toBeDefined();
   expect(originals()).toEqual(first);
   delete fixture.host.objectApplied;
-  expect((await transfer(fixture, records)).results.map(result => result.error)).toEqual(['', '']);
+  expect((await transferReceivedBatch(fixture, records)).results.map(result => result.error)).toEqual(['', '']);
   const complete = await originals();
-  await transfer(fixture, records);
+  await transferReceivedBatch(fixture, records);
   expect(await originals()).toEqual(complete);
   expect(await fixture.device.db.query('SELECT id, content FROM nodes ORDER BY id')).toEqual([
     { id: 'first', content: 'First😀原文' }, { id: 'second', content: secondBody }

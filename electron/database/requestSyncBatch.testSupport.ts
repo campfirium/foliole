@@ -4,8 +4,14 @@ import path from 'node:path';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { requestSyncBatchEnd } from '../../lib/core/sync/requestSyncBatchContract.js';
+import { receiveRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchReceiver.js';
 import type { RequestSyncBatchSelection } from '../../lib/core/sync/requestSyncBatchSnapshot.js';
+import { RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
+import { requestSyncObjectMessages, type RequestSyncMessage } from '../../lib/core/sync/requestSyncObjectMessages.js';
+import { prepareRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { createDesktopRequestSyncFiles } from '../sync/desktopRequestSyncFiles.js';
@@ -67,4 +73,40 @@ export async function batchSelections(fixture: Awaited<ReturnType<typeof batchFi
     return { objectType: entry.objectType, globalId: entry.globalId,
       requestId: new Uint8Array(16).fill(index + 1), resolve: async () => difference };
   }));
+}
+
+export async function transferReceivedBatch(fixture: Awaited<ReturnType<typeof batchFixture>>, records: NativeSyncNodeRecord[],
+  options: { truncate?: boolean; wrongId?: boolean; wrongObjectId?: boolean; wrongGlobalId?: boolean; truncateSecond?: boolean;
+    duplicate?: boolean; selection?: 'missing' | 'extra' | 'duplicate' | 'exact'; legacy?: boolean } = {}) {
+  const files = records.map(() => new RequestSyncFiles(fixture.host.files, `requests/${crypto.randomUUID()}`));
+  const identities = records.map((record, i) => ({ requestId: new Uint8Array(16).fill(i + 1), objectType: 'node', globalId: record.object_id }));
+  try {
+    const headers = await Promise.all(records.map(async (record, i) => {
+      const projection = projectFramedSyncNodeRecord(record);
+      const file = files[i]!;
+      const fact = projection.manifest.facts[0]!;
+      for (const blob of fact.blobs) await file.writeBody(blob, projection.bodyBlob);
+      await file.writeFact(fact);
+      if (options.selection === 'duplicate') await file.writeFact(fact);
+      return { ...identities[i]!, currentVersionId: record.version_id ?? '', sourceStateHash: fact.sharedStateHash };
+    }));
+    const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* (contextId): AsyncGenerator<RequestSyncMessage> {
+      for (const [i, header] of headers.entries()) {
+        for await (const message of requestSyncObjectMessages(header, contextId, files[i]!)) {
+          yield message;
+          if (options.truncateSecond && i === 1 && message.payloadCase === 'blob_chunk') return;
+        }
+        if (options.duplicate) yield* requestSyncObjectMessages(header, contextId, files[i]!);
+      }
+      if (!options.truncate) yield requestSyncBatchEnd(batchId, records.length);
+    } });
+    if (options.legacy) new DataView(wire.preamble.buffer, wire.preamble.byteOffset).setUint16(10, 25);
+    const expected = identities.map((identity, index) => ({ ...identity,
+      ...(options.selection ? { need: { frontierFactIds: options.selection === 'extra' ? [] :
+        [records[index]!.version_id!, ...(options.selection === 'missing' ? ['missing-version'] : [])],
+      requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], resourceHashes: [], sharedState: true } } : {}) }));
+    return await receiveRequestSyncBatch(fixture.host, { ...wire, context, groupKey, peerState,
+      author: 'initiator', requestId: options.wrongId ? new Uint8Array(16).fill(99) : batchId,
+      expected: options.wrongObjectId ? identities.map(identity => ({ ...identity, requestId: new Uint8Array(16).fill(99) })) : options.wrongGlobalId ? identities.map(identity => ({ ...identity, globalId: 'another-object' })) : expected });
+  } finally { await Promise.all(files.map(file => file.close())); }
 }

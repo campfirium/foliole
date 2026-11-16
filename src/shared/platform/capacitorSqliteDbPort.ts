@@ -110,8 +110,7 @@ export function createCapacitorSqliteDbPort(
         await connection.commitTransaction();
         return result;
       } catch (error) {
-        await connection.rollbackTransaction();
-        throw normalizeSqliteError(error);
+        return await rollbackFailedTransaction(connection, error);
       } finally {
         transactionDepth -= 1;
       }
@@ -120,13 +119,27 @@ export function createCapacitorSqliteDbPort(
   return port;
 }
 
+async function rollbackFailedTransaction(connection: SQLiteDBConnection, error: unknown): Promise<never> {
+  const failure = normalizeSqliteError(error);
+  try { await connection.rollbackTransaction(); }
+  catch (rollbackError) { Object.defineProperty(failure, 'rollbackError', { value: rollbackError }); }
+  throw failure;
+}
+
 async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams, platform: string) {
   if (platform === 'ios' && params.some((value) => value instanceof Uint8Array)) {
     const values = params.map((value) => value instanceof Uint8Array ? Array.from(value) : normalizeValue(value, platform));
     // One explicit row avoids executeSet treating a leading BLOB as a batch of rows.
     return connection.executeSet([{ statement: sql, values: [values] }], false);
   }
-  return connection.run(platform === 'android' ? withoutPluginDeleteScan(sql) : sql, normalizeParams(params, platform), false);
+  return connection.run(platform === 'android' ? androidPreparedStatement(sql) : sql, normalizeParams(params, platform), false);
+}
+
+function androidPreparedStatement(sql: string) {
+  // SQLCipher's Java dispatcher classifies the first three characters of the statement as transaction control.
+  // Preserve SQLite's own ROLLBACK TO behavior by keeping the statement in the prepared runner.
+  if (/^\s*ROLLBACK\s+TO\b/iu.test(sql)) return `/* savepoint rollback */ ${sql.trimStart()}`;
+  return withoutPluginDeleteScan(sql);
 }
 
 // The Android plugin inspects every table's columns before each statement whose first word is DELETE,

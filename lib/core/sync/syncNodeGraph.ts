@@ -160,7 +160,8 @@ export async function loadMergeBaseCandidates(port: DbPort, leftId: string, righ
   return [...maximal];
 }
 
-export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, currentId: string) {
+export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, currentId: string,
+  pendingParents?: readonly (readonly [versionId: string, parentId: string])[]) {
   const [match] = await port.query(`WITH RECURSIVE ancestors(version_id) AS (
     SELECT ?
     UNION
@@ -177,7 +178,10 @@ export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, 
       WHERE tomb.parent_version_id IS NOT NULL AND NOT EXISTS (
         SELECT 1 FROM node_sync_version_parents edge WHERE edge.version_id = ancestor.version_id)
       AND NOT EXISTS (SELECT 1 FROM node_sync_versions version WHERE version.version_id = ancestor.version_id)
-    ) SELECT 1 FROM ancestors WHERE version_id = ? LIMIT 1`, [currentId, ancestorId]);
+    ${pendingParents?.length ? `UNION SELECT json_extract(incoming.value, '$[1]') FROM ancestors ancestor
+      JOIN json_each(?) incoming ON json_extract(incoming.value, '$[0]') = ancestor.version_id` : ''}
+    ) SELECT 1 FROM ancestors WHERE version_id = ? LIMIT 1`, pendingParents?.length
+    ? [currentId, JSON.stringify(pendingParents), ancestorId] : [currentId, ancestorId]);
   return Boolean(match);
 }
 
