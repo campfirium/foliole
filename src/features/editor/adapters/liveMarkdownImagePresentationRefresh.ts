@@ -1,6 +1,7 @@
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import { disposeImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
+import { finalizeLoadedMarkdownImageDisplay } from './liveMarkdownImageDisplay';
 import { createImageSurface } from './liveMarkdownImageSurface';
 import { disposeRemoteImageOnDemandLocalization } from './remoteImageOnDemandLocalization';
 
@@ -19,11 +20,13 @@ export function refreshMarkdownImageWidgetPresentation(
     existingImage: image
   });
   nextSurface.style.cssText = style;
-  if (surface.dataset.mdImageFinalDisplay) {
+  const sameCrop = surface.dataset.mdImageCropVisible === nextSurface.dataset.mdImageCropVisible;
+  if (surface.dataset.mdImageFinalDisplay && sameCrop) {
     nextSurface.dataset.mdImageFinalDisplay = surface.dataset.mdImageFinalDisplay;
   }
   disposeImageExcerptRegionInteractions(surface);
   disposeRemoteImageOnDemandLocalization(surface);
   widget.replaceChildren(nextSurface);
+  if (!sameCrop) finalizeLoadedMarkdownImageDisplay(widget, imageMatch, null);
   return true;
 }

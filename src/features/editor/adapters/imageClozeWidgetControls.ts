@@ -13,6 +13,8 @@ import {
   toRelativeImagePoint
 } from './imageClozeWidgetInteractionHelpers';
 import { createImageRegionElement } from './imageClozeWidgetOverlayHelpers';
+import { createImageCropDraftButton } from './liveMarkdownImageCrop';
+import { originalImageDraft, originalImagePoint } from './liveMarkdownImageCropFrame';
 import { IMAGE_FOCUS_EVENT } from './liveMarkdownImageFocus';
 
 export interface ImageClozeDeleteControl {
@@ -60,7 +62,7 @@ export function createImageClozeDraftController(args: {
   draftActions.hidden = true;
   const dragHandlers = attachOverlayDragHandlers({
     actions: draftActions,
-    canStartDrag: (event) => !findImageRegionNearBorder(args.presentation, args.attachmentId, toRelativeImagePoint(args.overlay, event)),
+    canStartDrag: (event) => !findImageRegionNearBorder(args.presentation, args.attachmentId, originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, event))),
     draftRectElement: args.draftRectElement,
     onFinalize: (anchorPoint) => {
       actionAnchorPoint = anchorPoint;
@@ -136,7 +138,7 @@ function createConfirmDraftButton(args: ImageClozeDraftButtonArgs) {
         imageRange,
         regions: [
           ...args.draft.consumePendingRegions(),
-          buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: imageRange.from, to: imageRange.to })
+          buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect: originalImageDraft(args.overlay, draftRect), from: imageRange.from, to: imageRange.to })
         ]
       });
       const anchorPoint = args.draft.actionAnchorPoint();
@@ -173,7 +175,7 @@ function createAddDraftRegionButton(args: ImageClozeDraftButtonArgs) {
       }
       const imageRange = getDraftImageRange(args);
       args.draft.addPendingRegion(
-        buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect, from: imageRange.from, to: imageRange.to })
+        buildImageClozeRegionDetail({ attachmentId: args.attachmentId, draftRect: originalImageDraft(args.overlay, draftRect), from: imageRange.from, to: imageRange.to })
       );
       args.draft.resetDraft();
       args.overlay.hidden = false;
@@ -191,7 +193,7 @@ function createFocusDraftButton(args: ImageClozeDraftButtonArgs) {
       event.stopPropagation();
       const focus = args.draft.dragHandlers.getDraftRect();
       if (!focus || args.draft.hasPendingRegions()) return;
-      args.host.dispatchEvent(new CustomEvent(IMAGE_FOCUS_EVENT, { detail: focus, bubbles: true }));
+      args.host.dispatchEvent(new CustomEvent(IMAGE_FOCUS_EVENT, { detail: originalImageDraft(args.overlay, focus), bubbles: true }));
       args.draft.resetDraft();
     }
   });
@@ -204,6 +206,7 @@ export function appendImageClozeDraftButtons(args: ImageClozeDraftButtonArgs) {
   args.draft.draftActions.append(
     createConfirmDraftButton(args),
     createFocusDraftButton(args),
+    createImageCropDraftButton(args),
     createCancelDraftButton(args),
     createAddDraftRegionButton(args)
   );

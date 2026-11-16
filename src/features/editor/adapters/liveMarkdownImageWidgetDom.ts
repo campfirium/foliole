@@ -17,6 +17,7 @@ export function setMarkdownImageWidgetDomIdentity(
 ) {
   wrapper.dataset.mdImageAlt = imageMatch.alt;
   wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
+  wrapper.dataset.mdImageCrop = JSON.stringify(imageMatch.crop ?? null);
   wrapper.dataset.mdImageDisplay = imageMatch.display;
   wrapper.dataset.mdImageFocusSupported = String(imageMatch.focusEditable !== false);
   wrapper.dataset.mdImageFocus = JSON.stringify(imageMatch.focus ?? null);
@@ -35,6 +36,7 @@ export function canReuseMarkdownImageWidgetDom(
 ) {
   return (
     wrapper.dataset.mdImageAlt === imageMatch.alt &&
+    wrapper.dataset.mdImageCrop === JSON.stringify(imageMatch.crop ?? null) &&
     wrapper.dataset.mdImageAttachmentId === (imageMatch.attachmentId ?? '') &&
     wrapper.dataset.mdImageFocusSupported === String(imageMatch.focusEditable !== false) &&
     wrapper.dataset.mdImageFocus === JSON.stringify(imageMatch.focus ?? null) &&

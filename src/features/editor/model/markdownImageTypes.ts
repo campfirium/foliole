@@ -4,6 +4,7 @@ export interface MarkdownImageMatch {
   attachmentId: string | null;
   alt: string;
   display: 'block' | 'inline';
+  crop?: ImageFocusRect;
   displayWidth?: number;
   focus?: ImageFocusRect;
   focusEditable?: false;

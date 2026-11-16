@@ -127,6 +127,8 @@ Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's t
 
 Desktop image focus is an editor action for a stored image occurrence. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
 
+Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area while retaining the original attachment destination and bytes. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
+
 ### Paging search results
 
 Use `offset: 0` with `materials/search`, or `--offset 0` in the CLI. Pass the returned `next_offset` with the same query and page size until it is null. The maximum page size is 40. Requests without an offset keep the original response. Each page uses the current search results, so restart after changes to the library or search settings.

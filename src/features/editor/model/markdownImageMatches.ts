@@ -228,6 +228,7 @@ export function collectImageMatchesFromTree(
         alt: label.alt,
         display: resolveImageDisplay(text, match.start, match.fullMatch),
         ...(label.displayWidth ? { displayWidth: label.displayWidth } : {}),
+        ...(label.crop && isInternalImageSource(source) ? { crop: label.crop } : {}),
         ...(label.focus ? { focus: label.focus } : {}),
         ...(match.referenceStyle && isInternalImageSource(source) ? { focusEditable: false } : {}),
         from: start,

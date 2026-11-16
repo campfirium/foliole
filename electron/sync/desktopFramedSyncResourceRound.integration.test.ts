@@ -55,10 +55,11 @@ it('retains undelivered image demand through source absence and receiver restart
   }
 });
 
-it('synchronizes saved focus on a repeated image while preserving the original attachment', { meta: { calibratedMs: 60_000 } }, async () => {
+it.each(['focus', 'crop'])('synchronizes saved %s on a repeated image while preserving the original attachment',
+  { meta: { calibratedMs: 60_000 } }, async effect => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const bytes = await fs.readFile('assets/brand/foliole-leaf-tight.png');
-  const nodeId = 'image-focus-article';
+  const nodeId = `image-${effect}-article`;
   try {
     const { storageKey } = await fixture.left.seedResource({ bytes, nodeId, includeImageInBody: true });
     await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
@@ -69,14 +70,14 @@ it('synchronizes saved focus on a repeated image while preserving the original a
     finally { sqlite.close(); }
     expect(current?.body_text).toContain(image);
     const baseContent = current!.body_text!;
-    const focused = baseContent.replace(image, `![Cover;focus=1000,2000,5000,5000](asset://${storageKey})`);
-    const content = `${focused}\n\n${image}`;
+    const updatedImage = `![Cover;${effect}=1000,2000,5000,5000](asset://${storageKey})`;
+    const content = `${baseContent.replace(image, updatedImage)}\n\n${image}`;
     await fixture.left.invoke('local_content_edit', { nodeId, baseVersionId: current!.version_id,
-      baseContent, versionId: 'focus-edit-1', content, hostName: 'desktop', updatedAt: '2026-11-16T12:00:00.000Z' });
+      baseContent, versionId: `${effect}-edit-1`, content, hostName: 'desktop', updatedAt: '2026-11-16T12:00:00.000Z' });
     await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
     for (const endpoint of [fixture.leftSnapshot, fixture.rightSnapshot]) {
       expect(article(endpoint.databasePath, nodeId)).toMatchObject({
-        content: `Article with an image\n\n![Cover;focus=1000,2000,5000,5000](asset://${storageKey})\n\n${image}`
+        content: `Article with an image\n\n${updatedImage}\n\n${image}`
       });
       expect(await fs.readFile(path.join(endpoint.stateRoot, 'documents', 'Foliole', 'Assets', storageKey))).toEqual(bytes);
     }

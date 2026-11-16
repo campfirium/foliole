@@ -16,6 +16,7 @@ import {
 } from './imageClozeWidgetInteractionHelpers';
 import { syncSavedRegionLayerState } from './imageClozeWidgetOverlayHelpers';
 import { isImageClozeControlTarget } from './imageClozeWidgetPointerTargets';
+import { originalImagePoint } from './liveMarkdownImageCropFrame';
 
 function positionDeleteControl(deleteControl: ImageClozeDeleteControl, anchorPoint: { x: number; y: number } | null) {
   if (!anchorPoint) {
@@ -50,7 +51,7 @@ function createSelectionPointerHandlers(args: {
       }
       args.overlay.hidden = false;
       const point = toRelativeImagePoint(args.overlay, event);
-      const region = findImageRegionNearBorder(args.presentation, args.attachmentId, point);
+      const region = findImageRegionNearBorder(args.presentation, args.attachmentId, originalImagePoint(args.overlay, point));
       if (region) event.preventDefault();
       if (region?.openNodeId) {
         event.stopImmediatePropagation();
@@ -73,7 +74,7 @@ function createSelectionPointerHandlers(args: {
       }
       args.overlay.hidden = false;
       args.setHoverRegionId(
-        findImageRegionNearBorder(args.presentation, args.attachmentId, toRelativeImagePoint(args.overlay, event))?.id ?? null
+        findImageRegionNearBorder(args.presentation, args.attachmentId, originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, event)))?.id ?? null
       );
     }
   };
@@ -208,7 +209,7 @@ export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs
     handlePointerMove: selection.handlePointerMove,
     handlePointerLeave() {
       selection.clearHover();
-      if (!draft.hasPendingRegions()) {
+      if (!draft.hasPendingRegions() && !host.closest('.cm-md-image-widget')?.querySelector('dialog[open]')) {
         draft.resetDraft();
       }
       draft.syncPendingPreview();

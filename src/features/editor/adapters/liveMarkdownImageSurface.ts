@@ -6,6 +6,10 @@ import { createImageClozeImageSurface } from './imageClozeWidgetDom';
 import { createMarkdownImageElement, type RequestEditorMeasure } from './liveMarkdownImageElement';
 import { attachRemoteImageOnDemandLocalization } from './remoteImageOnDemandLocalization';
 
+function needsFullImageForReview(presentation: ReturnType<typeof selectImageClozeOccurrencePresentation>) {
+  return presentation?.showFullImage && presentation.regions.length > 0;
+}
+
 export function createImageSurface(
   imageMatch: MarkdownImageMatch,
   source: string,
@@ -24,6 +28,7 @@ export function createImageSurface(
   const surface = createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
     display: imageMatch.display,
+    ...(imageMatch.crop && !needsFullImageForReview(imagePresentation) ? { crop: imageMatch.crop } : {}),
     ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),
     editorNodeId,
     ...(imageMatch.focus ? { focus: imageMatch.focus } : {}),

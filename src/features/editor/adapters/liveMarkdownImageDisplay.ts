@@ -29,9 +29,13 @@ export function finalizeMarkdownImageDisplay(
   size: ImageIntrinsicSize,
   requestMeasure: (() => void) | null
 ) {
+  // Resolve inline versus block from the original image so a crop only changes its footprint.
   const display = resolveImageDisplay(imageMatch.display, size, imageMatch.displayWidth);
   const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
   if (!surface || surface.dataset.mdImageFinalDisplay) return;
+  if (imageMatch.crop && surface.dataset.mdImageCropVisible === 'true') {
+    size = { width: size.width * imageMatch.crop.width, height: size.height * imageMatch.crop.height };
+  }
   surface.dataset.mdImageFinalDisplay = display;
   widget.dataset.mdImageFinalDisplay = display;
   widget.dataset.mdImageDisplay = display;

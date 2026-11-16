@@ -57,21 +57,21 @@ it('continues deriving a full-image region for an ordinary image highlight', () 
   }]);
 });
 
-it('keeps an existing image excerpt attached when focus is added to its source image', () => {
+it.each(['focus', 'crop'])('keeps an existing image excerpt attached when %s is added to its source image', effect => {
   const imageRegions = [{
     attachmentId: IMAGE_ATTACHMENT_ID,
     regions: [{ height: 0.2, id: 'region-1', width: 0.3, x: 0.1, y: 0.4 }]
   }];
   const child = createChild('image-excerpt', imageRegions);
-  const focused = image.replace('[Cover]', '[Cover;focus=1000,2000,5000,6000]');
+  const editedImage = image.replace('[Cover]', `[Cover;${effect}=1000,2000,5000,6000]`);
   const duplicateBody = `${image}\n\n${image}`;
   const updated = syncTextAnchorLocatorsForParentContent({
-    nextContent: `${focused}\n\n${image}`,
+    nextContent: `${editedImage}\n\n${image}`,
     nodesById: { [child.id]: child },
     parentNodeId: 'parent-1',
     previousContent: duplicateBody,
     timestamp: '2026-04-14T01:00:00.000Z'
   }).updatedNodes[0];
-  expect(updated?.anchorLink?.locator).toEqual({ from: 0, originalText: focused, to: focused.length });
+  expect(updated?.anchorLink?.locator).toEqual({ from: 0, originalText: editedImage, to: editedImage.length });
   expect(updated?.imageRegions).toEqual(imageRegions);
 });

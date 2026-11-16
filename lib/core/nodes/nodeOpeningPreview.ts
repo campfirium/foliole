@@ -1,3 +1,5 @@
+import { projectMarkdownImageLabel } from '../import/markdownImageLabel.js';
+
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
 const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
 
@@ -69,7 +71,7 @@ function stripMarkdownLinePrefix(line: string) {
 function stripMarkdownInline(value: string) {
   return value
     .replace(WIKILINK_WRAPPER_PATTERN, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, (_image, label: string) => projectMarkdownImageLabel(label))
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_~`]+/g, '');
 }

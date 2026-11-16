@@ -1,4 +1,5 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { formatMarkdownImageCropLabel, parseMarkdownImageCropLabel } from './markdownImageCrop';
 import { formatMarkdownImageFocusLabel, parseMarkdownImageFocusLabel, type ImageFocusRect } from './markdownImageFocus';
 import type { MarkdownSyntaxTree } from './markdownLinkReferences';
 
@@ -20,8 +21,9 @@ export function parseMarkdownImageLabelSize(label: string): MarkdownImageLabelSi
 }
 
 export function parseMarkdownImageLabel(label: string) {
-  const { label: widthLabel, focus } = parseMarkdownImageFocusLabel(label);
-  return { ...parseMarkdownImageLabelSize(widthLabel), ...(focus ? { focus } : {}) };
+  const { label: focusLabel, rect: crop } = parseMarkdownImageCropLabel(label);
+  const { label: widthLabel, focus } = parseMarkdownImageFocusLabel(focusLabel);
+  return { ...parseMarkdownImageLabelSize(widthLabel), ...(focus ? { focus } : {}), ...(crop ? { crop } : {}) };
 }
 
 function collectChildren(node: MarkdownSyntaxNode, name: string) {
@@ -57,10 +59,11 @@ export function createMarkdownImageDisplayWidthEdit(args: {
   const labelRange = findImageLabelRange(folioleMarkdownParser.parse(args.markdown).topNode, args.imageRange);
   if (!labelRange) return null;
   const currentLabel = args.markdown.slice(labelRange.from, labelRange.to);
-  const { label: currentWidthLabel, focus } = parseMarkdownImageFocusLabel(currentLabel);
+  const { label: focusLabel, rect: crop } = parseMarkdownImageCropLabel(currentLabel);
+  const { label: currentWidthLabel, focus } = parseMarkdownImageFocusLabel(focusLabel);
   const label = parseMarkdownImageLabelSize(currentWidthLabel).alt;
   const nextWidthLabel = args.width === null ? label : `${label}|${Math.max(1, Math.round(args.width))}`;
-  const insert = formatMarkdownImageFocusLabel(nextWidthLabel, focus);
+  const insert = formatMarkdownImageCropLabel(formatMarkdownImageFocusLabel(nextWidthLabel, focus), crop);
   return { from: labelRange.from, insert, to: labelRange.to };
 }
 
@@ -78,5 +81,17 @@ export function createMarkdownImageFocusEdit(args: {
   const range = findImageLabelRange(folioleMarkdownParser.parse(args.markdown).topNode, args.imageRange);
   if (!range) return null;
   const label = args.markdown.slice(range.from, range.to);
-  return { ...range, insert: formatMarkdownImageFocusLabel(label, args.focus) };
+  const { label: focusLabel, rect: crop } = parseMarkdownImageCropLabel(label);
+  return { ...range, insert: formatMarkdownImageCropLabel(formatMarkdownImageFocusLabel(focusLabel, args.focus), crop) };
+}
+
+export function createMarkdownImageCropEdit(args: {
+  imageRange: { from: number; to: number };
+  markdown: string;
+  crop: ImageFocusRect | null;
+}) {
+  const range = findImageLabelRange(folioleMarkdownParser.parse(args.markdown).topNode, args.imageRange);
+  if (!range) return null;
+  const label = args.markdown.slice(range.from, range.to);
+  return { ...range, insert: formatMarkdownImageCropLabel(label, args.crop) };
 }

@@ -15,7 +15,7 @@ export function useCompanionImageClozePresentation(snapshot: WorkspaceSnapshot |
         deriveImageClozeRegionsFromChildren({ nodeId, nodesById: snapshot.nodesById, trashedNodeIds: snapshot.trashedNodeIds })));
     const current = locator && !regions.length ? [{ ...locator, id: node.anchorLink!.id }] : regions;
     const ids = current.map(region => region.id);
-    const base: ImageClozeEditorPresentation = { canCreate: false, regions: current, outlinedRegionIds: locator ? [] : ids, hiddenRegionIds: locator ? ids : [] };
+    const base: ImageClozeEditorPresentation = { canCreate: false, showFullImage: Boolean(locator), regions: current, outlinedRegionIds: locator ? [] : ids, hiddenRegionIds: locator ? ids : [] };
     registerImageClozeEditorPresentation(nodeId, base);
     registerImageClozeEditorPresentation(nodeId + '::answer', { ...base, outlinedRegionIds: ids, hiddenRegionIds: [] });
     return () => {

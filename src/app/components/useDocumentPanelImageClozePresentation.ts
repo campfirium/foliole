@@ -33,6 +33,7 @@ function registerFocusedImageClozePresentation(
   const currentRegionIds = resolvedRegions.map((region) => region.id);
   registerImageClozeEditorPresentation(promptNodeId, {
     canCreate: false,
+    showFullImage: true,
     focusRegionId: null,
     hiddenRegionIds: currentRegionIds,
     outlinedRegionIds: [],
@@ -41,6 +42,7 @@ function registerFocusedImageClozePresentation(
   if (answerNodeId) {
     registerImageClozeEditorPresentation(answerNodeId, {
       canCreate: false,
+      showFullImage: true,
       focusRegionId: currentRegionIds[0] ?? null,
       hiddenRegionIds: [],
       outlinedRegionIds: currentRegionIds,

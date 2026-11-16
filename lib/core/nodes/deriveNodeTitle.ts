@@ -1,4 +1,4 @@
-import { projectImageOnlyMarkdownLabel } from '../import/markdownImageLabel.js';
+import { projectImageOnlyMarkdownLabel, projectMarkdownImageLabel } from '../import/markdownImageLabel.js';
 
 import { normalizeNodeTitle } from './nodeTitleBudget.js';
 
@@ -60,7 +60,7 @@ function stripMarkdownPrefixes(value: string) {
 
 function stripMarkdownInline(value: string) {
   return value
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, (_image, label: string) => projectMarkdownImageLabel(label))
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_~`]+/g, '');
 }

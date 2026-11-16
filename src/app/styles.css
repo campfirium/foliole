@@ -10,6 +10,7 @@
 @import "./styles/workspace-floating-sidebars.css";
 @import "./styles/pdf-selection.css";
 @import "./styles/pdf-top-bars.css";
+@import "./styles/image-crop.css";
 
 * {
   box-sizing: border-box;

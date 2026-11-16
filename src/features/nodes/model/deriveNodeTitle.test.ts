@@ -26,4 +26,10 @@ describe('deriveNodeTitle', () => {
     expect(deriveNodeTitleFromContent('![](asset://hash.png)')).toBe('Image highlight');
     expect(deriveNodeTitleFromContent('![Cover](asset://hash.png)')).toBe('Cover');
   });
+
+  it('uses the image label for a cropped cloze without exposing display options', () => {
+    const image = '![Cover;focus=1000,2000,5000,6000;crop=2000,3000,7000,8000](asset://hash.png)';
+    expect(deriveNodeTitleForCloze(image, image)).toBe('Cover');
+    expect(deriveNodeTitleFromContent(`# Image: ${image}\n\nBody`)).toBe('Image: Cover');
+  });
 });

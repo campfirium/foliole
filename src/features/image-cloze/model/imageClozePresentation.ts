@@ -2,6 +2,7 @@ import type { ImageClozeLocator } from './imageCloze';
 
 export interface ImageClozeEditorPresentation {
   canCreate: boolean;
+  showFullImage?: boolean;
   focusRegionId?: string | null;
   outlinedRegionIds: string[];
   onOpenNode?: (nodeId: string) => void;

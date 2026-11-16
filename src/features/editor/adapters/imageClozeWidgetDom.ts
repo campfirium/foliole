@@ -7,6 +7,8 @@ import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePrevi
 import { attachImageClozeOverlayInteractions } from './imageClozeWidgetInteractions';
 import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
 import { attachImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
+import { createImageCropEditButton } from './liveMarkdownImageCrop';
+import { createImageCropPlane, setImageOverlayCrop } from './liveMarkdownImageCropFrame';
 import { createImageFocusMask } from './liveMarkdownImageFocus';
 
 function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
@@ -117,25 +119,30 @@ function createImageSurfaceWrapper(args: {
   return wrapper;
 }
 
-export function createImageClozeImageSurface(args: {
+interface ImageClozeImageSurfaceArgs {
   attachmentId: string | null;
   presentation?: ImageClozeEditorPresentation | null;
   display: 'block' | 'inline';
   displayWidth?: number;
   editorNodeId?: string | null;
+  crop?: ImageFocusRect;
   focus?: ImageFocusRect;
   from: number;
   previewAlt: string;
   previewPresentation: ImageClozeEditorPresentation | null;
   renderImage: () => HTMLImageElement;
   to: number;
-}) {
+}
+
+export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
   const wrapper = createImageSurfaceWrapper(args);
   const image = args.renderImage();
-  wrapper.append(image);
-  if (args.focus) wrapper.append(createImageFocusMask(args.focus));
+  const plane = args.crop ? createImageCropPlane(wrapper, args.crop) : wrapper;
+  plane.append(image);
+  if (args.focus) plane.append(createImageFocusMask(args.focus));
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);
-  wrapper.append(regionLayer);
+  plane.append(regionLayer);
+  if (args.crop) wrapper.append(createImageCropEditButton(args.crop));
   wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation, ...(args.focus ? { focus: args.focus } : {}) }));
   focusImageRegionInViewport(wrapper, args.presentation ?? null);
   if (!args.attachmentId) {
@@ -144,6 +151,7 @@ export function createImageClozeImageSurface(args: {
 
   const { draftRectElement, overlay } = createImageRegionOverlay();
   wrapper.append(overlay);
+  if (args.crop) setImageOverlayCrop(overlay, args.crop);
 
   attachImageExcerptSelection({
     attachmentId: args.attachmentId,

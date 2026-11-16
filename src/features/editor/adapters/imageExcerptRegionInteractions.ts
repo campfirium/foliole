@@ -8,6 +8,7 @@ import {
 } from '../model/imageExcerptRegionSelection';
 
 import { toRelativeImagePoint } from './imageClozeWidgetInteractionHelpers';
+import { originalImageDraft } from './liveMarkdownImageCropFrame';
 
 type DragState = { pointerId: number; start: { x: number; y: number } };
 type InteractionState = { active: boolean; drag: DragState | null };
@@ -96,7 +97,7 @@ function createPointerHandlers(args: InteractionArgs, state: InteractionState) {
       image: args.image,
       imageRange: args.getImageRange() ?? { from: args.from, to: args.to },
       left: event.clientX,
-      rect,
+      rect: originalImageDraft(args.overlay, rect),
       top: event.clientY
     });
   };

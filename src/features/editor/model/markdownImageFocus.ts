@@ -1,40 +1,18 @@
-export interface ImageFocusRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import {
+  formatMarkdownImageRectLabel, MARKDOWN_IMAGE_FOCUS_MARKER, parseMarkdownImageRectLabel, type MarkdownImageRect
+} from '../../../../lib/core/import/markdownImageRectLabel';
 
-const FOCUS_MARKER = ';focus=';
-const PRECISION = 10_000;
+export type ImageFocusRect = MarkdownImageRect;
+
 export const IMAGE_FOCUS_OPACITY = 0.3;
 
 export function parseMarkdownImageFocusLabel(label: string) {
-  const offset = label.lastIndexOf(FOCUS_MARKER);
-  if (offset < 0) return { label, focus: null };
-  const parts = label.slice(offset + FOCUS_MARKER.length).split(',');
-  if (parts.length !== 4 || parts.some(part => !part.length || [...part].some(c => c < '0' || c > '9'))) {
-    return { label, focus: null };
-  }
-  const [left, top, right, bottom] = parts.map(Number) as [number, number, number, number];
-  if (right > PRECISION || bottom > PRECISION || right <= left || bottom <= top) {
-    return { label, focus: null };
-  }
-  return {
-    label: label.slice(0, offset),
-    focus: { x: left / PRECISION, y: top / PRECISION,
-      width: (right - left) / PRECISION, height: (bottom - top) / PRECISION }
-  };
+  const { label: base, rect } = parseMarkdownImageRectLabel(label, MARKDOWN_IMAGE_FOCUS_MARKER);
+  return { label: base, focus: rect };
 }
 
 export function formatMarkdownImageFocusLabel(label: string, focus: ImageFocusRect | null) {
-  const current = parseMarkdownImageFocusLabel(label).label;
-  if (!focus) return current;
-  const values = [focus.x, focus.y, focus.x + focus.width, focus.y + focus.height];
-  const serialized = values.map(value => Math.round(value * PRECISION)).join(',');
-  return parseMarkdownImageFocusLabel(`${current}${FOCUS_MARKER}${serialized}`).focus
-    ? `${current}${FOCUS_MARKER}${serialized}`
-    : label;
+  return formatMarkdownImageRectLabel(label, focus, MARKDOWN_IMAGE_FOCUS_MARKER);
 }
 
 export function imageFocusMaskStyle(rect: ImageFocusRect) {

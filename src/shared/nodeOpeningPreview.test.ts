@@ -15,6 +15,11 @@ describe('nodeOpeningPreview', () => {
     expect(extractNodeOpeningPreview(content, 'Title')).toBe('First paragraph. Later paragraph.');
   });
 
+  it('projects cropped image alt text into an opening preview', () => {
+    const content = 'A figure: ![Map;crop=2000,3000,7000,8000](asset://hash.png)';
+    expect(extractNodeOpeningPreview(content, 'Title')).toBe('A figure: Map');
+  });
+
   it('returns null when only the placeholder opening remains after normalization', () => {
     const content = 'Linked PDF source ready for the reader surface.';
 
