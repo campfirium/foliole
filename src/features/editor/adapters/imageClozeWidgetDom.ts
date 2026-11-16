@@ -182,6 +182,7 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
       wrapper
     });
     attachImageRegionClick({
+      onClose: controls.clearSelection,
       wrapper,
       overlay,
       attachmentId: args.attachmentId,

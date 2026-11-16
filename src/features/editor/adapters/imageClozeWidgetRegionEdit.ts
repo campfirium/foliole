@@ -20,6 +20,7 @@ function openImageRegionEditor(args: {
   region: ImageClozeEditorPresentation['regions'][number] | null;
   focus?: ImageFocusRect;
   point: ReturnType<typeof toRelativeImagePoint>;
+  onClose: () => void;
 }) {
   const { region, overlay } = args;
   if (!region) {
@@ -36,6 +37,7 @@ function openImageRegionEditor(args: {
   return showImageRegionEditor({
     surface,
     point: args.point,
+    onClose: args.onClose,
     onPreview: rect => updateDraftRectElement(regionElement, rect),
     rect: region,
     kind: 'cloze',
@@ -58,6 +60,7 @@ function openImageRegionEditor(args: {
 }
 
 export function attachImageRegionClick(args: {
+  onClose: () => void;
   wrapper: HTMLElement;
   overlay: HTMLElement;
   attachmentId: string;
@@ -75,7 +78,7 @@ export function attachImageRegionClick(args: {
     if (!down || Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY) > 4) return;
     const point = originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, down));
     const region = findImageRegionNearBorder(args.presentation, args.attachmentId, point);
-    if (openImageRegionEditor({ overlay: args.overlay, region, point, ...(args.focus ? { focus: args.focus } : {}) })) {
+    if (openImageRegionEditor({ overlay: args.overlay, region, point, onClose: args.onClose, ...(args.focus ? { focus: args.focus } : {}) })) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }

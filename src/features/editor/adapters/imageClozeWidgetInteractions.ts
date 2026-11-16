@@ -100,6 +100,11 @@ function createSelectionHandlers(args: {
   let selectedRegionId: string | null = null;
   let selectedAnchorPoint: { x: number; y: number } | null = null;
   const syncSurface = createSelectionSync(args);
+  const setSelected = (regionId: string | null, anchorPoint: typeof selectedAnchorPoint) => {
+    selectedRegionId = regionId;
+    selectedAnchorPoint = anchorPoint;
+    syncSurface(hoverRegionId, selectedRegionId, selectedAnchorPoint);
+  };
   const pointerHandlers = createSelectionPointerHandlers({
     attachmentId: args.attachmentId,
     draft: args.draft,
@@ -110,13 +115,10 @@ function createSelectionHandlers(args: {
       hoverRegionId = value;
       args.overlay.dataset.mdImageRegionHover = hoverRegionId === 'focus' ? 'focus' : String(Boolean(hoverRegionId));
     },
-    setSelected: (regionId, anchorPoint) => {
-      selectedRegionId = regionId;
-      selectedAnchorPoint = anchorPoint;
-      syncSurface(hoverRegionId, selectedRegionId, selectedAnchorPoint);
-    }
+    setSelected
   });
   return {
+    clearSelection: () => setSelected(null, null),
     clearHover() {
       hoverRegionId = null;
       if (!args.draft.dragHandlers.isDragging()) {
@@ -133,9 +135,7 @@ function createSelectionHandlers(args: {
         showImageClozeFeedback(args.host, 'Item deleted.', anchorPoint.x, anchorPoint.y);
       }
       args.regionLayer.querySelector(`.cm-md-image-cloze-region[data-region-id="${deletedRegionId}"]`)?.remove();
-      selectedRegionId = null;
-      selectedAnchorPoint = null;
-      syncSurface(hoverRegionId, selectedRegionId, selectedAnchorPoint);
+      setSelected(null, null);
     },
     handlePointerDown: pointerHandlers.handlePointerDown,
     handlePointerMove: pointerHandlers.handlePointerMove,
@@ -212,7 +212,7 @@ export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs
   attachSavedRegionPointerHandlers({ regionLayer: args.regionLayer, selection });
   args.overlay.append(draft.draftActions, deleteControl.container);
   return {
-    clearHover: selection.clearHover,
+    clearSelection: selection.clearSelection,
     handlePointerDown: selection.handlePointerDown,
     handlePointerMove: selection.handlePointerMove,
     handlePointerLeave() {

@@ -97,6 +97,7 @@ interface RegionEditorOptions {
   canRemove: boolean;
   trigger?: HTMLButtonElement | null;
   point?: RegionEditPoint;
+  onClose?: () => void;
   onPreview?: (rect: ImageFocusRect) => void;
   onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>;
   requestMeasure?: () => void;
@@ -126,6 +127,7 @@ export function showImageRegionEditor(args: RegionEditorOptions) {
     delete surface.dataset.mdImageRegionEdit;
     surface.style.removeProperty('--image-edit-original-ratio');
     args.onPreview?.(args.rect);
+    args.onClose?.();
     args.requestMeasure?.();
   };
   const controls = createRegionActions(args, () => rect, close);

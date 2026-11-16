@@ -27,6 +27,9 @@ async function adjustFromLeftAndCancel(page: import('@playwright/test').Page, su
   await controls.getByRole('button', { name: 'Cancel adjustment' }).click();
   await expect(controls).toBeHidden();
   expect((await range.boundingBox())!.x).toBeCloseTo(before.x);
+  await expect(range).toHaveAttribute('data-region-state', 'outlined');
+  await expect(surface.getByRole('button', { name: 'Delete image cloze' })).toHaveCount(0);
+  await expect(surface.locator('.cm-md-image-crop-frame')).toHaveCount(0);
 }
 
 async function removeFocusFromSource(page: import('@playwright/test').Page, surface: import('@playwright/test').Locator) {
