@@ -11,6 +11,18 @@ export async function pruneLearningRowsOrDefer(port: DbPort, deferred?: Deferred
   return false;
 }
 
+export async function hasLearningRowsToCheck(port: DbPort) {
+  // An empty set of targets makes every prune a no-op, irrespective of node visibility.
+  // Probe in the application transaction, since this batch can have written learning rows.
+  const [row] = await port.query<{ present: number }>(`SELECT (
+    EXISTS (SELECT 1 FROM node_reading_host_state) OR
+    EXISTS (SELECT 1 FROM node_reading) OR
+    EXISTS (SELECT 1 FROM node_review) OR
+    EXISTS (SELECT 1 FROM sync_object_state WHERE object_type IN ('node_reading', 'node_review'))
+  ) AS present`);
+  return row?.present !== 0;
+}
+
 export async function pruneLearningRowsWithoutVisibleNodes(port: DbPort) {
   const removedHostState = await port.run(
     `DELETE FROM node_reading_host_state

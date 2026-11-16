@@ -13,7 +13,7 @@ import {
 } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
 import { isolateRequestSyncObjectWrite } from './requestSyncObjectWriteIsolation.js';
-import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
+import { hasLearningRowsToCheck, pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 export type StagedRequestSyncObject = { header: RequestSyncObjectHeader; files: RequestSyncFiles };
 type BatchInput = Parameters<typeof applyReceivedRequestSyncObject>[1];
@@ -75,7 +75,8 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
   const results = inputs.map(objectInput => applied.get(objectInput)!);
   const firstAccepted = inputs.find(objectInput => !applied.get(objectInput)!.error);
   if (firstAccepted) await recordRequestSyncInbound(tx, firstAccepted.context, firstAccepted.requestId);
-  const expanded = pruning.requested && await pruneLearningRowsWithoutVisibleNodes(tx);
+  const expanded = pruning.requested && await hasLearningRowsToCheck(tx) &&
+    await pruneLearningRowsWithoutVisibleNodes(tx);
   return results.map(result => ({ ...result, workspaceScope: expanded ? { kind: 'full' as const }
     : result.workspaceScope }));
 }
