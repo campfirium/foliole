@@ -76,7 +76,7 @@
 }
 
 :root[data-desktop-focus] .app-focus-reveal:focus-visible {
-  z-index: 1;
+  z-index: var(--z-local-raised);
   width: max-content;
   height: auto;
   margin: 0;

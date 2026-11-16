@@ -37,7 +37,7 @@ export function PanelViewOptions({ label, children }: { label: string; children:
         </AppTooltipTrigger>
         {!open && <AppTooltipContent>{label}</AppTooltipContent>}
       </AppTooltip>
-      {open && <div aria-label={label} className={appFloatingSurfaceClassName('popover', 'absolute end-0 top-full z-20 mt-1 w-max space-y-3 p-3')}
+      {open && <div aria-label={label} className={appFloatingSurfaceClassName('popover', 'absolute end-0 top-full z-surface-overlay mt-1 w-max space-y-3 p-3')}
         id={id} role="group">{children}</div>}
     </div>
   );

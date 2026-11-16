@@ -16,12 +16,15 @@ const {
   prepareCanonicalImageAttachment,
   notifyManagedInboxUpdated
 } = vi.hoisted(() => {
-  const driver = {
+  const methods = {
     execute: vi.fn(),
     queryAll: vi.fn(() => []),
     query: vi.fn(),
-    queryOne: vi.fn(),
-    transaction: vi.fn((execute: () => unknown) => execute())
+    queryOne: vi.fn()
+  };
+  const driver = {
+    ...methods,
+    transaction: vi.fn((execute: (tx: typeof methods) => unknown) => execute(driver))
   };
   const image = {
     isEmpty: vi.fn(() => true),

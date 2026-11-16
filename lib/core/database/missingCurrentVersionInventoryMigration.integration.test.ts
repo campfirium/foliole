@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
-import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import { readFramedSyncInventory } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
@@ -18,6 +18,7 @@ it.each(['desktop', 'companion'])('rebuilds %s missing-head inventory atomically
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, 89);
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    if (host === 'desktop') restoreLegacyParentOrderTable(sqlite);
     await applySyncNodesWithDbPort(db, [branch('current', 'Preserved current text')], { enqueueSearchInvalidations: false });
     sqlite.exec(`DELETE FROM node_sync_versions WHERE version_id = 'current';
       DELETE FROM framed_sync_inventory WHERE object_id = 'node-1';

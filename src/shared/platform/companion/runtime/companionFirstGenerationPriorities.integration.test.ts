@@ -109,12 +109,14 @@ it.each(['android', 'ios'] as const)('%s generates from committed moves and pres
 
 it.each(['android', 'ios'] as const)('%s uses a changed default in the first durable order without changing original priorities', async platform => {
   const library = await openLibrary(platform, 5);
+  hydrateCurrentReviewSchedulerSettings({ pushQueue: { defaultPriority: 5, priorityRatio: 100 } });
   await refreshCompanionWorkspaceSnapshot();
   const before = await generate(library);
-  hydrateCurrentReviewSchedulerSettings({ pushQueue: { defaultPriority: 9 } });
+  hydrateCurrentReviewSchedulerSettings({ pushQueue: { defaultPriority: 1, priorityRatio: 100 } });
   const changed = await generate(library);
   expect(changed[0]).toBe('zero');
-  expect(changed).not.toEqual(before);
+  expect(before.indexOf('leaf')).toBeLessThan(before.indexOf('default-0'));
+  expect(changed.indexOf('default-0')).toBeLessThan(changed.indexOf('leaf'));
   library.owner.clearNodePriorities();
   expect(await generate(library)).toEqual(changed);
 });

@@ -8,6 +8,7 @@ import { build } from 'vite';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreLegacyParentOrderTable } from '../../../electron/database/historicalMigration.test-support.js';
 import { closeLibraries, createPeer, joinPeers, startLibraries } from '../../../electron/database/syncLibrary.testSupport.js';
 import { syncRequestLibrary } from '../../../electron/database/syncRequestLibrary.testSupport.js';
 import { iosCompanionContentHash, markIosCompanionMutation } from '../../../src/shared/platform/companion/runtime/iosCompanionMutationState.js';
@@ -151,6 +152,7 @@ it('upgrades desktop and companion storage while retaining existing reading data
       INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('retained', 'Retained', '2026-10-01', '2026-10-01');
       INSERT INTO node_reading(node_id, last_handled_at, next_at, repetition_count, state) VALUES ('retained', '2026-10-01', '2026-10-04', 7, 'active')`);
     if (schema === DESKTOP_FRESH_SCHEMA_STATEMENTS) {
+      restoreLegacyParentOrderTable(db);
       // These versions predate Flow; do not feed the current cycle schema into its later migration.
       const triggers = db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'daily_flow_%'").all() as { name: string }[];
       for (const { name } of triggers) db.exec(`DROP TRIGGER ${name}`);
