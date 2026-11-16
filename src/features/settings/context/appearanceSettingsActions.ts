@@ -79,6 +79,7 @@ export type AppearanceState = {
   setClozeColorPresetState: Setter<ClozeColorPreset>;
   setCustomInterfaceFontState: Setter<string>;
   setCustomMonospaceFontState: Setter<string>;
+  setImageFocusTransparencyPercentState: Setter<number>;
   setDimImagesInDarkModeState: Setter<boolean>;
   setEditorDisplayModeState: Setter<EditorDisplayMode>;
   setFontColorPresetState: Setter<FontColorPreset>;

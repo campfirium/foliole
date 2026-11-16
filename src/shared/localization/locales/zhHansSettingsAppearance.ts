@@ -57,6 +57,8 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.readingWidth.title': '阅读宽度',
   'settings.appearance.readingWidth.description': '设置主题内容的最大阅读宽度。',
   'settings.appearance.readingWidth.reset': '重置阅读宽度',
+  'settings.appearance.imageFocusTransparency.title': '聚焦透明度',
+  'settings.appearance.imageFocusTransparency.description': '调整图片聚焦区域外的遮罩透明度。',
   'settings.appearance.colors.section': '阅读颜色',
   'settings.appearance.colors.sectionAria': '外观阅读颜色设置区',
   'settings.appearance.colors.hexValue': '{title} 十六进制颜色值',

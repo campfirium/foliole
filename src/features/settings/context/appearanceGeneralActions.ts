@@ -4,6 +4,7 @@ import { resetFrontmatterMetaFields, setFrontmatterMetaFields } from '../../edit
 import { type MarkdownSyntaxVisibility, setMarkdownSyntaxVisibility } from '../../editor/model/markdownSyntaxSetting';
 import { setAutoLocalizeRemoteImages } from '../../editor/model/remoteImageLocalizationSetting';
 import { setSelectionToolbarEnabled, setSelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
+import { setImageFocusTransparencyPercent } from '../model/appearanceReadingModeSettings';
 import {
   INTERFACE_FONT_SIZE_DEFAULT,
   type InterfaceFontPreset,
@@ -39,6 +40,7 @@ export type GeneralAppearanceActions = Pick<
   | 'setCustomInterfaceFont'
   | 'setCustomMonospaceFont'
   | 'setDimImagesInDarkMode'
+  | 'setImageFocusTransparencyPercent'
   | 'setFrontmatterDisplayMode'
   | 'setFrontmatterMetaFields'
   | 'setInterfaceFontPreset'
@@ -70,6 +72,7 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setBaseColorMode: applyBaseColorMode,
     setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
     setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
+    setImageFocusTransparencyPercent: (value: number) => state.setImageFocusTransparencyPercentState(setImageFocusTransparencyPercent(value)),
     setDimImagesInDarkMode: (value: boolean) => (setDimImagesInDarkMode(value), state.setDimImagesInDarkModeState(value)),
     setFrontmatterDisplayMode: (value: FrontmatterDisplayMode) => (setFrontmatterDisplayMode(value), state.setFrontmatterDisplayModeState(value)),
     setFrontmatterMetaFields: (value: string) => state.setFrontmatterMetaFieldsState(setFrontmatterMetaFields(value)),

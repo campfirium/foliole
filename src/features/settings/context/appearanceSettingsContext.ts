@@ -26,6 +26,7 @@ export interface AppearanceSettingsContextValue {
   autoLocalizeRemoteImages: boolean;
   baseColorMode: BaseColorMode;
   dimImagesInDarkMode: boolean;
+  imageFocusTransparencyPercent: number;
   resolvedBaseColorMode: ResolvedBaseColorMode;
   customInterfaceFont: string;
   customMonospaceFont: string;
@@ -66,6 +67,7 @@ export interface AppearanceSettingsContextValue {
   setAutoLocalizeRemoteImages: (value: boolean) => void;
   setBaseColorMode: (value: BaseColorMode) => void;
   setClozeColorPreset: (value: ClozeColorPreset) => void;
+  setImageFocusTransparencyPercent: (value: number) => void;
   setDimImagesInDarkMode: (value: boolean) => void;
   setFontColorPreset: (value: FontColorPreset) => void;
   setFrontmatterDisplayMode: (value: FrontmatterDisplayMode) => void;

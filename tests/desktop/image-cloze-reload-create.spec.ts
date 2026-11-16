@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { expect, test } from './harness/fixtures';
 import { clozeIds, dragImageCloze, openSource, OWNER_ID, readDocument, seedImageSource } from './harness/imageClozeSource';
-import { expectWorkspaceShell } from './harness/settings';
+import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 for (const reload of [false, true]) {
   test(`creates another image cloze with an existing region ${reload ? 'after reload' : 'without reload'}`, async ({
@@ -91,4 +91,37 @@ test('saves image focus for one occurrence and preserves it when creating a cloz
   expect(await masks.first().locator('xpath=ancestor::*[contains(@class,"cm-md-image-widget")]').getAttribute('data-md-image-from')).toBe('0');
   expect((await readDocument(page, OWNER_ID)).content).toBe(saved);
   await page.screenshot({ path: info.outputPath('saved-image-focus.png') });
+});
+
+test('applies focus transparency immediately and saves it in appearance settings', async ({ desktopWindow: page }, info) => {
+  await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await seedImageSource(page);
+  await dragImageCloze(page);
+  await page.getByRole('button', { name: 'Focus image region' }).click();
+  await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');
+  const mask = page.locator('.cm-md-image-focus-mask');
+  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.3)');
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const slider = settings.getByRole('slider', { name: 'Focus transparency' });
+  await expect(slider).toHaveValue('70');
+  await slider.press('Home');
+  await expect(mask).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await slider.press('End');
+  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await slider.press('ArrowLeft');
+  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.01)');
+  await page.screenshot({ path: info.outputPath('focus-transparency-setting.png') });
+  await expect.poll(() => page.evaluate(async () => {
+    const saved = await window.electronAPI!.invoke('load_app_settings_state') as Record<string, string>;
+    return saved['foliole-image-focus-transparency-percent'];
+  })).toBe('99');
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await openSource(page);
+  await expect(mask).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.01)');
+  await openSettingsCategory(page, 'Appearance');
+  await expect(slider).toHaveValue('99');
 });

@@ -1,6 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
+import { DEFAULT_IMAGE_FOCUS_TRANSPARENCY_PERCENT } from '../../editor/model/markdownImageFocus';
 
 import {
   DEFAULT_DIM_IMAGES_IN_DARK_MODE,
@@ -64,4 +65,19 @@ export function getDimImagesInDarkMode() {
 
 export function setDimImagesInDarkMode(value: boolean) {
   setWhitelistedLocalStorageItem(STORAGE_KEYS.dimImagesInDarkMode, String(value));
+}
+
+function normalizeImageFocusTransparency(value: number) {
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : DEFAULT_IMAGE_FOCUS_TRANSPARENCY_PERCENT;
+}
+
+export function getImageFocusTransparencyPercent() {
+  const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.imageFocusTransparencyPercent);
+  return raw?.trim() ? normalizeImageFocusTransparency(Number(raw)) : DEFAULT_IMAGE_FOCUS_TRANSPARENCY_PERCENT;
+}
+
+export function setImageFocusTransparencyPercent(value: number) {
+  const normalized = normalizeImageFocusTransparency(value);
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.imageFocusTransparencyPercent, String(normalized));
+  return normalized;
 }

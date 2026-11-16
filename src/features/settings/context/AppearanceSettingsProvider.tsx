@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
 import { subscribeRuntimeSystemColorMode } from '../../../shared/platform/runtime/systemColorMode';
 import { applySelectionToolbarOpacityPercent } from '../../editor/model/selectionToolbarSettings';
+import { getImageFocusTransparencyPercent } from '../model/appearanceReadingModeSettings';
 import {
   applyAppearanceSettings,
   getAccentColorPreset,
@@ -66,6 +67,7 @@ export function useAppearanceStateValues() {
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
   const baseColorModeCycle = useBaseColorModeCycle();
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
+  const [imageFocusTransparencyPercentState, setImageFocusTransparencyPercentState] = useState(getImageFocusTransparencyPercent);
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
   const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
@@ -85,6 +87,7 @@ export function useAppearanceStateValues() {
     ...baseColorModeCycle,
     baseColorModeState,
     dimImagesInDarkModeState,
+    imageFocusTransparencyPercentState,
     customInterfaceFontState,
     customMonospaceFontState,
     interfaceFontPresetState,
@@ -94,6 +97,7 @@ export function useAppearanceStateValues() {
     resolvedBaseColorModeState,
     setBaseColorModeState,
     setDimImagesInDarkModeState,
+    setImageFocusTransparencyPercentState,
     setCustomInterfaceFontState,
     setCustomMonospaceFontState,
     setInterfaceFontPresetState,
@@ -213,6 +217,9 @@ function useAppearanceSideEffects(state: ReturnType<typeof useAppearanceStateVal
   useResolvedBaseColorEffect(state);
   useModeScopedAppearanceEffect(state);
   useApplyAppearanceEffect(state);
+  usePrePaintEffect(() => {
+    document.documentElement.style.setProperty('--app-image-focus-opacity', String((100 - state.imageFocusTransparencyPercentState) / 100));
+  }, [state.imageFocusTransparencyPercentState]);
 }
 
 function useAppearanceSettingsState() {

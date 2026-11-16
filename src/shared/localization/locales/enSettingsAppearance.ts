@@ -55,6 +55,8 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.readingWidth.title': 'Reading width',
   'settings.appearance.readingWidth.description': 'Set the maximum reading width for topic content.',
   'settings.appearance.readingWidth.reset': 'Reset reading width',
+  'settings.appearance.imageFocusTransparency.title': 'Focus transparency',
+  'settings.appearance.imageFocusTransparency.description': 'Adjust the transparency of the shade outside an image’s focus area.',
   'settings.appearance.colors.section': 'Reading colors',
   'settings.appearance.colors.sectionAria': 'Appearance reading colors section',
   'settings.appearance.colors.hexValue': '{title} hex value',

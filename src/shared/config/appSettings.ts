@@ -48,6 +48,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   readingFontWeight: 'foliole-reading-font-weight',
   readingParagraphSpacing: 'foliole-reading-paragraph-spacing',
   readingContentWidth: 'foliole-reading-content-width',
+  imageFocusTransparencyPercent: 'foliole-image-focus-transparency-percent',
   dimImagesInDarkMode: 'foliole-dim-images-in-dark-mode',
   fontColor: 'foliole-font-color',
   accentColor: 'foliole-accent-color',

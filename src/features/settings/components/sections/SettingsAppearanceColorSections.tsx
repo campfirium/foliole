@@ -1,10 +1,13 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_RANGE_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
   SettingsSegmentedRow,
+  settingsControlValueClassName,
+  settingsRangeClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -82,6 +85,21 @@ function DimImagesInDarkModeRow(props: { appearance: AppearanceSettings }) {
   );
 }
 
+function ImageFocusTransparencyRow({ appearance }: { appearance: AppearanceSettings }) {
+  const t = useTranslation();
+  const title = t('settings.appearance.imageFocusTransparency.title');
+  return (
+    <SettingsRow title={title} description={t('settings.appearance.imageFocusTransparency.description')}>
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <input aria-label={title} className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
+          min={0} max={100} step={1} type="range" value={appearance.imageFocusTransparencyPercent}
+          onChange={event => appearance.setImageFocusTransparencyPercent(event.currentTarget.valueAsNumber)} />
+        <span className={settingsControlValueClassName('w-12 tabular-nums')}>{appearance.imageFocusTransparencyPercent}%</span>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 export function AppearanceReadingColorSection(props: {
   appearance: AppearanceSettings;
   safeAccentColor: string;
@@ -124,6 +142,7 @@ export function AppearanceReadingColorSection(props: {
         safeClozeColor={props.safeClozeColor}
         setClozeColorPreset={(value) => props.appearance.setClozeColorPreset(value as typeof props.appearance.clozeColorPreset)}
       />
+      <ImageFocusTransparencyRow appearance={props.appearance} />
     </SettingsSection>
   );
 }

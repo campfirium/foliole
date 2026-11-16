@@ -56,6 +56,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'readingParagraphSpacing',
   'readingContentWidth',
   'dimImagesInDarkMode',
+  'imageFocusTransparencyPercent',
   'fontColor',
   'accentColor',
   'selectionColor',
