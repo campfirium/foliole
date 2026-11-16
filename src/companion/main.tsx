@@ -72,7 +72,8 @@ if (isIosBridgeAcceptance) {
     window.__foliolePreviewUnmount = () => renderer.unmount();
   renderer.render(
     <React.StrictMode>
-      <StartupErrorBoundary moduleLabel="Companion renderer">
+      <StartupErrorBoundary moduleLabel="Companion renderer"
+        onError={() => window.dispatchEvent(new Event('foliole-companion-startup-settled'))}>
         <CompanionApp />
       </StartupErrorBoundary>
     </React.StrictMode>

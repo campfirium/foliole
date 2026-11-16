@@ -7,10 +7,35 @@
     <meta name="theme-color" content="#181918" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
+    <style>
+      #android-startup[hidden] { display: none; }
+      #android-startup { position: fixed; inset: 0; top: 0; right: 0; bottom: 0; left: 0;
+        z-index: 10000; overflow: auto; padding: 1.5rem; box-sizing: border-box; background: #fff;
+        color: #242424; font: 1rem/1.5 system-ui, sans-serif; overflow-wrap: break-word; }
+      #android-startup > div { max-width: 36rem; margin: 1rem auto; }
+      #android-startup h1 { font-size: 1.4rem; }
+      #android-startup summary { padding: .65rem 0; cursor: pointer; }
+      @media (prefers-color-scheme: dark) {
+        #android-startup { background: #181918; color: #eee; }
+      }
+    </style>
     <title>Foliole Companion</title>
   </head>
   <body>
+    <main id="android-startup" data-chromium-minimum="__FOLIOLE_ANDROID_WEBVIEW_MINIMUM__" hidden>
+      <div>
+        <h1 id="android-startup-title">Opening Foliole…</h1>
+        <p id="android-startup-description" role="status"></p>
+        <details id="android-startup-help">
+          <summary>Having trouble opening Foliole?</summary>
+          <p id="android-startup-version"></p>
+          <p id="android-startup-update"></p>
+          <p id="android-startup-reopen"></p>
+        </details>
+      </div>
+    </main>
     <div id="root"></div>
+    <script src="/android-startup.js"></script>
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>

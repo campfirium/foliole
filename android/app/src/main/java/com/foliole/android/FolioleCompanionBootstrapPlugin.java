@@ -1,5 +1,9 @@
 package com.foliole.android;
 
+import android.content.pm.PackageInfo;
+import android.webkit.WebView;
+
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -10,6 +14,22 @@ import java.time.Instant;
 @CapacitorPlugin(name = "FolioleCompanionBootstrap")
 public class FolioleCompanionBootstrapPlugin extends Plugin {
     private FolioleFlowGestureRegion flowGestureRegion;
+
+    @PluginMethod
+    public void getWebViewVersion(PluginCall call) {
+        PackageInfo provider = WebView.getCurrentWebViewPackage();
+        JSObject result = new JSObject();
+        if (provider != null && provider.versionName != null) {
+            var config = getBridge().getConfig();
+            var packages = getContext().getPackageManager();
+            result.put("component", provider.applicationInfo == null ? provider.packageName
+                : packages.getApplicationLabel(provider.applicationInfo).toString());
+            result.put("version", provider.versionName);
+            result.put("minimum", "com.huawei.webview".equals(provider.packageName)
+                ? config.getMinHuaweiWebViewVersion() : config.getMinWebViewVersion());
+        }
+        call.resolve(result);
+    }
 
     @PluginMethod
     public void setReadingSystemBars(PluginCall call) {

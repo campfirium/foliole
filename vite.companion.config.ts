@@ -7,6 +7,7 @@ import postcss from 'postcss';
 import type { Plugin } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
+import { createCapacitorConfig } from './capacitor.config';
 import { companionPreviewServerPlugin } from './scripts/vite/companionPreviewServer';
 import { companionTextScaleCss } from './scripts/vite/companionTextScaleCss';
 import { createSharedViteConfig } from './vite.shared';
@@ -65,7 +66,17 @@ export default mergeConfig(
   defineConfig({
     define: { 'import.meta.env.VITE_FOLIOLE_SOURCE_REVISION': JSON.stringify(resolveCompanionSourceRevision()) },
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
-    plugins: [companionLegacyWebViewCssPlugin(), companionPreviewServerPlugin(PROJECT_ROOT)],
+    plugins: [
+      companionLegacyWebViewCssPlugin(),
+      companionPreviewServerPlugin(PROJECT_ROOT),
+      {
+        name: 'companion-android-startup-requirement',
+        transformIndexHtml: html => html.replace(
+          '__FOLIOLE_ANDROID_WEBVIEW_MINIMUM__',
+          String(createCapacitorConfig().android?.minWebViewVersion ?? '')
+        )
+      }
+    ],
     css: { postcss: { plugins: [companionTextScaleCss(), autoprefixer()] } },
     build: {
       emptyOutDir: true,

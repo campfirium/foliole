@@ -31,8 +31,13 @@ function original(attachmentId = 'pdf') {
 it('keeps a PDF with no text local to an unsupported original without loading the viewer', () => {
   vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Chrome/108.0.5359.128');
   render(original());
-  expect(screen.getByText(/Android System WebView component is too old/)).toBeInTheDocument();
+  expect(screen.getByText(/uses Chromium 108.*requires Chromium 125/)).toBeInTheDocument();
   expect(screen.queryByText(/still read/)).not.toBeInTheDocument();
+  const updateHelp = screen.getByText('View update instructions').closest('details');
+  expect(updateHelp).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByText('View update instructions'));
+  expect(updateHelp).toHaveAttribute('open');
+  expect(updateHelp).toHaveTextContent(/reopen Foliole and try again/);
   expect(runtime.renders).toBe(0);
 });
 
@@ -60,7 +65,7 @@ it('contains a viewer failure and can display another document without blaming t
   runtime.fail = true;
   const view = render(original());
   expect(await screen.findByText('The original PDF could not be opened.')).toBeInTheDocument();
-  expect(screen.queryByText(/WebView component is too old/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Opening the original PDF requires Chromium/)).not.toBeInTheDocument();
   runtime.fail = false;
   view.rerender(original('another'));
   expect(await screen.findByText('PDF original viewer')).toBeInTheDocument();

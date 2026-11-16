@@ -42,7 +42,10 @@ it('reopens persisted original-view state as text and keeps restricted clicks ou
     expect(await screen.findByText('Existing readable body')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Android System WebView');
+    expect(await screen.findByRole('dialog')).toHaveTextContent('This device uses Chromium 108');
+    fireEvent.click(screen.getByText('View update instructions'));
+    expect(screen.getByText('View update instructions').closest('details')).toHaveAttribute('open');
+    expect(screen.getByRole('dialog')).toHaveTextContent('You can still read the extracted text.');
     expect(screen.getByText('Existing readable body')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

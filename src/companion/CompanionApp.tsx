@@ -29,6 +29,8 @@ function CompanionAppContent() {
   useAttachmentObservation(bootstrap.status === 'ready');
   useCompanionForegroundTime(bootstrap.status === 'ready');
   useEffect(() => {
+    if (bootstrap.status !== 'booting')
+      window.dispatchEvent(new Event('foliole-companion-startup-settled'));
     if (bootstrap.status === 'ready')
       void hydrateCompanionSystemEntryDisplayNames().catch(() => undefined);
   }, [bootstrap.status]);
