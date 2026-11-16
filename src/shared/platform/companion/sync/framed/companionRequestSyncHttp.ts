@@ -131,13 +131,19 @@ async function prepareHttpRequest(temporary: RequestSyncFiles, input: CompanionR
 export async function spoolCompanionRequestSyncHttp(files: Pick<RequestSyncFilePort, 'write'>, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
   const digest = sha256.create();
   let count = 0;
-  let pending = new Uint8Array(CHUNK_BYTES);
+  // Small control messages can fit in a fraction of a native HTTP chunk.
+  let pending = new Uint8Array(256);
   let used = 0;
   for await (const bytes of encodeFramedSyncStream(body)) {
     let offset = 0;
     while (offset < bytes.length) {
       signal?.throwIfAborted();
       const size = Math.min(CHUNK_BYTES - used, bytes.length - offset);
+      if (used + size > pending.length) {
+        const grown = new Uint8Array(Math.min(CHUNK_BYTES, Math.max(used + size, pending.length * 2)));
+        grown.set(pending.subarray(0, used));
+        pending = grown;
+      }
       pending.set(bytes.subarray(offset, offset + size), used);
       used += size;
       offset += size;

@@ -120,7 +120,12 @@ it.each(['valid', 'invalid-offset', 'excessive-blocks', 'missing-result'])('retu
   const { attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
   const query = attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16).fill(3),
     storageKey: `${'a'.repeat(64)}.pdf`, byteLength: 512 * 1024, maxBlocks: 32 });
+  const write = vi.spyOn(files, 'write');
   native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
+    const staged = write.mock.calls.find(([key]) => key === `${request.directory}/http-out-0`)?.[1];
+    expect(request.request_chunk_count).toBe(1);
+    expect(staged?.buffer.byteLength).toBeLessThan(1024);
+    expect(native.sign.mock.calls[0]![0].body_hash).toBe(bytesToHex(sha256(staged!)));
     expect(request.attachment_receive).toMatchObject({ storage_key: query.storageKey, offset: 0,
       byte_length: query.byteLength, max_blocks: 32, request_id_base64: Buffer.from(query.requestId).toString('base64') });
     return { response_chunk_count: 0, response_byte_length: 0, ...(fault === 'missing-result' ? {} : {
