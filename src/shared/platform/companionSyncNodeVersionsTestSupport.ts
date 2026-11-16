@@ -1,12 +1,14 @@
 import path from 'node:path';
 
+import type { ISQLiteConnection } from '@capacitor-community/sqlite';
 import Database from 'better-sqlite3';
 
-import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs';
-import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
-import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort';
+import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs.js';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements.js';
+import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort.js';
 
-import type { CapacitorCompanionDatabaseManager } from './companion/runtime/capacitorCompanionDatabaseOwner';
+type FakeDatabaseManager = Pick<ISQLiteConnection,
+  'closeConnection' | 'createConnection' | 'isConnection' | 'isDatabase' | 'retrieveConnection'>;
 
 export function installCompanionNodeSchema(database: Database.Database) {
   database.transaction(() => {
@@ -70,7 +72,7 @@ export function createFakeCapacitorConnection(database: Database.Database) {
 
 export function createFakeCapacitorDatabaseManager(
   writer: Database.Database, existed: boolean, onWriterClose: () => void
-): CapacitorCompanionDatabaseManager {
+): FakeDatabaseManager {
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const journals = new Map<string, Database.Database>();
   const adapt = (database: Database.Database) => ({
@@ -97,7 +99,7 @@ export function createFakeCapacitorDatabaseManager(
     isConnection: async () => ({ result: false }),
     isDatabase: async () => ({ result: existed }),
     retrieveConnection: async () => adapt(writer)
-  } as unknown as CapacitorCompanionDatabaseManager;
+  } as unknown as FakeDatabaseManager;
 }
 
 export function createFakeCompanionDatabaseOwner(database: Database.Database) {

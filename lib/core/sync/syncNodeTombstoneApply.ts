@@ -7,10 +7,26 @@ import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { deleteTopicAlternative } from './topicAlternativeApply.js';
 import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
-interface NodeTombstoneRow extends DbRow {
+export interface NodeTombstoneRow extends DbRow {
   deleted_at: string;
   parent_version_id: string | null;
   version_id: string;
+}
+
+export async function loadBatchNodeSyncTombstones(port: DbPort, projections: readonly { object_id: string }[]) {
+  const counts = new Map<string, number>();
+  for (const { object_id: id } of projections) counts.set(id, (counts.get(id) ?? 0) + 1);
+  const ids = [...counts].filter(([, count]) => count === 1).map(([id]) => id);
+  const tombstones = new Map<string, NodeTombstoneRow | null>();
+  if (ids.length < 2) return tombstones;
+  const rows = await port.query<NodeTombstoneRow & { node_id: string }>(
+    `SELECT node_id, version_id, parent_version_id, deleted_at
+     FROM node_sync_tombstones WHERE node_id IN (SELECT value FROM json_each(?))`,
+    [JSON.stringify(ids)]
+  );
+  for (const id of ids) tombstones.set(id, null);
+  for (const row of rows) tombstones.set(row.node_id, row);
+  return tombstones;
 }
 
 export async function loadNodeSyncTombstone(port: DbPort, nodeId: string) {

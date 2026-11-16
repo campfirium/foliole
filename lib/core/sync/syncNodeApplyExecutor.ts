@@ -12,6 +12,7 @@ import { decideIncomingNodeApply, latestBranchHeadRecords, orderNodesForApply, t
 import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
+import { loadBatchNodeSyncTombstones } from './syncNodeTombstoneApply.js';
 import { prepareIncomingNodeVersionSource, prepareIncomingVersionRetention } from './syncNodeVersionHistory.js';
 import { pruneLearningRowsOrDefer, type DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 
@@ -100,12 +101,16 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   await port.transaction(async (tx) => {
     const history = await prepareIncomingNodeVersionSource(tx, historySource);
     const retain = await prepareIncomingVersionRetention(tx, history);
+    // Request sync isolates each node's writes. A node with multiple projections must
+    // read its tombstone again after each projection.
+    const batchTombstones = options.isolateNodeWrites ? await loadBatchNodeSyncTombstones(tx, ordered) : undefined;
     async function applyRecords(records: readonly M[], versions: readonly M[], target: ApplySyncNodeSourceResult<M>) {
       const releaseHashes = options.deletedHistoryReleaseHashes;
       if (releaseHashes && await canApplyDeletionBeforeHistory(tx, records, versions, historySource, retain.isNew)) {
         const record = await source.load(tx, records[0]!);
         await applyIncomingRecord({ tx, record, result: target, options, invalidatedAt, remoteNodeIdsInBatch,
-          preparedTextBodyHash: undefined, versionAlreadyRetained: false });
+          preparedTextBodyHash: undefined, versionAlreadyRetained: false,
+          batchTombstone: batchTombstones?.get(record.object_id) });
         if (!target.appliedIds.includes(record.object_id)) throw new Error('request_sync_new_deletion_not_applied');
         const hashes = new Set<string>();
         await retain.write(tx, historySource, versions, options.deferBodyRetirement ?? false, hashes);
@@ -120,7 +125,8 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
         const versionAlreadyRetained = retention === 'complete' || (retention === 'verify_body_hash' &&
           typeof content === 'string' && hashTextBody(content) === record.snapshot.body_blob_hash);
         if (await applyIncomingRecord({ tx, record, result: target, options, invalidatedAt, remoteNodeIdsInBatch,
-          preparedTextBodyHash: preparedHashes.get(metadata), versionAlreadyRetained })) {
+          preparedTextBodyHash: preparedHashes.get(metadata), versionAlreadyRetained,
+          batchTombstone: batchTombstones?.get(record.object_id) })) {
           target.conflictNodes.push(metadata);
         }
       }

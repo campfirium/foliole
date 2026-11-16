@@ -7,7 +7,7 @@ import { prepareImportedNodeDeletionVersions } from '../../../../../../electron/
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { deleteNodesPermanently } from '../../../../../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../../../../../lib/core/database/workspaceSearchSidecar.js';
-import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import type { DbParams, DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
 
@@ -42,15 +42,20 @@ function permanentlyDeleteSourceNodes(adoption: NonNullable<typeof host>, nodeId
   } finally { source.close(); }
 }
 
-function observeDatabaseCalls(port: DbPort, onCall: (deletedId?: string, sql?: string) => void): DbPort {
+function observeDatabaseCalls(port: DbPort, onCall: (deletedId?: string, sql?: string, params?: DbParams) => void): DbPort {
   return {
     run: (sql, params) => {
       onCall(/^DELETE FROM/u.test(sql) && params?.length === 1 ? String(params[0]) : undefined, sql);
       return port.run(sql, params);
     },
-    query: (sql, params) => { onCall(); return port.query(sql, params) as never; },
+    query: (sql, params) => { onCall(undefined, sql, params); return port.query(sql, params) as never; },
     transaction: execute => port.transaction(tx => execute(observeDatabaseCalls(tx, onCall)))
   };
+}
+
+function observeTombstoneRead(reads: string[][], sql?: string, params?: DbParams) {
+  if (!sql || !params || !/SELECT (?:node_id, )?version_id, parent_version_id, deleted_at\s+FROM node_sync_tombstones/u.test(sql)) return;
+  reads.push(sql.includes('json_each') ? JSON.parse(String(params[0])) as string[] : [String(params[0])]);
 }
 
 it('bounds deletion follow-up calls while completing a mixed first adoption', async () => {
@@ -63,8 +68,15 @@ it('bounds deletion follow-up calls while completing a mixed first adoption', as
   const original = native.db!;
   let calls = 0;
   let localDeletes = 0;
-  native.db = observeDatabaseCalls(original, deletedId => {
+  const reads: string[][] = [];
+  let pulls = 0;
+  native.post.mockImplementation(input => {
+    if (input.url.includes('request=pulls')) pulls++;
+    return adoption.post(input);
+  });
+  native.db = observeDatabaseCalls(original, (deletedId, sql, params) => {
     calls++;
+    observeTombstoneRead(reads, sql, params);
     if (deletedId && nodeIds.includes(deletedId)) localDeletes++;
   });
   try { await adoption.sync(); }
@@ -78,6 +90,9 @@ it('bounds deletion follow-up calls while completing a mixed first adoption', as
     WHERE object_id IN (SELECT value FROM json_each(?)) AND body_text IS NOT NULL`).get(JSON.stringify(nodeIds)))
     .toEqual({ count: 0 });
   expect(localDeletes).toBe(0);
+  expect(pulls).toBeGreaterThan(1);
+  expect(reads).toHaveLength(pulls);
+  expect(reads.flat().sort()).toEqual([...nodeIds, ...receivedIds(adoption), 'special-inbox'].sort());
   await adoption.restart();
   expect(adoption.sqlite.prepare('SELECT node_id, version_id, content_hash FROM node_sync_tombstones ORDER BY node_id').all())
     .toEqual(expected);
@@ -133,13 +148,17 @@ it('cleans only existing rows in ordinary sync and retries a failed orphan clean
   ).all();
   const original = native.db!;
   const localDeletes: Array<[string, string]> = [];
-  native.db = observeDatabaseCalls(original, (deletedId, sql) => {
+  const reads: string[][] = [];
+  native.db = observeDatabaseCalls(original, (deletedId, sql, params) => {
+    observeTombstoneRead(reads, sql, params);
     if (deletedId && sql && [present, orphan, absent].includes(deletedId)) localDeletes.push([deletedId, sql]);
   });
   try {
     const partial = await adoption.sync();
     expect(partial.remainingStructureChangeCount).toBeGreaterThan(0);
   } finally { native.db = original; }
+  expect(reads).toHaveLength(1);
+  expect(reads.flat().sort()).toEqual([present, orphan, absent].sort());
   expect(localDeletes.filter(([id]) => id === absent)).toEqual([]);
   expect(localDeletes.filter(([id]) => id === orphan).map(([, sql]) => sql)).toEqual([
     'DELETE FROM node_view_state WHERE node_id = ?'

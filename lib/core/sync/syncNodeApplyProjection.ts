@@ -9,7 +9,7 @@ import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalence.js';
 import { isIncomingLocalAnchorRepair } from './syncNodeLocalAnchorRepair.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
-import { applyRemoteNodeTombstone, assertKnownDeletionIdentity, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
+import { applyRemoteNodeTombstone, assertKnownDeletionIdentity, loadNodeSyncTombstone, type NodeTombstoneRow } from './syncNodeTombstoneApply.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
   parent_id: string | null;
@@ -37,8 +37,11 @@ async function handleTombstoneGuard(input: {
   record: NativeSyncNodeRecord;
   result: Pick<ApplySyncNodesWithDbPortResult, 'appliedIds' | 'tombstoneBlockedIds' | 'workspaceStructureChanged'>;
   tx: DbPort;
+  batchTombstone: NodeTombstoneRow | null | undefined;
 }) {
-  const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
+  const localTombstone = input.batchTombstone === undefined
+    ? await loadNodeSyncTombstone(input.tx, input.record.object_id)
+    : input.batchTombstone;
   if (input.record.is_tombstone) {
     if (localTombstone && input.record.version_id === localTombstone.version_id) {
       await assertKnownDeletionIdentity(input.tx, input.record);
@@ -94,9 +97,10 @@ export async function applyIncomingRecord(input: {
   options: ApplySyncNodesWithDbPortOptions; invalidatedAt: string; remoteNodeIdsInBatch: ReadonlySet<string>;
   preparedTextBodyHash: string | undefined;
   versionAlreadyRetained: boolean;
+  batchTombstone: NodeTombstoneRow | null | undefined;
 }) {
   const { tx, record, result, options } = input;
-  if (await handleTombstoneGuard({ options, record, result, tx })) return false;
+  if (await handleTombstoneGuard(input)) return false;
   const localNode = await loadLocalNodeSyncState(tx, record.object_id);
   let decision = await decideNodeApply(tx, localNode, record, options.operation);
   if (record.snapshot.kind === 'topic' && localNode && !localNode.deleted_at &&
