@@ -6,8 +6,12 @@ import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNode
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPostponeDelay';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
 import { node, now, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
+import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
+import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import { createSetStateHarness, createWorkspaceFixture } from './workspaceStoreReviewActions.test-support';
 
@@ -35,6 +39,48 @@ beforeEach(async () => {
   reading = new Promise(resolve => { requested = resolve; });
 });
 afterEach(closeLibraries);
+
+it.each([1, 2, 3, 4] as const)('saves grade %s once when the same Flow cursor refreshes during its learning read', async grade => {
+  const app = await prepare('item');
+  const actions = createWorkspaceReviewActions(app.setState, app.getState, createLocalReviewSchedulerAdapter());
+  const history = createWorkspaceActionHistoryActions(app.setState, app.getState);
+  actions.revealReviewAnswer();
+  const before = app.getState().reviewSession;
+  const pending = actions.gradeReviewCard(grade, now);
+  await reading;
+  await openWorkspaceDailyFlow(app.setState, app.getState, { now, mode: 'review-first',
+    preserveCurrent: true, preferredNodeId: before.currentNodeId, seed: before }, undefined, true);
+  expect(app.getState().reviewSession).not.toBe(before);
+  expect(isSameWorkspaceReviewSession(app.getState().reviewSession, before)).toBe(true);
+  release();
+  expect(await pending).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).not.toBe(before.currentNodeId);
+  expect((await snapshot(peer)).nodesById[before.currentNodeId!]?.review?.reps).toBe(1);
+  expect(peer.db.prepare("SELECT COUNT(*) AS n FROM review_log WHERE kind='review' AND node_id=?").get(before.currentNodeId!))
+    .toEqual({ n: 1 });
+  expect(history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect((await snapshot(peer)).nodesById[before.currentNodeId!]?.review?.reps ?? 0).toBe(0);
+  expect(history.redoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect((await snapshot(peer)).nodesById[before.currentNodeId!]?.review?.reps).toBe(1);
+});
+
+it.each(['exit', 'navigate', 'restart'] as const)('rejects a pending grade after %s instead of applying it to a changed context', async change => {
+  const app = await prepare('item');
+  const actions = createWorkspaceReviewActions(app.setState, app.getState, createLocalReviewSchedulerAdapter());
+  actions.revealReviewAnswer();
+  const pending = actions.gradeReviewCard(3, now);
+  await reading;
+  if (change === 'exit') actions.exitReviewSession();
+  if (change === 'navigate') app.setState({ activeNodeId: 'b' });
+  if (change === 'restart') await actions.startReviewSession(now);
+  const expected = app.getState().reviewSession;
+  release();
+  expect(await pending).toBe(false);
+  expect(app.getState().reviewSession).toEqual(expected);
+  expect(peer.db.prepare("SELECT COUNT(*) AS n FROM review_log WHERE kind='review'").get()).toEqual({ n: 0 });
+});
 
 async function prepare(kind: 'topic' | 'item' = 'topic') {
   node(peer, 'a', kind); node(peer, 'b', kind);

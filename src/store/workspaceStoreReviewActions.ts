@@ -12,6 +12,7 @@ import { isReviewProfileDue } from './reviewQueuePlannerTime';
 import { reserveApplicationGrade } from './workspaceApplicationGradeAdmission';
 import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
+import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { isSameNodeReview } from './workspaceNodeLearningComparison';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
 import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
@@ -84,7 +85,8 @@ function createGradeReviewCardAction(
     const currentNodeId = rendererBefore.reviewSession.currentNodeId;
     if (!currentNodeId || !rendererBefore.reviewSession.isAnswerRevealed || rendererBefore.activeNodeId !== currentNodeId) return false;
     const snapshot = await readWorkspaceGradeLearning(rendererBefore, currentNodeId, grade);
-    if (!snapshot || get().libraryScope !== rendererBefore.libraryScope || get().reviewSession !== rendererBefore.reviewSession ||
+    if (!snapshot || get().libraryScope !== rendererBefore.libraryScope || get().activeNodeId !== currentNodeId ||
+      !isSameWorkspaceReviewSession(get().reviewSession, rendererBefore.reviewSession) ||
       !isSameNodeReview(get().nodesById[currentNodeId], rendererBefore.nodesById[currentNodeId])) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
