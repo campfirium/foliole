@@ -81,10 +81,10 @@ export class RequestSyncFiles {
   }
 
   async *readFacts(kinds?: readonly number[]): AsyncIterable<CanonicalFact> {
-    for await (const record of this.readFactRecords(kinds)) yield record.fact;
+    for await (const record of this.readFactRecords(kinds, { includeWire: false })) yield record.fact;
   }
 
-  async *readFactRecords(kinds?: readonly number[]): AsyncIterable<{
+  async *readFactRecords(kinds?: readonly number[], { includeWire = true } = {}): AsyncIterable<{
     fact: CanonicalFact; wire: { message: ValidatedProtocolMessage; encoded: Uint8Array } | null;
   }> {
     this.check();
@@ -96,7 +96,8 @@ export class RequestSyncFiles {
         this.check();
         const bytes = await this.read(`${this.directory}/fact-${index}`);
         if (!bytes) throw new Error('request_sync_fact_missing');
-        const message = decodeAndValidateProtocolMessage(bytes, FRAMED_SYNC_FRAME_TYPES.fact);
+        const message = decodeAndValidateProtocolMessage(bytes, FRAMED_SYNC_FRAME_TYPES.fact,
+          { retainFactEncoding: includeWire });
         if (complete) throw new Error('request_sync_fact_trailing_frame');
         if (message.payloadCase === 'fact' && index !== range.first) throw new Error('request_sync_fact_incomplete');
         const fact = message.payloadCase === 'fact' ? message : decoder.accept(message, BigInt(index))?.message;
@@ -106,7 +107,7 @@ export class RequestSyncFiles {
         const canonical = canonicalFactFromValidatedMessage(fact);
         if (canonical.kind !== range.kind) throw new Error('request_sync_fact_kind_mismatch');
         yield { fact: canonical,
-          wire: range.end === range.first + 1 && message.payloadCase === 'fact'
+          wire: includeWire && range.end === range.first + 1 && message.payloadCase === 'fact'
             ? { message, encoded: bytes.slice() } : null };
       }
       if (!complete) throw new Error('request_sync_fact_incomplete');

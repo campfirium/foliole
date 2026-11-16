@@ -81,7 +81,8 @@ function validated<C extends ProtocolPayloadCase>(
 
 export function decodeAndValidateProtocolMessage(
   encoded: Uint8Array,
-  authenticatedFrameType: number
+  authenticatedFrameType: number,
+  { retainFactEncoding = true } = {}
 ): ValidatedProtocolMessage {
   const decoded = protocolMessage.toObject(protocolMessage.decode(encoded), {
     arrays: true,
@@ -94,7 +95,7 @@ export function decodeAndValidateProtocolMessage(
   const [payloadCase, property] = selected[0]!;
   assertDecodedPayloadType(authenticatedFrameType, payloadCase);
   const message = validated(payloadCase, decoded[property]);
-  if (payloadCase === 'fact' && encoded.byteLength <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
+  if (retainFactEncoding && payloadCase === 'fact' && encoded.byteLength <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
     decodedFactEncodings.set(message, Uint8Array.from(encoded));
   }
   if (payloadCase === 'inventory_chunk') decodedInventoryEncodings.set(message, Uint8Array.from(encoded));
