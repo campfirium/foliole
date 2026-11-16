@@ -2,6 +2,10 @@ import { SYNC_SESSION_WAIT_MS, type SyncChangeMarker } from '../../platform/sync
 
 const MANUAL_SYNC_WAIT_MS = 30_000;
 
+export class SyncSessionExpiredError extends Error {
+  constructor() { super('sync_session_expired'); }
+}
+
 type Session = {
   id: string;
   controller: AbortController;
@@ -28,7 +32,7 @@ export function createSyncChangeSessions(instance: string, newId: () => string, 
   const marker = (): SyncChangeMarker => ({ instance, sequence });
   function requireSession(peer: string, id: string) {
     const session = sessions.get(peer);
-    if (!session || session.id !== id) throw new Error('sync_session_expired');
+    if (!session || session.id !== id) throw new SyncSessionExpiredError();
     scheduleSessionExpiration(session, () => close(peer, id));
     return session;
   }

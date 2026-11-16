@@ -2,6 +2,7 @@ import type http from 'node:http';
 
 import { withInboundAttachmentPreparation } from '../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
+import { SyncSessionExpiredError } from '../../lib/core/sync/syncChangeSessions.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { createWebDavRelayInboundCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../lib/core/sync/webDavRelayLanBaseline.js';
@@ -12,7 +13,7 @@ import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
   FRAMED_SYNC_PATH,
-  handleCompanionLanFramedSyncPost
+  handleCompanionLanFramedSyncPost, writeFramedSyncError
 } from './companionLanFramedSyncPost.js';
 import { requestDatabaseTiming, type RequestDatabaseTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
@@ -45,7 +46,12 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     return true;
   }
   const timing = requestDatabaseTiming(args.response);
-  const runtime = await loadInboundRuntime(args.request, timing);
+  const runtime = await loadInboundRuntime(args.request, timing).catch(error => {
+    if (!(error instanceof SyncSessionExpiredError)) throw error;
+    writeFramedSyncError(args.response, 409, error.message);
+    return null;
+  });
+  if (!runtime) return true;
   const controller = new AbortController();
   const round = parseRequestSyncPeerRound(
     url.searchParams.get('peer_round_id'), url.searchParams.get('peer_round_mode'));

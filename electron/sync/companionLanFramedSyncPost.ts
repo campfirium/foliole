@@ -25,6 +25,7 @@ import { readFramedSyncStreamSequence } from './desktopFramedSyncStreamSequence.
 export { FRAMED_SYNC_PATH, FRAMED_SYNC_CONTENT_TYPE, FRAMED_SYNC_BODY_SHA256_HEADER,
   FRAMED_SYNC_LIBRARY_EPOCH_HEADER, FRAMED_SYNC_DEVICE_ID_HEADER, framedSyncPathWithIdentity
 } from '../../lib/core/sync/framedSyncHttpContract.js';
+export { writeError as writeFramedSyncError };
 
 type Authenticator = typeof authenticateCompanionRequest;
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
