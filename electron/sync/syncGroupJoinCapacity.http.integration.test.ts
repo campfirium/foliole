@@ -37,7 +37,7 @@ it('bounds unauthenticated HTTP admission while preserving approval, rejection a
     });
     return { status: response.status, body: await response.json() as { request_id: string; error?: string } };
   };
-  const first = await post('join-requests', input);
+  const first = await worker.send('postJoinDuringTransaction', { input }) as unknown as Awaited<ReturnType<typeof post>>;
   expect(first.status).toBe(202);
   for (let index = 0; index < 20; index += 1) {
     expect(await post('join-requests', input)).toEqual(first);

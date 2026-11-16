@@ -24,6 +24,7 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
+import { postJoinDuringTransaction } from './contendedJoin.fixture.js';
 import { holdSyncRound, reopenAfterSyncStops, runWithHeldSyncRound, startContendedSync } from './contendedSync.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
@@ -119,6 +120,7 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
     onMembershipCommitted() { throw new Error('test_join_interrupted_after_membership'); }
   });
   if (action === 'joinComplete') return handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
+  if (action === 'postJoinDuringTransaction') return postJoinDuringTransaction(origin, args.input);
   if (action === 'joinBusy') return completeJoinWithBusyRound();
   if (action === 'joinProviderEnable') {
     const result = await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
@@ -170,7 +172,7 @@ async function runRemovalFixture(action: string, args: Record<string, unknown>) 
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
     'joinProviderEnable', 'joinOverview', 'joinInterrupt', 'joinBusy',
-    'startImportMonitor', 'refreshImportMonitor'].includes(action)) {
+    'startImportMonitor', 'refreshImportMonitor', 'postJoinDuringTransaction'].includes(action)) {
     return runJoinFixture(action, args);
   }
   if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopenMemberState'].includes(action)) {

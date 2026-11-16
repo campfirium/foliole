@@ -21,14 +21,15 @@ export async function handleSyncGroupJoinRequest(
   onRequestCreated: (() => void) | null,
   writeJson: JsonResponder
 ) {
-  const provider = loadDesktopSyncGroupJoinProvider();
-  if (!provider) return writeJson(request, response, 409, { error: 'sync_group_not_available' });
   try {
     const input: unknown = JSON.parse(await readCompanionRequestBody(request, MAX_SYNC_GROUP_JOIN_REQUEST_BYTES));
     const created = await runWithDatabaseConnectionOwner(async () => {
+      const provider = loadDesktopSyncGroupJoinProvider();
+      if (!provider) return null;
       await assertSyncGroupJoinAdmission(createBetterSqliteDbPort(openDatabaseConnection().sqlite), input);
       return provider.receive(input as Parameters<typeof provider.receive>[0]);
     });
+    if (!created) return writeJson(request, response, 409, { error: 'sync_group_not_available' });
     writeJson(request, response, 202, created);
     onRequestCreated?.();
   } catch (error) {
