@@ -6,9 +6,16 @@ import process from 'node:process';
 import ts from 'typescript';
 import { expect, it } from 'vitest';
 
+import { electronTypecheckArgs, electronTypecheckProject } from './typecheck-electron.mjs';
+
+const hostedEnv = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' };
+
 const root = process.cwd();
 const script = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts['typecheck:desktop:raw'];
 const steps = script.split('&&').map(command => {
+  if (command.trim() === 'node scripts/typecheck-electron.mjs') {
+    return { heapMb: Number(electronTypecheckArgs(hostedEnv)[0].split('=')[1]), project: electronTypecheckProject };
+  }
   const match = /^node --max-old-space-size=(\d+) node_modules\/typescript\/bin\/tsc -p (\S+) --noEmit$/u.exec(command.trim());
   if (!match) throw new Error(`Unexpected desktop typecheck command: ${command}`);
   return { heapMb: Number(match[1]), project: match[2] };
@@ -22,6 +29,10 @@ function parsedProject(project) {
 
 it('reserves native process overhead below the hosted RSS limit', () => {
   for (const step of steps) expect(step.heapMb).toBeLessThanOrEqual(1536);
+});
+
+it('uses a 2 GiB heap for local Electron typechecking', () => {
+  expect(electronTypecheckArgs({})).toContain('--max-old-space-size=2048');
 });
 
 it('typechecks every renderer test once without dropping source or host projects', () => {
