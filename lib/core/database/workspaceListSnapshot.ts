@@ -1,7 +1,7 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadNodeOpenStateById } from './nodeOpenState.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
-import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
+import { loadDerivedNodeOrder } from './parentChildOrder.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
 import {
   buildWorkspaceListNodesById,
@@ -89,7 +89,7 @@ function loadPersistedActiveNodeId(driver: DatabaseDriver) {
 
 function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesById: Record<string, unknown>) {
   void rows;
-  return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver))
+  return loadDerivedNodeOrder(driver)
     .filter((nodeId) => Boolean(nodesById[nodeId]));
 }
 

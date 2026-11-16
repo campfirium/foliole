@@ -2,7 +2,7 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
-import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
+import { loadDerivedNodeOrder } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { READWISE_SOURCE_JOIN_SQL } from './workspaceReadwiseSourceSql.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
@@ -156,7 +156,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
 }
 
 function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
-  return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver))
+  return loadDerivedNodeOrder(driver)
     .map((nodeId, position) => ({ node_id: nodeId, position }));
 }
 

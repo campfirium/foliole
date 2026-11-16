@@ -18,13 +18,13 @@ export function seedSnapshotDatabase(database: Database.Database) {
         stamp, stamp, index === 1201 ? stamp : null);
     }
     const insertOrder = database.prepare(
-      'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)'
+      "INSERT INTO parent_order_sources VALUES (?, 'fixture', 1, ?)"
     );
-    insertOrder.run('parent-child-order:root', JSON.stringify([snapshotNodeId(0)]), stamp);
+    insertOrder.run('parent-child-order:root', JSON.stringify([snapshotNodeId(0)]));
     insertOrder.run(snapshotNodeId(0), JSON.stringify(
       Array.from({ length: SNAPSHOT_NODE_COUNT - 2 }, (_, index) => snapshotNodeId(1201 - index))
-    ), stamp);
-    insertOrder.run(snapshotNodeId(1201), JSON.stringify([snapshotNodeId(1202)]), stamp);
+    ));
+    insertOrder.run(snapshotNodeId(1201), JSON.stringify([snapshotNodeId(1202)]));
   })();
   const hash = 'a'.repeat(64);
   database.prepare(`INSERT INTO content_blobs

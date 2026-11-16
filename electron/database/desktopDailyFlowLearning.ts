@@ -1,4 +1,4 @@
-import { projectParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
+import { loadDerivedNodeOrderWithDbPort } from '../../lib/core/database/parentChildOrder.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { loadDailyFlowLearningFromNodeIndex, loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
@@ -22,10 +22,6 @@ export async function loadDesktopDailyFlowLearning(db: DbPort, ids?: readonly st
     }
     // Uncommitted node changes and independent snapshots use their own database facts.
     const snapshot = await loadDailyFlowLearningSnapshot(tx, hostName);
-    const rows = await tx.query<{ parent_id: string; child_ids_json: string }>('SELECT parent_id, child_ids_json FROM parent_child_order');
-    const members = Object.values(snapshot.nodesById).map(node => ({ id: node.id, parent_id: node.parentNodeId,
-      created_at: node.createdAt, deleted_at: node.deletedAt ?? null }));
-    return { ...snapshot, nodeOrder: projectParentChildOrder(members,
-      new Map(rows.map(row => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]))) };
+    return { ...snapshot, nodeOrder: await loadDerivedNodeOrderWithDbPort(tx) };
   });
 }

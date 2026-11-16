@@ -4,8 +4,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { loadCompanionWorkspaceNodeFromDb } from '../../lib/core/database/companionWorkspaceNodeRead';
+import { WORKSPACE_ORDER_SOURCES_SQL } from '../../lib/core/database/parentChildOrder';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { companionDailyFlowPersistence, openCompanionDailyFlow, readCompanionDailyFlowView } from '../shared/platform/companion/runtime/companionDailyFlow';
@@ -116,7 +116,7 @@ it.each([[false, false], [false, true], [true, true]])('keeps grade node reads b
   const query = library.connection.query.bind(library.connection);
   vi.spyOn(library.connection, 'query').mockImplementation(async (...args) => {
     const result = await query(...args);
-    if (args[0] === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) orders++;
+    if (args[0] === WORKSPACE_ORDER_SOURCES_SQL) orders++;
     if (args[0].startsWith('SELECT n.id') && args[0].endsWith('FROM nodes n')) reads.push(result.values?.length ?? 0);
     return result;
   });

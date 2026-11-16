@@ -48,9 +48,9 @@ it.each(['android', 'ios'] as const)('%s refreshes committed root and nested ord
         await db.run(`INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at)
           VALUES (?, ?, ?, 'Preserved body', 'now', 'now')`, [id!, parent ?? null, id!]);
       }
-      await db.run(`INSERT OR REPLACE INTO parent_child_order VALUES (?, ?, 'now')`,
+      await db.run(`INSERT INTO parent_order_sources VALUES (?, 'fixture', 1, ?)`,
         [ROOT_CHILD_ORDER_ID, JSON.stringify(['folder', 'other'])]);
-      await db.run(`INSERT OR REPLACE INTO parent_child_order VALUES ('folder', ?, 'now')`, [JSON.stringify(['a', 'b'])]);
+      await db.run(`INSERT INTO parent_order_sources VALUES ('folder', 'fixture', 1, ?)`, [JSON.stringify(['a', 'b'])]);
     });
     let before = await refreshCompanionWorkspaceSnapshot();
     expect(before?.nodeOrder).toEqual(['folder', 'a', 'b', 'other', 'special-inbox']);
@@ -60,9 +60,9 @@ it.each(['android', 'ios'] as const)('%s refreshes committed root and nested ord
       // A separate connection commits the external change before its notification arrives.
       const writer = new Database(library.file);
       try {
-        writer.prepare('UPDATE parent_child_order SET child_ids_json = ? WHERE parent_id = ?')
+        writer.prepare('UPDATE parent_order_sources SET counter = counter + 1, child_ids_json = ? WHERE parent_id = ?')
           .run(JSON.stringify(order), parent);
-        expect(writer.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(parent))
+        expect(writer.prepare('SELECT child_ids_json FROM parent_order_sources WHERE parent_id = ?').pluck().get(parent))
           .toBe(JSON.stringify(order));
       } finally { writer.close(); }
       const outerRelease = holdCompanionSyncAppliedRefresh();

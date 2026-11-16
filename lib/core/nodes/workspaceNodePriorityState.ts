@@ -8,6 +8,7 @@ export type WorkspaceNodeAnchorKinds = ReadonlyMap<string, StoredAnchorLink['kin
 
 export interface PriorityIndexNode {
   id: string;
+  title?: string;
   parentNodeId: string | null;
   priority?: number | null;
   createdAt?: string | null;
@@ -55,7 +56,7 @@ export class WorkspaceNodePriorityState {
     }
     for (const node of nodes) {
       const previous = this.nodes.get(node.id);
-      const changed = !previous || previous.parentNodeId !== node.parentNodeId
+      const changed = !previous || previous.title !== node.title || previous.parentNodeId !== node.parentNodeId
         || previous.createdAt !== (node.createdAt ?? null) || previous.deletedAt !== (node.deletedAt ?? null);
       const eligibilityChanged = previous?.kind !== (node.kind ?? null)
         || previous?.shelvedAt !== (node.shelvedAt ?? null)
@@ -100,6 +101,7 @@ export class WorkspaceNodePriorityState {
 
   private store(node: PriorityIndexNode) {
     this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
+      ...(node.title === undefined ? {} : { title: node.title }),
       createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null,
       kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null,
       hasContent: node.hasContent ?? null, hasReveal: node.hasReveal ?? null,

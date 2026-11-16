@@ -1,6 +1,7 @@
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../../../../../lib/core/database/androidCompanionWorkspaceReadDefinitions';
 import { NODE_RESOURCES_SQL } from '../../../../../../lib/core/database/nodeResourcesSql';
+import { loadDerivedNodeOrderWithDbPort } from '../../../../../../lib/core/database/parentChildOrder';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeAnchorKinds } from '../../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
@@ -29,8 +30,9 @@ async function loadSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly str
 
   const { nodesById, trashedNodeIds } = buildIosWorkspaceNodes(nodes);
   attachIosWorkspaceNodeAttachments(nodesById, await loadAttachments(connection), hostName);
-  const orderedRows = await queryRows(connection, QUERIES.workspaceOrderedNodeIds.sql);
-  const nodeOrder = orderedRows.flatMap((row) => typeof row.id === 'string' ? [row.id] : []);
+  const members = Object.values(nodesById).map(node => ({ id: node.id, parent_id: node.parentNodeId,
+    title: node.title, created_at: node.createdAt, deleted_at: node.deletedAt ?? null }));
+  const nodeOrder = await loadDerivedNodeOrderWithDbPort(connection, members, true);
   if (onNodeOrder) {
     const anchorKinds = new Map(nodes.map(row => [String(row.id),
       row.learning_anchor_unmapped === 1 ? null : nodesById[String(row.id)]?.anchorLink?.kind ?? null]));

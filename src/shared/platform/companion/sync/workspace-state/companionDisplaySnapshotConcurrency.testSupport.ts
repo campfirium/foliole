@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
+import { WORKSPACE_ORDER_SOURCES_SQL } from '../../../../../../lib/core/database/parentChildOrder';
 import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
 import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope';
 import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
@@ -100,8 +100,8 @@ function createIndexObservations() {
 
 function recordIndexRead(sql: string, params: unknown[], values: unknown[], reads: ReturnType<typeof createIndexObservations>) {
   const rows = values.length;
-  if (sql === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) reads.nodeOrderReads.push(rows);
-  if (sql.includes('SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at,')) reads.priorityReads.push({ params, rows });
+  if (sql === WORKSPACE_ORDER_SOURCES_SQL) reads.nodeOrderReads.push(rows);
+  if (sql.includes('SELECT id, title, parent_id, priority, created_at, deleted_at, kind, shelved_at,')) reads.priorityReads.push({ params, rows });
   if (sql.startsWith('SELECT n.id') && sql.endsWith('FROM nodes n')) {
     reads.flowNodeReads.push({ rows, bytes: Buffer.byteLength(JSON.stringify(values)) });
   }

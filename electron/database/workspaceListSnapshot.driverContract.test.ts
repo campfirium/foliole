@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { DatabaseBindParams, DatabaseDriver, DatabaseExecuteResult, DatabaseRow, DatabaseStatement } from '../../lib/core/database/driver.js';
 import { loadWorkspaceListSnapshot } from '../../lib/core/database/index.js';
+import { WORKSPACE_ORDER_SOURCES_SQL } from '../../lib/core/database/parentChildOrder.js';
 
 const prepareSpy = vi.fn<(sql: string) => DatabaseStatement>();
 const executeSpy = vi.fn<(sql: string, params?: DatabaseBindParams) => DatabaseExecuteResult>();
@@ -129,8 +130,8 @@ it('loads workspace list snapshot and last opened time without long-lived node d
 
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledWith('SELECT id, parent_id, created_at, deleted_at FROM nodes', undefined);
-  expect(queryAllSpy).toHaveBeenCalledWith('SELECT parent_id, child_ids_json FROM parent_child_order', undefined);
+  expect(queryAllSpy).toHaveBeenCalledWith('SELECT id, parent_id, title, created_at, deleted_at FROM nodes', undefined);
+  expect(queryAllSpy).toHaveBeenCalledWith(WORKSPACE_ORDER_SOURCES_SQL, undefined);
 });
 
 it('projects collection names without retaining long-lived content bodies', () => {
@@ -217,7 +218,7 @@ it('can skip pdf page opening backfill for lightweight startup snapshots', () =>
 
   expect(loadWorkspaceListSnapshot(driver, { includePdfOpenings: false })?.nodesById['node-1']?.openingText).toBeNull();
   expect(queryAllSpy.mock.calls.some(([sql]) => sql.includes('pdf_page_text'))).toBe(false);
-  expect(queryAllSpy).toHaveBeenCalledWith('SELECT parent_id, child_ids_json FROM parent_child_order', undefined);
+  expect(queryAllSpy).toHaveBeenCalledWith(WORKSPACE_ORDER_SOURCES_SQL, undefined);
 });
 
 it('falls back to the first nested child opening when the parent body is only a cover', () => {
@@ -259,9 +260,9 @@ it('falls back to the first nested child opening when the parent body is only a 
       { ...workspaceListRow, id: 'node-chapter', parent_id: 'node-part' }
     ])
     .mockReturnValueOnce([
-      { parent_id: 'parent-child-order:root', child_ids_json: '["node-book"]' },
-      { parent_id: 'node-book', child_ids_json: '["node-title-page","node-part"]' },
-      { parent_id: 'node-part', child_ids_json: '["node-chapter"]' }
+      { parent_id: 'parent-child-order:root', authorId: 'fixture', counter: 1, child_ids_json: '["node-book"]' },
+      { parent_id: 'node-book', authorId: 'fixture', counter: 1, child_ids_json: '["node-title-page","node-part"]' },
+      { parent_id: 'node-part', authorId: 'fixture', counter: 1, child_ids_json: '["node-chapter"]' }
     ]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 

@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
+import { loadDerivedNodeOrder, readOrderMembers } from './parentChildOrder.js';
 import { queryWorkspaceRows } from './workspaceListSnapshot.js';
 import { buildWorkspaceListNodesById } from './workspaceListSnapshotNodes.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
@@ -41,7 +41,7 @@ export function loadWorkspaceListProjection(driver: DatabaseDriver, input: {
       requestedNodeIds: [...input.nodeIds],
       structure: members ? {
         memberIds: members.map(row => row.id),
-        nodeOrder: projectParentChildOrder(members, readParentChildOrders(driver))
+        nodeOrder: loadDerivedNodeOrder(driver, members)
       } : null,
       untitledSequenceByParent: loadUntitledSequenceByParent(driver)
     };

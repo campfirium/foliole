@@ -1,6 +1,6 @@
 import type { Database } from 'better-sqlite3';
 
-import { projectParentChildOrder, readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { WorkspaceNodePriorityState, type PriorityIndexNode } from '../../lib/core/nodes/workspaceNodePriorityState.js';
 import type { RegularPushQueuePriority } from '../../lib/core/review/unifiedPushQueueRules.js';
 
@@ -67,8 +67,8 @@ class DesktopNodeIndex {
 
   private projectOrder() {
     const members = Array.from(this.state!.metadata.values(), node => ({ id: node.id, parent_id: node.parentNodeId,
-      created_at: node.createdAt!, deleted_at: node.deletedAt ?? null }));
-    return projectParentChildOrder(members, readParentChildOrders(createBetterSqlite3Driver(this.sqlite)));
+      title: node.title!, created_at: node.createdAt!, deleted_at: node.deletedAt ?? null }));
+    return loadDerivedNodeOrder(createBetterSqlite3Driver(this.sqlite), members);
   }
 
   private dataVersion() { return this.sqlite.pragma('data_version', { simple: true }) as number; }

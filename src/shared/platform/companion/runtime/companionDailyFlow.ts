@@ -1,4 +1,4 @@
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
+import { loadDerivedNodeOrderWithDbPort } from '../../../../../lib/core/database/parentChildOrder';
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
@@ -29,8 +29,7 @@ export const companionDailyFlowPersistence: DailyFlowPersistence = {
   learningSnapshot: async (db, ids) => {
     const snapshot = await loadDailyFlowLearningSnapshot(db, await iosCompanionHostName(db), ids);
     if (ids) return snapshot;
-    const order = await db.query<{ id: string }>(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql);
-    return { ...snapshot, nodeOrder: order.map(row => row.id) };
+    return { ...snapshot, nodeOrder: await loadDerivedNodeOrderWithDbPort(db, undefined, true) };
   },
   snapshot: async (db, nodeIds) => {
     if (nodeIds) return { ...buildIosWorkspaceNodes(await loadCompanionSnapshotNodeRows(db, await iosCompanionHostName(db), nodeIds, true)), nodeOrder: [...nodeIds] };

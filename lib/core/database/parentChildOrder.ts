@@ -1,6 +1,8 @@
+import { parseParentOrderSources, projectCurrentParentOrder, type ParentOrderSource } from '../sync/currentParentOrder.js';
+import type { DbPort } from '../sync/dbPort.js';
 import { compareUtf8Text } from '../sync/syncFactKeyOrder.js';
 
-import { flushCurrentParentOrderProjections, readCurrentParentOrder } from './currentParentOrderStore.js';
+import { readCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
 export const ROOT_CHILD_ORDER_ID = 'parent-child-order:root';
@@ -46,13 +48,42 @@ export function readParentChildOrder(driver: DatabaseDriver, parentNodeId: strin
   });
 }
 
+export interface WorkspaceOrderMember extends NodeOrderMember { title: string }
+const WORKSPACE_ORDER_MEMBERS_SQL = 'SELECT id, parent_id, title, created_at, deleted_at FROM nodes';
+export const WORKSPACE_ORDER_SOURCES_SQL = `SELECT parent_id, author_id AS authorId, counter, child_ids_json
+  FROM parent_order_sources ORDER BY parent_id, author_id`;
+
+interface WorkspaceOrderSourceRow extends ChildOrderRow { authorId: string; counter: number }
+
 export function readOrderMembers(driver: DatabaseDriver) {
-  return driver.queryAll<NodeOrderMember>('SELECT id, parent_id, created_at, deleted_at FROM nodes');
+  return driver.queryAll<WorkspaceOrderMember>(WORKSPACE_ORDER_MEMBERS_SQL);
 }
 
-export function loadDerivedNodeOrder(driver: DatabaseDriver) {
-  flushCurrentParentOrderProjections(driver);
-  return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver));
+export function loadDerivedNodeOrder(driver: DatabaseDriver, members?: WorkspaceOrderMember[]) {
+  return driver.transaction(tx => projectWorkspaceOrder(members ?? readOrderMembers(tx),
+    tx.queryAll<WorkspaceOrderSourceRow>(WORKSPACE_ORDER_SOURCES_SQL)));
+}
+
+export function loadDerivedNodeOrderWithDbPort(port: DbPort, members?: WorkspaceOrderMember[], visibleRooted = false) {
+  return port.transaction(async tx => projectWorkspaceOrder(members ?? await tx.query<WorkspaceOrderMember>(WORKSPACE_ORDER_MEMBERS_SQL),
+    await tx.query<WorkspaceOrderSourceRow>(WORKSPACE_ORDER_SOURCES_SQL), visibleRooted));
+}
+
+function projectWorkspaceOrder(members: WorkspaceOrderMember[], rows: WorkspaceOrderSourceRow[], visibleRooted = false) {
+  const sources = new Map<string, ParentOrderSource[]>();
+  for (const { parent_id, authorId, counter, child_ids_json } of rows) {
+    const group = sources.get(parent_id) ?? [];
+    group.push({ authorId, counter, childIds: JSON.parse(child_ids_json) });
+    sources.set(parent_id, group);
+  }
+  return walkWorkspaceOrder(members, (parentId, children) => {
+    const group = sources.get(parentId);
+    if (!group?.length) return children.sort(compareMembers);
+    const byId = new Map(children.map(child => [child.id, child]));
+    return projectCurrentParentOrder(parseParentOrderSources(group), children.map(child => ({
+      id: child.id, title: child.title, createdAt: child.created_at
+    }))).map(id => byId.get(id)!);
+  }, visibleRooted);
 }
 
 function compareMembers(left: NodeOrderMember, right: NodeOrderMember) {
@@ -64,7 +95,19 @@ export function projectParentChildOrder(
   orders: ReadonlyMap<string, readonly string[]>
 ) {
   const byId = new Map(members.map((member) => [member.id, member]));
-  const childrenByParent = new Map<string, NodeOrderMember[]>();
+  return walkWorkspaceOrder(members, (parentId, children) => {
+    const ordered = (orders.get(parentId) ?? [])
+      .map((id) => byId.get(id))
+      .filter((member): member is NodeOrderMember => Boolean(member && parentOrderId(member.parent_id) === parentId));
+    const listed = new Set(ordered.map((member) => member.id));
+    return [...ordered, ...children.filter((child) => !listed.has(child.id)).sort(compareMembers)];
+  });
+}
+
+function walkWorkspaceOrder<T extends NodeOrderMember>(
+  members: T[], orderChildren: (parentId: string, children: T[]) => T[], visibleRooted = false
+) {
+  const childrenByParent = new Map<string, T[]>();
   for (const member of members) {
     const parentId = parentOrderId(member.parent_id);
     const children = childrenByParent.get(parentId) ?? [];
@@ -75,18 +118,15 @@ export function projectParentChildOrder(
   const visited = new Set<string>();
   const walk = (parentId: string) => {
     const children = childrenByParent.get(parentId) ?? [];
-    const ordered = (orders.get(parentId) ?? [])
-      .map((id) => byId.get(id))
-      .filter((member): member is NodeOrderMember => Boolean(member && parentOrderId(member.parent_id) === parentId));
-    const listed = new Set(ordered.map((member) => member.id));
-    for (const member of [...ordered, ...children.filter((child) => !listed.has(child.id)).sort(compareMembers)]) {
-      if (visited.has(member.id)) continue;
+    for (const member of orderChildren(parentId, children)) {
+      if (visited.has(member.id) || (visibleRooted && member.deleted_at)) continue;
       visited.add(member.id);
       result.push(member.id);
       walk(member.id);
     }
   };
   walk(ROOT_CHILD_ORDER_ID);
+  if (visibleRooted) return result;
   for (const member of [...members].sort(compareMembers)) {
     if (visited.has(member.id)) continue;
     result.push(member.id);

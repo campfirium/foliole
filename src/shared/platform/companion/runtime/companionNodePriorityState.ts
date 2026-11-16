@@ -1,12 +1,12 @@
 import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLinkCodec';
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
+import { loadDerivedNodeOrderWithDbPort } from '../../../../../lib/core/database/parentChildOrder';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { WorkspaceNodePriorityState, type PriorityIndexNode } from '../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { RegularPushQueuePriority } from '../../../../../lib/core/review/unifiedPushQueueRules';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
 interface PriorityRow extends DbRow {
-  id: string; parent_id: string | null; priority: number | null; created_at: string; deleted_at: string | null;
+  id: string; title: string; parent_id: string | null; priority: number | null; created_at: string; deleted_at: string | null;
   kind: string | null; shelved_at: string | null; has_content: number; has_reveal: number; anchor_link: string | null;
 }
 
@@ -42,8 +42,7 @@ export class CompanionNodePriorityState {
     if (this.failure) throw this.failure;
     if (initial) this.nodeOrder = [...initial];
     if (!this.nodeOrder) {
-      const rows = await db.query<{ id: string }>(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql);
-      this.nodeOrder = rows.map(row => row.id);
+      this.nodeOrder = await loadDerivedNodeOrderWithDbPort(db, undefined, true);
     }
     return this.nodeOrder;
   }
@@ -97,12 +96,12 @@ export class CompanionNodePriorityState {
 }
 
 async function readNodes(db: DbPort, ids?: readonly string[]) {
-  const rows = await db.query<PriorityRow>(`${ids ? 'WITH changed(id) AS (SELECT value FROM json_each(?)) ' : ''}SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at,
+  const rows = await db.query<PriorityRow>(`${ids ? 'WITH changed(id) AS (SELECT value FROM json_each(?)) ' : ''}SELECT id, title, parent_id, priority, created_at, deleted_at, kind, shelved_at,
     CASE WHEN body_blob_hash IS NOT NULL OR LENGTH(TRIM(content)) > 0 THEN 1 ELSE 0 END AS has_content,
     CASE WHEN reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
     CASE WHEN anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE anchor_link END AS anchor_link FROM nodes${ids
     ? ' WHERE id IN changed OR (parent_id IN changed AND anchor_link IS NOT NULL)' : ''}`, ids ? [JSON.stringify(ids)] : []);
-  return rows.map(row => ({ id: row.id, parentNodeId: row.parent_id, priority: row.priority,
+  return rows.map(row => ({ id: row.id, title: row.title, parentNodeId: row.parent_id, priority: row.priority,
     createdAt: row.created_at, deletedAt: row.deleted_at, kind: row.kind, shelvedAt: row.shelved_at,
     hasContent: row.has_content === 1, hasReveal: row.has_reveal === 1,
     anchorKind: parseStoredAnchorLink(row.anchor_link)?.kind ?? null }));

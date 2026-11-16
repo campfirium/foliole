@@ -5,9 +5,11 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
-import { parentOrderId, writeParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
+import { parentOrderId } from '../../lib/core/database/parentChildOrder.js';
+import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
 
@@ -33,9 +35,37 @@ beforeEach(async () => {
   root = await fs.mkdtemp(path.resolve('.tmp/artifacts/T590/desktop-'));
   initializeDatabase();
   for (const id of ['a', 'b', 'c']) add(id);
-  writeParentChildOrder(openDatabaseConnection().driver, parentOrderId(null), ['c', 'a', 'b'], now);
+  saveRootOrder(['c', 'a', 'b']);
 });
 afterEach(async () => { closeDatabaseConnection(); await fs.rm(root, { recursive: true, force: true }); });
+
+function saveRootOrder(childIds: string[]) {
+  const { driver } = openDatabaseConnection();
+  saveLocalCurrentParentOrder(driver, { parentId: parentOrderId(null), childIds, now, hostName: requireDatabaseHostName(driver) });
+}
+
+it('reorders the open workspace and its next daily list from committed source and title changes', async () => {
+  const { sqlite } = openDatabaseConnection();
+  sqlite.exec("UPDATE nodes SET priority = 0 WHERE id IN ('a','b','c')");
+  const order = () => loadWorkspaceListSnapshot().nodeOrder.filter(id => ['a', 'b', 'c'].includes(id));
+  expect(order()).toEqual(['c', 'a', 'b']);
+  sqlite.transaction(() => {
+    sqlite.prepare('DELETE FROM parent_order_sources WHERE parent_id = ?').run(parentOrderId(null));
+    const source = sqlite.prepare('INSERT INTO parent_order_sources VALUES (?, ?, 1, ?)');
+    source.run(parentOrderId(null), 'first', '["a"]');
+    source.run(parentOrderId(null), 'second', '["b"]');
+  })();
+  expect(order()).toEqual(['a', 'b', 'c']);
+  const rename = sqlite.prepare("UPDATE nodes SET title = ? WHERE id = 'a'");
+  expect(() => sqlite.transaction(() => {
+    rename.run('Title z');
+    throw new Error('cancel rename');
+  })()).toThrow('cancel rename');
+  expect(order()).toEqual(['a', 'b', 'c']);
+  rename.run('Title z');
+  expect(order()).toEqual(['b', 'a', 'c']);
+  expect((await generate('reading-only')).rows.map(row => (row as { node_id: string }).node_id)).toEqual(['b', 'a', 'c']);
+});
 
 function add(id: string, parentNodeId: string | null = null) {
   upsertNodeSnapshot({ nodeId: id, title: `Title ${id}`, kind: 'topic', parentNodeId,
@@ -86,7 +116,7 @@ it('uses committed moves, root order, deletion, restore and same-count replaceme
       { parentNodeId: 'source', expectedChildIds: [], childIds: ['b'] }] });
   await generate();
   expect(readDesktopNodeIndex(sqlite)!.paths.get('b')).toEqual(['source', 'b']);
-  writeParentChildOrder(driver, parentOrderId(null), ['a', 'source', 'c'], now);
+  saveRootOrder(['a', 'source', 'c']);
   await generate();
   expect(readDesktopNodeIndex(sqlite)!.nodeOrder.filter(id => ['a', 'b', 'c'].includes(id))).toEqual(['a', 'b', 'c']);
   softDeleteNodes({ nodeIds: ['source'], deletedAt: now });
