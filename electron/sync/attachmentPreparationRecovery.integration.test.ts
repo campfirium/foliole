@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, it } from 'vitest';
@@ -21,7 +21,9 @@ import { demandFixture, imageBody, imageKey } from './attachmentDemandQueue.test
 import { peerState } from './attachmentPreparationHttp.testSupport.js';
 
 it.each(['before-write', 'after-write'])('recovers durable demand after reopening %s', async boundary => {
-  const root = await mkdtemp(path.resolve('.tmp/artifacts/T626/recovery-'));
+  const artifacts = path.resolve('.tmp/artifacts');
+  await mkdir(artifacts, { recursive: true });
+  const root = await mkdtemp(path.join(artifacts, 'attachment-recovery-'));
   const file = path.join(root, 'library.db');
   let f = demandFixture(file);
   try {
