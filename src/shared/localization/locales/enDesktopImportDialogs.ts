@@ -59,6 +59,8 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.directoryUnavailable': 'Current location kept. The destination is unavailable.',
   'desktop.superMemoDrafts.directoryAdd': 'Import missing parent into {to}',
   'desktop.superMemoDrafts.directoryAdded': 'Missing parents imported ({count})',
+  'desktop.superMemoDrafts.directoryAnchorUnverified': 'Current location kept. The selection could not be verified in {to}.',
+  'desktop.superMemoDrafts.directoryAnchorMove': 'Update the text anchor',
   'desktop.superMemoDrafts.directoryUpdated': 'Updated directory locations ({count})',
   'desktop.superMemoDrafts.reapplyNote': 'First review dates can be adjusted after conversion. Cards already reviewed in Foliole keep their schedule.',
   'desktop.superMemoDrafts.scheduleTitle': 'First review dates',

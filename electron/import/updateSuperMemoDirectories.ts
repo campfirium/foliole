@@ -10,6 +10,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { moveNodes } from '../database/nodeMutations.js';
 
 import { prepareSuperMemoRows, type runSuperMemoImport, writeSuperMemoRows } from './runSuperMemoImport.js';
+import { createSuperMemoAnchorReparentPlanner, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
 
 interface BatchEntry {
@@ -17,6 +18,7 @@ interface BatchEntry {
   nodeId: string | null;
   outcome: NativeSuperMemoPreview['rows'][number]['outcome'];
   importedParentNodeId?: string | null;
+  importedAnchorLink?: string | null;
   sourceChildren?: number[];
   unresolvedImages?: unknown[];
 }
@@ -34,10 +36,16 @@ type LiveNode = {
   created_at: string;
   updated_at: string;
   anchor_link: string | null;
+  anchor_resolution_status: string | null;
+  image_regions: string | null;
   deleted_at: string | null;
   virtual_filter: string | null;
   title: string;
 };
+
+type PlannedMove = { entry: BatchEntry; nodeId: string; from: string | null; to: string | null;
+  anchor?: ReparentedSuperMemoAnchor };
+type UpdateStatus = NativeSuperMemoDirectoryUpdate['changes'][number]['status'];
 
 type ImportInput = Parameters<typeof runSuperMemoImport>[0];
 type AdditionWriter = (sourceIds: number[], rows: NativeSuperMemoPreview['rows'],
@@ -66,6 +74,30 @@ function canMove(nodeId: string, parentId: string | null, read: (id: string) => 
   return true;
 }
 
+function createNodeLookup(driver: ReturnType<typeof openDatabaseConnection>['driver']) {
+  const lookup = new Map<string, LiveNode | undefined>();
+  const read = (id: string) => {
+    if (!lookup.has(id)) lookup.set(id, driver.queryOne<LiveNode>(
+      'SELECT parent_id, kind, created_at, updated_at, anchor_link, anchor_resolution_status, image_regions, deleted_at, virtual_filter, title FROM nodes WHERE id = ?', [id]) ?? undefined);
+    return lookup.get(id);
+  };
+  return { lookup, read };
+}
+
+function classifyMove(planAnchor: ReturnType<typeof createSuperMemoAnchorReparentPlanner>, entry: BatchEntry, node: LiveNode | undefined,
+  allowedTarget: boolean, target: string | null | undefined): { status: UpdateStatus; anchor?: ReparentedSuperMemoAnchor } {
+  if (!node || node.deleted_at || node.virtual_filter || node.kind !== entry.outcome) return { status: 'protected' };
+  const untouched = node.created_at === node.updated_at;
+  const originalParent = entry.importedParentNodeId === undefined ? untouched : node.parent_id === entry.importedParentNodeId;
+  const originalAnchor = entry.importedAnchorLink === undefined ? untouched : node.anchor_link === entry.importedAnchorLink;
+  if (!originalParent || ((node.anchor_link || entry.importedAnchorLink) && !originalAnchor)) return { status: 'protected' };
+  if (!allowedTarget) return { status: 'unavailable' };
+  if (!node.anchor_link) return { status: 'move' };
+  const anchor = node.parent_id && target && !node.image_regions && !node.anchor_resolution_status?.startsWith('unmapped_')
+    ? planAnchor(node.anchor_link, node.parent_id, target) : null;
+  return anchor ? { status: 'move', anchor } : { status: 'anchor-unverified' };
+}
+
 function planMoves(batch: Batch, preview: NativeSuperMemoPreview) {
   const { driver } = openDatabaseConnection();
   const rows = orderSuperMemoSourceRows(preview.rows);
@@ -74,15 +106,11 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview) {
   const required = requiredParents(rows, parents, entries);
   const existingNodeIds = new Map<number, string>();
   const additions = new Map<number, { pendingId: string; target: string | null }>();
-  const lookup = new Map<string, LiveNode | undefined>();
-  const read = (id: string) => {
-    if (!lookup.has(id)) lookup.set(id, driver.queryOne<LiveNode>(
-      'SELECT parent_id, kind, created_at, updated_at, anchor_link, deleted_at, virtual_filter, title FROM nodes WHERE id = ?', [id]) ?? undefined);
-    return lookup.get(id);
-  };
+  const { lookup, read } = createNodeLookup(driver);
+  const planAnchor = createSuperMemoAnchorReparentPlanner(driver);
   const projectedParents = new Map<string, string | null>();
   const changes: NativeSuperMemoDirectoryUpdate['changes'] = [];
-  const moves: Array<{ entry: BatchEntry; nodeId: string; from: string | null; to: string | null }> = [];
+  const moves: PlannedMove[] = [];
   for (const { row } of orderSuperMemoImportWrites(rows.map(row => ({ row })), parents)) {
     const entry = entries.get(row.id);
     if (!entry) continue;
@@ -98,20 +126,20 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview) {
       if (!canMove(pendingId, target, read, projectedParents)) continue;
       additions.set(row.id, { pendingId, target });
       lookup.set(pendingId, { parent_id: target, kind: row.outcome, title: row.title,
-        created_at: '', updated_at: '', anchor_link: null, deleted_at: null, virtual_filter: null });
+        created_at: '', updated_at: '', anchor_link: null, anchor_resolution_status: null, image_regions: null, deleted_at: null, virtual_filter: null });
       changes.push({ sourceId: row.id, title: row.title, from: null, to: targetNode?.title ?? null, status: 'add' });
     }
     if (!entry.nodeId || entry.outcome !== row.outcome) continue;
     const node = read(entry.nodeId);
     if (node && !node.deleted_at && !node.virtual_filter && node.kind === row.outcome) existingNodeIds.set(row.id, entry.nodeId);
     if (node && target === node.parent_id) continue;
-    const eligible = node && !node.deleted_at && !node.anchor_link && !node.virtual_filter && node.kind === row.outcome &&
-      (entry.importedParentNodeId === undefined ? node.created_at === node.updated_at : node.parent_id === entry.importedParentNodeId);
-    const status = !eligible ? 'protected' : target === undefined || !targetKindValid || !canMove(entry.nodeId, target, read, projectedParents) ? 'unavailable' : 'move';
+    const allowedTarget = target !== undefined && targetKindValid && canMove(entry.nodeId, target, read, projectedParents);
+    const { status, anchor } = classifyMove(planAnchor, entry, node, allowedTarget, target);
     changes.push({ sourceId: row.id, title: node?.title ?? row.title,
-      from: node?.parent_id ? read(node.parent_id)?.title ?? null : null, to: targetNode?.title ?? null, status });
+      from: node?.parent_id ? read(node.parent_id)?.title ?? null : null, to: targetNode?.title ?? null, status,
+      ...(anchor ? { reanchor: true } : {}) });
     if (status === 'move' && node && target !== undefined) {
-      moves.push({ entry, nodeId: entry.nodeId, from: node.parent_id, to: target });
+      moves.push({ entry, nodeId: entry.nodeId, from: node.parent_id, to: target, ...(anchor ? { anchor } : {}) });
       projectedParents.set(entry.nodeId, target);
     }
   }
@@ -146,7 +174,15 @@ function applyUpdate(batch: Batch, plan: ReturnType<typeof planMoves>, now: stri
   }
   const resolvedMoves = moves.map(move => ({ ...move, to: move.to === null ? null : replacements.get(move.to) ?? move.to }));
   if (resolvedMoves.length) applyMoves(resolvedMoves, now);
-  for (const move of resolvedMoves) move.entry.importedParentNodeId = move.to;
+  for (const move of resolvedMoves) {
+    move.entry.importedParentNodeId = move.to;
+    if (!move.anchor) continue;
+    const { driver } = openDatabaseConnection();
+    const anchorLink = JSON.stringify(move.anchor.link);
+    driver.execute(`UPDATE nodes SET anchor_link = ?, anchor_resolution_status = 'resolved', anchor_source_version_id = ?
+      WHERE id = ?`, [anchorLink, move.anchor.sourceVersionId, move.nodeId]);
+    move.entry.importedAnchorLink = anchorLink;
+  }
   batch.entries = batch.entries.map(entry => bySource.get(entry.id) ?? entry);
   batch.imported = batch.entries.filter(entry => entry.nodeId).length;
   batch.skipped = batch.entries.length - batch.imported;
@@ -169,7 +205,7 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
     const plan = pairedSourceRequired ? undefined : planMoves(batch, preview);
     const changes = plan?.changes ?? [];
     const signature = createHash('sha256').update(JSON.stringify({ batchId, pairedSourceRequired, changes,
-      moves: plan?.moves.map(({ nodeId, from, to }) => [nodeId, from, to]), additions: [...plan?.additions ?? []]
+      moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');
     if (confirmation && (confirmation !== signature || !plan)) throw new Error('supermemo_update_changed');
     if (confirmation && plan && (plan.moves.length || plan.additions.size)) {

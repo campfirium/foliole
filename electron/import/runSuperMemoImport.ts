@@ -83,6 +83,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
     const nodeId = nodeIds.get(row.id) ?? null;
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
+    let importedAnchorLink: string | null = null;
     if (nodeId && kind !== 'skipped') {
       const snapshot: Snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
         title: row.title || `#${row.id}`, isTitleManual: true, content: '', reveal: null, anchorLink: null,
@@ -108,12 +109,13 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
         if (locator) snapshot.anchorLink = { id: `anchor-${randomUUID()}`, kind: kind === 'topic' ? 'highlight' : 'cloze',
           locator: { ...locator, from: locator.from + source.shift, to: locator.to + source.shift } };
       }
+      if (snapshot.anchorLink) importedAnchorLink = JSON.stringify(snapshot.anchorLink);
       persistElement(snapshot, element, { ...body, content },
         kind === 'item' && answer.content && (placement === 'metadata' || placement === 'body')
           ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
         due, offset, row.sourceState, gradeMap);
     }
-    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
 }

@@ -17,6 +17,8 @@ export function SuperMemoDirectoryUpdate({ update }: { update: NativeSuperMemoDi
               {change.status === 'move' ? t('desktop.superMemoDrafts.directoryMove', { from: change.from ?? root, to: change.to ?? root }) : null}
               {change.status === 'add' ? t('desktop.superMemoDrafts.directoryAdd', { to: change.to ?? root }) : null}
               {change.status === 'protected' ? t('desktop.superMemoDrafts.directoryProtected') : null}
+              {change.status === 'anchor-unverified' ? t('desktop.superMemoDrafts.directoryAnchorUnverified', { to: change.to ?? root }) : null}
+              {change.reanchor ? <span className="ml-2">{t('desktop.superMemoDrafts.directoryAnchorMove')}</span> : null}
               {change.status === 'unavailable' ? t('desktop.superMemoDrafts.directoryUnavailable') : null}
             </span>
           </li>

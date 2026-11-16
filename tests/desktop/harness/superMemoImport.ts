@@ -3,6 +3,9 @@ import path from 'node:path';
 
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
+import type { SuperMemoXmlDraftElement } from '../../../lib/core/import/superMemoXmlDraft.js';
+import type { NativeSuperMemoPreviewRow } from '../../../lib/platform/nativeSuperMemoImportContract.js';
+
 import { openSettingsDialog } from './settings';
 
 const title = /^(SuperMemo import preview|SuperMemo 导入预览)$/;
@@ -62,4 +65,24 @@ export async function writeCollection(directory: string, includeTopic: boolean) 
     'priority.sub': priorities, 'RepetitionHistory.dat': history
   }).map(([name, bytes]) => writeFile(path.join(info, name), bytes)));
   return elements;
+}
+
+export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements: SuperMemoXmlDraftElement[],
+  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome'>>>) {
+  return app.evaluate(async ({ app }, input) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
+    const { runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
+    const { handleSuperMemoImportCommand } = require(`${app.getAppPath()}/ipc/superMemoImportCommands.js`);
+    const { runSuperMemoImport } = require(`${app.getAppPath()}/import/runSuperMemoImport.js`);
+    const { loadReviewSchedulerSettings } = require(`${app.getAppPath()}/reviewSchedulerSettings.js`);
+    const canonicalElements = input.elements.map(({ id, parentId, children, sourceType, title, ordinal, bodyOrQuestionHtml,
+      answerHtml, skippedAudioComponents, learning }) => ({
+      id, parentId, children, sourceType, title, ordinal, bodyOrQuestionHtml, answerHtml, skippedAudioComponents, learning
+    }));
+    const preview = await handleSuperMemoImportCommand('preview_supermemo_import', { elements: canonicalElements });
+    for (const row of preview.rows) Object.assign(row, input.overrides[row.id]);
+    return runWithDatabaseConnectionOwner(() => runSuperMemoImport({ elements: canonicalElements, preview, percent: 0,
+      offset: '+00:00', gradeMap: [1, 1, 1, 2, 3, 4], scheduler: loadReviewSchedulerSettings(), expectedImages: new Map(),
+      sourceFormat: { placement: 'topic-info', template: '' } }));
+  }, { elements, overrides });
 }
