@@ -1,6 +1,7 @@
-import type { DragEvent as ReactDragEvent } from 'react';
+import { useEffect, type DragEvent as ReactDragEvent } from 'react';
 
 import type { NodeListDropIntent } from './nodeListDragIntent';
+import { clearNodeListDragSource } from './NodeListDragSource';
 
 export interface NodeListDragState {
   dropIntent: NodeListDropIntent | null;
@@ -16,6 +17,21 @@ export function createInitialNodeListDragState(): NodeListDragState {
     isRootDropActive: false,
     sourceNodeIds: []
   };
+}
+
+export function useNodeListDragLifecycle(setState: (next: NodeListDragState) => void) {
+  useEffect(() => {
+    const reset = () => {
+      clearNodeListDragSource();
+      setState(createInitialNodeListDragState());
+    };
+    document.addEventListener('dragend', reset, true);
+    document.addEventListener('drop', reset);
+    return () => {
+      document.removeEventListener('dragend', reset, true);
+      document.removeEventListener('drop', reset);
+    };
+  }, [setState]);
 }
 
 export function clearNodeListDropTarget(state: NodeListDragState): NodeListDragState {

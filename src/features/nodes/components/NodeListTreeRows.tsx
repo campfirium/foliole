@@ -26,6 +26,7 @@ import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 import { resolveNodeTreeRowIconKind, resolveNodeTreeRowIconState, type NodeTreeRowIconKind } from './NodeTreeRowIconModel';
 import { TrashListRows } from './TrashListRows';
 import { TrashUndoAction } from './TrashUndoAction';
+import { useNodeListFolderDragExpand } from './useNodeListFolderDragExpand';
 
 interface NodeListRowsProps {
   activeNodeId: string | null;
@@ -59,12 +60,6 @@ function renderNodeListRow(
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
   const onSelect = createNodeListRowSelectHandler(props, row);
-  const onDragOver = (nodeId: string, event: Parameters<typeof props.drag.onDragOverNode>[1]) => {
-    props.drag.onDragOverNode(nodeId, event);
-    if (shouldExpandFolderOnDragOver(row, props.collapsedNodeIds)) {
-      props.onExpandCollapse(nodeId);
-    }
-  };
 
   return (
     <NodeTreeRowItem
@@ -96,7 +91,7 @@ function renderNodeListRow(
       onDragEnd={props.drag.onDragEnd}
       onDragEnter={props.drag.onDragEnterNode}
       onDragLeave={props.drag.onDragLeaveNode}
-      onDragOver={onDragOver}
+      onDragOver={props.drag.onDragOverNode}
       onDragStart={props.drag.onDragStartNode}
       onDrop={props.drag.onDropOnNode}
       onKeyDown={onRowKeyDown}
@@ -119,10 +114,6 @@ function createNodeListRowSelectHandler(props: NodeListRowsProps, row: NodeTreeR
 function shouldToggleFolderOnSelect(props: NodeListRowsProps, row: NodeTreeRow, modifiers?: NodeSelectModifiers) {
   if (modifiers?.ctrlKey || modifiers?.metaKey || modifiers?.shiftKey) return false;
   return shouldExpandFolder(row, row.node.id, props.collapsedNodeIds);
-}
-
-function shouldExpandFolderOnDragOver(row: NodeTreeRow, collapsedNodeIds: ReadonlySet<string>) {
-  return shouldExpandFolder(row, row.node.id, collapsedNodeIds);
 }
 
 function shouldExpandFolder(row: NodeTreeRow, nodeId: string, collapsedNodeIds: ReadonlySet<string>) {
@@ -184,6 +175,7 @@ function resolveNodeListEmptyState(
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
+  useNodeListFolderDragExpand(props);
   const { locale, t } = useLocalization();
   const stack = useFolderSectionStack();
   const navigationTitleFontSize = getNavigationTitleFontSize();

@@ -16,11 +16,13 @@ import {
 import {
   createInitialNodeListDragState,
   createNodeListDragLeaveHandler,
+  useNodeListDragLifecycle,
   type NodeListDragState
 } from './NodeListDragState';
 import {
   createNodeDragOverHandler,
   createNodeDropHandler,
+  isNodeListDropAllowed,
   type CanDropOnNode,
   type NodeListMoveIntent
 } from './NodeListNodeDrop';
@@ -133,6 +135,7 @@ export function useNodeListDragController({
   selectedNodeIds
 }: UseNodeListDragControllerInput): NodeListDragController {
   const [state, setState] = useState<NodeListDragState>(createInitialNodeListDragState);
+  useNodeListDragLifecycle(setState);
   const onDragStartNode = useMemo(
     () =>
       createDragStartHandler(isTrashViewOpen, nodesById, noteRowIds, selectedNodeIds, setState),
@@ -160,7 +163,10 @@ export function useNodeListDragController({
   );
 
   return {
-    dropTargetNodeId: state.dropTargetNodeId,
+    dropTargetNodeId: state.dropTargetNodeId && state.dropIntent && isNodeListDropAllowed({
+      canDropOnNode, nodesById, sourceNodeIds: state.sourceNodeIds,
+      targetNodeId: state.dropTargetNodeId, intent: state.dropIntent
+    }) ? state.dropTargetNodeId : null,
     dropIntent: state.dropIntent,
     isRootDropActive: state.isRootDropActive,
     onDragEnd: useCallback(() => {

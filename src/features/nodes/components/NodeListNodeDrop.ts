@@ -1,5 +1,6 @@
 import type { DragEvent as ReactDragEvent } from 'react';
 
+import { canNodeAcceptMovedNode } from '../model/nodeMovementRules';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { resolveNodeListDropIntent, type NodeListDropIntent } from './nodeListDragIntent';
@@ -21,6 +22,21 @@ export type CanDropOnNode = (
   intent: NodeListDropIntent
 ) => boolean;
 
+export function isNodeListDropAllowed(args: {
+  canDropOnNode: CanDropOnNode | undefined;
+  nodesById: WorkspaceListNodesById;
+  sourceNodeIds: string[];
+  targetNodeId: string;
+  intent: NodeListDropIntent;
+}) {
+  if (!args.nodesById[args.targetNodeId] || args.sourceNodeIds.length === 0 ||
+    isInvalidNodeListDropTarget(args.targetNodeId, args.sourceNodeIds, args.nodesById)) return false;
+  if (args.canDropOnNode) return args.canDropOnNode(args.sourceNodeIds, args.targetNodeId, args.intent);
+  return args.intent !== 'child' || args.sourceNodeIds.every(nodeId => (
+    !args.nodesById[nodeId] || canNodeAcceptMovedNode(args.nodesById[args.targetNodeId], args.nodesById[nodeId])
+  ));
+}
+
 export function createNodeDropHandler(args: {
   canDropOnNode: CanDropOnNode | undefined;
   isTrashViewOpen: boolean;
@@ -36,9 +52,7 @@ export function createNodeDropHandler(args: {
       : resolveNodeListDropIntent(event);
     if (
       args.isTrashViewOpen ||
-      sourceNodeIds.length === 0 ||
-      sourceNodeIds.includes(targetNodeId) ||
-      args.canDropOnNode?.(sourceNodeIds, targetNodeId, dropIntent) === false
+      !isNodeListDropAllowed({ ...args, sourceNodeIds, targetNodeId, intent: dropIntent })
     ) {
       if (!args.canDropOnNode) event.preventDefault();
       args.setState(createInitialNodeListDragState());
@@ -64,21 +78,17 @@ export function createNodeDragOverHandler(args: {
     const dropIntent = isCrossTreeDrop ? 'child' : resolveNodeListDropIntent(event);
     if (
       args.isTrashViewOpen ||
-      sourceNodeIds.length === 0 ||
-      !args.nodesById[targetNodeId] ||
-      isInvalidNodeListDropTarget(targetNodeId, sourceNodeIds, args.nodesById) ||
-      args.canDropOnNode?.(sourceNodeIds, targetNodeId, dropIntent) === false
+      !isNodeListDropAllowed({ ...args, sourceNodeIds, targetNodeId, intent: dropIntent })
     ) {
-      if (args.canDropOnNode) {
-        event.dataTransfer.dropEffect = 'none';
-        args.setState(clearNodeListDropTarget);
-      }
+      event.dataTransfer.dropEffect = 'none';
+      args.setState(clearNodeListDropTarget);
       return;
     }
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     args.setState((prev) => ({
       ...prev,
+      sourceNodeIds,
       dropIntent,
       dropTargetNodeId: targetNodeId,
       isRootDropActive: false
