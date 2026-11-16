@@ -15,6 +15,7 @@ export function SuperMemoDirectoryUpdate({ update, sourceFormat, disabled, onSou
     <SuperMemoSourceSettings value={sourceFormat} onChange={onSourceFormatChange} disabled={disabled} />
     <DirectoryChanges changes={update.changes} />
     <TextChanges changes={update.textChanges} />
+    <FirstReviewChanges changes={update.firstReviewChanges} />
     {update.citationChanges.length ? <section className="grid gap-2">
       <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.citationChanges')}</h2>
       <ul className="divide-y divide-foreground/10 text-sm">
@@ -26,6 +27,25 @@ export function SuperMemoDirectoryUpdate({ update, sourceFormat, disabled, onSou
       </ul>
     </section> : null}
   </div>;
+}
+
+function FirstReviewChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['firstReviewChanges'] }) {
+  const t = useTranslation();
+  if (!changes.length) return null;
+  return <section className="grid gap-2">
+    <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.firstReviewChanges')}</h2>
+    <ul className="divide-y divide-foreground/10 text-sm">
+      {changes.map(change => <li key={change.sourceId} className="grid gap-1 py-2">
+        <span>{change.title}</span>
+        <span className="text-foreground/65">
+          {change.status === 'update' ? t('desktop.superMemoDrafts.directoryMove', { from: change.from ?? '', to: change.to ?? '' }) : null}
+          {change.status === 'basis' ? t('desktop.superMemoDrafts.firstReviewBasis', { date: change.from ?? '' }) : null}
+          {change.status === 'protected' ? t('desktop.superMemoDrafts.firstReviewProtected', { date: change.from ?? '' }) : null}
+          {change.status === 'unavailable' ? t('desktop.superMemoDrafts.firstReviewUnavailable') : null}
+        </span>
+      </li>)}
+    </ul>
+  </section>;
 }
 
 function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['textChanges'] }) {
@@ -74,11 +94,13 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
   const added = result.directoryUpdate?.changes.filter(change => change.status === 'add').length ?? 0;
   const citations = result.directoryUpdate?.citationChanges.filter(change => change.status === 'update').length ?? 0;
   const text = result.directoryUpdate?.textChanges.filter(change => change.status === 'update').length ?? 0;
+  const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
   return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
     count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
   }) + (added ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: added }) : '')
     + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
-    + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '') : t('desktop.superMemoDrafts.importResult', {
+    + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
+    + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '') : t('desktop.superMemoDrafts.importResult', {
     imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
   })}</p>;
 }

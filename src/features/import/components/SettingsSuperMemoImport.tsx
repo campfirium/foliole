@@ -205,7 +205,8 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           <SuperMemoDraftActions
             busy={busy} showRules={showRules} canConvert={Boolean(preview && !result)} parameters={parameters}
             directoryUpdate={update ? { canConfirm: update.changes.some(change => change.status === 'move' || change.status === 'add') ||
-              update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') } : undefined}
+              update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
+              update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
             toggleRules={() => setShowRules(!showRules)} backToPreview={() => setParameters(false)}
             openParameters={() => setParameters(true)} convert={() => void importSource()}
           />

@@ -9,12 +9,13 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
 import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates, type SuperMemoContentBatchEntry } from './planSuperMemoCitationUpdates.js';
+import { applySuperMemoFirstReviewUpdates, planSuperMemoFirstReviewUpdates, type SuperMemoFirstReviewReceipt } from './planSuperMemoFirstReviewUpdates.js';
 import { prepareSuperMemoRows, type runSuperMemoImport, writeSuperMemoRows } from './runSuperMemoImport.js';
 import { createSuperMemoAnchorReparentPlanner, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
 import { createPendingParentRenderer, type PendingParentContent } from './superMemoPendingParent.js';
 
-interface BatchEntry extends SuperMemoContentBatchEntry {
+interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFirstReviewReceipt, 'outcome'> {
   sourceChildren?: number[];
   unresolvedImages?: unknown[];
 }
@@ -192,23 +193,27 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
     const citations = plan && content ? planSuperMemoCitationUpdates(driver, batch, plan.rows, content, elements,
       new Map(plan.moves.map(move => [move.nodeId, move.to])), plan.additions,
       new Set(plan.moves.flatMap(move => move.anchor && move.to ? [move.to] : []))) : undefined;
+    const firstReviews = plan ? planSuperMemoFirstReviewUpdates(driver, batch.entries, plan.rows, batch.percent) : undefined;
     const signature = createHash('sha256').update(JSON.stringify({ batchId, pairedSourceRequired, changes,
-      citations: citations?.signature, moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
+      citations: citations?.signature, firstReviews: firstReviews?.changes,
+      firstReviewWrites: firstReviews?.writes.map(({ nodeId, instant, offset, percent }) => [nodeId, instant, offset, percent]),
+      moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');
     if (confirmation && (confirmation !== signature || !plan)) throw new Error('supermemo_update_changed');
-    if (confirmation && plan && (plan.moves.length || plan.additions.size || citations?.writes.length)) {
+    if (confirmation && plan && (plan.moves.length || plan.additions.size || citations?.writes.length || firstReviews?.writes.length)) {
       const now = new Date().toISOString();
       applyUpdate(batch, plan, now, writeAdditions);
       if (citations?.writes.length && content) {
         applySuperMemoCitationUpdates(driver, batch.entries, citations.writes, now);
         if (citations.changes.some(change => change.status === 'update')) batch.preferredSourceFormat = content.sourceFormat;
       }
+      if (firstReviews?.writes.length) applySuperMemoFirstReviewUpdates(driver, firstReviews.writes, now);
       if (preview.pairedCollection) batch.directoryRequiresCollection = true;
       driver.execute('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?', [JSON.stringify(batch), now, key]);
     }
     const sourceFormat = batch.preferredSourceFormat ?? batch.sourceFormat;
     return { batchId, signature, pairedSourceRequired, changes, citationChanges: citations?.changes ?? [], textChanges: citations?.textChanges ?? [],
-      ...(sourceFormat ? { sourceFormat } : {}),
+      firstReviewChanges: firstReviews?.changes ?? [], ...(sourceFormat ? { sourceFormat } : {}),
       imported: batch.imported, skipped: batch.skipped, unresolvedImages: batch.unresolvedImages };
   });
 }

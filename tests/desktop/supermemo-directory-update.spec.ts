@@ -164,3 +164,34 @@ test('previews a changed conversion result and updates the answer in place', asy
   await expect(dialog.getByText(/Text fields updated \(1\)|已更新 1 个文字字段/)).toBeVisible();
   expect(await readCard()).toMatchObject({ nodeId: before?.nodeId, content: 'Original question', reveal: 'New answer' });
 });
+
+test('previews and recalculates an imported first review date', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
+  const xml = `<SuperMemoCollection><Count>1</Count>
+    <SuperMemoElement><ID>1</ID><Type>Item</Type><Title>Scheduled card</Title>
+    <Content><Question>Question</Question><Answer>Answer</Answer></Content>
+    <LearningData><LastRepetition>10.11.2026</LastRepetition><Interval>300</Interval></LearningData>
+    </SuperMemoElement></SuperMemoCollection>`;
+  await seedHistoricalSuperMemoBatch(desktopApp, [{
+    id: 1, parentId: null, children: [], sourceType: 'Item', title: 'Scheduled card', ordinal: null,
+    bodyOrQuestionHtml: ['Question'], answerHtml: ['Answer'], skippedAudioComponents: 0,
+    learning: { lastRepetition: '10.11.2026', intervalDays: '300', repetitions: null, lapses: null,
+      sourceAFactor: null, sourceUFactor: null, history: [] }
+  }], { 1: { sourceDue: '2027-08-01' } });
+  const readCard = () => desktopWindow.evaluate(async () => {
+    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const node = Object.values(nodesById).find(entry => entry.title === 'Scheduled card');
+    return { id: node?.id, day: node?.review?.due };
+  });
+  const before = await readCard();
+  expect(before.day).toBe(new Date('2027-08-01T00:00:00').toISOString());
+  await loadSource(desktopApp, dialog, testInfo.outputPath('FirstReview'), xml);
+  await continueXml(desktopWindow);
+  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+  await expect(dialog.getByRole('heading', { name: /^(First review dates|首次到期日变化)$/ })).toBeVisible();
+  await expect(dialog.getByText('2027-08-01 → 2027-09-06')).toBeVisible();
+  expect(await readCard()).toEqual(before);
+  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(dialog.getByText(/First review schedules updated \(1\)|已更新 1 张卡的首次排程/)).toBeVisible();
+  expect(await readCard()).toEqual({ id: before.id, day: new Date('2027-09-06T00:00:00').toISOString() });
+});

@@ -1,8 +1,7 @@
-import { IMPORTED_REVIEW_OP_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
-import { recomputeNodeReview } from '../../lib/core/database/reviewProjection.js';
 import { adjustSuperMemoDue } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
+import { canUpdateSuperMemoFirstReview, writeSuperMemoFirstReview } from './superMemoFirstReviewWrites.js';
 import { superMemoDueInstant } from './superMemoImportSchedule.js';
 
 interface Entry {
@@ -22,11 +21,6 @@ interface Batch {
   unresolvedImages: number;
 }
 
-const ELIGIBLE = `SELECT 1 FROM nodes n JOIN node_review r ON r.node_id = n.id
-  WHERE n.id = ? AND n.deleted_at IS NULL AND n.initial_review_due = ? AND r.due = ?
-  AND NOT EXISTS (SELECT 1 FROM review_log l WHERE l.node_id = n.id AND
-    (l.kind <> 'review' OR substr(l.op_id, 1, ?) <> ?))`;
-
 export function adjustSuperMemoImport(batchId: string, percent: number, previewOnly = false) {
   const { driver } = openDatabaseConnection();
   const key = `supermemo-import:${batchId}`;
@@ -44,9 +38,7 @@ export function adjustSuperMemoImport(batchId: string, percent: number, previewO
         entry.appliedPercent = percent;
         continue;
       }
-      const eligible = driver.queryOne(ELIGIBLE, [entry.nodeId, entry.lastAppliedAt, entry.lastAppliedAt,
-        IMPORTED_REVIEW_OP_PREFIX.length, IMPORTED_REVIEW_OP_PREFIX]);
-      if (!eligible) {
+      if (!canUpdateSuperMemoFirstReview(driver, entry.nodeId, entry.lastAppliedAt)) {
         entry.appliedPercent ??= batch.percent;
         protectedItems++;
         continue;
@@ -56,9 +48,7 @@ export function adjustSuperMemoImport(batchId: string, percent: number, previewO
       entry.lastApplied = date;
       entry.lastAppliedAt = superMemoDueInstant(date);
       entry.appliedPercent = percent;
-      driver.execute('UPDATE nodes SET initial_review_due = ?, sync_dirty = 1, updated_at = ? WHERE id = ?',
-        [entry.lastAppliedAt, now, entry.nodeId]);
-      recomputeNodeReview(driver, entry.nodeId);
+      writeSuperMemoFirstReview(driver, entry.nodeId, entry.lastAppliedAt, now);
     }
     batch.percent = percent;
     if (!previewOnly) {

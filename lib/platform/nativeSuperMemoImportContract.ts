@@ -66,6 +66,14 @@ export type NativeSuperMemoTextChange = {
   field: 'body' | 'question' | 'answer';
 } & ({ status: 'update' } | { status: 'protected'; reason: 'edited' | 'media' | 'anchor' });
 
+export interface NativeSuperMemoFirstReviewChange {
+  sourceId: number;
+  title: string;
+  from: string | null;
+  to: string | null;
+  status: 'update' | 'basis' | 'protected' | 'unavailable';
+}
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
@@ -73,6 +81,7 @@ export interface NativeSuperMemoDirectoryUpdate {
   sourceFormat?: SuperMemoSourceFormat;
   citationChanges: NativeSuperMemoCitationChange[];
   textChanges: NativeSuperMemoTextChange[];
+  firstReviewChanges: NativeSuperMemoFirstReviewChange[];
   changes: Array<{
     sourceId: number;
     title: string;
