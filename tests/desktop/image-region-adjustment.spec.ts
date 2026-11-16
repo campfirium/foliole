@@ -2,11 +2,23 @@ import { expect, test } from './harness/fixtures';
 import { clozeIds, dragImageCloze, openSource, OWNER_ID, readDocument, seedImageSource } from './harness/imageClozeSource';
 import { expectWorkspaceShell } from './harness/settings';
 
-async function expectActionsNearPointer(controls: import('@playwright/test').Locator, point: { x: number; y: number }) {
+async function expectActionsBesideRange(controls: import('@playwright/test').Locator, range: import('@playwright/test').Locator) {
   await expect(controls).toBeVisible();
   const bounds = (await controls.boundingBox())!;
-  expect(Math.abs(bounds.x + bounds.width / 2 - point.x)).toBeLessThan(bounds.width);
-  expect(Math.abs(bounds.y + bounds.height / 2 - point.y)).toBeLessThan(bounds.height * 2);
+  const frame = (await range.boundingBox())!;
+  expect(bounds.x).toBeGreaterThan(frame.x + frame.width);
+  expect(Math.abs(bounds.y + bounds.height / 2 - frame.y - frame.height / 2)).toBeLessThan(bounds.height);
+}
+
+async function removeFocusFromSource(page: import('@playwright/test').Page, surface: import('@playwright/test').Locator) {
+  const outline = surface.locator('.cm-md-image-focus-outline');
+  await expect(outline).toBeVisible();
+  const bounds = (await outline.boundingBox())!;
+  await page.mouse.click(bounds.x, bounds.y + bounds.height / 2);
+  const controls = page.getByRole('group', { name: 'Adjust focus' });
+  await controls.getByRole('button', { name: 'Remove focus' }).click();
+  await expect(outline).toHaveCount(0);
+  await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).not.toContain(';focus=');
 }
 
 async function expectTransparentOutline(surface: import('@playwright/test').Locator) {
@@ -46,9 +58,10 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   await page.mouse.down();
   await page.mouse.up();
   const clozeControls = page.getByRole('group', { name: 'Adjust image cloze' });
-  await expectActionsNearPointer(clozeControls, pointer);
+  await expectActionsBesideRange(clozeControls, surface.locator('.cm-md-image-crop-frame'));
   await expectTransparentOutline(surface);
   await dragRightEdge(page, surface.getByRole('button', { name: 'Right edge' }));
+  await expectActionsBesideRange(clozeControls, surface.locator('.cm-md-image-crop-frame'));
   await page.screenshot({ path: info.outputPath('adjust-image-cloze.png') });
   await clozeControls.getByRole('button', { name: 'Apply' }).click();
   await expect(clozeControls).toBeHidden();
@@ -75,7 +88,7 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   await page.reload();
   await expectWorkspaceShell(page);
   await openSource(page);
-  await expect(surface.locator('.cm-md-image-focus-mask')).toBeVisible();
   expect(await readDocument(page, OWNER_ID)).toEqual(saved);
+  await removeFocusFromSource(page, surface);
   expect((await readDocument(page, id!)).imageRegions![0]!.regions[0]).toEqual(adjusted);
 });

@@ -94,28 +94,11 @@
 .cm-md-image-crop-handle::before {
   content: '';
   position: absolute;
-  inset: 5px;
-  border: 2px solid currentColor;
-  border-radius: 3px;
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 85%));
+  inset: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 65%);
   pointer-events: none;
-}
-
-.cm-md-image-crop-handle[data-corner='nw']::before { border-right: 0; border-bottom: 0; }
-.cm-md-image-crop-handle[data-corner='ne']::before { border-left: 0; border-bottom: 0; }
-.cm-md-image-crop-handle[data-corner='sw']::before { border-right: 0; border-top: 0; }
-.cm-md-image-crop-handle[data-corner='se']::before { border-left: 0; border-top: 0; }
-
-.cm-md-image-crop-handle:is([data-corner='n'], [data-corner='s'])::before {
-  inset: 9px 4px;
-  border: 0;
-  background: currentColor;
-}
-
-.cm-md-image-crop-handle:is([data-corner='e'], [data-corner='w'])::before {
-  inset: 4px 9px;
-  border: 0;
-  background: currentColor;
 }
 
 .cm-md-image-crop-handle:is(:hover, :active)::before {
@@ -155,4 +138,17 @@
   background: transparent;
   border-color: rgb(var(--role-highlight-rgb) / 0.92);
   border-style: dashed;
+}
+
+.cm-md-image-focus-outline {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid rgb(255 255 255 / 85%);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 35%);
+  z-index: var(--z-local-overlay);
+}
+
+.cm-md-image-surface[data-md-image-region-edit='focus'] .cm-md-image-crop-frame {
+  border-color: transparent;
+  box-shadow: none;
 }

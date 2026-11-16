@@ -41,6 +41,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.image.resize': 'Resize image',
   'desktop.editor.image.focus': 'Focus image region',
   'desktop.editor.image.crop': 'Crop image',
+  'desktop.editor.image.removeFocus': 'Remove focus',
   'desktop.editor.image.editFocus': 'Adjust focus',
   'desktop.editor.image.editCloze': 'Adjust image cloze',
   'desktop.editor.image.applyRegion': 'Apply',

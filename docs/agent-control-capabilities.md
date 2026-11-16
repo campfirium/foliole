@@ -125,7 +125,7 @@ Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's t
 
 ### Image focus in material content
 
-Desktop image focus is an editor action for a stored image occurrence. Its saved rectangle can be adjusted in place from its border in the editor. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
+Desktop image focus is an editor action for a stored image occurrence. Its saved rectangle can be adjusted or removed in place from its border in the editor. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
 
 Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area at the original display width while retaining the original attachment destination and bytes. The editor can reveal the original image in place to adjust or remove a crop. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
 

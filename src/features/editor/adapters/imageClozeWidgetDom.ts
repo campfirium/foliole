@@ -11,7 +11,7 @@ import { attachImageRegionClick } from './imageClozeWidgetRegionEdit';
 import { attachImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
 import { createImageCropEditButton } from './liveMarkdownImageCrop';
 import { createImageCropPlane, setImageOverlayCrop } from './liveMarkdownImageCropFrame';
-import { createImageFocusMask } from './liveMarkdownImageFocus';
+import { createImageFocusMask, createImageFocusOutline } from './liveMarkdownImageFocus';
 
 function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
   return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
@@ -141,7 +141,7 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
   const image = args.renderImage();
   const plane = args.crop ? createImageCropPlane(wrapper, args.crop) : wrapper;
   plane.append(image);
-  if (args.focus) plane.append(createImageFocusMask(args.focus));
+  if (args.focus) plane.append(createImageFocusMask(args.focus), createImageFocusOutline(args.focus));
   const regionLayer = createSavedRegionLayer(args.presentation ?? null, isDesktopRuntime());
   plane.append(regionLayer);
   if (args.crop) wrapper.append(createImageCropEditButton(args.crop));

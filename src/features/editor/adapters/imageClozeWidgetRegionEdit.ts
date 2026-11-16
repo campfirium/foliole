@@ -17,7 +17,6 @@ export function findEditableImageFocus(overlay: HTMLElement, focus: ImageFocusRe
 
 function openImageRegionEditor(args: {
   overlay: HTMLElement;
-  anchor: { x: number; y: number };
   region: ImageClozeEditorPresentation['regions'][number] | null;
   focus?: ImageFocusRect;
   point: ReturnType<typeof toRelativeImagePoint>;
@@ -25,7 +24,7 @@ function openImageRegionEditor(args: {
   const { region, overlay } = args;
   if (!region) {
     const widget = findEditableImageFocus(overlay, args.focus, args.point);
-    return Boolean(widget && args.focus && editMarkdownImageFocus(widget, args.focus, args.anchor));
+    return Boolean(widget && args.focus && editMarkdownImageFocus(widget, args.focus));
   }
   if (region.openNodeId || !isDesktopRuntime()) return false;
   const widget = overlay.closest<HTMLElement>('.cm-md-image-widget');
@@ -36,7 +35,6 @@ function openImageRegionEditor(args: {
 
   return showImageRegionEditor({
     surface,
-    anchor: args.anchor,
     onPreview: rect => updateDraftRectElement(regionElement, rect),
     rect: region,
     kind: 'cloze',
@@ -76,7 +74,7 @@ export function attachImageRegionClick(args: {
     if (!down || Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY) > 4) return;
     const point = originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, down));
     const region = findImageRegionNearBorder(args.presentation, args.attachmentId, point);
-    if (openImageRegionEditor({ overlay: args.overlay, region, point, anchor: { x: event.clientX, y: event.clientY }, ...(args.focus ? { focus: args.focus } : {}) })) {
+    if (openImageRegionEditor({ overlay: args.overlay, region, point, ...(args.focus ? { focus: args.focus } : {}) })) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
