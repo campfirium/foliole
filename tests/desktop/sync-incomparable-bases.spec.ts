@@ -9,7 +9,7 @@ test('settles incomparable body bases with a durable current body and alternativ
   expect(result.parents.sort()).toEqual(['left', 'right']);
   expect(result.replayedVersion).toBe(result.version);
   expect(result.reopened.version).toBe(result.version);
-  expect(new Set([result.reopened.body, ...result.reopened.alternatives.map((row) => row.text)]))
+  expect(new Set([result.reopened.body, ...result.reopened.alternatives]))
     .toEqual(new Set(['Left body is longer', 'Right body']));
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
@@ -65,6 +65,8 @@ async function mergeIncomparableBranches(_electron: unknown, fixture: Awaited<Re
   const { createBetterSqliteDbPort } = load('electron/database/betterSqliteDbPort.js');
   const { loadNodeBodyResolution } = load('lib/core/database/nodeBodyResolution.js');
   const { loadCurrentSyncNodeRecord } = load('lib/core/sync/syncNodeGraph.js');
+  const { readTopicAlternativeRecords } = load('lib/core/sync/topicAlternativeStore.js') as
+    typeof import('../../lib/core/sync/topicAlternativeStore');
   const { applyNodePushBatchWithDbPort } = load('electron/database/companionSyncNodeConvergence.js');
   const { nodeVersionSyncAdapter } = load('src/shared/platform/companionSyncPushProtocol.js');
   const db = new Database(fixture.file);
@@ -78,8 +80,8 @@ async function mergeIncomparableBranches(_electron: unknown, fixture: Awaited<Re
     db.close();
     const reopened = new Database(fixture.file, { readonly: true });
     try {
-      const persisted = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(reopened), 'topic');
-      const alternatives = persisted.alternative_bodies ?? [];
+      const alternatives = (await readTopicAlternativeRecords(createBetterSqliteDbPort(reopened), 'topic'))
+        .filter((row) => row.status === 'available').map((row) => row.body_text);
       return { accepted: result.acks[0]?.status === 'accepted', parents: merged.parent_version_ids as string[],
         version: merged.version_id as string, replayedVersion: replayedVersion as string,
         reopened: { body: loadNodeBodyResolution(createBetterSqlite3Driver(reopened), 'topic').content as string,
