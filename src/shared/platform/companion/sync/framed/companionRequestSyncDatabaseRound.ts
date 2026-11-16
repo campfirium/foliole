@@ -8,6 +8,7 @@ import { runRequestSyncDatabaseRound, type RequestSyncDatabaseRoundPort } from '
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/requestSyncOverwriteRound.js';
 import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { requestSyncPerformance } from '../../../../../../lib/core/sync/requestSyncPerformance.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { tryCaptureWebDavRelayCleanup } from '../../../../../../lib/core/sync/webDavRelayCollectionCleanup.js';
@@ -85,12 +86,11 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
         receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined, includeAdoptionParents))),
     transferObjects: async differences => {
-      const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
+      const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState,
+        ...(requestSyncPerformance && adoption ? { performanceStage: receivingOverwrite ? 'adoption' : 'followup' } : {}) });
       for (const [index, result] of results.entries()) if (!result.error) {
         (differences[index]!.direction === 'local_to_remote' ? sent : received).add(result.globalId);
-        if (differences[index]!.direction === 'remote_to_local' && result.objectType !== 'foreground_source') {
-          workspaceChanged = true;
-        }
+        workspaceChanged ||= differences[index]!.direction === 'remote_to_local' && result.objectType !== 'foreground_source';
       }
       receiveProgress.received(received.size);
       input.large!.transferred(results.length);
@@ -108,6 +108,7 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
   if (result.complete && adoption) {
     receivingOverwrite = false;
     const continuation = await runRequestSyncDatabaseRound(port, input.signal);
+    requestSyncPerformance?.markAdoption('adoption_followup_finished');
     result = { ...continuation, transferred: result.transferred + continuation.transferred,
       madeProgress: result.madeProgress || continuation.madeProgress };
   }

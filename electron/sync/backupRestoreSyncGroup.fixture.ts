@@ -194,7 +194,7 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'seed') return runWithDatabaseConnectionOwner(() => seed(args));
   if (action === 'batch') return runWithDatabaseConnectionOwner(() => seedBatch(args));
   if (action === 'facts') return appendRestoreFacts();
-  if (action === 'delete') return deletePausedNode();
+  if (action === 'delete') return deletePausedNode(args.permanently === true);
   if (action === 'readFacts') return restoreFactsSnapshot();
   if (action === 'proofs') return openDatabaseConnection().driver.queryAll(
     `SELECT device_identity_key, library_epoch, proof_revision

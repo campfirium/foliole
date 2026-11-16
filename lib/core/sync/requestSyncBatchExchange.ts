@@ -5,12 +5,15 @@ import { readRequestSyncBatchResults, receiveRequestSyncBatch } from './requestS
 import { requestSyncBatchMessages, withRequestSyncBatchSnapshot } from './requestSyncBatchSnapshot.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 import type { RequestSyncDatabaseHost, receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
-import { requestSyncPerformance } from './requestSyncPerformance.js';
+import { requestSyncPerformance, type SyncReceiveStage } from './requestSyncPerformance.js';
 import { prepareRequestSyncWire } from './requestSyncWire.js';
 
+type TransferOptions = Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState' | 'objectOptions'> & {
+  performanceStage?: SyncReceiveStage;
+};
+
 export async function transferRequestSyncBatch(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
-  differences: readonly FramedSyncInventoryDifference[],
-  options: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState' | 'objectOptions'>) {
+  differences: readonly FramedSyncInventoryDifference[], options: TransferOptions) {
   const results: RequestSyncObjectResult[] = [];
   for (let offset = 0; offset < differences.length;) {
     exchange.signal?.throwIfAborted();
@@ -48,12 +51,16 @@ async function pushBatch(host: RequestSyncDatabaseHost, exchange: RequestSyncExc
 
 async function pullBatch(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
   differences: readonly FramedSyncInventoryDifference[],
-  options: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState' | 'objectOptions'>) {
+  options: TransferOptions) {
   const requestId = crypto.getRandomValues(new Uint8Array(16));
   const expected = differences.map(difference => ({ requestId: crypto.getRandomValues(new Uint8Array(16)),
     objectType: difference.objectType, globalId: difference.globalId, sourceSnapshot: difference.sourceSnapshot, need: difference.need }));
   const measurement = requestSyncPerformance;
-  if (measurement) for (const item of expected) measurement.pull(item.objectType, item.globalId);
+  const { performanceStage } = options;
+  if (measurement) {
+    if (performanceStage) measurement.pullBatch(performanceStage);
+    for (const item of expected) measurement.pull(item.objectType, item.globalId, performanceStage);
+  }
   return withControlRequest(exchange, '/companion/framed-sync?request=pulls',
     requestSyncBatchDifferences(differences, expected.map(identity => identity.requestId), requestId), async response => {
       const result = await receiveRequestSyncBatch(host, { ...exchange, ...response, ...options,

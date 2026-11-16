@@ -52,6 +52,9 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     }
     if (input.attachmentReceive && shouldYield()) throw new AttachmentReceivePaused();
     const measurement = requestSyncPerformance;
+    if (measurement && input.pathWithQuery === '/companion/framed-sync?request=attachments') {
+      measurement.markAdoption('first_attachment_dispatched');
+    }
     const endHttp = measurement?.begin('receive_http_inclusive');
     const operation = FolioleCompanionSync.postRequestSyncHttp(request);
     let cancellation: Promise<void> | undefined;

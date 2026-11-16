@@ -3,10 +3,11 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
-import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
+import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { bytes, text, unsigned } from './framedSyncDecodedValues.js';
 import { FramedSyncFactFragmentDecoder } from './framedSyncFactFrameReader.js';
+import { FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
 import type { ValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { canonicalFactFromValidatedMessage } from './framedSyncWireFact.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
@@ -62,7 +63,7 @@ function same(a: Uint8Array, b: Uint8Array) {
 export type RequestSyncDecodedMessage = Readonly<{ message: ValidatedProtocolMessage; encoded: Uint8Array }>;
 
 export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<RequestSyncDecodedMessage>,
-  contextId: Uint8Array, files: RequestSyncFiles, receiveReviewsIndependently = false) {
+  contextId: Uint8Array, files: RequestSyncFiles, receiveReviewsIndependently = false, onTombstone?: () => void) {
   const digest = sha256.create();
   const bodies = new RequestBodies(files, contextId);
   const facts = new Set<string>();
@@ -106,6 +107,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
         const identity = `${fact.kind}:${fact.factId}`;
         if (facts.has(identity)) throw new Error('request_sync_fact_duplicate');
         facts.add(identity);
+        if (onTombstone && isPermanentDeletion(fact)) onTombstone();
         if (message.payloadCase === 'fact') await files.writeDecodedFact(message);
         else await files.writeFact(fact);
         await bodies.declare(fact.blobs);
@@ -119,6 +121,11 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
   // DAV has no live peer inventory. A review-only object needs the node, but does not need this body version.
   return receiveReviewsIndependently && header.objectType === 'node' && facts.size && reviewsOnly
     ? { ...header, currentVersionId: '' } : header;
+}
+
+function isPermanentDeletion(fact: CanonicalFact) {
+  return fact.objectType === 'node' && fact.kind === FRAMED_SYNC_NODE_VERSION_FACT.factKind &&
+    fact.body.some(field => field.name === 'is_tombstone' && field.value.kind === 'bool' && field.value.value);
 }
 
 function readHeader(message: ValidatedProtocolMessage): RequestSyncObjectHeader {

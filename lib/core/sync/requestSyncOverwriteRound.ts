@@ -5,6 +5,7 @@ import { pendingFramedSyncOverwriteDifferences } from './framedSyncOverwriteComp
 import { orderAdoptionPulls } from './requestSyncAdoptionOrder.js';
 import { deliverRequestSyncDatabaseDifferences, type RequestSyncDatabaseRoundPort } from './requestSyncDatabaseRound.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
+import { requestSyncPerformance } from './requestSyncPerformance.js';
 import { coverAdoptedSyncGroupLibrary } from './syncGroupCoverageStore.js';
 import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption, SYNC_GROUP_LOCAL_ADOPTION_KEY } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound, finishSyncGroupOverwriteProgress,
@@ -55,5 +56,6 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
     signal?.throwIfAborted();
     return true;
   }));
+  if (complete && isAdoption) requestSyncPerformance?.markAdoption('adoption_committed');
   return { complete, pending: complete ? 0 : 1, transferred, madeProgress };
 }

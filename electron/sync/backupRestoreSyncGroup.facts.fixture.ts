@@ -13,7 +13,7 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { materializeCompressedSqliteBackup } from '../database/compressedSqliteBackup.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
-import { softDeleteNodes } from '../database/nodeMutations.js';
+import { deleteNodesPermanently, softDeleteNodes } from '../database/nodeMutations.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
 import { loadNodeResourceReferences } from '../database/nodeResources.js';
 import { applyReviewGrade } from '../database/reviewMutations.js';
@@ -42,7 +42,8 @@ export async function appendRestoreFacts() {
     newImageReferences: [{ storage_key: result.storage_key, original_name: result.original_name, role: 'image' }] });
 }
 
-export function deletePausedNode() {
+export function deletePausedNode(permanently = false) {
+  if (permanently) return deleteNodesPermanently({ nodeIds: ['delete-me'] });
   softDeleteNodes({ nodeIds: ['delete-me'], deletedAt: new Date().toISOString() });
 }
 

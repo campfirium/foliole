@@ -23,6 +23,8 @@ it.each([true, false])('first reception produces the same durable facts with mea
   host = await createJoiningMobile();
   await host.provider.send('seed', { id: 'topic', content: 'Measured article' });
   await host.provider.send('seed', { id: 'another', content: 'Second article' });
+  await host.provider.send('seed', { id: 'delete-me', content: 'Permanently removed article' });
+  await host.provider.send('delete', { permanently: true });
   await host.provider.send('facts');
   const clock = vi.fn(() => performance.now());
   if (enabled) {
@@ -37,6 +39,7 @@ it.each([true, false])('first reception produces the same durable facts with mea
   expect(await host.db.query("SELECT id FROM nodes WHERE id IN ('topic','another') ORDER BY id"))
     .toEqual([{ id: 'another' }, { id: 'topic' }]);
   expect(await host.db.query("SELECT reps FROM node_review WHERE node_id = 'topic'")).toEqual([{ reps: 1 }]);
+  expect(await host.db.query("SELECT id FROM nodes WHERE id = 'delete-me'")).toEqual([]);
   if (!enabled) {
     expect(desktop).toBeNull();
     expect(receiver).toBeUndefined();
@@ -53,6 +56,14 @@ it.each([true, false])('first reception produces the same durable facts with mea
   expect(receiver!.counts.committedObjects).toBeGreaterThanOrEqual(2);
   expect(receiver!.counts.reviewProjections).toBeGreaterThanOrEqual(1);
   expect(receiver!.counts.receivedWireBytes).toBeGreaterThan(0);
+  expect(receiver!.receiveStages.adoption.decodedTombstones).toBe(1);
+  expect(receiver!.receiveStages.adoption.pullBatches).toBeGreaterThan(0);
+  expect(receiver!.receiveStages.adoption.nodeAttempts).toBeGreaterThanOrEqual(2);
+  const { adoption_committed, adoption_followup_finished, attachment_stage_entered, first_attachment_dispatched } =
+    receiver!.milestonesMs;
+  const milestones = [adoption_committed, adoption_followup_finished, attachment_stage_entered, first_attachment_dispatched];
+  expect(milestones).toEqual([expect.any(Number), expect.any(Number), expect.any(Number), expect.any(Number)]);
+  expect(milestones).toEqual([...milestones].sort((left, right) => left! - right!));
   const report = { runId: randomUUID(), desktop, receiver, unavailable: ['android_bridge', 'application_replay_detail', 'attachment_processing'] };
   expect(JSON.stringify(report)).not.toMatch(/Measured article|Second article|https?:\/\//u);
   if (process.env.FOLIOLE_SYNC_PERFORMANCE_REPORT === '1') {
@@ -76,7 +87,8 @@ it('closes a failed window and keeps its work out of the retry report', {
   startRequestSyncPerformance();
   await expect(approveJoiningMobile(host)).rejects.toThrow('fixture_reply_lost');
   const failed = finishRequestSyncPerformance('failed');
-  expect(failed).toMatchObject({ outcome: 'failed', counts: { committedObjects: 0 } });
+  expect(failed).toMatchObject({ outcome: 'failed', counts: { committedObjects: 0 }, milestonesMs: {} });
+  expect(failed!.milestonesMs).toEqual({});
   expect(failed!.counts.pullAttempts).toBeGreaterThan(0);
   expect(await loadSyncGroupLocalAdoption(host.db)).not.toBeNull();
   mobile.post.mockImplementation(send);

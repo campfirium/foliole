@@ -9,7 +9,7 @@ import { withRequestSyncFiles } from './requestSyncFiles.js';
 import type { RequestSyncDatabaseHost, receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
 import { assertRequestSyncObjectSource } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages, type RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
-import { requestSyncPerformance } from './requestSyncPerformance.js';
+import { requestSyncPerformance, type SyncReceiveStage } from './requestSyncPerformance.js';
 import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
 
@@ -17,6 +17,7 @@ type ReceiveInput = Omit<Parameters<typeof receiveRequestSyncObject>[1], 'expect
   expected?: readonly (RequestSyncObjectIdentity & { sourceSnapshot?: FramedSyncInventoryEntry; need?: FramedSyncInventoryNeed })[];
   requestId?: Uint8Array;
   receiveReviewsIndependently?: boolean;
+  performanceStage?: SyncReceiveStage;
 };
 
 export async function receiveRequestSyncBatch(host: RequestSyncDatabaseHost, input: ReceiveInput) {
@@ -79,8 +80,11 @@ async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Arr
       continue;
     }
     return withRequestSyncFiles(batch.host.files, async files => {
+      const stage = input.performanceStage;
+      const measurement = stage ? requestSyncPerformance : undefined;
       const header = await receiveRequestSyncObjectMessages(objectMessages(next.value, messages),
-        decodeFramedSyncPreamble(input.preamble).contextId, files, input.receiveReviewsIndependently);
+        decodeFramedSyncPreamble(input.preamble).contextId, files, input.receiveReviewsIndependently,
+        measurement && stage ? () => measurement.decodedTombstone(stage) : undefined);
       assertRequestSyncObjectSource(header, expected?.sourceSnapshot);
       if (expected?.need) await assertReceivedRequestFacts(files, expected.need);
       batch.staged.push({ header, files, index: results.length });

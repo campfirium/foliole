@@ -1,6 +1,7 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
 import type { RequestSyncDatabaseRoundPort } from '../../../../../lib/core/sync/requestSyncDatabaseRound.js';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { requestSyncPerformance } from '../../../../../lib/core/sync/requestSyncPerformance.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import type {
   CompanionDesktopSyncOptions,
@@ -68,6 +69,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
   await options.onStructureSynced?.({ receivedCount: round.received.length, workspaceChanged: round.workspaceChanged });
   const resourcesStartedAt = Date.now();
+  requestSyncPerformance?.markAdoption('attachment_stage_entered');
   const resources = await runAttachmentStage({ endpoint_url: endpointUrl, boundedSlice: round.pending > 0 && round.madeProgress,
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
