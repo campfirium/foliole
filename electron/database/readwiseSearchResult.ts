@@ -1,6 +1,6 @@
 import type { FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { locateSearchAliasSpans } from '../../lib/core/database/searchAliasMatchContext.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
+import { buildWorkspaceSearchTextExcerpt } from '../../lib/core/database/workspaceSearchTextExcerpt.js';
 
 import type { ReadwiseExternalDocumentRow } from './readwiseExternalDocumentRows.js';
 
@@ -27,9 +27,8 @@ export function toReadwiseSearchResult(args: {
     const body = bodySpans.find((span) => span.spelling === spelling);
     const metadata = metadataSpans.find((span) => span.spelling === spelling);
     if (!body && !metadata) return [];
-    const start = Math.max(0, (body?.from ?? 0) - 36);
     return [{
-      excerpt: body ? row.content.slice(start, body.to + 36).replace(/\s+/gu, ' ') : row.opening_text ?? '',
+      excerpt: buildWorkspaceSearchTextExcerpt(row.content, body?.query ?? '') || row.opening_text || '',
       externalMatch: { ...externalMatch, query: body?.query ?? '' },
       nodeMatch: null,
       pdfMatch: null,
@@ -39,7 +38,7 @@ export function toReadwiseSearchResult(args: {
   const primary = aliasMatches.find((item) => plan.triggerSpellings.includes(item.spelling)) ?? aliasMatches[0];
   return {
     aliasMatches: aliasMatches.length ? aliasMatches : undefined,
-    excerpt: primary?.excerpt ?? row.opening_text ?? resolveNodeOpeningText(row.content, row.title) ?? '',
+    excerpt: primary?.excerpt ?? (buildWorkspaceSearchTextExcerpt(row.content, plan.highlightQuery) || row.opening_text || ''),
     externalMatch: primary?.externalMatch ?? externalMatch,
     id: absolutePath,
     kind: 'external' as const,

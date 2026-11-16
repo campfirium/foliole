@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test';
 
-import { expect, test } from './harness/fixtures';
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
+
+import { expect, normalizeDesktopWindow, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const content = 'History preview text ' + 'WIDE WINDOW WELCOME '.repeat(12).trim();
@@ -11,7 +13,7 @@ async function openHistory(page: Page) {
   return page.getByRole('dialog', { name: 'History', exact: true });
 }
 
-test('history view options apply immediately and return after reload', async ({ desktopWindow: page }) => {
+test('history view options apply immediately and return after app restart', async ({ desktopSession, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(async ({ title, content }) => {
     window.localStorage.setItem('foliole-app-language', 'en');
@@ -64,14 +66,27 @@ test('history view options apply immediately and return after reload', async ({ 
   await expect(preview).toHaveCSS('-webkit-line-clamp', '3');
 
   await page.evaluate(() => window.localStorage.removeItem('foliole-material-history-view'));
-  await page.reload();
+  await desktopSession.electronApp.close();
+  const restarted = await launchDesktopSession({
+    env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: desktopSession.target.runtimeStateRoot }
+  }) as DesktopSession;
+  try {
+    await normalizeDesktopWindow(restarted);
+    await verifyRestart(restarted.firstWindow);
+  } finally {
+    await restarted.close();
+  }
+});
+
+async function verifyRestart(page: Page) {
   await expectWorkspaceShell(page);
-  await openHistory(page);
-  await expect(breadcrumbFirst).toBeVisible();
-  await expect(preview).toHaveCSS('-webkit-line-clamp', '3');
-  await trigger.click();
+  const history = await openHistory(page);
+  await expect(history.getByRole('button', { name: /^.*History layout topic History preview text/ })).toBeVisible();
+  await expect(history.getByText(/^History preview text/)).toHaveCSS('-webkit-line-clamp', '3');
+  await history.getByRole('button', { name: 'View options' }).click();
+  const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();
   await expect(options.getByRole('radio', { name: '3', exact: true })).toBeChecked();
   await history.getByRole('searchbox').click();
   await expect(options).toBeHidden();
-});
+}

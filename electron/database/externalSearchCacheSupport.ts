@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { locateSearchAliasSpans } from '../../lib/core/database/searchAliasMatchContext.js';
+import { buildExcerpt } from '../../lib/core/database/workspaceSearchResultBuilders.js';
 import type { WorkspaceExternalSearchSourceKind } from '../../lib/core/database/workspaceSearchResults.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
@@ -159,17 +160,6 @@ export function replaceFolderDocuments(
   return indexedAt;
 }
 
-function buildExternalExcerpt(content: string, query: string) {
-  const normalized = content.replace(/\s+/g, ' ').trim();
-  if (!normalized) return 'No content preview';
-  const lower = normalized.toLowerCase();
-  const matchIndex = lower.indexOf(query);
-  if (matchIndex < 0) return normalized.slice(0, 96);
-  const start = Math.max(0, matchIndex - 36);
-  const end = Math.min(normalized.length, matchIndex + query.length + 36);
-  return `${start > 0 ? '...' : ''}${normalized.slice(start, end)}${end < normalized.length ? '...' : ''}`;
-}
-
 export function toExternalResult(
   row: ExternalSearchRow,
   query: string,
@@ -192,7 +182,7 @@ export function toExternalResult(
     const metadata = metadataSpans.find((span) => span.spelling === spelling);
     if (!body && !metadata) return [];
     return [{
-      excerpt: buildExternalExcerpt(row.text, body?.query ?? ''),
+      excerpt: buildExcerpt(row.text, body?.query ?? ''),
       externalMatch: { ...externalMatch, query: body?.query ?? '' },
       nodeMatch: null,
       pdfMatch: null,
@@ -202,7 +192,7 @@ export function toExternalResult(
   const primary = aliasMatches.find((item) => plan?.triggerSpellings.includes(item.spelling)) ?? aliasMatches[0];
   return {
     aliasMatches: aliasMatches.length ? aliasMatches : undefined,
-    excerpt: primary?.excerpt ?? buildExternalExcerpt(row.text, query),
+    excerpt: primary?.excerpt ?? buildExcerpt(row.text, query),
     externalMatch: primary?.externalMatch ?? externalMatch,
     id: row.absolute_path,
     kind: 'external' as const,

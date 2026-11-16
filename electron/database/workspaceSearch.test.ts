@@ -242,3 +242,16 @@ it('keeps 1 to 2 character queries on the fallback path', () => {
     kind: 'node'
   });
 });
+
+it('keeps enough text after a short workspace search hit for a multiline preview', () => {
+  const after = ' A long passage with enough text for several lines.'.repeat(12);
+  insertNode({
+    id: 'node-long-preview',
+    title: 'Quartz search sample',
+    content: `A sample paragraph before the match: Quartz.${after}`,
+    updatedAt: '2026-03-03T00:00:00.000Z'
+  });
+  const match = searchWorkspace('Quartz').find(result => result.id === 'node-long-preview');
+  expect(match?.excerpt).toContain(`Quartz.${after.slice(0, 250)}`);
+  expect(match?.excerpt).not.toContain(after);
+});

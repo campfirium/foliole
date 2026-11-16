@@ -6,40 +6,15 @@ import type {
   WorkspacePdfSearchRow,
   WorkspaceSearchRow
 } from './workspaceSearchSql.js';
-
-const EXCERPT_PADDING = 36;
-const EXCERPT_LENGTH = 96;
-
-function normalizeWhitespace(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
-}
+import { buildWorkspaceSearchTextExcerpt } from './workspaceSearchTextExcerpt.js';
 
 export function buildExcerpt(content: string, query: string) {
-  const normalizedContent = normalizeWhitespace(content);
-  if (!normalizedContent) {
-    return 'No content preview';
-  }
-  const matchIndex = normalizedContent.toLowerCase().indexOf(query);
-  if (matchIndex === -1) {
-    return normalizedContent.slice(0, EXCERPT_LENGTH);
-  }
-  const start = Math.max(0, matchIndex - EXCERPT_PADDING);
-  const end = Math.min(normalizedContent.length, matchIndex + query.length + EXCERPT_PADDING);
-  return `${start > 0 ? '...' : ''}${normalizedContent.slice(start, end)}${end < normalizedContent.length ? '...' : ''}`;
+  return buildWorkspaceSearchTextExcerpt(content, query) || 'No content preview';
 }
 
 export function buildPdfExcerpt(content: string, query: string, page: number) {
-  const normalizedContent = normalizeWhitespace(content);
-  if (!normalizedContent) {
-    return `Page ${page}`;
-  }
-  const matchStart = normalizedContent.toLowerCase().indexOf(query);
-  if (matchStart < 0) {
-    return `Page ${page} · ${normalizedContent.slice(0, EXCERPT_LENGTH)}`;
-  }
-  const start = Math.max(0, matchStart - EXCERPT_PADDING);
-  const end = Math.min(normalizedContent.length, matchStart + query.length + EXCERPT_PADDING);
-  return `Page ${page} · ${start > 0 ? '...' : ''}${normalizedContent.slice(start, end)}${end < normalizedContent.length ? '...' : ''}`;
+  const excerpt = buildWorkspaceSearchTextExcerpt(content, query);
+  return excerpt ? `Page ${page} · ${excerpt}` : `Page ${page}`;
 }
 
 function resolveNodeContentMatch(content: string, query: string) {
