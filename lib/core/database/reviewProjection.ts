@@ -7,6 +7,7 @@ import { normalizeReviewSchedulerSettings } from '../review/settings.js';
 import { resolveReviewWeights, type ReviewTrainingNode } from '../review/trainingModel.js';
 import type { SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
+import { requestSyncPerformance } from '../sync/requestSyncPerformance.js';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRowSchemas.js';
 
 import type { DatabaseDriver } from './driver.js';
@@ -65,12 +66,17 @@ export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
 
 /** Caller owns the application transaction, including the fact insert and this projection. */
 export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string, shared?: SharedReviewParameters) {
-  const { events, parameters } = await readNodeReviewHistoryWithDb(db, nodeId, shared);
-  const [initial] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
-  const card = projectInitialReviewDue(recomputeReview(events, parameters, nodeId), initial?.initial_review_due, events);
-  if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
-  else await db.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
-  return card;
+  const measurement = requestSyncPerformance;
+  measurement?.review(nodeId);
+  const endProjection = measurement?.begin('review_projection');
+  try {
+    const { events, parameters } = await readNodeReviewHistoryWithDb(db, nodeId, shared);
+    const [initial] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
+    const card = projectInitialReviewDue(recomputeReview(events, parameters, nodeId), initial?.initial_review_due, events);
+    if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
+    else await db.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
+    return card;
+  } finally { endProjection?.(); }
 }
 
 async function readSharedReviewParameters(db: DbPort) {

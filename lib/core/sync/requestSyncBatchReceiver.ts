@@ -9,6 +9,7 @@ import { withRequestSyncFiles } from './requestSyncFiles.js';
 import type { RequestSyncDatabaseHost, receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
 import { assertRequestSyncObjectSource } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages, type RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
+import { requestSyncPerformance } from './requestSyncPerformance.js';
 import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
 
@@ -28,7 +29,7 @@ export async function receiveRequestSyncBatch(host: RequestSyncDatabaseHost, inp
 /** A broken stream still commits the objects that arrived complete before it, as a retry would. */
 async function keepCompletedObjects(batch: ReceivingBatch, error: unknown): Promise<never> {
   const staged = batch.staged.splice(0);
-  if (staged.length && !batch.input.signal?.aborted) await applyReceivedRequestSyncBatch(batch.host, batch.input, staged);
+  if (staged.length && !batch.input.signal?.aborted) await applyMeasuredBatch(batch, staged);
   throw error;
 }
 
@@ -58,7 +59,7 @@ async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Arr
       assertRequestSyncBatchEnd(message, requestId, results.length);
       if (!(await messages.next()).done) throw new Error('request_sync_batch_trailing_data');
       const staged = batch.staged.splice(0);
-      const applied = await applyReceivedRequestSyncBatch(batch.host, input, staged);
+      const applied = await applyMeasuredBatch(batch, staged);
       staged.forEach((object, position) => { results[object.index] = applied[position]!; });
       return { requestId, results: results as RequestSyncObjectResult[] };
     }
@@ -87,6 +88,20 @@ async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Arr
       return receiveNext(batch);
     }, input.signal);
   }
+}
+
+function applyMeasuredBatch(batch: ReceivingBatch, staged: readonly StagedRequestSyncObject[]) {
+  const measurement = requestSyncPerformance;
+  if (!measurement || !staged.length) return applyReceivedRequestSyncBatch(batch.host, batch.input, staged);
+  return (async () => {
+    measurement.add('applyObjectsOffered', staged.length);
+    const end = measurement.begin('receive_apply');
+    try {
+      const results = await applyReceivedRequestSyncBatch(batch.host, batch.input, staged);
+      measurement.add('committedObjects', results.filter(result => !result.error).length);
+      return results;
+    } finally { end(); }
+  })();
 }
 
 async function* objectMessages(first: RequestSyncDecodedMessage, messages: AsyncIterator<RequestSyncDecodedMessage>) {

@@ -6,6 +6,7 @@ import { REQUEST_SYNC_BATCH_BYTES, REQUEST_SYNC_BATCH_OBJECTS, requestSyncBatchE
 import { RequestSyncFiles } from './requestSyncFiles.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { requestSyncObjectMessages, type RequestSyncMessage, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
+import { requestSyncPerformance } from './requestSyncPerformance.js';
 import { writeRequestSyncSnapshot } from './requestSyncSnapshot.js';
 
 export type RequestSyncBatchSelection = RequestSyncObjectIdentity & {
@@ -27,13 +28,20 @@ export async function withRequestSyncBatchSnapshot<T>(host: RequestSyncDatabaseH
         signal?.throwIfAborted();
         const scratch = new RequestSyncFiles(host.files, framedSyncFileKey('requests', crypto.randomUUID()), signal);
         files.push(scratch);
-        const object = await prepareObject(db, selection, scratch, signal);
+        const endPrepare = requestSyncPerformance?.begin('object_prepare');
+        let object: PreparedObject;
+        try { object = await prepareObject(db, selection, scratch, signal); }
+        finally { endPrepare?.(); }
         const bytes = object.kind === 'object' ? scratch.byteLength : 0;
         if (object.kind === 'error' || (objects.length && size + bytes > REQUEST_SYNC_BATCH_BYTES)) {
           await scratch.close(); files.pop();
         }
         if (objects.length && size + bytes > REQUEST_SYNC_BATCH_BYTES) break;
         objects.push(object); size += bytes;
+        if (object.kind === 'object') {
+          requestSyncPerformance?.add('preparedObjects');
+          requestSyncPerformance?.add('preparedObjectBytes', bytes);
+        }
         if (size >= REQUEST_SYNC_BATCH_BYTES) break;
       }
       return objects;

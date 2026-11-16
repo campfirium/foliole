@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 
+import { finishRequestSyncPerformance, startRequestSyncPerformance } from '../../lib/core/sync/requestSyncPerformance.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath,
   type SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
@@ -226,8 +227,15 @@ async function run(action: string, args: Record<string, unknown>) {
   }
   throw new Error('unknown test action');
 }
+async function runPerformanceFixture(action: string, args: Record<string, unknown>) {
+  if (action === 'syncPerformanceStart') { startRequestSyncPerformance(); return null; }
+  if (action !== 'syncPerformanceFinish') throw new Error('unknown performance fixture action');
+  return finishRequestSyncPerformance(args.complete === true ? 'complete' : 'partial') ?? null;
+}
+
 process.on('message', (message: { id: number; action: string; args: Record<string, unknown> }) => {
-  const handler = message.action.startsWith('readwise')
+  const handler = message.action.startsWith('syncPerformance') ? runPerformanceFixture
+    : message.action.startsWith('readwise')
     ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runReadwiseTakeoverFixture(action, args))
     : message.action === 'local_content_edit'
     ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runDesktopFramedSyncEditCommand(action, args))

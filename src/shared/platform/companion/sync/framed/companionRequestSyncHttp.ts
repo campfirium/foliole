@@ -7,6 +7,7 @@ import { encodeFramedSyncStream, readFramedSyncStream, type FramedSyncStreamBody
 import { framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { withRequestSyncFiles, type RequestSyncFilePort, type RequestSyncFiles } from '../../../../../../lib/core/sync/requestSyncFiles.js';
 import { requestSyncPeerRoundPath, touchRequestSyncStream, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { requestSyncPerformance } from '../../../../../../lib/core/sync/requestSyncPerformance.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
@@ -50,6 +51,8 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
       input.signal?.throwIfAborted();
     }
     if (input.attachmentReceive && shouldYield()) throw new AttachmentReceivePaused();
+    const measurement = requestSyncPerformance;
+    const endHttp = measurement?.begin('receive_http_inclusive');
     const operation = FolioleCompanionSync.postRequestSyncHttp(request);
     let cancellation: Promise<void> | undefined;
     const cancel = () => { cancellation = FolioleCompanionSync.cancelRequestSyncHttp({ ...owner, request_id: requestId });
@@ -59,6 +62,8 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     const stopYield = input.attachmentReceive ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
     try {
       const response = await operation;
+      endHttp?.();
+      measurement?.add('receivedWireBytes', response.response_byte_length);
       input.signal?.throwIfAborted();
       if (input.peerRound) input.peerRound.admitted = true;
       return await consume(response, temporary.directory);
@@ -69,6 +74,7 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
       }
       throw error;
     } finally {
+      endHttp?.();
       stopYield();
       input.signal?.removeEventListener('abort', cancel);
       await cancellation;

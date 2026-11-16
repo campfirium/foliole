@@ -10,6 +10,7 @@ import { readRequestSyncDifference } from './requestSyncDifferenceWire.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
+import { requestSyncPerformance } from './requestSyncPerformance.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
 
 export type RequestSyncDatabaseResponseInput = {
@@ -53,12 +54,16 @@ async function respondPrepared<T>(host: RequestSyncDatabaseHost, input: RequestS
   } else {
     const request = await decodeRequestSyncInventory(messages, { retainEntries: false });
     const nodeIds = !request.bucketSummary && request.detailGlobalIds.length ? request.detailGlobalIds : undefined;
-    await host.write(db => db.transaction(tx => flushRequestSyncInventoryDigests(tx, nodeIds)));
-    const entries = await host.readSnapshot(async db => {
-      const summaries = await readRequestSyncInventorySummaries(db, nodeIds);
-      return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(
-        db, summaries, request.detailGlobalIds, request.includeAdoptionParents) : summaries;
-    }, input.signal);
+    const endPreparation = requestSyncPerformance?.begin('inventory_prepare');
+    let entries;
+    try {
+      await host.write(db => db.transaction(tx => flushRequestSyncInventoryDigests(tx, nodeIds)));
+      entries = await host.readSnapshot(async db => {
+        const summaries = await readRequestSyncInventorySummaries(db, nodeIds);
+        return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(
+          db, summaries, request.detailGlobalIds, request.includeAdoptionParents) : summaries;
+      }, input.signal);
+    } finally { endPreparation?.(); }
     if (request.bucketSummary) {
       const summary = summarizeInventoryBuckets(entries);
       response = iterateRequestSyncInventory({ entries: [], roundId: request.roundId,
