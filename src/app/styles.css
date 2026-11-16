@@ -1117,7 +1117,7 @@ b {
   z-index: var(--z-local-overlay);
 }
 
-.cm-md-image-cloze-overlay[data-md-image-region-hover='true'] {
+.cm-md-image-cloze-overlay:is([data-md-image-region-hover='true'], [data-md-image-region-hover='focus']) {
   cursor: grab;
 }
 

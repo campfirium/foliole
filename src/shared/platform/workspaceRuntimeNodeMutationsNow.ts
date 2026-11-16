@@ -114,6 +114,7 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
   affectedAnchorNodes: WorkspaceRuntimeNode[];
   diagnostics?: RuntimeNodeContentMutationDiagnostics;
   diagnosticsEnabled?: boolean;
+  expectedNodeTimestamps?: Array<{ nodeId: string; updatedAt: string }>;
   nodeOrder: string[];
   parentNode: WorkspaceRuntimeNode;
 }): Promise<WorkspaceNodeMutationPatchResult | null> {
@@ -130,6 +131,7 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
     const invokeStartedAt = args.diagnostics ? readNowMs() : 0;
     const result = await runtimeInvoke(NATIVE_COMMANDS.updateNodeContentWithAnchors, {
       parent,
+      ...(args.expectedNodeTimestamps ? { expectedNodeTimestamps: args.expectedNodeTimestamps } : {}),
       ...(args.parentNode.contentEdit ? { edit: args.parentNode.contentEdit } : {}),
       affectedAnchors: args.affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload),
       ...(args.diagnosticsEnabled ? { diagnostics: true } : {})

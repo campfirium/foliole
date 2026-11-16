@@ -6,6 +6,7 @@ import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePrevi
 
 import { attachImageClozeOverlayInteractions } from './imageClozeWidgetInteractions';
 import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
+import { attachImageRegionClick } from './imageClozeWidgetRegionEdit';
 import { attachImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
 import { createImageCropEditButton } from './liveMarkdownImageCrop';
 import { createImageCropPlane, setImageOverlayCrop } from './liveMarkdownImageCropFrame';
@@ -171,12 +172,20 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
       attachmentId: args.attachmentId,
       draftRectElement,
       from: args.from,
+      ...(args.focus ? { focus: args.focus } : {}),
       getImageRange: () => resolveCurrentImageRange(wrapper, { from: args.from, to: args.to }),
       overlay,
       ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
       regionLayer,
       to: args.to,
       wrapper
+    });
+    attachImageRegionClick({
+      wrapper,
+      overlay,
+      attachmentId: args.attachmentId,
+      ...(args.focus ? { focus: args.focus } : {}),
+      ...(args.presentation !== undefined ? { presentation: args.presentation } : {})
     });
     wrapper.addEventListener('pointerdown', controls.handlePointerDown, { capture: true });
     wrapper.addEventListener('pointermove', controls.handlePointerMove, { capture: true });

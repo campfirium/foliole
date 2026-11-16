@@ -63,14 +63,25 @@ export function createVersionedNodeSnapshot(input: UpsertNodeSnapshotInput, opti
   });
 }
 
+export type ExpectedNodeTimestamp = { nodeId: string; updatedAt: string };
+
+function assertExpectedNodeTimestamps(driver: ReturnType<typeof openDatabaseConnection>['driver'], expected: ExpectedNodeTimestamp[]) {
+  for (const { nodeId, updatedAt } of expected) {
+    const row = driver.queryOne<{ updated_at: string }>(
+      'SELECT updated_at FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
+    if (!row || row.updated_at !== updatedAt) throw new Error('node_version_changed');
+  }
+}
+
 export function upsertVersionedNodeContentWithAnchors(
   parent: UpsertNodeSnapshotInput,
   affectedAnchors: UpdateNodeAnchorLinkInput[],
-  options: UpsertNodeSnapshotOptions & { versionId?: string } = {}
+  options: UpsertNodeSnapshotOptions & { versionId?: string; expectedNodeTimestamps?: ExpectedNodeTimestamp[] } = {}
 ) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
   return withTransaction(driver, () => {
+    if (options.expectedNodeTimestamps) assertExpectedNodeTimestamps(driver, options.expectedNodeTimestamps);
     assertIndexPlacement(driver, parent);
     const contentChange = applyParentContentChange({
       driver,

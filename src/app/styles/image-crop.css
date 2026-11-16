@@ -94,6 +94,13 @@
 .cm-md-image-crop-handle:is([data-corner='nw'], [data-corner='se']) { cursor: nwse-resize; }
 .cm-md-image-crop-handle:is([data-corner='ne'], [data-corner='sw']) { cursor: nesw-resize; }
 
+.cm-md-image-crop-handle:is([data-corner='n'], [data-corner='s']) { left: 50%; cursor: ns-resize; }
+.cm-md-image-crop-handle:is([data-corner='e'], [data-corner='w']) { top: 50%; cursor: ew-resize; }
+.cm-md-image-crop-handle[data-corner='n'] { top: 0; }
+.cm-md-image-crop-handle[data-corner='s'] { top: 100%; }
+.cm-md-image-crop-handle[data-corner='e'] { left: 100%; }
+.cm-md-image-crop-handle[data-corner='w'] { left: 0; }
+
 .cm-md-image-crop-dialog-actions {
   display: flex;
   flex-wrap: wrap;

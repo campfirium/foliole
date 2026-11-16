@@ -1,4 +1,5 @@
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageFocusRect } from '../model/markdownImageFocus';
 
 import { prunePresentationRegion } from './imageClozePresentationMutation';
 import {
@@ -16,6 +17,7 @@ import {
 } from './imageClozeWidgetInteractionHelpers';
 import { syncSavedRegionLayerState } from './imageClozeWidgetOverlayHelpers';
 import { isImageClozeControlTarget } from './imageClozeWidgetPointerTargets';
+import { findEditableImageFocus } from './imageClozeWidgetRegionEdit';
 import { originalImagePoint } from './liveMarkdownImageCropFrame';
 
 function positionDeleteControl(deleteControl: ImageClozeDeleteControl, anchorPoint: { x: number; y: number } | null) {
@@ -29,7 +31,7 @@ function positionDeleteControl(deleteControl: ImageClozeDeleteControl, anchorPoi
 }
 function createSelectionSync(args: Pick<Parameters<typeof createSelectionHandlers>[0], 'attachmentId' | 'deleteControl' | 'overlay' | 'presentation' | 'regionLayer'>) {
   return (hoverRegionId: string | null, selectedRegionId: string | null, selectedAnchorPoint: { x: number; y: number } | null) => {
-    args.overlay.dataset.mdImageRegionHover = hoverRegionId ? 'true' : 'false';
+    args.overlay.dataset.mdImageRegionHover = hoverRegionId === 'focus' ? 'focus' : String(Boolean(hoverRegionId));
     args.overlay.hidden = false;
     syncSavedRegionLayerState(args.regionLayer, args.presentation ?? null, selectedRegionId);
     positionDeleteControl(args.deleteControl, selectedAnchorPoint);
@@ -39,6 +41,7 @@ function createSelectionSync(args: Pick<Parameters<typeof createSelectionHandler
 function createSelectionPointerHandlers(args: {
   attachmentId: string;
   draft: ImageClozeDraftController;
+  focus?: ImageFocusRect;
   overlay: HTMLElement;
   presentation?: ImageClozeEditorPresentation | null;
   setHoverRegionId: (value: string | null) => void;
@@ -51,7 +54,8 @@ function createSelectionPointerHandlers(args: {
       }
       args.overlay.hidden = false;
       const point = toRelativeImagePoint(args.overlay, event);
-      const region = findImageRegionNearBorder(args.presentation, args.attachmentId, originalImagePoint(args.overlay, point));
+      const originalPoint = originalImagePoint(args.overlay, point);
+      const region = findImageRegionNearBorder(args.presentation, args.attachmentId, originalPoint);
       if (region) event.preventDefault();
       if (region?.openNodeId) {
         event.stopImmediatePropagation();
@@ -73,9 +77,9 @@ function createSelectionPointerHandlers(args: {
         return;
       }
       args.overlay.hidden = false;
-      args.setHoverRegionId(
-        findImageRegionNearBorder(args.presentation, args.attachmentId, originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, event)))?.id ?? null
-      );
+      const point = originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, event));
+      args.setHoverRegionId(findImageRegionNearBorder(args.presentation, args.attachmentId, point)?.id ??
+        (findEditableImageFocus(args.overlay, args.focus, point) ? 'focus' : null));
     }
   };
 }
@@ -85,6 +89,7 @@ function createSelectionHandlers(args: {
   deleteControl: ImageClozeDeleteControl;
   draft: ImageClozeDraftController;
   host: HTMLElement;
+  focus?: ImageFocusRect;
   overlay: HTMLElement;
   presentation?: ImageClozeEditorPresentation | null;
   regionLayer: HTMLElement;
@@ -96,11 +101,12 @@ function createSelectionHandlers(args: {
   const pointerHandlers = createSelectionPointerHandlers({
     attachmentId: args.attachmentId,
     draft: args.draft,
+    ...(args.focus ? { focus: args.focus } : {}),
     overlay: args.overlay,
     ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
     setHoverRegionId: (value) => {
       hoverRegionId = value;
-      args.overlay.dataset.mdImageRegionHover = hoverRegionId ? 'true' : 'false';
+      args.overlay.dataset.mdImageRegionHover = hoverRegionId === 'focus' ? 'focus' : String(Boolean(hoverRegionId));
     },
     setSelected: (regionId, anchorPoint) => {
       selectedRegionId = regionId;
@@ -116,9 +122,7 @@ function createSelectionHandlers(args: {
       }
     },
     deleteSelection() {
-      if (!selectedRegionId) {
-        return;
-      }
+      if (!selectedRegionId) return;
       const deletedRegionId = selectedRegionId;
       dispatchImageClozeDelete({ attachmentId: args.attachmentId, regionId: selectedRegionId });
       prunePresentationRegion(args.presentation ?? null, deletedRegionId);
@@ -144,6 +148,7 @@ type OverlayInteractionArgs = {
   attachmentId: string;
   draftRectElement: HTMLElement;
   from: number;
+  focus?: ImageFocusRect;
   getImageRange?: () => { from: number; to: number };
   overlay: HTMLElement;
   presentation?: ImageClozeEditorPresentation | null;
@@ -197,6 +202,7 @@ export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs
     deleteControl,
     draft,
     host,
+    ...(args.focus ? { focus: args.focus } : {}),
     overlay: args.overlay,
     ...(args.presentation !== undefined ? { presentation: args.presentation } : {}),
     regionLayer: args.regionLayer

@@ -20,6 +20,7 @@ import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 import {
   parseNodeAnchorLocatorUpdateArray,
   asStringArray,
+  asString,
   parseNodeCreationMutationArgs,
   parseNodeSnapshotArgs
 } from './commandParsers.js';
@@ -87,6 +88,17 @@ function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: Or
   return completeWorkspaceMutation(result, originWindow);
 }
 
+function parseExpectedNodeTimestamps(value: unknown) {
+  if (!Array.isArray(value)) throw new Error('invalid expectedNodeTimestamps');
+  return value.map(item => {
+    const entry = readObjectArg(item, 'expectedNodeTimestamps');
+    return {
+      nodeId: asString(entry.nodeId, 'nodeId'),
+      updatedAt: asString(entry.updatedAt, 'updatedAt')
+    };
+  });
+}
+
 function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const shouldReturnDiagnostics = args.diagnostics === true;
   const totalStartedAt = readNowMs();
@@ -99,7 +111,8 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   diagnostics.parseAnchorsMs = readElapsedMs(parseAnchorsStartedAt);
   const upsertStartedAt = readNowMs();
   const persistedAnchors = upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
-    searchInvalidation: { workspaceInvalidation: 'defer' }
+    searchInvalidation: { workspaceInvalidation: 'defer' },
+    ...(args.expectedNodeTimestamps === undefined ? {} : { expectedNodeTimestamps: parseExpectedNodeTimestamps(args.expectedNodeTimestamps) })
   });
   diagnostics.upsertNodeMs = readElapsedMs(upsertStartedAt);
   const updateAnchorsStartedAt = readNowMs();

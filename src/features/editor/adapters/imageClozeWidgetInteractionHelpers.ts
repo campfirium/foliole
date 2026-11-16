@@ -46,27 +46,22 @@ export function findImageRegionNearBorder(
   attachmentId: string,
   point: ReturnType<typeof toRelativeImagePoint>
 ) {
-  if (!point) {
-    return null;
-  }
+  const regions = presentation?.regions.filter((region) => region.attachmentId === attachmentId) ?? [];
+  return [...regions].reverse().find(region => isNearImageRegionBorder(region, point)) ?? null;
+}
+
+export function isNearImageRegionBorder(rect: DraftRect, point: ReturnType<typeof toRelativeImagePoint>) {
+  if (!point) return false;
   const toleranceX = 10 / point.width;
   const toleranceY = 10 / point.height;
-  const regions = presentation?.regions.filter((region) => region.attachmentId === attachmentId) ?? [];
-  return [...regions].reverse().find((region) => {
-    const insideOuter =
-      point.x >= region.x - toleranceX &&
-      point.x <= region.x + region.width + toleranceX &&
-      point.y >= region.y - toleranceY &&
-      point.y <= region.y + region.height + toleranceY;
-    if (!insideOuter) {
-      return false;
-    }
-    const innerLeft = region.x + toleranceX;
-    const innerRight = region.x + region.width - toleranceX;
-    const innerTop = region.y + toleranceY;
-    const innerBottom = region.y + region.height - toleranceY;
-    return innerLeft >= innerRight || innerTop >= innerBottom || !(point.x > innerLeft && point.x < innerRight && point.y > innerTop && point.y < innerBottom);
-  }) ?? null;
+  const right = rect.x + rect.width;
+  const bottom = rect.y + rect.height;
+  const withinX = point.x >= rect.x - toleranceX && point.x <= right + toleranceX;
+  const withinY = point.y >= rect.y - toleranceY && point.y <= bottom + toleranceY;
+  return withinX && withinY && (
+    Math.abs(point.x - rect.x) <= toleranceX || Math.abs(point.x - right) <= toleranceX ||
+    Math.abs(point.y - rect.y) <= toleranceY || Math.abs(point.y - bottom) <= toleranceY
+  );
 }
 
 export function buildImageClozeRegionDetail(args: { attachmentId: string; from: number; draftRect: DraftRect; to: number }) {

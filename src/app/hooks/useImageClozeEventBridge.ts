@@ -7,10 +7,14 @@ import { buildImageClozeSourcePayload } from '../../features/image-cloze/model/i
 import {
   IMAGE_CLOZE_CREATE_EVENT,
   IMAGE_CLOZE_DELETE_EVENT,
+  IMAGE_CLOZE_EDIT_EVENT,
+  type ImageClozeEditEventDetail,
   type ImageClozeCreateEventDetail,
   type ImageClozeDeleteEventDetail
 } from '../../features/image-cloze/model/imageClozeEvents';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { saveImageClozeRegionEdit } from '../../store/workspaceImageClozeRegionEdit';
+import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 export function useImageClozeEventBridge(args: {
   activeNode?: Node;
@@ -51,9 +55,19 @@ export function useImageClozeEventBridge(args: {
       }
     };
 
+    const handleImageClozeEdit = (event: Event) => {
+      const { detail } = event as CustomEvent<ImageClozeEditEventDetail>;
+      const parentId = args.activeNodeId;
+      if (!detail || !parentId) return;
+      args.flushPendingEditorDraft();
+      detail.respond(drainPendingNodeContentRuntimePersist(parentId).then(ready => ready && saveImageClozeRegionEdit(parentId, detail.edit)));
+    };
+
+    window.addEventListener(IMAGE_CLOZE_EDIT_EVENT, handleImageClozeEdit);
     window.addEventListener(IMAGE_CLOZE_CREATE_EVENT, handleImageClozeCreate as EventListener);
     window.addEventListener(IMAGE_CLOZE_DELETE_EVENT, handleImageClozeDelete as EventListener);
     return () => {
+      window.removeEventListener(IMAGE_CLOZE_EDIT_EVENT, handleImageClozeEdit);
       window.removeEventListener(IMAGE_CLOZE_CREATE_EVENT, handleImageClozeCreate as EventListener);
       window.removeEventListener(IMAGE_CLOZE_DELETE_EVENT, handleImageClozeDelete as EventListener);
     };
