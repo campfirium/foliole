@@ -29,7 +29,7 @@ export function WorkspaceRightSidebarSplitter({
       aria-orientation="vertical"
       data-workspace-floating-splitter={floating ? 'right' : undefined}
       aria-valuenow={Math.round(rightSidebarWidth)}
-      className={cn('group relative z-surface self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}
+      className={cn('app-focus-divider group relative z-surface self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}
       onDoubleClick={onResetLayout}
       onKeyDown={onRightSidebarSplitterKeyDown}
       onPointerDown={onRightSidebarSplitterPointerDown}

@@ -29,7 +29,7 @@ export function WorkspaceListSplitter({
       aria-orientation="vertical"
       data-workspace-floating-splitter={floating ? 'left' : undefined}
       aria-valuenow={Math.round(listWidth)}
-      className={cn('group relative z-surface self-stretch bg-transparent max-[1080px]:hidden', isCollapsed && 'pointer-events-none opacity-0')}
+      className={cn('app-focus-divider group relative z-surface self-stretch bg-transparent max-[1080px]:hidden', isCollapsed && 'pointer-events-none opacity-0')}
       onDoubleClick={onResetLayout}
       onKeyDown={onSplitterKeyDown}
       onPointerDown={onSplitterPointerDown}

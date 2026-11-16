@@ -11,3 +11,43 @@
     --tw-ring-shadow: 0 0 #0000 !important;
   }
 }
+
+@layer components {
+  .app-focus-divider {
+    --app-focus-line: #707070;
+  }
+
+  :root[data-resolved-base-color='dark'] .app-focus-divider {
+    --app-focus-line: #a3a3a3;
+  }
+
+  .app-focus-divider:focus-visible {
+    outline: none;
+  }
+
+  .app-focus-divider:focus-visible::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    border-inline-start: 1px solid var(--app-focus-line);
+  }
+
+  .app-focus-divider[data-workspace-floating-splitter='left']:focus-visible::after {
+    inset-inline: auto 0;
+  }
+
+  .app-focus-divider[aria-orientation='horizontal']:focus-visible::after {
+    inset: auto 1rem 0;
+    border-inline-start: 0;
+    border-block-end: 1px solid var(--app-focus-line);
+  }
+
+  @media (forced-colors: active) {
+    .app-focus-divider:focus-visible::after {
+      border-color: Highlight;
+      forced-color-adjust: none;
+    }
+  }
+}

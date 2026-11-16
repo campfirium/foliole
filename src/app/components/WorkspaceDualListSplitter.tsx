@@ -22,7 +22,7 @@ export function WorkspaceDualListSplitter({
       aria-label={t('desktop.workspace.resizeFolderList')}
       aria-orientation="vertical"
       aria-valuenow={Math.round(width)}
-      className="group relative w-px self-stretch bg-transparent"
+      className="app-focus-divider group relative w-px self-stretch bg-transparent"
       data-workspace-folder-splitter
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}

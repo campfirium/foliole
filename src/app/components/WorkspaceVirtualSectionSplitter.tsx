@@ -22,7 +22,7 @@ export function WorkspaceVirtualSectionSplitter({
       aria-label={t('desktop.workspace.resizeVirtualSection')}
       aria-orientation="horizontal"
       aria-valuenow={Math.round(height)}
-      className="group relative h-1 shrink-0 bg-transparent"
+      className="app-focus-divider group relative h-1 shrink-0 bg-transparent"
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       role="separator"
