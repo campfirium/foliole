@@ -99,7 +99,8 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
   }
   const statement = buildRemoteNodeVersionUpsert(record, undefined, compactSnapshot)!;
   const inserted = await port.run(statement.sql, statement.params);
-  if (compactSnapshot !== undefined && inserted.changes !== 1) {
+  // Android includes inventory trigger writes in the statement change count.
+  if (compactSnapshot !== undefined && inserted.changes <= 0) {
     throw new Error(`request_sync_deleted_history_not_new:${record.version_id}`);
   }
   await retainVersionParents(port, record);

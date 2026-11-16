@@ -135,7 +135,7 @@ async function rejectHistoryAndReopen(host: CompanionFixture) {
 async function syncAndObserveVersionReads(host: CompanionFixture) {
   const reads = new Map<string, string[]>();
   const original = host.db;
-  native.db = observeVersionReads(original, reads);
+  native.db = observeVersionReads(original, reads, host.sqlite);
   try { expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 }); }
   finally { native.db = original; }
   return reads;
@@ -191,9 +191,32 @@ it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('compacts receive
   }
 }, 60000);
 
-function observeVersionReads(db: DbPort, reads: Map<string, string[]>): DbPort {
+it('rolls back the deletion when the compact version insert changes no rows', async () => {
+  const host = await createCompanionRequestFixture();
+  const source = new Database(host.fixture.rightSnapshot.databasePath);
+  try {
+    const { old } = await prepareHistory(host, source, false);
+    host.sqlite.exec(`CREATE TRIGGER ignore_received_history BEFORE INSERT ON node_sync_versions
+      WHEN NEW.object_id = '${legacy}' BEGIN SELECT RAISE(IGNORE); END`);
+    await expect(syncAndObserveVersionReads(host)).rejects.toThrow(`request_sync_deleted_history_not_new:${old.version_id}`);
+    await host.restart();
+    expect(persistedHistory(host.sqlite, legacy)).toEqual([]);
+    expect(tombstone(host.sqlite)).toBeUndefined();
+  } finally {
+    source.close();
+    await host.close();
+  }
+});
+
+function observeVersionReads(db: DbPort, reads: Map<string, string[]>, sqlite: Database.Database): DbPort {
+  const totalChanges = sqlite.prepare('SELECT total_changes()').pluck();
   return {
-    run: (sql, params) => db.run(sql, params),
+    async run(sql, params) {
+      const before = Number(totalChanges.get());
+      const result = await db.run(sql, params);
+      // Android counts writes performed by triggers in the same statement.
+      return { ...result, changes: Number(totalChanges.get()) - before };
+    },
     query(sql, params) {
       const shape = sql.startsWith('SELECT length(CAST(body_text AS BLOB)) AS body_length') ? 'descriptor'
         : sql.startsWith('SELECT json_extract(alternative.value,') ? 'alternatives'
@@ -202,6 +225,6 @@ function observeVersionReads(db: DbPort, reads: Map<string, string[]>): DbPort {
       if (shape && typeof versionId === 'string') reads.set(versionId, [...reads.get(versionId) ?? [], shape]);
       return db.query(sql, params) as never;
     },
-    transaction: execute => db.transaction(tx => execute(observeVersionReads(tx, reads)))
+    transaction: execute => db.transaction(tx => execute(observeVersionReads(tx, reads, sqlite)))
   };
 }
