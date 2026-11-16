@@ -16,14 +16,11 @@ import {
 } from '../../shared/ui';
 
 import { WorkspaceAppearanceModeIcon } from './WorkspaceAppearanceModeIcon';
-import {
-  WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
-  WorkspaceRailTooltipButton
-} from './WorkspaceRailTooltipButton';
+import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 
 const RAIL_BUTTON_CLASS_NAME =
-  `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 export function RailItemIcon({
   commandId,
   iconId,

@@ -23,7 +23,7 @@ function OutlineItem({
   return (
     <button
       className={cn(
-        'flex w-full items-start py-1 text-left text-sm transition-all hover:translate-x-[-2px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        'flex w-full items-start py-1 text-left text-sm transition-all hover:translate-x-[-2px] ',
         isActive ? 'text-foreground/85 hover:text-foreground' : 'text-foreground/42 hover:text-foreground/90',
         level === 1 ? 'font-bold' : 'font-normal'
       )}

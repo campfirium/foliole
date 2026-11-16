@@ -6,7 +6,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '../../shared/ui';
 
 const tagClassName = 'inline-flex min-h-6 min-w-0 max-w-full items-center gap-1 rounded-md border border-border px-1.5 text-ui-xs text-foreground/65';
-const buttonClassName = `${tagClassName} hover:bg-foreground/[0.05] focus-visible:outline focus-visible:outline-1`;
+const buttonClassName = `${tagClassName} hover:bg-foreground/[0.05] `;
 
 type MaterialTagsProps = {
   activeNodeId?: string | null;

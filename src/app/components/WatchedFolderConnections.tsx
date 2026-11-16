@@ -54,7 +54,7 @@ function SourceActions(props: {
           aria-label={t('desktop.watchedFolder.connections.folderActions', {
             path: props.binding.primary_path || t('desktop.watchedFolder.source')
           })}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground "
           type="button"
         >
           <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />

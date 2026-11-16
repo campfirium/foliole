@@ -17,9 +17,6 @@ type WorkspaceRailTooltipButtonProps = ComponentPropsWithoutRef<typeof AppIconBu
   preserveFocusOnClick?: boolean;
 };
 
-export const WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME =
-  'focus-visible:bg-foreground/[0.06]';
-
 export function WorkspaceRailTooltipButton({
   forceTooltipOpen = false,
   preserveFocusOnClick = false,

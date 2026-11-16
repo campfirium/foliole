@@ -69,7 +69,7 @@ function TrailColorRow() {
         >
           <RotateCcw aria-hidden="true" size={18} />
         </button>
-        <label className="relative h-9 w-9 shrink-0">
+        <label className="app-focus-proxy relative h-9 w-9 shrink-0">
           <span
             aria-hidden="true"
             className={settingsColorSwatchClassName('pointer-events-none absolute inset-0')}

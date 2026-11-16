@@ -162,7 +162,6 @@ it('opens the queued node from the title only', () => {
 
   expect(onSelectNode).toHaveBeenCalledWith('reading-1');
   expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus:outline-none');
-  expect(screen.getByRole('button', { name: 'Reading 1' }).className).toContain('focus-visible:ring-1');
 });
 
 it('does not show due times in the flow list', () => {

@@ -15,10 +15,9 @@ import {
   AppTooltipTrigger
 } from '../../shared/ui';
 
-import { WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME } from './WorkspaceRailTooltipButton';
 
 const BUTTON_CLASS_NAME =
-  `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 
 export function WorkspaceDemoLanguageMenu() {
   const t = useTranslation();

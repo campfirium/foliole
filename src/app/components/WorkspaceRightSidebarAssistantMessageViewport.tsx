@@ -78,7 +78,7 @@ function AssistantTransitionEvent(props: {
         {props.event.onAction && props.event.actionLabel ? (
           <>
             <a
-              className="text-inherit underline decoration-current/55 underline-offset-2 hover:decoration-current focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="text-inherit underline decoration-current/55 underline-offset-2 hover:decoration-current "
               href="#"
               onClick={(event) => {
                 event.preventDefault();

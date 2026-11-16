@@ -9,15 +9,12 @@ import {
 } from '../../shared/platform/desktopUpdate';
 import { ToolbarActionGroup } from '../../shared/ui';
 
-import {
-  WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
-  WorkspaceRailTooltipButton
-} from './WorkspaceRailTooltipButton';
+import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import './WorkspaceUpdateAction.css';
 
 const UPDATE_REMINDER_INTERVAL_MS = 60 * 1000;
 const UPDATE_BUTTON_CLASS_NAME =
-  `workspace-update-action workspace-update-action-nudge ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
+  'workspace-update-action workspace-update-action-nudge';
 
 export function WorkspaceUpdateAction() {
   const t = useTranslation();

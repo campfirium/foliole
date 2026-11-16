@@ -1,8 +1,8 @@
 @layer components {
-  .app-focus-control:focus,
-  .app-focus-control:focus-visible,
-  .app-focus-silent:focus,
-  .app-focus-silent:focus-visible {
+  :root:not([data-desktop-focus]) .app-focus-control:focus,
+  :root:not([data-desktop-focus]) .app-focus-control:focus-visible,
+  :root:not([data-desktop-focus]) .app-focus-silent:focus,
+  :root:not([data-desktop-focus]) .app-focus-silent:focus-visible {
     outline: none !important;
   }
 
@@ -26,10 +26,6 @@
 
   :root[data-resolved-base-color='dark'] {
     --app-focus-line: #a3a3a3;
-  }
-
-  [data-menu-focus-return='keyboard']:focus:not(:focus-visible) {
-    outline: 1px solid var(--app-focus-line) !important;
   }
 
   .app-focus-divider:focus-visible {
@@ -56,13 +52,63 @@
   }
 
   @media (forced-colors: active) {
-    [data-menu-focus-return='keyboard']:focus:not(:focus-visible) {
-      outline-color: Highlight !important;
-    }
-
     .app-focus-divider:focus-visible::after {
       border-color: Highlight;
       forced-color-adjust: none;
     }
+  }
+}
+
+
+:root[data-desktop-focus] {
+  --app-control-focus-outline: 1px solid var(--app-focus-line);
+}
+
+:root[data-desktop-focus] :where(button, a[href], area[href], input, select, textarea, summary, [tabindex]):is(:focus-visible, [data-menu-focus-return='keyboard']:focus):not(:where(
+  [data-menu-focus-return='pointer'], .app-focus-boundary, .app-focus-caret, .app-focus-divider, .app-shellless-input,
+  [aria-hidden='true'], [contenteditable], [role='menu'], [role^='menuitem'], [role='listbox'][aria-activedescendant],
+  [tabindex='-1']:not(button, a[href], input, select, textarea, [role='treeitem'])
+)),
+:root[data-desktop-focus] .app-focus-proxy:has(> :focus-visible),
+:root[data-desktop-focus] .app-focus-peer:focus-visible + * {
+  outline: var(--app-control-focus-outline);
+  outline-offset: -1px;
+}
+
+:root[data-desktop-focus] .app-focus-reveal:focus-visible {
+  z-index: 1;
+  width: max-content;
+  height: auto;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  clip: auto;
+  border-radius: 0.25rem;
+  background: var(--app-surface);
+}
+
+/* Keep the touch renderer's legacy utilities while desktop uses a single outline or border. */
+:root[data-desktop-focus] :focus-visible:where([class*='focus-visible:ring-'], [class*='focus-visible:!ring-']) {
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-inset-ring-shadow: 0 0 #0000 !important;
+}
+
+:root[data-desktop-focus] .app-focus-boundary:not(.app-focus-caret):focus-visible {
+  border-color: var(--app-focus-line);
+  outline: none;
+}
+
+:root[data-desktop-focus] .app-focus-caret:focus-visible {
+  outline: none;
+}
+
+@media (forced-colors: active) {
+  :root[data-desktop-focus] {
+    --app-focus-line: Highlight;
+  }
+
+  :root[data-desktop-focus] [role^='menuitem']:focus-visible {
+    outline: var(--app-control-focus-outline);
+    outline-offset: -1px;
   }
 }

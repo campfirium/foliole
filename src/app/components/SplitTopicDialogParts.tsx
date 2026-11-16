@@ -51,11 +51,11 @@ export function SplitTopicControls(props: {
       </div>
       <label className="block text-sm font-medium text-foreground">
         {t('desktop.splitTopic.headerText')}
-        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.headerText} onChange={(event) => props.onChange({ ...props.form, headerText: event.target.value })} />
+        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none " value={props.form.headerText} onChange={(event) => props.onChange({ ...props.form, headerText: event.target.value })} />
       </label>
       <label className="block text-sm font-medium text-foreground">
         {t('desktop.splitTopic.footerText')}
-        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.footerText} onChange={(event) => props.onChange({ ...props.form, footerText: event.target.value })} />
+        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none " value={props.form.footerText} onChange={(event) => props.onChange({ ...props.form, footerText: event.target.value })} />
       </label>
     </div>
   );

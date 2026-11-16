@@ -25,10 +25,10 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
       <button
         aria-label={props.ariaLabel}
         data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
-        className={`-mx-4 flex h-full w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
+        className={`-mx-4 flex h-full w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors ${
           props.active || props.isBulkSelectionActive
             ? 'bg-[var(--app-surface-control-bg)]'
-            : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
+            : 'hover:bg-[var(--app-surface-control-hover-bg)]'
         }`}
         onClick={props.onClick}
         type="button"

@@ -8,7 +8,7 @@ import {
   defaultSidebarTiers, nextSidebarThreshold, selectSidebarTier, sidebarModes, type SidebarMode, type SidebarRule, type SidebarSide, type SidebarTier
 } from '../../model/sidebarLayoutTiers';
 
-const fieldClass = 'rounded border border-settings-control-border bg-settings-control px-2 py-1';
+const fieldClass = 'app-focus-boundary rounded border border-settings-control-border bg-settings-control px-2 py-1';
 
 function NumberField(props: { label: string; value: number; onChange: (value: number) => boolean; integer?: boolean }) {
   return (

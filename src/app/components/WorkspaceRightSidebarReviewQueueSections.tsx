@@ -56,7 +56,7 @@ function QueueRow(props: {
       <span className={`${inspectorListMetaClassName} text-left tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
-        className={`${inspectorListTitleClassName} truncate text-left font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+        className={`${inspectorListTitleClassName} truncate text-left font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none `}
         onClick={() => props.onSelectNode(props.nodeId)}
         type="button"
       >

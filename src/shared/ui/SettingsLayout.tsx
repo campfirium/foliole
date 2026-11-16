@@ -57,9 +57,9 @@ export function settingsHotkeyRowClassName(className?: string) {
 
 export function settingsFieldClassName(className?: string) {
   return cn(
-    'h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground transition-colors',
+    'app-focus-boundary h-9 w-full min-w-0 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground transition-colors',
     'hover:border-settings-control-border-hover hover:bg-settings-control-hover',
-    'focus-visible:border-settings-control-border-hover focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    'focus-visible:border-settings-control-border-hover [:root:not([data-desktop-focus])_&]:focus-visible:bg-settings-control-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
     'disabled:cursor-not-allowed disabled:opacity-45',
     className
   );

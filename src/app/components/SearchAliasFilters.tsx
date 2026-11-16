@@ -15,7 +15,7 @@ export function SearchAliasFilters(props: {
         return (
           <button
             aria-pressed={selected}
-            className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${selected
+            className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition-colors ${selected
               ? 'border-border/70 bg-foreground/5 font-semibold text-foreground'
               : 'border-border/50 text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}
             key={option.key}

@@ -54,7 +54,7 @@ export function WorkspaceActivityNotice({
       {onOpen ? (
         <button
           aria-label={resolvedOpenLabel}
-          className="group flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="group flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-foreground/[0.04] "
           onClick={onOpen}
           type="button"
         >

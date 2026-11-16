@@ -96,7 +96,7 @@ function WorkspaceContentSortTrigger(props: { triggerLabel: string }) {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={props.triggerLabel}
-          className="inline-flex size-8 items-center justify-center rounded-md bg-transparent text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          className="inline-flex size-8 items-center justify-center rounded-md bg-transparent text-foreground/70 transition-colors hover:bg-foreground/[0.04] hover:text-foreground "
           type="button"
         >
           <ArrowDownNarrowWide aria-hidden="true" size={16} strokeWidth={1.9} />

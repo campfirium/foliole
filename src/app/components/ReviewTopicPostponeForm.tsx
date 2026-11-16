@@ -17,7 +17,7 @@ function DelaySlider({ min, max, value, suffix, onChange }: {
   const progress = `${((value - min) / (max - min)) * 100}%`;
   return (
     <div>
-      <div className="relative h-5">
+      <div className="app-focus-proxy relative h-5 rounded-sm">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/16" />
         <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/32" style={{ width: progress }} />
         <div aria-hidden="true"
@@ -60,7 +60,7 @@ export function ReviewTopicPostponeForm(props: Props) {
           {dayMode ? <input aria-label={t('desktop.reviewDelay.daysInput')} inputMode="numeric" ref={input}
             value={dayDraft ?? ''} placeholder={dayDraft === null ? DEFAULT_DAYS : undefined}
             style={{ width: `${Math.min(9, Math.max(3, days.length))}ch` }}
-            className="min-w-0 rounded-sm border-b border-border bg-transparent text-3xl font-semibold leading-none tabular-nums outline-none placeholder:text-current focus:border-foreground/60"
+            className="app-focus-boundary min-w-0 rounded-sm border-b border-border bg-transparent text-3xl font-semibold leading-none tabular-nums outline-none placeholder:text-current focus:border-foreground/60"
             onChange={event => setDayDraft(event.currentTarget.value)} />
             : <span className="text-3xl font-semibold leading-none tabular-nums">{props.selectedLevel}</span>}
           <span className="text-sm font-semibold text-foreground/65">{label}</span>

@@ -96,7 +96,7 @@ export function ReadwiseApiConnectionRow(props: {
   if (!state.connection) {
     return (
       <SettingsRow
-        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
+        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 " onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
         title={t('desktop.readwise.api.connection.title')}
       />
     );
@@ -108,7 +108,7 @@ export function ReadwiseApiConnectionRow(props: {
   return (
     <>
       <SettingsRow
-        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
+        description={<><button className="underline decoration-foreground/35 underline-offset-2 hover:decoration-foreground/65 " onClick={() => void openExternalUrl(READWISE_TOKEN_URL)} type="button">{t('desktop.readwise.api.connection.getToken')}</button>{t('desktop.readwise.api.connection.description')}</>}
         title={t('desktop.readwise.api.connection.title')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>

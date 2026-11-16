@@ -35,7 +35,7 @@ export function ImportCatalogSortControls(props: {
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={t('desktop.importCatalog.sort.aria', { label: activeLabel })}
-          className="inline-flex h-8 items-center gap-2 bg-transparent px-0 text-sm font-medium text-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          className="inline-flex h-8 items-center gap-2 bg-transparent px-0 text-sm font-medium text-foreground/72 transition-colors hover:text-foreground "
           type="button"
         >
           <SortIcon />

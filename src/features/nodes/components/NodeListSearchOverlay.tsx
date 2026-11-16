@@ -60,7 +60,7 @@ export function NodeListSearchOverlay(props: {
       <AppInput
         ref={inputRef}
         aria-label={t('desktop.nodeSearch.input')}
-        className="h-8 min-w-0 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
+        className="app-focus-caret h-8 min-w-0 border-0 bg-transparent px-0 text-[14px] focus-visible:ring-0"
         onChange={(event) => props.onChangeSearchQuery(event.currentTarget.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {

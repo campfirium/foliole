@@ -38,7 +38,7 @@ export function ClozeGuardPanel(props: {
       <div className="mt-4 flex items-center justify-between gap-2">
         <button
           aria-label={t('desktop.clozeGuard.openSettings')}
-          className="flex size-8 items-center justify-center rounded-md text-foreground/60 transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex size-8 items-center justify-center rounded-md text-foreground/60 transition-colors hover:bg-foreground/[0.06] hover:text-foreground "
           onClick={() => {
             dispatchOpenClozeGuardSettings();
             props.onCancel();

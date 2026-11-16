@@ -23,7 +23,7 @@ function ValuePanel(props: {
     <div className="fixed inset-0 z-modal flex items-center justify-center bg-foreground/10 px-5">
       <div className={appFloatingSurfaceClassName('popover', 'grid w-[min(860px,calc(100vw-40px))] gap-3 overflow-hidden p-4')} role="listbox">
         <div className="grid grid-cols-[1fr_auto] items-center gap-3">
-          <input aria-label={t('desktop.foliolePublish.chooseValue', { field: props.field })} autoFocus className="h-10 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground outline-none focus:border-settings-control-border-hover focus:bg-settings-control-hover focus:ring-1 focus:ring-ring" onChange={(event) => props.onQueryChange(event.target.value)} onKeyDown={(event) => {
+          <input aria-label={t('desktop.foliolePublish.chooseValue', { field: props.field })} autoFocus className="h-10 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground outline-none app-focus-boundary" onChange={(event) => props.onQueryChange(event.target.value)} onKeyDown={(event) => {
             if (event.key !== 'Enter' || !props.query.trim()) return;
             event.preventDefault();
             props.select(props.query.trim());

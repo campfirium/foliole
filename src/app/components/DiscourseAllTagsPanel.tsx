@@ -37,7 +37,7 @@ export function DiscourseAllTagsPanel(props: {
           <input
             aria-label={t('desktop.discoursePublish.tags')}
             autoFocus
-            className="h-10 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground outline-none placeholder:text-foreground/42 focus:border-settings-control-border-hover focus:bg-settings-control-hover focus:ring-1 focus:ring-ring"
+            className="h-10 rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground outline-none placeholder:text-foreground/42 app-focus-boundary"
             onChange={(event) => props.setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key !== 'Enter') return;

@@ -203,7 +203,7 @@ function TopicSearchPanel(state: TopicSearchState) {
           <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
           <AppInput
             aria-label={t('desktop.topicSearch.input')}
-            className="h-8 w-40 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
+            className="h-8 w-40 border-transparent bg-transparent px-2 text-xs "
             onChange={(event) => state.setQuery(event.target.value)}
             onKeyDown={(event) => handleSearchInputKeyDown(event, state.hasMatches, () => state.step(1), () => state.step(-1), state.close)}
             placeholder={t('desktop.topicSearch.placeholder')}

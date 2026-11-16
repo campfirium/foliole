@@ -142,20 +142,6 @@ it('runs search and command palette from the top rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.openCommandPalette);
 });
 
-it('suppresses accent focus rings on rail buttons', () => {
-  renderToolbar(false);
-
-  for (const button of screen.getAllByRole('button')) {
-    expect(button.className).toContain('app-focus-silent');
-    expect(button.className).toContain('focus-visible:bg-foreground/[0.06]');
-    expect(button.className).toContain('focus:outline-none');
-    expect(button.className).toContain('focus-visible:ring-0');
-    expect(button.className).toContain('focus-visible:[--tw-ring-shadow:0_0_#0000]');
-    expect(button.className).not.toContain('focus-visible:ring-border-strong');
-    expect(button.className).not.toContain('focus-visible:ring-ring');
-  }
-});
-
 it('shows localized search and command palette rail actions', () => {
   window.localStorage.setItem('foliole-app-language', 'zh-Hans');
 

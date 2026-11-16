@@ -12,7 +12,7 @@ function FollowSelectionButton(props: { label: string; onClick: () => void }) {
   return (
     <button
       aria-label={props.label}
-      className="group/pin flex h-5 w-5 items-center justify-center rounded-md text-foreground/35 hover:bg-[var(--app-floating-item-hover-bg)] hover:text-foreground/65 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="group/pin flex h-5 w-5 items-center justify-center rounded-md text-foreground/35 hover:bg-[var(--app-floating-item-hover-bg)] hover:text-foreground/65 "
       onClick={props.onClick}
       onPointerDown={(event) => event.stopPropagation()}
       title={props.label}
@@ -69,6 +69,7 @@ export function AnnotationNotePanel(props: {
         autoFocus
         className={cn(
           'min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-3.5 py-3 text-ui-md text-foreground placeholder:text-foreground/45',
+          'app-focus-caret',
           appFocusSilentClassName
         )}
         onChange={(event) => props.onChange(event.target.value)}

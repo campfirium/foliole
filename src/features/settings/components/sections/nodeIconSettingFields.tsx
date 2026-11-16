@@ -17,7 +17,7 @@ export function ColorField(props: { compact?: boolean; label: string; onChange: 
   if (props.compact) {
     return (
       <label className="inline-grid size-7 min-w-0 cursor-pointer place-items-center text-sm text-foreground/72">
-        <span className="relative size-5 shrink-0">
+        <span className="app-focus-proxy relative size-5 shrink-0">
           <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 !size-5 rounded-sm')} style={{ backgroundColor: props.value }} />
           <input
             aria-label={props.label}
@@ -34,7 +34,7 @@ export function ColorField(props: { compact?: boolean; label: string; onChange: 
     <label className="grid min-w-0 gap-1 text-sm text-foreground/72">
       <span>{props.label}</span>
       <span className="inline-flex h-9 items-center gap-2.5">
-        <span className="relative size-9 shrink-0">
+        <span className="app-focus-proxy relative size-9 shrink-0">
           <span aria-hidden="true" className={settingsColorSwatchClassName('pointer-events-none absolute inset-0 rounded-sm')} style={{ backgroundColor: props.value }} />
           <input
             aria-label={props.label}

@@ -27,7 +27,7 @@ export function FolderListSearchBox({
       <Search aria-hidden="true" className={`shrink-0 ${readOnly ? 'text-foreground/28' : 'text-foreground/38'}`} size={14} strokeWidth={1.8} />
       <AppInput
         aria-label={resolvedAriaLabel}
-        className={`h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none hover:!bg-transparent focus-visible:!bg-transparent focus-visible:!ring-0 [&::-webkit-search-cancel-button]:appearance-none ${mutedSearchClassName}`}
+        className={`app-focus-caret h-8 min-w-0 appearance-none !border-0 !bg-transparent px-0 text-sm shadow-none hover:!bg-transparent focus-visible:!bg-transparent [&::-webkit-search-cancel-button]:appearance-none ${mutedSearchClassName}`}
         onChange={(event) => onChangeSearchQuery(event.target.value)}
         placeholder={resolvedPlaceholder}
         readOnly={readOnly}
@@ -57,7 +57,7 @@ function FolderListSearchClearButton({ onClear }: { onClear: () => void }) {
   return (
     <button
       aria-label={t('desktop.folderSearch.clear')}
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-foreground/46 transition-colors hover:bg-foreground/8 hover:text-foreground/68 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-foreground/46 transition-colors hover:bg-foreground/8 hover:text-foreground/68 "
       onClick={onClear}
       type="button"
     >

@@ -100,7 +100,7 @@ function PdfSearchInput(props: SearchControlsProps & { canNavigateMatches: boole
     <PdfToolbarTooltip label={t('desktop.pdf.search.aria')}>
       <AppInput
         aria-label={t('desktop.pdf.search.aria')}
-        className="h-8 w-36 min-w-0 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
+        className="h-8 w-36 min-w-0 border-transparent bg-transparent px-2 text-xs "
         data-pdf-search-input="true"
         onKeyDown={(event) => handleSearchInputKeyDown(event, props.canNavigateMatches, props.onFindNext, props.onFindPrevious)}
         onChange={handleSearchInputChange}

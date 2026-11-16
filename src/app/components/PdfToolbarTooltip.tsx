@@ -1,6 +1,5 @@
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 
-import { cn } from '../../shared/lib/utils';
 import { AppIconButton, AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
 
 export function PdfToolbarTooltip({ children, disabled = false, label }: {
@@ -18,10 +17,10 @@ export function PdfToolbarTooltip({ children, disabled = false, label }: {
   );
 }
 
-export function PdfToolbarIconButton({ className, ...props }: ComponentProps<typeof AppIconButton>) {
+export function PdfToolbarIconButton(props: ComponentProps<typeof AppIconButton>) {
   return (
     <PdfToolbarTooltip disabled={props.disabled ?? false} label={props.label}>
-      <AppIconButton {...props} className={cn('focus-visible:ring-inset focus-visible:ring-ring/50', className)} />
+      <AppIconButton {...props} />
     </PdfToolbarTooltip>
   );
 }

@@ -64,7 +64,7 @@ function renderReadwiseBookTitle(input: {
   }
   return (
     <button
-      className="text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="text-left underline-offset-2 hover:underline "
       onClick={() => input.onOpenBookNode?.(input.generatedNodeId!)}
       type="button"
     >

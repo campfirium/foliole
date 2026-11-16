@@ -24,7 +24,7 @@ export function WorkspaceResultShortcutsFooter(props: {
       <button
         aria-label={props.collapsed ? props.showLabel : props.collapseLabel}
         aria-expanded={!props.collapsed}
-        className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 "
         onClick={props.onToggle}
         type="button"
       >

@@ -62,7 +62,7 @@ function renderNodeListActions(
 function renderTrashActions(t: Translate, onEmptyTrash: () => void, trashCount: number) {
   return (
     <>
-      <button aria-label={t('desktop.nodeList.create')} className="sr-only" type="button">
+      <button aria-label={t('desktop.nodeList.create')} className="sr-only" tabIndex={-1} type="button">
         {t('desktop.nodeList.create')}
       </button>
       <AppIconButton
@@ -109,7 +109,7 @@ function renderNodeListHeaderShell(args: {
       className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 overflow-hidden px-4"
     >
       <h2 className="sr-only">{t('desktop.nodeList.title')}</h2>
-      <button className="sr-only" onClick={args.onOpenNotesView} type="button">
+      <button className="sr-only app-focus-reveal" onClick={args.onOpenNotesView} type="button">
         {t('desktop.toolbar.openTopicsView')}
       </button>
       {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}

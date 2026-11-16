@@ -48,7 +48,7 @@ export function TrashDocumentHeaderImportAction({
           <AppTooltipTrigger asChild>
             <button
               aria-label={t('desktop.externalLibrary.preview.importToFoliole')}
-              className="inline-block border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-foreground/45 transition-colors hover:text-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-45"
+              className="inline-block border-0 bg-transparent p-0 text-sm font-normal leading-[1.25] text-foreground/45 transition-colors hover:text-foreground/65 focus:outline-none disabled:pointer-events-none disabled:opacity-45"
               disabled={isImporting}
               onClick={() => void handleImport()}
               type="button"

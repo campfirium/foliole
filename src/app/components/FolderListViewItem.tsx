@@ -59,7 +59,7 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
         <div className="flex items-start justify-between gap-4">
           <button
             aria-label={`Open ${props.displayTitle}`}
-            className="min-w-0 flex-1 text-left text-[17px] font-normal leading-7 text-foreground transition-colors hover:text-accent-strong focus-visible:outline-none"
+            className="min-w-0 flex-1 text-left text-[17px] font-normal leading-7 text-foreground transition-colors hover:text-accent-strong "
             onClick={(event) => props.onSelectNode(props.node.id, toNodeSelectModifiers(event))}
             type="button"
           >
@@ -80,7 +80,7 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
         </div>
         <button
           aria-label={`Open real location for ${props.displayTitle}`}
-          className="w-fit max-w-full truncate text-left text-[13px] leading-5 text-foreground/56 underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none"
+          className="w-fit max-w-full truncate text-left text-[13px] leading-5 text-foreground/56 underline-offset-2 transition-colors hover:text-foreground hover:underline "
           onClick={handleLocationClick}
           type="button"
         >

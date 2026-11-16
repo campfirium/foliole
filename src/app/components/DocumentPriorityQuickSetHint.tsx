@@ -22,7 +22,7 @@ function PriorityQuickSetSlider(props: Pick<DocumentPriorityQuickSetHintProps, '
   const progress = `${(priority / 9) * 100}%`;
   return (
     <div className="w-full">
-      <div className="relative h-6">
+      <div className="app-focus-proxy relative h-6 rounded-sm">
         <div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/16" />
         <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/32" style={{ width: progress }} />
         <div

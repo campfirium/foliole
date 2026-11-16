@@ -68,7 +68,7 @@ function CategoryPopover(props: {
           <input
             aria-label={t('desktop.discoursePublish.category')}
             autoFocus
-            className="h-8 rounded-md border border-settings-control-border bg-settings-control px-2 text-ui-md text-foreground outline-none placeholder:text-foreground/42 focus:border-settings-control-border-hover focus:bg-settings-control-hover focus:ring-1 focus:ring-ring"
+            className="h-8 rounded-md border border-settings-control-border bg-settings-control px-2 text-ui-md text-foreground outline-none placeholder:text-foreground/42 app-focus-boundary"
             onChange={(event) => props.setQuery(event.target.value)}
             placeholder=""
             value={props.query}

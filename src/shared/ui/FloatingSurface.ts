@@ -9,7 +9,7 @@ const floatingSurfaceBaseClassName = [
 const floatingOverlayBaseClassName =
   'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
-  'w-full appearance-none border-x-0 border-t-0 border-b border-transparent bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-foreground shadow-none outline-none [box-shadow:none]',
+  'app-focus-caret w-full appearance-none border-x-0 border-t-0 border-b border-transparent bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-foreground shadow-none outline-none [box-shadow:none]',
   appFocusSilentClassName,
   'focus:border-transparent focus:shadow-none focus:[box-shadow:none]',
   'focus-visible:border-transparent focus-visible:shadow-none focus-visible:[box-shadow:none]',
@@ -46,7 +46,7 @@ const floatingWorkspaceHeaderBaseClassName = 'flex shrink-0 flex-col gap-3 p-set
 const floatingWorkspaceTitleBaseClassName = 'text-ui-md font-normal text-foreground';
 const floatingWorkspaceFormBaseClassName = 'flex items-center gap-2';
 const floatingWorkspaceInputBaseClassName = [
-  'h-9 min-w-0 flex-1 appearance-none rounded-md border border-[var(--app-floating-border-color)]',
+  'app-focus-boundary h-9 min-w-0 flex-1 appearance-none rounded-md border border-[var(--app-floating-border-color)]',
   'bg-[var(--app-floating-input-bg)] px-3 text-ui-md text-foreground outline-none transition-colors',
   'placeholder:text-foreground/42 hover:bg-[var(--app-floating-item-hover-bg)]',
   'focus-visible:border-border-strong focus-visible:ring-1 focus-visible:ring-ring',

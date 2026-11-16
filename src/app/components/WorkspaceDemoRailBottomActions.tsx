@@ -8,15 +8,12 @@ import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation
 import { requestAppConfirmation, ToolbarActionGroup } from '../../shared/ui';
 
 import { WorkspaceDemoLanguageMenu } from './WorkspaceDemoLanguageMenu';
-import {
-  WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
-  WorkspaceRailTooltipButton
-} from './WorkspaceRailTooltipButton';
+import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 
 const FOLIOLE_OFFICIAL_SITE_URL = 'https://foliole.app/';
 const FOLIOLE_DOWNLOAD_URL = 'https://github.com/campfirium/foliole/releases';
 const RAIL_BUTTON_CLASS_NAME =
-  `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
 
 function DemoRailActionButton(props: Parameters<typeof WorkspaceRailTooltipButton>[0]) {
   return (

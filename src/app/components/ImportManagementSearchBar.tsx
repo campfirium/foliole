@@ -30,7 +30,7 @@ export function ImportManagementSearchBar({
         <Search aria-hidden="true" className="shrink-0 text-foreground/45" size={14} strokeWidth={1.8} />
         <AppInput
           aria-label={placeholder}
-          className="h-8 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+          className="app-focus-caret h-8 border-0 bg-transparent px-0 text-sm shadow-none "
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           value={value}

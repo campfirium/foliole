@@ -78,7 +78,7 @@ export function ReviewToolbarSessionSummaryMenu({ summary }: { summary: ReviewTo
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={triggerLabel}
-          className="inline-flex size-8 items-center justify-center rounded-md text-foreground/38 outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground/65 focus-visible:ring-1 focus-visible:ring-border-strong"
+          className="inline-flex size-8 items-center justify-center rounded-md text-foreground/38 outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground/65 "
           type="button"
         >
           <Clock3 aria-hidden="true" className="size-4" strokeWidth={1.8} />

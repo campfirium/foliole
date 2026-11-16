@@ -29,7 +29,7 @@ export function SettingsColorRow(props: {
           <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
         </button>
         <div className="inline-flex min-h-9 items-center gap-2.5">
-          <label data-settings-color-swatch className="relative h-9 w-9 shrink-0">
+          <label data-settings-color-swatch className="app-focus-proxy relative h-9 w-9 shrink-0">
             <span
               aria-hidden="true"
               className={settingsColorSwatchClassName(props.compact

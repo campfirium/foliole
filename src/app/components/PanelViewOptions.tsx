@@ -73,8 +73,8 @@ function ViewChoice({ checked, name, label, onSelect }: {
 }) {
   return (
     <label className="relative min-w-0 cursor-pointer">
-      <input checked={checked} className="peer sr-only" name={name} onChange={onSelect} type="radio" />
-      <span className="flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-ui-base text-foreground/75 transition-colors hover:bg-[var(--app-control-bg-hover-color)] peer-checked:border-[var(--app-control-border-color)] peer-checked:bg-[var(--app-floating-item-active-bg)] peer-checked:font-medium peer-checked:text-foreground peer-focus-visible:outline peer-focus-visible:outline-ring">
+      <input checked={checked} className="app-focus-peer peer sr-only" name={name} onChange={onSelect} type="radio" />
+      <span className="flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-ui-base text-foreground/75 transition-colors hover:bg-[var(--app-control-bg-hover-color)] peer-checked:border-[var(--app-control-border-color)] peer-checked:bg-[var(--app-floating-item-active-bg)] peer-checked:font-medium peer-checked:text-foreground">
         <Check aria-hidden="true" className={`size-3.5 shrink-0 ${checked ? '' : 'invisible'}`} />
         <span>{label}</span>
       </span>

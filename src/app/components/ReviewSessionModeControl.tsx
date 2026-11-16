@@ -25,17 +25,17 @@ function getSessionModeLabel(mode: ReviewSessionMode, t: ReviewSessionTranslate)
 
 function modeButtonClassName(isTemporaryMode: boolean) {
   return [
-    'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none',
+    'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
     isTemporaryMode
-      ? 'bg-foreground/[0.055] text-foreground/78 hover:bg-foreground/[0.08] focus-visible:bg-foreground/[0.08]'
-      : 'bg-transparent text-foreground/32 hover:bg-foreground/[0.045] hover:text-foreground/68 focus-visible:bg-foreground/[0.05] focus-visible:text-foreground/72'
+      ? 'bg-foreground/[0.055] text-foreground/78 hover:bg-foreground/[0.08]'
+      : 'bg-transparent text-foreground/32 hover:bg-foreground/[0.045] hover:text-foreground/68 focus-visible:text-foreground/72'
   ].join(' ');
 }
 
 function queueClearButtonClassName() {
   return [
-    'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:outline-none',
-    'bg-transparent text-foreground/38 hover:bg-foreground/[0.045] hover:text-foreground/68 focus-visible:bg-foreground/[0.05] focus-visible:text-foreground/72'
+    'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
+    'bg-transparent text-foreground/38 hover:bg-foreground/[0.045] hover:text-foreground/68 focus-visible:text-foreground/72'
   ].join(' ');
 }
 

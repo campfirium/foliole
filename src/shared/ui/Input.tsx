@@ -12,6 +12,7 @@ export const AppInput = React.forwardRef<HTMLInputElement, AppInputProps>(({ cla
     type={type}
     className={cn(
       'flex h-10 w-full appearance-none rounded-md border border-settings-control-border bg-settings-control px-3 py-1 text-ui-input text-foreground transition-colors placeholder:text-foreground/45 hover:border-settings-control-border-hover hover:bg-settings-control-hover focus-visible:border-settings-control-border-hover disabled:cursor-not-allowed disabled:opacity-45',
+      'app-focus-boundary',
       appInputFocusVisibleClassName,
       className
     )}

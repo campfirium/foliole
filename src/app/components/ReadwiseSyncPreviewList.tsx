@@ -88,7 +88,7 @@ function ReadwisePreviewSourceName({ entry }: { entry: NativeReadwiseSyncPreview
   }
   return (
     <button
-      className="min-w-0 truncate text-left text-foreground underline-offset-2 hover:underline hover:decoration-foreground/35 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="min-w-0 truncate text-left text-foreground underline-offset-2 hover:underline hover:decoration-foreground/35 "
       onClick={() => void openLocalPath(entry.open_path ?? '')}
       title={entry.source_path}
       type="button"

@@ -18,7 +18,7 @@ function NavigationButtons({ canGoBack, canGoForward, canGoParent, onGoBack, onG
     <div className="flex shrink-0 items-center gap-1">
       <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoBack} icon={<ArrowLeftIcon />} label={t('desktop.navigation.back')} onClick={onGoBack} />
       <AppIconButton className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground" disabled={!canGoForward} icon={<ArrowRightIcon />} label={t('desktop.navigation.forward')} onClick={onGoForward} />
-      <button aria-label={t('desktop.navigation.parent')} className="sr-only" disabled={!canGoParent} onClick={onGoParent} type="button">
+      <button aria-label={t('desktop.navigation.parent')} className="sr-only app-focus-reveal" disabled={!canGoParent} onClick={onGoParent} type="button">
         {t('desktop.navigation.parent')}
       </button>
     </div>
