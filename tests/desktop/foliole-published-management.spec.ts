@@ -57,7 +57,7 @@ test('opens Published from Settings and identifies its Topics and management act
   await region.getByRole('button', { name: /^(Manage content|管理内容)$/ }).click();
 
   await expect(dialog).toBeHidden();
-  await expect(desktopWindow.getByRole('treeitem', { name: /^(Published|已发布)$/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(desktopWindow.locator('[data-node-id="special-virtual-published"]')).toHaveAttribute('aria-selected', 'true');
   const publishedRegion = desktopWindow.getByRole('region', { name: /^(Published topics|已发布主题)$/ });
   await expect(publishedRegion.getByRole('searchbox', {
     name: /^(Search Topics published to your site|搜索已发布到站点的 Topic)$/
@@ -79,7 +79,7 @@ test('opens Published from Settings and identifies its Topics and management act
   await writeFile(TOPIC_SCREENSHOT, topicScreenshot);
   await testInfo.attach('foliole-published-topic', { body: topicScreenshot, contentType: 'image/png' });
 
-  await desktopWindow.getByRole('treeitem', { exact: true, name: 'Home' }).click();
+  await desktopWindow.locator('[data-node-id="special-home"]').first().click();
   const topicPanel = desktopWindow.getByRole('complementary', {
     name: /^(Current folder contents|当前文件夹内容)$/
   });

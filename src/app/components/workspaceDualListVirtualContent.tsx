@@ -55,6 +55,7 @@ function resolveVirtualHeader(args: {
 function renderPublishedContentColumn(props: WorkspaceDualListContentProps) {
   return (
     <PublishedVirtualResultListPanel
+      continueAfterDelete={!props.isStudyMode}
       activeNodeId={props.activeNodeId}
       nodeOrder={props.nodeOrder}
       nodesById={props.nodesById}
@@ -92,6 +93,8 @@ export function renderVirtualContentColumn(
 
   return (
     <VirtualResultListPanel
+      virtualFolderId={activeVirtualNodeId}
+      continueAfterDelete={!props.isStudyMode && !isRemovedView}
       activeNodeId={props.activeNodeId}
       childrenByParent={childrenByParent}
       emptyState={{
@@ -99,9 +102,7 @@ export function renderVirtualContentColumn(
           ? t('desktop.virtualSearch.removed.empty.description')
           : isShelvedView
           ? t('desktop.virtualSearch.shelved.empty.description')
-          : activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID
-            ? t('desktop.virtualSearch.empty.description')
-            : t('desktop.virtualSearch.saved.empty.description'),
+          : t('desktop.virtualSearch.saved.empty.description'),
         title: isRemovedView
           ? t('desktop.virtualSearch.removed.empty.title')
           : isShelvedView

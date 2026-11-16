@@ -151,7 +151,8 @@ export async function applyWorkspaceDeleteHistory(args: {
       navigation: { backStack: [...navigation.backStack], forwardStack: [...navigation.forwardStack] },
       ...applyWorkspaceTrashLifecycle({ ...latest, activeNodeId: context.activeNodeId, nodeOrder, nodesById,
         trashedNodeDeletedAtById: applyDeletedAtSnapshots(latest, args.entry, args.mode, args.mutationTimestamp),
-        trashedNodeIds: [...trashed] }, args.entry.nodeIds, args.mode === 'undo' ? null : args.mutationTimestamp)
+        trashedNodeIds: [...trashed] }, args.entry.nodeIds, args.mode === 'undo' ? null : args.mutationTimestamp),
+      ...(context.activeNodeId === null ? { activeNodeId: null } : {})
     }
   );
 }

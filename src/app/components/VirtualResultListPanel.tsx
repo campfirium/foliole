@@ -6,6 +6,8 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 interface VirtualResultListPanelProps {
   activeNodeId: string | null;
+  virtualFolderId?: string;
+  continueAfterDelete?: boolean;
   childrenByParent?: Map<string | null, string[]>;
   emptyState: {
     description: string;
@@ -54,7 +56,7 @@ function getManualRootIds(ids: string[], nodesById: Record<string, Node>) {
 
 export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const nodeIds = props.nodes.map((node) => node.id);
-  const virtualFolderId = resolveVirtualFolderId(props);
+  const virtualFolderId = props.virtualFolderId ?? resolveVirtualFolderId(props);
   const virtualFolderView = isManualVirtualNodeFilter(props.nodesById[virtualFolderId]?.virtualFilter)
     ? 'manual' as const
     : 'readonly' as const;
@@ -63,6 +65,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
     <WorkspaceTopicTree
       activeFolderId={virtualFolderId}
       activeNodeId={props.activeNodeId}
+      {...(props.continueAfterDelete ? { deleteBrowseRootId: virtualFolderId } : {})}
       {...(props.emptyState ? { emptyState: props.emptyState } : {})}
       {...(virtualFolderView === 'manual' && props.childrenByParent ? { childrenByParent: props.childrenByParent } : {})}
       itemIds={virtualFolderView === 'manual' && props.childrenByParent ? getManualRootIds(nodeIds, props.nodesById) : nodeIds}

@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useLocalization } from '../../shared/localization/LocalizationProvider';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import { AppButton, AppErrorState, AppLoadingState } from '../../shared/ui';
@@ -8,6 +9,7 @@ import { VirtualResultListPanel } from './VirtualResultListPanel';
 
 export function PublishedVirtualResultListPanel(props: {
   activeNodeId: string | null;
+  continueAfterDelete?: boolean;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
@@ -30,6 +32,8 @@ export function PublishedVirtualResultListPanel(props: {
   if (!state.topics) return <AppLoadingState title={title} />;
   return (
     <VirtualResultListPanel
+      virtualFolderId={VIRTUAL_PUBLISHED_NODE_ID}
+      continueAfterDelete={Boolean(props.continueAfterDelete)}
       activeNodeId={props.activeNodeId}
       emptyState={{
         description: t('desktop.virtualSearch.published.empty.description'),
