@@ -26,6 +26,17 @@ async function openPreview(page: Page) {
   return page.getByRole('dialog', { name: title });
 }
 
+const rules = /^(Conversion rules|转换细则)$/;
+const backToConversion = /^(Back to conversion|返回转换)$/;
+
+async function openConversionRules(page: Page, dialog: Locator) {
+  await dialog.getByRole('button', { name: rules }).click();
+  const help = page.getByRole('dialog', { name: rules });
+  await expect(help.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ })).toBeVisible();
+  await expect(help.getByRole('heading', { name: /^(First review dates|首次复习日期)$/ })).toBeVisible();
+  return help;
+}
+
 const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
 const backToPreview = /^(Back to preview|返回资料预览)$/;
 
@@ -54,6 +65,9 @@ test('previews different XML exports and changes the interval without saving a d
   const dialog = await openPreview(desktopWindow);
   const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
   await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toBeVisible();
+  const rulesBeforeLoading = await openConversionRules(desktopWindow, dialog);
+  await expect(rulesBeforeLoading.getByRole('button', { name: /^(Load XML|载入 XML)$/ })).toHaveCount(0);
+  await rulesBeforeLoading.getByRole('button', { name: backToConversion }).click();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await continueXml(desktopWindow);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
@@ -69,6 +83,12 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(slider).toHaveValue('0');
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).toHaveText('0');
   await slider.press('End');
+  await expect(slider).toHaveValue('100');
+  const rulesFromSettings = await openConversionRules(desktopWindow, dialog);
+  await expect(rulesFromSettings.getByRole('slider')).toHaveCount(0);
+  await expect(rulesFromSettings.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
+  await rulesFromSettings.screenshot({ path: testInfo.outputPath('supermemo-conversion-rules.png') });
+  await rulesFromSettings.getByRole('button', { name: backToConversion }).click();
   await expect(slider).toHaveValue('100');
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
   await dialog.getByRole('button', { name: backToPreview }).click();
