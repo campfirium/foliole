@@ -10,8 +10,10 @@ export function SuperMemoDirectoryUpdate({ update, sourceFormat, disabled, onSou
   onSourceFormatChange(next: SuperMemoSourceFormat): void;
 }) {
   const t = useTranslation();
+  if (update.sourceMatch && update.sourceMatch.status !== 'verified') return <SourceMatch match={update.sourceMatch} />;
   if (update.pairedSourceRequired) return <p>{t('desktop.superMemoDrafts.updateNeedsCollection')}</p>;
   return <div className="grid gap-3">
+    {update.sourceMatch ? <SourceMatch match={update.sourceMatch} /> : null}
     <SuperMemoSourceSettings value={sourceFormat} onChange={onSourceFormatChange} disabled={disabled} />
     <DirectoryChanges changes={update.changes} />
     <TextChanges changes={update.textChanges} />
@@ -27,6 +29,22 @@ export function SuperMemoDirectoryUpdate({ update, sourceFormat, disabled, onSou
       </ul>
     </section> : null}
   </div>;
+}
+
+function SourceMatch({ match }: { match: NonNullable<NativeSuperMemoDirectoryUpdate['sourceMatch']> }) {
+  const t = useTranslation();
+  return <section className="grid gap-2">
+    <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.exportMatch')}</h2>
+    <p className="text-sm">{match.status === 'verified'
+      ? t('desktop.superMemoDrafts.exportMatched', { matched: match.matched, additions: match.additions })
+      : t(`desktop.superMemoDrafts.exportStatus.${match.status}`)}</p>
+    {match.conflicts.length ? <ul className="divide-y divide-foreground/10 text-sm">
+      {match.conflicts.map(conflict => <li key={conflict.sourceId} className="py-2">
+        <span>{conflict.title || `#${conflict.sourceId}`}</span>
+        <span className="ml-2 text-foreground/65">{t(`desktop.superMemoDrafts.exportConflict.${conflict.reason}`)}</span>
+      </li>)}
+    </ul> : null}
+  </section>;
 }
 
 function FirstReviewChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['firstReviewChanges'] }) {
@@ -107,7 +125,8 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
     + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
     + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
     + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '')
-    + (withdrawn ? ' · ' + t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }) : '') : t('desktop.superMemoDrafts.importResult', {
+    + (withdrawn ? ' · ' + t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }) : '')
+    + (result.directoryUpdate.sourceMatch?.linkOnConfirm ? ' · ' + t('desktop.superMemoDrafts.exportLinked') : '') : t('desktop.superMemoDrafts.importResult', {
     imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
   })}</p>;
 }

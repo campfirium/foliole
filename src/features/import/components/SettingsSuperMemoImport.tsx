@@ -69,14 +69,19 @@ function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; 
   );
 }
 
-function DraftSourcePicker({ name, disabled, onLoad }: { name: string | undefined; disabled: boolean; onLoad(): void }) {
+function DraftSourcePicker({ name, disabled, onLoad, onLoadNew }: {
+  name: string | undefined; disabled: boolean; onLoad(): void; onLoadNew?: (() => void) | undefined;
+}) {
   const t = useTranslation();
   return <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/15 px-4 py-3">
     <div className="min-w-0">
       <h2 className="text-sm font-semibold">{name ?? t('desktop.superMemoDrafts.sourceTitle')}</h2>
       {!name ? <p className="mt-1 max-w-prose text-sm text-foreground/70">{t('desktop.superMemoDrafts.prepareSource')}</p> : null}
     </div>
-    <AppButton disabled={disabled} onClick={onLoad}>{t(name ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}</AppButton>
+    <div className="flex flex-wrap gap-2">
+      <AppButton disabled={disabled} onClick={onLoad}>{t(name ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}</AppButton>
+      {onLoadNew ? <AppButton disabled={disabled} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
+    </div>
   </div>;
 }
 
@@ -107,7 +112,8 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           {showRules ? <SuperMemoConversionRules /> : null}
           <AppDialogBody className={showRules ? 'hidden' : 'flex min-h-0 flex-col gap-3 overflow-y-auto'}>
             {(!parameters || update) && !result ? <DraftSourcePicker name={source?.name} disabled={busy}
-              onLoad={() => { setSelection(undefined); void loadSource(); }} /> : null}
+              onLoad={() => { setSelection(undefined); void loadSource(); }}
+              onLoadNew={update ? () => { setParameters(true); setSelection(undefined); void loadSource(true); } : undefined} /> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
             {!result && !update ? <div hidden={parameters}><SuperMemoEntryPreview key={source?.filePath} preview={preview} elements={draft?.elements} /></div> : null}
             {parameters && preview && !result && !update ? (
@@ -123,7 +129,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           </AppDialogBody>
           <SuperMemoDraftActions
             busy={busy} showRules={showRules} canConvert={Boolean(preview && !result)} parameters={parameters}
-            directoryUpdate={update ? { canConfirm: selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
+            directoryUpdate={update ? { canConfirm: (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
               update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
               update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
             toggleRules={() => setShowRules(!showRules)} backToPreview={() => { setParameters(false); setSelection(undefined); }}

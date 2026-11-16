@@ -23,6 +23,7 @@ import { superMemoBatchKey } from './superMemoBatchKey.js';
 import { addSuperMemoCitation, type SuperMemoCitation } from './superMemoCitation.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { formatSuperMemoMaterialSource } from './superMemoMaterialSource.js';
+import { superMemoExportLinkKey, superMemoSourceEvidence } from './superMemoSourceIdentity.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
 
 type Row = NativeSuperMemoPreview['rows'][number];
@@ -144,7 +145,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
       }
       persistElement(snapshot, element, { ...body, content }, { ...answer, content: reveal }, due, offset, row.sourceState, gradeMap);
     }
-    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation,
+    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceEvidence: superMemoSourceEvidence(element),
       ...importedTextReceipt(kind, body.content, answer.content), sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
@@ -166,6 +167,9 @@ export async function runSuperMemoImport(input: {
     }
     return { batchId: fingerprint, imported: stored.imported, skipped: stored.skipped,
       unresolvedImages: stored.unresolvedImages };
+  }
+  if (driver.queryOne('SELECT key FROM workspace_meta WHERE key = ?', [superMemoExportLinkKey(fingerprint)])) {
+    throw new Error('supermemo_update_preview_required');
   }
   const prepared = await prepareSuperMemoRows(orderSuperMemoSourceRows(input.preview.rows),
     new Map(input.elements.map(element => [element.id, element])), input.collectionDirectory, input.expectedImages);

@@ -8,6 +8,8 @@ export interface NativeSuperMemoPreviewArgs {
   collectionDirectory?: string;
   sourceFormat?: SuperMemoSourceFormat;
   gradeMap?: SuperMemoGradeMap;
+  targetBatchId?: string;
+  originalElements?: SuperMemoXmlDraftElement[];
 }
 
 export interface NativeSuperMemoPreviewRow {
@@ -81,11 +83,20 @@ export interface NativeSuperMemoWithdrawal {
   protectedBy?: 'children' | 'modified' | 'published';
 }
 
+export interface NativeSuperMemoSourceMatch {
+  status: 'verified' | 'unverified' | 'older-export';
+  matched: number;
+  additions: number;
+  linkOnConfirm?: true;
+  conflicts: Array<{ sourceId: number; title: string; reason: 'number-conflict' | 'renumbered' }>;
+}
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
   pairedSourceRequired: boolean;
   sourceFormat?: SuperMemoSourceFormat;
+  sourceMatch?: NativeSuperMemoSourceMatch;
   citationChanges: NativeSuperMemoCitationChange[];
   textChanges: NativeSuperMemoTextChange[];
   firstReviewChanges: NativeSuperMemoFirstReviewChange[];

@@ -5,14 +5,17 @@ import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './app
 import type { SuperMemoContentBatchEntry } from './planSuperMemoCitationUpdates.js';
 import type { SuperMemoFirstReviewReceipt } from './planSuperMemoFirstReviewUpdates.js';
 import type { writeSuperMemoRows } from './runSuperMemoImport.js';
+import type { SuperMemoSourceEvidence } from './superMemoSourceIdentity.js';
 
 export interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFirstReviewReceipt, 'outcome'> {
   withdrawnAt?: string;
+  sourceEvidence?: SuperMemoSourceEvidence;
   sourceChildren?: number[];
   unresolvedImages?: unknown[];
 }
 export interface Batch {
   entries: BatchEntry[];
+  activeExport?: string;
   directoryRequiresCollection?: boolean;
   sourceFormat?: SuperMemoSourceFormat;
   preferredSourceFormat?: SuperMemoSourceFormat;

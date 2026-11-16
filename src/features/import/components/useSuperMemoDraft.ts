@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport, saveSuperMemoGradeMap,
-  selectRuntimeSuperMemoSource } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+  selectRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 async function refreshSourceFormat(apply: () => Promise<void>, setBusy: (value: boolean) => void,
   setError: (value: boolean) => void) {
@@ -28,6 +28,7 @@ async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType
 }
 
 export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
+  const [target, setTarget] = useState<SuperMemoUpdateTarget>();
   const [draft, setDraft] = useState<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>>();
   const [gradeMap, setGradeMap] = useState(initialGrades);
   const [sourceFormat, setSourceFormat] = useState<SuperMemoSourceFormat>({ ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' });
@@ -37,13 +38,19 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<boolean | 'xml-only'>(false);
 
-  async function loadSource() {
+  async function loadSource(asUpdate = false) {
     setBusy(true);
     setError(false);
     try {
       const selected = await selectRuntimeSuperMemoSource();
       if (!selected) return;
-      const loaded = await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
+      const update = draft?.preview.directoryUpdate;
+      const nextTarget = asUpdate && update && draft
+        ? target ?? { targetBatchId: update.batchId, ...(!update.sourceMatch ? { originalElements: draft.elements } : {}) } : undefined;
+      const loaded = nextTarget
+        ? { draft: await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, nextTarget), sourceFormat }
+        : await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
+      setTarget(nextTarget);
       setSourceFormat(loaded.sourceFormat);
       setDraft(loaded.draft);
       setSource(selected);
@@ -56,23 +63,16 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     }
   }
 
-  async function changeGrades(next: SuperMemoGradeMap) {
-    setBusy(true);
-    setError(false);
-    try {
-      const nextPreview = source && !result ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat) : undefined;
-      await saveSuperMemoGradeMap(next);
-      setGradeMap(next);
-      if (nextPreview) setDraft(nextPreview);
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const changeGrades = (next: SuperMemoGradeMap) => refreshSourceFormat(async () => {
+    const nextPreview = source && !result
+      ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat, target) : undefined;
+    await saveSuperMemoGradeMap(next);
+    setGradeMap(next);
+    if (nextPreview) setDraft(nextPreview);
+  }, setBusy, setError);
 
   const changeSourceFormat = (next: SuperMemoSourceFormat) => refreshSourceFormat(async () => {
-    if (source && !result) setDraft(await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next));
+    if (source && !result) setDraft(await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next, target));
     setSourceFormat(next);
   }, setBusy, setError);
 
@@ -82,7 +82,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     setError(false);
     try {
       setResult(await runRuntimeSuperMemoImport(source.filePath, percent, gradeMap, draft.preview.previewSignature, sourceFormat,
-        draft.preview.directoryUpdate?.signature, withdrawSourceIds));
+        draft.preview.directoryUpdate?.signature, withdrawSourceIds, target));
     } catch {
       setError(true);
     } finally {

@@ -90,6 +90,7 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   const elements = await writeCollection(directory, false);
   const info = path.join(directory, 'info');
   await loadSource(desktopApp, dialog, directory, secondExport);
+  await expect(dialog.getByRole('heading', { name: 'collection.xml', exact: true })).toBeVisible();
   const dateBasis = dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/);
   await expect(dateBasis).toHaveCount(0);
   elements.writeUInt16LE(200, 118 + 16);

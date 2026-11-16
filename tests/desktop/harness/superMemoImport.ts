@@ -26,14 +26,15 @@ export async function openPreview(page: Page) {
 
 export const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
 
-export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string) {
+export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
+  sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/) {
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, path.basename(directory) + '.xml');
   if (xml !== undefined) await writeFile(file, xml);
   await app.evaluate(({ dialog }, selected) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
   }, file);
-  await dialog.getByRole('button', { name: /^(Load XML|Load another XML|载入 XML|重新载入)$/ }).click();
+  await dialog.getByRole('button', { name: sourceButton }).click();
 }
 
 export async function continueXml(page: Page) {
