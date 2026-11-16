@@ -24,7 +24,7 @@ import {
   useSettingsModels
 } from './useSettingsModels';
 
-const MODEL_COLUMNS = '[grid-template-columns:3.5rem_minmax(110px,0.65fr)_minmax(190px,1.2fr)_minmax(120px,0.75fr)_8rem_2.5rem]';
+const MODEL_COLUMNS = 'px-settings-panel-x [grid-template-columns:3.5rem_minmax(110px,0.65fr)_minmax(190px,1.2fr)_minmax(120px,0.75fr)_8rem]';
 
 export function SettingsModelsSection() {
   const t = useTranslation();
@@ -75,13 +75,12 @@ export function SettingsModelsSection() {
 function ModelTableHeader() {
   const t = useTranslation();
   return (
-    <div className={settingsActionTableHeaderClassName(MODEL_COLUMNS)}>
+    <div className={settingsActionTableHeaderClassName(MODEL_COLUMNS, 'after:left-settings-panel-x after:right-settings-panel-x')}>
       <span className="text-center">{t('settings.models.header.use')}</span>
       <span>{t('settings.models.header.model')}</span>
       <span>{t('settings.models.header.endpoint')}</span>
       <span>{t('settings.models.header.key')}</span>
       <span className="text-center">{t('settings.models.header.connection')}</span>
-      <span aria-hidden />
     </div>
   );
 }
@@ -160,13 +159,15 @@ function CustomModelRow(props: {
         <ModelRadio active={props.active} disabled={!props.draft.selectable || props.busy} label={props.draft.model || t('settings.models.custom')} onSelect={props.onSelect} />
         <input aria-label={t('settings.models.header.model')} className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ model: event.target.value })} placeholder={props.draft.persisted ? undefined : t('settings.models.custom')} value={props.draft.model} />
         <input aria-label={t('settings.models.header.endpoint')} className={settingsFieldClassName('font-mono text-[0.78rem]')} onChange={(event) => props.onUpdate({ endpoint: event.target.value })} spellCheck={false} type="url" value={props.draft.endpoint} />
-        <input aria-label={t('settings.models.header.key')} autoComplete="off" className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ apiKey: event.target.value })} placeholder={storedKeyMask(props.draft)} type="password" value={props.draft.apiKey} />
+        <div className="flex min-w-0 items-center gap-3">
+          <input aria-label={t('settings.models.header.key')} autoComplete="off" className={settingsFieldClassName()} onChange={(event) => props.onUpdate({ apiKey: event.target.value })} placeholder={storedKeyMask(props.draft)} type="password" value={props.draft.apiKey} />
+          {props.draft.persisted ? (
+            <button aria-label={t('settings.models.remove')} className={settingsUtilityIconButtonClassName(false)} disabled={props.active || props.busy} onClick={props.onRemove} type="button">
+              <Trash2 aria-hidden size={15} />
+            </button>
+          ) : null}
+        </div>
         <TestButton busy={props.draft.testing} disabled={!canTest} onTest={props.onTest} />
-        {props.draft.persisted ? (
-          <button aria-label={t('settings.models.remove')} className={settingsUtilityIconButtonClassName(false)} disabled={props.active || props.busy} onClick={props.onRemove} type="button">
-            <Trash2 aria-hidden size={15} />
-          </button>
-        ) : <span aria-hidden />}
       </div>
       {props.draft.result ? (
         <InlineResult
@@ -211,5 +212,5 @@ function InlineResult(props: {
   else if (category === 'model_tools_unsupported') key = 'settings.models.connection.toolsUnsupported';
   else key = 'settings.models.connection.failed';
   const message = props.failure?.message ?? t(key);
-  return <div className={`border-t border-settings-divider/55 px-4 py-2 text-ui-xs ${props.ready ? 'text-foreground/60' : 'text-destructive'}`}>{message}</div>;
+  return <div className={`border-t border-settings-divider/55 px-settings-panel-x py-2 text-ui-xs ${props.ready ? 'text-foreground/60' : 'text-destructive'}`}>{message}</div>;
 }
