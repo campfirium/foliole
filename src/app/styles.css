@@ -1052,8 +1052,8 @@ b {
 }
 
 .cm-md-image-cloze-region[data-region-state='hidden'] {
-  background: rgb(var(--role-legacy-elevated-rgb) / 0.98);
-  border-color: rgb(var(--role-legacy-border-rgb) / 0.98);
+  background: rgb(var(--role-legacy-elevated-rgb));
+  border-color: rgb(var(--role-legacy-border-rgb));
 }
 
 .cm-md-image-cloze-region[data-region-state='outlined'] {
