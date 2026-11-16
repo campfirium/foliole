@@ -1,6 +1,33 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { expect } from './harness/fixtures';
+
+async function scrollAtEdge(page: Page, scroller: Locator, right: Locator) {
+  const scroll = await scroller.evaluateHandle(element => ({
+    initialLeft: element.scrollLeft,
+    settled: new Promise<void>(resolve => {
+      element.addEventListener('scrollend', () => {
+        // Start the sidebar's quiet period after the renderer finishes scrolling.
+        window.setTimeout(resolve, 350);
+      }, { once: true });
+    })
+  }));
+  try {
+    await page.mouse.wheel(80, 0);
+    const initialLeft = await scroll.evaluate(async ({ initialLeft, settled }) => {
+      await settled;
+      return initialLeft;
+    });
+    expect(await scroller.evaluate(element => element.scrollLeft)).toBeGreaterThan(initialLeft);
+    await expect(right).toBeHidden();
+  } finally {
+    await scroll.dispose();
+  }
+}
+
+function readScrollPosition(scroller: Locator) {
+  return scroller.evaluate(element => ({ left: element.scrollLeft, top: element.scrollTop }));
+}
 
 export async function expectEdgeHover(page: Page) {
   const scroller = page.getByTestId('pdf-scroll-container');
@@ -21,12 +48,14 @@ export async function expectEdgeHover(page: Page) {
   await page.mouse.up();
   await page.mouse.move(center, y);
   await page.mouse.move(edge, y);
-  await page.mouse.wheel(80, 0);
-  await page.waitForTimeout(350);
-  await expect(right).toBeHidden();
+  await scrollAtEdge(page, scroller, right);
+  const position = await readScrollPosition(scroller);
   await page.mouse.move(center, y);
   await page.mouse.move(edge, y);
   await expect(right).toBeVisible();
+  expect(await scroller.boundingBox()).toEqual(bounds);
+  expect(await readScrollPosition(scroller)).toEqual(position);
+  await expect(page.getByTestId('pdf-zoom-value')).toHaveText('270%');
   await expect(right).toHaveCSS('box-shadow', 'none');
   await expect(scroller).toBeVisible();
   await expect(page.locator('.window-titlebar [data-workspace-surface-column="sidebar"]')).toBeVisible();
