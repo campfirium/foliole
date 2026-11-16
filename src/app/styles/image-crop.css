@@ -127,6 +127,10 @@
   z-index: var(--z-local-control);
 }
 
+.cm-md-image-region-remove {
+  margin-inline-start: 0.375rem;
+}
+
 .cm-md-image-region-controls [role='status']:empty { display: none; }
 
 .cm-md-image-region-controls [role='status'] {

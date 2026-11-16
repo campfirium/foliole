@@ -75,12 +75,28 @@ const titles = {
   cloze: 'desktop.editor.image.editCloze'
 } as const;
 
+export type RegionEditPoint = { x: number; y: number; width: number; height: number };
+type ToolbarAnchor = { edge: 'left' | 'right' | 'top' | 'bottom'; offset: number };
+
+function resolveToolbarAnchor(rect: ImageFocusRect, point?: RegionEditPoint): ToolbarAnchor {
+  if (!point) return { edge: 'right', offset: 0.5 };
+  const x = clamp((point.x - rect.x) / rect.width, 0, 1);
+  const y = clamp((point.y - rect.y) / rect.height, 0, 1);
+  const left = Math.abs(point.x - rect.x) * point.width;
+  const right = Math.abs(point.x - rect.x - rect.width) * point.width;
+  const top = Math.abs(point.y - rect.y) * point.height;
+  const bottom = Math.abs(point.y - rect.y - rect.height) * point.height;
+  if (Math.min(left, right) <= Math.min(top, bottom)) return { edge: left <= right ? 'left' : 'right', offset: y };
+  return { edge: top <= bottom ? 'top' : 'bottom', offset: x };
+}
+
 interface RegionEditorOptions {
   surface: HTMLElement;
   rect: ImageFocusRect;
   kind: RegionKind;
   canRemove: boolean;
   trigger?: HTMLButtonElement | null;
+  point?: RegionEditPoint;
   onPreview?: (rect: ImageFocusRect) => void;
   onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>;
   requestMeasure?: () => void;
@@ -97,11 +113,12 @@ export function showImageRegionEditor(args: RegionEditorOptions) {
   const frame = document.createElement('span');
   frame.className = 'cm-md-image-crop-frame';
   let rect = args.rect;
+  const anchor = resolveToolbarAnchor(rect, args.point);
   const update = (next: ImageFocusRect) => {
     rect = next;
     updateDraftRectElement(frame, rect);
     args.onPreview?.(rect);
-    positionRegionActions(surface, plane, controls, rect);
+    positionRegionActions(surface, plane, controls, rect, anchor);
   };
   const close = () => {
     frame.remove();
@@ -121,20 +138,26 @@ export function showImageRegionEditor(args: RegionEditorOptions) {
   return true;
 }
 
-function positionRegionActions(surface: HTMLElement, plane: HTMLElement, toolbar: HTMLElement, rect: ImageFocusRect) {
+function positionRegionActions(surface: HTMLElement, plane: HTMLElement, toolbar: HTMLElement, rect: ImageFocusRect, anchor: ToolbarAnchor) {
   const bounds = surface.getBoundingClientRect();
   const image = plane.getBoundingClientRect();
   const gap = 12;
-  const right = clamp(image.left - bounds.left + image.width * (rect.x + rect.width), 0, bounds.width);
-  const center = image.top - bounds.top + image.height * (rect.y + rect.height / 2);
   const width = toolbar.offsetWidth;
   const height = toolbar.offsetHeight;
   const maxLeft = Math.max(0, bounds.width - width);
   const maxTop = Math.max(0, bounds.height - height);
-  const outside = right + gap;
-  const left = outside <= maxLeft ? outside : right - width - gap;
-  toolbar.style.left = `${clamp(left, 0, maxLeft)}px`;
-  toolbar.style.top = `${clamp(center - height / 2, 0, maxTop)}px`;
+  const horizontalEdge = anchor.edge === 'top' || anchor.edge === 'bottom';
+  const startSide = anchor.edge === 'left' || anchor.edge === 'top';
+  const x = image.left - bounds.left + image.width * (rect.x + rect.width * (horizontalEdge ? anchor.offset : Number(!startSide)));
+  const y = image.top - bounds.top + image.height * (rect.y + rect.height * (horizontalEdge ? Number(!startSide) : anchor.offset));
+  const offset = (position: number, size: number, limit: number) => {
+    const edge = clamp(position, 0, limit + size);
+    const before = edge - size - gap;
+    const after = edge + gap;
+    return startSide ? (before >= 0 ? before : after) : (after <= limit ? after : before);
+  };
+  toolbar.style.left = `${clamp(horizontalEdge ? x - width / 2 : offset(x, width, maxLeft), 0, maxLeft)}px`;
+  toolbar.style.top = `${clamp(horizontalEdge ? offset(y, height, maxTop) : y - height / 2, 0, maxTop)}px`;
 }
 
 function createRegionActions(args: RegionEditorOptions, getRect: () => ImageFocusRect, close: () => void) {
@@ -171,15 +194,19 @@ function createRegionActions(args: RegionEditorOptions, getRect: () => ImageFocu
     controls.append(button);
     return button;
   };
-  if (args.canRemove) add(
-    translate(locale, args.kind === 'cloze' ? 'desktop.editor.image.removeImageCloze' :
-      args.kind === 'focus' ? 'desktop.editor.image.removeFocus' : 'desktop.editor.image.removeCrop'),
-    'M3 4h10M6 4V2.5h4V4M4.5 4l.6 9h5.8l.6-9M7 6.5v4M9 6.5v4',
-    () => { void commit(null); }
-  );
-  const cancelButton = add(translate(locale, 'desktop.editor.image.cancelCrop'), 'M4 4l8 8m0-8-8 8', cancel);
   add(translate(locale, args.kind === 'crop' ? 'desktop.editor.image.applyCrop' : 'desktop.editor.image.applyRegion'),
     'M3 8l3.3 3.3L13 4.6', () => { void commit(getRect()); });
+  const cancelButton = add(translate(locale, args.kind === 'crop' ? 'desktop.editor.image.cancelCrop' : 'desktop.editor.image.cancelRegion'),
+    'M4 4l8 8m0-8-8 8', cancel);
+  if (args.canRemove) {
+    const removeButton = add(
+      translate(locale, args.kind === 'cloze' ? 'desktop.editor.image.removeImageCloze' :
+        args.kind === 'focus' ? 'desktop.editor.image.removeFocus' : 'desktop.editor.image.removeCrop'),
+      'M3 4h10M6 4V2.5h4V4M4.5 4l.6 9h5.8l.6-9M7 6.5v4M9 6.5v4',
+      () => { void commit(null); }
+    );
+    removeButton.classList.add('cm-md-image-region-remove');
+  }
   controls.prepend(status);
   controls.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !cancelButton.disabled) {

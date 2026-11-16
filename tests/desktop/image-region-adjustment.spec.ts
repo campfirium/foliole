@@ -10,6 +10,25 @@ async function expectActionsBesideRange(controls: import('@playwright/test').Loc
   expect(Math.abs(bounds.y + bounds.height / 2 - frame.y - frame.height / 2)).toBeLessThan(bounds.height);
 }
 
+async function adjustFromLeftAndCancel(page: import('@playwright/test').Page, surface: import('@playwright/test').Locator) {
+  const range = surface.locator('.cm-md-image-cloze-region');
+  const before = (await range.boundingBox())!;
+  const pointerY = before.y + before.height / 4;
+  await page.mouse.click(before.x, pointerY);
+  const controls = page.getByRole('group', { name: 'Adjust image cloze' });
+  await expect(controls).toBeVisible();
+  const toolbar = (await controls.boundingBox())!;
+  expect(toolbar.x + toolbar.width).toBeLessThan(before.x);
+  const labels = await controls.getByRole('button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')));
+  expect(labels).toEqual(['Apply', 'Cancel adjustment', 'Delete image cloze']);
+  expect(Math.abs(toolbar.y + toolbar.height / 2 - pointerY)).toBeLessThan(toolbar.height / 2);
+  await surface.getByRole('button', { name: 'Left edge' }).press('ArrowLeft');
+  expect((await range.boundingBox())!.x).toBeLessThan(before.x);
+  await controls.getByRole('button', { name: 'Cancel adjustment' }).click();
+  await expect(controls).toBeHidden();
+  expect((await range.boundingBox())!.x).toBeCloseTo(before.x);
+}
+
 async function removeFocusFromSource(page: import('@playwright/test').Page, surface: import('@playwright/test').Locator) {
   const outline = surface.locator('.cm-md-image-focus-outline');
   await expect(outline).toBeVisible();
@@ -73,6 +92,7 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   expect(after.reveal).toBe(before.reveal);
   expect(await clozeIds(page)).toEqual([id]);
   expect((await readDocument(page, OWNER_ID)).imageRegions![0]!.regions[0]).toEqual(adjusted);
+  await adjustFromLeftAndCancel(page, surface);
   await dragImageCloze(page, true);
   await page.getByRole('button', { name: 'Focus image region' }).click();
   await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');

@@ -24,17 +24,18 @@ function openImageRegionEditor(args: {
   const { region, overlay } = args;
   if (!region) {
     const widget = findEditableImageFocus(overlay, args.focus, args.point);
-    return Boolean(widget && args.focus && editMarkdownImageFocus(widget, args.focus));
+    return Boolean(widget && args.focus && args.point && editMarkdownImageFocus(widget, args.focus, args.point));
   }
   if (region.openNodeId || !isDesktopRuntime()) return false;
   const widget = overlay.closest<HTMLElement>('.cm-md-image-widget');
   const surface = overlay.parentElement;
   const regionElement = [...(surface?.querySelectorAll<HTMLElement>('.cm-md-image-cloze-region') ?? [])]
     .find(element => element.dataset.regionId === region.id);
-  if (!widget || !surface || !regionElement) return false;
+  if (!widget || !surface || !regionElement || !args.point) return false;
 
   return showImageRegionEditor({
     surface,
+    point: args.point,
     onPreview: rect => updateDraftRectElement(regionElement, rect),
     rect: region,
     kind: 'cloze',

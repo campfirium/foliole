@@ -5,7 +5,7 @@ import { createMarkdownImageFocusEdit } from '../model/markdownImageSize';
 import type { MarkdownImageMatch } from '../model/markdownImageTypes';
 
 import { updateDraftRectElement } from './imageClozeWidgetDraft';
-import { showImageRegionEditor } from './liveMarkdownImageRegionEditor';
+import { showImageRegionEditor, type RegionEditPoint } from './liveMarkdownImageRegionEditor';
 
 export const IMAGE_FOCUS_EVENT = 'foliole:editor-image-focus';
 
@@ -41,13 +41,14 @@ export function enableMarkdownImageFocus(widget: HTMLElement, view: EditorView, 
   });
 }
 
-export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRect) {
+export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRect, point: RegionEditPoint) {
   const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
   const mask = surface?.querySelector<HTMLElement>('.cm-md-image-focus-mask');
   const outline = surface?.querySelector<HTMLElement>('.cm-md-image-focus-outline');
   if (!surface || !mask || !outline) return false;
   return showImageRegionEditor({
     surface,
+    point,
     onPreview: rect => {
       Object.assign(mask.style, imageFocusMaskStyle(rect));
       updateDraftRectElement(outline, rect);

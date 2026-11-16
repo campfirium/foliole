@@ -44,6 +44,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.image.removeFocus': 'Remove focus',
   'desktop.editor.image.editFocus': 'Adjust focus',
   'desktop.editor.image.editCloze': 'Adjust image cloze',
+  'desktop.editor.image.cancelRegion': 'Cancel adjustment',
   'desktop.editor.image.applyRegion': 'Apply',
   'desktop.editor.image.removeImageCloze': 'Delete image cloze',
   'desktop.editor.image.regionSaveFailed': 'The range could not be saved. Reopen the editor and try again.',
