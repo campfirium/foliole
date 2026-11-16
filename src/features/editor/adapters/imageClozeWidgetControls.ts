@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import type { ImageClozeDraftRegion } from '../../image-cloze/model/imageCloze';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 
@@ -11,6 +13,7 @@ import {
   toRelativeImagePoint
 } from './imageClozeWidgetInteractionHelpers';
 import { createImageRegionElement } from './imageClozeWidgetOverlayHelpers';
+import { IMAGE_FOCUS_EVENT } from './liveMarkdownImageFocus';
 
 export interface ImageClozeDeleteControl {
   button: HTMLButtonElement;
@@ -75,6 +78,7 @@ export function createImageClozeDraftController(args: {
   };
   const syncPendingPreview = () => {
     args.regionLayer.querySelectorAll('[data-region-pending="true"]').forEach((element) => element.remove());
+    draftActions.dataset.mdImageClozeGrouping = String(pendingRegions.length > 0);
     for (const region of pendingRegions) {
       const preview = createImageRegionElement(region, 'outlined');
       preview.dataset.regionPending = 'true';
@@ -177,9 +181,29 @@ function createAddDraftRegionButton(args: ImageClozeDraftButtonArgs) {
   });
 }
 
+function createFocusDraftButton(args: ImageClozeDraftButtonArgs) {
+  const label = translate(getStoredAppLocale(), 'desktop.editor.image.focus');
+  const button = createImageClozeActionButton({
+    ariaLabel: label,
+    iconPath: 'M2 6V2h4m4 0h4v4m0 4v4h-4m-4 0H2v-4m4-4h4v4H6z',
+    onClick: event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const focus = args.draft.dragHandlers.getDraftRect();
+      if (!focus || args.draft.hasPendingRegions()) return;
+      args.host.dispatchEvent(new CustomEvent(IMAGE_FOCUS_EVENT, { detail: focus, bubbles: true }));
+      args.draft.resetDraft();
+    }
+  });
+  button.title = label;
+  button.classList.add('cm-md-image-focus-action');
+  return button;
+}
+
 export function appendImageClozeDraftButtons(args: ImageClozeDraftButtonArgs) {
   args.draft.draftActions.append(
     createConfirmDraftButton(args),
+    createFocusDraftButton(args),
     createCancelDraftButton(args),
     createAddDraftRegionButton(args)
   );

@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppIconButton } from '../../../shared/ui';
+import { imageFocusMaskStyle } from '../model/markdownImageFocus';
 import type { MarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
 import { MarkdownImagePreviewViewport } from './MarkdownImagePreviewViewport';
@@ -35,6 +36,7 @@ function renderPreviewImage(
     >
       <img alt={image.alt || 'Image preview'} draggable={fullscreen ? false : undefined}
         className={fullscreen ? 'block max-h-[var(--preview-height)] max-w-[var(--preview-width)] object-contain' : 'block max-h-[88vh] max-w-[88vw] object-contain'} src={image.src} />
+      {image.focus && <div aria-hidden="true" style={imageFocusMaskStyle(image.focus)} />}
       {image.presentation?.regions?.length ? (
         <div aria-hidden="true" className="cm-md-image-cloze-regions z-local-raised">
           {image.presentation.regions.map((region) => (

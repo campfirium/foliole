@@ -4,6 +4,7 @@ import { Decoration, type EditorView, WidgetType } from '@codemirror/view';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import { enableMarkdownImageFocus } from './liveMarkdownImageFocus';
 import { refreshMarkdownImageWidgetPresentation } from './liveMarkdownImagePresentationRefresh';
 import { attachMarkdownImageResize } from './liveMarkdownImageResize';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
@@ -59,6 +60,8 @@ class MarkdownImageWidget extends WidgetType {
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
       this.imageMatch.display === other.imageMatch.display &&
       this.imageMatch.displayWidth === other.imageMatch.displayWidth &&
+      JSON.stringify(this.imageMatch.focus) === JSON.stringify(other.imageMatch.focus) &&
+      this.imageMatch.focusEditable === other.imageMatch.focusEditable &&
       this.imageMatch.from === other.imageMatch.from &&
       this.imageMatch.linkHref === other.imageMatch.linkHref &&
       this.localDocumentPath === other.localDocumentPath &&
@@ -85,6 +88,7 @@ class MarkdownImageWidget extends WidgetType {
       getRetainedRemoteImageSource(this.editorNodeId, this.imageMatch.source)
     );
     attachMarkdownImageResize(widgetDom, view, this.imageMatch);
+    enableMarkdownImageFocus(widgetDom, view, this.imageMatch);
     return widgetDom;
   }
 

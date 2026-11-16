@@ -123,6 +123,10 @@ The route uses the existing bearer token and advertises `materials.createTextExc
 
 Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's text body budget. Their JSON request limit allows for JSON escaping. To pass a long body through the CLI, pipe UTF-8 text into `materials/create` or `materials/update` with `--content-stdin true`. Supply the usual ID and expected revision for updates. The Item answer limit is still 4,000 UTF-16 code units.
 
+### Image focus in material content
+
+Desktop image focus is an editor action for a stored image occurrence. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
+
 ### Paging search results
 
 Use `offset: 0` with `materials/search`, or `--offset 0` in the CLI. Pass the returned `next_offset` with the same query and page size until it is null. The maximum page size is 40. Requests without an offset keep the original response. Each page uses the current search results, so restart after changes to the library or search settings.

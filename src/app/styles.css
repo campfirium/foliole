@@ -1031,6 +1031,19 @@ b {
   display: none;
 }
 
+.cm-md-image-focus-mask {
+  z-index: var(--z-local-raised);
+}
+
+.cm-md-image-cloze-action.cm-md-image-focus-action {
+  display: none;
+}
+
+.cm-md-image-widget[data-md-image-focus-editable='true']
+  .cm-md-image-cloze-actions:not([data-md-image-cloze-grouping='true']) .cm-md-image-focus-action {
+  display: inline-flex;
+}
+
 .cm-md-image-cloze-regions {
   inset: 0;
   pointer-events: none;

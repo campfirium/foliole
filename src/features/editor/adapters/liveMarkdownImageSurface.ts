@@ -26,6 +26,7 @@ export function createImageSurface(
     display: imageMatch.display,
     ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),
     editorNodeId,
+    ...(imageMatch.focus ? { focus: imageMatch.focus } : {}),
     from: imageMatch.from,
     presentation: imagePresentation,
     renderImage: () => imageOptions.existingImage ?? createMarkdownImageElement({

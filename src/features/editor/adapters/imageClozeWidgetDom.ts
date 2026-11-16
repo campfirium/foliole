@@ -1,11 +1,13 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageFocusRect } from '../model/markdownImageFocus';
 import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
 import { attachImageClozeOverlayInteractions } from './imageClozeWidgetInteractions';
 import { createSavedRegionLayer, focusImageRegionInViewport } from './imageClozeWidgetOverlayHelpers';
 import { attachImageExcerptRegionInteractions } from './imageExcerptRegionInteractions';
+import { createImageFocusMask } from './liveMarkdownImageFocus';
 
 function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
   return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
@@ -22,7 +24,7 @@ function hasWholeImageHighlight(presentation: ImageClozeEditorPresentation | nul
   );
 }
 
-function createImagePreviewTrigger(args: { alt: string; image: HTMLImageElement; presentation: ImageClozeEditorPresentation | null }) {
+function createImagePreviewTrigger(args: { alt: string; image: HTMLImageElement; presentation: ImageClozeEditorPresentation | null; focus?: ImageFocusRect }) {
   const label = translate(getStoredAppLocale(), 'desktop.editorPreview.openImage');
   const button = document.createElement('button');
   button.className =
@@ -41,7 +43,7 @@ function createImagePreviewTrigger(args: { alt: string; image: HTMLImageElement;
     event.preventDefault();
     event.stopPropagation();
     const src = args.image.currentSrc || args.image.getAttribute('src');
-    if (src) dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, src });
+    if (src) dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, ...(args.focus ? { focus: args.focus } : {}), src });
   });
   return button;
 }
@@ -121,6 +123,7 @@ export function createImageClozeImageSurface(args: {
   display: 'block' | 'inline';
   displayWidth?: number;
   editorNodeId?: string | null;
+  focus?: ImageFocusRect;
   from: number;
   previewAlt: string;
   previewPresentation: ImageClozeEditorPresentation | null;
@@ -130,9 +133,10 @@ export function createImageClozeImageSurface(args: {
   const wrapper = createImageSurfaceWrapper(args);
   const image = args.renderImage();
   wrapper.append(image);
+  if (args.focus) wrapper.append(createImageFocusMask(args.focus));
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);
   wrapper.append(regionLayer);
-  wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation }));
+  wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation, ...(args.focus ? { focus: args.focus } : {}) }));
   focusImageRegionInViewport(wrapper, args.presentation ?? null);
   if (!args.attachmentId) {
     return wrapper;

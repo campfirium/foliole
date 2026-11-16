@@ -5,6 +5,9 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
@@ -49,5 +52,38 @@ it('retains undelivered image demand through source absence and receiver restart
   } finally {
     await Promise.allSettled([f.left.close(), f.right.close()]);
     await fs.rm(f.root, { recursive: true, force: true });
+  }
+});
+
+it('synchronizes saved focus on a repeated image while preserving the original attachment', { meta: { calibratedMs: 60_000 } }, async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  const bytes = await fs.readFile('assets/brand/foliole-leaf-tight.png');
+  const nodeId = 'image-focus-article';
+  try {
+    const { storageKey } = await fixture.left.seedResource({ bytes, nodeId, includeImageInBody: true });
+    await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
+    const image = `![Cover](asset://${storageKey})`;
+    const sqlite = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
+    let current;
+    try { current = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(sqlite), nodeId); }
+    finally { sqlite.close(); }
+    expect(current?.body_text).toContain(image);
+    const baseContent = current!.body_text!;
+    const focused = baseContent.replace(image, `![Cover;focus=1000,2000,5000,5000](asset://${storageKey})`);
+    const content = `${focused}\n\n${image}`;
+    await fixture.left.invoke('local_content_edit', { nodeId, baseVersionId: current!.version_id,
+      baseContent, versionId: 'focus-edit-1', content, hostName: 'desktop', updatedAt: '2026-11-16T12:00:00.000Z' });
+    await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
+    for (const endpoint of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+      expect(article(endpoint.databasePath, nodeId)).toMatchObject({
+        content: `Article with an image\n\n![Cover;focus=1000,2000,5000,5000](asset://${storageKey})\n\n${image}`
+      });
+      expect(await fs.readFile(path.join(endpoint.stateRoot, 'documents', 'Foliole', 'Assets', storageKey))).toEqual(bytes);
+    }
+    const reopened = await fixture.restartRight();
+    expect(article(reopened.snapshot.databasePath, nodeId)).toMatchObject({ content });
+  } finally {
+    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    await fs.rm(fixture.root, { recursive: true, force: true });
   }
 });

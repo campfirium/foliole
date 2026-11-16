@@ -1,4 +1,5 @@
 import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { formatMarkdownImageFocusLabel, parseMarkdownImageFocusLabel, type ImageFocusRect } from './markdownImageFocus';
 import type { MarkdownSyntaxTree } from './markdownLinkReferences';
 
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
@@ -16,6 +17,11 @@ export function parseMarkdownImageLabelSize(label: string): MarkdownImageLabelSi
   const displayWidth = Number(match[2]);
   if (!Number.isSafeInteger(displayWidth)) return { alt: label };
   return { alt: match[1] ?? '', displayWidth };
+}
+
+export function parseMarkdownImageLabel(label: string) {
+  const { label: widthLabel, focus } = parseMarkdownImageFocusLabel(label);
+  return { ...parseMarkdownImageLabelSize(widthLabel), ...(focus ? { focus } : {}) };
 }
 
 function collectChildren(node: MarkdownSyntaxNode, name: string) {
@@ -51,8 +57,10 @@ export function createMarkdownImageDisplayWidthEdit(args: {
   const labelRange = findImageLabelRange(folioleMarkdownParser.parse(args.markdown).topNode, args.imageRange);
   if (!labelRange) return null;
   const currentLabel = args.markdown.slice(labelRange.from, labelRange.to);
-  const label = parseMarkdownImageLabelSize(currentLabel).alt;
-  const insert = args.width === null ? label : `${label}|${Math.max(1, Math.round(args.width))}`;
+  const { label: currentWidthLabel, focus } = parseMarkdownImageFocusLabel(currentLabel);
+  const label = parseMarkdownImageLabelSize(currentWidthLabel).alt;
+  const nextWidthLabel = args.width === null ? label : `${label}|${Math.max(1, Math.round(args.width))}`;
+  const insert = formatMarkdownImageFocusLabel(nextWidthLabel, focus);
   return { from: labelRange.from, insert, to: labelRange.to };
 }
 
@@ -60,4 +68,15 @@ export function setMarkdownImageDisplayWidth(args: Parameters<typeof createMarkd
   const edit = createMarkdownImageDisplayWidthEdit(args);
   if (!edit) return null;
   return `${args.markdown.slice(0, edit.from)}${edit.insert}${args.markdown.slice(edit.to)}`;
+}
+
+export function createMarkdownImageFocusEdit(args: {
+  imageRange: { from: number; to: number };
+  markdown: string;
+  focus: ImageFocusRect | null;
+}) {
+  const range = findImageLabelRange(folioleMarkdownParser.parse(args.markdown).topNode, args.imageRange);
+  if (!range) return null;
+  const label = args.markdown.slice(range.from, range.to);
+  return { ...range, insert: formatMarkdownImageFocusLabel(label, args.focus) };
 }

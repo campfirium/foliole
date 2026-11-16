@@ -11,17 +11,17 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const OWNER_ID = 'hidden-native-image-source';
 
-async function seedImageSource(page: Page) {
+async function seedImageSource(page: Page, imageCount = 1) {
   const bytes = fs.readFileSync(path.resolve('assets/brand/foliole-leaf-tight.png'));
   const hash = createHash('sha256').update(bytes).digest('hex');
-  await page.evaluate(async ({ hash, bytesBase64, ownerId }) => {
+  await page.evaluate(async ({ hash, bytesBase64, ownerId, imageCount }) => {
     const debug = window.__folioleWorkspaceDebug!;
     await debug.seedNodes([{ id: ownerId, kind: 'topic', title: 'Image input isolation',
-      content: `![Original image](asset://${hash}.png)` }], { persist: true });
+      content: Array.from({ length: imageCount }, () => `![Original image](asset://${hash}.png)`).join('\n\n') }], { persist: true });
     await debug.importClipboardImageAttachment!({ bytesBase64, mimeType: 'image/png',
       nodeId: ownerId, originalName: 'original.png' });
     await debug.openNode(ownerId);
-  }, { ownerId: OWNER_ID, hash, bytesBase64: bytes.toString('base64') });
+  }, { ownerId: OWNER_ID, hash, bytesBase64: bytes.toString('base64'), imageCount });
   await page.waitForFunction(() => Array.from(document.querySelectorAll<HTMLImageElement>('.cm-md-image-element-block'))
     .some((image) => image.complete && image.naturalWidth > 0));
 }
@@ -111,3 +111,36 @@ for (const reload of [false, true]) {
     await page.screenshot({ path: info.outputPath('two-persisted-clozes.png') });
   });
 }
+
+test('saves image focus for one occurrence and preserves it when creating a cloze', async ({ desktopWindow: page }, info) => {
+  await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await seedImageSource(page, 2);
+  const original = (await readDocument(page, OWNER_ID)).content.split('\n\n')[0];
+  await expect(page.locator('.cm-md-image-element-block')).toHaveCount(2);
+  await dragImageCloze(page);
+  await page.getByRole('button', { name: 'Focus image region' }).click();
+  const masks = page.locator('.cm-md-image-focus-mask');
+  await expect(masks).toHaveCount(1);
+  await expect(masks.first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.3)');
+  await expect(masks.first()).toHaveCSS('clip-path', /^polygon\(evenodd,/u);
+  await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).toContain(';focus=');
+  const saved = (await readDocument(page, OWNER_ID)).content;
+  expect(saved.split('\n\n')[1]).toBe(original);
+  await dragImageCloze(page, true);
+  await page.getByRole('button', { name: 'Confirm image cloze' }).click();
+  await expect.poll(() => clozeIds(page)).toHaveLength(1);
+  const cloze = await readDocument(page, (await clozeIds(page))[0]!);
+  expect(cloze.content).toBe(saved.split('\n\n')[0]);
+  expect(cloze.reveal).toBe(cloze.content);
+  expect(cloze.imageRegions?.flatMap(group => group.regions)).toHaveLength(1);
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await openSource(page);
+  await expect(masks).toHaveCount(1);
+  expect(await masks.first().locator('xpath=ancestor::*[contains(@class,"cm-md-image-widget")]').getAttribute('data-md-image-from')).toBe('0');
+  expect((await readDocument(page, OWNER_ID)).content).toBe(saved);
+  await page.screenshot({ path: info.outputPath('saved-image-focus.png') });
+});

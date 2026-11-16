@@ -1,7 +1,7 @@
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 
-import { parseMarkdownImageLabelSize } from './markdownImageSize';
+import { parseMarkdownImageLabel } from './markdownImageSize';
 import { isBrowserImageSource, isInternalImageSource, isRelativeImageSource } from './markdownImageSourceKinds';
 import type { MarkdownImageMatch } from './markdownImageTypes';
 import { resolveMarkdownImageWrappingLink } from './markdownImageWrappingLink';
@@ -24,6 +24,7 @@ interface ParserImageMatch {
   fullMatch: string;
   linkHref?: string;
   rawTarget: string;
+  referenceStyle?: true;
   start: number;
 }
 
@@ -149,6 +150,7 @@ function createParserImageMatch(
     fullMatch: text.slice(from, to),
     ...(outerLink?.target && isSafeMarkdownLinkHref(outerLink.target) ? { linkHref: normalizeMarkdownLinkDestination(outerLink.target) } : {}),
     rawTarget: normalizeImageUrl(rawTarget),
+    ...(!url ? { referenceStyle: true } : {}),
     start: from
   };
 }
@@ -213,7 +215,7 @@ export function collectImageMatchesFromTree(
 
   for (const match of collectParserImageMatchesFromTree(tree, text, references)) {
     const source = match.rawTarget;
-    const label = parseMarkdownImageLabelSize(match.altText);
+    const label = parseMarkdownImageLabel(match.altText);
     if (
       source &&
       (isBrowserImageSource(source) || isInternalImageSource(source) || (options.allowRelativeImages && isRelativeImageSource(source)))
@@ -226,6 +228,8 @@ export function collectImageMatchesFromTree(
         alt: label.alt,
         display: resolveImageDisplay(text, match.start, match.fullMatch),
         ...(label.displayWidth ? { displayWidth: label.displayWidth } : {}),
+        ...(label.focus ? { focus: label.focus } : {}),
+        ...(match.referenceStyle && isInternalImageSource(source) ? { focusEditable: false } : {}),
         from: start,
         ...(match.linkHref ? { linkHref: match.linkHref } : {}),
         source,

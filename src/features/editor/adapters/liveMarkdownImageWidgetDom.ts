@@ -18,6 +18,8 @@ export function setMarkdownImageWidgetDomIdentity(
   wrapper.dataset.mdImageAlt = imageMatch.alt;
   wrapper.dataset.mdImageAttachmentId = imageMatch.attachmentId ?? '';
   wrapper.dataset.mdImageDisplay = imageMatch.display;
+  wrapper.dataset.mdImageFocusSupported = String(imageMatch.focusEditable !== false);
+  wrapper.dataset.mdImageFocus = JSON.stringify(imageMatch.focus ?? null);
   wrapper.dataset.mdImageInitialDisplay = imageMatch.display;
   wrapper.dataset.mdImageDisplayWidth = imageMatch.displayWidth ? String(imageMatch.displayWidth) : '';
   wrapper.dataset.mdImageEditorNodeId = editorNodeId ?? '';
@@ -34,6 +36,8 @@ export function canReuseMarkdownImageWidgetDom(
   return (
     wrapper.dataset.mdImageAlt === imageMatch.alt &&
     wrapper.dataset.mdImageAttachmentId === (imageMatch.attachmentId ?? '') &&
+    wrapper.dataset.mdImageFocusSupported === String(imageMatch.focusEditable !== false) &&
+    wrapper.dataset.mdImageFocus === JSON.stringify(imageMatch.focus ?? null) &&
     wrapper.dataset.mdImageInitialDisplay === imageMatch.display &&
     wrapper.dataset.mdImageDisplayWidth === (imageMatch.displayWidth ? String(imageMatch.displayWidth) : '') &&
     wrapper.dataset.mdImageEditorNodeId === (editorNodeId ?? '') &&
