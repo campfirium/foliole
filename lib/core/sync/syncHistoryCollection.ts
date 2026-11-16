@@ -2,10 +2,10 @@ import type { DbPort } from './dbPort.js';
 import { loadSyncGroupHistoryHorizon } from './syncGroupCoverageStore.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 import {
-  RECLAIM_TOMBSTONE_STATEMENTS,
   RECLAIMABLE_HISTORY_SQL,
   RECLAIMABLE_TOMBSTONES_SQL,
-  reclaimHistoryStatements
+  reclaimHistoryStatements,
+  reclaimTombstoneStatements
 } from './syncHistoryCollectionSql.js';
 import { RECLAIM_STATE_TOMBSTONE_STATEMENTS, reclaimableStateTombstonesSql,
   WATCHED_FOLDER_TABLE_SQL } from './syncStateTombstoneCollectionSql.js';
@@ -24,7 +24,7 @@ async function reclaimBatch(db: DbPort, groupId: string) {
   if (versions.length) for (const sql of reclaimHistoryStatements(versions)) await db.run(sql, versions);
   const tombstones = (await db.query<{ node_id: string }>(RECLAIMABLE_TOMBSTONES_SQL, [horizon, BATCH]))
     .map(row => row.node_id);
-  for (const nodeId of tombstones) for (const sql of RECLAIM_TOMBSTONE_STATEMENTS) await db.run(sql, [nodeId]);
+  if (tombstones.length) for (const sql of reclaimTombstoneStatements(tombstones)) await db.run(sql, tombstones);
   const marks = await reclaimStateTombstones(db, horizon);
   return { versions: versions.length, tombstones: tombstones.length + marks };
 }

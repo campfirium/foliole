@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort.js';
 import { textBranch } from '../../../../../electron/database/topicTextState.testSupport.js';
@@ -99,4 +99,49 @@ it('reclaims a deletion mark only after the group line and only once its object 
     startedAt: '2026-10-20T00:00:00.000Z' });
   await collect(port);
   expect(marks()).toEqual(['source-present']);
+});
+
+async function companionWithTombstones() {
+  const { sqlite, port } = await companion();
+  sqlite.exec(`WITH RECURSIVE ids(id) AS (
+      VALUES(0) UNION ALL SELECT id + 1 FROM ids WHERE id < 400
+    )
+    INSERT INTO node_sync_tombstones SELECT printf('gone-%03d', id), printf('v-%03d', id),
+      NULL, 'phone', 'hash', '{}', '2026-09-05T00:00:00.000Z', '2026-09-05T00:00:00.000Z'
+    FROM ids;
+    INSERT INTO node_sync_tombstones VALUES ('recent', 'recent-v1', NULL, 'phone', 'hash', '{}',
+      '2026-10-20T00:00:00.000Z', '2026-10-20T00:00:00.000Z');`);
+  await recordCompletedSyncGroupRound(port, { groupId: 'group-1', localDeviceId: 'phone', peerDeviceId: 'desktop',
+    startedAt: '2026-10-20T00:00:00.000Z' });
+  const tombstones = () => sqlite.prepare('SELECT node_id FROM node_sync_tombstones ORDER BY node_id').pluck().all();
+  return { sqlite, port, tombstones };
+}
+
+it('reclaims covered node tombstones with bounded writes across multiple SQLite transactions', async () => {
+  const { port, tombstones } = await companionWithTombstones();
+  const writes = vi.spyOn(port, 'run');
+  expect(await collect(port)).toEqual({ versions: 0, tombstones: 401 });
+  expect(tombstones()).toEqual(['recent']);
+  expect(writes.mock.calls.filter(([sql]) => sql.startsWith('DELETE')).length).toBeLessThanOrEqual(30);
+});
+
+it('preserves committed progress and rolls back the failed batch before retry', async () => {
+  const { sqlite, port, tombstones } = await companionWithTombstones();
+  sqlite.exec(`INSERT INTO sync_object_state (object_type, object_id, content_hash, deleted_at, updated_at,
+      last_modified_by_host_name, sync_dirty, state_seq)
+    VALUES ('node_reading', 'gone-200', 'hash', '2026-10-20', '2026-10-20', 'phone', 0, 901);
+    CREATE TRIGGER fail_tombstone_batch BEFORE DELETE ON node_sync_tombstones
+    WHEN OLD.node_id = 'gone-201' BEGIN SELECT RAISE(ABORT, 'tombstone batch failure'); END;`);
+  const childMark = () => sqlite.prepare(`SELECT object_id FROM sync_object_state
+    WHERE object_type = 'node_reading' AND object_id = 'gone-200'`).pluck().get();
+
+  await expect(collect(port)).rejects.toThrow('tombstone batch failure');
+  expect(tombstones()).toHaveLength(202);
+  expect(tombstones()[0]).toBe('gone-200');
+  expect(childMark()).toBe('gone-200');
+
+  sqlite.exec('DROP TRIGGER fail_tombstone_batch');
+  expect(await collect(port)).toEqual({ versions: 0, tombstones: 201 });
+  expect(tombstones()).toEqual(['recent']);
+  expect(childMark()).toBeUndefined();
 });

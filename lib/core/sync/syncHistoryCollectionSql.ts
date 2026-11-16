@@ -46,26 +46,28 @@ export const RECLAIMABLE_TOMBSTONES_SQL = `SELECT tomb.node_id FROM node_sync_to
 const placeholders = (count: number) => Array.from({ length: count }, () => '?').join(', ');
 
 export function reclaimHistoryStatements(versionIds: readonly string[]) {
-  const ids = placeholders(versionIds.length);
+  return deleteVersionStatements(placeholders(versionIds.length));
+}
+
+function deleteVersionStatements(versionIdsSql: string) {
   return [
-    `DELETE FROM node_sync_version_parents WHERE version_id IN (${ids})`,
-    `DELETE FROM node_version_local_origins WHERE version_id IN (${ids})`,
-    `DELETE FROM node_sync_versions WHERE version_id IN (${ids})`
+    `DELETE FROM node_sync_version_parents WHERE version_id IN (${versionIdsSql})`,
+    `DELETE FROM node_version_local_origins WHERE version_id IN (${versionIdsSql})`,
+    `DELETE FROM node_sync_versions WHERE version_id IN (${versionIdsSql})`
   ];
 }
 
 /** Retained parent identities of other versions are left as they are; a missing parent is a valid gap. */
-export const RECLAIM_TOMBSTONE_STATEMENTS = [
-  `DELETE FROM sync_object_state WHERE deleted_at IS NOT NULL AND object_type <> 'node'
-    AND ${nodeChildOwnerSql('sync_object_state')} = ?`,
-  'DELETE FROM sync_node_child_owners WHERE node_id = ?',
-  `DELETE FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`,
-  'DELETE FROM node_sync_conflicts WHERE object_id = ?',
-  'DELETE FROM node_version_local_holds WHERE object_id = ?',
-  `DELETE FROM node_sync_version_parents WHERE version_id IN
-    (SELECT version_id FROM node_sync_versions WHERE object_id = ?)`,
-  `DELETE FROM node_version_local_origins WHERE version_id IN
-    (SELECT version_id FROM node_sync_versions WHERE object_id = ?)`,
-  'DELETE FROM node_sync_versions WHERE object_id = ?',
-  'DELETE FROM node_sync_tombstones WHERE node_id = ?'
-] as const;
+export function reclaimTombstoneStatements(nodeIds: readonly string[]) {
+  const ids = placeholders(nodeIds.length);
+  return [
+    `DELETE FROM sync_object_state WHERE deleted_at IS NOT NULL AND object_type <> 'node'
+      AND ${nodeChildOwnerSql('sync_object_state')} IN (${ids})`,
+    `DELETE FROM sync_node_child_owners WHERE node_id IN (${ids})`,
+    `DELETE FROM sync_object_state WHERE object_type = 'node' AND object_id IN (${ids})`,
+    `DELETE FROM node_sync_conflicts WHERE object_id IN (${ids})`,
+    `DELETE FROM node_version_local_holds WHERE object_id IN (${ids})`,
+    ...deleteVersionStatements(`SELECT version_id FROM node_sync_versions WHERE object_id IN (${ids})`),
+    `DELETE FROM node_sync_tombstones WHERE node_id IN (${ids})`
+  ];
+}
