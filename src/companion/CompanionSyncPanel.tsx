@@ -114,6 +114,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
     ?? props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT;
   const busy = props.joinStatus === 'requesting';
   const searching = props.joinStatus === 'discovering' || props.discoveries.length > 0;
+  const receiving = props.joinStatus === 'adopting' || adoptionRun.phase !== 'none';
   const manualSyncFailed = props.manualSyncAction?.status === 'terminal'
     && props.manualSyncAction.terminalResult === 'failed';
   return (
@@ -121,7 +122,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
       <div className="flex flex-col gap-5">
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
-        {props.joinStatus === 'adopting' || adoptionRun.phase !== 'none'
+        {receiving
           ? <ReceivingGroupDataState run={adoptionRun} onLeave={props.onLeaveSyncGroup}
             onRetry={() => { void runPendingCompanionSyncGroupAdoption().catch(() => undefined); }} />
           : props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
@@ -132,13 +133,13 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
             : searching ? null : <EmptyDiscoveryState disabled={busy} onTryAgain={() => void props.onDiscover()} />}
         {props.error && !manualSyncFailed ? <p className="text-sm text-error" data-error-code={props.error}
           data-testid="companion-sync-error">{formatSyncPanelError(props.error, t)}</p> : null}
-        <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
+        {receiving ? null : <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
           onJoin={(url) => {
             retryProtocolNotice();
             void props.onRequestJoin(url).catch(() => undefined);
           }}
-          onRefresh={() => { retryProtocolNotice(); void props.onDiscover(); }} />
+          onRefresh={() => { retryProtocolNotice(); void props.onDiscover(); }} />}
       </div>
     </section>
   );

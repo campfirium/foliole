@@ -149,7 +149,7 @@ When changing a product capability:
 2. Reuse the product operation that owns validation, persistence, and sync. Keep search indexes, sync bookkeeping, and device-local UI state internal unless a specific public operation needs them.
 3. Exercise the real API and CLI where supported. Verify the user-visible result, check existing callers' contracts, and cover restart or an independent sync peer where the operation promises those results.
 
-The companion sync-group setup screen displays safe failure codes and the known device and stage when library reception is incomplete. This diagnostic stays in the setup screen. Agent Control exposes no sync-group setup or diagnostic operation.
+The companion sync-group setup screen displays safe failure codes and the known device and stage when library reception is incomplete, including reported errors that can be retried. Once reception starts, the setup screen hides discovery and join actions until reception ends. These controls stay in the setup screen. Agent Control exposes no sync-group setup or diagnostic operation.
 
 Desktop Settings → About records application events to files under the desktop instance’s application data directory with the existing redacted diagnostic context. Users can reveal the latest file after stopping. Foliole retains recordings for up to seven days and 64 MiB. The Logs settings page on Android and iPhone captures and exports a short local troubleshooting session. Agent Control exposes no operation to start capture, read the log, or export it. The user initiates capture and chooses where to share the exported file.
 

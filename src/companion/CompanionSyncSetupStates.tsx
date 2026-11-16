@@ -119,9 +119,9 @@ function ReceivingProgress(props: { run: AdoptionRun }) {
 function ReceivingFailure({ run }: { run: AdoptionRun }) {
   const t = useTranslation();
   const issue = run.phase === 'failed' ? undefined : run.rejection;
-  const code = issue?.code ?? run.error;
+  const code = issue?.code ?? (run.phase === 'paused' ? null : run.error);
   const oversized = issue?.code === 'request_sync_body_too_large';
-  if (!code || (!issue && run.phase !== 'failed')) return null;
+  if (!code) return null;
   const device = issue?.device === 'peer' ? run.providerName || t('companion.syncSetup.receiving.sendingDevice')
     : t(issue?.device === 'local' ? 'companion.syncSetup.receiving.thisDevice' : 'companion.syncSetup.receiving.unknownDevice');
   const stage = t(issue?.stage === 'prepare' ? 'companion.syncSetup.receiving.prepareStage'
@@ -129,7 +129,7 @@ function ReceivingFailure({ run }: { run: AdoptionRun }) {
   return (
     <div className="space-y-1 text-sm text-error" role="status">
       <p>{t(oversized ? 'companion.syncSetup.receiving.oversized'
-        : issue ? 'companion.syncSetup.receiving.partial' : 'companion.syncSetup.receiving.failed')}</p>
+        : run.phase === 'failed' ? 'companion.syncSetup.receiving.failed' : 'companion.syncSetup.receiving.partial')}</p>
       <p className="break-words">{t('companion.syncSetup.receiving.issueLocation', { device, stage })}</p>
       <code className="break-all text-xs">{code}</code>
     </div>

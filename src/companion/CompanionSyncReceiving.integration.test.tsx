@@ -95,3 +95,25 @@ it('shows a safe code for a session failure and completes normally when the prov
   expect(await loadSyncGroupLocalAdoption(db)).toBeNull();
   expect(renderCard()).toBe('');
 });
+
+it('shows an expired receive round while retry remains possible', {
+  meta: { calibratedMs: 20000 }
+}, async () => {
+  host = await createJoiningMobile();
+  const { db } = host;
+  const join = await approveJoin(host);
+  const send = mobile.http.getMockImplementation()!;
+  mobile.http.mockImplementation(async request => {
+    if (request.url.endsWith('/sync-group/member-state')) throw new Error('sync_round_expired');
+    return send(request);
+  });
+  await expect(join()).rejects.toThrow('sync_round_expired');
+  expect(await loadSyncGroupLocalAdoption(db)).not.toBeNull();
+  expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving' });
+  expect(renderCard()).toContain('sync_round_expired</code>');
+
+  mobile.http.mockImplementation(send);
+  await expect(runPendingCompanionSyncGroupAdoption()).resolves.toBe(true);
+  expect(await loadSyncGroupLocalAdoption(db)).toBeNull();
+  expect(renderCard()).toBe('');
+});

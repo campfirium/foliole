@@ -60,7 +60,7 @@ export function runPendingCompanionSyncGroupAdoption() {
   if (leaving) return leaving.then(() => false);
   running ??= (async () => {
     if (!await hydrateCompanionSyncGroupAdoptionRun()) return false;
-    active('receiving');
+    active('receiving', { error: current.phase === 'receiving' ? current.error : null });
     // Receiving a whole library is the long round people leave the app during.
     const work = holdCompanionSyncBackgroundWork();
     let rejection: CompanionSyncReceiveIssue | undefined;
