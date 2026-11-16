@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../lib/core/database/diveSourceEligibility.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { HOME_NODE_ID, INBOX_NODE_ID, TRASH_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { DIVE_NODE_FILTER, readDiveNode, type Dive } from '../../lib/core/nodes/dive.js';
+import { appendDiveSources, DIVE_NODE_FILTER, readDiveNode, type Dive } from '../../lib/core/nodes/dive.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 
@@ -37,13 +37,9 @@ export function listDives(db: SqliteDatabase): Dive[] {
 
 function validateSources(db: SqliteDatabase, ids: readonly string[]): string[] {
   if (!ids.length) throw new Error('Choose at least one Dive source');
-  const eligible = db.prepare(`SELECT 1 FROM nodes AS source LEFT JOIN nodes AS parent ON parent.id = source.parent_id
-    WHERE source.id = ? AND source.deleted_at IS NULL AND source.virtual_filter IS NULL
-    AND (source.kind = 'folder' OR (source.kind = 'topic'
-      AND source.anchor_link IS NULL AND (source.parent_id IS NULL OR parent.kind = 'folder')))
-    AND source.id NOT IN (?, ?, ?, ?) AND COALESCE(source.parent_id, '') <> ?`);
+  const eligible = db.prepare(DIVE_SOURCE_ELIGIBILITY_SQL);
   const uniqueIds = [...new Set(ids)];
-  if (uniqueIds.some(id => !eligible.get(id, HOME_NODE_ID, INBOX_NODE_ID, TRASH_NODE_ID, VIRTUAL_ROOT_NODE_ID, VIRTUAL_ROOT_NODE_ID))) {
+  if (uniqueIds.some(id => !eligible.get(...diveSourceEligibilityArgs(id)))) {
     throw new Error('A Dive source is unavailable');
   }
   return uniqueIds;
@@ -82,10 +78,7 @@ export function renameDive(db: SqliteDatabase, diveId: string, name: string): Di
 }
 
 export function addDiveSources(db: SqliteDatabase, diveId: string, ids: readonly string[]): Dive {
-  return updateDive(db, diveId, dive => {
-    const directSourceIds = [...new Set([...dive.directSourceIds, ...validateSources(db, ids)])];
-    return directSourceIds.length === dive.directSourceIds.length ? dive : { ...dive, directSourceIds };
-  });
+  return updateDive(db, diveId, dive => appendDiveSources(dive, validateSources(db, ids)));
 }
 
 export function removeDiveSource(db: SqliteDatabase, diveId: string, sourceId: string): Dive {

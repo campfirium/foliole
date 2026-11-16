@@ -1,6 +1,7 @@
 import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { canUseDiveSource } from '../../lib/core/database/diveSourceEligibility';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -14,6 +15,9 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
   const workspace = useCompanionWorkspaceActions();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const nodes = workspace?.snapshot?.nodesById;
+  const node = props.nodeId ? nodes?.[props.nodeId] : undefined;
+  const canAddToDive = canUseDiveSource(node, node?.parentNodeId ? nodes?.[node.parentNodeId]?.kind : undefined);
   const interaction = useCompanionListInteraction();
   useEffect(() => {
     if (!open && !infoOpen) return;
@@ -30,6 +34,11 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
         <button className="block min-h-11 w-full border-b border-companion-divider py-3 text-left text-sm" onClick={() => { setOpen(false); props.onOpen(); }} type="button">
           {t('desktop.searchPreview.open')}
         </button>
+        {node && workspace && canAddToDive && isAvailableNativeCompanionRuntime() && <button type="button"
+          className="block min-h-11 w-full border-b border-companion-divider py-3 text-left text-sm"
+          disabled={workspace.busy || workspace.pending}
+          onClick={() => { setOpen(false); workspace.open({ mode: 'add-to-dive', nodeId: node.id, parentNodeId: null }); }}>
+          {t('desktop.nodeList.menu.addToDive')}</button>}
         {props.nodeId && workspace && isAvailableNativeCompanionRuntime() && <button type="button" className="block min-h-11 w-full border-b border-companion-divider py-3 text-left text-sm"
           disabled={workspace.busy || workspace.pending} onClick={() => { setOpen(false); workspace.open({ mode: 'menu', nodeId: props.nodeId!, parentNodeId: null }); }}>
           {t('companion.workspace.manage')}</button>}

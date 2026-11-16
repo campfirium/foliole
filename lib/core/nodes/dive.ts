@@ -35,3 +35,8 @@ export function readDiveNode(node: {
 export function resolveDiveTopicIds(dive: Dive, tree: Parameters<typeof resolveFolderSourceTopicIds>[1]) {
   return resolveFolderSourceTopicIds(dive.directSourceIds, tree);
 }
+
+export function appendDiveSources(dive: Dive, ids: readonly string[]): Dive {
+  const directSourceIds = [...new Set([...dive.directSourceIds, ...ids])];
+  return directSourceIds.length === dive.directSourceIds.length ? dive : { ...dive, directSourceIds };
+}
