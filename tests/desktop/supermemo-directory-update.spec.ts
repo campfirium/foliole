@@ -37,6 +37,7 @@ test('updates the directory of an already imported card after previewing the ori
 });
 
 test('shows and confirms a missing parent and its existing child as one update', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
   const xml = `<SuperMemoCollection><Count>2</Count>
     <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Missing parent</Title>
     <Content><Question>Original source text</Question></Content>
@@ -50,7 +51,6 @@ test('shows and confirms a missing parent and its existing child as one update',
         bodyOrQuestionHtml: ['Question'], answerHtml: ['Answer'], skippedAudioComponents: 0, learning: null }
   ], { 1: { outcome: 'skipped' } });
   expect(batch).toMatchObject({ imported: 1, skipped: 1 });
-  const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, testInfo.outputPath('MissingParent'), xml);
   await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
@@ -69,6 +69,7 @@ test('shows and confirms a missing parent and its existing child as one update',
 
 for (const missingParent of [false, true]) {
   test(`confirms an existing highlight against a ${missingParent ? 'missing' : 'present'} corrected parent`, async ({ desktopWindow, desktopApp }, testInfo) => {
+    const dialog = await openPreview(desktopWindow);
     const selection = 'The selected sentence.';
     const newBody = 'Different introduction. ' + selection;
     const xml = `<SuperMemoCollection><Count>3</Count>
@@ -92,7 +93,6 @@ for (const missingParent of [false, true]) {
     });
     const before = await readLink();
     expect(before).toMatchObject({ parent: 'Previous parent', anchor: { kind: 'highlight', locator: { from: 0 } } });
-    const dialog = await openPreview(desktopWindow);
     await loadSource(desktopApp, dialog, testInfo.outputPath('ExistingHighlight'), xml);
     await continueXml(desktopWindow);
     await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
@@ -135,4 +135,32 @@ test('changes source information on the existing card from the saved batch', asy
   const after = await readCard();
   expect(after).toMatchObject({ nodeId: before?.nodeId, reveal: 'Answer' });
   expect(after?.content).toMatch(/^Question\n\nSource: \[\[node-id:.+\|Source article\]\]/u);
+});
+
+test('previews a changed conversion result and updates the answer in place', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
+  const xml = `<SuperMemoCollection><Count>1</Count>
+    <SuperMemoElement><ID>1</ID><Type>Item</Type><Title>Converted card</Title>
+    <Content><Question>Original question</Question><Answer>New answer</Answer></Content>
+    </SuperMemoElement></SuperMemoCollection>`;
+  await seedHistoricalSuperMemoBatch(desktopApp, [{
+    id: 1, parentId: null, children: [], sourceType: 'Item', title: 'Converted card', ordinal: null,
+    bodyOrQuestionHtml: ['Original question'], answerHtml: ['New answer'], skippedAudioComponents: 0, learning: null
+  }], {}, { 1: { answerHtml: ['Old answer'] } });
+  const readCard = () => desktopWindow.evaluate(async () => {
+    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const node = Object.values(nodesById).find(entry => entry.title === 'Converted card');
+    return node ? window.electronAPI!.invoke('load_node_document', { nodeId: node.id }) : null;
+  });
+  const before = await readCard();
+  expect(before).toMatchObject({ content: 'Original question', reveal: 'Old answer' });
+  await loadSource(desktopApp, dialog, testInfo.outputPath('TextUpdate'), xml);
+  await continueXml(desktopWindow);
+  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+  await expect(dialog.getByRole('heading', { name: /^(Text changes|文字内容变化)$/ })).toBeVisible();
+  await expect(dialog.getByText(/^Converted card · (Answer|答案)$/)).toBeVisible();
+  expect(await readCard()).toEqual(before);
+  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(dialog.getByText(/Text fields updated \(1\)|已更新 1 个文字字段/)).toBeVisible();
+  expect(await readCard()).toMatchObject({ nodeId: before?.nodeId, content: 'Original question', reveal: 'New answer' });
 });

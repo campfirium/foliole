@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { findSuperMemoClozeLocator } from '../../lib/core/import/superMemoClozeLocator.js';
 import { findSuperMemoHighlightLocator } from '../../lib/core/import/superMemoHighlightLocator.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
@@ -61,6 +62,12 @@ export async function prepareSuperMemoRows(rows: Row[], elements: Map<number, Su
 
 type PreparedRows = Awaited<ReturnType<typeof prepareSuperMemoRows>>;
 
+function importedTextReceipt(kind: Row['outcome'], content: string, reveal: string) {
+  if (kind === 'topic') return { importedText: { content: hashTextBody(content) } };
+  if (kind === 'item') return { importedText: { content: hashTextBody(content), reveal: hashTextBody(reveal) } };
+  return {};
+}
+
 export function writeSuperMemoRows(prepared: PreparedRows, options: {
   percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
   allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
@@ -116,7 +123,8 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
       }
       persistElement(snapshot, element, { ...body, content }, { ...answer, content: reveal }, due, offset, row.sourceState, gradeMap);
     }
-    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation,
+      ...importedTextReceipt(kind, body.content, answer.content), sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
 }

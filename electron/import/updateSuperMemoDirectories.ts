@@ -8,20 +8,13 @@ import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview } from '../
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
-import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates } from './planSuperMemoCitationUpdates.js';
+import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates, type SuperMemoContentBatchEntry } from './planSuperMemoCitationUpdates.js';
 import { prepareSuperMemoRows, type runSuperMemoImport, writeSuperMemoRows } from './runSuperMemoImport.js';
 import { createSuperMemoAnchorReparentPlanner, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
-import type { SuperMemoCitation } from './superMemoCitation.js';
 import { createPendingParentRenderer, type PendingParentContent } from './superMemoPendingParent.js';
 
-interface BatchEntry {
-  id: number;
-  nodeId: string | null;
-  outcome: NativeSuperMemoPreview['rows'][number]['outcome'];
-  importedParentNodeId?: string | null;
-  importedAnchorLink?: string | null;
-  importedCitation?: SuperMemoCitation | null;
+interface BatchEntry extends SuperMemoContentBatchEntry {
   sourceChildren?: number[];
   unresolvedImages?: unknown[];
 }
@@ -196,8 +189,9 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
       Boolean(batch.directoryRequiresCollection || batch.entries.some(entry => entry.sourceChildren !== undefined));
     const plan = pairedSourceRequired ? undefined : planMoves(batch, preview, content && createPendingParentRenderer(elements, preview, content));
     const changes = plan?.changes ?? [];
-    const citations = plan && content ? planSuperMemoCitationUpdates(driver, batch, plan.rows, content.sourceFormat,
-      new Map(plan.moves.map(move => [move.nodeId, move.to])), plan.additions) : undefined;
+    const citations = plan && content ? planSuperMemoCitationUpdates(driver, batch, plan.rows, content, elements,
+      new Map(plan.moves.map(move => [move.nodeId, move.to])), plan.additions,
+      new Set(plan.moves.flatMap(move => move.anchor && move.to ? [move.to] : []))) : undefined;
     const signature = createHash('sha256').update(JSON.stringify({ batchId, pairedSourceRequired, changes,
       citations: citations?.signature, moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');
@@ -207,13 +201,13 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
       applyUpdate(batch, plan, now, writeAdditions);
       if (citations?.writes.length && content) {
         applySuperMemoCitationUpdates(driver, batch.entries, citations.writes, now);
-        batch.preferredSourceFormat = content.sourceFormat;
+        if (citations.changes.some(change => change.status === 'update')) batch.preferredSourceFormat = content.sourceFormat;
       }
       if (preview.pairedCollection) batch.directoryRequiresCollection = true;
       driver.execute('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?', [JSON.stringify(batch), now, key]);
     }
     const sourceFormat = batch.preferredSourceFormat ?? batch.sourceFormat;
-    return { batchId, signature, pairedSourceRequired, changes, citationChanges: citations?.changes ?? [],
+    return { batchId, signature, pairedSourceRequired, changes, citationChanges: citations?.changes ?? [], textChanges: citations?.textChanges ?? [],
       ...(sourceFormat ? { sourceFormat } : {}),
       imported: batch.imported, skipped: batch.skipped, unresolvedImages: batch.unresolvedImages };
   });

@@ -68,10 +68,11 @@ export async function writeCollection(directory: string, includeTopic: boolean) 
 }
 
 export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements: SuperMemoXmlDraftElement[],
-  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome'>>>) {
+  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome'>>>,
+  oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>) {
   return app.evaluate(async ({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
-    const { runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
+    const { openDatabaseConnection, runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
     const { handleSuperMemoImportCommand } = require(`${app.getAppPath()}/ipc/superMemoImportCommands.js`);
     const { runSuperMemoImport } = require(`${app.getAppPath()}/import/runSuperMemoImport.js`);
     const { loadReviewSchedulerSettings } = require(`${app.getAppPath()}/reviewSchedulerSettings.js`);
@@ -81,8 +82,18 @@ export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements:
     }));
     const preview = await handleSuperMemoImportCommand('preview_supermemo_import', { elements: canonicalElements });
     for (const row of preview.rows) Object.assign(row, input.overrides[row.id]);
-    return runWithDatabaseConnectionOwner(() => runSuperMemoImport({ elements: canonicalElements, preview, percent: 0,
-      offset: '+00:00', gradeMap: [1, 1, 1, 2, 3, 4], scheduler: loadReviewSchedulerSettings(), expectedImages: new Map(),
-      sourceFormat: { placement: 'topic-info', template: '' } }));
-  }, { elements, overrides });
+    return runWithDatabaseConnectionOwner(async () => {
+      const historical = canonicalElements.map(element => ({ ...element, ...input.oldText?.[element.id] }));
+      const result = await runSuperMemoImport({ elements: historical, preview, percent: 0,
+        offset: '+00:00', gradeMap: [1, 1, 1, 2, 3, 4], scheduler: loadReviewSchedulerSettings(), expectedImages: new Map(),
+        sourceFormat: { placement: 'topic-info', template: '' } });
+      if (input.oldText) {
+        // Model older rendering rules for the same original export.
+        const { superMemoBatchKey } = require(`${app.getAppPath()}/import/superMemoBatchKey.js`);
+        openDatabaseConnection().sqlite.prepare('UPDATE workspace_meta SET key = ? WHERE key = ?')
+          .run(superMemoBatchKey(canonicalElements).key, superMemoBatchKey(historical).key);
+      }
+      return result;
+    });
+  }, { elements, overrides, oldText });
 }

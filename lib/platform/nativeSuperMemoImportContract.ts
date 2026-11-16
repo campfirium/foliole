@@ -60,12 +60,19 @@ export interface NativeSuperMemoCitationChange {
   status: 'update' | 'protected';
 }
 
+export type NativeSuperMemoTextChange = {
+  sourceId: number;
+  title: string;
+  field: 'body' | 'question' | 'answer';
+} & ({ status: 'update' } | { status: 'protected'; reason: 'edited' | 'media' | 'anchor' });
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
   pairedSourceRequired: boolean;
   sourceFormat?: SuperMemoSourceFormat;
   citationChanges: NativeSuperMemoCitationChange[];
+  textChanges: NativeSuperMemoTextChange[];
   changes: Array<{
     sourceId: number;
     title: string;
