@@ -40,7 +40,7 @@ function FirstReviewChanges({ changes }: { changes: NativeSuperMemoDirectoryUpda
         <span className="text-foreground/65">
           {change.status === 'update' ? t('desktop.superMemoDrafts.directoryMove', { from: change.from ?? '', to: change.to ?? '' }) : null}
           {change.status === 'basis' ? t('desktop.superMemoDrafts.firstReviewBasis', { date: change.from ?? '' }) : null}
-          {change.status === 'protected' ? t('desktop.superMemoDrafts.firstReviewProtected', { date: change.from ?? '' }) : null}
+              {change.status === 'protected' ? t('desktop.superMemoDrafts.firstReviewProtected', { date: change.from ?? '' }) : null}
           {change.status === 'unavailable' ? t('desktop.superMemoDrafts.firstReviewUnavailable') : null}
         </span>
       </li>)}
@@ -76,7 +76,9 @@ function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate
             <span>{change.title}</span>
             <span className="text-foreground/65">
               {change.status === 'move' ? t('desktop.superMemoDrafts.directoryMove', { from: change.from ?? root, to: change.to ?? root }) : null}
-              {change.status === 'add' ? t('desktop.superMemoDrafts.directoryAdd', { to: change.to ?? root }) : null}
+              {change.status === 'add' ? t(change.missingParent ? 'desktop.superMemoDrafts.directoryAdd' :
+                'desktop.superMemoDrafts.directoryAddMaterial', { to: change.toInbox ? t('desktop.superMemoDrafts.directoryInbox') : change.to ?? root }) : null}
+              {change.status === 'add-unavailable' ? t('desktop.superMemoDrafts.directoryAddUnavailable') : null}
               {change.status === 'protected' ? t('desktop.superMemoDrafts.directoryProtected') : null}
               {change.status === 'anchor-unverified' ? t('desktop.superMemoDrafts.directoryAnchorUnverified', { to: change.to ?? root }) : null}
               {change.reanchor ? <span className="ml-2">{t('desktop.superMemoDrafts.directoryAnchorMove')}</span> : null}
@@ -91,13 +93,16 @@ function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate
 
 export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof runRuntimeSuperMemoImport>> }) {
   const t = useTranslation();
-  const added = result.directoryUpdate?.changes.filter(change => change.status === 'add').length ?? 0;
+  const additions = result.directoryUpdate?.changes.filter(change => change.status === 'add') ?? [];
+  const addedParents = additions.filter(change => change.missingParent).length;
+  const addedMaterials = additions.length - addedParents;
   const citations = result.directoryUpdate?.citationChanges.filter(change => change.status === 'update').length ?? 0;
   const text = result.directoryUpdate?.textChanges.filter(change => change.status === 'update').length ?? 0;
   const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
   return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
     count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
-  }) + (added ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: added }) : '')
+  }) + (addedParents ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }) : '')
+    + (addedMaterials ? ' · ' + t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }) : '')
     + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
     + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
     + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '') : t('desktop.superMemoDrafts.importResult', {

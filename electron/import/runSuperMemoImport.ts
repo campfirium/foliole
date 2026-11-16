@@ -68,18 +68,39 @@ function importedTextReceipt(kind: Row['outcome'], content: string, reveal: stri
   return {};
 }
 
-export function writeSuperMemoRows(prepared: PreparedRows, options: {
-  percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
-  allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
-}) {
-  const { percent, offset, now, gradeMap, sourceFormat, allRows = prepared.map(({ row }) => row) } = options;
-  const parents = planSuperMemoImportParents(allRows);
-  const nodeIds = new Map(options.existingNodeIds);
+type AnchorParent = { body: string; shift: number; search?: SuperMemoParentText };
+
+function anchorParentFor(row: Row, parent: number | null | undefined, written: Map<number, AnchorParent>,
+  options: { existingNodeIds?: ReadonlyMap<number, string>; existingParentContent?: (nodeId: string) => string | undefined }): AnchorParent | undefined {
+  if (parent == null || row.parentId !== parent) return undefined;
+  const prepared = written.get(parent);
+  if (prepared) return prepared;
+  const existingId = options.existingNodeIds?.get(parent);
+  const body = existingId ? options.existingParentContent?.(existingId) : undefined;
+  if (body === undefined) return undefined;
+  const source = { body, shift: 0 };
+  written.set(parent, source);
+  return source;
+}
+
+function allocateImportedNodeIds(prepared: PreparedRows, existing?: ReadonlyMap<number, string>) {
+  const nodeIds = new Map(existing);
   for (const { row } of prepared) {
     if (row.outcome !== 'skipped') nodeIds.set(row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`);
   }
+  return nodeIds;
+}
+
+export function writeSuperMemoRows(prepared: PreparedRows, options: {
+  percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
+  allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
+  existingParentContent?: (nodeId: string) => string | undefined;
+}) {
+  const { percent, offset, now, gradeMap, sourceFormat, allRows = prepared.map(({ row }) => row) } = options;
+  const parents = planSuperMemoImportParents(allRows);
+  const nodeIds = allocateImportedNodeIds(prepared, options.existingNodeIds);
   const sourceRows = new Map(allRows.map(row => [row.id, row]));
-  const parentBodies = new Map<number, { body: string; shift: number; search?: SuperMemoParentText }>();
+  const parentBodies = new Map<number, AnchorParent>();
   const priorities = allRows.filter(row => row.sourceRank != null).sort((a, b) => a.sourceRank! - b.sourceRank!);
   const priorityById = new Map(priorities.map((row, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
   const preparedById = new Map(prepared.map(entry => [entry.row.id, entry]));
@@ -108,7 +129,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
         const shift = placement === 'metadata' || placement === 'topic-info' ? content.length - body.content.length : 0;
         parentBodies.set(row.id, { body: body.content, shift });
       }
-      const source = parent != null && parent === row.parentId ? parentBodies.get(parent) : undefined;
+      const source = sourceRows.get(parent ?? 0)?.outcome === 'topic' ? anchorParentFor(row, parent, parentBodies, options) : undefined;
       if (source && (kind === 'topic' || kind === 'item')) {
         const search = source.search ??= prepareSuperMemoParentText(source.body);
         const locator = kind === 'topic' ? findSuperMemoHighlightLocator(search, element.bodyOrQuestionHtml)

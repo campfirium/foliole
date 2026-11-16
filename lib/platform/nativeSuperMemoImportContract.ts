@@ -87,7 +87,9 @@ export interface NativeSuperMemoDirectoryUpdate {
     title: string;
     from: string | null;
     to: string | null;
-    status: 'add' | 'move' | 'protected' | 'unavailable' | 'anchor-unverified';
+    status: 'add' | 'add-unavailable' | 'move' | 'protected' | 'unavailable' | 'anchor-unverified';
     reanchor?: true;
+    missingParent?: true;
+    toInbox?: true;
   }>;
 }
