@@ -12,8 +12,8 @@
   opacity: 0;
   pointer-events: none;
   position: absolute;
-  bottom: 0;
-  left: 0;
+  top: 0.5rem;
+  left: 0.5rem;
   z-index: var(--z-local-control);
 }
 
@@ -48,33 +48,28 @@
   width: 100%;
 }
 
-.cm-md-image-crop-dialog {
-  margin: auto;
-  max-width: calc(100vw - 2rem);
-  padding: 1rem;
+/* Expanding a saved crop reuses the image and its original-coordinate overlay plane. */
+.cm-md-image-surface[data-md-image-region-edit='crop'][data-md-image-crop-visible='true'] {
+  aspect-ratio: var(--image-edit-original-ratio) !important;
 }
 
-.cm-md-image-crop-dialog::backdrop {
-  background: var(--app-floating-overlay-bg);
+.cm-md-image-surface[data-md-image-region-edit='crop'] .cm-md-image-crop-plane {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
-.cm-md-image-crop-area {
-  margin-inline: auto;
-  position: relative;
-  width: fit-content;
-}
-
-.cm-md-image-crop-area img {
-  display: block;
-  max-height: 74vh;
-  max-width: calc(100vw - 4rem);
-  user-select: none;
+.cm-md-image-surface[data-md-image-region-edit] :is(.cm-md-image-cloze-overlay, .cm-md-image-crop-edit, .cm-md-image-preview-trigger, .cm-md-image-resize-handle) {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .cm-md-image-crop-frame {
   border: 1px solid white;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 80%);
   position: absolute;
+  pointer-events: none;
+  z-index: var(--z-local-control);
 }
 
 .cm-md-image-crop-handle {
@@ -82,6 +77,7 @@
   border: 1px solid #333;
   height: 14px;
   position: absolute;
+  pointer-events: auto;
   touch-action: none;
   transform: translate(-50%, -50%);
   width: 14px;
@@ -101,23 +97,25 @@
 .cm-md-image-crop-handle[data-corner='e'] { left: 100%; }
 .cm-md-image-crop-handle[data-corner='w'] { left: 0; }
 
-.cm-md-image-crop-dialog-actions {
+.cm-md-image-region-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  padding-top: 1rem;
+  align-items: center;
+  gap: 0.25rem;
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: var(--z-local-control);
 }
 
-.cm-md-image-crop-dialog-action {
+.cm-md-image-region-controls [role='status']:empty { display: none; }
+
+.cm-md-image-region-controls [role='status'] {
   background: var(--app-surface-control-bg);
-  border: 1px solid var(--app-control-border-color);
-  border-radius: var(--radius-md);
-  line-height: 1.25;
-  min-height: 2rem;
-  padding-inline: 0.65rem;
+  padding-inline: 0.5rem;
 }
 
-.cm-md-image-crop-dialog-action:hover {
-  background: var(--app-surface-control-hover-bg);
+.cm-md-image-cloze-region[data-md-image-cloze-source-region='true']:is([data-region-state='outlined'], [data-region-state='selected']) {
+  background: rgb(var(--role-cloze-rgb) / 0.34);
+  border-color: rgb(var(--role-cloze-rgb) / 0.95);
+  border-style: solid;
 }

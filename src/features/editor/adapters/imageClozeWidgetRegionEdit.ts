@@ -3,11 +3,12 @@ import { IMAGE_CLOZE_EDIT_EVENT, type ImageClozeEditEventDetail } from '../../im
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 
+import { updateDraftRectElement } from './imageClozeWidgetDraft';
 import { dispatchImageClozeDelete, findImageRegionNearBorder, isNearImageRegionBorder, toRelativeImagePoint } from './imageClozeWidgetInteractionHelpers';
 import { isImageClozeControlTarget } from './imageClozeWidgetPointerTargets';
-import { showImageCropDialog } from './liveMarkdownImageCropDialog';
 import { originalImagePoint } from './liveMarkdownImageCropFrame';
 import { editMarkdownImageFocus } from './liveMarkdownImageFocus';
+import { showImageRegionEditor } from './liveMarkdownImageRegionEditor';
 
 export function findEditableImageFocus(overlay: HTMLElement, focus: ImageFocusRect | undefined, point: ReturnType<typeof toRelativeImagePoint>) {
   if (!focus || !isNearImageRegionBorder(focus, point)) return null;
@@ -27,14 +28,14 @@ function openImageRegionEditor(args: {
   }
   if (region.openNodeId || !isDesktopRuntime()) return false;
   const widget = overlay.closest<HTMLElement>('.cm-md-image-widget');
-  const image = widget?.querySelector<HTMLImageElement>('.cm-md-image-element');
-  const source = image?.currentSrc || image?.getAttribute('src');
-  if (!widget || !source || widget.querySelector('dialog[open]')) return false;
+  const surface = overlay.parentElement;
+  const regionElement = [...(surface?.querySelectorAll<HTMLElement>('.cm-md-image-cloze-region') ?? [])]
+    .find(element => element.dataset.regionId === region.id);
+  if (!widget || !surface || !regionElement) return false;
 
-  showImageCropDialog({
-    widget,
-    source,
-    alt: image?.alt ?? '',
+  return showImageRegionEditor({
+    surface,
+    onPreview: rect => updateDraftRectElement(regionElement, rect),
     rect: region,
     kind: 'cloze',
     canRemove: true,
@@ -53,7 +54,6 @@ function openImageRegionEditor(args: {
       return saved ?? false;
     }
   });
-  return true;
 }
 
 export function attachImageRegionClick(args: {

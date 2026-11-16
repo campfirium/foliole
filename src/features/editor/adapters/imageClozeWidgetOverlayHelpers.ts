@@ -51,7 +51,7 @@ export function focusImageRegionInViewport(wrapper: HTMLElement, presentation: I
   });
 }
 
-export function createSavedRegionLayer(presentation: ImageClozeEditorPresentation | null) {
+export function createSavedRegionLayer(presentation: ImageClozeEditorPresentation | null, desktop = false) {
   const layer = document.createElement('div');
   layer.className = 'cm-md-image-cloze-regions';
   if (!presentation || presentation.regions.length === 0) {
@@ -61,12 +61,12 @@ export function createSavedRegionLayer(presentation: ImageClozeEditorPresentatio
   const hiddenRegionIds = new Set(presentation.hiddenRegionIds);
   const outlinedRegionIds = new Set(presentation.outlinedRegionIds);
   for (const region of presentation.regions) {
-    layer.append(
-      createImageRegionElement(
-        region,
-        hiddenRegionIds.has(region.id) ? 'hidden' : outlinedRegionIds.has(region.id) ? 'outlined' : 'normal'
-      )
+    const element = createImageRegionElement(
+      region,
+      hiddenRegionIds.has(region.id) ? 'hidden' : outlinedRegionIds.has(region.id) ? 'outlined' : 'normal'
     );
+    if (desktop && !presentation.showFullImage && !region.openNodeId) element.dataset.mdImageClozeSourceRegion = 'true';
+    layer.append(element);
   }
   return layer;
 }

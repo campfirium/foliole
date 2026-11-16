@@ -1,9 +1,9 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
-import { appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 
 import { updateDraftRectElement } from './imageClozeWidgetDraft';
+import { createImageClozeActionButton } from './imageClozeWidgetInteractionHelpers';
 
 const CORNERS = ['nw', 'ne', 'sw', 'se'] as const;
 const EDGES = ['n', 'e', 's', 'w'] as const;
@@ -45,6 +45,8 @@ function createCornerHandle(args: {
   let start: { x: number; y: number; rect: ImageFocusRect } | null = null;
   handle.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
     handle.setPointerCapture(event.pointerId);
     start = { x: event.clientX, y: event.clientY, rect: getRect() };
   });
@@ -58,107 +60,115 @@ function createCornerHandle(args: {
     const dy = Number(event.key === 'ArrowDown') - Number(event.key === 'ArrowUp');
     if (!dx && !dy) return;
     event.preventDefault();
+    event.stopPropagation();
     const step = event.shiftKey ? 0.05 : 0.01;
     update(resizeCrop(getRect(), corner, dx * step, dy * step));
   });
   return handle;
 }
 
-function createCropDialogButton(label: string, action: () => void) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'cm-md-image-crop-dialog-action';
-  button.textContent = label;
-  button.addEventListener('click', action);
-  return button;
+type RegionKind = 'crop' | 'focus' | 'cloze';
+
+const titles = {
+  crop: 'desktop.editor.image.editCrop',
+  focus: 'desktop.editor.image.editFocus',
+  cloze: 'desktop.editor.image.editCloze'
+} as const;
+
+interface RegionEditorOptions {
+  surface: HTMLElement;
+  rect: ImageFocusRect;
+  kind: RegionKind;
+  canRemove: boolean;
+  trigger?: HTMLButtonElement | null;
+  onPreview?: (rect: ImageFocusRect) => void;
+  onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>;
+  requestMeasure?: () => void;
 }
 
-export function showImageCropDialog(args: {
-  widget: HTMLElement;
-  source: string;
-  alt: string;
-  rect: ImageFocusRect;
-  canRemove: boolean;
-  kind?: 'crop' | 'focus' | 'cloze';
-  trigger: HTMLButtonElement | null;
-  onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>;
-}) {
-  const locale = getStoredAppLocale();
-  const dialog = document.createElement('dialog');
-  const kind = args.kind ?? 'crop';
-  const title = translate(locale, ({ crop: 'desktop.editor.image.editCrop', focus: 'desktop.editor.image.editFocus', cloze: 'desktop.editor.image.editCloze' } as const)[kind]);
-  dialog.className = appFloatingSurfaceClassName('panel', 'cm-md-image-crop-dialog text-foreground');
-  dialog.setAttribute('aria-label', title);
-  dialog.setAttribute('role', 'dialog');
-  dialog.setAttribute('aria-modal', 'true');
-  const area = document.createElement('div');
-  area.className = 'cm-md-image-crop-area';
-  const image = document.createElement('img');
-  image.src = args.source;
-  image.alt = args.alt;
-  image.draggable = false;
-  const frame = document.createElement('div');
+export function showImageRegionEditor(args: RegionEditorOptions) {
+  const { surface, kind } = args;
+  if (surface.dataset.mdImageRegionEdit) return false;
+  const plane = surface.querySelector<HTMLElement>('.cm-md-image-crop-plane') ?? surface;
+  const image = plane.querySelector<HTMLImageElement>('.cm-md-image-element');
+  if (!image?.naturalWidth || !image.naturalHeight) return false;
+  surface.dataset.mdImageRegionEdit = kind;
+  surface.style.setProperty('--image-edit-original-ratio', `${image.naturalWidth} / ${image.naturalHeight}`);
+  const frame = document.createElement('span');
   frame.className = 'cm-md-image-crop-frame';
   let rect = args.rect;
   const update = (next: ImageFocusRect) => {
     rect = next;
     updateDraftRectElement(frame, rect);
+    args.onPreview?.(rect);
   };
+  const close = () => {
+    frame.remove();
+    controls.remove();
+    delete surface.dataset.mdImageRegionEdit;
+    surface.style.removeProperty('--image-edit-original-ratio');
+    args.onPreview?.(args.rect);
+    args.requestMeasure?.();
+  };
+  const controls = createRegionActions(args, () => rect, close);
   update(rect);
   const handles = kind === 'crop' ? CORNERS : [...CORNERS, ...EDGES];
-  frame.append(...handles.map(corner => createCornerHandle({ area, corner, getRect: () => rect, update, isRegion: kind !== 'crop' })));
-  area.append(image, frame);
-  dialog.append(area, createCropDialogActions(dialog, args.canRemove, () => rect, args.onCommit, kind));
-  dialog.addEventListener('close', () => {
-    dialog.remove();
-    if (!dialog.returnValue) args.trigger?.focus();
-  });
-  dialog.addEventListener('click', event => event.stopPropagation());
-  dialog.addEventListener('keydown', event => event.stopPropagation());
-  args.widget.append(dialog);
-  dialog.showModal();
+  frame.append(...handles.map(corner => createCornerHandle({ area: plane, corner, getRect: () => rect, update, isRegion: kind !== 'crop' })));
+  plane.append(frame);
+  surface.append(controls);
+  args.requestMeasure?.();
+  return true;
 }
 
-function createCropDialogActions(
-  dialog: HTMLDialogElement,
-  canRemove: boolean,
-  getRect: () => ImageFocusRect,
-  onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>,
-  kind: 'crop' | 'focus' | 'cloze'
-) {
+function createRegionActions(args: RegionEditorOptions, getRect: () => ImageFocusRect, close: () => void) {
   const locale = getStoredAppLocale();
-  const actions = document.createElement('div');
-  actions.className = 'cm-md-image-crop-dialog-actions';
+  const controls = document.createElement('span');
+  controls.className = 'cm-md-image-region-controls';
+  controls.setAttribute('role', 'group');
+  controls.setAttribute('aria-label', translate(locale, titles[args.kind]));
   const status = document.createElement('span');
   status.setAttribute('role', 'status');
+  const cancel = () => {
+    close();
+    args.trigger?.focus();
+  };
   const commit = async (rect: ImageFocusRect | null) => {
-    if (kind !== 'cloze') {
-      dialog.close('commit');
-      await onCommit(rect);
-      return;
-    }
-    const buttons = [...dialog.querySelectorAll('button')];
+    const buttons = [...controls.querySelectorAll('button')];
     buttons.forEach(button => { button.disabled = true; });
     status.textContent = '';
-    const keepOpen = (event: Event) => event.preventDefault();
-    dialog.addEventListener('cancel', keepOpen);
     try {
-      if (await onCommit(rect) === false) throw new Error('image_region_not_saved');
-      dialog.close('commit');
+      if (await args.onCommit(rect) === false) throw new Error('image_region_not_saved');
+      close();
     } catch {
       status.textContent = translate(locale, 'desktop.editor.image.regionSaveFailed');
       buttons.forEach(button => { button.disabled = false; });
-    } finally {
-      dialog.removeEventListener('cancel', keepOpen);
     }
   };
-  if (canRemove) actions.append(createCropDialogButton(
-    translate(locale, kind === 'cloze' ? 'desktop.editor.image.removeImageCloze' : 'desktop.editor.image.removeCrop'), () => { void commit(null); }
-  ));
-  actions.append(
-    status,
-    createCropDialogButton(translate(locale, 'desktop.editor.image.cancelCrop'), () => dialog.close()),
-    createCropDialogButton(translate(locale, kind !== 'crop' ? 'desktop.editor.image.applyRegion' : 'desktop.editor.image.applyCrop'), () => { void commit(getRect()); })
+  const add = (label: string, iconPath: string, action: () => void) => {
+    const button = createImageClozeActionButton({ ariaLabel: label, iconPath, onClick(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      action();
+    } });
+    button.title = label;
+    controls.append(button);
+    return button;
+  };
+  if (args.canRemove) add(
+    translate(locale, args.kind === 'cloze' ? 'desktop.editor.image.removeImageCloze' : 'desktop.editor.image.removeCrop'),
+    'M3 4h10M6 4V2.5h4V4M4.5 4l.6 9h5.8l.6-9M7 6.5v4M9 6.5v4',
+    () => { void commit(null); }
   );
-  return actions;
+  const cancelButton = add(translate(locale, 'desktop.editor.image.cancelCrop'), 'M4 4l8 8m0-8-8 8', cancel);
+  add(translate(locale, args.kind === 'crop' ? 'desktop.editor.image.applyCrop' : 'desktop.editor.image.applyRegion'),
+    'M3 8l3.3 3.3L13 4.6', () => { void commit(getRect()); });
+  controls.prepend(status);
+  controls.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !cancelButton.disabled) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancel();
+    }
+  });
+  return controls;
 }

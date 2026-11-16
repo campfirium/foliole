@@ -4,7 +4,7 @@ import { imageFocusMaskStyle, type ImageFocusRect } from '../model/markdownImage
 import { createMarkdownImageFocusEdit } from '../model/markdownImageSize';
 import type { MarkdownImageMatch } from '../model/markdownImageTypes';
 
-import { showImageCropDialog } from './liveMarkdownImageCropDialog';
+import { showImageRegionEditor } from './liveMarkdownImageRegionEditor';
 
 export const IMAGE_FOCUS_EVENT = 'foliole:editor-image-focus';
 
@@ -33,13 +33,12 @@ export function enableMarkdownImageFocus(widget: HTMLElement, view: EditorView, 
 }
 
 export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRect) {
-  const image = widget.querySelector<HTMLImageElement>('.cm-md-image-element');
-  const source = image?.currentSrc || image?.getAttribute('src');
-  if (!source || widget.querySelector('dialog[open]')) return false;
-  showImageCropDialog({
-    widget,
-    source,
-    alt: image?.alt ?? '',
+  const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
+  const mask = surface?.querySelector<HTMLElement>('.cm-md-image-focus-mask');
+  if (!surface || !mask) return false;
+  return showImageRegionEditor({
+    surface,
+    onPreview: rect => Object.assign(mask.style, imageFocusMaskStyle(rect)),
     rect: focus,
     kind: 'focus',
     canRemove: false,
@@ -48,5 +47,4 @@ export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRec
       if (rect) widget.dispatchEvent(new CustomEvent(IMAGE_FOCUS_EVENT, { detail: rect }));
     }
   });
-  return true;
 }

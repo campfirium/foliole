@@ -9,16 +9,16 @@ import type { MarkdownImageMatch } from '../model/markdownImageTypes';
 
 import type { ImageClozeDraftController } from './imageClozeWidgetControls';
 import { createImageClozeActionButton } from './imageClozeWidgetInteractionHelpers';
-import { showImageCropDialog } from './liveMarkdownImageCropDialog';
 import { originalImageDraft } from './liveMarkdownImageCropFrame';
+import { showImageRegionEditor } from './liveMarkdownImageRegionEditor';
 
 const EDIT_CROP_EVENT = 'foliole:editor-edit-image-crop';
 const CROP_ICON_PATH = 'M5 2v9h9M2 5h9v9';
 
-function createCropButton(label: string, className: string, selection: () => ImageFocusRect | null) {
+function createCropButton(label: string, className: string, selection: () => ImageFocusRect | null, iconPath = CROP_ICON_PATH) {
   const button = createImageClozeActionButton({
     ariaLabel: label,
-    iconPath: CROP_ICON_PATH,
+    iconPath,
     onClick: event => {
       event.preventDefault();
       event.stopPropagation();
@@ -40,8 +40,8 @@ export function createImageCropDraftButton(args: { draft: ImageClozeDraftControl
 }
 
 export function createImageCropEditButton(crop: ImageFocusRect) {
-  return createCropButton(translate(getStoredAppLocale(), 'desktop.editor.image.editCrop'),
-    'cm-md-image-crop-edit', () => crop);
+  return createCropButton(translate(getStoredAppLocale(), 'desktop.editor.image.returnToOriginal'),
+    'cm-md-image-crop-edit', () => crop, 'M2.5 3h11v10h-11zM3 11l3.1-3 2 2L10 8l3.4 3.3M10.8 5.5h.2');
 }
 
 function commitImageCrop(widget: HTMLElement, view: EditorView, crop: ImageFocusRect | null) {
@@ -62,14 +62,13 @@ export function enableMarkdownImageCrop(widget: HTMLElement, view: EditorView, m
   if (view.state.sliceDoc(match.from, match.from + 3) === '![[') return;
   widget.dataset.mdImageCropEditable = 'true';
   widget.addEventListener(EDIT_CROP_EVENT, event => {
-    if (view.state.readOnly || !widget.isConnected || widget.querySelector('dialog[open]')) return;
-    const image = widget.querySelector<HTMLImageElement>('.cm-md-image-element');
-    const source = image?.currentSrc || image?.getAttribute('src');
-    if (!source) return;
-    showImageCropDialog({
-      widget,
-      source,
-      alt: match.alt,
+    if (view.state.readOnly || !widget.isConnected) return;
+    const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
+    if (!surface) return;
+    showImageRegionEditor({
+      surface,
+      kind: 'crop',
+      requestMeasure: () => view.requestMeasure(),
       rect: (event as CustomEvent<ImageFocusRect>).detail,
       canRemove: Boolean(match.crop),
       onCommit: crop => commitImageCrop(widget, view, crop),

@@ -54,6 +54,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.image.regionHandle.e': 'Right edge',
   'desktop.editor.image.regionHandle.s': 'Bottom edge',
   'desktop.editor.image.regionHandle.w': 'Left edge',
+  'desktop.editor.image.returnToOriginal': 'Return to original image',
   'desktop.editor.image.editCrop': 'Edit crop',
   'desktop.editor.image.removeCrop': 'Remove crop',
   'desktop.editor.image.cancelCrop': 'Cancel',

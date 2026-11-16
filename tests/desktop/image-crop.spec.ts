@@ -14,9 +14,11 @@ async function openCropFromDraft(page: Page) {
   const draft = page.locator('.cm-md-image-cloze-draft:visible').first();
   const initial = await draft.evaluate(element => (element as HTMLElement).style.cssText);
   await page.getByRole('button', { name: 'Crop image', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Edit crop' });
+  const dialog = page.getByRole('group', { name: 'Edit crop' });
   await expect(dialog).toBeVisible();
-  const frame = dialog.locator('.cm-md-image-crop-frame');
+  const frame = page.locator('.cm-md-image-crop-frame');
+  await expect(frame.locator('xpath=ancestor::*[contains(@class,"cm-md-image-surface")][1]').locator('img')).toHaveCount(1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await frame.evaluate(element => (element as HTMLElement).style.cssText)).toBe(initial);
   return { dialog, frame, initial };
 }
@@ -64,7 +66,7 @@ test('crops one occurrence, restores its draft on cancel, and reopens the saved 
   await seedImageSource(page, 2);
   const original = (await readDocument(page, OWNER_ID)).content;
 
-  const originalHeight = (await page.locator('.cm-md-image-surface-block').first().boundingBox())!.height;
+  const originalImage = (await page.locator('.cm-md-image-surface-block').first().boundingBox())!;
   const draft = await openCropFromDraft(page);
   await moveCropHandle(page);
   expect(await draft.frame.evaluate(element => (element as HTMLElement).style.cssText)).not.toBe(draft.initial);
@@ -84,7 +86,8 @@ test('crops one occurrence, restores its draft on cancel, and reopens the saved 
   const saved = (await readDocument(page, OWNER_ID)).content;
   expect(saved.split('\n\n')[1]).toBe(original.split('\n\n')[1]);
   await expect(viewport).toHaveCSS('overflow', 'hidden');
-  await expect.poll(async () => (await viewport.boundingBox())?.height ?? Infinity).toBeLessThan(originalHeight);
+  await expect.poll(async () => (await viewport.boundingBox())?.width).toBeCloseTo(originalImage.width, 0);
+  expect((await viewport.boundingBox())!.height).not.toBeCloseTo(originalImage.height, 0);
 
   await page.keyboard.press(undoShortcut());
   await expect(viewport).toHaveCount(0);
@@ -103,8 +106,9 @@ test('crops one occurrence, restores its draft on cancel, and reopens the saved 
   await expect(page.locator('.cm-content').getByText(lead)).toBeVisible();
   await page.screenshot({ path: info.outputPath('cropped-markdown-image.png') });
   await page.locator('.cm-md-image-surface').filter({ has: viewport }).hover();
-  await page.getByRole('button', { name: 'Edit crop' }).click();
-  await expect(draft.dialog.locator('img')).toHaveAttribute('src', await viewport.locator('img').getAttribute('src') ?? '');
+  await page.getByRole('button', { name: 'Return to original image' }).click();
+  await expect(viewport.locator('img')).toHaveCount(1);
+  await expect.poll(async () => (await viewport.boundingBox())?.height).toBeCloseTo(originalImage.height, 0);
   await expectSavedCropFrame(draft.frame, saved);
   await draft.dialog.getByRole('button', { name: 'Remove crop' }).click();
   await expect(viewport).toHaveCount(0);

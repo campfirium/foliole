@@ -23,9 +23,10 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   await expect(overlay).toHaveCSS('cursor', 'grab');
   await page.mouse.down();
   await page.mouse.up();
-  const clozeDialog = page.getByRole('dialog', { name: 'Adjust image cloze' });
-  await expect.poll(() => clozeDialog.locator('img').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
-  const edgeButton = clozeDialog.getByRole('button', { name: 'Right edge' });
+  const clozeControls = page.getByRole('group', { name: 'Adjust image cloze' });
+  await expect(surface.locator('img')).toHaveCount(1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const edgeButton = surface.getByRole('button', { name: 'Right edge' });
   await edgeButton.hover();
   const edge = (await edgeButton.boundingBox())!;
   await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
@@ -33,8 +34,8 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   await page.mouse.move(edge.x - 25, edge.y + edge.height / 2, { steps: 5 });
   await page.mouse.up();
   await page.screenshot({ path: info.outputPath('adjust-image-cloze.png') });
-  await clozeDialog.getByRole('button', { name: 'Apply' }).click();
-  await expect(clozeDialog).toBeHidden();
+  await clozeControls.getByRole('button', { name: 'Apply' }).click();
+  await expect(clozeControls).toBeHidden();
   const after = await readDocument(page, id!);
   const adjusted = after.imageRegions![0]!.regions[0]!;
   expect(adjusted).toMatchObject({ id: region.id, x: region.x, y: region.y, height: region.height });
@@ -51,9 +52,9 @@ test('adjusts saved cloze and focus borders and keeps both after reopening', asy
   await surface.hover();
   const focusBounds = (await overlay.boundingBox())!;
   await page.mouse.click(focusBounds.x + focusBounds.width * 0.78, focusBounds.y + focusBounds.height * 0.2);
-  const focusDialog = page.getByRole('dialog', { name: 'Adjust focus' });
-  await focusDialog.getByRole('button', { name: 'Left edge' }).press('ArrowLeft');
-  await focusDialog.getByRole('button', { name: 'Apply' }).click();
+  const focusControls = page.getByRole('group', { name: 'Adjust focus' });
+  await surface.getByRole('button', { name: 'Left edge' }).press('ArrowLeft');
+  await focusControls.getByRole('button', { name: 'Apply' }).click();
   await expect.poll(async () => (await readDocument(page, OWNER_ID)).content).not.toBe(focused);
   const saved = await readDocument(page, OWNER_ID);
   await page.reload();

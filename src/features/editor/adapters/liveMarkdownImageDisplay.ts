@@ -33,6 +33,7 @@ export function finalizeMarkdownImageDisplay(
   const display = resolveImageDisplay(imageMatch.display, size, imageMatch.displayWidth);
   const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
   if (!surface || surface.dataset.mdImageFinalDisplay) return;
+  const originalSize = size;
   if (imageMatch.crop && surface.dataset.mdImageCropVisible === 'true') {
     size = { width: size.width * imageMatch.crop.width, height: size.height * imageMatch.crop.height };
   }
@@ -48,7 +49,13 @@ export function finalizeMarkdownImageDisplay(
   }
   const image = widget.querySelector('.cm-md-image-element');
   if (image) replaceDisplayClass(image, 'cm-md-image-element', display);
-  if (imageMatch.displayWidth) {
+  if (surface.dataset.mdImageCropVisible === 'true') {
+    surface.style.aspectRatio = `${size.width} / ${size.height}`;
+    surface.style.removeProperty('height');
+    surface.style.width = display === 'inline'
+      ? `calc(1lh * ${originalSize.width / originalSize.height})`
+      : fitBlockImageWidth(imageMatch.displayWidth ?? originalSize.width, originalSize);
+  } else if (imageMatch.displayWidth) {
     surface.style.aspectRatio = `${size.width} / ${size.height}`;
     surface.style.width = fitBlockImageWidth(imageMatch.displayWidth, size);
   } else {

@@ -1,5 +1,6 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePreview';
@@ -141,7 +142,7 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
   const plane = args.crop ? createImageCropPlane(wrapper, args.crop) : wrapper;
   plane.append(image);
   if (args.focus) plane.append(createImageFocusMask(args.focus));
-  const regionLayer = createSavedRegionLayer(args.presentation ?? null);
+  const regionLayer = createSavedRegionLayer(args.presentation ?? null, isDesktopRuntime());
   plane.append(regionLayer);
   if (args.crop) wrapper.append(createImageCropEditButton(args.crop));
   wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation, ...(args.focus ? { focus: args.focus } : {}) }));

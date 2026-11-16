@@ -125,11 +125,11 @@ Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's t
 
 ### Image focus in material content
 
-Desktop image focus is an editor action for a stored image occurrence. Its saved rectangle can be adjusted from its border in the editor. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
+Desktop image focus is an editor action for a stored image occurrence. Its saved rectangle can be adjusted in place from its border in the editor. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Agent Control has no dedicated image focus operation. Preserve the image label and destination when copying or updating focused material.
 
-Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area while retaining the original attachment destination and bytes. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
+Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area at the original display width while retaining the original attachment destination and bytes. The editor can reveal the original image in place to adjust or remove a crop. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
 
-Desktop image cloze borders open a range editor that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation.
+Desktop image cloze borders show in-place range handles that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation.
 
 ### Paging search results
 

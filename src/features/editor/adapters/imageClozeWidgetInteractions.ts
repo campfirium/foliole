@@ -52,6 +52,7 @@ function createSelectionPointerHandlers(args: {
       if (event.button !== 0 || args.draft.dragHandlers.isDragging() || isImageClozeControlTarget(event.target)) {
         return;
       }
+      if (args.overlay.parentElement?.dataset.mdImageRegionEdit) return;
       args.overlay.hidden = false;
       const point = toRelativeImagePoint(args.overlay, event);
       const originalPoint = originalImagePoint(args.overlay, point);
@@ -76,6 +77,7 @@ function createSelectionPointerHandlers(args: {
       if (args.draft.dragHandlers.isDragging() || isImageClozeControlTarget(event.target)) {
         return;
       }
+      if (args.overlay.parentElement?.dataset.mdImageRegionEdit) return;
       args.overlay.hidden = false;
       const point = originalImagePoint(args.overlay, toRelativeImagePoint(args.overlay, event));
       args.setHoverRegionId(findImageRegionNearBorder(args.presentation, args.attachmentId, point)?.id ??
@@ -215,7 +217,7 @@ export function attachImageClozeOverlayInteractions(args: OverlayInteractionArgs
     handlePointerMove: selection.handlePointerMove,
     handlePointerLeave() {
       selection.clearHover();
-      if (!draft.hasPendingRegions() && !host.closest('.cm-md-image-widget')?.querySelector('dialog[open]')) {
+      if (!draft.hasPendingRegions() && !args.wrapper.dataset.mdImageRegionEdit) {
         draft.resetDraft();
       }
       draft.syncPendingPreview();
