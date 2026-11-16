@@ -5,6 +5,7 @@ import { selectCanonicalWorkspaceMembershipView } from '../../store/workspaceCan
 import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore, type WorkspaceState } from '../../store/workspaceStore';
 
+import { gradeReviewCardAfterFlush } from './gradeReviewCardAfterFlush';
 import { readReviewTopicAfterFlush } from './readReviewTopicAfterFlush';
 
 function selectWorkspaceCreationActions(state: WorkspaceState) {
@@ -27,7 +28,7 @@ function selectWorkspaceReviewActions(state: WorkspaceState) {
     postponeReviewTopic: state.postponeReviewTopic,
     setReviewTopicDelay: state.setReviewTopicDelay,
     revisitReviewTopicSoon: state.revisitReviewTopicSoon,
-    gradeReviewCard: state.gradeReviewCard,
+    gradeReviewCard: gradeReviewCardAfterFlush,
     revealReviewAnswer: state.revealReviewAnswer,
     resumeReviewSession: state.resumeReviewSession,
     setReviewSessionMode: state.setReviewSessionMode,

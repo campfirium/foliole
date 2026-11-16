@@ -1,5 +1,7 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
+
 import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -73,6 +75,71 @@ async function installProbe(app: ElectronApplication) {
 
 const current = (page: Page) => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
 const document = (page: Page, id: string) => page.evaluate(nodeId => window.electronAPI.invoke('load_node_document', { nodeId }), id);
+
+async function failDraftWrites(app: ElectronApplication, nodeId: string | null) {
+  await app.evaluate(async (_, target) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
+    await connection.runWithDatabaseConnectionOwner(() => {
+      const { sqlite } = connection.openDatabaseConnection();
+      sqlite.exec('DROP TRIGGER IF EXISTS reject_cloze_draft');
+      if (target) sqlite.exec(`CREATE TEMP TRIGGER reject_cloze_draft BEFORE INSERT ON node_sync_versions
+        WHEN NEW.object_id='${target.replaceAll("'", "''")}'
+        BEGIN SELECT RAISE(ABORT, 'draft_save_failure'); END`);
+    });
+  }, nodeId);
+}
+
+test('keeps the edited cloze and its grade pending after a SQLite write failure until retry saves both', async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, desktopApp);
+  const id = (await current(page)).currentNodeId!;
+  const before = await document(page, id);
+  await failDraftWrites(desktopApp, id);
+  try {
+    await edit(page, ' Retained failed draft');
+    await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
+    await page.getByRole('button', { name: 'Good', exact: true }).click();
+    await expect(page.getByText('Failed to save grade. Please retry.', { exact: true })).toBeVisible();
+    expect((await current(page)).currentNodeId).toBe(id);
+    expect((await document(page, id))?.content).toBe(before?.content);
+    const failed = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));
+    expect(failed.nodesById[id]?.review?.reps ?? 0).toBe(0);
+    await expect(page.locator('.prompt-editor-host .cm-content')).toContainText(' Retained failed draft');
+    await failDraftWrites(desktopApp, null);
+    await page.getByRole('button', { name: 'Retry', exact: true }).click();
+    await expect.poll(async () => (await current(page)).currentNodeId).not.toBe(id);
+    expect((await document(page, id))?.content).toContain(' Retained failed draft');
+    const saved = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));
+    expect(saved.nodesById[id]?.review?.reps).toBe(1);
+  } finally { await failDraftWrites(desktopApp, null); }
+});
+
+test('retains an unsaved cloze draft through reveal, first grading and restart', async ({ desktopApp, desktopSession, desktopWindow: page }) => {
+  await prepare(page, desktopApp);
+  const edited = new Map<string, string>();
+  for (const [index, label] of ['Good', 'Easy', 'Hard', 'Again'].entries()) {
+    const id = (await current(page)).currentNodeId!;
+    const suffix = ` Rapid edit ${index}`;
+    await edit(page, suffix);
+    await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
+    await expect(page.locator('.prompt-editor-host .cm-content')).toContainText(suffix);
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await expect.poll(async () => (await current(page)).currentNodeId).not.toBe(id);
+    expect((await document(page, id))?.content).toContain(suffix);
+    edited.set(id, suffix);
+  }
+  await page.reload();
+  await expectWorkspaceShell(page);
+  for (const [id, suffix] of edited) expect((await document(page, id))?.content).toContain(suffix);
+  await page.screenshot({ path: '.tmp/artifacts/T789/rapid-cloze-grade.png' });
+  const env = { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: desktopSession.target.runtimeStateRoot };
+  await desktopApp.close();
+  const restarted = await launchDesktopSession({ env });
+  try {
+    await expectWorkspaceShell(restarted.firstWindow);
+    for (const [id, suffix] of edited) expect((await document(restarted.firstWindow, id))?.content).toContain(suffix);
+  } finally { await restarted.close(); }
+});
 
 test('saves the first grade after a settled cloze edit and retains edits after reload', async ({ desktopApp, desktopWindow: page }) => {
   await prepare(page, desktopApp);

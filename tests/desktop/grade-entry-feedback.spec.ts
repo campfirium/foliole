@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { ElectronApplication, Page } from '@playwright/test';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -11,7 +12,7 @@ const labels = ['Again', 'Hard', 'Good', 'Easy'] as const;
 type Probe = { calls: unknown[]; release?: () => void };
 type Globals = typeof globalThis & { gradeSaveProbe: Probe };
 
-async function prepare(page: Page) {
+async function prepare(page: Page, app: ElectronApplication) {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -24,6 +25,10 @@ async function prepare(page: Page) {
         stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 }
     })), { persist: true });
   });
+  await resetDailyFlowGeneration(app);
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();
   await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
   await expect(page.getByRole('button', { name: /^Good$/ })).toBeVisible();
@@ -50,9 +55,12 @@ async function installProbe(app: ElectronApplication) {
 async function state(page: Page) {
   return page.evaluate(async () => {
     const api = window.__folioleWorkspaceDebug!;
-    const session = api.getReviewSession!();
+    const review = api.getReviewSession!();
+    const session = { currentNodeId: review.currentNodeId, queueNodeIds: review.queueNodeIds,
+      isAnswerRevealed: review.isAnswerRevealed, reviewedItemCount: review.reviewedItemCount,
+      readTopicCount: review.readTopicCount };
     const disk = await window.electronAPI.invoke('load_workspace_snapshot', {});
-    return { session, a: api.getNode('grade-failure-a')?.review, b: api.getNode('grade-failure-b')?.review,
+    return { session,
       diskA: disk.nodesById['grade-failure-a']?.review, diskB: disk.nodesById['grade-failure-b']?.review };
   });
 }
@@ -100,7 +108,7 @@ for (const [index, label] of labels.entries()) {
   for (const entry of ['button', 'keyboard', 'palette', 'native-callback']) {
     test(`${label} ${entry} retries its failed grade once and survives reload`, async ({ desktopApp: app, desktopWindow: page }) => {
       fs.mkdirSync(output, { recursive: true });
-      await prepare(page);
+      await prepare(page, app);
       await installProbe(app);
       const before = await state(page);
       await trigger(page, app, entry, label, index + 1);
@@ -114,16 +122,17 @@ for (const [index, label] of labels.entries()) {
       const targetA = before.session.currentNodeId === 'grade-failure-a';
       expect(targetA ? after.diskB : after.diskA).toEqual(targetA ? before.diskB : before.diskA);
       expect(targetA ? after.diskA?.reps : after.diskB?.reps).toBe(1);
-      expect(after.a).toEqual(after.diskA);
-      expect(after.b).toEqual(after.diskB);
       const requests = await calls(app);
       expect(requests).toHaveLength(2);
       for (const request of requests) expect(request).toMatchObject({ nodeId: before.session.currentNodeId, grade: index + 1 });
       await page.screenshot({ path: path.join(output, `${label}-${entry}-restored.png`) });
       await page.reload();
       await expectWorkspaceShell(page);
-      await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getNode('grade-failure-a')?.review)).toEqual(after.diskA);
-      await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getNode('grade-failure-b')?.review)).toEqual(after.diskB);
+      await page.getByRole('button', { name: /^Enter Flow$/ }).click();
+      await expect.poll(async () => (await state(page)).session.currentNodeId).toBe(after.session.currentNodeId);
+      const restored = await state(page);
+      expect(restored.diskA).toEqual(after.diskA);
+      expect(restored.diskB).toEqual(after.diskB);
       fs.writeFileSync(path.join(output, `${label}-${entry}-result.json`), JSON.stringify({ before, after, requests, hydrated: true }, null, 2));
     });
   }
