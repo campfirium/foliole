@@ -1,4 +1,4 @@
-import { createEvent, fireEvent, render, screen } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../localization/testLocalization';
@@ -118,4 +118,28 @@ it('uses shared dropdown styling for grouped checked menu items', () => {
   expect(screen.getByText('Sort by').className).toContain('text-ui-sm');
   expect(screen.getByText('Sort by').className).toContain('text-foreground/45');
   expect(screen.getByRole('separator').className).toContain('var(--app-floating-divider-color)');
+});
+
+
+it('leaves focus at the target chosen by a menu that cancels automatic return', async () => {
+  render(
+    <>
+      <button type="button">Editor target</button>
+      <AppDropdownMenu>
+        <AppDropdownMenuTrigger>Actions</AppDropdownMenuTrigger>
+        <AppDropdownMenuContent onCloseAutoFocus={event => {
+          event.preventDefault();
+          screen.getByRole('button', { name: 'Editor target' }).focus();
+        }}>
+          <AppDropdownMenuCheckItem checked={false}>Move</AppDropdownMenuCheckItem>
+        </AppDropdownMenuContent>
+      </AppDropdownMenu>
+    </>
+  );
+  const trigger = screen.getByRole('button', { name: 'Actions' });
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+  expect(screen.getByRole('menu')).toBeVisible();
+  fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Editor target' })).toHaveFocus());
 });

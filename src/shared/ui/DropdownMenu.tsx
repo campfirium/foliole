@@ -5,13 +5,12 @@ import { createPortal } from 'react-dom';
 
 import { useTranslation } from '../localization/LocalizationProvider';
 
+import { AppDropdownMenuTrigger, useDropdownMenuCloseFocus } from './DropdownMenuFocusReturn';
 import { AppDropdownMenu } from './DropdownMenuRoot';
 import { appFloatingSurfaceClassName } from './FloatingSurface';
 
 import { cn } from '@/shared/lib/utils';
 import { onWindowEscape } from '@/shared/platform/keyboard';
-
-const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
 interface AppSelectionDropdownMenuProps {
   children: ReactNode;
@@ -55,16 +54,20 @@ function dropdownMenuSeparatorClassName(className?: string) {
 const AppDropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={dropdownMenuContentClassName(className)}
-      {...props}
-    />
-  </DropdownMenuPrimitive.Portal>
-));
+>(({ className, sideOffset = 4, onCloseAutoFocus, ...props }, ref) => {
+  const closeFocus = useDropdownMenuCloseFocus(onCloseAutoFocus);
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.Content
+        ref={ref}
+        sideOffset={sideOffset}
+        className={dropdownMenuContentClassName(className)}
+        onCloseAutoFocus={closeFocus}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+});
 AppDropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
 const AppDropdownMenuItem = React.forwardRef<
