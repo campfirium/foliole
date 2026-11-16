@@ -105,6 +105,7 @@ export const controlledSyncSqliteTests = [
   'electron/database/requestSyncReadwiseOwner.integration.test.ts',
   'electron/database/currentNodeBodyProjection.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncMissingBody.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionRequestSyncBodyRepair.integration.test.ts',
   'electron/database/requestSyncLargeSettings.integration.test.ts',
   'electron/database/syncPackExternalDocumentTombstoneScenario.test.ts',
   'src/shared/platform/companion/sync/syncGroupRestoreMemberDependencies.sqlite.test.ts',

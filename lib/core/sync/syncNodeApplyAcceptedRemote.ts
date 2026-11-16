@@ -2,7 +2,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { initializeReceivedReviewSchedule } from '../database/initialReviewSchedule.js';
 import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
 
-import type { DbPort, DbRow } from './dbPort.js';
+import type { DbPort } from './dbPort.js';
 import {
   repairDirectChildAnchorsForAppliedParent,
   type SyncNodeAnchorRepairRecord,
@@ -19,7 +19,8 @@ import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalida
 import { compactDeletedVersionIdentity, deletedVersionMetadataDigest, isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
-import { applyStoredNodeVersionBodyState, repairStoredRetiredNodeBodyHash } from './syncNodeVersionBodyState.js';
+import { applyStoredNodeVersionBodyState, STORED_NODE_VERSION_BODY_REPAIR_COLUMNS, storeRetiredNodeBodyHash,
+  type StoredNodeVersionBodyRepairState } from './syncNodeVersionBodyState.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
@@ -33,14 +34,14 @@ export interface AcceptedRemoteNodeOptions {
   enqueueSearchInvalidations?: boolean;
 }
 
-export type StoredVersionIdentity = { object_id: string; content_hash: string; host_name: string; created_at: string;
+type StoredVersionIdentity = StoredNodeVersionBodyRepairState & { object_id: string; content_hash: string; host_name: string; created_at: string;
   snapshot_json: string; body_text: string | null };
 
 /** One read of the stored identities of versions about to be retained; absent ids are new versions. */
 export async function loadStoredVersionIdentities(port: DbPort, versionIds: readonly string[]) {
   if (!versionIds.length) return new Map<string, StoredVersionIdentity>();
   const rows = await port.query<StoredVersionIdentity & { version_id: string }>(`SELECT version_id, object_id, content_hash,
-    host_name, created_at, snapshot_json, body_text FROM node_sync_versions
+    host_name, created_at, snapshot_json, body_text, ${STORED_NODE_VERSION_BODY_REPAIR_COLUMNS} FROM node_sync_versions
     WHERE version_id IN (SELECT value FROM json_each(?))`, [JSON.stringify(versionIds)]);
   return new Map(rows.map(({ version_id: id, ...row }) => [id, row]));
 }
@@ -48,7 +49,8 @@ export async function loadStoredVersionIdentities(port: DbPort, versionIds: read
 async function storedVersion(port: DbPort, record: NativeSyncNodeRecord, incomingBody: string | null,
   known?: StoredVersionIdentity | null) {
   if (known === undefined) {
-    const [row] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at, snapshot_json,
+    const [row] = await port.query<Omit<StoredVersionIdentity, 'body_text'> & { body_mismatch: number }>(
+      `SELECT object_id, content_hash, host_name, created_at, snapshot_json, ${STORED_NODE_VERSION_BODY_REPAIR_COLUMNS},
       body_text IS NOT NULL AND ? IS NOT NULL AND body_text IS NOT ? AS body_mismatch
       FROM node_sync_versions WHERE version_id = ?`, [incomingBody, incomingBody, record.version_id]);
     return row;
@@ -84,8 +86,13 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
       await retainVersionParents(port, record);
       return null;
     }
-    await repairStoredRetiredNodeBodyHash(port, record);
-    if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) await applyStoredNodeVersionBodyState(port, record);
+    if (existing.retired_hash_missing && record.snapshot.kind === 'topic' &&
+        record.snapshot.body_deleted === true && record.snapshot.body_blob_hash) {
+      await storeRetiredNodeBodyHash(port, record.version_id, record.snapshot.body_blob_hash);
+    }
+    if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) {
+      await applyStoredNodeVersionBodyState(port, record, existing);
+    }
     await retainVersionParents(port, record);
     // Retirement can depend on which version is current when it runs.
     return record.snapshot.body_deleted === true ? null : 'complete';

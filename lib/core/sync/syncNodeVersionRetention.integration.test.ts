@@ -2,6 +2,7 @@
 import { expect, it } from 'vitest';
 
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
@@ -68,3 +69,48 @@ it('still rejects a newly received body with a mismatched hash and rolls back it
     receiver.sqlite.close();
   }
 });
+
+it('rejects a mismatched immutable body or claimed hash on re-delivery of a complete version', async () => {
+  const sender = textDevice();
+  const receiver = textDevice();
+  try {
+    await applySyncNodesWithDbPort(sender.db, [textBranch('head', 'current body')]);
+    const record = (await loadRetainedSyncNodeVersionFact(sender.db, 'head', false))!;
+    await applySyncNodesWithDbPort(receiver.db, [record]);
+    const before = await receiver.current();
+    await expect(applySyncNodesWithDbPort(receiver.db, [{ ...record, body_text: 'Wrong bytes' }]))
+      .rejects.toThrow('sync_pack_node_version_immutable_mismatch');
+    const wrongHash = { ...record, snapshot: { ...record.snapshot, body_blob_hash: hashTextBody('other bytes') } };
+    await expect(applySyncNodesWithDbPort(receiver.db, [wrongHash]))
+      .rejects.toThrow('sync_node_version_body_hash_mismatch');
+    expect(await receiver.current()).toEqual(before);
+    expect(await loadRetainedSyncNodeVersionFact(receiver.db, 'head', false)).toEqual(record);
+  } finally {
+    receiver.sqlite.close();
+    sender.sqlite.close();
+  }
+});
+
+it.each(['complete', 'retired'])('backfills a missing retired hash from a %s delivery without restoring its body',
+  async delivery => {
+    const receiver = textDevice();
+    try {
+      const base = textBranch('base', 'original');
+      const current = textBranch('head', 'current body', base);
+      await applySyncNodesWithDbPort(receiver.db, [base, current]);
+      const retired = { ...base, body_text: null, snapshot: { ...base.snapshot, content: null, body_deleted: true } };
+      await applySyncNodesWithDbPort(receiver.db, [retired]);
+      const read = () => receiver.sqlite.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS retired,
+        json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = 'base'`).get();
+      const hash = hashTextBody(base.body_text!);
+      expect(read()).toEqual({ body_text: null, retired: 1, hash });
+      receiver.sqlite.prepare(`UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_blob_hash')
+        WHERE version_id = 'base'`).run();
+      const incoming = delivery === 'retired' ? { ...retired, snapshot: { ...retired.snapshot, body_blob_hash: hash } } : base;
+      const receive = () => applySyncNodesWithDbPort(receiver.db, [incoming]);
+      await receive();
+      await receive();
+      expect(read()).toEqual({ body_text: null, retired: 1, hash });
+      expect(await receiver.current()).toMatchObject({ body_text: 'current body', version_id: 'head' });
+    } finally { receiver.sqlite.close(); }
+  });

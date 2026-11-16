@@ -73,7 +73,7 @@ export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, vers
 
 export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId: string) {
   const [row] = await port.query<Descriptor>(DESCRIPTOR_SQL, [versionId]);
-  if (!row) return { hashes: new Array<string>(), mainBodyHash: null };
+  if (!row) return { hashes: new Array<string>(), mainBodyHash: null, hasStoredMainBodyHash: false };
   const hashes = new Set<string>();
   let snapshotHash: string | null = null;
   let mainBodyHash: string | null = null;
@@ -96,5 +96,5 @@ export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId:
   for (const alternative of await port.query<{ hash: string }>(ALTERNATIVES_SQL, [versionId])) hashes.add(alternative.hash);
   if (row.body_hash) hashes.add(row.body_hash);
   if (snapshotHash !== null) hashes.add(snapshotHash);
-  return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash };
+  return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash, hasStoredMainBodyHash: row.body_hash != null };
 }

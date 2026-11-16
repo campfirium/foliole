@@ -78,7 +78,9 @@ async function releasePlannedBodies(tx: DbPort, plan: ReturnType<typeof planTopi
   for (const id of plan.removed ?? []) {
     const released = await releasedVersionBodyHashesWithPort(tx, id);
     for (const hash of released.hashes) hashes.add(hash);
-    if (released.mainBodyHash) await tx.run(PRESERVE_RELEASED_MAIN_HASH_SQL, [released.mainBodyHash, id]);
+    if (released.mainBodyHash && !released.hasStoredMainBodyHash) {
+      await tx.run(PRESERVE_RELEASED_MAIN_HASH_SQL, [released.mainBodyHash, id]);
+    }
   }
   for (const statement of chainMutationStatements(plan)) await tx.run(statement.sql, statement.params);
   if (hashes.size) await collectTextBodyBlobCandidatesWithPort(tx, [...hashes]);
