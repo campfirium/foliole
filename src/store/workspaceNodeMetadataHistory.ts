@@ -49,6 +49,11 @@ export function collectWorkspaceMetadataSubtree(rootId: string, nodes: Record<st
 
 export function assertWorkspaceMetadataParent(node: WorkspaceNodeSnapshot, parentId: string | null,
   nodes: Record<string, WorkspaceNodeSnapshot>) {
+  assertWorkspaceMetadataParentWithSubtree(node, parentId, nodes);
+}
+
+function assertWorkspaceMetadataParentWithSubtree(node: WorkspaceNodeSnapshot, parentId: string | null,
+  nodes: Record<string, WorkspaceNodeSnapshot>, subtreeIds?: ReadonlySet<string>) {
   if (parentId === null) {
     if (node.kind !== 'folder') throw new Error('node_parent_required');
     return;
@@ -57,7 +62,14 @@ export function assertWorkspaceMetadataParent(node: WorkspaceNodeSnapshot, paren
   if (!parent || parent.deletedAt || parentId === 'special-home' || parentId === 'special-virtual-root' || parent.virtualFilter ||
     !canCreateChildNodeKind(parent.kind, node.kind)) throw new Error('node_parent_unavailable');
   if (nodes[node.id] && (!canNodeBeMoved(node) || !canNodeAcceptMovedNode(parent, node))) throw new Error('node_move_unavailable');
-  if (collectWorkspaceMetadataSubtree(node.id, nodes).includes(parentId)) throw new Error('node_parent_cycle');
+  if ((subtreeIds ?? new Set(collectWorkspaceMetadataSubtree(node.id, nodes))).has(parentId)) throw new Error('node_parent_cycle');
+}
+
+export function listWorkspaceMetadataParents(node: WorkspaceNodeSnapshot, nodes: Record<string, WorkspaceNodeSnapshot>) {
+  const subtreeIds = new Set(collectWorkspaceMetadataSubtree(node.id, nodes));
+  return Object.values(nodes).filter(parent => {
+    try { assertWorkspaceMetadataParentWithSubtree(node, parent.id, nodes, subtreeIds); return true; } catch { return false; }
+  });
 }
 
 export function resolveWorkspaceMetadataHistory(entry: WorkspaceNodeMetadataHistoryEntry, mode: 'undo' | 'redo',
