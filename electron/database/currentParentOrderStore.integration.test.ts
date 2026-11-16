@@ -6,6 +6,9 @@ import { CURRENT_PARENT_ORDER_SCHEMA, PARENT_ORDER_PAYLOAD_SQL } from '../../lib
 import { flushCurrentParentOrderProjections, readCurrentParentOrderSources,
   saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
+import { rewriteParentChildOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { bindParentOrderWriter, requireParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
@@ -49,6 +52,47 @@ function record(sources: ParentOrderSource[]) {
     payload_json: JSON.stringify(currentParentOrderPayload('parent', sources)), updated_at: now,
     content_hash: currentParentOrderHash('parent', sources) };
 }
+
+it('reads current move and reorder positions without writing the directory order', async () => {
+  const host = fixture();
+  host.node('b');
+  host.node('a');
+  host.db.pragma('query_only = ON');
+  expect(readParentChildOrder(host.driver, 'parent').childIds).toEqual(['a', 'b']);
+  expect(readMoveParentOrder(host.driver, 'parent').visibleIds).toEqual(['a', 'b']);
+
+  host.db.pragma('query_only = OFF');
+  await applyCurrentParentOrderRecord(host.port, record([
+    { authorId: 'remote', counter: 1, childIds: ['b', 'late', 'a'] }
+  ]));
+  host.node('late');
+  host.db.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'b');
+  host.db.pragma('query_only = ON');
+
+  expect(readParentChildOrder(host.driver, 'parent').childIds).toEqual(['b', 'late', 'a']);
+  expect(readMoveParentOrder(host.driver, 'parent').visibleIds).toEqual(['late', 'a']);
+  expect(host.order()).toEqual(['b', 'a']);
+});
+
+it('saves an explicit rearrangement that matches the stale materialized order', async () => {
+  const host = fixture();
+  host.db.exec("INSERT INTO settings VALUES ('host_name', 'Test', 'now')");
+  host.node('a');
+  host.node('b');
+  await applyCurrentParentOrderRecord(host.port, record([
+    { authorId: 'first', counter: 1, childIds: ['a'] },
+    { authorId: 'second', counter: 1, childIds: ['b'] }
+  ]));
+  host.db.prepare("UPDATE nodes SET title = 'z' WHERE id = 'a'").run();
+  expect(readParentChildOrder(host.driver, 'parent').childIds).toEqual(['b', 'a']);
+
+  rewriteParentChildOrder(host.driver, 'parent', ['a', 'b']);
+
+  expect(readParentChildOrder(host.driver, 'parent').childIds).toEqual(['a', 'b']);
+  expect(readCurrentParentOrderSources(host.driver, 'parent')).toContainEqual({
+    authorId: requireParentOrderWriter(host.driver), counter: 2, childIds: ['a', 'b']
+  });
+});
 
 it('preserves root membership when a child moves out of a folder through either storage adapter', async () => {
   const host = fixture();

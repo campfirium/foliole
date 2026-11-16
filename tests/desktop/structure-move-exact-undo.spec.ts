@@ -67,18 +67,26 @@ test('saves pending source content before maintaining reading during a cross-par
       createdAt: '2026-04-08T00:00:00.000Z', updatedAt: '2026-10-28T00:00:00.000Z'
     });
   });
+  const reading = () => desktopWindow.evaluate(async () => {
+    const api = window.electronAPI!;
+    const { libraryScope } = await api.invoke('load_workspace_list_snapshot', {});
+    if (!libraryScope) throw new Error('Missing library scope');
+    const [learning] = await api.invoke('load_node_learning', { nodeIds: ['reading-two'], libraryScope });
+    return learning?.reading;
+  });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
+  expect(await reading()).toMatchObject({ state: 'locked', readingPosition: 31, repetitionCount: 7 });
   const result = await desktopWindow.evaluate(async () => {
     const debug = window.__folioleWorkspaceDebug!;
     await debug.openNode('reading-two');
     const edited = await debug.updateNodeContent('reading-two', 'Newly written content');
     const moved = await debug.moveNodes(['reading-one'], 'reading-target', 'child');
-    return { edited, moved, reading: debug.getNode('reading-two')?.reading };
+    return { edited, moved };
   });
-  expect(result).toMatchObject({ edited: true, moved: true,
-    reading: { state: 'active', readingPosition: 31, repetitionCount: 7 } });
+  expect(result).toEqual({ edited: true, moved: true });
+  expect(await reading()).toMatchObject({ state: 'active', readingPosition: 31, repetitionCount: 7 });
   await expect.poll(async () => (await loadNodeDocument(desktopWindow, 'reading-two'))?.content)
     .toBe('Newly written content');
   await desktopWindow.reload();
@@ -86,6 +94,5 @@ test('saves pending source content before maintaining reading during a cross-par
   await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   expect(await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getNode('reading-one')?.parentNodeId))
     .toBe('reading-target');
-  expect(await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getNode('reading-two')?.reading))
-    .toMatchObject({ state: 'active', readingPosition: 31, repetitionCount: 7 });
+  expect(await reading()).toMatchObject({ state: 'active', readingPosition: 31, repetitionCount: 7 });
 });

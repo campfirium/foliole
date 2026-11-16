@@ -3,7 +3,7 @@ import { findSequentialReadingSourcesForNode } from '../review/sequentialReading
 import type { SequentialReadingNode, SequentialReadingNodes } from '../review/sequentialReadingTypes.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { projectParentChildOrder } from './parentChildOrder.js';
+import { projectParentChildOrder, readParentChildOrder } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 
 interface ReadingRow extends DatabaseRow {
@@ -65,10 +65,7 @@ export function loadMoveReadingContext(driver: DatabaseDriver, scope: ReturnType
   const nodesById = loadReadingNodes(driver, scope.nodeIds);
   const parentIds = [...new Set(Object.values(nodesById).flatMap((node) =>
     node.parentNodeId && scope.descendantIds.has(node.parentNodeId) ? [node.parentNodeId] : []))];
-  const rows = driver.queryAll<{ parent_id: string; child_ids_json: string }>(
-    'SELECT parent_id, child_ids_json FROM parent_child_order WHERE parent_id IN (SELECT value FROM json_each(?))',
-    [JSON.stringify(parentIds)]);
-  const orders = new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
+  const orders = new Map(parentIds.map(parentId => [parentId, readParentChildOrder(driver, parentId).childIds]));
   const members = Object.values(nodesById).map((node) => ({ id: node.id, parent_id: node.parentNodeId,
     title: node.title, created_at: node.createdAt, deleted_at: null }));
   return { nodesById, nodeOrder: projectParentChildOrder(members, orders) };

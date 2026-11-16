@@ -27,7 +27,8 @@ export function restoreDeletedParentOrders(
       covered.add(id);
     }
     const childIds = restoreDeletedChildOrder(current.childIds, order.childIds, targets);
-    saveLocalCurrentParentOrder(driver, { parentId: parentOrderId(order.parentNodeId), childIds, now, hostName });
+    saveLocalCurrentParentOrder(driver, { parentId: parentOrderId(order.parentNodeId), childIds,
+      previousChildIds: current.childIds, now, hostName });
     const manual = order.parentNodeId && order.manualChildIds ? restoreManualOrder(driver, order, targets) : null;
     if (manual) manualParentOrders.push(manual);
   }

@@ -1,6 +1,6 @@
 import { compareUtf8Text } from '../sync/syncFactKeyOrder.js';
 
-import { flushCurrentParentOrderProjections, projectStoredParentOrder } from './currentParentOrderStore.js';
+import { flushCurrentParentOrderProjections, readCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
 export const ROOT_CHILD_ORDER_ID = 'parent-child-order:root';
@@ -37,18 +37,13 @@ export function readOrdersAroundNodes(driver: DatabaseDriver, parentIds: string[
 
 /** Reads the current order and membership of one parent, including hidden slots. */
 export function readParentChildOrder(driver: DatabaseDriver, parentNodeId: string) {
-  if (driver.queryOne('SELECT parent_id FROM parent_order_projection_pending WHERE parent_id = ?', [parentNodeId])) {
-    projectStoredParentOrder(driver, parentNodeId, new Date().toISOString());
-  }
-  const members = driver.queryAll<NodeOrderMember>(
-    'SELECT id, parent_id, created_at, deleted_at FROM nodes WHERE parent_id = ?', [parentNodeId]);
-  const byId = new Map(members.map((member) => [member.id, member]));
-  const stored = driver.queryOne<ChildOrderRow>(
-    'SELECT parent_id, child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentNodeId]);
-  const existing = (stored ? JSON.parse(stored.child_ids_json) as string[] : []).filter((id) => byId.has(id));
-  const listed = new Set(existing);
-  return { childIds: [...existing, ...members.filter((member) => !listed.has(member.id))
-    .sort(compareMembers).map((member) => member.id)], byId };
+  return driver.transaction(tx => {
+    const members = tx.queryAll<NodeOrderMember & { title: string; createdAt: string }>(
+      'SELECT id, parent_id, title, created_at, created_at AS createdAt, deleted_at FROM nodes WHERE parent_id = ?',
+      [parentNodeId]);
+    const byId = new Map(members.map((member) => [member.id, member]));
+    return { childIds: readCurrentParentOrder(tx, parentNodeId, members), byId };
+  });
 }
 
 export function readOrderMembers(driver: DatabaseDriver) {

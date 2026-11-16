@@ -3,7 +3,7 @@ import { canCreateChildNodeKind } from '../nodes/folderTopicItemCommands.js';
 import type { NodeKind } from '../nodes/nodeKind.js';
 import { isFixedStructureRoot } from '../nodes/structureMoveOrder.js';
 
-import { projectStoredParentOrder, saveLocalCurrentParentOrder } from './currentParentOrderStore.js';
+import { readCurrentParentOrder, saveLocalCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForInput } from './nodeMutationSpecialRoots.js';
 import { parentOrderId } from './parentChildOrder.js';
@@ -21,19 +21,15 @@ function sameIds(left: string[], right: string[]) {
 }
 
 export function readMoveParentOrder(driver: DatabaseDriver, parentNodeId: string | null) {
-  const parentId = parentOrderId(parentNodeId);
-  if (driver.queryOne('SELECT parent_id FROM parent_order_projection_pending WHERE parent_id = ?', [parentId])) {
-    projectStoredParentOrder(driver, parentId, new Date().toISOString());
-  }
-  const rows = driver.queryAll<MoveStructureNode>(
-    'SELECT id, parent_id, kind, deleted_at, updated_at FROM nodes WHERE parent_id IS ?', [parentNodeId]);
-  const byId = new Map(rows.map((row) => [row.id, row]));
-  const stored = driver.queryOne<{ child_ids_json: string }>(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId]);
-  const childIds = (stored ? JSON.parse(stored.child_ids_json) as string[] : []).filter((id) => byId.has(id));
-  if (childIds.length !== rows.length) throw new Error('move_parent_projection_incomplete');
-  return { parentNodeId, childIds, visibleIds: childIds.filter((id) => !byId.get(id)!.deleted_at &&
-    (parentNodeId !== null || !isFixedStructureRoot(id))), byId };
+  return driver.transaction(tx => {
+    const rows = tx.queryAll<MoveStructureNode & { title: string; createdAt: string }>(
+      'SELECT id, parent_id, kind, deleted_at, updated_at, title, created_at AS createdAt FROM nodes WHERE parent_id IS ?',
+      [parentNodeId]);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const childIds = readCurrentParentOrder(tx, parentOrderId(parentNodeId), rows);
+    return { parentNodeId, childIds, visibleIds: childIds.filter((id) => !byId.get(id)!.deleted_at &&
+      (parentNodeId !== null || !isFixedStructureRoot(id))), byId };
+  });
 }
 
 function requireMoveNode(driver: DatabaseDriver, id: string) {
@@ -105,7 +101,7 @@ export function writeMoveStructure(
     const childIds = retained.flatMap((id) => previous.byId.get(id)?.deleted_at ||
       (order.parentNodeId === null && isFixedStructureRoot(id)) ? [id] : target.splice(0, 1));
     childIds.push(...target);
-    saveLocalCurrentParentOrder(driver, { parentId: parentOrderId(order.parentNodeId), childIds,
+    saveLocalCurrentParentOrder(driver, { parentId: parentOrderId(order.parentNodeId), childIds, previousChildIds: previous.childIds,
       now: new Date().toISOString(), hostName });
   }
 }

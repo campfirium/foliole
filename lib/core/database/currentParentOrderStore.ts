@@ -15,12 +15,15 @@ export function readCurrentParentOrderSources(driver: DatabaseDriver, parentId: 
 }
 
 export function projectStoredParentOrder(driver: DatabaseDriver, parentId: string, now: string) {
-  const sources = readCurrentParentOrderSources(driver, parentId);
   const members = driver.queryAll<CurrentOrderMember & DatabaseRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
-  const order = projectCurrentParentOrder(sources, members);
+  const order = readCurrentParentOrder(driver, parentId, members);
   driver.execute(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
   driver.execute('DELETE FROM parent_order_projection_pending WHERE parent_id = ?', [parentId]);
   return order;
+}
+
+export function readCurrentParentOrder(driver: DatabaseDriver, parentId: string, members: readonly CurrentOrderMember[]) {
+  return projectCurrentParentOrder(readCurrentParentOrderSources(driver, parentId), members);
 }
 
 export function flushCurrentParentOrderProjections(driver: DatabaseDriver) {
@@ -32,13 +35,15 @@ export function flushCurrentParentOrderProjections(driver: DatabaseDriver) {
 }
 
 export function saveLocalCurrentParentOrder(driver: DatabaseDriver, input: {
-  parentId: string; childIds: string[]; now: string; hostName: string;
+  parentId: string; childIds: string[]; previousChildIds?: readonly string[]; now: string; hostName: string;
 }) {
   return driver.transaction(() => {
-    const { parentId, childIds, now, hostName } = input;
-    const current = driver.queryOne<{ child_ids_json: string }>(
-      'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId]);
-    if ((current?.child_ids_json ?? '[]') === JSON.stringify(childIds)) return false;
+    const { parentId, childIds, previousChildIds, now, hostName } = input;
+    const previous = previousChildIds === undefined
+      ? driver.queryOne<{ child_ids_json: string }>(
+        'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId])?.child_ids_json ?? '[]'
+      : JSON.stringify(previousChildIds);
+    if (previous === JSON.stringify(childIds)) return false;
     const authorId = requireParentOrderWriter(driver);
     const sources = readCurrentParentOrderSources(driver, parentId);
     const counter = Math.max(0, ...sources.map((source) => source.counter)) + 1;

@@ -68,6 +68,7 @@ export function rewriteParentChildOrder(driver: DatabaseDriver, parentNodeId: st
     const hidden = new Set(childIds.filter((id) => byId.get(id)!.deleted_at));
     const unlisted = childIds.filter((id) => !listed.has(id) && !hidden.has(id));
     saveLocalCurrentParentOrder(driver, { parentId: parentNodeId,
+      previousChildIds: childIds,
       childIds: retainHiddenSlots(childIds, [...requested, ...unlisted], hidden),
       now: new Date().toISOString(), hostName: requireDatabaseHostName(driver) });
   });
