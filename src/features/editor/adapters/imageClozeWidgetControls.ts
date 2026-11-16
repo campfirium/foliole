@@ -124,7 +124,7 @@ function getDraftImageRange(args: ImageClozeDraftButtonArgs) {
 function createConfirmDraftButton(args: ImageClozeDraftButtonArgs) {
   return createImageClozeActionButton({
     ariaLabel: 'Confirm image cloze',
-    iconPath: 'M3 8.5 6.2 11.7 13 4.8',
+    iconPath: 'M3 4h10a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 13 12H3a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 3 4ZM4.7 8h.01M8 8h.01M11.3 8h.01',
     onClick: (event) => {
       event.preventDefault();
       event.stopPropagation();

@@ -32,12 +32,13 @@ export function enableMarkdownImageFocus(widget: HTMLElement, view: EditorView, 
   });
 }
 
-export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRect) {
+export function editMarkdownImageFocus(widget: HTMLElement, focus: ImageFocusRect, anchor: { x: number; y: number }) {
   const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
   const mask = surface?.querySelector<HTMLElement>('.cm-md-image-focus-mask');
   if (!surface || !mask) return false;
   return showImageRegionEditor({
     surface,
+    anchor,
     onPreview: rect => Object.assign(mask.style, imageFocusMaskStyle(rect)),
     rect: focus,
     kind: 'focus',

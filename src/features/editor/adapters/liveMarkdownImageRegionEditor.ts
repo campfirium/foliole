@@ -81,6 +81,7 @@ interface RegionEditorOptions {
   kind: RegionKind;
   canRemove: boolean;
   trigger?: HTMLButtonElement | null;
+  anchor?: { x: number; y: number };
   onPreview?: (rect: ImageFocusRect) => void;
   onCommit: (rect: ImageFocusRect | null) => void | Promise<boolean>;
   requestMeasure?: () => void;
@@ -92,6 +93,11 @@ export function showImageRegionEditor(args: RegionEditorOptions) {
   const plane = surface.querySelector<HTMLElement>('.cm-md-image-crop-plane') ?? surface;
   const image = plane.querySelector<HTMLImageElement>('.cm-md-image-element');
   if (!image?.naturalWidth || !image.naturalHeight) return false;
+  const triggerRect = args.trigger?.getBoundingClientRect();
+  const anchor = args.anchor ?? (triggerRect && {
+    x: triggerRect.left + triggerRect.width / 2,
+    y: triggerRect.top + triggerRect.height / 2
+  });
   surface.dataset.mdImageRegionEdit = kind;
   surface.style.setProperty('--image-edit-original-ratio', `${image.naturalWidth} / ${image.naturalHeight}`);
   const frame = document.createElement('span');
@@ -116,8 +122,24 @@ export function showImageRegionEditor(args: RegionEditorOptions) {
   frame.append(...handles.map(corner => createCornerHandle({ area: plane, corner, getRect: () => rect, update, isRegion: kind !== 'crop' })));
   plane.append(frame);
   surface.append(controls);
+  positionRegionActions(surface, controls, anchor);
   args.requestMeasure?.();
   return true;
+}
+
+function positionRegionActions(surface: HTMLElement, toolbar: HTMLElement, anchor?: { x: number; y: number }) {
+  const bounds = surface.getBoundingClientRect();
+  const gap = 12;
+  const pointerX = (anchor?.x ?? bounds.left + bounds.width / 2) - bounds.left;
+  const pointerY = (anchor?.y ?? bounds.top + bounds.height / 2) - bounds.top;
+  const width = toolbar.offsetWidth;
+  const height = toolbar.offsetHeight;
+  const maxLeft = Math.max(0, bounds.width - width);
+  const maxTop = Math.max(0, bounds.height - height);
+  const above = pointerY - height - gap;
+  const fitsAbove = pointerY >= height + gap && bounds.top + above >= 0;
+  toolbar.style.left = `${clamp(pointerX - width / 2, 0, maxLeft)}px`;
+  toolbar.style.top = `${clamp(fitsAbove ? above : pointerY + gap, 0, maxTop)}px`;
 }
 
 function createRegionActions(args: RegionEditorOptions, getRect: () => ImageFocusRect, close: () => void) {

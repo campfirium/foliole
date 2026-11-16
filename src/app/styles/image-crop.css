@@ -72,15 +72,54 @@
   z-index: var(--z-local-control);
 }
 
+.cm-md-image-surface[data-md-image-region-edit='cloze'] .cm-md-image-crop-frame {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .cm-md-image-crop-handle {
-  background: white;
-  border: 1px solid #333;
-  height: 14px;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 22px;
+  height: 22px;
   position: absolute;
   pointer-events: auto;
   touch-action: none;
   transform: translate(-50%, -50%);
-  width: 14px;
+  color: white;
+}
+
+.cm-md-image-crop-handle::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 85%));
+  pointer-events: none;
+}
+
+.cm-md-image-crop-handle[data-corner='nw']::before { border-right: 0; border-bottom: 0; }
+.cm-md-image-crop-handle[data-corner='ne']::before { border-left: 0; border-bottom: 0; }
+.cm-md-image-crop-handle[data-corner='sw']::before { border-right: 0; border-top: 0; }
+.cm-md-image-crop-handle[data-corner='se']::before { border-left: 0; border-top: 0; }
+
+.cm-md-image-crop-handle:is([data-corner='n'], [data-corner='s'])::before {
+  inset: 9px 4px;
+  border: 0;
+  background: currentColor;
+}
+
+.cm-md-image-crop-handle:is([data-corner='e'], [data-corner='w'])::before {
+  inset: 4px 9px;
+  border: 0;
+  background: currentColor;
+}
+
+.cm-md-image-crop-handle:is(:hover, :active)::before {
+  color: var(--role-accent);
 }
 
 .cm-md-image-crop-handle:is([data-corner='nw'], [data-corner='sw']) { left: 0; }
@@ -102,8 +141,6 @@
   align-items: center;
   gap: 0.25rem;
   position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
   z-index: var(--z-local-control);
 }
 
@@ -114,8 +151,8 @@
   padding-inline: 0.5rem;
 }
 
-.cm-md-image-cloze-region[data-md-image-cloze-source-region='true']:is([data-region-state='outlined'], [data-region-state='selected']) {
-  background: rgb(var(--role-cloze-rgb) / 0.34);
-  border-color: rgb(var(--role-cloze-rgb) / 0.95);
-  border-style: solid;
+.cm-md-image-cloze-region[data-md-image-cloze-source-region='true'][data-region-state='selected'] {
+  background: transparent;
+  border-color: rgb(var(--role-highlight-rgb) / 0.92);
+  border-style: dashed;
 }
