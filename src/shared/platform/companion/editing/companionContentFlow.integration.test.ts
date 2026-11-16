@@ -8,7 +8,6 @@ import { expect, it, vi } from 'vitest';
 import { openDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
 import { readCycleRows, readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../../../../lib/core/review/settings';
-import { flushCurrentParentOrderProjectionsWithDbPort } from '../../../../../lib/core/sync/currentParentOrderStore';
 import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 import { companionDailyFlowPersistence } from '../runtime/companionDailyFlow';
 
@@ -37,7 +36,6 @@ it.each(['android', 'ios'])('%s content save through the owner preserves its gen
     const opened = await host.owner.runWriter(db => openDailyFlow(db, { now, mode: 'reading-only' }, config, companionDailyFlowPersistence));
     const id = opened.session.currentNodeId!;
     const before = await host.owner.read(db => readCycleRows(db));
-    await host.owner.runWriter(db => flushCurrentParentOrderProjectionsWithDbPort(db));
     const source = await readCompanionContentSource(id, 'editor');
     const readings = host.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
     const result = await saveCompanionContentEdit({ nodeId: id, baseVersionId: source.versionId,
@@ -45,7 +43,6 @@ it.each(['android', 'ios'])('%s content save through the owner preserves its gen
     expect(result.content).toBe('Edited on the companion');
     expect(host.database.prepare('SELECT content FROM nodes WHERE id=?').pluck().get(id)).toBe(result.content);
     expect(host.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(readings);
-    expect(host.database.prepare('SELECT * FROM parent_order_projection_pending').all()).toEqual([]);
     expect((await host.owner.read(db => readDailyFlow(db)))!.invalidated).toBe(0);
     expect(await host.owner.read(db => readCycleRows(db))).toEqual(before);
   } finally {

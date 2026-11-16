@@ -1,10 +1,11 @@
 import type Database from 'better-sqlite3';
 
+import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver.ts';
 import {
   androidBodyStatusExpression,
   androidResolvedContentExpression
 } from '../../lib/core/database/androidCompanionDerivedReadSql.ts';
-import { projectParentChildOrder } from '../../lib/core/database/parentChildOrder.ts';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.ts';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 import { buildReviewQueuePlan, type ReviewQueueNode } from '../../src/store/reviewQueuePlanner.ts';
 
@@ -129,10 +130,7 @@ export function selectReviewAcceptanceObjects(
      ORDER BY n.created_at ASC, n.id ASC`
   ).all() as ReviewNodeRow[];
   const nodesById = Object.fromEntries(rows.map((row) => [row.id, toPlannerNode(row)]));
-  const orders = db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order').all() as
-    { parent_id: string; child_ids_json: string }[];
-  const nodeOrder = projectParentChildOrder(rows,
-    new Map(orders.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]])));
+  const nodeOrder = loadDerivedNodeOrder(createBetterSqlite3Driver(db));
   const plan = buildReviewQueuePlan({
     newDayStartsAtHour: settings.newDayStartsAtHour,
     nodeOrder,

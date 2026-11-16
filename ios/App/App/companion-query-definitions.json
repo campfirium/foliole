@@ -639,17 +639,6 @@
         }
       ]
     },
-    "workspaceOrderedNodeIds": {
-      "resultKey": "nodes",
-      "sql": "WITH RECURSIVE sibling_positions AS (\n        SELECT p.parent_id, j.value AS child_id, MIN(CAST(j.key AS INTEGER)) AS ordinal\n        FROM parent_child_order p, json_each(p.child_ids_json) j\n        GROUP BY p.parent_id, j.value\n      ), ranked AS (\n        SELECT n.id, n.parent_id,\n          printf('%010d', COALESCE(j.ordinal, 999999999)) || ':' || n.created_at || ':' || n.id AS segment\n        FROM nodes n INDEXED BY idx_nodes_parent_id\n        LEFT JOIN sibling_positions j ON j.parent_id = COALESCE(n.parent_id, 'parent-child-order:root')\n          AND j.child_id = n.id\n        WHERE n.deleted_at IS NULL\n      ), ordered(id, path) AS (\n        SELECT id, segment FROM ranked WHERE parent_id IS NULL\n        UNION ALL\n        SELECT child.id, parent.path || '/' || child.segment\n        FROM ranked child JOIN ordered parent ON child.parent_id = parent.id\n      ) SELECT id FROM ordered ORDER BY path",
-      "columns": [
-        {
-          "key": "id",
-          "source": "id",
-          "type": "string"
-        }
-      ]
-    },
     "workspaceMetaValue": {
       "resultKey": "rows",
       "sql": "SELECT value FROM workspace_meta WHERE key = ? LIMIT 1",
@@ -2821,8 +2810,6 @@
       "metaValueResultKey": "rows",
       "nodesQueryName": "workspaceSnapshotNodes",
       "nodesResultKey": "nodes",
-      "orderedNodeIdsQueryName": "workspaceOrderedNodeIds",
-      "orderedNodeIdsResultKey": "nodes",
       "outputKeys": {
         "activeNodeId": "activeNodeId",
         "nodeOrder": "nodeOrder",

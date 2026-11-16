@@ -14,6 +14,7 @@ import { applyRemoteNodeTombstone, assertKnownDeletionIdentity, loadNodeSyncTomb
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
   parent_id: string | null;
   title: string;
+  created_at: string;
 }
 
 async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
@@ -24,7 +25,7 @@ async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: read
 export async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
   return queryOne<LocalSyncNodeStateRow>(
     port,
-    `SELECT current_version_id, deleted_at, parent_id, sync_dirty, title
+    `SELECT current_version_id, deleted_at, parent_id, sync_dirty, title, created_at
      FROM nodes
      WHERE id = ?`,
     [nodeId]
@@ -34,7 +35,7 @@ export async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
 async function handleTombstoneGuard(input: {
   options: ApplySyncNodesWithDbPortOptions;
   record: NativeSyncNodeRecord;
-  result: Pick<ApplySyncNodesWithDbPortResult, 'appliedIds' | 'tombstoneBlockedIds'>;
+  result: Pick<ApplySyncNodesWithDbPortResult, 'appliedIds' | 'tombstoneBlockedIds' | 'workspaceStructureChanged'>;
   tx: DbPort;
 }) {
   const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
@@ -51,6 +52,7 @@ async function handleTombstoneGuard(input: {
       input.tx, input.record, input.options.enqueueSearchInvalidations !== false
     )) {
       input.result.appliedIds.push(input.record.object_id);
+      input.result.workspaceStructureChanged = true;
     }
     return true;
   }
@@ -111,6 +113,10 @@ export async function applyIncomingRecord(input: {
     if (input.preparedTextBodyHash) preparedTextBodyHashes.set(record, input.preparedTextBodyHash);
     await applyAcceptedRemoteNode({ ...input, localNode, preparedTextBodyHashes,
       operation: options.operation ?? 'remote_sync' });
+    const snapshot = record.snapshot;
+    result.workspaceStructureChanged ||= !localNode || localNode.parent_id !== snapshot.parent_id ||
+      localNode.title !== snapshot.title || localNode.deleted_at !== snapshot.deleted_at ||
+      localNode.created_at !== snapshot.created_at;
     return false;
   }
   if (!input.versionAlreadyRetained) await upsertRemoteVersion(tx, record);

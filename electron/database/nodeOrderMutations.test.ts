@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -57,10 +58,7 @@ function seedFolderNode(nodeId: string, position: number) {
 }
 
 function childIds(parentId: string) {
-  const row = openDatabaseConnection().sqlite.prepare(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?'
-  ).get(parentId) as { child_ids_json: string } | undefined;
-  return row ? (JSON.parse(row.child_ids_json) as string[]).filter((id) => !id.startsWith('special-')) : [];
+  return readParentChildOrder(openDatabaseConnection().driver, parentId === 'parent-child-order:root' ? null : parentId).childIds.filter(id => !id.startsWith('special-'));
 }
 
 it('reorders only the root sequence without creating article versions', () => {

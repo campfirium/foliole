@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -107,10 +108,9 @@ it.each([
     expect(parentBody?.slice(locator.from, locator.to)).toBe(locator.originalText);
     expect(locator.originalText).toBe(child.content.replace(/\s+/g, ' '));
   }
-  const order = driver.queryOne<{ child_ids_json: string }>(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [topic.latest_node_id]);
+  const order = readParentChildOrder(driver, topic.latest_node_id).childIds;
   const byId = new Map(children.map((child) => [child.id, child.content]));
-  const ordered = (JSON.parse(order?.child_ids_json ?? '[]') as string[]).map((id) => byId.get(id));
+  const ordered = order.map((id) => byId.get(id));
   expect(ordered).toEqual(Array.from({ length: HIGHLIGHT_COUNT }, (_, index) => highlightText(passage(index))));
   expect(longest, `Readwise import blocked the main thread for ${longest.toFixed(1)} ms`).toBeLessThan(MAX_MAIN_THREAD_BLOCK_MS);
 }, 120_000);

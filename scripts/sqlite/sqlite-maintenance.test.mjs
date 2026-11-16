@@ -51,8 +51,8 @@ it('backs up and restores sqlite through the script entrypoint', async () => {
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run('node-1', null, 'node-1', 1, '# original', null, null, '2026-03-14T10:00:00.000Z', '2026-03-14T10:00:00.000Z', null);
-  sqlite.prepare('INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)')
-    .run('parent-child-order:root', JSON.stringify(['node-1']), '2026-03-14T10:00:00.000Z');
+  sqlite.prepare("INSERT INTO parent_order_sources (parent_id, author_id, counter, child_ids_json) VALUES (?, 'fixture', 1, ?)")
+    .run('parent-child-order:root', JSON.stringify(['node-1']));
   sqlite.close();
 
   await runScript('backup', '--db-path', dbPath, '--destination-path', backupPath);

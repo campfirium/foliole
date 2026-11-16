@@ -15,6 +15,7 @@ import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/deskto
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from '../../lib/core/database/externalDocumentSchemaStatements.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/syncSchemaStatements.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
@@ -59,6 +60,7 @@ it('runs the registered desktop upgrade and preserves mounted references and PDF
       ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
       ...SYNC_SCHEMA_STATEMENTS, ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS,
       ...SYNC_GROUP_SCHEMA_STATEMENTS, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS].join(';'));
+    db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
     seedLegacy(db);
     const oldSnapshot = JSON.stringify(canonicalWorkspaceNodePayload({
       id: 'article', parentNodeId: null, kind: 'topic', title: 'Article', content: 'Body',
@@ -93,6 +95,7 @@ it('runs the companion version upgrade and never recreates retired tables on reo
   const db = new Database(':memory:');
   try {
     db.exec([...COMPANION_SCHEMA_STATEMENTS, ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS].join(';'));
+    db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
     seedLegacy(db);
     const oldSnapshot = JSON.stringify(canonicalWorkspaceNodePayload({
       id: 'article', parentNodeId: null, kind: 'topic', title: 'Article', content: 'Body',
@@ -125,6 +128,7 @@ it('rolls back the registered upgrade when a mounted reference cannot be express
   try {
     db.exec([...DESKTOP_CORE_SCHEMA_STATEMENTS, ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS,
       ...SYNC_SCHEMA_STATEMENTS, ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS].join(';'));
+    db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
     seedLegacy(db);
     db.prepare('UPDATE attachments SET mime_type = ?').run('unknown/type');
     db.pragma('user_version = 118');

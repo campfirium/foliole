@@ -8,11 +8,14 @@ import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncSt
 import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { migrateNodeHistoryState } from '../../lib/core/database/nodeHistoryStateMigration.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord, loadCurrentParentOrderSources, saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { bindParentOrderWriterWithDbPort } from '../../lib/core/sync/parentOrderWriter.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
@@ -24,6 +27,7 @@ const orderFact: CanonicalFact = { kind: 1, objectType: 'parent_child_order', gl
 function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
+  db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   initializeDatabaseSchema(db);
   restoreEmptyLegacyDailyFlowSchema(db);
   for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
@@ -31,11 +35,11 @@ function fixture() {
   }
   migrateNodeHistoryState(db);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) db.exec(sql);
-  db.exec(`DROP TRIGGER trg_parent_order_node_insert;
-    DROP TRIGGER trg_parent_order_node_update;
-    DROP TRIGGER trg_parent_order_node_delete;
+  db.exec(`DROP TRIGGER IF EXISTS trg_parent_order_node_insert;
+    DROP TRIGGER IF EXISTS trg_parent_order_node_update;
+    DROP TRIGGER IF EXISTS trg_parent_order_node_delete;
     DROP TABLE parent_order_sources; DROP TABLE parent_order_writer;
-    DROP TABLE parent_order_projection_pending;
+    DROP TABLE IF EXISTS parent_order_projection_pending;
     ALTER TABLE framed_sync_outbound_publications DROP COLUMN retirement_reason;
     CREATE TABLE parent_order_versions (version_id TEXT PRIMARY KEY, parent_id TEXT NOT NULL,
       kind TEXT NOT NULL, child_ids_json TEXT NOT NULL, parent_version_ids_json TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -128,10 +132,8 @@ it('keeps a real edit above a later upgrade seed without discarding the old devi
   });
   await deliver(late, await loadCurrentParentOrderSources(early.port, 'parent'));
   await deliver(early, seed);
-  expect(late.db.prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent'").pluck().get())
-    .toBe('["b","a","c"]');
-  expect(early.db.prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent'").pluck().get())
-    .toBe('["b","a"]');
+  expect(readParentChildOrder(createBetterSqlite3Driver(late.db), 'parent').childIds).toEqual(['b', 'a', 'c']);
+  expect(readParentChildOrder(createBetterSqlite3Driver(early.db), 'parent').childIds).toEqual(['b', 'a']);
   expect(late.db.prepare("SELECT content FROM nodes WHERE id = 'c'").pluck().get()).toBe('Offline new body');
   expect(await loadCurrentParentOrderSources(early.port, 'parent'))
     .toEqual(await loadCurrentParentOrderSources(late.port, 'parent'));

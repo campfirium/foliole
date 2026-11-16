@@ -11,7 +11,6 @@ import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js
  */
 export interface RequestSyncBatchScope {
   overwriting: boolean;
-  parentOrder: { requested: boolean };
 }
 
 export async function openRequestSyncInbound(tx: DbPort, context: FramedSyncContext,

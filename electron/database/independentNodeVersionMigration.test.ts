@@ -12,7 +12,7 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 
 function oldDatabase(host: string) {
   const db = new Database(':memory:');
@@ -24,6 +24,7 @@ function oldDatabase(host: string) {
       : statement);
   removeCurrentInventoryFixtureTriggers(db);
   restoreEmptyLegacyDailyFlowSchema(db);
+  restoreLegacyParentOrderTable(db);
   for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
     ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) db.exec(sql);
   db.pragma(`user_version = ${host === 'desktop' ? 121 : 58}`);

@@ -88,8 +88,6 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "workspaceRead.snapshot.metaValueResultKey": return "rows";
             case "workspaceRead.snapshot.nodesQueryName": return "workspaceSnapshotNodes";
             case "workspaceRead.snapshot.nodesResultKey": return "nodes";
-            case "workspaceRead.snapshot.orderedNodeIdsQueryName": return "workspaceOrderedNodeIds";
-            case "workspaceRead.snapshot.orderedNodeIdsResultKey": return "nodes";
             case "workspaceRead.snapshot.untitledSequenceMetaKey": return "untitled_sequence_by_parent";
             case "workspaceRead.viewState.defaultSource": return "user-scroll";
             case "workspaceRead.viewState.nodeIdRowKey": return "node_id";

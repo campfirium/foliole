@@ -9,6 +9,7 @@ import { migrateCompanionDatabase } from '../../lib/core/database/companionDatab
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { readCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -41,8 +42,7 @@ describe('fresh companion workspace initialization', () => {
     expect(fixture.sqlite.prepare(
       'SELECT id, kind, title, sync_dirty FROM nodes WHERE id = ?'
     ).get(INBOX_NODE_ID)).toEqual({ id: INBOX_NODE_ID, kind: 'folder', sync_dirty: 0, title: 'Inbox' });
-    expect(fixture.sqlite.prepare('SELECT parent_id, child_ids_json FROM parent_child_order').get())
-      .toEqual({ parent_id: 'parent-child-order:root', child_ids_json: JSON.stringify([INBOX_NODE_ID]) });
+    expect(await readCurrentParentOrderWithDbPort(fixture.port, 'parent-child-order:root')).toEqual([INBOX_NODE_ID]);
     fixture.sqlite.close();
   });
 

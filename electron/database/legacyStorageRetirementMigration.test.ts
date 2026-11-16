@@ -3,8 +3,11 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
@@ -12,6 +15,7 @@ const databases: Database.Database[] = [];
 function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
+  db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   initializeDatabaseSchema(db);
   restoreEmptyLegacyDailyFlowSchema(db);
   db.exec(`CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
@@ -45,11 +49,10 @@ it('retires obsolete tables without replaying old ordering or overwriting curren
     UPDATE nodes SET kind='folder', virtual_filter='{"version":1,"match":"all","conditions":[]}',
       manual_child_order='["b"]' WHERE id='a'`);
   const nodes = db.prepare('SELECT * FROM nodes ORDER BY id').all();
-  const orders = db.prepare('SELECT * FROM parent_child_order').all();
   initializeDatabaseSchema(db);
   expect(legacyTables(db)).toEqual([]);
   expect(db.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
-  expect(db.prepare('SELECT * FROM parent_child_order').all()).toEqual(orders);
+  expect(readParentChildOrder(createBetterSqlite3Driver(db), null).childIds).toEqual(['b', 'a']);
   expect(db.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 

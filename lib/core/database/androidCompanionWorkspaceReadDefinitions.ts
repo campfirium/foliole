@@ -25,8 +25,6 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
     metaValueResultKey: 'rows',
     nodesQueryName: 'workspaceSnapshotNodes',
     nodesResultKey: 'nodes',
-    orderedNodeIdsQueryName: 'workspaceOrderedNodeIds',
-    orderedNodeIdsResultKey: 'nodes',
     outputKeys: {
       activeNodeId: 'activeNodeId',
       nodeOrder: 'nodeOrder',

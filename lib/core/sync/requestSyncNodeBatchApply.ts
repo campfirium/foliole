@@ -3,7 +3,6 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import type { DbPort } from './dbPort.js';
 import { applyFramedFactSources } from './framedSyncFactApply.js';
 import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
-import type { RequestSyncBatchScope } from './requestSyncBatchScope.js';
 import type { RequestSyncObjectInput } from './requestSyncObjectApply.js';
 import { changedCurrentVersions, finishReceivedNodes, receivedObjectFacts } from './requestSyncObjectFacts.js';
 
@@ -11,8 +10,7 @@ import { changedCurrentVersions, finishReceivedNodes, receivedObjectFacts } from
  * The nodes of one received batch go through one fact application, so its version, parent and convergence
  * checks read the batch's rows together instead of once per node. Per-node projection checks follow.
  */
-export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly RequestSyncObjectInput[],
-  batch: RequestSyncBatchScope) {
+export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly RequestSyncObjectInput[]) {
   const first = inputs[0]!;
   const collect = await changedCurrentVersions(tx, inputs);
   const rejectedNodes = new Map<string, string>();
@@ -36,7 +34,6 @@ export async function applyRequestSyncNodeBatch(tx: DbPort, inputs: readonly Req
     currentVersions: { sourceIds: inputs.map(input => input.globalId), references: inputs.flatMap(input =>
       input.currentVersionId ? [{ globalId: input.globalId, versionId: input.currentVersionId }] : []) },
     ...(first.visibilityPruning ? { visibilityPruning: first.visibilityPruning } : {}),
-    parentOrderFlush: batch.parentOrder,
     rejectedNodes,
     requireCompleteVersionGraph: true, enqueueSearchInvalidations: first.enqueueSearchInvalidations ?? true });
   first.signal?.throwIfAborted();

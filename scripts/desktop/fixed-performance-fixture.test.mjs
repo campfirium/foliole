@@ -11,6 +11,7 @@ import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSync
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.ts';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.ts';
 import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.ts';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.ts';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.ts';
 import fixture from './fixed-performance-fixture.cjs';
 
@@ -43,8 +44,7 @@ test('offline fixture persists exact bodies, current versions and order across r
       expect(row.current_version_id).toBeTruthy();
       expect(Number.isFinite(Date.parse(row.created_at))).toBe(true);
     }
-    expect(JSON.parse(db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-      .get('parent-child-order:root').child_ids_json).filter((id) => id.startsWith('benchmark-')))
+    expect(readParentChildOrder(createBetterSqlite3Driver(db), null).childIds.filter((id) => id.startsWith('benchmark-')))
       .toEqual(nodes.map((node) => node.id));
   } finally { db.close(); rmSync(root, { recursive: true, force: true }); }
 });

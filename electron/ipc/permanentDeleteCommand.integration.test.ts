@@ -147,7 +147,7 @@ it('deletes from IDs alone while preserving unrelated ordering and learning afte
   rewriteParentChildOrder(driver, 'kept-folder', ['second', 'first']);
   driver.execute("INSERT INTO node_reading (node_id, last_handled_at, next_at) VALUES ('first', 'handled', 'next')");
   const orders = () => openDatabaseConnection().driver.queryAll(
-    "SELECT * FROM parent_child_order WHERE parent_id = 'kept-folder'");
+    "SELECT * FROM parent_order_sources WHERE parent_id = 'kept-folder'");
   const learning = () => openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading');
   const beforeOrder = orders();
   const beforeLearning = learning();

@@ -7,7 +7,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 
 it.each(['desktop', 'companion'] as const)('rolls back a failed %s upgrade without changing original data', async (host) => {
   const sqlite = new Database(':memory:');
@@ -16,6 +16,7 @@ it.each(['desktop', 'companion'] as const)('rolls back a failed %s upgrade witho
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await db.transaction((tx) => createCompanionDatabase(tx, COMPANION_DATABASE_VERSION));
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    restoreLegacyParentOrderTable(sqlite);
     const oldVersion = host === 'desktop' ? 148 : 77;
     sqlite.exec(`DROP TABLE IF EXISTS framed_sync_resource_demands; PRAGMA user_version = ${oldVersion}`);
     sqlite.prepare(`INSERT INTO nodes (id, title, content, created_at, updated_at)

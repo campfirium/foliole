@@ -143,10 +143,10 @@ it.each([
 ])('rolls back restore and sync facts for invalid saved parent orders: %j', ({ parentOrders }) => {
   softDeleteNodesWithParents(deletion);
   const before = rows();
-  const orders = openDatabaseConnection().driver.queryAll('SELECT * FROM parent_child_order ORDER BY parent_id');
+  const orders = openDatabaseConnection().driver.queryAll('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id');
   expect(() => restoreNodesWithParents({ nodeIds: deletion.nodeIds, parentOrders })).toThrow();
   expect(rows()).toEqual(before);
-  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM parent_child_order ORDER BY parent_id')).toEqual(orders);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id')).toEqual(orders);
 });
 
 it('rolls back the entire undo on a restore conflict when parent regions are included', () => {

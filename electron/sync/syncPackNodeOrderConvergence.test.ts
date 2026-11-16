@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
@@ -28,8 +30,8 @@ it('applies and replays a parent sequence independently of article versions and 
     for (let replay = 0; replay < 2; replay++) {
       await sendCurrentObject(source, target, 'parent_child_order', ROOT_CHILD_ORDER_ID);
       await sendCurrentObject(source, target); target.reopen();
-      expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').get(ROOT_CHILD_ORDER_ID))
-        .toEqual({ child_ids_json: '["topic"]' });
+      expect(readParentChildOrder(createBetterSqlite3Driver(target.sqlite), null).childIds)
+        .toEqual(['topic']);
       expect(target.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").all()).toEqual([]);
       expect(target.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(versions);
     }

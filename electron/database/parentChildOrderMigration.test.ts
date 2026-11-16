@@ -17,9 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { migrateCompanionParentChildOrder } from '../../lib/core/database/companionParentChildOrderMigration.js';
+import { migrateCurrentParentOrders } from '../../lib/core/database/currentParentOrderMigration.js';
 import { restoreNodes } from '../../lib/core/database/nodeMutations.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
-import { loadDerivedNodeOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { loadDerivedNodeOrder, readParentChildOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -50,7 +52,8 @@ function createNode(id: string) {
 
 function prepareOldOrder(ids: string[]) {
   const db = openDatabaseConnection().sqlite;
-  db.exec("DELETE FROM parent_child_order; DELETE FROM sync_object_state WHERE object_type = 'parent_child_order'");
+  db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
+  db.exec("DELETE FROM parent_child_order; DELETE FROM parent_order_sources; DELETE FROM sync_object_state WHERE object_type = 'parent_child_order'");
   db.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   const insert = db.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
   insert.run('special-inbox', 0);
@@ -65,7 +68,7 @@ function migrateOldOrder(db: ReturnType<typeof prepareOldOrder>) {
     legacyMessage: 'unsupported', sqlite: db, setUserVersion: version => db.pragma(`user_version = ${version}`) }))();
 }
 
-it('keeps old versions and appends a legacy trash node only when restored', () => {
+it('keeps legacy order facts while restoring a trash node omitted from the original order', () => {
   createNode('node-a');
   createNode('node-b');
   createNode('old-trash');
@@ -82,25 +85,22 @@ it('keeps old versions and appends a legacy trash node only when restored', () =
   expect(JSON.parse(rows.child_ids_json)).toEqual([
     'special-inbox', 'special-virtual-root', 'node-b', 'node-a'
   ]);
+  migrateCurrentParentOrders(db);
   const beforeRestoreState = db.prepare(
     "SELECT content_hash FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = ?"
-  ).get(ROOT_CHILD_ORDER_ID) as { content_hash: string };
+  ).get(ROOT_CHILD_ORDER_ID);
   expect(db.prepare("SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'old-version'").get())
     .toEqual({ snapshot_json: '{"position":7}' });
   expect(restoreNodes(openDatabaseConnection().driver, { nodeIds: ['old-trash'] }).restoredNodeIds)
     .toEqual(['old-trash']);
-  const restoredOrder = db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-    .get(ROOT_CHILD_ORDER_ID) as { child_ids_json: string };
-  expect(JSON.parse(restoredOrder.child_ids_json)).toEqual([
+  expect(readParentChildOrder(openDatabaseConnection().driver, null).childIds).toEqual([
     'special-inbox', 'special-virtual-root', 'node-b', 'node-a', 'old-trash'
   ]);
   expect(db.prepare("SELECT deleted_at FROM nodes WHERE id = 'old-trash'").get())
     .toEqual({ deleted_at: null });
-  const restoredState = db.prepare(
-    "SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = ?"
-  ).get(ROOT_CHILD_ORDER_ID) as { content_hash: string; sync_dirty: number };
-  expect(restoredState.content_hash).not.toBe(beforeRestoreState.content_hash);
-  expect(restoredState.sync_dirty).toBe(1);
+  expect(db.prepare(
+    "SELECT content_hash FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = ?"
+  ).get(ROOT_CHILD_ORDER_ID)).toEqual(beforeRestoreState);
   expect(db.pragma('user_version', { simple: true })).toBe(105);
 });
 

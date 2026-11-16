@@ -122,11 +122,3 @@ function walkWorkspaceOrder<T extends NodeOrderMember>(
   }
   return result;
 }
-
-export function writeParentChildOrder(driver: DatabaseDriver, parentId: string, childIds: string[], updatedAt: string) {
-  driver.execute(
-    `INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(parent_id) DO UPDATE SET child_ids_json = excluded.child_ids_json, updated_at = excluded.updated_at`,
-    [parentId, JSON.stringify(childIds), updatedAt]
-  );
-}

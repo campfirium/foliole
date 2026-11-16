@@ -29,6 +29,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
   canCurrentHostRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -88,8 +89,8 @@ function seedManualBookPlaceholder() {
 it('re-imports book placeholders without writing inbox topic order', async () => {
   await scanManualBook();
   const nodeId = seedManualBookPlaceholder();
-  const connection = openDatabaseConnection().sqlite;
-  connection
+  const { sqlite, driver } = openDatabaseConnection();
+  sqlite
     .prepare(
       `INSERT INTO nodes (
          id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
@@ -97,9 +98,14 @@ it('re-imports book placeholders without writing inbox topic order', async () =>
        ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`
     )
     .run('node-existing-inbox-top', 'special-inbox', 'Older inbox node', '2026-04-04T11:00:00.000Z', '2026-04-04T11:00:00.000Z');
-  connection.prepare('INSERT INTO parent_child_order VALUES (?, ?, ?) ON CONFLICT(parent_id) DO UPDATE SET child_ids_json=excluded.child_ids_json').run('special-inbox', '["node-existing-inbox-top"]', 'then');
+  sqlite.prepare("DELETE FROM parent_order_sources WHERE parent_id = ?").run('special-inbox');
+  sqlite.prepare("INSERT INTO parent_order_sources VALUES (?, 'fixture', 1, ?)").run('special-inbox', '["node-existing-inbox-top"]');
+
+  const persisted = () => sqlite.prepare("SELECT * FROM parent_order_sources WHERE parent_id = 'special-inbox' ORDER BY author_id").all();
+  const before = persisted();
 
   await resetReadwiseBookImport(nodeId);
 
-  expect(connection.prepare("SELECT value FROM parent_child_order, json_each(child_ids_json) WHERE value = ?").get(nodeId)).toBeUndefined();
+  expect(persisted()).toEqual(before);
+  expect(readParentChildOrder(driver, 'special-inbox').childIds).toEqual(['node-existing-inbox-top', nodeId]);
 });

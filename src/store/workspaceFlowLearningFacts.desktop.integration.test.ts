@@ -16,7 +16,8 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/
 import { desktopDailyFlowPersistence } from '../../electron/database/dailyFlow';
 import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
-import { parentOrderId, writeParentChildOrder } from '../../lib/core/database/parentChildOrder';
+import { saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore';
+import { parentOrderId } from '../../lib/core/database/parentChildOrder';
 import { flowPlan } from '../../lib/core/flow/dailyFlowPlanning';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings';
@@ -35,7 +36,7 @@ it('preserves desktop manual order and profiles while learning eligibility avoid
   for (const id of ['a', 'b', 'c']) upsertNodeSnapshot({ nodeId: id, title: `Title ${id}`, kind: 'topic',
     parentNodeId: null, content: `Display body ${id}`, reveal: null, isTitleManual: true,
     anchorLink: null, position: 0, createdAt: now, updatedAt: now });
-  writeParentChildOrder(connection.driver, parentOrderId(null), ['c', 'a', 'b'], now);
+  saveLocalCurrentParentOrder(connection.driver, { parentId: parentOrderId(null), childIds: ['c', 'a', 'b'], now, hostName: 'desktop' });
   const db = createBetterSqliteDbPort(connection.sqlite);
   const display = await desktopDailyFlowPersistence.snapshot(db);
   const learning = await desktopDailyFlowPersistence.learningSnapshot(db);

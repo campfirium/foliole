@@ -86,7 +86,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearNodeVersionLocalOrigins: 'DELETE FROM node_version_local_origins',
   appDataClearNodeViewState: 'DELETE FROM node_view_state',
   appDataClearNodeReadingHostState: 'DELETE FROM node_reading_host_state',
-  appDataClearParentChildOrder: 'DELETE FROM parent_child_order',
+  appDataClearParentOrderSources: 'DELETE FROM parent_order_sources',
   appDataClearNodeOpenState: 'DELETE FROM node_open_state',
   appDataClearPdfIndexState: 'DELETE FROM pdf_index_state',
   appDataClearPdfPageText: 'DELETE FROM pdf_page_text',

@@ -6,6 +6,7 @@ import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.j
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
@@ -27,6 +28,7 @@ function fixture(companion: boolean, ranges: Array<{ from: number; to: number }>
   opened.push(sqlite);
   if (companion) sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
   else initializeDatabaseSchema(sqlite);
+  sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   restoreEmptyLegacyDailyFlowSchema(sqlite);
   const anchor = JSON.stringify({ id: 'original-anchor', kind: 'highlight', locator: ranges.length > 1 ?
     { ranges: ranges.map(range => ({ ...range, originalText: BODY.slice(range.from, range.to) })) } :

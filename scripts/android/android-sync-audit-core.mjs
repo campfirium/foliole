@@ -13,7 +13,9 @@ const STRUCTURAL_TABLES = [
   {
     name: 'parent_child_order',
     pk: 'node_id',
-    sql: 'SELECT parent_id AS node_id, child_ids_json AS position FROM parent_child_order'
+    table: 'parent_order_sources',
+    sql: `SELECT parent_id AS node_id, json_group_array(json_array(author_id, counter, json(child_ids_json))) AS position
+      FROM (SELECT * FROM parent_order_sources ORDER BY parent_id, author_id) GROUP BY parent_id`
   },
   { name: 'external_documents', pk: 'document_id', sql: 'SELECT document_id FROM external_documents WHERE is_present = 1' }
 ];
@@ -43,7 +45,7 @@ function objectTypeStats(db) {
 }
 
 function keyRows(db, definition) {
-  if (!tableExists(db, definition.name)) return [];
+  if (!tableExists(db, definition.table ?? definition.name)) return [];
   return all(db, definition.sql);
 }
 

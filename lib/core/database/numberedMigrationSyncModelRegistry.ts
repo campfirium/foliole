@@ -26,6 +26,7 @@ import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
+import { retireParentOrderProjection } from './retireParentOrderProjectionMigration.js';
 import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
@@ -78,5 +79,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 188, migrate: db => addColumnIfMissing(db, 'node_view_state', 'reading_offset', 'INTEGER') },
   { version: 189, migrate: db => db.exec(READING_RESUME_SCHEMA) },
   // Keep the version readable for development libraries that opened the import preview prototype.
-  { version: 190, migrate: () => {} }
+  { version: 190, migrate: () => {} },
+  { version: 191, migrate: retireParentOrderProjection }
 ];

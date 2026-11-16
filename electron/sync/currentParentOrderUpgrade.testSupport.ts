@@ -4,11 +4,14 @@ import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSy
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import { migrateNodeHistoryState } from '../../lib/core/database/nodeHistoryStateMigration.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { readParentChildOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 /** Seeds a historical mixed publication from exact current business facts in this temporary library. */
@@ -49,9 +52,16 @@ export async function freezeLegacyOrderPublication(file: string) {
         await tx.run(`DROP TRIGGER IF EXISTS ${/^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)![1]}`);
       }
       migrateNodeHistoryState(db);
-      for (const name of ['insert', 'update', 'delete']) await tx.run(`DROP TRIGGER trg_parent_order_node_${name}`);
+      db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
+      const driver = createBetterSqlite3Driver(db);
+      const parents = db.prepare<[], { parent_id: string }>('SELECT DISTINCT parent_id FROM parent_order_sources').all();
+      for (const { parent_id: parentId } of parents) {
+        const { childIds } = readParentChildOrder(driver, parentId === ROOT_CHILD_ORDER_ID ? null : parentId);
+        await tx.run('INSERT INTO parent_child_order VALUES (?, ?, ?)', [parentId, JSON.stringify(childIds), '2026-01-01']);
+      }
+      for (const name of ['insert', 'update', 'delete']) await tx.run(`DROP TRIGGER IF EXISTS trg_parent_order_node_${name}`);
       for (const table of ['parent_order_sources', 'parent_order_writer', 'parent_order_projection_pending']) {
-        await tx.run(`DROP TABLE ${table}`);
+        await tx.run(`DROP TABLE IF EXISTS ${table}`);
       }
       await tx.run('ALTER TABLE framed_sync_outbound_publications DROP COLUMN retirement_reason');
       await tx.run('PRAGMA user_version = 151');

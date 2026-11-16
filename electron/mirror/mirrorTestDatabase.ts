@@ -8,7 +8,7 @@ export function resetMirrorTestWorkspace() {
     DELETE FROM incoming_updates;
     DELETE FROM node_reading;
     DELETE FROM node_review;
-    DELETE FROM parent_child_order;
+    DELETE FROM parent_order_sources;
     DELETE FROM workspace_meta;
     DELETE FROM nodes;
   `);

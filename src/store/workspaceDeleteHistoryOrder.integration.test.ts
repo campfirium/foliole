@@ -86,7 +86,7 @@ it('rolls back a failed order write with the restore and permits retrying the sa
   app.reorder('p', ['x', 'b', 'a', 'y']);
   app.refresh();
   const entry = app.get().appActionHistory.undoStack.at(-1)!;
-  app.driver.execute(`CREATE TRIGGER reject_restore_order BEFORE UPDATE ON parent_child_order
+  app.driver.execute(`CREATE TRIGGER reject_restore_order BEFORE INSERT ON parent_order_sources
     WHEN NEW.parent_id = 'p' BEGIN SELECT RAISE(ABORT, 'restore order failure'); END`);
   expect(await app.history.undoWorkspaceAction()).toBe(false);
   expect(app.get().appActionHistory.undoStack.at(-1)?.id).toBe(entry.id);

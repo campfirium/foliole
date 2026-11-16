@@ -18,7 +18,7 @@ import { placeUnlocatedChildHighlightsLast } from '../../lib/core/database/impor
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+import { loadDerivedNodeOrder, readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
@@ -119,7 +119,7 @@ for (const size of [100, 1000]) {
         ...Array.from({ length: size }, (_, index) => `unrelated-${index}`)]);
       driver.execute("UPDATE nodes SET deleted_at='gone' WHERE id='hidden'");
       loadDerivedNodeOrder(driver);
-      const otherOrder = driver.queryOne("SELECT * FROM parent_child_order WHERE parent_id='sibling'");
+      const otherOrder = driver.queryOne("SELECT * FROM parent_order_sources WHERE parent_id='sibling'");
       const original = driver.queryAll.bind(driver);
       let unrelatedReads = 0;
       const reads = vi.spyOn(driver, 'queryAll').mockImplementation((sql, params) => {
@@ -141,10 +141,9 @@ for (const size of [100, 1000]) {
         return row ? [row.title] : [];
       });
       expect(childTitles).toEqual(operation === 'chapters' ? ['second', 'first', 'a', 'b'] : ['b', 'a']);
-      const stored = driver.queryOne<{ child_ids_json: string }>(
-        "SELECT child_ids_json FROM parent_child_order WHERE parent_id='root'");
+      const stored = { child_ids_json: JSON.stringify(readParentChildOrder(driver, 'root').childIds) };
       expect(JSON.parse(stored!.child_ids_json)[1]).toBe('hidden');
-      expect(driver.queryOne("SELECT * FROM parent_child_order WHERE parent_id='sibling'")).toEqual(otherOrder);
+      expect(driver.queryOne("SELECT * FROM parent_order_sources WHERE parent_id='sibling'")).toEqual(otherOrder);
       expect(unrelatedReads).toBe(0);
     });
 }

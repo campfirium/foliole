@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
@@ -33,6 +34,7 @@ let tempRoot = '';
 
 it('restores v127 legacy storage and duplicate previews through the normal backup upgrade', async () => {
   const db = openDatabaseConnection().sqlite;
+  db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   restoreEmptyLegacyDailyFlowSchema(db);
   const full = '# Recovery\n\n' + 'Complete cached source body. '.repeat(30);
   db.exec(`CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
@@ -45,7 +47,7 @@ it('restores v127 legacy storage and duplicate previews through the normal backu
     PRAGMA user_version = 127;`);
   db.prepare(`INSERT INTO keep_import_item_cache VALUES ('rule','unavailable.md','Recovery',?,?,1,2,'then','unavailable')`)
     .run(full, full);
-  const order = db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
+  const order = loadDerivedNodeOrder(openDatabaseConnection().driver);
   const backupPath = path.join(tempRoot, 'legacy-cache.db');
   await db.backup(backupPath);
   await initializeDatabase();
@@ -54,7 +56,7 @@ it('restores v127 legacy storage and duplicate previews through the normal backu
   expect(restored.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(restored.prepare(`SELECT name FROM sqlite_master
     WHERE name IN ('node_order','virtual_folders','virtual_folder_items')`).all()).toEqual([]);
-  expect(restored.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(order);
+  expect(loadDerivedNodeOrder(openDatabaseConnection().driver)).toEqual(order);
   const cache = restored.prepare('SELECT content,content_preview,refreshed_at,refresh_error FROM keep_import_item_cache')
     .get() as { content: string; content_preview: string; refreshed_at: string; refresh_error: string };
   expect(cache).toMatchObject({ content: full, refreshed_at: 'then', refresh_error: 'unavailable' });
@@ -130,6 +132,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
 
 function prepareLegacyOrder() {
   const { driver, sqlite } = openDatabaseConnection();
+  sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   const nodeOrder = loadDerivedNodeOrder(driver);
   sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   sqlite.exec(`DELETE FROM node_order;

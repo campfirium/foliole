@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PARENT_ORDER_MATERIALIZE_SQL, PARENT_ORDER_MEMBERS_SQL,
+import { PARENT_ORDER_MEMBERS_SQL,
   PARENT_ORDER_SOURCES_SQL, PARENT_ORDER_SOURCE_WRITE_SQL } from '../database/currentParentOrderSchema.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
@@ -18,19 +18,12 @@ export async function loadCurrentParentOrderSources(port: DbPort, parentId: stri
     ({ authorId, counter, childIds: JSON.parse(child_ids_json) })));
 }
 
-export async function projectCurrentParentOrderWithDbPort(port: DbPort, parentId: string, now: string, onChanged?: () => void) {
-  const sources = await loadCurrentParentOrderSources(port, parentId);
-  const members = await port.query<CurrentOrderMember & DbRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
-  const order = projectCurrentParentOrder(sources, members);
-  const written = await port.run(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
-  if (written.changes > 0) onChanged?.();
-  await port.run('DELETE FROM parent_order_projection_pending WHERE parent_id = ?', [parentId]);
-  return order;
-}
-
-/** Drain the transaction's structural invalidations without reading directory members. */
-export async function flushCurrentParentOrderProjectionsWithDbPort(port: DbPort) {
-  return (await port.run('DELETE FROM parent_order_projection_pending')).changes > 0;
+export function readCurrentParentOrderWithDbPort(port: DbPort, parentId: string) {
+  return port.transaction(async (tx) => {
+    const sources = await loadCurrentParentOrderSources(tx, parentId);
+    const members = await tx.query<CurrentOrderMember & DbRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
+    return projectCurrentParentOrder(sources, members);
+  });
 }
 
 const payloadSchema = z.object({ parent_id: z.string().min(1), sources_json: z.string() }).strict();
@@ -75,7 +68,6 @@ export function saveLocalCurrentParentOrderWithDbPort(port: DbPort, input: {
     if (!next) throw new Error('parent_order_local_source_missing');
     const updated = canonicalParentOrderSources([...sources.filter((source) => source.authorId !== authorId), next]);
     await tx.run(PARENT_ORDER_SOURCE_WRITE_SQL, [parentId, authorId, counter, JSON.stringify(childIds)]);
-    await projectCurrentParentOrderWithDbPort(tx, parentId, now);
     await storeParentOrderState(tx, parentId, currentParentOrderHash(parentId, updated), now, hostName);
     return true;
   });

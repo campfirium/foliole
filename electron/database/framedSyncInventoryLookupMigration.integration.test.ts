@@ -13,6 +13,7 @@ import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventory
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 const T = '2026-10-16T00:00:00.000Z';
@@ -51,6 +52,7 @@ function restorePreviousLookups(sqlite: Database.Database, companion: boolean) {
     CREATE TABLE daily_flow_entries(node_id TEXT PRIMARY KEY, initial_position INTEGER NOT NULL,
       queue_position INTEGER, soon_position INTEGER);
     ALTER TABLE daily_flow_operations DROP COLUMN source_session_json`);
+  if (!companion) restoreLegacyParentOrderTable(sqlite);
   sqlite.pragma(`user_version = ${companion ? 95 : 167}`);
 }
 

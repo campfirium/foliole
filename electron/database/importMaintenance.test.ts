@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
@@ -87,9 +88,7 @@ function readImportMaintenanceCounts(firstNodeId: string | null, secondNodeId: s
     nodes: connection.sqlite
       .prepare('SELECT COUNT(*) AS count FROM nodes WHERE id IN (?, ?)')
       .get(firstNodeId, secondNodeId) as { count: number },
-    nodeOrder: connection.sqlite
-      .prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent-child-order:root'")
-      .get() as { child_ids_json: string } | undefined,
+    nodeOrder: { child_ids_json: JSON.stringify(readParentChildOrder(connection.driver, null).childIds) },
     activeNode: connection.sqlite
       .prepare(`SELECT value FROM workspace_meta WHERE key = 'active_node_id'`)
       .get() as { value: string } | undefined,

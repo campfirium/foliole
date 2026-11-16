@@ -1,4 +1,3 @@
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
 import { joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
 import { trackCommittedAttachmentArticles } from './requestSyncAttachmentPreparation.js';
@@ -52,24 +51,21 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
   const pruning = { requested: false };
   const objectOptions = { ...await host.objectOptions?.(tx), ...input.objectOptions };
   const inputs = staged.map(({ header, files }) => receivedObjectInput(host, input, header, files, objectOptions, pruning));
-  const batch: RequestSyncBatchScope = { overwriting: await openRequestSyncObjectInbound(tx, inputs[0]!),
-    parentOrder: { requested: false } };
+  const batch: RequestSyncBatchScope = { overwriting: await openRequestSyncObjectInbound(tx, inputs[0]!) };
   // Nodes first: states, relations and reviews in the same batch may refer to them.
   const nodes = inputs.filter(objectInput => objectInput.objectType === 'node');
   const applied = new Map<RequestSyncObjectInput, Pick<Awaited<ReturnType<typeof applyRequestSyncObject>>, 'workspaceScope'> & { error: string }>();
   if (nodes.length) {
-    const nodeResults = await applyRequestSyncNodeBatch(tx, nodes, batch);
+    const nodeResults = await applyRequestSyncNodeBatch(tx, nodes);
     nodes.forEach((objectInput, index) => applied.set(objectInput, nodeResults[index]!));
   }
   for (const objectInput of inputs) {
     if (objectInput.objectType === 'node') continue;
-    const parentOrder = { requested: false };
     const visibilityPruning = { requested: false };
     const result = await isolateRequestSyncObjectWrite(tx, () => applyRequestSyncObject(tx, {
-      ...objectInput, batch: { ...batch, parentOrder }, visibilityPruning
+      ...objectInput, batch, visibilityPruning
     }));
     if (result.ok) {
-      batch.parentOrder.requested ||= parentOrder.requested;
       pruning.requested ||= visibilityPruning.requested;
       applied.set(objectInput, { ...result.value, error: '' });
     } else {
@@ -79,11 +75,9 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
   const results = inputs.map(objectInput => applied.get(objectInput)!);
   const firstAccepted = inputs.find(objectInput => !applied.get(objectInput)!.error);
   if (firstAccepted) await recordRequestSyncInbound(tx, firstAccepted.context, firstAccepted.requestId);
-  const structure = batch.parentOrder.requested && await flushCurrentParentOrderProjectionsWithDbPort(tx);
   const expanded = pruning.requested && await pruneLearningRowsWithoutVisibleNodes(tx);
   return results.map(result => ({ ...result, workspaceScope: expanded ? { kind: 'full' as const }
-    : structure ? joinWorkspaceScopes(result.workspaceScope, { kind: 'nodes', nodeIds: [], structure: true })
-      : result.workspaceScope }));
+    : result.workspaceScope }));
 }
 
 async function applySingleObject(host: RequestSyncDatabaseHost, input: BatchInput,

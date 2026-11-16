@@ -33,7 +33,6 @@ it('preserves original current sources with quoted and Unicode identities throug
     await applySyncNodesWithDbPort(port, [parent]);
     const sources = [{ authorId: 'a"中', counter: 4, childIds: ['node-1', 'late\\child'] },
       { authorId: '😀', counter: 2, childIds: ['late\\child', 'node-1'] }];
-    source.prepare('INSERT INTO parent_child_order VALUES (?, ?, ?)').run('parent', '[]', 'now');
     for (const value of sources) source.prepare('INSERT INTO parent_order_sources VALUES (?, ?, ?, ?)')
       .run('parent', value.authorId, value.counter, JSON.stringify(value.childIds));
     upsertSyncObjectState(createBetterSqlite3Driver(source), { objectType: 'parent_child_order',

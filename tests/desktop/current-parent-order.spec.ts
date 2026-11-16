@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { Page } from '@playwright/test';
 
+import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test } from './harness/fixtures';
@@ -17,6 +18,12 @@ async function orders(page: Page) {
   });
 }
 
+async function reorderFolder(folderArgs: string[]) {
+  const reordered = await runAgentCli(['materials/reorder', ...folderArgs,
+    '--material-ids', 'native-topic-b,native-topic-a,native-topic-c']);
+  expect(reordered.status).toBe(0);
+}
+
 test('keeps directory and topic arrangements through additions, reload and application restart', async ({
   desktopSession, desktopWindow
 }, testInfo) => {
@@ -29,9 +36,14 @@ test('keeps directory and topic arrangements through additions, reload and appli
       ...['a', 'b', 'c'].map((id) => ({ content: `Question ${id}`, id: `native-item-${id}`,
         kind: 'item' as const, parentNodeId: 'native-topic-a', title: `Item ${id}` }))
     ], { persist: true });
+  });
+  const userData = await desktopSession.electronApp.evaluate(({ app }) => app.getPath('userData'));
+  const descriptor = path.join(userData, 'cache', 'agent-control-session.json');
+  const folderArgs = ['--descriptor', descriptor, '--parent-id', 'native-order-folder'];
+  await reorderFolder(folderArgs);
+  await desktopWindow.evaluate(async () => {
     await window.electronAPI.invoke('replace_node_order', {
-      nodeIds: ['native-topic-b', 'native-topic-a', 'native-topic-c',
-        'native-item-c', 'native-item-a', 'native-item-b']
+      nodeIds: ['native-item-c', 'native-item-a', 'native-item-b']
     });
     for (const kind of ['topic', 'item'] as const) {
       const snapshot = await window.electronAPI.invoke('load_workspace_snapshot');
@@ -67,5 +79,9 @@ test('keeps directory and topic arrangements through additions, reload and appli
   try {
     await expectWorkspaceShell(reopened.firstWindow);
     expect(await orders(reopened.firstWindow)).toEqual(expected);
+    const listed = await runAgentCli(['materials/list-children', ...folderArgs]);
+    expect(listed.status).toBe(0);
+    const children = listed.output as { children: { id: string }[] };
+    expect(children.children.map(({ id }) => id)).toEqual([...expected.topics].sort());
   } finally { await reopened.close(); }
 });

@@ -13,6 +13,7 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('../ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
 
+import { readParentChildOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -28,10 +29,7 @@ function node(nodeId: string, parentNodeId: string | null, kind: 'topic' | 'item
     anchorLink: null, position: null, createdAt: at, updatedAt: at };
 }
 function children(parentId: string) {
-  const row = openDatabaseConnection().sqlite.prepare(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?'
-  ).get(parentId) as { child_ids_json: string };
-  return JSON.parse(row.child_ids_json) as string[];
+  return readParentChildOrder(openDatabaseConnection().driver, parentId === ROOT_CHILD_ORDER_ID ? null : parentId).childIds;
 }
 
 beforeEach(async () => {
@@ -49,13 +47,13 @@ afterEach(async () => {
 
 it.each(['topic', 'item'] as const)('creates a %s without submitting existing order', (kind) => {
   const sqlite = openDatabaseConnection().sqlite;
-  const previous = sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
+  const previous = sqlite.prepare('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id').all();
   const result = handleNodeMutationCommand(`create_${kind}`, { ...node('new', 'p', kind), activeNodeId: 'new' });
   expect(result).toMatchObject({ createdNodeIds: ['new'], nodes: [{ nodeId: 'new', content: 'Created body' }] });
   expect(result).not.toHaveProperty('nodeOrder');
   expect(children('p')).toEqual(['p2', 'p1', 'new']);
   expect(children('b')).toEqual(['b2', 'b1']);
-  expect(sqlite.prepare("SELECT * FROM parent_child_order WHERE parent_id != 'p' ORDER BY parent_id").all())
+  expect(sqlite.prepare("SELECT * FROM parent_order_sources WHERE parent_id != 'p' ORDER BY parent_id, author_id").all())
     .toEqual(previous.filter((row) => (row as { parent_id: string }).parent_id !== 'p'));
   const stored = sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('new') as { current_version_id: string };
   expect(stored.current_version_id).toMatch(/^ver_/);
@@ -66,10 +64,10 @@ it.each(['topic', 'item'] as const)('creates a %s without submitting existing or
 });
 
 it('registers a root folder without changing other root members', () => {
-  const before = children('parent-child-order:root');
+  const before = children(ROOT_CHILD_ORDER_ID);
   const result = handleNodeMutationCommand('create_folder', node('new-folder', null, 'folder'));
   expect(result).toMatchObject({ createdNodeIds: ['new-folder'] });
-  expect(children('parent-child-order:root')).toEqual([...before, 'new-folder']);
+  expect(children(ROOT_CHILD_ORDER_ID)).toEqual([...before, 'new-folder']);
   expect(children('p')).toEqual(['p2', 'p1']);
 });
 

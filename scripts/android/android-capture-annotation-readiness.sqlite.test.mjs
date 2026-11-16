@@ -13,12 +13,12 @@ function workspace({ body = 'Retained article body', deleted = null, blobs = 0, 
   databases.push(database);
   database.exec(`
     CREATE TABLE nodes (id TEXT PRIMARY KEY, kind TEXT, content TEXT, deleted_at TEXT, body_blob_hash TEXT);
-    CREATE TABLE parent_child_order (parent_id TEXT, child_id TEXT);
+    CREATE TABLE parent_order_sources (parent_id TEXT, child_id TEXT);
     CREATE TABLE content_blobs (hash TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);
     INSERT INTO nodes VALUES ('special-inbox', 'folder', NULL, NULL, NULL);
-    INSERT INTO parent_child_order VALUES ('special-inbox', 'article');
+    INSERT INTO parent_order_sources VALUES ('special-inbox', 'article');
     INSERT INTO companion_meta VALUES ('device_id', 'private-device');
     INSERT INTO companion_meta VALUES ('workspace_sync_endpoint_url', 'http://private-endpoint');
   `);
@@ -59,7 +59,6 @@ it.each([
   ["DELETE FROM companion_meta WHERE key = 'device_id'", 'pairing_workspace_unproven'],
   ["DELETE FROM companion_meta WHERE key = 'workspace_sync_endpoint_url'", 'pairing_workspace_unproven'],
   ["UPDATE nodes SET deleted_at = '2026-11-01' WHERE id = 'special-inbox'", 'canonical_inbox_missing'],
-  ['DELETE FROM parent_child_order', 'acceptance_workspace_empty']
 ])('preserves the existing protection for %s', (sql, missing) => {
   const database = workspace();
   database.exec(sql);

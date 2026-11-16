@@ -1,4 +1,3 @@
-import { projectStoredParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
 import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
@@ -23,7 +22,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   return [];
 }
 
-/** Deletes rows and returns released body hashes; membership triggers update the affected parent projections. */
+/** Deletes rows and returns released body hashes. */
 export function deleteNodesPermanentlyDeferringBodies(
   driver: DatabaseDriver,
   input: DeleteNodesPermanentlyInput
@@ -39,9 +38,6 @@ export function deleteNodesPermanentlyDeferringBodies(
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   return driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
-    const parents = driver.queryAll<{ parent_id: string }>(
-      `SELECT DISTINCT COALESCE(parent_id, 'parent-child-order:root') AS parent_id FROM nodes
-       WHERE id IN (SELECT value FROM json_each(?))`, [JSON.stringify(input.nodeIds)]);
     advanceWorkspaceSearchSourceRevision(driver);
     const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
     const searchTablesReady = deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
@@ -59,7 +55,6 @@ export function deleteNodesPermanentlyDeferringBodies(
       deleteNodeStatement.run([nodeId]);
       driver.execute(DELETE_NODE_SEARCH_PENDING_SQL, [nodeId]);
     }
-    for (const { parent_id } of parents) projectStoredParentOrder(driver, parent_id, now);
     markWorkspaceSearchSourceRevisionQueued(driver);
     // Missing search tables are rebuilt by normal initialization from the remaining main rows.
     if (searchTablesReady) markWorkspaceSearchSourceIndexedIfSettled(driver);

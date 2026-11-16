@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 
 const EXPECTED_STAGING_TABLES = [
   'framed_sync_fact_summary',
@@ -43,6 +43,7 @@ it('upgrades the prior production schema without changing business rows and rema
     .run('existing-setting', 'preserved-value', '2026-10-05T00:00:00.000Z');
   removeStagingTables();
   const businessSchema = readBusinessSchema();
+  restoreLegacyParentOrderTable(sqlite);
   sqlite.pragma('user_version = 137');
 
   initializeDatabaseSchema(sqlite);

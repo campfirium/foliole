@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
@@ -10,6 +11,7 @@ import { restoreFramedSyncObjectStateFact, selectFramedSyncObjectStateFact } fro
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { restoreFixture, transfer } from './requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
@@ -39,7 +41,7 @@ it.each(['node_open_state', 'parent_child_order'] as const)(
         expect(node.need.stateFactIds).toContain(JSON.stringify([type, id, hash]));
       } else {
         await transfer(source, target, progress, state!);
-        expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(id)).toBe('[]');
+        expect(readParentChildOrder(createBetterSqlite3Driver(target.sqlite), id === ROOT_CHILD_ORDER_ID ? null : id).childIds).toEqual([]);
       }
       await transfer(source, target, progress, node);
       if (state) await transfer(source, target, progress, state);
@@ -56,7 +58,7 @@ it.each(['node_open_state', 'parent_child_order'] as const)(
       }
       if (type === 'node_open_state') expect(target.sqlite.prepare("SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'").pluck().get())
         .toBe('2026-10-09T09:00:00.000Z');
-      else expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(id))
-        .toBe('["topic"]');
+      else expect(readParentChildOrder(createBetterSqlite3Driver(target.sqlite), id === ROOT_CHILD_ORDER_ID ? null : id).childIds)
+        .toEqual(['topic']);
     } finally { await fixture.close(); }
   });

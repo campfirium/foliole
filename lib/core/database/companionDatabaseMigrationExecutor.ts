@@ -57,7 +57,9 @@ import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js
 import { migrateCompanionMaterialFlowInvalidation, migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from './numberedMigrationParentChildOrder.js';
 import { migrateCompanionPdfTextArtifacts, migrateCompanionPdfTextReadingOffset } from './pdfTextArtifactMigration.js';
+import { retireCompanionParentOrderProjection } from './retireParentOrderProjectionMigration.js';
 import { migrateCompanionReviewLog } from './reviewLogMigration.js';
 import { retireCompanionReviewStateSync } from './reviewStateSyncRetirement.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
@@ -110,7 +112,7 @@ export async function migrateCompanionDatabase(
     }
   }
   await repairCompanionDatabase(db);
-  if (currentVersion < 40 && targetVersion >= 40) await migrateCompanionParentChildOrder(db);
+  if (currentVersion < 40 && targetVersion >= 40) await migrateCompanionHistoricalParentChildOrder(db);
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
   if (currentVersion < 39 && targetVersion >= 39) await migrateCompanionWatchedDisplayPath(db);
   if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
@@ -128,7 +130,7 @@ export async function migrateCompanionDatabase(
     await migrateCompanionTextBodyOwnership(db);
   }
   if (currentVersion < 80 && targetVersion >= 80) await migrateCompanionNodeHistoryState(db);
-  if (currentVersion < 81 && targetVersion >= 81) await migrateCompanionCurrentParentOrders(db);
+  if (currentVersion < 81 && targetVersion >= 81) await migrateCompanionParentOrderSources(db);
   if (currentVersion < 82 && targetVersion >= 82) await retireCompanionLegacySyncState(db);
   if (currentVersion < 83 && targetVersion >= 83) await migrateCompanionTopicHistoryRetirement(db);
   if (currentVersion < 84 && targetVersion >= 84) await retireCompanionNodePositions(db);
@@ -153,6 +155,16 @@ export async function migrateCompanionDatabase(
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
 
+async function migrateCompanionHistoricalParentChildOrder(db: DbPort) {
+  await db.run(PARENT_CHILD_ORDER_SCHEMA_SQL);
+  await migrateCompanionParentChildOrder(db);
+}
+
+async function migrateCompanionParentOrderSources(db: DbPort) {
+  await db.run(PARENT_CHILD_ORDER_SCHEMA_SQL);
+  await migrateCompanionCurrentParentOrders(db);
+}
+
 async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number, targetVersion: number) {
   if (currentVersion < 96 && targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
   if (currentVersion < 97 && targetVersion >= 97) await migrateCompanionFramedSyncInventoryLookups(db);
@@ -174,6 +186,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 114 && targetVersion >= 114) await migrateCompanionIndependentTopicAlternatives(db);
   if (currentVersion < 115 && targetVersion >= 115) await installRelayReviewSequence(db);
   if (currentVersion < 117 && targetVersion >= 117) await migrateCompanionPdfTextReadingOffset(db);
+  if (currentVersion < 118 && targetVersion >= 118) await retireCompanionParentOrderProjection(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

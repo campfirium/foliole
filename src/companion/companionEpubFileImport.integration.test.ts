@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { projectCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
+import { readCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
 import type { NativeCompanionFramedFileRequest } from '../../lib/platform/nativeCompanionFramedFilesContract';
 import { companionEpubBook, EPUB_IMAGE, EPUB_ICON } from '../../tests/fixtures/companionEpubBook';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
@@ -46,7 +46,7 @@ async function importBook(bytes: Uint8Array = companionEpubBook(), failRefresh =
   } })(new File([Uint8Array.from(bytes)], 'Book.epub'));
 }
 async function children(id: string) {
-  const order = await getIosCompanionDatabaseOwner().read(db => projectCurrentParentOrderWithDbPort(db, id, '2026-11-03T08:00:00Z'));
+  const order = await getIosCompanionDatabaseOwner().read(db => readCurrentParentOrderWithDbPort(db, id));
   return Promise.all(order.map(child => loadCompanionWorkspaceNode(child)));
 }
 it('imports the desktop book hierarchy, ordered chapters and embedded images, then reopens without an EPUB original', async () => {

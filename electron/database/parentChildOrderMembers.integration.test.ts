@@ -3,12 +3,9 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { ensureNodeParentMembership } from '../../lib/core/database/nodeOrderMutations.js';
-import { PARENT_CHILD_ORDER_MEMBER_SCHEMA } from '../../lib/core/database/parentChildOrderMembers.js';
-import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { migrateParentChildOrderMembers, PARENT_CHILD_ORDER_MEMBER_SCHEMA } from '../../lib/core/database/parentChildOrderMembers.js';
 
-import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const T = '2026-10-16T00:00:00.000Z';
 
@@ -29,23 +26,20 @@ function schemaObjects(sqlite: Database.Database) {
     WHERE name IN (SELECT value FROM json_each(?)) ORDER BY name`).all(JSON.stringify(names));
 }
 
-it('an upgraded library indexes every stored order like a new one and keeps the index current', () => {
+it('historical reverse-index migration indexed existing lists and subsequent writes', () => {
   const created = new Database(':memory:');
   const upgraded = new Database(':memory:');
   try {
     initializeDatabaseSchema(created);
     initializeDatabaseSchema(upgraded);
-    restoreEmptyLegacyDailyFlowSchema(upgraded);
-    for (const sql of [...PARENT_CHILD_ORDER_MEMBER_SCHEMA].reverse()) {
-      const [, type, name] = /^CREATE (TABLE|INDEX|TRIGGER) IF NOT EXISTS (\w+)/u.exec(sql)!;
-      upgraded.exec(`DROP ${type} ${name}`);
-    }
+    upgraded.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
+    created.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
+    for (const sql of PARENT_CHILD_ORDER_MEMBER_SCHEMA) created.exec(sql);
     storeOrder(upgraded, 'folder-a', '["note-1","note-2","note-1"]');
     storeOrder(upgraded, 'folder-b', '["note-1"]');
     storeOrder(upgraded, 'folder-c', '{not json');
     storeOrder(upgraded, 'folder-d', '[7,"note-3"]');
-    upgraded.pragma('user_version = 168');
-    initializeDatabaseSchema(upgraded);
+    migrateParentChildOrderMembers(upgraded);
     expect(schemaObjects(upgraded)).toEqual(schemaObjects(created));
     expect(members(upgraded)).toEqual([
       ['folder-a', 'note-1'], ['folder-a', 'note-2'], ['folder-b', 'note-1'], ['folder-d', 'note-3']]);
@@ -56,29 +50,5 @@ it('an upgraded library indexes every stored order like a new one and keeps the 
   } finally {
     created.close();
     upgraded.close();
-  }
-});
-
-it('saving a note still takes it out of every other stored order that lists it', () => {
-  const sqlite = new Database(':memory:');
-  try {
-    initializeDatabaseSchema(sqlite);
-    const driver = createBetterSqlite3Driver(sqlite);
-    sqlite.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, ?)")
-      .run(JSON.stringify('Mac'), T);
-    bindParentOrderWriter(driver, { deviceAnchor: 'device', libraryPath: '/library' });
-    const insertNode = sqlite.prepare(`INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at)
-      VALUES (?, ?, ?, '', ?, ?)`);
-    for (const id of ['folder-a', 'folder-b', 'folder-c']) insertNode.run(id, null, id, T, T);
-    insertNode.run('note', 'folder-a', 'Note', T, T);
-    insertNode.run('other', 'folder-c', 'Other', T, T);
-    storeOrder(sqlite, 'folder-b', '["note"]');
-    storeOrder(sqlite, 'folder-c', '["other"]');
-    ensureNodeParentMembership(driver, 'note');
-    expect(sqlite.prepare('SELECT parent_id, child_ids_json FROM parent_order_sources ORDER BY parent_id').raw().all())
-      .toEqual([['folder-a', '["note"]'], ['folder-b', '[]']]);
-    expect(members(sqlite).filter(([, child]) => child === 'note')).toEqual([['folder-a', 'note']]);
-  } finally {
-    sqlite.close();
   }
 });

@@ -78,7 +78,6 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
       ...(input.objectType === 'node' && input.currentVersionId
         ? { currentVersion: { globalId: input.globalId, versionId: input.currentVersionId } } : {}),
       ...(input.visibilityPruning ? { visibilityPruning: input.visibilityPruning } : {}),
-      ...(input.batch ? { parentOrderFlush: input.batch.parentOrder } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (!input.batch) await recordRequestSyncInbound(tx, input.context, input.requestId);
     await finishReceivedNode(tx, input, collectBodies);

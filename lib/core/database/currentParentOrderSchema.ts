@@ -1,4 +1,4 @@
-export const CURRENT_PARENT_ORDER_SCHEMA = [
+export const PARENT_ORDER_FACT_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS parent_order_sources (
     parent_id TEXT NOT NULL, author_id TEXT NOT NULL,
     counter INTEGER NOT NULL CHECK (counter >= 0 AND counter <= 9007199254740991),
@@ -6,6 +6,11 @@ export const CURRENT_PARENT_ORDER_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS parent_order_writer (
     singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
     binding_id TEXT NOT NULL, source_epoch TEXT NOT NULL, author_id TEXT NOT NULL)`,
+] as const;
+
+// Historical migrations only.
+export const CURRENT_PARENT_ORDER_SCHEMA = [
+  ...PARENT_ORDER_FACT_SCHEMA,
   `CREATE TABLE IF NOT EXISTS parent_order_projection_pending (parent_id TEXT PRIMARY KEY)`,
   `CREATE TRIGGER IF NOT EXISTS trg_parent_order_node_insert AFTER INSERT ON nodes BEGIN
     INSERT INTO parent_order_projection_pending VALUES (COALESCE(NEW.parent_id, 'parent-child-order:root')) ON CONFLICT(parent_id) DO NOTHING;

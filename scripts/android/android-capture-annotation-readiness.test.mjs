@@ -7,7 +7,7 @@ import {
 } from './android-capture-annotation-readiness.mjs';
 
 function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } = {}) {
-  const tables = new Set(['nodes', 'parent_child_order', 'content_blobs', 'companion_meta']);
+  const tables = new Set(['nodes', 'parent_order_sources', 'content_blobs', 'companion_meta']);
   return {
     prepare(sql) {
       return {
@@ -28,7 +28,7 @@ function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } 
 
 it('proves a populated canonical Inbox workspace without returning identity or endpoint values', () => {
   const inspection = inspectCaptureAnnotationWorkspace(databaseFixture({
-    counts: { content_blobs: 19, parent_child_order: 12, nodes: 13 },
+    counts: { content_blobs: 19, parent_order_sources: 12, nodes: 13 },
     meta: { device_id: 'android-a5', workspace_sync_endpoint_url: 'http://windows:38641?secret=x' }
   }));
   const readiness = captureAnnotationReadiness({ database: { exists: true, inspection } });

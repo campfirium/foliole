@@ -107,7 +107,7 @@ it.each([
       .toEqual([{ id: 'a' }, { id: 'c' }]);
     expect(await receiver.db.query("SELECT version_id FROM node_sync_versions WHERE object_id IN ('a','aa','b','c') ORDER BY object_id"))
       .toEqual([{ version_id: 'a-v1' }, { version_id: 'c-v1' }]);
-    expect(observation.writes.toSorted()).toEqual(['a', 'b', 'c']);
+    expect([...observation.writes].sort()).toEqual(['a', 'b', 'c']);
     expect(observation.commits()).toBe(1);
     if (withHistory) expect(await receiver.db.query("SELECT last_opened_at FROM node_open_state WHERE node_id = 'held'"))
       .toEqual([{ last_opened_at: '2026-11-11T00:00:00Z' }]);
@@ -143,7 +143,7 @@ async function assertFailedWriteTransaction(receiver: Peer, run: () => Promise<u
   observation: ReturnType<typeof observeRejectedWrite>, fault: 'transaction' | 'commit') {
   await expect(run()).rejects.toThrow(fault === 'transaction'
     ? 'request_sync_object_savepoint_failed' : 'FOREIGN KEY constraint failed');
-  expect(observation.writes.toSorted()).toEqual(fault === 'transaction' ? ['a', 'b'] : ['a', 'aa', 'b', 'c']);
+  expect([...observation.writes].sort()).toEqual(fault === 'transaction' ? ['a', 'b'] : ['a', 'aa', 'b', 'c']);
   expect(observation.commits()).toBe(fault === 'transaction' ? 0 : 1);
   receiver.reopen();
   expect(await receiver.db.query('SELECT id FROM nodes')).toEqual([]);

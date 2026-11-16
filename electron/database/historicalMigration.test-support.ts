@@ -4,6 +4,7 @@ import Database from 'better-sqlite3';
 
 import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
 import type { DatabaseMigrationTarget } from '../../lib/core/database/migrationTypes.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 
 export function installHistoricalDesktopSchema(sqlite: DatabaseMigrationTarget, targetVersion: number) {
@@ -97,4 +98,9 @@ export function restoreEmptyLegacyDailyFlowSchema(sqlite: Database.Database) {
   // Dropping the current entries table also removes its cycle-only index.
   sqlite.exec('DROP TABLE daily_flow_entries; DROP TABLE daily_flow_operations');
   for (const statement of DAILY_FLOW_SCHEMA.slice(1, 3)) sqlite.exec(statement);
+}
+
+/** Restore the ordering table expected by numbered migrations in downgraded fixtures. */
+export function restoreLegacyParentOrderTable(sqlite: DatabaseMigrationTarget) {
+  sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
 }

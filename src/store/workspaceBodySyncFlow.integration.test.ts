@@ -5,7 +5,6 @@ import { afterEach, expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
-import { flushCurrentParentOrderProjections } from '../../lib/core/database/currentParentOrderStore';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
@@ -22,7 +21,6 @@ it('keeps the saved local sequence through local saves, real HTTP body sync, dup
   const rows = await Promise.all([readCycleRows(source.port), readCycleRows(target.port)]);
   const id = sessions[1]!.currentNodeId!;
   const reading = (await snapshot(source)).nodesById[id]!.reading;
-  for (const peer of [source, target]) flushCurrentParentOrderProjections(peer.driver);
   for (const content of ['Edited body', 'Edited body', '']) {
     upsertNodeSnapshot(source.driver, { nodeId: id, kind: 'topic', title: id, content,
       parentNodeId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: now,
@@ -32,7 +30,6 @@ it('keeps the saved local sequence through local saves, real HTTP body sync, dup
     await exchangeBodySyncOverHttp(source, target);
     for (const [index, peer] of [source, target].entries()) {
       expect(peer.db.prepare('SELECT content FROM nodes WHERE id=?').pluck().get(id)).toBe(content);
-      expect(peer.db.prepare('SELECT * FROM parent_order_projection_pending').all()).toEqual([]);
       expect((await readDailyFlow(peer.port))!.invalidated).toBe(0);
       expect(await readCycleRows(peer.port)).toEqual(rows[index]);
       const reader = new Database(peer.file);

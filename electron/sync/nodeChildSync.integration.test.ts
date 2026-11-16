@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { readParentChildOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
@@ -14,6 +14,7 @@ import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectAppl
 import { topicAlternativeDeletionHash } from '../../lib/core/sync/topicAlternativeApply.js';
 import { topicAlternativeHash, validateTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -164,8 +165,8 @@ async function concurrentChanges(fixture: Fixture,
     expect(readReviewFacts(device.databasePath)).toEqual(expected);
     expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
     expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').pluck().get(nodeId)).toBe(2);
-    expect(sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(nodeId))
-      .toBe(JSON.stringify(['child-b', 'child-a']));
+    expect(readParentChildOrder(createBetterSqlite3Driver(sqlite), nodeId).childIds)
+      .toEqual(['child-b', 'child-a']);
     expect(sqlite.prepare("SELECT count(*) FROM parent_order_sources WHERE parent_id = ? AND author_id IN ('writer', 'other-writer')").pluck().get(nodeId)).toBe(2);
     expect(sqlite.prepare('SELECT state FROM node_reading WHERE node_id = ?').pluck().get(nodeId)).toBe('done');
     expect(sqlite.prepare('SELECT last_opened_at FROM node_open_state WHERE node_id = ?').pluck().get(nodeId))

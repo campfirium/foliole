@@ -4,12 +4,14 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord } from '../../lib/core/sync/currentParentOrderStore.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
@@ -122,8 +124,8 @@ it('preserves both body forks and their highlight and cloze anchors while order 
     expect(children(right.databasePath)).toEqual(expected);
     const db = new Database(right.databasePath);
     try {
-      expect(db.prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'topic'").pluck().get())
-        .toBe('["highlight","cloze"]');
+      expect(readParentChildOrder(createBetterSqlite3Driver(db), 'topic').childIds)
+        .toEqual(['highlight', 'cloze']);
     } finally { db.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

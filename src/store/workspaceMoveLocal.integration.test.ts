@@ -13,6 +13,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { moveNodes } from '../../lib/core/database/nodeMoveMutations.js';
 import type { NodeReadingPayload } from '../../lib/core/database/nodeReadingPayload.js';
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { loadWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot.js';
 
@@ -67,8 +68,7 @@ function setup() {
   const move = createMoveNodesAction(set, async (payload) => moveNodes(driver, payload));
   installWorkspaceMutationRepository({ ...createBrowserLocalWorkspaceMutationRepository(),
     syncMoveNodes: async (payload) => moveNodes(driver, payload) });
-  const children = (parentId: string) => JSON.parse(driver.queryOne<{ child_ids_json: string }>(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId])!.child_ids_json);
+  const children = (parentId: string) => readParentChildOrder(driver, parentId).childIds;
   return { children, driver, get: () => state, move, peer, set };
 }
 
@@ -171,8 +171,7 @@ it('preserves a hidden tombstone slot during sibling reorder and subsequent undo
     VALUES ('hidden', 'p', 'folder', 'Hidden', '', ?, ?, ?)`, [now, now, now]);
   saveLocalCurrentParentOrder(harness.peer, { parentId: 'p', childIds: ['one', 'hidden', 'two'], now, hostName: 'peer' });
   expect(await harness.move(['two'], 'one', 'before')).toBe(true);
-  const physical = () => JSON.parse(harness.peer.queryOne<{ child_ids_json: string }>(
-    "SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'p'")!.child_ids_json);
+  const physical = () => readParentChildOrder(harness.peer, 'p').childIds;
   expect(physical()).toEqual(['two', 'hidden', 'one']);
   const entry = harness.get().appActionHistory.undoStack.at(-1) as WorkspaceStructureMoveEntry;
   harness.set((await applyWorkspaceStructureHistory({ get: harness.get, entry, mode: 'undo' }))!);

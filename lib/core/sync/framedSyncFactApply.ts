@@ -4,7 +4,6 @@ import { prepareReceivedReviewProjection, recomputeReceivedReviewsWithDb } from 
 import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
@@ -35,8 +34,6 @@ type FramedApplyOptions = {
   /** Several received objects in one call: each source's object id and its trusted reference, if any. */
   currentVersions?: { sourceIds: readonly string[]; references: readonly RequestSyncCurrentVersion[] };
   visibilityPruning?: DeferredVisibilityPruning;
-  /** Set by a batch that projects parent child orders once after all its objects. */
-  parentOrderFlush?: { requested: boolean };
   rejectedNodes?: Map<string, string>;
 };
 
@@ -62,7 +59,8 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
           ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) }, historySource);
         generatedChanges = result.handledConflictCount > 0;
         workspaceScope = result.workspaceScopeExpanded ? { kind: 'full' }
-          : { kind: 'nodes', nodeIds: result.workspaceNodeIds };
+          : { kind: 'nodes', nodeIds: result.workspaceNodeIds,
+            ...(result.workspaceStructureChanged ? { structure: true } : {}) };
         if (options.enqueueSearchInvalidations) for (const id of result.processedNodeIds) {
           await enqueueAppliedNodeBodySearchInvalidation(tx, id, new Date().toISOString());
         }
@@ -80,7 +78,6 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     const topics = await tx.query<{ id: string; body_blob_hash: string }>(`SELECT id, body_blob_hash FROM nodes
       WHERE kind = 'topic' AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...nodeIds])]);
     await settleTopicAlternativesForNodes(tx, topics, new Date().toISOString());
-    workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
   });
 }
@@ -143,15 +140,6 @@ async function collectNodeFacts(tx: DbPort, sources: readonly FramedFactSource[]
     }
   }
   return { nodes, attached };
-}
-
-async function flushParentOrders(tx: DbPort, scope: WorkspaceRefreshScope, deferred?: { requested: boolean }) {
-  if (deferred) {
-    deferred.requested = true;
-    return scope;
-  }
-  return await flushCurrentParentOrderProjectionsWithDbPort(tx)
-    ? joinWorkspaceScopes(scope, { kind: 'nodes', nodeIds: [], structure: true }) : scope;
 }
 
 async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,

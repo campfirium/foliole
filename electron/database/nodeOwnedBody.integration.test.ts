@@ -11,7 +11,7 @@ import { loadWorkspaceNodeDocument } from '../../lib/core/database/workspaceNode
 import { loadNodeOwnedArticleResourceNeeds } from '../../lib/core/sync/nodeOwnedArticleResourceNeeds.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
@@ -42,6 +42,7 @@ it.each([false, true])('converts legacy projected text atomically through compan
   upsertTextBodyBlob(driver, content, record.updated_at);
   host.sqlite.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(projectNodeInlineContent(content), 'topic');
   restoreEmptyLegacyDailyFlowSchema(host.sqlite);
+  restoreLegacyParentOrderTable(host.sqlite);
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   const versions = host.sqlite.prepare('SELECT * FROM node_sync_versions').all();
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
@@ -57,6 +58,7 @@ it.each([false, true])('converts legacy projected text atomically through compan
 it.each([false, true])('keeps already complete current text during upgrade without requiring an obsolete shared copy companion=%s', async (companion) => {
   const { host, record, driver } = await fixture();
   restoreEmptyLegacyDailyFlowSchema(host.sqlite);
+  restoreLegacyParentOrderTable(host.sqlite);
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   const versions = host.sqlite.prepare('SELECT * FROM node_sync_versions').all();
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
@@ -71,6 +73,7 @@ it.each([false, true])('preserves contradictory inline text and schema version o
   upsertTextBodyBlob(driver, content, record.updated_at);
   host.sqlite.prepare('UPDATE nodes SET content = ? WHERE id = ?').run('Unreconciled user text', 'topic');
   restoreEmptyLegacyDailyFlowSchema(host.sqlite);
+  restoreLegacyParentOrderTable(host.sqlite);
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   const upgrade = async () => {
     if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));

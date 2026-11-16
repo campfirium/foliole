@@ -12,7 +12,7 @@ function savedSequence(app: DesktopSession['electronApp']) {
     const db = connection.openDatabaseConnection().sqlite;
     return { rows: db.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all(),
       state: db.prepare('SELECT session_json,invalidated FROM daily_flow_state WHERE id=1').get(),
-      pending: db.prepare('SELECT * FROM parent_order_projection_pending').all() };
+      retiredTables: db.prepare("SELECT name FROM sqlite_master WHERE name = 'parent_order_projection_pending'").all() };
     });
   });
 }
@@ -56,8 +56,8 @@ test('keeps the saved sequence after a body edit and advances Read through the o
   const after = await savedSequence(desktopApp);
   expect(after.rows).toEqual(before.rows);
   expect(after.state).toEqual(before.state);
-  expect(after.pending).toEqual(expect.arrayContaining(before.pending));
-  expect(after.pending).toHaveLength(before.pending.length);
+  expect(before.retiredTables).toEqual([]);
+  expect(after.retiredTables).toEqual([]);
   expect((await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession())).currentNodeId).toBe(session.currentNodeId);
   await page.getByRole('button', { name: 'Read', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe(next);

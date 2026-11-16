@@ -208,7 +208,7 @@ export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNode
 }
 
 export function clearNodeOrder(driver: DatabaseDriver): void {
-  driver.execute('DELETE FROM parent_child_order');
+  driver.execute('DELETE FROM parent_order_sources');
   driver.execute("DELETE FROM sync_object_state WHERE object_type = 'parent_child_order'");
 }
 

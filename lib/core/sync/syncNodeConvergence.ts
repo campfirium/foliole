@@ -63,6 +63,7 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
     await collectNodeVersionPayloads(port, nodeId, Number.MAX_SAFE_INTEGER);
   }
   return {
+    workspaceStructureChanged: result.workspaceStructureChanged,
     workspaceScopeExpanded: expired || result.workspaceScopeExpanded || revivedIds.length > 0 || conflicts.length > 0,
     workspaceNodeIds: [...new Set([...result.appliedIds,
       ...result.anchorRepairRecords.map(record => record.nodeId),

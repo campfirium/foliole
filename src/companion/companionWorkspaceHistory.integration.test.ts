@@ -173,10 +173,10 @@ it('refuses to undo creation across an externally added child', async () => {
 it('restores the original sibling placement when moving back', async () => {
   for (const id of ['a', 'b', 'c']) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', title: id, parentNodeId: 'folder' });
   await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder', childIds: ['c', 'b', 'a'], hostName: 'Search', now }));
-  const before = library.database.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').get('folder');
+  const before = library.database.prepare('SELECT child_ids_json FROM parent_order_sources WHERE parent_id = ?').get('folder');
   await mutateCompanionWorkspace({ type: 'move', nodeId: 'b', parentNodeId: 'destination' });
   await replay('undo');
-  expect(library.database.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').get('folder')).toEqual(before);
+  expect(library.database.prepare('SELECT child_ids_json FROM parent_order_sources WHERE parent_id = ?').get('folder')).toEqual(before);
   await replay('redo');
   expect((await snapshot()).nodesById.b?.parentNodeId).toBe('destination');
 });

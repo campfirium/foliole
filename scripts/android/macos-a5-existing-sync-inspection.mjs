@@ -37,12 +37,14 @@ function inspectDifferenceValues(phone, desktop, row) {
     return { actualValues: { phone: phone.prepare(query).all(row.object_id),
       desktop: desktop.prepare(query).all(row.object_id) } };
   }
-  const queries = {
-    node_open_state: 'SELECT node_id, last_opened_at FROM node_open_state WHERE node_id = ?',
-    parent_child_order: 'SELECT parent_id, child_ids_json, updated_at FROM parent_child_order WHERE parent_id = ?'
-  };
-  const query = Object.hasOwn(queries, row.object_type) ? queries[row.object_type] : null;
-  if (!query) return {};
+  if (row.object_type === 'parent_child_order') {
+    const read = database => database.prepare(
+      'SELECT author_id, counter, child_ids_json FROM parent_order_sources WHERE parent_id = ? ORDER BY author_id'
+    ).all(row.object_id);
+    return { actualValues: { phone: read(phone), desktop: read(desktop) } };
+  }
+  if (row.object_type !== 'node_open_state') return {};
+  const query = 'SELECT node_id, last_opened_at FROM node_open_state WHERE node_id = ?';
   return { actualValues: {
     phone: phone.prepare(query).get(row.object_id) ?? null,
     desktop: desktop.prepare(query).get(row.object_id) ?? null

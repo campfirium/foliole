@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
@@ -51,8 +52,8 @@ function assertInbox(databasePath: string, priority: number, children: string[],
   try {
     expect(db.prepare('SELECT kind, priority, deleted_at FROM nodes WHERE id = ?').get(inbox))
       .toEqual({ kind: 'folder', priority, deleted_at: null });
-    expect(db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(inbox))
-      .toBe(JSON.stringify(children));
+    expect(readParentChildOrder(createBetterSqlite3Driver(db), inbox).childIds)
+      .toEqual(children);
     expect(db.prepare('SELECT last_opened_at FROM node_open_state WHERE node_id = ?').pluck().get(inbox)).toBe(openedAt);
     expect(db.prepare('SELECT COUNT(*) FROM nodes WHERE parent_id = ?').pluck().get(inbox)).toBe(2);
   } finally { db.close(); }

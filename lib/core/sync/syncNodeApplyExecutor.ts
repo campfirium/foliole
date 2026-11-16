@@ -17,6 +17,7 @@ import { pruneLearningRowsOrDefer, type DeferredVisibilityPruning } from './sync
 export interface ApplySyncNodesWithDbPortResult {
   appliedIds: string[];
   workspaceScopeExpanded: boolean;
+  workspaceStructureChanged: boolean;
   anchorRepairRecords: SyncNodeAnchorRepairRecord[];
   blockedIds: string[];
   conflictRecords: NativeSyncNodeConflictRecord[];
@@ -118,7 +119,7 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
 }
 
 function emptyNodeApplyResult<M extends SyncNodeRecordMetadata>(): ApplySyncNodeSourceResult<M> {
-  return { workspaceScopeExpanded: false, appliedIds: [], anchorRepairRecords: [], blockedIds: [], conflictNodes: [],
+  return { workspaceScopeExpanded: false, workspaceStructureChanged: false, appliedIds: [], anchorRepairRecords: [], blockedIds: [], conflictNodes: [],
     skippedConflictCopyIds: [], tombstoneBlockedIds: [], unmappedAnchorRecords: [] };
 }
 
@@ -149,6 +150,7 @@ async function applyPreparedNodeGroups<M extends SyncNodeRecordMetadata>(tx: DbP
     for (const key of ['appliedIds', 'blockedIds', 'skippedConflictCopyIds', 'tombstoneBlockedIds'] as const) {
       result[key].push(...target[key]);
     }
+    result.workspaceStructureChanged ||= target.workspaceStructureChanged;
     result.conflictNodes.push(...target.conflictNodes);
     result.anchorRepairRecords.push(...target.anchorRepairRecords);
     result.unmappedAnchorRecords.push(...target.unmappedAnchorRecords);

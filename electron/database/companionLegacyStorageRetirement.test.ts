@@ -8,8 +8,11 @@ import { afterEach, expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
@@ -24,6 +27,7 @@ function database() {
 }
 function fixture() {
   const db = database();
+  db.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   db.exec(COMPANION_SCHEMA_STATEMENTS.join(';'));
   restoreEmptyLegacyDailyFlowSchema(db);
   db.exec(`INSERT INTO companion_meta VALUES ('device_id','fixture','then');
@@ -42,12 +46,12 @@ afterEach(() => {
 
 it('retires companion old ordering without overriding current ordering and does not recreate it on restart', async () => {
   const { db, port } = fixture();
-  const before = db.prepare('SELECT * FROM parent_child_order').all();
+  const before = ['b', 'a'];
   const nodes = db.prepare('SELECT * FROM nodes ORDER BY id').all();
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await bootstrapCompanionDatabase(port, { allowCreate: false, expectedHostName: 'fixture', now: 'now' });
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name='node_order'").get()).toBeUndefined();
-    expect(db.prepare('SELECT * FROM parent_child_order').all()).toEqual(before);
+    expect(readParentChildOrder(createBetterSqlite3Driver(db), null).childIds).toEqual(before);
     expect(db.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
   }
   expect(db.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);

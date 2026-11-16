@@ -5,7 +5,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { readDataMigrationState } from '../../lib/core/database/dataMigrationState.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
 import { closeLibraries, createPeer, edit, history, startLibraries } from './syncLibrary.testSupport.js';
@@ -71,6 +71,7 @@ it('converts a proven PDF placeholder and repairs its version in one schema upgr
   const { peer, version } = seed();
   const old = history(peer)[0];
   restoreEmptyLegacyDailyFlowSchema(peer.db);
+  restoreLegacyParentOrderTable(peer.db);
   peer.db.pragma('user_version = 149');
   initializeDatabaseSchema(peer.db, { beforeVersionCommit: () =>
     migrateLegacyBodyConsistency({ driver: peer.driver, sqlite: peer.db }, peer.name, false) });

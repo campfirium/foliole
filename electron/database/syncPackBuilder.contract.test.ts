@@ -79,10 +79,6 @@ function insertNodeSyncState() {
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
   );
-  driver.execute(
-    'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
-    [ROOT_CHILD_ORDER_ID, '["node-1"]', '2026-04-27T00:00:00.000Z']
-  );
   driver.execute('INSERT INTO parent_order_sources VALUES (?, ?, ?, ?)',
     [ROOT_CHILD_ORDER_ID, 'contract-writer', 1, '["node-1"]']);
   driver.execute(

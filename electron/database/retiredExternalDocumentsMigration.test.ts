@@ -12,7 +12,7 @@ import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncO
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 import { folderDeletedAt, seedRetiredExternalDocuments } from './retiredExternalDocuments.testSupport.js';
 
 it('repairs proved retired projections once and makes every legacy child selectable as a deletion fact', async () => {
@@ -20,6 +20,7 @@ it('repairs proved retired projections once and makes every legacy child selecta
   try {
     initializeDatabaseSchema(sqlite);
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    restoreLegacyParentOrderTable(sqlite);
     seedRetiredExternalDocuments(sqlite, 562);
     upsertTextBodyBlob(createBetterSqlite3Driver(sqlite), 'Protected original body', folderDeletedAt);
     sqlite.prepare(`INSERT INTO nodes (id, kind, title, content, body_blob_hash, created_at, updated_at)
@@ -51,6 +52,7 @@ it('preserves materialized documents, existing deletion facts, and ambiguous fol
   try {
     initializeDatabaseSchema(sqlite);
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    restoreLegacyParentOrderTable(sqlite);
     seedRetiredExternalDocuments(sqlite, 3);
     sqlite.exec(`INSERT INTO external_documents
       (document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at,
@@ -81,6 +83,7 @@ it('keeps unproved missing states and newer child facts unchanged', () => {
   try {
     initializeDatabaseSchema(sqlite);
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    restoreLegacyParentOrderTable(sqlite);
     seedRetiredExternalDocuments(sqlite);
     sqlite.exec(`UPDATE sync_object_state SET updated_at = '2026-08-01T00:00:00.000Z'
       WHERE object_id = 'retired-folder:document-0.md';
@@ -97,6 +100,7 @@ it('rolls back repaired states and the schema version if migration publication f
   try {
     initializeDatabaseSchema(sqlite);
     restoreEmptyLegacyDailyFlowSchema(sqlite);
+    restoreLegacyParentOrderTable(sqlite);
     seedRetiredExternalDocuments(sqlite);
     const before = sqlite.prepare('SELECT * FROM sync_object_state ORDER BY object_id').all();
     sqlite.exec(`CREATE TRIGGER reject_retirement BEFORE UPDATE ON sync_object_state

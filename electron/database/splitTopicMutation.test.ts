@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
 let mockedAppDataDir = '/tmp/foliole-split-topic-tests';
@@ -64,17 +65,14 @@ function readSyncDirty(nodeId: string) {
 }
 
 function childIds(parentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<{ child_ids_json: string }>(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId]
-  );
-  return JSON.parse(row!.child_ids_json) as string[];
+  return readParentChildOrder(openDatabaseConnection().driver, parentId === 'parent-child-order:root' ? null : parentId).childIds;
 }
 
 function mutationState() {
   const driver = openDatabaseConnection().driver;
   return {
     nodes: driver.queryAll('SELECT * FROM nodes ORDER BY id'),
-    orders: driver.queryAll('SELECT * FROM parent_child_order ORDER BY parent_id'),
+    orders: driver.queryAll('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id'),
     versions: driver.queryAll('SELECT * FROM node_sync_versions ORDER BY version_id'),
     state: driver.queryAll('SELECT * FROM sync_object_state ORDER BY object_type, object_id'),
     sequence: driver.queryAll('SELECT * FROM sync_state_sequence'),

@@ -1,5 +1,3 @@
-import { ROOT_CHILD_ORDER_ID, writeParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
-
 import type { DatabaseConnection } from './connection.js';
 import { markGuidedSampleSeedPending } from './guidedSampleSeedState.js';
 
@@ -31,10 +29,6 @@ function insertVirtualRoot(connection: DatabaseConnection, timestamp: string) {
   );
 }
 
-function insertInitialOrder(connection: DatabaseConnection, timestamp: string) {
-  writeParentChildOrder(connection.driver, ROOT_CHILD_ORDER_ID, [INITIAL_INBOX_NODE_ID, INITIAL_VIRTUAL_ROOT_NODE_ID], timestamp);
-}
-
 export function seedInitialWorkspace(connection: DatabaseConnection) {
   if (hasWorkspaceNodes(connection)) {
     return;
@@ -45,7 +39,6 @@ export function seedInitialWorkspace(connection: DatabaseConnection) {
     const transactionalConnection = { ...connection, driver };
     insertInboxRoot(transactionalConnection, timestamp);
     insertVirtualRoot(transactionalConnection, timestamp);
-    insertInitialOrder(transactionalConnection, timestamp);
     markGuidedSampleSeedPending(driver, timestamp);
   });
 }

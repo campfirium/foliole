@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
@@ -38,10 +39,7 @@ export function editParentOrderPerformance(input: unknown) {
   for (let edit = 0; edit < savedEdits; edit += 1) {
     const ids: string[] = [];
     for (let parent = 0; parent < parentCount; parent += 1) {
-      const row = driver.queryOne<{ child_ids_json: string }>(
-        'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId(kind, parent)]);
-      if (!row) throw new Error('fixture_order_missing');
-      const order = z.array(z.string()).parse(JSON.parse(row.child_ids_json));
+      const order = readParentChildOrder(driver, parentId(kind, parent)).childIds;
       if (order.length < 2) throw new Error('fixture_order_too_small');
       [order[0], order[1]] = [order[1]!, order[0]!];
       ids.push(...order);

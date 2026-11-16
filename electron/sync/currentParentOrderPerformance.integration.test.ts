@@ -5,6 +5,9 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
+
 import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 import { createDesktopFramedSyncFaultProxy } from './desktopFramedSyncTwoProcessFaultProxy.js';
 
@@ -15,7 +18,7 @@ function storage(databasePath: string) {
       'sync_object_state'];
     const bytes = db.prepare(`SELECT name, SUM(pgsize) bytes FROM dbstat
       WHERE name IN (${tables.map(() => '?').join(',')}) GROUP BY name`).all(...tables);
-    const orders = db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order ORDER BY parent_id').all();
+    const orders = loadDerivedNodeOrder(createBetterSqlite3Driver(db));
     return { bytes, orders };
   } finally { db.close(); }
 }

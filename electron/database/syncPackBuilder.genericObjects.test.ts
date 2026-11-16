@@ -4,11 +4,14 @@ import { expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { openDatabaseConnection } from './connection.js';
 import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
@@ -54,7 +57,7 @@ it('transfers a changed direct-child sequence without creating article versions'
   expect(differences.filter(row => row.direction === 'local_to_remote').map(row => row.objectType))
     .toEqual(['parent_child_order']);
   await transferProjection(ownerPort(), target.db);
-  expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order').pluck().all()).toEqual(['["node-b","node-a"]']);
+  expect(readParentChildOrder(createBetterSqlite3Driver(target.sqlite), null).childIds).toEqual(['node-b', 'node-a']);
   expect(target.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(targetVersions);
 });
 
@@ -135,6 +138,7 @@ it('refreshes a stale reading inventory during desktop retirement without changi
   const facts = () => tables.map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
   const before = facts();
   restoreEmptyLegacyDailyFlowSchema(sqlite);
+  sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   sqlite.pragma('user_version = 152'); initializeDatabaseSchema(sqlite);
   expect(sqlite.prepare("SELECT states_json FROM framed_sync_inventory WHERE object_id = 'node-reading-1'").pluck().get())
     .toBe('[]');

@@ -1,4 +1,5 @@
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS as historicalInventoryTriggers } from '../../lib/core/database/preNodeChildInventorySchema.js';
 
@@ -24,10 +25,11 @@ export function restorePreCurrentParentOrderFixture(sqlite: SqliteDatabase) {
     sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
   }
   for (const sql of historicalInventoryTriggers) sqlite.exec(sql);
-  sqlite.exec(`DROP TRIGGER trg_parent_order_node_insert;
-    DROP TRIGGER trg_parent_order_node_update;
-    DROP TRIGGER trg_parent_order_node_delete;
+  sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
+  sqlite.exec(`DROP TRIGGER IF EXISTS trg_parent_order_node_insert;
+    DROP TRIGGER IF EXISTS trg_parent_order_node_update;
+    DROP TRIGGER IF EXISTS trg_parent_order_node_delete;
     DROP TABLE parent_order_sources;
     DROP TABLE parent_order_writer;
-    DROP TABLE parent_order_projection_pending;`);
+    DROP TABLE IF EXISTS parent_order_projection_pending;`);
 }

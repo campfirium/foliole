@@ -10,6 +10,7 @@ import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncSt
 import { projectNodeInlineContent } from '../../lib/core/database/nodeInlineProjection.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from '../../lib/core/database/nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from '../../lib/core/database/numberedMigrationParentChildOrder.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
@@ -34,6 +35,7 @@ function companionDevice() {
 async function fixture(companion: boolean, inline = false) {
   const host = companion ? companionDevice() : textDevice();
   devices.push(host);
+  host.sqlite.exec(PARENT_CHILD_ORDER_SCHEMA_SQL);
   await applyConvergentSyncNodesWithDbPort(host.db, [textBranch('original-head', 'Original version', undefined, NOW)]);
   for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS, ...NODE_VERSION_MEMBER_POSITION_SCHEMA,
     ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(sql);

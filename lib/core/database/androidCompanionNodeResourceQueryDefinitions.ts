@@ -7,7 +7,6 @@ import {
 import { COMPANION_WORKSPACE_DISPLAY_NODE_QUERY } from './companionSnapshotNodeQuery.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
-import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
@@ -103,28 +102,6 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'id', source: 'id', type: 'string' },
       { key: 'snapshot_json', source: 'snapshot_json', type: 'string' }
     ]
-  },
-  workspaceOrderedNodeIds: {
-    resultKey: 'nodes',
-    sql:
-      `WITH RECURSIVE sibling_positions AS (
-        SELECT p.parent_id, j.value AS child_id, MIN(CAST(j.key AS INTEGER)) AS ordinal
-        FROM parent_child_order p, json_each(p.child_ids_json) j
-        GROUP BY p.parent_id, j.value
-      ), ranked AS (
-        SELECT n.id, n.parent_id,
-          printf('%010d', COALESCE(j.ordinal, 999999999)) || ':' || n.created_at || ':' || n.id AS segment
-        FROM nodes n INDEXED BY idx_nodes_parent_id
-        LEFT JOIN sibling_positions j ON j.parent_id = COALESCE(n.parent_id, '${ROOT_CHILD_ORDER_ID}')
-          AND j.child_id = n.id
-        WHERE n.deleted_at IS NULL
-      ), ordered(id, path) AS (
-        SELECT id, segment FROM ranked WHERE parent_id IS NULL
-        UNION ALL
-        SELECT child.id, parent.path || '/' || child.segment
-        FROM ranked child JOIN ordered parent ON child.parent_id = parent.id
-      ) SELECT id FROM ordered ORDER BY path`,
-    columns: [{ key: 'id', source: 'id', type: 'string' }]
   },
   workspaceMetaValue: {
     resultKey: 'rows',

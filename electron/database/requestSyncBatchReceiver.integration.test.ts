@@ -71,7 +71,7 @@ it.each(['none', 'generic', 'object'] as const)('publishes committed review sche
   expect(await target.device.db.query('SELECT node_id, COUNT(*) AS count FROM review_log GROUP BY node_id ORDER BY node_id'))
     .toEqual(acceptedIds.map(node_id => ({ node_id, count: 2 })));
   expect(published).toEqual(acceptedIds.map(() => schedules()));
-  if (reject) expect(progress.toSorted()).toEqual(['card-a', 'card-b']);
+  if (reject) expect([...progress].sort()).toEqual(['card-a', 'card-b']);
   if (!reject) expect(await target.device.db.query("SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'"))
     .toEqual([{ value_json: '{"desiredRetention":0.99}' }]);
 });

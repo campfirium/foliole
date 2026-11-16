@@ -65,7 +65,6 @@ it('keeps Android companion learning payload queries scoped to visible node ance
 });
 
 it('executes Android companion visible-node queries without surfacing hidden descendants', () => {
-  expect(ids(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql)).toEqual(['visible-root']);
   expect(ids(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.topicSearch.sql, hiddenSearchArgs())).toEqual([]);
   expect(ids(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.readableArticleFirstNode.sql)).toEqual(['visible-root']);
   expect(

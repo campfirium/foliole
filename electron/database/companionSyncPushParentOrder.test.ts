@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { parentChildOrderSyncAdapter } from '../../src/shared/platform/companionSyncPushProtocol.js';
 
@@ -47,8 +48,6 @@ beforeEach(async () => {
   [id, id === parentId ? null : parentId, id]);
   driver.execute(`INSERT INTO parent_order_sources (parent_id, author_id, counter, child_ids_json)
     VALUES (?, 'android', 1, ?)`, [parentId, JSON.stringify([originalId])]);
-  driver.execute(`INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at)
-    VALUES (?, ?, ?)`, [parentId, JSON.stringify([originalId]), '2026-09-28T00:00:00.000Z']);
   driver.execute(`INSERT INTO sync_object_state (object_type, object_id, state_seq,
     content_hash, last_modified_by_host_name, updated_at, sync_dirty)
     VALUES ('parent_child_order', ?, 1, ?, 'desktop', '2026-09-28T00:00:00.000Z', 0)`,
@@ -76,7 +75,5 @@ it('pushes the conflict copy order while retaining the original branch and confi
   expect(first.appliedObjectIds).toEqual([`parent_child_order:${parentId}`]);
   expect(first.acks).toMatchObject([{ status: 'accepted' }]);
   expect(replay.acks).toMatchObject([{ status: 'already_applied' }]);
-  expect(openDatabaseConnection().driver.queryOne<{ child_ids_json: string }>(
-    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId]
-  )).toEqual({ child_ids_json: JSON.stringify(childIds) });
+  expect(readParentChildOrder(openDatabaseConnection().driver, parentId).childIds).toEqual(childIds);
 });

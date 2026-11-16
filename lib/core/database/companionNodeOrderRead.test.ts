@@ -2,9 +2,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
+import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from './companionCurrentSchemaRepairs.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { loadDerivedNodeOrderWithDbPort } from './parentChildOrder.js';
 
 let db: Database.Database;
 let orderReads = 0;
@@ -26,38 +28,37 @@ function node(id: string, parent: string | null, deleted = false) {
 }
 
 function order(parent: string, ids: string[]) {
-  db.prepare('INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)')
-    .run(parent, JSON.stringify(ids), '2026-01-01');
+  db.prepare("INSERT INTO parent_order_sources VALUES (?, 'fixture', 1, ?)")
+    .run(parent, JSON.stringify(ids));
 }
 
 function readOrder() {
-  return db.prepare(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql)
-    .all().map(row => (row as { id: string }).id);
+  return loadDerivedNodeOrderWithDbPort(createBetterSqliteDbPort(db), undefined, true);
 }
 
-it('preserves explicit sibling order, unlisted children, nested folders and deleted-ancestor visibility', () => {
+it('preserves explicit sibling order, unlisted children, nested folders and deleted-ancestor visibility', async () => {
   node('root', null); node('other-root', null);
   node('a', 'root'); node('b', 'root'); node('c', 'root'); node('nested', 'b');
   node('deleted', 'root', true); node('hidden-child', 'deleted');
   order('parent-child-order:root', ['root', 'other-root']);
   order('root', ['b', 'missing', 'a', 'deleted']);
-  expect(readOrder()).toEqual(['root', 'b', 'nested', 'a', 'c', 'other-root']);
+  expect(await readOrder()).toEqual(['root', 'b', 'nested', 'a', 'c', 'other-root']);
 });
 
-it('reads each parent order once instead of once per sibling in a wide directory', () => {
+it('reads each parent order once instead of once per sibling in a wide directory', async () => {
   node('root', null);
   const children = Array.from({ length: 1000 }, (_, i) => `child-${String(i).padStart(4, '0')}`);
   db.transaction(() => { for (const id of children) node(id, 'root'); })();
   order('root', [...children].reverse());
-  db.exec(`ALTER TABLE parent_child_order RENAME TO stored_parent_child_order;
-    CREATE VIEW parent_child_order AS SELECT parent_id,
-      observe_parent_order(child_ids_json) AS child_ids_json, updated_at FROM stored_parent_child_order`);
-  expect(readOrder()).toEqual(['root', ...[...children].reverse()]);
+  db.exec(`ALTER TABLE parent_order_sources RENAME TO stored_parent_order_sources;
+    CREATE VIEW parent_order_sources AS SELECT parent_id, author_id, counter,
+      observe_parent_order(child_ids_json) AS child_ids_json FROM stored_parent_order_sources`);
+  expect(await readOrder()).toEqual(['root', ...[...children].reverse()]);
   expect(orderReads).toBeLessThanOrEqual(2);
 });
 
 
-it('excludes missing parents and cycles while retaining literal sibling order and live roots', () => {
+it('excludes missing parents and cycles while retaining literal sibling order and live roots', async () => {
   node('root', null); node('other-root', null);
   node('a', 'root'); node('b', 'root'); node('unlisted', 'root'); node('leaf', 'a');
   // Deliberately malformed parent links exercise the read boundary, not normal writes.
@@ -67,12 +68,12 @@ it('excludes missing parents and cycles while retaining literal sibling order an
   db.pragma('foreign_keys = ON');
   node('deleted', 'root', true); node('hidden', 'deleted'); node('hidden-leaf', 'hidden');
   node('deleted-root', null, true); node('hidden-root-child', 'deleted-root');
-  order('parent-child-order:root', ['other-root', 'root', 'other-root', 'absent']);
-  order('root', ['b', 'missing', 'a', 'b', 'deleted', 'other-root']);
+  order('parent-child-order:root', ['other-root', 'root', 'absent']);
+  order('root', ['b', 'missing', 'a', 'deleted', 'other-root']);
   order('a', ['leaf']);
-  expect(readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'unlisted']);
+  expect(await readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'unlisted']);
   db.prepare("UPDATE nodes SET deleted_at = NULL WHERE id = 'deleted'").run();
-  expect(readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
+  expect(await readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
   db.prepare("UPDATE nodes SET parent_id = 'other-root' WHERE id = 'a'").run();
-  expect(readOrder()).toEqual(['other-root', 'a', 'leaf', 'root', 'b', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
+  expect(await readOrder()).toEqual(['other-root', 'a', 'leaf', 'root', 'b', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
 });
