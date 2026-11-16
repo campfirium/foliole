@@ -34,18 +34,16 @@ function handleRenameInputKeyDown(args: {
   submit: (target: RenameExitTarget) => void;
 }) {
   const { event } = args;
+  event.stopPropagation();
   if (args.isComposing || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
   if (event.key === 'Tab' && args.focusBodyOnTab) {
     event.preventDefault();
-    event.stopPropagation();
     args.submit('body');
   } else if (event.key === 'Enter') {
     event.preventDefault();
-    event.stopPropagation();
     args.submit('origin');
   } else if (event.key === 'Escape') {
     event.preventDefault();
-    event.stopPropagation();
     args.skipNextBlurSubmitRef.current = true;
     args.onCancel();
   }
