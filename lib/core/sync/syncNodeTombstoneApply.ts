@@ -1,7 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { markCompactDeletionSnapshot } from '../database/deletedNodeBodyRelease.js';
 
-
 import type { DbPort, DbRow } from './dbPort.js';
 import { enqueueAppliedNodeDeleteSearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
@@ -25,20 +24,39 @@ export async function loadNodeSyncTombstone(port: DbPort, nodeId: string) {
   return rows[0] ?? null;
 }
 
-async function deleteLocalNodeRows(port: DbPort, nodeId: string, deletedAt: string) {
-  const [child] = await port.query<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ? ORDER BY id LIMIT 1', [nodeId]);
-  if (child) throw new Error(`framed_sync_node_delete_child_pending:${child.id}`);
-  for (const row of await port.query<{ alternative_id: string }>('SELECT alternative_id FROM node_text_alternatives WHERE node_id = ?', [nodeId])) {
-    await deleteTopicAlternative(port, row.alternative_id, deletedAt, undefined, nodeId);
-  }
-  await port.run('DELETE FROM review_log WHERE node_id = ?', [nodeId]);
-  await port.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
-  await port.run('DELETE FROM node_reading WHERE node_id = ?', [nodeId]);
-  await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [nodeId]);
-  await port.run("DELETE FROM sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume') AND object_id = ?", [nodeId]);
+const LOCAL_NODE_CLEANUP_TARGETS = [
+  'review_log WHERE node_id = ?',
+  'node_review WHERE node_id = ?',
+  'node_reading WHERE node_id = ?',
+  'node_reading_host_state WHERE node_id = ?',
+  "sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume') AND object_id = ?",
   // Phones keep a per-device reading position that references the node without cascading.
-  await port.run('DELETE FROM node_view_state WHERE node_id = ?', [nodeId]);
-  await port.run('DELETE FROM nodes WHERE id = ?', [nodeId]);
+  'node_view_state WHERE node_id = ?',
+  'nodes WHERE id = ?'
+];
+
+const LOCAL_NODE_CLEANUP_SQL = `
+  SELECT 'child' AS kind, id FROM (
+    SELECT id FROM nodes WHERE parent_id = ? ORDER BY id LIMIT 1
+  )
+  UNION ALL
+  SELECT 'alternative', alternative_id FROM node_text_alternatives WHERE node_id = ?
+  UNION ALL
+  ${LOCAL_NODE_CLEANUP_TARGETS.map((target, index) =>
+    `SELECT 'cleanup', ${index} WHERE EXISTS (SELECT 1 FROM ${target})`).join(' UNION ALL ')}`;
+
+async function deleteLocalNodeRows(port: DbPort, nodeId: string, deletedAt: string) {
+  const rows = await port.query<{ kind: 'child' | 'alternative'; id: string } | { kind: 'cleanup'; id: number }>(
+    LOCAL_NODE_CLEANUP_SQL, [nodeId, nodeId, ...LOCAL_NODE_CLEANUP_TARGETS.map(() => nodeId)]);
+  const child = rows.find(row => row.kind === 'child');
+  if (child) throw new Error(`framed_sync_node_delete_child_pending:${child.id}`);
+  for (const row of rows) {
+    if (row.kind === 'alternative') await deleteTopicAlternative(port, row.id, deletedAt, undefined, nodeId);
+  }
+  const cleanupTargets = new Set(rows.flatMap(row => row.kind === 'cleanup' ? [row.id] : []));
+  for (const [index, target] of LOCAL_NODE_CLEANUP_TARGETS.entries()) {
+    if (cleanupTargets.has(index)) await port.run(`DELETE FROM ${target}`, [nodeId]);
+  }
 }
 
 export async function applyRemoteNodeTombstone(
