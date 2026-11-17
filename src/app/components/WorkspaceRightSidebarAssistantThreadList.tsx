@@ -13,7 +13,7 @@ import {
 
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
-const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-x-inspector-list-inset before:inset-y-px before:-z-local-raised before:transition-colors';
+const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-y-0 before:left-2 before:right-0 before:-z-local-raised before:rounded-sm before:transition-colors';
 
 type ThreadListProps = {
   onOpenMaterial: (nodeId: string) => void;
@@ -51,8 +51,8 @@ function AssistantHistoryRow({ record, list }: { record: NativeAssistantThreadIn
         'group/history-row relative isolate flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2',
         rowHighlightClassName,
         active
-          ? 'before:bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
-          : 'hover:before:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
+          ? 'before:bg-[color-mix(in_srgb,var(--app-surface)_92%,rgb(var(--role-accent-rgb))_8%)]'
+          : 'hover:before:bg-[color-mix(in_srgb,var(--app-surface)_97%,rgb(var(--role-ink-rgb))_3%)]'
       )}
     >
       <div className="min-w-0 flex-1">
