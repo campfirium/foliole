@@ -1,7 +1,7 @@
 import { expect, test } from './harness/fixtures';
 import { card, confirmStep, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
 
-test('updates the directory of an already imported card after previewing the original export', async ({ desktopWindow, desktopApp }, testInfo) => {
+test('updates the directory of a card imported before structure confirmation', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('Update');
   const xml = `<SuperMemoCollection><Count>2</Count>
@@ -12,25 +12,29 @@ test('updates the directory of an already imported card after previewing the ori
     const nodes = Object.values(snapshot.nodesById);
     return { article: nodes.find(node => node.title === 'Source article'), card: nodes.find(node => node.title === 'Card') };
   });
-  await loadSource(desktopApp, dialog, directory, xml);
-  await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
+  const legacyEntry = { parentId: null, children: [], ordinal: null, skippedAudioComponents: 0, learning: null };
+  const batch = await seedHistoricalSuperMemoBatch(desktopApp, [
+    { ...legacyEntry, id: 1, sourceType: 'Topic', title: 'Source article', bodyOrQuestionHtml: ['Article text'], answerHtml: [] },
+    { ...legacyEntry, id: 2, sourceType: 'Item', title: 'Card', bodyOrQuestionHtml: ['Question'], answerHtml: ['Answer'],
+      learning: { lastRepetition: '10.11.2026', intervalDays: '300', repetitions: null, lapses: null,
+        sourceAFactor: null, sourceUFactor: null, history: [{
+          date: '10.11.2026', hour: '3.5', grade: 4, repetition: 2, lapses: 0,
+          raw: 'ElNo=2 Rep=2 Laps=0 Date=10.11.2026 Hour=3.5 Int=1 Grade=4'
+        }] } }
+  ], {});
+  expect(batch).toMatchObject({ imported: 2, skipped: 0 });
   const before = await readNodes();
   expect(before.card?.id).toBeTruthy();
   expect(before.card?.parentNodeId).not.toBe(before.article?.id);
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 
   await writeCollection(directory, true);
-  const reopened = await openPreview(desktopWindow);
-  await loadSource(desktopApp, reopened, directory);
-  await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(reopened.getByRole('heading', { name: /^(Directory changes|目录位置变化)$/ })).toBeVisible();
-  await expect(reopened.getByText(/→ Source article/)).toBeVisible();
+  await loadSource(desktopApp, dialog, directory, xml);
+  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+  await expect(dialog.getByRole('heading', { name: /^(Directory changes|目录位置变化)$/ })).toBeVisible();
+  await expect(dialog.getByText(/→ Source article/)).toBeVisible();
   expect((await readNodes()).card?.parentNodeId).toBe(before.card?.parentNodeId);
-  await reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(reopened.getByText(/^(Updated directory locations \(1\)|已更新 1 个条目的位置。)$/)).toBeVisible();
+  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(dialog.getByText(/^(Updated directory locations \(1\)|已更新 1 个条目的位置。)$/)).toBeVisible();
   const after = await readNodes();
   expect(after.card?.id).toBe(before.card?.id);
   expect(after.card?.parentNodeId).toBe(before.article?.id);
