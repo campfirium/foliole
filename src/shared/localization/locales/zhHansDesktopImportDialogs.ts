@@ -4,7 +4,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.title': 'SuperMemo 导入预览',
   'desktop.superMemoDrafts.open': '开始迁移',
   'desktop.superMemoDrafts.description': '载入 SuperMemo 的 XML 导出，即可查看预览。',
-  'desktop.superMemoDrafts.conversionNote': '摘录和检测项优先留在原来所属的主题下，也可按可核实的文章来源归到源主题。能确认原文位置时，会恢复高亮或标出挖空答案。',
+  'desktop.superMemoDrafts.conversionNote': '配套资料能确认文章来源时，放在其他分支的条目会归回来源文章。能确定原文位置时，Foliole 会在正文中标出摘录或挖空的位置。音频会跳过。',
   'desktop.superMemoDrafts.sourceTitle': 'SuperMemo 导出',
   'desktop.superMemoDrafts.loadSource': '载入 XML',
   'desktop.superMemoDrafts.reloadSource': '重新载入',

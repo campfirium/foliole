@@ -2,7 +2,7 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.title': 'SuperMemo import preview',
   'desktop.superMemoDrafts.open': 'Start migration',
   'desktop.superMemoDrafts.description': 'Choose a SuperMemo XML export to preview it.',
-  'desktop.superMemoDrafts.conversionNote': 'Excerpts and Items stay under their original Topic when possible, or can be placed under a verified source Topic. If the original passage can be located, Foliole restores the highlight or marks the cloze answer.',
+  'desktop.superMemoDrafts.conversionNote': 'When the companion files identify the source article, Foliole brings materials from other branches back under that article. Foliole marks excerpts and cloze locations when it can identify the passage. Audio is skipped.',
   'desktop.superMemoDrafts.sourceTitle': 'SuperMemo export',
   'desktop.superMemoDrafts.loadSource': 'Load XML',
   'desktop.superMemoDrafts.reloadSource': 'Load another XML',
