@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, type OpenDialogOptions } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { refreshDesktopDailyFlowAfterSuperMemoWrite } from '../database/dailyFlow.js';
 import { recordDesktopImportLocation } from '../database/desktopSources.js';
 import { resolveExternalSourceLocationByAddress } from '../database/externalSearchCacheRead.js';
 import { loadReadwiseApiExternalReference } from '../database/readwiseApiExternalDocuments.js';
@@ -102,7 +103,7 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
       : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
         ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
   }
-  const draftResult = await handleSuperMemoImportCommand(request.command, args);
+  const draftResult = await handleSuperMemoImportCommand(request.command, args, refreshDesktopDailyFlowAfterSuperMemoWrite);
   if (draftResult !== undefined) {
     if (request.command === NATIVE_COMMANDS.runSuperMemoImport || request.command === NATIVE_COMMANDS.adjustSuperMemoImport) {
       notifyWorkspaceContentChanged();

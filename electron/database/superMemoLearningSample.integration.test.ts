@@ -4,21 +4,17 @@ import { readFileSync } from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
-import { resetNodeReviewState } from '../../lib/core/database/reviewMutations.js';
-import { loadWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot.js';
 import { makeSuperMemoPreviewReport } from '../../lib/core/import/superMemoPreviewReport.js';
 import { readSuperMemoXmlDraft } from '../../lib/core/import/superMemoXmlDraft.js';
-import { collectReviewQueueCandidates } from '../../lib/core/review/queue/reviewQueuePlannerCandidates.js';
-import { createReviewQueueTimeInput } from '../../lib/core/review/queue/reviewQueueTimeInput.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { publishAttachmentLibraryPathSnapshot, clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { authorizeSelectedImportDirectoryPath, resetImportPathAuthorizationForTests } from '../ipc/importPathAuthorization.js';
 import { handleSuperMemoImportCommand } from '../ipc/superMemoImportCommands.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
-import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { sendReviews } from './reviewProjection.testSupport.js';
+import { restoreFixture, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
+import { dueCards, type ImportedSourceEntry, verifyDismissedSync, verifyFirstScores,
+  verifyImportedHierarchyOnPeer } from './superMemoLearningJourney.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({
@@ -27,40 +23,7 @@ vi.mock('./connection.js', () => ({
 }));
 
 
-function dueCards(driver: ReturnType<typeof createBetterSqlite3Driver>, now: string) {
-  const snapshot = loadWorkspaceSnapshot(driver)!;
-  return collectReviewQueueCandidates({ ...snapshot, trashedNodeIds: new Set(snapshot.trashedNodeIds),
-    includeScheduled: false, time: createReviewQueueTimeInput(0, 0), now }).fsrsCandidates.map(node => node.id);
-}
-
-async function verifyDismissedSync(source: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>,
-  target: typeof source, nodeId: string, now: string) {
-  const driver = createBetterSqlite3Driver(source.sqlite);
-  const later = new Date(Date.parse(now) + 60_000).toISOString();
-  const ancestors = source.sqlite.prepare(`WITH RECURSIVE parents(id, parent_id) AS (
-    SELECT id, parent_id FROM nodes WHERE id = ?
-    UNION ALL SELECT n.id, n.parent_id FROM nodes n JOIN parents p ON n.id = p.parent_id
-  ) SELECT id FROM parents WHERE id != ?`).pluck().all(nodeId, nodeId) as string[];
-  for (const id of ancestors.reverse()) {
-    if (target.sqlite.prepare('SELECT 1 FROM nodes WHERE id = ?').get(id)) continue;
-    flushNodeSyncVersionWithDriver(driver, id, source.id, now);
-    await sendReviews(source, target, true, [], id);
-  }
-  flushNodeSyncVersionWithDriver(driver, nodeId, source.id, now);
-  await sendReviews(source, target, true, [], nodeId);
-  target.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
-    .run('host_name', JSON.stringify(target.id), now);
-  target.reopen();
-  const targetDriver = createBetterSqlite3Driver(target.sqlite);
-  expect(loadWorkspaceSnapshot(targetDriver)?.nodesById[nodeId]?.reading?.state).toBe('dismissed');
-  expect(dueCards(targetDriver, later)).not.toContain(nodeId);
-  resetNodeReviewState(driver, nodeId, { hostName: source.id, deletedAt: later });
-  expect(dueCards(driver, later)).toContain(nodeId);
-  await sendReviews(source, target, true, [], nodeId);
-  expect(dueCards(targetDriver, later)).toContain(nodeId);
-}
-
-async function verifyMediaPreview(args: unknown, sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite']) {
+async function verifyMediaPreview(args: unknown, sqlite: RestorePeer['sqlite']) {
   const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, args);
   if (!preview || !('rows' in preview)) throw new Error('missing preview');
   expect(makeSuperMemoPreviewReport(preview, 0).unresolvedImages).toBe(243);
@@ -75,13 +38,6 @@ async function verifyMediaPreview(args: unknown, sqlite: ReturnType<Awaited<Retu
   return preview.previewSignature;
 }
 
-interface ImportedSourceEntry {
-  id: number;
-  nodeId: string | null;
-  parentId?: number;
-  sourceArticleId?: number | null;
-}
-
 function originalAncestorsContain(entries: Map<number, ImportedSourceEntry>, entry: ImportedSourceEntry) {
   for (let parent = entry.parentId; parent != null; parent = entries.get(parent)?.parentId) {
     if (parent === entry.sourceArticleId) return true;
@@ -90,7 +46,7 @@ function originalAncestorsContain(entries: Map<number, ImportedSourceEntry>, ent
 }
 
 function verifyArticleHierarchy(
-  sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
+  sqlite: RestorePeer['sqlite'],
   entries: ImportedSourceEntry[]
 ) {
   const nodeId = (id: number) => entries.find(entry => entry.id === id)!.nodeId;
@@ -130,7 +86,7 @@ function verifyArticleHierarchy(
   }
 }
 
-function verifyImportedHierarchy(sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
+function verifyImportedHierarchy(sqlite: RestorePeer['sqlite'],
   entries: Array<{ id: number; nodeId: string }>) {
   verifyArticleHierarchy(sqlite, entries);
   const article = entries.find(entry => entry.id === 3302)!.nodeId;
@@ -172,6 +128,26 @@ it('previews an XML-only import with a missing image without writing a batch', a
   }
 });
 
+async function verifyRetryAndReopen(source: RestorePeer,
+  result: unknown, args: unknown) {
+  const nodeCount = source.sqlite.prepare('SELECT count(*) FROM nodes').pluck().get();
+  expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args)).toEqual(result);
+  expect(source.sqlite.prepare('SELECT count(*) FROM nodes').pluck().get()).toBe(nodeCount);
+  source.reopen();
+  connection.driver = createBetterSqlite3Driver(source.sqlite);
+}
+
+async function verifyUnreviewedAdjustments(source: RestorePeer,
+  adjust: (percent: number) => Promise<unknown>) {
+  const readDates = () => source.sqlite.prepare('SELECT node_id, due FROM node_review ORDER BY node_id').all();
+  const before = readDates();
+  expect(await adjust(50)).toMatchObject({ protectedItems: 0, updated: expect.any(Number) });
+  expect(readDates()).not.toEqual(before);
+  await adjust(100);
+  await adjust(0);
+  expect(readDates()).toEqual(before);
+}
+
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 const collectionDirectory = process.env.FOLIOLE_SUPERMEMO_VALIDATION_COLLECTION;
 
@@ -197,11 +173,7 @@ if (!xml || !collectionDirectory) {
       { ...args, previewSignature });
     if (!result || !('batchId' in result)) throw new Error('missing import result');
     expect(result).toMatchObject({ imported: 3434, skipped: 17, unresolvedImages: 243 });
-    const nodeCount = source.sqlite.prepare('SELECT count(*) FROM nodes').pluck().get();
-    expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, args)).toEqual(result);
-    expect(source.sqlite.prepare('SELECT count(*) FROM nodes').pluck().get()).toBe(nodeCount);
-    source.reopen();
-    connection.driver = createBetterSqlite3Driver(source.sqlite);
+    await verifyRetryAndReopen(source, result, args);
     const batchJson = source.sqlite.prepare('SELECT value FROM workspace_meta WHERE key = ?')
       .pluck().get(`supermemo-import:${result.batchId}`) as string;
     const batch = JSON.parse(batchJson) as { entries: Array<ImportedSourceEntry & { nodeId: string; sourceState?: string; learning?: { history: unknown[] }; unresolvedImages: string[] }> };
@@ -225,15 +197,14 @@ if (!xml || !collectionDirectory) {
     const count = source.sqlite.prepare('SELECT count(*) FROM review_log').pluck().get();
     expect(count).toBe(17_926);
     const adjust = (percent: number) => handleSuperMemoImportCommand(NATIVE_COMMANDS.adjustSuperMemoImport, { batchId: result.batchId, percent });
-    const readDates = () => source.sqlite.prepare('SELECT node_id, due FROM node_review ORDER BY node_id').all();
-    const before = readDates();
-    expect(await adjust(50)).toMatchObject({ protectedItems: 0, updated: expect.any(Number) });
-    expect(readDates()).not.toEqual(before);
-    await adjust(100);
-    await adjust(0);
-    expect(readDates()).toEqual(before);
-    await verifyDismissedSync(source, fixture.peer('target'), dismissed.nodeId, now);
-
+    await verifyUnreviewedAdjustments(source, adjust);
+    const target = fixture.peer('target');
+    await verifyDismissedSync(source, target, dismissed.nodeId, now);
+    await verifyImportedHierarchyOnPeer(source, target, batch.entries, now);
+    await verifyFirstScores(source, target, new Date(Date.parse(now) + 120_000).toISOString(), () => {
+      connection.driver = createBetterSqlite3Driver(source.sqlite);
+      return adjust(100);
+    });
   } finally {
     clearAttachmentLibraryPathSnapshot();
     resetImportPathAuthorizationForTests();

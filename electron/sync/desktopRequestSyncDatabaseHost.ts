@@ -5,7 +5,7 @@ import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGr
 import { libraryScopeForDatabasePath } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { refreshDesktopDailyFlowAfterSync } from '../database/dailyFlow.js';
+import { refreshDesktopDailyFlowMembership } from '../database/dailyFlow.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 import { flushDirtyNodeSyncVersions, hasPendingNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
@@ -27,7 +27,7 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
   const files = createDesktopRequestSyncFiles(databasePath);
   const host: RequestSyncDatabaseHost = {
     databaseRoundCompleted: async () => {
-      const current = await host.write(async db => await refreshDesktopDailyFlowAfterSync(db)
+      const current = await host.write(async db => await refreshDesktopDailyFlowMembership(db)
         ? (await readDailyFlow(db))?.session.currentNodeId : undefined);
       if (current) notifyWorkspaceSyncApplied({ workspaceScope: { kind: 'nodes', nodeIds: [current] },
         libraryScope: libraryScopeForDatabasePath(databasePath), appliedNodeIds: [],

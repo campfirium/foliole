@@ -6,12 +6,13 @@ import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
 import { dailyFlowSettingsForInstant } from '../../lib/core/flow/dailyFlowDayWindow.js';
 import { flowDay } from '../../lib/core/flow/dailyFlowPlanning.js';
-import { refreshDailyFlowAfterSync } from '../../lib/core/flow/dailyFlowRefresh.js';
+import { refreshDailyFlowMembership } from '../../lib/core/flow/dailyFlowRefresh.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { dailyFlowSourceSettingsSchema, saveDailyFlowSourceSettings } from '../../lib/core/flow/dailyFlowSourceSettings.js';
 import { readDailyFlowView } from '../../lib/core/flow/dailyFlowView.js';
 import { dailyFlowViewSchema } from '../../lib/core/flow/dailyFlowViewContract.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { currentLibraryScope } from './attachmentResourceDescription.js';
@@ -86,6 +87,14 @@ export function saveDesktopDailyFlowSourceSettings(args: unknown) {
     dailyFlowSourceSettingsSchema.parse(args), desktopDailyFlowPersistence, requireDatabaseHostName(openDatabaseConnection().driver), currentLibraryScope());
 }
 
-export function refreshDesktopDailyFlowAfterSync(db: DbPort) {
-  return refreshDailyFlowAfterSync(db, new Date().toISOString(), settings(), desktopDailyFlowPersistence);
+export function refreshDesktopDailyFlowMembership(db: DbPort) {
+  return refreshDailyFlowMembership(db, new Date().toISOString(), settings(), desktopDailyFlowPersistence);
+}
+
+export async function refreshDesktopDailyFlowAfterSuperMemoWrite() {
+  try {
+    await refreshDesktopDailyFlowMembership(createBetterSqliteDbPort(openDatabaseConnection().sqlite, { transactionMode: 'deferred' }));
+  } catch (error) {
+    appendMainProcessDiagnosticLog('supermemo_flow_refresh_failed', { error });
+  }
 }

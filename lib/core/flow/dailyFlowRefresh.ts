@@ -15,8 +15,8 @@ import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { insertCycleRows, readCycleRows, readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { CycleStored } from './dailyFlowStore.js';
 
-/** Refresh only an existing current-day list, after a confirmed database exchange. */
-export function refreshDailyFlowAfterSync(db: DbPort, now: string, settings: DailyFlowSettings,
+/** Refresh an existing current-day list after committed learning membership changes. */
+export function refreshDailyFlowMembership(db: DbPort, now: string, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<boolean> {
   return db.transaction(async tx => {
     const config = await dailyFlowSettingsForInstant(tx, settings, now);
@@ -45,6 +45,8 @@ export function refreshDailyFlowAfterSync(db: DbPort, now: string, settings: Dai
     return true;
   });
 }
+
+export const refreshDailyFlowAfterSync = refreshDailyFlowMembership;
 
 function keepDisplayed(stored: CycleStored, snapshot: DailyFlowLearningSnapshot) {
   const id = stored.session.currentNodeId;

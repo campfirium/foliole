@@ -84,13 +84,21 @@ async function readCollectionForImport(collectionDirectory: string, elements: Pa
   }
 }
 
-export async function handleSuperMemoImportCommand(command: string, args: unknown) {
+function handleSuperMemoAdjustment(args: unknown, previewOnly: boolean, afterWrite?: () => Promise<void>) {
+  const { batchId, percent } = z.object({ batchId: z.string().regex(/^[a-f0-9]{64}$/),
+    percent: z.number().int().min(0).max(100) }).parse(args);
+  return runWithDatabaseConnectionOwner(async () => {
+    const result = adjustSuperMemoImport(batchId, percent, previewOnly);
+    if (!previewOnly) await afterWrite?.();
+    return result;
+  });
+}
+
+export async function handleSuperMemoImportCommand(command: string, args: unknown, afterWrite?: () => Promise<void>) {
   if (command === NATIVE_COMMANDS.listSuperMemoImports) return runWithDatabaseConnectionOwner(listSuperMemoImports);
   const previewAdjustment = command === NATIVE_COMMANDS.previewSuperMemoAdjustment;
   if (previewAdjustment || command === NATIVE_COMMANDS.adjustSuperMemoImport) {
-    const { batchId, percent } = z.object({ batchId: z.string().regex(/^[a-f0-9]{64}$/),
-      percent: z.number().int().min(0).max(100) }).parse(args);
-    return runWithDatabaseConnectionOwner(() => adjustSuperMemoImport(batchId, percent, previewAdjustment));
+    return handleSuperMemoAdjustment(args, previewAdjustment, afterWrite);
   }
   const write = command === NATIVE_COMMANDS.runSuperMemoImport;
   if (!write && command !== NATIVE_COMMANDS.previewSuperMemoImport) return undefined;
@@ -138,8 +146,10 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
     if (write && previewSignature && preview.previewSignature !== previewSignature) {
       throw new Error('supermemo_preview_changed');
     }
-    return finishSuperMemoImport({ elements, preview, percent, offset, collectionDirectory, gradeMap, scheduler, sourceFormat, expectedImages: images,
+    const result = await finishSuperMemoImport({ elements, preview, percent, offset, collectionDirectory, gradeMap, scheduler, sourceFormat, expectedImages: images,
       ...(targetBatchId ? { targetBatchId } : {}), ...(originalElements ? { originalElements } : {})
     }, write, previewSignature, updateSignature, withdrawSourceIds);
+    if (write) await afterWrite?.();
+    return result;
   });
 }
