@@ -24,7 +24,11 @@ async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference,
       await files.writeFact(projectFramedSyncNodeIdentityFact(record));
       continue;
     }
-    const projection = projectFramedSyncNodeRecord(record);
+    const projection = projectFramedSyncNodeRecord(difference.sourceSnapshot.permanentlyDeleted && record.is_tombstone
+      ? { ...record, body_text: null, alternative_bodies: [], snapshot: {
+        ...record.snapshot, content: null, opening_text: null, title: '',
+        ...(record.snapshot.text_alternatives?.length ? { text_alternatives: [] } : {})
+      } } : record);
     const fact = projection.manifest.facts[0];
     const body = fact?.blobs.find(blob => blob.role === 1);
     if (!fact || !body) throw new Error('request_sync_body_descriptor_missing');

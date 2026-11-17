@@ -1,4 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
+import { RETIRE_NODE_CHILD_STATE_SQL } from './nodeChildStateSql.js';
 import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL } from './searchPendingState.js';
@@ -32,9 +33,12 @@ export function deleteNodesPermanentlyDeferringBodies(
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeReadingHostStateStatement = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteNodeTextAlternativesStatement = driver.prepare('DELETE FROM node_text_alternatives WHERE node_id = ?');
-  const deleteNodeOpenSyncStateStatement = driver.prepare(
-    "DELETE FROM sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume') AND object_id = ?"
+  const deleteNodeOwnedSyncStateStatement = driver.prepare(
+    "DELETE FROM sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume', 'parent_child_order') AND object_id = ?"
   );
+  const retireChildState = RETIRE_NODE_CHILD_STATE_SQL.map(sql => driver.prepare(sql));
+  const hasTombstone = driver.prepare('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?');
+  const deleteParentOrder = driver.prepare('DELETE FROM parent_order_sources WHERE parent_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   return driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
@@ -42,14 +46,17 @@ export function deleteNodesPermanentlyDeferringBodies(
     const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
     const searchTablesReady = deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
     for (const nodeId of input.nodeIds) {
-      recordNodeRelatedStateDeletion(driver, nodeId, now);
+      if (hasTombstone.get([nodeId])) {
+        for (const statement of retireChildState) statement.run([nodeId]);
+      } else recordNodeRelatedStateDeletion(driver, nodeId, now);
       retireUnversionedDeletedNodeState(driver, nodeId);
       deleteReviewLogStatement.run([nodeId]);
       deleteNodeReviewStatement.run([nodeId]);
       deleteNodeReadingStatement.run([nodeId]);
       deleteNodeReadingHostStateStatement.run([nodeId]);
       deleteNodeTextAlternativesStatement.run([nodeId]);
-      deleteNodeOpenSyncStateStatement.run([nodeId]);
+      deleteNodeOwnedSyncStateStatement.run([nodeId]);
+      deleteParentOrder.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {
       deleteNodeStatement.run([nodeId]);

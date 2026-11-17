@@ -3,6 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import { applyRemoteNodeTombstone } from '../../lib/core/sync/syncNodeTombstoneApply.js';
 import { applyTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeApply.js';
 import { topicAlternativeHash, type TopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 import { settleTopicAlternatives, writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
@@ -73,4 +74,23 @@ it('replays creation after retirement without loading payloads, renewing or chan
   expect(await host.alternatives()).toEqual([]);
   expect(observed.bodyBytes()).toBe(0);
   expect(state()).toEqual(before);
+});
+
+it('removes an owned choice on permanent deletion and ignores the old choice replay', async () => {
+  const host = textDevice();
+  hosts.push(host);
+  const base = textBranch('base', 'Main');
+  await host.receive([base]);
+  const record = candidate('choice', new Date().toISOString(), 'Alternative');
+  await writeTopicAlternative(host.db, record, true);
+  await host.db.transaction(tx => applyRemoteNodeTombstone(tx, {
+    ...base, is_tombstone: true, snapshot: { ...base.snapshot, deleted_at: record.updated_at }
+  }, false));
+  const replay = { object_type: 'node_text_alternative', object_id: record.alternative_id,
+    content_hash: topicAlternativeHash(record), payload_json: JSON.stringify(record),
+    updated_at: record.updated_at, deleted_at: null } as const;
+  await applyTopicAlternativeRecord(host.db, replay);
+  expect(await host.alternatives()).toEqual([]);
+  expect(host.sqlite.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'choice'").all()).toEqual([]);
+  expect(host.sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_id = 'choice'").all()).toEqual([]);
 });

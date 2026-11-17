@@ -33,7 +33,7 @@ async function send(source: RestorePeer, target: RestorePeer, search = true) {
 }
 
 
-it('receives a fresh legacy deletion without repeatedly publishing the growing history', async () => {
+it('receives one legacy tombstone without importing deleted history after rollback and retry', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
@@ -68,15 +68,11 @@ it('receives a fresh legacy deletion without repeatedly publishing the growing h
     target.reopen();
     expect(target.sqlite.prepare('SELECT count(*) FROM inventory_publications').pluck().get())
       .toBeLessThanOrEqual(4);
-    expect(target.sqlite.prepare(`SELECT version_id, parent_version_id FROM node_sync_versions
-      WHERE body_text IS NULL AND json_type(snapshot_json, '$.deleted_version_metadata_digest') = 'text'
-      ORDER BY version_id`).all()).toEqual(history
-      .map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }))
-      .sort((left, right) => left.version_id!.localeCompare(right.version_id!)));
-    expect(target.sqlite.prepare(`SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents
-      WHERE version_id LIKE 'draft-%' ORDER BY version_id`).all()).toEqual(history.slice(1)
-      .map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id, ordinal: 0 }))
-      .sort((left, right) => left.version_id!.localeCompare(right.version_id!)));
+    expect(source.sqlite.prepare("SELECT count(*) FROM node_sync_versions WHERE object_id='topic'")
+      .pluck().get()).toBe(history.length);
+    expect(target.sqlite.prepare("SELECT version_id FROM node_sync_versions WHERE object_id='topic'").all()).toEqual([]);
+    expect(target.sqlite.prepare("SELECT version_id FROM node_sync_version_parents WHERE version_id LIKE 'draft-%'")
+      .all()).toEqual([]);
     expect(target.sqlite.prepare("SELECT version_id FROM node_sync_tombstones WHERE node_id='topic'").pluck().get()).toBe('deleted');
     expect(target.sqlite.prepare("SELECT count(*) FROM nodes WHERE id='topic'").pluck().get()).toBe(0);
   } finally { await fixture.close(); }

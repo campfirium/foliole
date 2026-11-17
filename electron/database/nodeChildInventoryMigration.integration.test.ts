@@ -39,7 +39,7 @@ it.each([false, true])('upgrades child inventory atomically, preserving business
     const names = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trg_framed_inventory_%'")
       .pluck().all();
     for (const name of names) sqlite.exec(`DROP TRIGGER ${name}`);
-    sqlite.exec('DROP TABLE sync_node_child_owners; DROP INDEX idx_sync_topic_daily_owner_lookup');
+    sqlite.exec('DROP TABLE sync_node_child_owners; DROP INDEX IF EXISTS idx_sync_topic_daily_owner_lookup');
     for (const sql of legacyTriggers) sqlite.exec(sql);
     sqlite.pragma(`user_version = ${companion ? 84 : 155}`);
     await expect(upgrade(true)).rejects.toThrow('interrupted');
@@ -48,9 +48,8 @@ it.each([false, true])('upgrades child inventory atomically, preserving business
     await upgrade();
     expect(businessRows(sqlite)).toEqual(before);
     const entries = await readFramedSyncInventory(db);
-    expect(entries.find(entry => entry.objectType === 'import_source')).toBeUndefined();
-    expect(entries.find(entry => entry.objectType === 'node' && entry.globalId === 'topic')?.stateFactIds)
-      .toContain(JSON.stringify(['import_source', 'source', 'c'.repeat(64)]));
+    expect(entries.find(entry => entry.objectType === 'import_source')).toMatchObject({ globalId: 'source' });
+    expect(entries.find(entry => entry.objectType === 'node' && entry.globalId === 'topic')?.stateFactIds).toEqual([]);
     await upgrade();
     expect(await readFramedSyncInventory(db)).toEqual(entries);
   } finally { sqlite.close(); fs.rmSync(root, { recursive: true, force: true }); }

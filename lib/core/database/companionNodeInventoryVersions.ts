@@ -1,0 +1,17 @@
+import type { DbPort } from '../sync/dbPort.js';
+
+import { INVALIDATE_ALL_SYNC_DIGESTS } from './framedSyncDigestSchema.js';
+import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
+import { migrateCompanionIndependentImportHistoryInventory } from './independentImportHistoryInventoryMigration.js';
+import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementMigration.js';
+
+export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentVersion: number, targetVersion: number) {
+  if (currentVersion < 119 && targetVersion >= 119) {
+    for (const sql of reinstallNodeHistoryInventoryUpdates()) await db.run(sql);
+  }
+  if (currentVersion < 120 && targetVersion >= 120) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
+  if (currentVersion < 121 && targetVersion >= 121) {
+    for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) await db.run(sql);
+  }
+  if (currentVersion < 122 && targetVersion >= 122) await migrateCompanionIndependentImportHistoryInventory(db);
+}

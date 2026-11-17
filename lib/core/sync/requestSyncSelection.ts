@@ -28,6 +28,10 @@ export async function selectRequestSyncNodeSource(db: DbPort, current: FramedSyn
   assertRequestedFactsAvailable(current, difference);
   const selected = difference.sourceSnapshot.currentVersionId;
   if (!selected || !current.currentVersionId) throw new Error('framed_sync_source_changed');
+  if (current.permanentlyDeleted) {
+    if (selected !== current.currentVersionId) throw new Error('framed_sync_source_changed');
+    return current;
+  }
   const graph = await readRequestSyncNodeGraph(db, current.globalId);
   if (selected !== current.currentVersionId &&
       !await isSelectedAncestor(db, current, selected, graph)) throw new Error('framed_sync_source_changed');

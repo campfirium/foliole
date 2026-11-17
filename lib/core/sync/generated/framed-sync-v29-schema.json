@@ -297,6 +297,11 @@
                       "id": 16,
                       "protoName": "adoption_parent_id"
                     },
+                    "permanentlyDeleted": {
+                      "type": "bool",
+                      "id": 17,
+                      "protoName": "permanently_deleted"
+                    },
                     "currentVersionId": {
                       "type": "string",
                       "id": 10,

@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
+import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
@@ -10,6 +11,8 @@ import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRe
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applyRemoteNodeTombstone } from '../../lib/core/sync/syncNodeTombstoneApply.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
@@ -95,7 +98,7 @@ it.each([1, 2])('receives a parent and %s child deletion facts in one request ro
 });
 
 
-it('rejects a lone parent tombstone without deleting a live child or retaining partial deletion facts', async () => {
+it.each([false, true])('preserves an offline child in Inbox when the child arrives first: %s', async childFirst => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
@@ -113,21 +116,63 @@ it('rejects a lone parent tombstone without deleting a live child or retaining p
       await upsertRemoteVersion(tx, tombstone);
       await applyRemoteNodeTombstone(tx, tombstone, false);
     });
-    const rows = () => ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones',
-      'sync_object_state'].map(table => target.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
-    const before = rows();
     const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db),
       remote: await readFramedSyncInventory(target.db) });
     const difference = differences.find(value => value.direction === 'local_to_remote' && value.globalId === 'parent');
     if (!difference) throw new Error('test_parent_deletion_missing');
     const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
-    await expect(transfer(source, target, progress, difference)).rejects.toThrow('framed_sync_node_delete_child_pending:child');
-    expect(rows()).toEqual(before);
-    target.reopen();
-    expect(rows()).toEqual(before);
-    expect(target.sqlite.prepare("SELECT parent_id, content FROM nodes WHERE id = 'child'").get())
-      .toEqual({ parent_id: 'parent', content: 'Live child body😀' });
-    expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
+    const childRow = (peer: RestorePeer) => peer.sqlite.prepare(
+      "SELECT parent_id, content FROM nodes WHERE id = 'child'").get();
+    const inboxChild = { parent_id: INBOX_NODE_ID, content: 'Live child body😀' };
+    const publishChild = (peer: RestorePeer) => flushNodeSyncVersionWithDriver(
+      createBetterSqlite3Driver(peer.sqlite), 'child', peer.id);
+    if (childFirst) {
+      const inbound = differences.find(value => value.direction === 'remote_to_local' && value.globalId === 'child');
+      if (!inbound) throw new Error('test_child_missing');
+      await transfer(target, source, { ...progress, providerDeviceId: target.id, providerLibraryEpoch: target.epoch,
+        receiverDeviceId: source.id, receiverLibraryEpoch: source.epoch }, inbound);
+      expect(childRow(source)).toEqual(inboxChild);
+      expect(publishChild(source)).toBeTruthy();
+      expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    } else {
+      await transfer(source, target, progress, difference);
+      expect(childRow(target)).toEqual(inboxChild);
+      expect(publishChild(target)).toBeTruthy();
+      expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    }
+    for (const peer of [source, target]) {
+      peer.reopen();
+      expect(childRow(peer)).toEqual(inboxChild);
+      expect(peer.sqlite.prepare("SELECT id FROM nodes WHERE id = 'parent'").get()).toBeUndefined();
+      expect(peer.sqlite.prepare("SELECT json_extract(snapshot_json, '$.parent_id') FROM node_sync_versions WHERE version_id = 'child-base'")
+        .pluck().get()).toBe('parent');
+      expect(peer.sqlite.pragma('foreign_key_check')).toEqual([]);
+    }
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+  } finally { await fixture.close(); }
+});
+
+it('waits for a missing parent when there is no permanent deletion', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  const target = fixture.peer('target');
+  try {
+    const parent = textBranch('future-parent-version', 'Parent');
+    const child = textBranch('future-child-version', 'Child');
+    await applySyncNodesWithDbPort(source.db, [
+      { ...parent, object_id: 'future-parent', snapshot: { ...parent.snapshot, id: 'future-parent' } },
+      { ...child, object_id: 'future-child',
+        snapshot: { ...child.snapshot, id: 'future-child', parent_id: 'future-parent' } }
+    ]);
+    const entries = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db), remote: [] });
+    const childDifference = entries.find(value => value.globalId === 'future-child')!;
+    const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+      providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
+    await expect(transfer(source, target, progress, childDifference)).rejects
+      .toThrow('framed_sync_node_parent_missing:future-parent');
+    expect(target.sqlite.prepare('SELECT id FROM nodes WHERE id IN (?, ?)').all('future-child', INBOX_NODE_ID)).toEqual([]);
+    expect(await round(source, target)).toMatchObject({ complete: true });
+    expect(target.sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck().get('future-child')).toBe('future-parent');
   } finally { await fixture.close(); }
 });

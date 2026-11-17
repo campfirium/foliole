@@ -2,7 +2,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { assertFramedSyncDigest } from './framedSyncContract.js';
 import { sameFramedSyncInventoryEntry } from './framedSyncInventoryEntryEquality.js';
-import { changedNodeVersionIds, missingNodeRelationIds, needsNodeCurrentReference } from './framedSyncNodeInventoryState.js';
+import { changedNodeVersionIds, missingNodeRelationIds, needsNodeCurrentReference, permanentDeletionNeed } from './framedSyncNodeInventoryState.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export type FramedSyncInventoryEntry = Readonly<{
@@ -15,6 +15,7 @@ export type FramedSyncInventoryEntry = Readonly<{
   sharedStateHash: Uint8Array;
   stateFactIds?: readonly string[];
   adoptionParentId?: string;
+  permanentlyDeleted?: true;
   currentVersionId?: string | undefined;
   versionStates?: readonly string[] | undefined;
   unready?: boolean | undefined;
@@ -109,6 +110,8 @@ function missingHashes(source: readonly Uint8Array[], destination: readonly Uint
 }
 
 function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {
+  const deletion = permanentDeletionNeed(source, destination);
+  if (deletion) return deletion;
   const versionIds = source.versionStates ? changedNodeVersionIds(source, destination) :
     missingStrings(source.frontierFactIds, destination?.frontierFactIds ?? []);
   const resourceHashes = missingHashes(source.resourceHashes, destination?.resourceHashes ?? []);
@@ -159,11 +162,9 @@ function differenceFrom(
       need: { frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], sharedState: false, resourceHashes: resources } };
   }
   if (source.objectType === 'daily_flow' && source.dailyFlowRootId === source.globalId && !source.dailyFlowComplete) return null;
-  const need = needFrom(source, destination);
-  if (source.dailyFlowComplete && !destination?.dailyFlowComplete) {
-    need.sharedState = true;
-    need.stateFactIds = [...source.stateFactIds ?? []];
-  }
+  const requested = needFrom(source, destination);
+  const need = source.dailyFlowComplete && !destination?.dailyFlowComplete
+    ? { ...requested, sharedState: true, stateFactIds: [...source.stateFactIds ?? []] } : requested;
   if (!hasNeed(need)) return null;
   return {
     direction, globalId: source.globalId, need,

@@ -1,7 +1,7 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
 import { externalFolderVisibleSql } from '../database/externalFolderMembershipVisibility.js';
-import { NODE_CHILD_STATE_TYPES_SQL, nodeChildOwnerSql } from '../database/nodeChildStateSql.js';
+import { NODE_CHILD_STATE_TYPES_SQL, nodeChildOwnerSql, nodeChildPayloadExistsSql } from '../database/nodeChildStateSql.js';
 import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
 
@@ -64,6 +64,7 @@ export async function readFramedSyncObjectStateInventory(
         OR (deleted_at IS NOT NULL AND NOT EXISTS
           (SELECT 1 FROM framed_sync_inventory owner WHERE owner.object_type = 'node'
             AND owner.object_id = ${nodeChildOwnerSql('sync_object_state')})))
+      AND (object_type NOT IN ('import_source', 'topic_daily_count') OR ${nodeChildPayloadExistsSql('sync_object_state')})
       AND (object_type != 'external_folder' OR ${externalFolderVisibleSql('object_id')})
       AND (object_type != 'external_document' OR ${externalFolderVisibleSql(
     '(SELECT folder_id FROM external_documents WHERE document_id = object_id)')})

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
+import type { FramedSyncInventoryEntry, FramedSyncInventoryNeed } from './framedSyncInventory.js';
 
 const version = z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
   z.enum(['available', 'deleted', 'missing']), z.string().nullable()]);
@@ -47,4 +47,16 @@ function relationChild(id: string) {
 
 export function needsNodeCurrentReference(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {
   return Boolean(source.currentVersionId) && (!destination || source.currentVersionId !== destination.currentVersionId);
+}
+
+export function permanentDeletionNeed(source: FramedSyncInventoryEntry,
+  destination?: FramedSyncInventoryEntry): FramedSyncInventoryNeed | null {
+  if (source.objectType !== 'node' || (!source.permanentlyDeleted && !destination?.permanentlyDeleted)) return null;
+  const sendDeletion = !!source.permanentlyDeleted && !destination?.permanentlyDeleted;
+  return {
+    frontierFactIds: sendDeletion ? [...source.frontierFactIds] : [],
+    requiredRelationIds: [], resourceHashes: [], reviewFactIds: [],
+    stateFactIds: [],
+    sharedState: sendDeletion
+  };
 }

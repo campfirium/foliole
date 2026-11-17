@@ -1,6 +1,20 @@
+export const TOMBSTONE_DIRECT_STATE_TYPES = [
+  'node_reading', 'node_open_state', 'node_reading_resume', 'parent_child_order'
+] as const;
+
+export const TOMBSTONE_DIRECT_STATE_TYPES_SQL = TOMBSTONE_DIRECT_STATE_TYPES.map(type => `'${type}'`).join(',');
+
+export const RETIRE_NODE_CHILD_STATE_SQL = [
+  `DELETE FROM sync_object_state WHERE object_id = ? AND object_type IN (${TOMBSTONE_DIRECT_STATE_TYPES_SQL})`,
+  `DELETE FROM sync_object_state WHERE object_type = 'node_text_alternative' AND object_id IN (
+    SELECT object_id FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND node_id = ?
+  )`,
+  "DELETE FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND node_id = ?"
+] as const;
+
 export const NODE_CHILD_STATE_TYPES = [
   'node_reading', 'node_open_state', 'parent_child_order',
-  'node_text_alternative', 'topic_daily_count', 'import_source'
+  'node_text_alternative'
 ] as const;
 
 export const NODE_CHILD_STATE_TYPES_SQL = NODE_CHILD_STATE_TYPES.map(type => `'${type}'`).join(',');
@@ -9,8 +23,7 @@ export function nodeChildOwnerSql(state: string) {
   return `CASE
     WHEN ${state}.object_type IN ('node_reading', 'node_open_state', 'parent_child_order')
       THEN ${state}.object_id
-    WHEN ${state}.object_type = 'topic_daily_count' THEN substr(${state}.object_id, 12)
-    ELSE (SELECT node_id FROM sync_node_child_owners owner
+    WHEN ${state}.object_type = 'node_text_alternative' THEN (SELECT node_id FROM sync_node_child_owners owner
       WHERE owner.object_type = ${state}.object_type AND owner.object_id = ${state}.object_id) END`;
 }
 
@@ -35,29 +48,16 @@ export function nodeChildFactIdsSql(nodeId: string) {
     FROM (
       SELECT * FROM sync_object_state WHERE object_type IN
         ('node_reading', 'node_open_state', 'parent_child_order') AND object_id = ${nodeId}
-      UNION ALL SELECT * FROM sync_object_state WHERE object_type = 'topic_daily_count'
-        AND substr(object_id, 12) = +${nodeId}
       UNION ALL SELECT indirect.* FROM sync_node_child_owners owner JOIN sync_object_state indirect
         ON indirect.object_type = owner.object_type AND indirect.object_id = owner.object_id
-        WHERE owner.node_id = ${nodeId}
+        WHERE owner.node_id = ${nodeId} AND owner.object_type = 'node_text_alternative'
     ) child WHERE ${nodeChildPayloadExistsSql('child')}
     ORDER BY child.object_type, child.object_id)), '[]')`;
 }
-
-/**
- * Keyed by type and owner so the planner prefers it over the type prefix of the primary key; lookups compare
- * against `+owner` because a correlated TEXT column would otherwise disqualify the expression.
- */
-export const TOPIC_DAILY_OWNER_SCHEMA = [
-  `CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner_lookup
-  ON sync_object_state(object_type, substr(object_id, 12)) WHERE object_type = 'topic_daily_count'`
-] as const;
-export const TOPIC_DAILY_OWNER_INDEX = TOPIC_DAILY_OWNER_SCHEMA[0];
 
 export const NODE_CHILD_OWNER_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sync_node_child_owners (
     object_type TEXT NOT NULL, object_id TEXT NOT NULL, node_id TEXT NOT NULL,
     PRIMARY KEY(object_type, object_id))`,
-  'CREATE INDEX IF NOT EXISTS idx_sync_node_child_owners_node ON sync_node_child_owners(node_id)',
-  ...TOPIC_DAILY_OWNER_SCHEMA
+  'CREATE INDEX IF NOT EXISTS idx_sync_node_child_owners_node ON sync_node_child_owners(node_id)'
 ];

@@ -38,7 +38,7 @@ it('keeps child tombstones with their node and keeps ownerless tombstones indepe
     .toContain(JSON.stringify(['node_reading', 'topic', 'a'.repeat(64)]));
 });
 
-it('moves import facts to the latest node and omits absent owners without deleting local provenance', async () => {
+it('advertises import facts independently when the latest note changes or is absent', async () => {
   const device = textDevice(); devices.push(device);
   await device.receive([textBranch('base', 'Original')]);
   for (const [index, owner] of ['topic', 'absent', 'topic'].entries()) {
@@ -46,30 +46,30 @@ it('moves import facts to the latest node and omits absent owners without deleti
       content_hash: String(index + 1).repeat(64), deleted_at: null,
       updated_at: `2026-10-16T0${index}:00:00.000Z`, payload_json: JSON.stringify({ latest_node_id: owner }) });
     const entries = await readFramedSyncInventory(device.db);
-    expect(entries.some(entry => entry.objectType === 'import_source')).toBe(false);
+    expect(entries.find(entry => entry.objectType === 'import_source')).toMatchObject({ globalId: 'source' });
     const childFacts = entries.find(entry => entry.objectType === 'node' && entry.globalId === 'topic')?.stateFactIds;
-    expect(childFacts?.some(id => JSON.parse(id)[0] === 'import_source')).toBe(owner === 'topic');
+    expect(childFacts).toEqual([]);
     expect(device.sqlite.prepare('SELECT latest_node_id FROM import_sources WHERE source_fingerprint = ?').get('source'))
       .toEqual({ latest_node_id: owner });
   }
 });
 
-it('converges the placement of an already-applied tombstone without changing its deletion fact', async () => {
-  const { applyFramedSyncNodeChildFact, selectFramedSyncNodeChildFact } = await import('../../lib/core/sync/framedSyncNodeChildFact.js');
+it('relays the same independent import deletion through repeat transfers without a node owner', async () => {
+  const { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact, selectFramedSyncObjectStateFact }
+    = await import('../../lib/core/sync/framedSyncObjectStateFact.js');
   const left = textDevice(); const right = textDevice(); devices.push(left, right);
-  const factId = JSON.stringify(['import_source', 'source', 'a'.repeat(64)]);
-  for (const [device, owner] of [[left, 'a-owner'], [right, 'b-owner']] as const) {
-    await applySyncObjectInTransaction(device.db, { object_type: 'import_source', object_id: 'source',
-      content_hash: 'a'.repeat(64), deleted_at: '2026-10-16', updated_at: '2026-10-16', payload_json: null });
-    await device.db.run('INSERT INTO sync_node_child_owners VALUES (?, ?, ?)', ['import_source', 'source', owner]);
+  const hash = 'a'.repeat(64);
+  const time = '2026-10-16';
+  await applySyncObjectInTransaction(left.db, { object_type: 'import_source', object_id: 'source',
+    content_hash: hash, deleted_at: time, updated_at: time, payload_json: null });
+  const fact = await selectFramedSyncObjectStateFact(left.db,
+    { objectType: 'import_source', globalId: 'source' }, `import_source:${hash}`);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await applyFramedSyncObjectStateRecord(right.db, restoreFramedSyncObjectStateFact(fact));
   }
-  const a = await selectFramedSyncNodeChildFact(left.db, 'a-owner', factId);
-  const b = await selectFramedSyncNodeChildFact(right.db, 'b-owner', factId);
-  await applyFramedSyncNodeChildFact(left.db, b);
-  await applyFramedSyncNodeChildFact(right.db, a);
   for (const device of [left, right]) {
-    expect(await device.db.query('SELECT node_id FROM sync_node_child_owners')).toEqual([{ node_id: 'a-owner' }]);
+    expect(await device.db.query('SELECT * FROM sync_node_child_owners')).toEqual([]);
     expect(await device.db.query('SELECT content_hash, deleted_at FROM sync_object_state'))
-      .toEqual([{ content_hash: 'a'.repeat(64), deleted_at: '2026-10-16' }]);
+      .toEqual([{ content_hash: hash, deleted_at: time }]);
   }
 });

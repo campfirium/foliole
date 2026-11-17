@@ -1,4 +1,5 @@
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { TOMBSTONE_DIRECT_STATE_TYPES } from '../database/nodeChildStateSql.js';
 import { computeSyncContentHash } from '../database/syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 import { hashTextBody } from '../database/textBodyHash.js';
@@ -137,6 +138,8 @@ async function applySingleSyncObjectInTransaction(
     const changed = await applyCurrentParentOrderRecord(port, record);
     return changed || options.includeAlreadyApplied ? `parent_child_order:${record.object_id}` : null;
   }
+  if (TOMBSTONE_DIRECT_STATE_TYPES.some(type => type === record.object_type) &&
+      (await port.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [record.object_id])).length) return null;
   if (record.object_type === 'node_reading_resume') {
     const merged = await applyReadingResumeRecord(port, record);
     if (merged) await upsertAppliedSyncObjectState(port, merged);

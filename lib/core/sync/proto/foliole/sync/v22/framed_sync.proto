@@ -79,6 +79,7 @@ message InventoryEntry {
   bool daily_flow_current = 14;
   repeated string daily_flow_node_ids = 15;
   string adoption_parent_id = 16;
+  bool permanently_deleted = 17;
   string current_version_id = 10;
   bool unready = 11;
 }

@@ -101,8 +101,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', async () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Inventory update triggers change at 119 outside the historical beforeVersion plan.
-      Math.max(119, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Import history separates from node inventory at 122 outside the historical beforeVersion plan.
+      Math.max(122, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
     const { connection, manager } = harness({ existed: true, storedId: 'ios-device', version: 113 });
