@@ -16,17 +16,29 @@ import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 const ARTICLE_DOCUMENT = '[data-companion-article-document="true"]';
 const READING_SURFACE = '[data-companion-reading-surface="true"]';
 
-type SelectionAtTap = {
+type TapStart = {
+  pointerId: number;
+  startedAt: number;
+  x: number;
+  y: number;
+};
+
+type SelectionAtTap = TapStart & ({
+  kind: 'managed';
+  editor: EditorAdapter | null;
+} | {
+  kind: 'native';
   anchorNode: Node | null;
   anchorOffset: number;
   editorFrom: number;
   editorTo: number;
   focusNode: Node | null;
   focusOffset: number;
-  startedAt: number;
-  x: number;
-  y: number;
-};
+});
+
+function readTapStart(event: PointerEvent): TapStart {
+  return { pointerId: event.pointerId, startedAt: Date.now(), x: event.clientX, y: event.clientY };
+}
 
 function readSelectionAtTap(editor: EditorAdapter | null, event: PointerEvent): SelectionAtTap | null {
   const target = event.target;
@@ -50,32 +62,38 @@ function readSelectionAtTap(editor: EditorAdapter | null, event: PointerEvent): 
     })();
   if (overSelection) return null;
   return {
+    ...readTapStart(event), kind: 'native',
     anchorNode: native?.anchorNode ?? null,
     anchorOffset: native?.anchorOffset ?? 0,
     editorFrom: selection?.from ?? 0,
     editorTo: selection?.to ?? 0,
     focusNode: native?.focusNode ?? null,
-    focusOffset: native?.focusOffset ?? 0,
-    startedAt: Date.now(), x: event.clientX, y: event.clientY
+    focusOffset: native?.focusOffset ?? 0
   };
 }
 
-function selectionStayedAtTap(start: SelectionAtTap, editor: EditorAdapter | null) {
+function selectionStayedAtTap(start: Extract<SelectionAtTap, { kind: 'native' }>, editor: EditorAdapter | null) {
   const native = window.getSelection();
   const selection = editor?.getSelection();
-  return Date.now() - start.startedAt < 500 &&
-    native?.anchorNode === start.anchorNode && native?.anchorOffset === start.anchorOffset &&
+  return native?.anchorNode === start.anchorNode && native?.anchorOffset === start.anchorOffset &&
     native?.focusNode === start.focusNode && native?.focusOffset === start.focusOffset &&
     (selection?.from ?? 0) === start.editorFrom && (selection?.to ?? 0) === start.editorTo;
 }
 
-function clearFinishedOutsideTap(
+function clearFinishedTap(
   event: MouseEvent | PointerEvent | TouchEvent,
   started: SelectionAtTap | null,
-  args: { clearSelectionAndCloseToolbar: () => void; editorRef: MutableRefObject<EditorAdapter | null> }
+  args: SelectionAnnotationDocumentEventsArgs
 ) {
-  if (event.type !== 'pointerup' || !started || toolbarDom.isCompanionArticleInteractiveTarget(event.target) ||
-    isExistingHighlightTarget(event.target) || !selectionStayedAtTap(started, args.editorRef.current)) return false;
+  if (event.type !== 'pointerup' || !started || (event as PointerEvent).pointerId !== started.pointerId ||
+    Date.now() - started.startedAt >= 500 || !('clientX' in event) ||
+    Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8) return false;
+  const editor = args.editorRef.current;
+  if (started.kind === 'managed') {
+    if (!args.hasAdjustableSelection?.() || started.editor !== editor ||
+      toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return false;
+  } else if (toolbarDom.isCompanionArticleInteractiveTarget(event.target) ||
+    isExistingHighlightTarget(event.target) || !selectionStayedAtTap(started, editor)) return false;
   args.clearSelectionAndCloseToolbar();
   return true;
 }
@@ -89,6 +107,15 @@ interface SelectionAnnotationDocumentEventsArgs {
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
   scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint) => void;
+}
+
+function readPointerDownTap(args: SelectionAnnotationDocumentEventsArgs, pointer: PointerEvent): SelectionAtTap | null {
+  if (pointer.isPrimary === false || pointer.button !== 0 ||
+    toolbarDom.isCompanionSelectionToolbarTarget(pointer.target)) return null;
+  const editor = args.editorRef.current;
+  return args.hasAdjustableSelection?.()
+    ? { ...readTapStart(pointer), kind: 'managed', editor }
+    : readSelectionAtTap(editor, pointer);
 }
 
 function recordSelectionSnapshot(editor: EditorAdapter | null) {
@@ -107,7 +134,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
     }
     const rememberSelectionInteraction = (event: MouseEvent | PointerEvent | TouchEvent) => {
       if (toolbarDom.isCompanionHighlightRangeDragging()) return;
-      if (event.type === 'pointerdown') tapRef.current = readSelectionAtTap(args.editorRef.current, event as PointerEvent);
+      if (event.type === 'pointerdown') tapRef.current = readPointerDownTap(args, event as PointerEvent);
       if (event.type === 'touchmove') tapRef.current = null;
       const tap = tapRef.current;
       if (event.type === 'pointermove' && tap && 'clientX' in event &&
@@ -115,9 +142,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
-      if (args.hasAdjustableSelection?.()) {
-        if (event.type === 'pointerdown') args.clearSelectionAndCloseToolbar();
-      } else args.closeSelectionToolbar();
+      if (!args.hasAdjustableSelection?.()) args.closeSelectionToolbar();
     };
     const handleSelectionEnd = (event: MouseEvent | PointerEvent | TouchEvent) => {
       if (toolbarDom.isCompanionHighlightRangeDragging()) {
@@ -126,7 +151,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       }
       const started = tapRef.current;
       if (event.type === 'pointerup') tapRef.current = null;
-      if (clearFinishedOutsideTap(event, started, args)) return;
+      if (clearFinishedTap(event, started, args)) return;
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
@@ -141,6 +166,8 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
         args.scheduleSelectionToolbarOpen();
       }
     };
+    const cancelTap = () => { tapRef.current = null; };
+    document.addEventListener('pointercancel', cancelTap, true);
     document.addEventListener('pointerdown', rememberSelectionInteraction, true);
     document.addEventListener('pointermove', rememberSelectionInteraction, true);
     document.addEventListener('pointerup', handleSelectionEnd, true);
@@ -148,6 +175,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
     document.addEventListener('touchend', handleSelectionEnd, true);
     document.addEventListener('touchmove', rememberSelectionInteraction, true);
     return () => {
+      document.removeEventListener('pointercancel', cancelTap, true);
       document.removeEventListener('pointerdown', rememberSelectionInteraction, true);
       document.removeEventListener('pointermove', rememberSelectionInteraction, true);
       document.removeEventListener('pointerup', handleSelectionEnd, true);

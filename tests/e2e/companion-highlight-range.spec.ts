@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type CDPSession, type Page, type Route } from '@playwright/test';
 
 test.use({ hasTouch: true, isMobile: true });
 
@@ -131,4 +131,71 @@ test('scrolls in both directions from an existing highlight and opens its toolba
   }
   await highlight.tap();
   await expect(page.getByRole('button', { name: 'Adjust anchor end' })).toBeVisible();
+});
+
+async function takeOverWord(page: Page, cdp: CDPSession, line: string) {
+  const paragraph = page.getByText(line, { exact: true });
+  const { x, y } = (await paragraph.boundingBox())!;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x + 10, y: y + 8 }] });
+  // Chromium has no Android ActionMode; provide the OS word selection and release notification.
+  await paragraph.evaluate(element => window.getSelection()!.setBaseAndExtent(element.firstChild!, 0, element.firstChild!, 7));
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.evaluate(() => document.dispatchEvent(new Event('foliole-android-reading-touch-release')));
+  await expect(page.locator('.cm-md-reading-selection')).toHaveText('Reading');
+}
+
+async function touchDrag(cdp: CDPSession, from: { x: number; y: number }, to: { x: number; y: number }) {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+  for (let i = 1; i <= 14; i++) {
+    const x = from.x + (to.x - from.x) * i / 14;
+    const y = from.y + (to.y - from.y) * i / 14;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
+async function center(locator: ReturnType<Page['locator']>) {
+  const { x, y, width, height } = (await locator.boundingBox())!;
+  return { x: x + width / 2, y: y + height / 2 };
+}
+
+test('retains the Android reading range during body swipes and highlights the range after dragging again', async ({ page, context }) => {
+  await page.addInitScript(() => Object.assign(window, { androidBridge: {} }));
+  await openReader(page);
+  const cdp = await context.newCDPSession(page);
+  const surface = page.locator('[data-companion-reading-surface]');
+  const mark = page.locator('.cm-md-reading-selection');
+  const end = page.getByRole('button', { name: 'Adjust anchor end' });
+  const paragraph = (number: number) => page.getByText(`Reading paragraph ${number}.`, { exact: true });
+
+  await takeOverWord(page, cdp, 'Reading paragraph 1.');
+  await paragraph(2).tap();
+  await expect(mark).toHaveCount(0);
+  await expect(page.getByRole('toolbar')).toBeHidden();
+
+  await takeOverWord(page, cdp, 'Reading paragraph 1.');
+  await touchDrag(cdp, await center(end), await center(paragraph(10)));
+  await expect(mark.last()).toContainText('Reading paragraph');
+  const range = await mark.allTextContents();
+  const offset = () => surface.evaluate(element => element.scrollTop);
+  const before = await offset();
+  await touchDrag(cdp, { x: 320, y: 730 }, { x: 320, y: 230 });
+  await expect.poll(offset).toBeGreaterThan(before + 350);
+  await expect(mark).not.toHaveCount(0);
+  expect(await mark.allTextContents()).toEqual(range);
+  const scrolled = await offset();
+  await touchDrag(cdp, { x: 320, y: 270 }, { x: 320, y: 425 });
+  await expect.poll(offset).toBeLessThan(scrolled - 50);
+  expect(await mark.allTextContents()).toEqual(range);
+
+  await expect(end).toBeInViewport();
+  await touchDrag(cdp, await center(end), await center(paragraph(13)));
+  await expect(mark.last()).toContainText('Reading paragraph');
+  const final = (await mark.allTextContents()).join('\n\n');
+  expect(final).toContain('Reading paragraph 12.');
+  expect(final.length).toBeGreaterThan(range.join('\n\n').length);
+  await page.getByRole('button', { name: 'Highlight', exact: true }).tap();
+  const saved = JSON.parse((await page.getByLabel('Saved highlight range').textContent())!);
+  expect(saved.originalText).toBe(final);
+  expect(saved.to - saved.from).toBe(final.length);
 });

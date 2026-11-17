@@ -162,7 +162,7 @@ function touchPointer(target: Element | Document, type: string, x: number, y = 1
   fireEvent(target, event);
 }
 
-it('hands a fresh Android long-press to the reader handles and saves the range after two releases', async () => {
+it('hands a fresh Android long-press to the reader handles and saves the extended range after scrolling the body', async () => {
   vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getPositionClientRect')
     .mockImplementation(position => new DOMRect(20 + position * 3, 100, 3, 20));
   const { container } = renderWithLocalization(<Reader immersive initial={await loadCompanionWorkspaceSyncState()} />);
@@ -191,6 +191,16 @@ it('hands a fresh Android long-press to the reader handles and saves the range a
   touchPointer(screen.getByRole('button', { name: 'Adjust anchor end' }), 'pointerdown', end);
   touchPointer(document, 'pointermove', end);
   touchPointer(document, 'pointerup', end);
+  release();
+  expect(container.querySelector('.cm-md-reading-selection')?.textContent).toBe('Repeat this phrase');
+
+  // jsdom cannot pan; deliver the browser's canceled pointer and resulting scroll.
+  touchPointer(selected, 'pointerdown', 200, 200);
+  touchPointer(selected, 'pointermove', 200, 160);
+  touchPointer(selected, 'pointercancel', 200, 150);
+  surface.scrollTop = 30;
+  fireEvent.scroll(surface);
+  fireEvent.touchEnd(selected, { touches: [] });
   release();
   expect(container.querySelector('.cm-md-reading-selection')?.textContent).toBe('Repeat this phrase');
 
