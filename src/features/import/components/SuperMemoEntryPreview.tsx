@@ -7,7 +7,6 @@ import type { SuperMemoXmlDraftElement } from '../../../../lib/core/import/super
 import type { NativeSuperMemoPreview, NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
-import { SuperMemoConversionNote } from './SuperMemoConversionNote';
 import { SuperMemoEntryButton, SuperMemoPreviewTree } from './SuperMemoPreviewTree';
 
 const tabs = ['converted', 'skipped', 'missing'] as const;
@@ -132,10 +131,7 @@ export function SuperMemoEntryPreview({ preview, elements }: {
           </div>
         </section>
       </div>
-      <footer className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-1">
-        <SuperMemoConversionNote section="materials" />
-        <SuperMemoConversionNote section="annotations" />
-      </footer>
+      <p className="px-1 text-xs leading-relaxed text-foreground/75">{t('desktop.superMemoDrafts.conversionNote')}</p>
       {media.local || media.remote || media.audio ? <p className="px-1 text-xs text-foreground/65">
         {t('desktop.superMemoDrafts.media', media)}
       </p> : null}

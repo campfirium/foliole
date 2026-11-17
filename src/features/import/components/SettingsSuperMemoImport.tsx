@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
@@ -50,20 +50,38 @@ function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGra
   </div>);
 }
 
-function DraftSourcePicker({ name, disabled, onLoad, onLoadNew }: {
-  name: string | undefined; disabled: boolean; onLoad(): void; onLoadNew?: (() => void) | undefined;
-}) {
+function DraftSourcePicker({ disabled, onLoad }: { disabled: boolean; onLoad(): void }) {
   const t = useTranslation();
   return <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/15 px-4 py-3">
     <div className="min-w-0">
-      <h2 className="text-sm font-semibold">{name ?? t('desktop.superMemoDrafts.sourceTitle')}</h2>
-      {!name ? <p className="mt-1 max-w-prose text-sm text-foreground/70">{t('desktop.superMemoDrafts.prepareSource')}</p> : null}
+      <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.sourceTitle')}</h2>
+      <p className="mt-1 max-w-prose text-sm text-foreground/70">{t('desktop.superMemoDrafts.prepareSource')}</p>
     </div>
-    <div className="flex flex-wrap gap-2">
-      <AppButton disabled={disabled} onClick={onLoad}>{t(name ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}</AppButton>
-      {onLoadNew ? <AppButton disabled={disabled} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
-    </div>
+    <AppButton disabled={disabled} onClick={onLoad}>{t('desktop.superMemoDrafts.loadSource')}</AppButton>
   </div>;
+}
+
+function DraftHeader({ titleId, name, disabled, onReload, onLoadNew }: {
+  titleId: string; name: string | undefined; disabled: boolean; onReload(): void; onLoadNew?: (() => void) | undefined;
+}) {
+  const t = useTranslation();
+  return (
+    <AppDialogTitle asChild className="flex-wrap gap-x-3 gap-y-1">
+      <header>
+        <h2 id={titleId} className="shrink-0">{t('desktop.superMemoDrafts.title')}</h2>
+        {name ? <span title={name} className="min-w-0 flex-1 truncate text-sm text-foreground/70">{name}</span> : null}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {name ? <AppButton size="sm" disabled={disabled} onClick={onReload}>{t('desktop.superMemoDrafts.reloadSource')}</AppButton> : null}
+          {onLoadNew ? <AppButton size="sm" disabled={disabled} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
+          <AppDialogClose asChild>
+            <AppButton size="sm" variant="ghost" disabled={disabled} aria-label={t('desktop.superMemoDrafts.close')}>
+              <X aria-hidden className="size-4" />
+            </AppButton>
+          </AppDialogClose>
+        </div>
+      </header>
+    </AppDialogTitle>
+  );
 }
 
 function useSuperMemoDraftNavigation(
@@ -96,31 +114,27 @@ function useSuperMemoDraftNavigation(
 
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
+  const titleId = useId();
   const model = useSuperMemoDraft(initialGrades);
   const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = model;
   const { parameters, setParameters, selection, setSelection, backToPreview, dismissDialog } = useSuperMemoDraftNavigation(model, close);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
+  const showSource = (!parameters || update) && !result;
+  const reloadSource = () => { setSelection(undefined); void loadSource(); };
   const selected = selection && selection.signature === update?.signature ? selection.ids : [];
   return (
     <AppDialog open onOpenChange={open => { if (!open) dismissDialog(); }}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent layout="task" className="max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]">
-          <AppDialogTitle>{t('desktop.superMemoDrafts.title')}</AppDialogTitle>
-          <AppDialogClose asChild>
-            <AppButton className="absolute right-4 top-3" variant="ghost" disabled={busy}
-              aria-label={t('desktop.superMemoDrafts.close')}>
-              <X aria-hidden className="size-4" />
-            </AppButton>
-          </AppDialogClose>
+        <AppDialogContent layout="task" aria-labelledby={titleId} className="max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]">
+          <DraftHeader titleId={titleId} name={showSource ? source?.name : undefined} disabled={busy} onReload={reloadSource}
+            onLoadNew={showSource && update ? () => { setParameters(true); setSelection(undefined); void loadSource(true); } : undefined} />
           <AppDialogDescription className="sr-only">
             {t('desktop.superMemoDrafts.description')}
           </AppDialogDescription>
           <AppDialogBody className="flex min-h-0 flex-col gap-3 overflow-y-auto">
-            {(!parameters || update) && !result ? <DraftSourcePicker name={source?.name} disabled={busy}
-              onLoad={() => { setSelection(undefined); void loadSource(); }}
-              onLoadNew={update ? () => { setParameters(true); setSelection(undefined); void loadSource(true); } : undefined} /> : null}
+            {showSource && !source ? <DraftSourcePicker disabled={busy} onLoad={reloadSource} /> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
             {!result && !update ? <div hidden={parameters}><SuperMemoEntryPreview key={source?.filePath} preview={preview} elements={draft?.elements} /></div> : null}
             {parameters && preview && !result && !update ? (
