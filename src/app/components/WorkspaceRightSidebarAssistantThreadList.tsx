@@ -13,6 +13,8 @@ import {
 
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
+const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-x-inspector-list-inset before:inset-y-px before:-z-10 before:transition-colors';
+
 type ThreadListProps = {
   onOpenMaterial: (nodeId: string) => void;
   trashedNodeIds?: readonly string[] | undefined;
@@ -38,10 +40,7 @@ export function WorkspaceRightSidebarAssistantThreadList(props: ThreadListProps)
   );
 }
 
-function AssistantHistoryRow({ record, list }: {
-  record: NativeAssistantThreadIndexRecord;
-  list: ThreadListProps;
-}) {
+function AssistantHistoryRow({ record, list }: { record: NativeAssistantThreadIndexRecord; list: ThreadListProps }) {
   const t = useTranslation();
   const active = record.providerThreadId === list.selectedThreadId;
   const preview = record.preview || t('desktop.rightPanel.assistant.noPreview');
@@ -49,10 +48,11 @@ function AssistantHistoryRow({ record, list }: {
   return (
     <li
       className={cn(
-        'group/history-row relative flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
+        'group/history-row relative isolate flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2',
+        rowHighlightClassName,
         active
-          ? 'bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
-          : 'hover:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
+          ? 'before:bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
+          : 'hover:before:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
       )}
     >
       <div className="min-w-0 flex-1">

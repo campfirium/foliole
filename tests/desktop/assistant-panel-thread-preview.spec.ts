@@ -69,18 +69,18 @@ test('Aide history aligns history rows and reveals removal on hover or keyboard 
   await expect(remove).toHaveCSS('opacity', '0');
   await title.hover();
   await expect(remove).toHaveCSS('opacity', '0.6');
-  await desktopWindow.getByRole('heading', { name: 'Aide' }).hover();
-  await expect(remove).toHaveCSS('opacity', '0');
-  await title.focus();
-  await title.press('Tab');
-  await expect(remove).toBeFocused();
-  await expect(remove).toHaveCSS('opacity', '1');
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-thread-preview', {
     path: screenshotPath,
     contentType: 'image/png'
   });
+  await desktopWindow.getByRole('heading', { name: 'Aide' }).hover();
+  await expect(remove).toHaveCSS('opacity', '0');
+  await title.focus();
+  await title.press('Tab');
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveCSS('opacity', '1');
 });
 
 test('Aide links an old conversation inline and preserves its history in the new conversation', async ({
