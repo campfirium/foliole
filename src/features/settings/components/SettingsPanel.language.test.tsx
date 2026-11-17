@@ -1,5 +1,7 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { APP_LANGUAGE_PREFERENCES } from '../../../shared/localization/appLanguage';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -18,7 +20,8 @@ it('offers System and every formal locale, switches immediately, and persists th
 
   expect(await screen.findByRole('heading', { level: 2, name: 'General' })).toBeInTheDocument();
   const select = screen.getByRole('combobox', { name: 'App language' });
-  expect(screen.getAllByRole('option').filter((option) => option.closest('select') === select)).toHaveLength(13);
+  expect(within(select).getAllByRole<HTMLOptionElement>('option').map(option => option.value).sort())
+    .toEqual([...APP_LANGUAGE_PREFERENCES].sort());
   expect(screen.getByRole('option', { name: 'Português (Brasil)' })).toHaveValue('pt-BR');
 
   fireEvent.change(select, { target: { value: 'de' } });

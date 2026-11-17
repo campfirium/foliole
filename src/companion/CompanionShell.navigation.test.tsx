@@ -28,7 +28,8 @@ vi.mock('./CompanionArticleDocument', () => ({
     readingSelection?: { from: number; to: number } | null;
   }) => {
     useEffect(() => {
-      props.onEditorReady?.({ revealSelectionCentered, setSearchDecorations });
+      props.onEditorReady?.({ getSelection: () => ({ from: 0, to: 0 }),
+        revealSelectionCentered, setSearchDecorations, setSelection: vi.fn() });
       return () => props.onEditorReady?.(null);
     }, [props]);
     return (

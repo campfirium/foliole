@@ -27,7 +27,8 @@ it('uses only the current Sync Group data owner for production signing', async (
     readJava('FolioleCompanionCurrentGroupCredential.java'),
     readJava('FolioleCompanionSyncGroupSigning.java')
   ]);
-  expect(credential).toContain('FolioleCompanionSyncGroupDataBridge.current().request(');
+  expect(credential).toContain('load(FolioleCompanionSyncGroupDataBridge.current(), groupId, budget)');
+  expect(credential).toContain('bridge.request(');
   expect(credential).toContain('"load_current_credential"');
   expect(signing).toContain('FolioleCompanionCurrentGroupCredential.load(groupId)');
   expect(signing).toContain('FolioleCompanionWorkgroupHttp.prepareWithKey(');

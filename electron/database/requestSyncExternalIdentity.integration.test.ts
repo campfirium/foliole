@@ -63,8 +63,8 @@ it('preserves all remote import-source fields through request replay and reopen'
       content_hash: computeSyncContentHash('import_source', payload), payload_json: JSON.stringify(payload),
       updated_at: at, deleted_at: null });
     const difference = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db), remote: [] })
-      .find(value => value.objectType === 'node' && value.globalId === 'topic');
-    if (!difference) throw new Error('import_owner_missing');
+      .find(value => value.objectType === 'import_source' && value.globalId === 'source-contract');
+    if (!difference) throw new Error('import_source_missing');
     for (let replay = 0; replay < 2; replay++) {
       await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
         providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);

@@ -96,5 +96,6 @@ it('clears inactive orphan flags without discarding valid progress or deletion r
   deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], deletedAt: DELETED_AT });
   await pruneLearningRowsWithoutVisibleNodes(peer.port);
   expect(persistedReading(peer)).toEqual({ reading: [], positions: [] });
-  expect(peer.db.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node_reading'").pluck().get()).toBe(DELETED_AT);
+  expect(peer.db.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node_reading'").pluck().get()).toBeUndefined();
+  expect(peer.db.prepare("SELECT deleted_at FROM node_sync_tombstones WHERE node_id = 'topic'").pluck().get()).toBe(DELETED_AT);
 });

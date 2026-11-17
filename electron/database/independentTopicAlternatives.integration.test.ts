@@ -122,7 +122,7 @@ it('deletes independent alternatives with their node and rejects delayed creatio
     expect(host.sqlite.prepare("SELECT id FROM nodes WHERE id='topic'").get()).toBeUndefined();
     expect(host.sqlite.prepare('SELECT COUNT(*) FROM node_text_alternatives').pluck().get()).toBe(0);
     expect(host.sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type='node_text_alternative' AND object_id=?")
-      .pluck().get(entry!.id)).toBeTruthy();
+      .pluck().get(entry!.id)).toBeUndefined();
   }
 });
 

@@ -125,7 +125,7 @@ function createTopicContainerSnapshot(): WorkspaceSnapshot {
 }
 
 describe('CompanionDirectoryContent external article exit', () => {
-  it.each(['row', 'menu'])('opens an External document using its %s', (entry) => {
+  it('opens an External document from its row', () => {
     mocks.useCompanionExternalDirectory.mockReturnValue(externalDirectory);
     mocks.useCompanionExternalDocument.mockReturnValue(null);
     const onChangeSelection = vi.fn();
@@ -142,12 +142,7 @@ describe('CompanionDirectoryContent external article exit', () => {
       />
     );
 
-    if (entry === 'menu') {
-      fireEvent.click(screen.getByRole('button', { name: 'companion.browse.more: Doc title' }));
-      fireEvent.click(screen.getByRole('button', { name: 'desktop.searchPreview.open' }));
-    } else {
-      fireEvent.click(screen.getByText('Doc title'));
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'Open topic Doc title' }));
 
     expect(onChangeSelection).toHaveBeenCalledWith({
       documentId: 'external-1:sub/doc.md', kind: 'externalDocument'

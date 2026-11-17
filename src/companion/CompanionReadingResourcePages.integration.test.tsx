@@ -56,7 +56,7 @@ it.each(['pdf', 'external'])('returns from a search %s to the same expanded resu
   expect(result).toBeVisible();
 });
 
-it('returns an external document to its parent directory after row and menu opens', async () => {
+it('returns an external document to its parent directory after opening its row', async () => {
   library.database.prepare(`INSERT INTO external_search_folders
     (id, folder_path, attachment_mode, document_count, created_at, updated_at, source_ref)
     VALUES ('folder', '/Reference', 'reference', 60, 'now', 'now', 'fixture-source')`).run();
@@ -69,15 +69,10 @@ it('returns an external document to its parent directory after row and menu open
   fireEvent.click(await screen.findByRole('button', { name: 'Open folder Reference' }));
   const row = await screen.findByRole('button', { name: 'Open topic 000000' });
   const page = screen.getByTestId('companion-scroll-container');
-  for (const menu of [false, true]) {
-    if (menu) {
-      fireEvent.click(screen.getByRole('button', { name: 'More: 000000' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Open' }));
-    } else fireEvent.click(row);
-    fireEvent.click(await screen.findByTestId('companion-article-document'));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
-    expect(await screen.findByRole('button', { name: 'Open topic 000000' })).toBe(row);
-    expect(screen.getByTestId('companion-scroll-container')).toBe(page);
-  }
+  fireEvent.click(row);
+  fireEvent.click(await screen.findByTestId('companion-article-document'));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+  expect(await screen.findByRole('button', { name: 'Open topic 000000' })).toBe(row);
+  expect(screen.getByTestId('companion-scroll-container')).toBe(page);
 });

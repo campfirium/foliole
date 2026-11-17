@@ -41,7 +41,7 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
     <div data-sidebar-preview-panel={side} data-floating={floating || undefined}
       className={`grid min-w-0 shrink-0 place-items-center overflow-hidden text-ui-sm
         ${floating
-          ? `absolute inset-y-0 z-10 border-x border-foreground/30 shadow-lg ${side === 'left' ? 'left-0' : 'right-0'}`
+          ? `absolute inset-y-0 z-local-overlay border-x border-foreground/30 shadow-panel ${side === 'left' ? 'left-0' : 'right-0'}`
           : `text-muted-foreground border-settings-divider ${side === 'left' ? 'border-r' : 'border-l'}`}`}
       onPointerLeave={floating ? dismissHover : undefined}
       style={{ width: `${tier[side].width}%`, background: previewPanelBackground(side, floating) }}>

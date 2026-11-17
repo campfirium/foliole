@@ -65,7 +65,9 @@ it('keeps provider lifecycle state complete and owned by one active bridge', asy
   expect(plugin).toContain('FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest)');
   expect(bridge).toContain('active.replaceDispatcher(dispatcher)');
   expect(provider).not.toContain('replaceDispatcher');
-  expect(provider).toContain('isProviderStartCurrent(request)');
+  expect(provider).toContain('FolioleCompanionSyncGroupDataBridge.beginProviderStart(owner, document)');
+  expect(provider).toContain('FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)');
+  expect(provider).toContain('activeOwner = owner; dataBridge = bridge;');
   expect(provider).toContain('server = new FolioleCompanionSyncGroupServer');
   expect(provider).toContain('advertisement = FolioleCompanionNsdAdvertisement.start');
   expect(provider).toContain('advertisement = null; server = null;');

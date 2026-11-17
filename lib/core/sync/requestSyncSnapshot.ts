@@ -18,17 +18,14 @@ import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference, files: RequestSyncFiles) {
   const requested = requiredFramedSyncNodeVersionIds(difference);
   for (const id of requested) {
-    const record = await loadRetainedSyncNodeVersionFact(db, id, false);
+    const scope = difference.sourceSnapshot.permanentlyDeleted ? 'deletion-only' : undefined;
+    const record = await loadRetainedSyncNodeVersionFact(db, id, false, scope);
     if (!record || record.object_id !== difference.globalId) throw new Error(`request_sync_version_missing:${id}`);
     if (isNodeVersionIdentityOnly(record)) {
       await files.writeFact(projectFramedSyncNodeIdentityFact(record));
       continue;
     }
-    const projection = projectFramedSyncNodeRecord(difference.sourceSnapshot.permanentlyDeleted && record.is_tombstone
-      ? { ...record, body_text: null, alternative_bodies: [], snapshot: {
-        ...record.snapshot, content: null, opening_text: null, title: '',
-        ...(record.snapshot.text_alternatives?.length ? { text_alternatives: [] } : {})
-      } } : record);
+    const projection = projectFramedSyncNodeRecord(record);
     const fact = projection.manifest.facts[0];
     const body = fact?.blobs.find(blob => blob.role === 1);
     if (!fact || !body) throw new Error('request_sync_body_descriptor_missing');

@@ -76,7 +76,7 @@ it('moves the active node under an empty target node from the command palette', 
   fireEvent.keyDown(commandInput, { key: 'Enter' });
 
   const moveDialog = await screen.findByRole('dialog', { name: 'Move to' });
-  const moveInput = within(moveDialog).getByLabelText('Move to');
+  const moveInput = within(moveDialog).getByRole('textbox', { name: /Move .+ to…/u });
   fireEvent.change(moveInput, { target: { value: 'Article' } });
 
   await waitFor(() => {
@@ -123,7 +123,7 @@ it('keeps non-derived topics as move targets even when they already have content
   fireEvent.keyDown(commandInput, { key: 'Enter' });
 
   const moveDialog = await screen.findByRole('dialog', { name: 'Move to' });
-  const moveInput = within(moveDialog).getByLabelText('Move to');
+  const moveInput = within(moveDialog).getByRole('textbox', { name: /Move .+ to…/u });
   fireEvent.change(moveInput, { target: { value: 'Article' } });
 
   await waitFor(() => {

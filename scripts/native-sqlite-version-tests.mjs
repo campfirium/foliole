@@ -1,4 +1,8 @@
 export const controlledVersionSqliteTests = [
+  'electron/database/requestSyncCompactDeletion.integration.test.ts',
+  'electron/database/requestSyncFreshLegacyDeletion.integration.test.ts',
+  'electron/sync/independentImportHistory.integration.test.ts',
+  'electron/sync/requestSyncTombstoneBatchHttp.integration.test.ts',
   'electron/database/publicDesktopDatabaseCapabilities.test.ts',
   'electron/database/requestSyncAnchorRepairEcho.integration.test.ts',
   'src/companion/CompanionImageClozeLayer.integration.test.tsx',

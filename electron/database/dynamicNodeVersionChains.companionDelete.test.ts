@@ -25,7 +25,7 @@ function originalFacts(db: Database.Database) {
   };
 }
 
-it('receives a deleted object complete chain through current requests with FK enabled and preserves it after reopening', async () => {
+it('receives only the deletion fact through current requests with FK enabled and preserves it after reopening', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -33,6 +33,7 @@ it('receives a deleted object complete chain through current requests with FK en
   const identity = captureVersionIdentity(source, base);
   const tomb = permanentlyDelete(source);
   const original = originalFacts(source.db);
+  const received = { tombstone: original.tombstone, versions: [], parents: [] };
   expect(source.db.prepare(`SELECT body_text, content_hash,
     json_extract(snapshot_json, '$.deleted_version_metadata_digest') AS digest,
     json_extract(snapshot_json, '$.body_deleted') AS retired FROM node_sync_versions WHERE version_id = ?`).get(base))
@@ -43,19 +44,19 @@ it('receives a deleted object complete chain through current requests with FK en
   await withLibraryRequestSnapshot(source, target, async replay => {
     await replay();
     await collectNodeVersionPayloads(target.port, 'topic');
-    expect(originalFacts(target.db)).toEqual(original);
-    expect(target.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(base)).toBeNull();
+    expect(originalFacts(target.db)).toEqual(received);
+    expect(target.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(base)).toBeUndefined();
     expect(target.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(tomb.version_id) ?? null)
       .toBeNull();
     expect(target.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
     expect(target.db.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(target.db.pragma('foreign_key_check')).toEqual([]);
     await replay();
-    expect(originalFacts(target.db)).toEqual(original);
+    expect(originalFacts(target.db)).toEqual(received);
   });
   const reopened = new Database(target.file, { readonly: true });
   try {
-    expect(originalFacts(reopened)).toEqual(original);
+    expect(originalFacts(reopened)).toEqual(received);
     expect(reopened.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(tomb.version_id) ?? null)
       .toBeNull();
     expect(reopened.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();

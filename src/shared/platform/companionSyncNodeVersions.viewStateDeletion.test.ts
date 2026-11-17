@@ -1,11 +1,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
-import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionResourceSchemaStatements';
-import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
+import { createCompanionDatabase } from '../../../lib/core/database/companionDatabaseMigrationExecutor';
+import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
+import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { applyCompanionSyncNodeVersionsWithSharedCore } from './companionSyncNodeVersions';
 import { createFakeCapacitorConnection } from './companionSyncNodeVersionsTestSupport';
 
@@ -15,9 +15,9 @@ afterEach(() => { db?.close(); db = null; });
 it('applies a remote deletion of a topic this phone has opened and scrolled', async () => {
   db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  for (const statements of [ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS, ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
-    ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS]) db.exec(statements.join(';\n'));
   const connection = createFakeCapacitorConnection(db) as never;
+  const port = createCapacitorSqliteDbPort(connection, 'android');
+  await port.transaction(tx => createCompanionDatabase(tx, COMPANION_DATABASE_VERSION));
   await applyCompanionSyncNodeVersionsWithSharedCore(connection, [topic('viewed#1', null, null)]);
   db.prepare(`INSERT INTO node_view_state (node_id, host_name, scroll_top, source, updated_at)
     VALUES ('viewed-topic', 'Phone', 480, 'user-scroll', '2026-10-24T00:00:00.000Z')`).run();
