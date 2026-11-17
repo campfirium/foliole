@@ -24,11 +24,12 @@ test('previews different XML exports and changes the interval without saving a d
   const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
   await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toBeVisible();
   const entries = dialog.getByRole('region', { name: /^(Entries|条目)$/ });
-  const materials = entries.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ });
-  const annotations = preview.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ });
+  const materials = dialog.getByRole('heading', { name: /^(Where excerpts and Items go|摘录与检测项的归属)$/ });
+  const annotations = dialog.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ });
   await expect(materials).toBeVisible();
   await expect(annotations).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Conversion rules|转换细则)$/ })).toHaveCount(0);
+  await expect(entries.getByRole('heading', { name: /Where excerpts and Items go|摘录与检测项的归属/ })).toHaveCount(0);
+  await expect(preview.getByRole('heading', { name: /Highlight and cloze locations|高亮与挖空定位/ })).toHaveCount(0);
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await continueXml(desktopWindow);
@@ -49,7 +50,6 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(slider).toHaveValue('100');
   await expect(materials).toBeHidden();
   await expect(annotations).toBeHidden();
-  await expect(slider).toHaveValue('100');
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();

@@ -120,7 +120,6 @@ export function SuperMemoEntryPreview({ preview, elements }: {
               <SuperMemoEntryButton row={row} active={current?.id} onSelect={setActive} />
             </li>)}</ul>}
           </div>
-          <SuperMemoConversionNote section="materials" />
         </section>
         <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="flex min-h-0 min-w-0 flex-col">
           <h2 className="flex min-h-11 items-center border-b border-foreground/10 px-4 text-xs font-medium text-foreground/70">
@@ -131,9 +130,12 @@ export function SuperMemoEntryPreview({ preview, elements }: {
               <p className="text-foreground/60">{t(preview ? 'desktop.superMemoDrafts.noEntries' : 'desktop.superMemoDrafts.description')}</p>
             )}
           </div>
-          <SuperMemoConversionNote section="annotations" />
         </section>
       </div>
+      <footer className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-1">
+        <SuperMemoConversionNote section="materials" />
+        <SuperMemoConversionNote section="annotations" />
+      </footer>
       {media.local || media.remote || media.audio ? <p className="px-1 text-xs text-foreground/65">
         {t('desktop.superMemoDrafts.media', media)}
       </p> : null}
