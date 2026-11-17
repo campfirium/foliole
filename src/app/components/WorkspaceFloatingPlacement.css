@@ -47,3 +47,27 @@
 .workspace-notice-placement[data-action] {
   --floating-width-limit: 360px;
 }
+
+[data-workspace-topic-column] {
+  anchor-name: --workspace-topic-column;
+}
+
+.workspace-destination-placement {
+  position: fixed;
+  top: 12vh;
+  left: max(16px, calc((100% - 560px) / 2));
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px - 12vh);
+}
+
+@supports (left: anchor(--workspace-topic-column right, 50%)) {
+  .workspace-destination-placement {
+    left: clamp(16px, calc(anchor(--workspace-topic-column right, 50%) + 8px), calc(100vw - 232px));
+    right: 16px;
+    width: auto;
+    max-width: 560px;
+    margin-right: auto;
+    top: clamp(16px, calc(anchor(--workspace-topic-column top, 8vh) + 48px), 23vh);
+    max-height: 72dvh;
+  }
+}

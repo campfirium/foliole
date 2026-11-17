@@ -43,7 +43,7 @@ interface WorkspaceTopicTreeShellArgs {
 
 export function renderWorkspaceTopicTreeShell(args: WorkspaceTopicTreeShellArgs) {
   return (
-    <aside aria-label={args.t('desktop.workspace.currentFolderContents')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
+    <aside data-workspace-topic-column aria-label={args.t('desktop.workspace.currentFolderContents')} className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 flex-col text-foreground">
       <WorkspaceTopicTreeHeaderBridge
         activeFolderId={args.activeFolderId}
         collapsibleNodeIds={args.collapsibleNodeIds}

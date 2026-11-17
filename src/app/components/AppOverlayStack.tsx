@@ -1,13 +1,13 @@
 import { Suspense, lazy } from 'react';
 
 import { APP_FEEDBACK_ENDPOINT } from '../../shared/feedback/feedbackEndpoint';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { useAppController } from '../hooks/useAppController';
 
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
 import { ReadwiseImportDeviceDialog } from './ReadwiseImportDeviceDialog';
 import { SyncGroupJoinRequestsDialog } from './SyncGroupJoinRequestsDialog';
 import { WatchedFolderConflictDialog } from './WatchedFolderConflictDialog';
+import { WorkspaceMoveToPalette } from './WorkspaceMoveToPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 type AppController = ReturnType<typeof useAppController>;
@@ -142,21 +142,12 @@ function FeedbackOverlay({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
 }
 
 function NavigationOverlays({ controller }: { controller: AppController }) {
-  const t = useTranslation();
   return (
     <>
       {controller.goToNodeState.isOpen ? <GoToNodePalette {...controller.goToNodeState} /> : null}
       {controller.materialHistoryState?.isOpen ? <MaterialHistoryPalette {...controller.materialHistoryState} /> : null}
       {controller.moveToNodeState.isOpen ? (
-        <GoToNodePalette
-          {...controller.moveToNodeState}
-          dialogLabel={t('desktop.palette.move.dialog')}
-          emptyLabel={t('desktop.palette.move.empty')}
-          inputLabel={t('desktop.palette.move.input')}
-          noResultsLabel={t('desktop.palette.move.noResults')}
-          onSelectNode={controller.moveToNodeState.onOpenNode}
-          placeholder={t('desktop.palette.node.placeholder')}
-        />
+        <WorkspaceMoveToPalette state={controller.moveToNodeState} />
       ) : null}
     </>
   );

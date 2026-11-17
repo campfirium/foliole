@@ -4,6 +4,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { ReviewSourceTopicDeleteDialogState } from './appControllerReviewSourceDelete';
 import type { AppGoToNodeState } from './appGoToNodeState';
 import type { AppHotkeySettings } from './appHotkeySettings';
+import type { AppMoveToNodeState } from './appMoveToNodeState';
 import type { AppSearchState } from './appSearchState';
 import type { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 
@@ -19,7 +20,7 @@ export interface AppControllerResult {
   hotkeySettings: AppHotkeySettings;
   goToNodeState: AppGoToNodeState;
   materialHistoryState: Pick<AppGoToNodeState, 'isOpen' | 'onClose' | 'onOpenNode'>;
-  moveToNodeState: AppGoToNodeState;
+  moveToNodeState: AppMoveToNodeState;
   layoutProps: WorkspaceLayoutProps;
   onStartNextDemoPreviewDayFlow: () => boolean | Promise<boolean>;
   onOpenCompanionSyncSettings: () => void;

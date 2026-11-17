@@ -58,10 +58,14 @@ function isMoveTargetForAllSources(args: {
   );
 }
 
+export interface AppMoveToNodeState extends AppGoToNodeState {
+  sourceTitle: string | undefined;
+}
+
 export function buildControllerMoveToNodeState(args: {
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
-}): AppGoToNodeState {
+}): AppMoveToNodeState {
   const isOpen = args.runtime.isMoveToNodePaletteOpen;
   const sourceSnapshots = isOpen
     ? collectValidMoveSourceSnapshots({
@@ -86,7 +90,7 @@ export function buildControllerMoveToNodeState(args: {
       })
     : [];
 
-  return buildGoToNodeState(
+  const state = buildGoToNodeState(
     isOpen,
     targetNodeOrder,
     isOpen ? args.ws.nodesById : {},
@@ -110,4 +114,9 @@ export function buildControllerMoveToNodeState(args: {
       }
     }
   );
+  const [firstSource] = sourceSnapshots;
+  const sourceTitle = firstSource && sourceSnapshots.length === 1
+    ? args.ws.nodesById[firstSource.id]?.title.trim()
+    : undefined;
+  return { ...state, sourceTitle };
 }

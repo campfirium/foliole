@@ -1,6 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_SEARCH_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.palette.move.sourcePlaceholder': '将「{title}」移动到…',
+  'desktop.palette.move.selectionPlaceholder': '将选中的资料移动到…',
+  'desktop.palette.move.execute': '移动',
+  'desktop.palette.destination.showShortcuts': '显示快捷键',
+  'desktop.palette.destination.hideShortcuts': '收起快捷键',
+  'desktop.palette.destination.navigate': '选择',
   'desktop.search.dialog': '工作区搜索',
   'desktop.search.input': '搜索工作区',
   'desktop.search.aliases.all': '全部',

@@ -1,4 +1,10 @@
 export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
+  'desktop.palette.move.sourcePlaceholder': 'Move “{title}” to…',
+  'desktop.palette.move.selectionPlaceholder': 'Move selected materials to…',
+  'desktop.palette.move.execute': 'Move',
+  'desktop.palette.destination.showShortcuts': 'Show shortcuts',
+  'desktop.palette.destination.hideShortcuts': 'Hide shortcuts',
+  'desktop.palette.destination.navigate': 'Navigate',
   'desktop.search.dialog': 'Workspace search',
   'desktop.search.input': 'Search workspace',
   'desktop.search.aliases.all': 'All',

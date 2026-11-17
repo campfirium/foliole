@@ -85,7 +85,8 @@ export function buildNodeSearchResults(
   nodesById: Record<string, WorkspaceListNode | undefined>,
   recentNodeIds: string[],
   trashedNodeIds: string[],
-  query: string
+  query: string,
+  limit = MAX_RESULTS
 ): WorkspaceNodeSearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
   const availableNodesById = Object.fromEntries(
@@ -120,7 +121,7 @@ export function buildNodeSearchResults(
       return [{ id: node.id, keywords, path, score, title }];
     })
     .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
-    .slice(0, MAX_RESULTS)
+    .slice(0, limit)
     .map(stripSearchScore);
 }
 
