@@ -15,7 +15,8 @@ vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
 vi.mock('./CompanionArticleDocument', () => ({
   CompanionArticleDocument: (props: { content: string; onEditorReady?: (adapter: unknown) => void }) => {
     useEffect(() => {
-      props.onEditorReady?.({ revealSelectionCentered: vi.fn(), setSearchDecorations: vi.fn() });
+      props.onEditorReady?.({ getSelection: () => ({ from: 0, to: 0 }),
+        revealSelectionCentered: vi.fn(), setSearchDecorations: vi.fn(), setSelection: vi.fn() });
       return () => props.onEditorReady?.(null);
     }, [props]);
     return <article data-testid="companion-article-document">{props.content}</article>;

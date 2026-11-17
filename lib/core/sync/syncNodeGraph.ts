@@ -70,7 +70,7 @@ export async function loadRetainedSyncNodeVersionFact(
     return storedVersionToRecord(port, {
       ...row, body_text: null, snapshot_json: JSON.stringify({
         ...snapshot, content: null, opening_text: null, title: '',
-        text_alternatives: [], text_alternative_bodies: []
+        ...(snapshot.text_alternatives?.length ? { text_alternatives: [] } : {}), text_alternative_bodies: []
       })
     }, includeAncestors, undefined, false);
   }
