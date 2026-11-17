@@ -172,6 +172,11 @@ test('retains the Android reading range during body swipes and highlights the ra
   await paragraph(2).tap();
   await expect(mark).toHaveCount(0);
   await expect(page.getByRole('toolbar')).toBeHidden();
+  await expect(surface).toHaveAttribute('data-reading-chrome-visible', 'false');
+  await paragraph(2).tap();
+  await expect(surface).toHaveAttribute('data-reading-chrome-visible', 'true');
+  await paragraph(2).tap();
+  await expect(surface).toHaveAttribute('data-reading-chrome-visible', 'false');
 
   await takeOverWord(page, cdp, 'Reading paragraph 1.');
   await touchDrag(cdp, await center(end), await center(paragraph(10)));
@@ -198,4 +203,27 @@ test('retains the Android reading range during body swipes and highlights the ra
   const saved = JSON.parse((await page.getByLabel('Saved highlight range').textContent())!);
   expect(saved.originalText).toBe(final);
   expect(saved.to - saved.from).toBe(final.length);
+});
+
+test('keeps Android dialog text out of selection while leaving article text selectable', async ({ page }) => {
+  await page.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => {
+    document.documentElement.dataset.companionPlatform = 'android';
+  }); });
+  await openReader(page);
+  await page.getByText('Reading paragraph 1.', { exact: true }).tap();
+  await page.getByRole('button', { name: 'Outline', exact: true }).tap();
+  const dialog = page.getByRole('dialog');
+  const title = dialog.getByRole('heading', { name: 'Outline' });
+  await title.dblclick();
+  expect(await page.evaluate(() => getSelection()?.toString())).toBe('');
+  await page.reload();
+  await expect(page.getByText('Alpha Beta Gamma', { exact: true })).toBeVisible();
+  const start = await pointInText(page, 6);
+  const end = await pointInText(page, 10);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 8 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await expect(page.getByLabel('Saved highlight range')).toHaveText(JSON.stringify({ from: 6, originalText: 'Beta', to: 10 }));
 });

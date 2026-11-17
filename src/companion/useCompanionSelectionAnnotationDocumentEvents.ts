@@ -94,6 +94,11 @@ function clearFinishedTap(
       toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return false;
   } else if (toolbarDom.isCompanionArticleInteractiveTarget(event.target) ||
     isExistingHighlightTarget(event.target) || !selectionStayedAtTap(started, editor)) return false;
+  if (started.kind === 'managed' && event.target instanceof Element &&
+    event.target.closest(READING_SURFACE) && !toolbarDom.isCompanionArticleInteractiveTarget(event.target)) {
+    event.preventDefault();
+    suppressCompanionPressClick(event.target.ownerDocument);
+  }
   args.clearSelectionAndCloseToolbar();
   return true;
 }

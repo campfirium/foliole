@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
 import './companionMinimal.css';
+import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 
 import { CompanionApp } from './CompanionApp';
@@ -10,6 +11,9 @@ import { installCompanionWebViewCompatibilityPolyfills } from './companionWebVie
 import type { AcceptanceResult } from './iosBridgeAcceptance';
 
 installCompanionWebViewCompatibilityPolyfills();
+if (getCompanionRuntimeCapability().kind === 'android-native') {
+  document.documentElement.dataset.companionPlatform = 'android';
+}
 
 const isIosBridgeAcceptance = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1';
 const iosAcceptanceScenario = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO;

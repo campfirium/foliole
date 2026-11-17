@@ -28,6 +28,18 @@
 }
 html, body, #root, #root * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
+
+/* Include portaled menus and dialogs alongside the Android shell labels. */
+:root[data-companion-platform='android'] :is(header, nav, button, [role='toolbar'], [role='dialog'], [role='menu'], .companion-toolbar-title) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+:root[data-companion-platform='android'] :is(input, textarea, [contenteditable='true'], [data-companion-article-document='true'] .cm-content) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .companion-page-start { padding-top: var(--companion-page-content-gap); }
 .companion-reading-top-chrome::after {
   content: '';

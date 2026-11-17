@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, PointerEvent, SetStateAction } from 'react';
 
 import { handleCompanionPagedTap, isPagedReadingInteraction } from './companionPagedReading';
 import { useCompanionTouchClick } from './useCompanionTouchClick';
@@ -15,7 +15,10 @@ export function useImmersiveReadingSurfaceTap(editing: boolean, setVisible: Disp
     handleSurfaceClick: handlers.onClick,
     handleSurfacePointerDown: handlers.onPointerDown,
     handleSurfacePointerMove: handlers.onPointerMove,
-    handleSurfacePointerUp: handlers.onPointerUp,
+    handleSurfacePointerUp(event: PointerEvent<HTMLElement>) {
+      if (event.defaultPrevented) handlers.onPointerCancel();
+      else handlers.onPointerUp(event);
+    },
     handleSurfacePointerCancel: handlers.onPointerCancel
   };
 }
