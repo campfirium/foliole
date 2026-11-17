@@ -9,7 +9,7 @@ import {
   deleteAssistantThreadIndexWithImages,
   listAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
-import { linkAssistantThreadMaterials } from '../database/assistantThreadMaterials.js';
+import { linkAssistantThreadMaterials, unlinkAssistantThreadMaterial } from '../database/assistantThreadMaterials.js';
 import { listAssistantThreadMessages } from '../database/assistantThreadMessages.js';
 
 import {
@@ -25,6 +25,13 @@ export function handleAssistantLocalHistoryCommand(command: string, args: Record
     const nodeIds = readAssistantMaterialIds([args.nodeId]);
     return runWithAssistantHistoryConnectionOwner(() => linkAssistantThreadMaterials(
       readAssistantProvider(args.provider), readProviderThreadId(args), nodeIds
+    ));
+  }
+  if (command === NATIVE_COMMANDS.assistantUnlinkThreadMaterial) {
+    const [nodeId] = readAssistantMaterialIds([args.nodeId]);
+    if (!nodeId) throw new Error('invalid_assistant_material_id');
+    return runWithAssistantHistoryConnectionOwner(() => unlinkAssistantThreadMaterial(
+      readAssistantProvider(args.provider), readProviderThreadId(args), nodeId
     ));
   }
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {

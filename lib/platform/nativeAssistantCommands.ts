@@ -4,6 +4,7 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
   assistantSendMessage: 'assistant_send_message',
   assistantLinkThreadMaterial: 'assistant_link_thread_material',
+  assistantUnlinkThreadMaterial: 'assistant_unlink_thread_material',
   assistantListThreadIndex: 'assistant_list_thread_index',
   assistantListThreadMessages: 'assistant_list_thread_messages',
   assistantReadImageAttachment: 'assistant_read_image_attachment',

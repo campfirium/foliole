@@ -61,11 +61,7 @@ export function upsertRecord(
   const previous = records.find(record =>
     record.provider === nextRecord.provider && record.providerThreadId === nextRecord.providerThreadId
   );
-  const linkedMaterialIds = [...new Set([...(previous?.linkedMaterialIds ?? []), ...(nextRecord.linkedMaterialIds ?? [])])];
-  return [
-    linkedMaterialIds.length ? { ...nextRecord, linkedMaterialIds } : nextRecord,
-    ...records.filter(record => record !== previous)
-  ];
+  return [nextRecord, ...records.filter(record => record !== previous)];
 }
 
 export function createUserMessageAction(

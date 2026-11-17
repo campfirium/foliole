@@ -84,6 +84,10 @@ export function linkAssistantThreadMaterial(args: NativeAssistantThreadIndexMuta
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.assistantLinkThreadMaterial, args) ?? Promise.resolve(null);
 }
 
+export function unlinkAssistantThreadMaterial(args: NativeAssistantThreadIndexMutationArgs & { nodeId: string }) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.assistantUnlinkThreadMaterial, args) ?? Promise.resolve(null);
+}
+
 export async function listAssistantThreadMessages(
   args: NativeAssistantThreadMessageListArgs
 ): Promise<NativeAssistantThreadMessageRecord[] | null> {

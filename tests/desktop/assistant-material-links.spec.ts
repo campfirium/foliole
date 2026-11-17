@@ -15,11 +15,15 @@ async function useControlledReply(app: ElectronApplication) {
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
     const index = require(`${process.cwd()}/dist/electron/database/assistantThreadIndex.js`);
-    const state = globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void };
+    const state = globalThis as typeof globalThis & {
+      releaseAideMaterialReply?: () => void;
+      aideMaterialContext?: unknown;
+    };
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (event, request) => {
       if (request.command === 'assistant_get_status') return status;
       if (request.command === 'assistant_send_message') {
+        state.aideMaterialContext = { message: request.args.message, ...request.args.workspaceContext };
         return new Promise(resolve => {
           state.releaseAideMaterialReply = () => {
             const threadIndex = index.upsertAssistantThreadIndex({
@@ -150,4 +154,76 @@ test('links materials after the reply and restores the overflow menu from deskto
   await thirdLink.click();
   await expect(page.getByText('Body for ' + third, { exact: true })).toBeVisible();
 
+});
+
+test('shows composer focus on the rounded border without an inner outline', async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, desktopApp);
+  await openAssistantPanel(page);
+  const input = page.getByRole('textbox', { name: 'Foliole Aide message' });
+  const composer = page.locator('form').filter({ has: input });
+  const unfocusedBorder = await composer.evaluate(form => getComputedStyle(form).borderColor);
+  await input.click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveCSS('outline-style', 'none');
+  await expect(composer).not.toHaveCSS('border-color', unfocusedBorder);
+  await composer.screenshot({ path: '.tmp/artifacts/aide-composer-focus.png' });
+});
+
+test('unlinks draft and saved materials without changing the opening material', async ({ desktopApp, desktopWindow: page }) => {
+  const third = 'aide-link-third';
+  await prepare(page, desktopApp, [...articleIds, third]);
+  const [first, second] = articleIds;
+  const openArticle = (id: string) => page.getByRole('treeitem', { name: id, exact: true }).click();
+  await openArticle(first!);
+  await openAssistantPanel(page);
+  const aide = page.locator('[data-panel-content-root="assistant"]');
+  const add = aide.getByRole('button', { name: 'Link current material' });
+  const send = aide.getByRole('button', { name: 'Send', exact: true });
+  const input = aide.getByRole('textbox', { name: 'Foliole Aide message' });
+  const unlink = (id: string) => aide.getByRole('button', { name: 'Unlink material: ' + id });
+  await add.click();
+  await unlink(first!).click();
+  await expect(unlink(first!)).toHaveCount(0);
+  await expect(add).toBeEnabled();
+
+  await input.fill('Compare these notes');
+  await send.click();
+  await expect.poll(() => desktopApp.evaluate(() =>
+    typeof (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply
+  )).toBe('function');
+  await desktopApp.evaluate(() =>
+    (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply?.()
+  );
+  await expect(aide.getByText('A shorter opening.')).toBeVisible();
+  await expect(unlink(first!)).toHaveCount(0);
+  await openArticle(second!);
+  await add.click();
+  await expect(unlink(second!)).toBeVisible();
+  await aide.screenshot({ path: '.tmp/artifacts/aide-material-unlink.png' });
+  await openArticle(third);
+  await add.click();
+  await aide.getByRole('button', { name: 'More linked materials' }).click();
+  await page.getByRole('menuitem', { name: 'Unlink material: ' + third }).click();
+  await expect(aide.getByRole('button', { name: 'More linked materials' })).toHaveCount(0);
+  await openArticle(second!);
+  await unlink(second!).click();
+  await expect(aide.getByRole('button', { name: 'Open material: ' + second })).toHaveCount(0);
+  await expect(add).toBeEnabled();
+
+  await input.fill('Use the opening material again');
+  await send.click();
+  await expect.poll(() => desktopApp.evaluate(() =>
+    (globalThis as typeof globalThis & { aideMaterialContext?: unknown }).aideMaterialContext
+  )).toMatchObject({
+    message: 'Use the opening material again',
+    scope: 'workspace',
+    conversationMaterials: [{ nodeId: first }]
+  });
+
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await openAssistantPanel(page);
+  const history = aide.getByRole('list', { name: 'Local Foliole Aide history' });
+  await expect(history.getByRole('button', { name: 'Open material: ' + first })).toBeVisible();
+  await expect(history.getByRole('button', { name: 'Open material: ' + second })).toHaveCount(0);
 });

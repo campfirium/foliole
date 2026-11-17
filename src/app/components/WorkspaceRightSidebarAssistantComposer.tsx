@@ -36,7 +36,7 @@ export function WorkspaceRightSidebarAssistantComposer(props: AssistantComposerP
     >
       <textarea
         aria-label={props.inputLabel}
-        className="min-h-20 w-full resize-none bg-transparent text-ui-md leading-5 text-foreground outline-none placeholder:text-foreground/42"
+        className="app-focus-caret min-h-20 w-full resize-none bg-transparent text-ui-md leading-5 text-foreground outline-none placeholder:text-foreground/42"
         onChange={(event) => props.onMessageTextChange(event.target.value)}
         onKeyDown={submitOnEnter}
         onPaste={(event) => addPastedImages(event, props.onAddImageFiles ?? ignoreFiles)}

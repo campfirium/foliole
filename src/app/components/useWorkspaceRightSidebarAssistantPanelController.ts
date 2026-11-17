@@ -177,6 +177,7 @@ function createPanelControllerResult(input: ControllerResultInput) {
       threads.selectThreadId(record.providerThreadId);
     },
     addMaterial: (nodeId: string) => input.materialLinks.add(nodeId, input.selectedRecord),
+    removeMaterial: (nodeId: string) => input.materialLinks.remove(nodeId, input.selectedRecord),
     linkedMaterialIds: input.selectedRecord?.linkedMaterialIds ?? (input.selectedRecord ? [] : input.materialLinks.draftIds),
     materialLinkBusy: input.materialLinks.saving,
     materialLinkFailed: input.materialLinks.failed,

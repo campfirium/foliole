@@ -152,4 +152,15 @@ it('persists draft and explicit links through the native history commands', asyn
   await expect(async () => link(123)).rejects.toThrow('invalid_assistant_material_id');
   await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {}))
     .resolves.toMatchObject([{ linkedMaterialIds: ['draft', 'visible'] }]);
+  const unlink = (nodeId: unknown) => handleAssistantCommandRaw(NATIVE_COMMANDS.assistantUnlinkThreadMaterial, {
+    nodeId, provider, providerThreadId
+  });
+  await expect(unlink('visible')).resolves.toMatchObject({ linkedMaterialIds: ['draft'] });
+  await expect(unlink('visible')).resolves.toMatchObject({ linkedMaterialIds: ['draft'] });
+  await expect(unlink('source')).resolves.toMatchObject({
+    location: { type: 'node', nodeId: 'source' }, linkedMaterialIds: ['draft']
+  });
+  await expect(async () => unlink(123)).rejects.toThrow('invalid_assistant_material_id');
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {}))
+    .resolves.toMatchObject([{ location: { type: 'node', nodeId: 'source' }, linkedMaterialIds: ['draft'] }]);
 });

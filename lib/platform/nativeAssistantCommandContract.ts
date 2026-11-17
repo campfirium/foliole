@@ -27,6 +27,10 @@ export type NativeAssistantCommandMap = NativeAssistantByokCommandMap & NativeAs
     args: NativeAssistantThreadIndexMutationArgs & { nodeId: string };
     result: NativeAssistantThreadIndexRecord;
   };
+  [NATIVE_COMMANDS.assistantUnlinkThreadMaterial]: {
+    args: NativeAssistantThreadIndexMutationArgs & { nodeId: string };
+    result: NativeAssistantThreadIndexRecord;
+  };
   [NATIVE_COMMANDS.assistantListThreadIndex]: {
     args: NativeAssistantThreadIndexListArgs | undefined;
     result: NativeAssistantThreadIndexRecord[];

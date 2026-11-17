@@ -224,6 +224,7 @@ function AssistantMaterialTags(props: Pick<Parameters<typeof FolioleAideReadyCon
         location={props.controller.materialLocation}
         linkedMaterialIds={props.controller.linkedMaterialIds}
         addMaterial={props.controller.addMaterial}
+        removeMaterial={props.controller.removeMaterial}
         draft={!props.controller.selectedRecord}
         busy={props.controller.materialLinkBusy || props.controller.sending}
         nodesById={props.nodesById}

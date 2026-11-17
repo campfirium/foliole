@@ -1,4 +1,4 @@
-import { LibraryBig, Link2, Plus } from 'lucide-react';
+import { LibraryBig, Link2, Plus, X } from 'lucide-react';
 
 import type { NativeAssistantThreadOpeningLocation } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -15,6 +15,7 @@ type MaterialTagsProps = {
   nodesById: Record<string, Node>;
   onOpenMaterial: (nodeId: string) => void;
   trashedNodeIds?: readonly string[] | undefined;
+  removeMaterial?: (nodeId: string) => void;
   addMaterial?: (nodeId: string) => void;
   busy?: boolean;
   draft?: boolean;
@@ -67,18 +68,29 @@ function MaterialTag({ id, props, single }: { id: string; props: MaterialTagsPro
   const t = useTranslation();
   const { title, unavailable, label } = useMaterialTag(id, props);
   const width = single ? 'max-w-[12em]' : 'max-w-[8em]';
-  if (unavailable) return <span className={tagClassName} title={label}>
-    <span className={`${width} truncate`}>{label}</span>
-  </span>;
+  const remove = getRemoveMaterial(id, props);
   return (
-    <button aria-label={label} className={buttonClassName}
-      onClick={() => props.onOpenMaterial(id)} title={title} type="button"
-    >
-      <Link2 aria-hidden className="size-3 shrink-0" />
-      <span className={`${width} truncate`}>
-        {props.activeNodeId === id ? t('desktop.rightPanel.assistant.materialTag.current') : title}
-      </span>
-    </button>
+    <span className={`${tagClassName} gap-0 px-0`}>
+      {unavailable ? <span className={`${width} truncate px-1.5`} title={label}>{label}</span> : (
+        <button aria-label={label}
+          className="inline-flex min-h-5 min-w-0 items-center gap-1 rounded-md px-1.5 hover:bg-foreground/[0.05]"
+          onClick={() => props.onOpenMaterial(id)} title={title} type="button"
+        >
+          <Link2 aria-hidden className="size-3 shrink-0" />
+          <span className={`${width} truncate`}>
+            {props.activeNodeId === id ? t('desktop.rightPanel.assistant.materialTag.current') : title}
+          </span>
+        </button>
+      )}
+      {remove ? <button
+        aria-label={t('desktop.rightPanel.assistant.materialTag.remove', { title })}
+        title={t('desktop.rightPanel.assistant.materialTag.remove', { title })}
+        className="grid size-5 shrink-0 place-items-center rounded-md hover:bg-foreground/[0.05] disabled:opacity-45"
+        disabled={props.busy}
+        onClick={remove}
+        type="button"
+      ><X aria-hidden className="size-3" /></button> : null}
+    </span>
   );
 }
 
@@ -99,8 +111,22 @@ function MoreMaterials({ ids, props }: { ids: string[]; props: MaterialTagsProps
 }
 
 function MoreMaterial({ id, props }: { id: string; props: MaterialTagsProps }) {
+  const t = useTranslation();
   const { title, unavailable, label } = useMaterialTag(id, props);
-  return <AppDropdownMenuItem disabled={unavailable} onSelect={() => props.onOpenMaterial(id)}>
-    {unavailable ? label : title}
-  </AppDropdownMenuItem>;
+  const remove = getRemoveMaterial(id, props);
+  return <>
+    <AppDropdownMenuItem disabled={unavailable} onSelect={() => props.onOpenMaterial(id)}>
+      {unavailable ? label : title}
+    </AppDropdownMenuItem>
+    {remove ? <AppDropdownMenuItem disabled={props.busy} onSelect={remove}>
+      {t('desktop.rightPanel.assistant.materialTag.remove', { title })}
+    </AppDropdownMenuItem> : null}
+  </>;
+}
+
+function getRemoveMaterial(id: string, props: MaterialTagsProps) {
+  const { removeMaterial, linkedMaterialIds, draft, location } = props;
+  if (!removeMaterial || !linkedMaterialIds?.includes(id)) return undefined;
+  if (!draft && location?.type === 'node' && location.nodeId === id) return undefined;
+  return () => removeMaterial(id);
 }
