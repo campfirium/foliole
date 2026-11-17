@@ -20,6 +20,7 @@ import { replaceNodeImageResourceReferences } from '../database/nodeResources.js
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
 import { addSuperMemoCitation, type SuperMemoCitation } from './superMemoCitation.js';
+import { ensureSuperMemoImportRoot } from './superMemoImportRoot.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { formatSuperMemoMaterialSource } from './superMemoMaterialSource.js';
 import { superMemoExportLinkKey, superMemoSourceEvidence } from './superMemoSourceIdentity.js';
@@ -95,6 +96,7 @@ function allocateImportedNodeIds(prepared: PreparedRows, existing?: ReadonlyMap<
 export function writeSuperMemoRows(prepared: PreparedRows, options: {
   percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
   allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
+  rootNodeId?: string | undefined;
   existingParentContent?: (nodeId: string) => string | undefined;
 }) {
   const { percent, offset, now, gradeMap, sourceFormat, allRows = prepared.map(({ row }) => row) } = options;
@@ -110,7 +112,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
     if (!entry) return [];
     const { element, body, answer } = entry;
     const kind = row.outcome;
-    const parentNodeId = nodeIds.get(parents.get(row.id) ?? 0) ?? (kind === 'folder' ? null : INBOX_NODE_ID);
+    const parentNodeId = nodeIds.get(parents.get(row.id) ?? 0) ?? options.rootNodeId ?? (kind === 'folder' ? null : INBOX_NODE_ID);
     const nodeId = nodeIds.get(row.id) ?? null;
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
@@ -174,11 +176,12 @@ export async function runSuperMemoImport(input: {
     new Map(input.elements.map(element => [element.id, element])), input.collectionDirectory, input.expectedImages);
   const now = new Date().toISOString();
   return driver.transaction(() => {
-    const entries = writeSuperMemoRows(prepared, { ...input, now });
+    const rootNodeId = ensureSuperMemoImportRoot(driver, now);
+    const entries = writeSuperMemoRows(prepared, { ...input, now, rootNodeId });
     const imported = entries.filter(entry => entry.nodeId).length;
     const result = { batchId: fingerprint, imported, skipped: entries.length - imported,
       unresolvedImages: entries.reduce((sum, entry) => sum + entry.unresolvedImages.length, 0) };
-    const batch = { ...result, formatVersion: 1, ruleVersion: SUPER_MEMO_CONVERSION_RULE_VERSION,
+    const batch = { ...result, rootNodeId, formatVersion: 1, ruleVersion: SUPER_MEMO_CONVERSION_RULE_VERSION,
       percent: input.percent, offset: input.offset, gradeMap: input.gradeMap, scheduler: input.scheduler, sourceFormat: input.sourceFormat, entries };
     driver.execute('INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)', [key, JSON.stringify(batch), now]);
     return result;

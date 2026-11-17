@@ -13,9 +13,9 @@ import { superMemoDueInstant } from '../import/superMemoImportSchedule.js';
 import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { score, sendReviews } from './reviewProjection.testSupport.js';
+import { score } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const state = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => state }));
@@ -68,8 +68,8 @@ it.each([0, 50])('refreshes first review calculations at the saved %s percent bl
     expect(due(eligible)).toBe(updated);
     expect(due(manual)).toBe(manualDue);
     expect(due(reviewed)).toBe(reviewedDue);
-    flushNodeSyncVersionWithDriver(state.driver!, eligible, peer.id);
-    await sendReviews(peer, replica, true, [], eligible);
+
+    await syncWithAncestors(peer, replica, eligible);
     expect(replica.sqlite.prepare('SELECT due FROM node_review WHERE node_id = ?').pluck().get(eligible)).toBe(updated);
     expect(adjustSuperMemoImport(batchId, 100)).toMatchObject({ updated: 1, protectedItems: 2 });
     expect(due(eligible)).toBe(superMemoDueInstant('2027-02-10'));

@@ -13,9 +13,8 @@ import { superMemoDueInstant } from '../import/superMemoImportSchedule.js';
 import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { sendReviews } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection }));
@@ -78,8 +77,7 @@ it('adds skipped materials once and preserves the placement of recovered cards',
       .rejects.toThrow('supermemo_update_changed');
     expect(peer.sqlite.prepare('SELECT COUNT(*) FROM nodes WHERE title = ?').pluck().get('Missing card')).toBe(1);
     for (const nodeId of [read('Article')!.id, recovered.id]) {
-      flushNodeSyncVersionWithDriver(connection.driver!, nodeId, peer.id);
-      await sendReviews(peer, replica, true, [], nodeId);
+      await syncWithAncestors(peer, replica, nodeId);
     }
     expect(replica.sqlite.prepare('SELECT parent_id, anchor_link FROM nodes WHERE id = ?').get(recovered.id))
       .toMatchObject({ parent_id: recovered.parent_id, anchor_link: recovered.anchor_link });
@@ -91,7 +89,7 @@ it('adds skipped materials once and preserves the placement of recovered cards',
   }
 });
 
-it('recovers an entirely skipped batch when the Inbox has not been created yet', async () => {
+it('recovers an entirely skipped batch inside the SuperMemo folder', async () => {
   const fixture = await restoreFixture();
   const peer = fixture.peer('source');
   const onlyCard = { ...card, parentId: null };
@@ -108,7 +106,8 @@ it('recovers an entirely skipped batch when the Inbox has not been created yet',
     const plan = updateSuperMemoDirectories(args.elements, draft, undefined, undefined, args)!;
     expect(plan.changes).toMatchObject([{ sourceId: 2, status: 'add' }]);
     expect(await confirmSuperMemoDirectoryUpdate({ ...args, preview: draft }, plan.signature)).toMatchObject({ imported: 1, skipped: 0 });
-    expect(peer.sqlite.prepare('SELECT parent_id FROM nodes WHERE title = ?').pluck().get('Missing card')).toBe('special-inbox');
+    expect(peer.sqlite.prepare(`SELECT p.title FROM nodes n JOIN nodes p ON p.id = n.parent_id
+      WHERE n.title = ?`).pluck().get('Missing card')).toBe('SuperMemo');
   } finally {
     connection.driver = null;
     await fixture.close();

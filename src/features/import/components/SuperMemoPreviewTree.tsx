@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { useState } from 'react';
 
+import { SUPER_MEMO_IMPORT_FOLDER_TITLE } from '../../../../lib/core/import/superMemoImportParents';
 import type { NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
@@ -56,5 +57,19 @@ export function SuperMemoPreviewTree(props: TreeProps) {
     <ul className={depth ? 'ml-3 border-l border-foreground/10 pl-1' : undefined}>
       {props.childrenByParent.get(props.parent)?.map(row => <Branch {...props} key={row.id} row={row} />)}
     </ul>
+  );
+}
+
+export function SuperMemoPreviewDestination(props: Omit<TreeProps, 'parent' | 'depth'>) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 px-2 py-1 font-medium">
+        <Folder aria-hidden className="size-3.5" />
+        {SUPER_MEMO_IMPORT_FOLDER_TITLE}
+      </div>
+      <div className="ml-3 border-l border-foreground/10 pl-1">
+        <SuperMemoPreviewTree {...props} parent={null} />
+      </div>
+    </div>
   );
 }

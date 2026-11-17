@@ -12,9 +12,8 @@ import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
 import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { sendReviews } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const state = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null, rule: 1 }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => state }));
@@ -54,8 +53,7 @@ it('updates the answer and Topic body across rule changes while keeping a manual
     await runSuperMemoImport({ ...input, preview: preview() });
     const before = read('Source card');
     const publish = async () => {
-      flushNodeSyncVersionWithDriver(state.driver!, before.id, peer.id);
-      await sendReviews(peer, replica, true, [], before.id);
+      await syncWithAncestors(peer, replica, before.id);
     };
     await publish();
     applyParentContentChange({ driver: state.driver!, nodeId: before.id, nextContent: 'My question', updatedAt: '2026-11-17' });

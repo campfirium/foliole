@@ -48,6 +48,7 @@ test('previews a moved excerpt under its source article and renders its imported
   await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await desktopWindow.keyboard.press('Escape');
+  await desktopWindow.getByRole('treeitem', { name: 'SuperMemo', exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toHaveText(passage);
 });
@@ -80,6 +81,7 @@ test('updates the same excerpt and restores its source highlight from the origin
   expect((await readExcerpt())?.id).toBe(before?.id);
   await update.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await desktopWindow.keyboard.press('Escape');
+  await desktopWindow.getByRole('treeitem', { name: 'SuperMemo', exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toHaveText(passage);
 });

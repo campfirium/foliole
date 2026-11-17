@@ -17,9 +17,9 @@ import { listSuperMemoImports } from '../import/adjustSuperMemoImport.js';
 import { handleSuperMemoImportCommand } from '../ipc/superMemoImportCommands.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { history, reviewFacts, reviewState, score, sendReviews } from './reviewProjection.testSupport.js';
+import { history, reviewFacts, reviewState, score } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({
@@ -56,6 +56,18 @@ it('writes the converted reference text and links shown before import', async ()
     expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, { ...args, previewSignature: preview.previewSignature }))
       .toMatchObject({ imported: 2, skipped: 0 });
     source.reopen();
+    connection.driver = createBetterSqlite3Driver(source.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: source.id, libraryPath: source.file });
+    const root = source.sqlite.prepare("SELECT id FROM nodes WHERE title = 'SuperMemo' AND parent_id IS NULL").pluck();
+    const destination = root.get();
+    expect(destination).toBeTruthy();
+    const parent = source.sqlite.prepare('SELECT parent_id FROM nodes WHERE title = ?').pluck();
+    expect(parent.get(topic.title)).toBe(destination);
+    expect(parent.get(card.title)).toBe(destination);
+    await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, { ...args,
+      elements: [{ ...card, title: 'Another export', bodyOrQuestionHtml: ['Another question'] }] });
+    expect(root.all()).toEqual([destination]);
+    expect(parent.get('Another export')).toBe(destination);
     const getText = source.sqlite.prepare('SELECT content, reveal FROM nodes WHERE title = ?');
     const topicText = (getText.get(topic.title) as { content: string }).content;
     const answer = (getText.get(card.title) as { reveal: string }).reveal;
@@ -116,8 +128,7 @@ it('imports real history and preserves the selected date through reopen, recompu
     expect(recomputeNodeReview(connection.driver, first!.node_id)?.due).toBe(first!.due);
     expect(dueCards(connection.driver, '2026-09-05T00:00:00')).not.toContain(first!.node_id);
     expect(dueCards(connection.driver, '2026-09-07T00:00:00')).toContain(first!.node_id);
-    flushNodeSyncVersionWithDriver(connection.driver, first!.node_id, source.id, now);
-    await sendReviews(source, target, true, [], first!.node_id);
+    await syncWithAncestors(source, target, first!.node_id, now);
     target.reopen();
     expect(reviewState(target)).toEqual([expect.objectContaining({ due: first!.due, reps: 1 })]);
     expect(reviewFacts(target)).toEqual([expect.objectContaining({ grade: 3 })]);
@@ -132,14 +143,13 @@ it('imports real history and preserves the selected date through reopen, recompu
     expect(source.sqlite.prepare('SELECT due FROM node_review WHERE node_id = ?').pluck().get(third!.node_id)).toBe(manualDue);
     const adjusted = recomputeNodeReview(connection.driver, first!.node_id)!.due;
     expect(adjusted).not.toBe(first!.due);
-    flushNodeSyncVersionWithDriver(connection.driver, first!.node_id, source.id, now);
-    await sendReviews(source, target, true, [], first!.node_id);
+    await syncWithAncestors(source, target, first!.node_id, now);
     expect(reviewState(target)).toEqual([expect.objectContaining({ due: adjusted })]);
     score(source, 'actual-first', now, 3, first!.node_id);
-    await sendReviews(source, target, true, [], first!.node_id);
+    await syncWithAncestors(source, target, first!.node_id, now);
     expect(reviewState(target)).toEqual([expect.objectContaining({ reps: 2, due: expect.not.stringMatching(adjusted) })]);
     history(source, 'undo', 'actual-first', '2026-11-13T09:00:00.000Z', first!.node_id);
-    await sendReviews(source, target, true, [], first!.node_id);
+    await syncWithAncestors(source, target, first!.node_id, now);
     expect(reviewState(target)).toEqual([expect.objectContaining({ reps: 1, due: adjusted })]);
   } finally {
     await fixture.close();

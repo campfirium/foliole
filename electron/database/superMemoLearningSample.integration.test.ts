@@ -97,13 +97,14 @@ function verifyImportedHierarchy(sqlite: RestorePeer['sqlite'],
   const todo = entries.find(entry => entry.id === 56)!.nodeId;
   const member = entries.find(entry => entry.id === 260)!.nodeId;
   expect(entries.find(entry => entry.id === 2276)).toMatchObject({ nodeId: null, sourceConceptFolderId: 56 });
-  expect(sqlite.prepare('SELECT title, kind, parent_id FROM nodes WHERE id = ?').get(todo))
-    .toEqual({ title: 'TODO', kind: 'folder', parent_id: null });
+  const rootFolder = sqlite.prepare("SELECT id FROM nodes WHERE title = 'SuperMemo' AND kind = 'folder' AND parent_id IS NULL").pluck().all();
+  expect(rootFolder).toHaveLength(1);
+  expect(sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck().get(todo)).toBe(rootFolder[0]);
   const root = sqlite.prepare(`WITH RECURSIVE parents(id, parent_id) AS (
     SELECT id, parent_id FROM nodes WHERE id = ?
     UNION ALL SELECT n.id, n.parent_id FROM nodes n JOIN parents p ON n.id = p.parent_id
   ) SELECT id FROM parents WHERE parent_id IS NULL`).pluck().get(member);
-  expect(root).toBe(todo);
+  expect(root).toBe(rootFolder[0]);
 }
 
 it('previews an XML-only import with a missing image without writing a batch', async () => {

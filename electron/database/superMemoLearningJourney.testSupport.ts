@@ -23,7 +23,7 @@ export function dueCards(driver: ReturnType<typeof createBetterSqlite3Driver>, n
     includeScheduled: false, time: createReviewQueueTimeInput(0, 0), now }).fsrsCandidates.map(node => node.id);
 }
 
-async function syncWithAncestors(source: RestorePeer, target: RestorePeer, nodeId: string, now: string) {
+export async function syncWithAncestors(source: RestorePeer, target: RestorePeer, nodeId: string, now = new Date().toISOString()) {
   const driver = createBetterSqlite3Driver(source.sqlite);
   const ancestors = source.sqlite.prepare(`WITH RECURSIVE parents(id, parent_id) AS (
     SELECT id, parent_id FROM nodes WHERE id = ?

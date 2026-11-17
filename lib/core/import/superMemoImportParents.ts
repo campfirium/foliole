@@ -1,5 +1,7 @@
 import type { NativeSuperMemoPreviewRow } from '../../platform/nativeSuperMemoImportContract.js';
 
+export const SUPER_MEMO_IMPORT_FOLDER_TITLE = 'SuperMemo';
+
 type Row = NativeSuperMemoPreviewRow;
 type Parents = Map<number, number | null>;
 

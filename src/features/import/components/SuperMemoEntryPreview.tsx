@@ -7,7 +7,7 @@ import type { SuperMemoXmlDraftElement } from '../../../../lib/core/import/super
 import type { NativeSuperMemoPreview, NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
-import { SuperMemoEntryButton, SuperMemoPreviewTree } from './SuperMemoPreviewTree';
+import { SuperMemoEntryButton, SuperMemoPreviewDestination } from './SuperMemoPreviewTree';
 
 const tabs = ['converted', 'skipped', 'missing'] as const;
 type Tab = typeof tabs[number];
@@ -114,7 +114,7 @@ export function SuperMemoEntryPreview({ preview, elements }: {
           </div>
           <div className="min-h-0 overflow-auto p-2">
             {tab === 'converted' ? (
-              <SuperMemoPreviewTree childrenByParent={childrenByParent} parent={null} active={current?.id} onSelect={setActive} />
+              preview ? <SuperMemoPreviewDestination childrenByParent={childrenByParent} active={current?.id} onSelect={setActive} /> : null
             ) : <ul>{rows.map(row => <li key={row.id} className="flex min-w-0">
               <SuperMemoEntryButton row={row} active={current?.id} onSelect={setActive} />
             </li>)}</ul>}

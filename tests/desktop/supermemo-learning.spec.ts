@@ -30,6 +30,9 @@ function readImportedIds(app: ElectronApplication) {
 }
 
 function expectImportedHierarchy(nodes: Awaited<ReturnType<typeof readWorkspace>>, ids: Record<number, string>) {
+  const root = Object.values(nodes).filter(node => node.kind === 'folder' && node.title === 'SuperMemo' && node.parentNodeId === null);
+  expect(root).toHaveLength(1);
+  expect(nodes[ids[56]!]?.parentNodeId).toBe(root[0]!.id);
   expect(nodes[ids[3517]!]).toMatchObject({ parentNodeId: ids[825], anchorLink: { kind: 'highlight' } });
   expect(nodes[ids[1148]!]?.parentNodeId).toBe(ids[3302]);
   expect(nodes[ids[797]!]).toMatchObject({ parentNodeId: ids[1148], anchorLink: { kind: 'cloze' } });
@@ -60,6 +63,8 @@ async function importLearning(page: Page, app: ElectronApplication, outputPath: 
   }, xml!);
   await dialog.getByRole('button', { name: /^(Load XML|载入 XML)$/ }).click();
   await expect(dialog.getByRole('button', { name: /^(Missing images|缺图) 243$/ })).toBeVisible({ timeout: 90_000 });
+  const tree = dialog.getByRole('region', { name: /^(Entries|条目)$/ });
+  await expect(tree.getByText('SuperMemo', { exact: true })).toBeVisible();
   await dialog.screenshot({ path: outputPath('learning-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from the paired collection|候选日期和优先顺序来自配对资料库/)).toBeVisible();

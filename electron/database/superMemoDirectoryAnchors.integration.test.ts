@@ -13,9 +13,8 @@ import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { updateNodeAnchorLinks } from './nodeMutations.js';
-import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { sendReviews } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({
@@ -72,8 +71,8 @@ it.each(['present', 'missing'])('preserves anchors when the corrected parent is 
     const old = [3, 4, 5, 6].map(id => read(`Selection ${id}`));
     expect(old.map(node => JSON.parse(node.anchor_link).kind)).toEqual(['highlight', 'cloze', 'highlight', 'highlight']);
     const publish = async (id: string) => {
-      flushNodeSyncVersionWithDriver(connection.driver!, id, peer.id);
-      await sendReviews(peer, replica, true, [], id);
+
+      await syncWithAncestors(peer, replica, id);
     };
     for (const id of [read('Source A').id, old[0]!.id, old[1]!.id]) await publish(id);
     if (parent === 'present') await publish(read('Destination').id);
@@ -171,8 +170,8 @@ it.each([false, true])('restores a missing anchor without replacing the material
     expect(destination.content.slice(restored.locator.from, restored.locator.to)).toBe(passage);
     expect(updateSuperMemoDirectories(elements, next, undefined, undefined, input)?.changes).toEqual([]);
     for (const id of [destination.id, after.id]) {
-      flushNodeSyncVersionWithDriver(connection.driver!, id, peer.id);
-      await sendReviews(peer, replica, true, [], id);
+
+      await syncWithAncestors(peer, replica, id);
     }
     expect(replica.sqlite.prepare('SELECT parent_id, anchor_link FROM nodes WHERE id = ?').get(after.id))
       .toMatchObject({ parent_id: destination.id, anchor_link: after.anchor_link });

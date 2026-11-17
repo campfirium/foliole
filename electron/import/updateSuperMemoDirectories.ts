@@ -115,7 +115,7 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview, elements: Supe
     const entry = entries.get(row.id);
     if (!entry) continue;
     const targetSource = parents.get(row.id);
-    const target = targetSource == null ? (row.outcome === 'folder' ? null : INBOX_NODE_ID)
+    const target = targetSource == null ? batch.rootNodeId ?? (row.outcome === 'folder' ? null : INBOX_NODE_ID)
       : existingNodeIds.get(targetSource) ?? additions.get(targetSource)?.pendingId;
     const targetNode = target ? read(target) : undefined;
     const targetKindValid = !targetNode || targetNode.kind === 'folder' ||
@@ -213,8 +213,8 @@ export async function confirmSuperMemoDirectoryUpdate(input: ImportInput, signat
   const additions = new Set(plan.changes.filter(change => change.status === 'add').map(change => change.sourceId));
   const prepared = await prepareSuperMemoRows(preview.rows.filter(row => additions.has(row.id)),
     new Map(elements.map(element => [element.id, element])), collectionDirectory, expectedImages);
-  return updateSuperMemoDirectories(elements, preview, signature, (_sourceIds, allRows, existingNodeIds, percent, now) =>
-    writeSuperMemoRows(prepared, { ...input, allRows, existingNodeIds, percent, now,
+  return updateSuperMemoDirectories(elements, preview, signature, (_sourceIds, allRows, existingNodeIds, percent, now, rootNodeId) =>
+    writeSuperMemoRows(prepared, { ...input, allRows, existingNodeIds, percent, now, rootNodeId,
       existingParentContent: nodeId => loadWorkspaceNodeDocument(openDatabaseConnection().driver, nodeId)?.content
     }), input, withdrawSourceIds);
 }

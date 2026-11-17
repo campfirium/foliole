@@ -14,7 +14,8 @@ import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { restoreNodes } from './nodeMutations.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
-import { score, sendReviews } from './reviewProjection.testSupport.js';
+import { score } from './reviewProjection.testSupport.js';
+import { syncWithAncestors } from './superMemoLearningJourney.testSupport.js';
 
 const connection = vi.hoisted(() => ({ driver: null as ReturnType<typeof createBetterSqlite3Driver> | null }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection }));
@@ -79,7 +80,7 @@ it('withdraws only explicitly selected safe materials and keeps them recoverable
     bind();
     expect(read('Card 1')).toMatchObject({ id: pristine.id, deleted_at: expect.any(String), content: pristine.content });
     for (const title of ['Card 2', 'Card 3', 'Parent', 'Card 5', 'Card 6']) expect(read(title).deleted_at).toBeNull();
-    await sendReviews(peer, replica, true, [], pristine.id);
+    await syncWithAncestors(peer, replica, pristine.id);
     expect(replica.sqlite.prepare('SELECT deleted_at FROM nodes WHERE id = ?').pluck().get(pristine.id)).toBe(read('Card 1').deleted_at);
     expect(restoreNodes({ nodeIds: [pristine.id] }).restoredNodeIds).toEqual([pristine.id]);
     expect(read('Card 1')).toEqual(pristine);

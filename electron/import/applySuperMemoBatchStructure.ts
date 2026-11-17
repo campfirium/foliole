@@ -16,6 +16,7 @@ export interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFi
 export interface Batch {
   entries: BatchEntry[];
   activeExport?: string;
+  rootNodeId?: string;
   directoryRequiresCollection?: boolean;
   sourceFormat?: SuperMemoSourceFormat;
   preferredSourceFormat?: SuperMemoSourceFormat;
@@ -26,7 +27,7 @@ export interface Batch {
 }
 
 export type AdditionWriter = (sourceIds: number[], rows: NativeSuperMemoPreview['rows'],
-  existingNodeIds: ReadonlyMap<number, string>, percent: number, now: string) => ReturnType<typeof writeSuperMemoRows>;
+  existingNodeIds: ReadonlyMap<number, string>, percent: number, now: string, rootNodeId?: string) => ReturnType<typeof writeSuperMemoRows>;
 
 export function applySuperMemoBatchStructure(batch: Batch, plan: {
   additions: ReadonlyMap<number, { pendingId: string }>; moves: (SuperMemoDirectoryMove & { entry: BatchEntry })[];
@@ -34,7 +35,7 @@ export function applySuperMemoBatchStructure(batch: Batch, plan: {
 }, now: string, writeAdditions?: AdditionWriter) {
   const { additions, moves, rows, existingNodeIds } = plan;
   if (additions.size && !writeAdditions) throw new Error('supermemo_update_additions_not_prepared');
-  const created = additions.size ? writeAdditions!([...additions.keys()], rows, existingNodeIds, batch.percent, now) : [];
+  const created = additions.size ? writeAdditions!([...additions.keys()], rows, existingNodeIds, batch.percent, now, batch.rootNodeId) : [];
   const bySource = new Map(created.map(entry => [entry.id, entry]));
   const replacements = new Map<string, string>();
   for (const [sourceId, { pendingId }] of additions) {
