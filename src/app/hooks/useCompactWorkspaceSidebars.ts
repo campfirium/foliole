@@ -105,18 +105,24 @@ function useFloatingSidebarState(isImmersiveMode: boolean, measureWindow: boolea
 }
 
 function resolvePdfSidebarPlacement(
-  chrome: WorkspaceLayoutChromeProps, compact: ReturnType<typeof readFloatingSidebars>, pdfWidth: number, windowWidth: number
+  chrome: WorkspaceLayoutChromeProps, compact: ReturnType<typeof readFloatingSidebars>,
+  pdfWidth: number, windowWidth: number, first: WorkspaceSidebarSide
 ) {
   if (!pdfWidth || chrome.isImmersiveMode) return compact;
-  const listDockWidth = chrome.listWidth + 1;
-  const rightDockWidth = chrome.rightSidebarWidth + 1;
-  const listWidth = compact.leftFloating || chrome.isListCollapsed ? 0 : listDockWidth;
-  const rightWidth = compact.rightFloating || chrome.isRightSidebarCollapsed ? 0 : rightDockWidth;
-  const contentWidth = windowWidth - 40 - listWidth - rightWidth;
-  return {
-    leftFloating: compact.leftFloating || pdfWidth > contentWidth + rightWidth + listWidth - listDockWidth,
-    rightFloating: compact.rightFloating || pdfWidth > contentWidth + rightWidth - rightDockWidth
+  const dockedWidths = {
+    left: compact.leftFloating || chrome.isListCollapsed ? 0 : chrome.listWidth + 1,
+    right: compact.rightFloating || chrome.isRightSidebarCollapsed ? 0 : chrome.rightSidebarWidth + 1
   };
+  const floating = { left: compact.leftFloating, right: compact.rightFloating };
+  let contentWidth = windowWidth - 40 - dockedWidths.left - dockedWidths.right;
+  const second = first === 'left' ? 'right' : 'left';
+  for (const side of [first, second] as const) {
+    if (pdfWidth <= contentWidth) break;
+    if (dockedWidths[side] === 0) continue;
+    floating[side] = true;
+    contentWidth += dockedWidths[side];
+  }
+  return { leftFloating: floating.left, rightFloating: floating.right };
 }
 
 function resolveFloatingSidebars(
@@ -126,14 +132,10 @@ function resolveFloatingSidebars(
   pdfWidth: number,
   windowWidth: number
 ) {
-  if (!rules.tier) return resolvePdfSidebarPlacement(chrome, legacy, pdfWidth, windowWidth);
-  const floating = resolvePdfSidebarPlacement(chrome, {
+  const compact = rules.tier ? {
     leftFloating: rules.left === 'edge', rightFloating: rules.right === 'edge'
-  }, pdfWidth, windowWidth);
-  return {
-    leftFloating: rules.left !== 'closed' && floating.leftFloating,
-    rightFloating: rules.right !== 'closed' && floating.rightFloating
-  };
+  } : legacy;
+  return resolvePdfSidebarPlacement(chrome, compact, pdfWidth, windowWidth, rules.pdfFirstSidebar);
 }
 
 function projectSidebarTier(chrome: WorkspaceLayoutChromeProps, rules: ReturnType<typeof useActiveSidebarTier>, width: number, resize: ReturnType<typeof useTierSidebarResize>): WorkspaceLayoutChromeProps {

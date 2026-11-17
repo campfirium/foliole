@@ -8,7 +8,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Mobile About | Settings shows the installed app version and build on iPhone and Android. | — | — | Mobile installation metadata and public site links stay in the app UI. |
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
 | Immersive reading | Desktop paragraph keys move within the open material in Browse and Flow. | — | Paragraph movement stays in the desktop reader. | Agent Control reads material content by ID. |
-| PDF reading view | Desktop PDF zoom and sidebar placement are reader controls. | — | PDF reading layout stays in the desktop reader. | Material search already supports PDF locations. |
+| PDF reading view | Desktop PDF zoom and sidebar placement are reader controls. Automatic width expansion follows narrower sidebar layout tiers, moving the left sidebar first when those tiers show no preference. | — | PDF reading layout stays in the desktop reader. | Material search already supports PDF locations. |
 | Android WebView guidance | Startup help can display before the Android renderer starts. Restricted PDF originals include update instructions. | — | Device component updates are managed through Android and its update channels. | — |
 | Trash | Find restorable subtree roots by title, including titles of trashed descendants. | — | Pass the returned ID and revision to `materials/restore`. | Emptying Trash requires confirmation in the desktop app. Permanent deletion is unavailable through Agent Control. |
 | Folder | Read title and hierarchy. Search and list direct children. | Create with a title and parent. | Move, reorder children, trash, and restore. Rename with `materials/update` (`--title` in the CLI) using the revision from `materials/read`. | — |
@@ -133,7 +133,7 @@ Desktop image focus is an editor action for a stored image occurrence. Its saved
 
 Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area at the original display width while retaining the original attachment destination and bytes. The editor can reveal the original image in place to adjust or remove a crop. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
 
-Desktop image cloze borders show in-place range handles that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation.
+Desktop image cloze borders show in-place range handles that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation. The desktop image preview also accepts drag selections for image cloze creation, annotation, focus, and crop where the source editor permits them. These gestures reuse the existing material operations and have no dedicated Agent Control commands.
 
 ### Paging search results
 

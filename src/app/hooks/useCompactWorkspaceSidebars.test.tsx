@@ -1,6 +1,9 @@
-import { act, fireEvent, renderHook } from '@testing-library/react';
+import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { defaultSidebarTiers } from '../../features/settings/model/sidebarLayoutTiers';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import * as windowControls from '../../shared/platform/windowControls';
 import type { WorkspaceLayoutChromeProps } from '../components/workspaceLayoutPropGroups';
 
 import { useCompactWorkspaceSidebars } from './useCompactWorkspaceSidebars';
@@ -145,4 +148,42 @@ it('floats only the sidebars needed for the requested PDF width and restores doc
   rerender(0);
   expect(result.current.compactSidebars).toMatchObject({ leftFloating: false, rightFloating: false, openSide: null });
   expect(chrome.onToggleRightSidebarVisibility).not.toHaveBeenCalled();
+});
+
+it.each([
+  { layout: 'default', middleLeft: 'dock', middleRight: 'edge', leftFirst: false },
+  { layout: 'right preferred', middleLeft: 'edge', middleRight: 'dock', leftFirst: true },
+  { layout: 'tied', middleLeft: 'dock', middleRight: 'dock', leftFirst: true }
+] as const)('follows the $layout layout as the PDF grows and shrinks', async ({ middleLeft, middleRight, leftFirst }) => {
+  installViewport(1600);
+  vi.stubGlobal('innerWidth', 1600);
+  const key = APP_SETTINGS_STORAGE_KEYS.sidebarLayoutTiers;
+  const tiers = defaultSidebarTiers.map(tier => tier.id === 'medium' ? {
+    ...tier,
+    left: { ...tier.left, mode: middleLeft },
+    right: { ...tier.right, mode: middleRight }
+  } : tier);
+  localStorage.setItem(key, JSON.stringify(tiers));
+  const metrics = vi.spyOn(windowControls, 'queryWindowSidebarLayoutMetrics')
+    .mockResolvedValue({ windowWidth: 1600, workAreaWidth: 1600 });
+  try {
+    const chrome = createChrome();
+    const { result, rerender } = renderHook(width => useCompactWorkspaceSidebars(chrome, width), { initialProps: 700 });
+    await waitFor(() => expect(result.current.compactSidebars?.tiered).toBe(true));
+    const expectFloating = (leftFloating: boolean, rightFloating: boolean) =>
+      expect(result.current.compactSidebars).toMatchObject({ leftFloating, rightFloating });
+    expectFloating(false, false);
+    rerender(1000);
+    expectFloating(leftFirst, !leftFirst);
+    rerender(1300);
+    expectFloating(true, true);
+    rerender(1000);
+    expectFloating(leftFirst, !leftFirst);
+    rerender(0);
+    expectFloating(false, false);
+    expect(localStorage.getItem(key)).toBe(JSON.stringify(tiers));
+  } finally {
+    metrics.mockRestore();
+    localStorage.removeItem(key);
+  }
 });
