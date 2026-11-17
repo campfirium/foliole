@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { convertSuperMemoContent } from '../../lib/core/import/superMemoContent.js';
+import { readSuperMemoNativeMarks } from '../../lib/core/import/superMemoNativeMarks.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { stageManagedAttachmentFile } from '../attachments/managedAttachmentFileStage.js';
@@ -75,7 +76,7 @@ export async function inspectSuperMemoImageSources(sources: ReadonlySet<string>,
   return images;
 }
 
-export async function prepareSuperMemoTopicContent(parts: string[], collectionDirectory?: string, expectedImages?: ReadonlyMap<string, string | null>) {
+export async function prepareSuperMemoTopicContent(parts: string[], collectionDirectory?: string, expectedImages?: ReadonlyMap<string, string | null>, readMarks = false) {
   const draft = convertSuperMemoContent(parts);
   const root = collectionDirectory ? await assertAuthorizedImportDirectoryPath(collectionDirectory) : null;
   const destinations = new Map<string, string>();
@@ -93,8 +94,11 @@ export async function prepareSuperMemoTopicContent(parts: string[], collectionDi
       storage_key: canonical.storageKey, original_name: image.originalName, role: 'image'
     });
   }
+  const render = (html: string[]) => convertSuperMemoContent(html, destinations).content;
+  const content = destinations.size ? render(parts) : draft.content;
+  const nativeMarks = readMarks ? readSuperMemoNativeMarks(parts, content, render) : undefined;
   return {
-    content: destinations.size ? convertSuperMemoContent(parts, destinations).content : draft.content,
+    content, ...(nativeMarks ? { nativeMarks } : {}),
     resourceReferences: [...references.values()],
     unresolvedImages: [...draft.localSources].flatMap(([source, count]) =>
       destinations.has(source) ? [] : Array<string>(count).fill(source))

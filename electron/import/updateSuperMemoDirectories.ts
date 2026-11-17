@@ -131,7 +131,7 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview, elements: Supe
       !node.deleted_at && !node.virtual_filter && !node.image_regions && !node.anchor_link &&
       node.parent_id === entry.importedParentNodeId &&
       (targetSource === row.parentId || targetSource === row.sourceArticleId);
-    const restored = recoverable ? recoverAnchor?.(entry, targetSource, target) : null;
+    const restored = recoverable ? recoverAnchor?.(entry, targetSource, target, entries.get(targetSource)) : null;
     if (sameParent && !restored) continue;
     const allowedTarget = target !== undefined && targetKindValid && canMove(entry.nodeId, target, read, projectedParents);
     if (node?.anchor_link && targetSource != null && target && additions.has(targetSource) && !pendingBodies.has(target)) {

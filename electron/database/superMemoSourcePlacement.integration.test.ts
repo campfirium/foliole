@@ -85,7 +85,7 @@ if (!xml || !collectionDirectory) {
   }
 });
 
-it('restores answer-only cloze anchors in the direct parent and leaves ambiguous cards usable', async () => {
+it.each([false, true])('uses a native cloze mark to resolve a repeated answer (marked: %s)', async marked => {
   const fixture = await restoreFixture();
   const peer = fixture.peer('source');
   try {
@@ -99,7 +99,7 @@ it('restores answer-only cloze anchors in the direct parent and leaves ambiguous
       + question + ']]></Question><Answer>' + answer + '</Answer></Content></SuperMemoElement>';
     const blank = '<span class="cloze">[...]</span>';
     const xml = '<SuperMemoCollection><Count>6</Count><SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Parent</Title>'
-      + '<Content><Question>' + body + '</Question></Content>'
+      + '<Content><Question><![CDATA[' + (marked ? body.replace('second milestone', 'second <span class=clozed>milestone</span>') : body) + ']]></Question></Content>'
       + item(2, 'Rewritten sentence with ' + blank, 'review')
       + item(3, 'A second ' + blank + ' with clear context.', 'milestone')
       + item(4, 'a ' + blank, 'milestone')
@@ -121,14 +121,20 @@ it('restores answer-only cloze anchors in the direct parent and leaves ambiguous
         kind: 'cloze', locator: { from, to: from + answer.length, originalText: parent.content.slice(from, from + answer.length) }
       });
     }
-    for (const id of [4, 5, 6]) expect(card(id)).toMatchObject({ parent_id: parent.id, anchor_link: null });
+    const repeated = card(4);
+    expect(repeated.parent_id).toBe(parent.id);
+    if (marked) expect(JSON.parse(repeated.anchor_link!)).toMatchObject({
+      kind: 'cloze', locator: { from: parent.content.lastIndexOf('milestone'), originalText: 'milestone' }
+    });
+    else expect(repeated.anchor_link).toBeNull();
+    for (const id of [5, 6]) expect(card(id)).toMatchObject({ parent_id: parent.id, anchor_link: null });
   } finally {
     connection.driver = null;
     await fixture.close();
   }
 });
 
-it('restores Topic highlights in the original parent when the selection can be located', async () => {
+it.each(['none', 'one', 'both'])('uses native extract colors only to resolve a unique candidate (%s)', async marks => {
   const fixture = await restoreFixture();
   const peer = fixture.peer('source');
   try {
@@ -141,7 +147,9 @@ it('restores Topic highlights in the original parent when the selection can be l
       '<SuperMemoElement><ID>' + id + '</ID><Type>Topic</Type><Title>Topic ' + id + '</Title><Content><Question><![CDATA['
       + body + ']]></Question></Content>' + children + '</SuperMemoElement>';
     const parent = '<p>' + revised + '</p><p>A second distinct selection.</p>'
-      + '<p>A repeated passage.</p><p>A repeated passage.</p>';
+      + (marks === 'both' ? '<p><span class="extract">A repeated passage.</span></p>' : '<p>A repeated passage.</p>')
+      + (marks === 'none' ? '<p>A repeated passage.</p>'
+        : '<p><font style="background-color:#7be1e1">A repeated</font> <font style="background-color:#7be1e1">passage.</font></p>');
     const children = topic(2, 'The first boundary remains, a brief paraphrase, the last boundary remains.')
       + topic(3, 'A second distinct selection.<hr SuperMemo><SuperMemoReference>#Title: Parent</SuperMemoReference>')
       + topic(4, 'A repeated passage.') + topic(5, 'Text that has no surviving evidence.');
@@ -162,7 +170,12 @@ it('restores Topic highlights in the original parent when the selection can be l
         kind: 'highlight', locator: { from, to: from + originalText.length, originalText }
       });
     }
-    for (const id of [4, 5]) expect(node(id)).toMatchObject({ parent_id: parentNode.id, anchor_link: null });
+    expect(node(4).parent_id).toBe(parentNode.id);
+    if (marks === 'one') expect(JSON.parse(node(4).anchor_link!)).toMatchObject({
+      kind: 'highlight', locator: { from: parentNode.content.lastIndexOf('A repeated passage.'), originalText: 'A repeated passage.' }
+    });
+    else expect(node(4).anchor_link).toBeNull();
+    expect(node(5)).toMatchObject({ parent_id: parentNode.id, anchor_link: null });
   } finally {
     connection.driver = null;
     await fixture.close();

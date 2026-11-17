@@ -7,7 +7,7 @@ import { card, loadSource, openPreview, parameters, writeCollection } from './ha
 const passage = 'A verified selection in the source article.';
 const xml = `<SuperMemoCollection><Count>4</Count>
   <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Source article</Title>
-    <Content><Question><![CDATA[<p><span class="extract">${passage}</span></p>]]></Question></Content></SuperMemoElement>
+    <Content><Question><![CDATA[<p>${passage}</p><p><font style="background-color:#7be1e1">${passage}</font></p>]]></Question></Content></SuperMemoElement>
   ${card}
   <SuperMemoElement><ID>4</ID><Type>Topic</Type><Title>Directory topic</Title>
     <Content><Question>This topic discusses something else.</Question></Content>

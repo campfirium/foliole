@@ -7,7 +7,7 @@ import { normalizeFullTextWithMap } from './contextExcerptFullTextNormalize.js';
 import { findContextExcerptInLocator } from './contextExcerptLocator.js';
 import { createContextExcerptQuoteLocator } from './contextExcerptQuoteLocator.js';
 import { convertSuperMemoContent } from './superMemoContent.js';
-import { isSuperMemoReference, prepareSuperMemoParentText, superMemoParentTextRange, type SuperMemoParentText } from './superMemoParentText.js';
+import { isSuperMemoNativeMarked, isSuperMemoReference, prepareSuperMemoParentText, superMemoParentTextRange, type SuperMemoParentText } from './superMemoParentText.js';
 
 const MIN_SLICE_LENGTH = 8;
 const MIN_SLICE_COVERAGE = 0.45;
@@ -103,8 +103,16 @@ export function findSuperMemoHighlightLocator(parent: SuperMemoParentText, excer
   if (!normalized || !/[\p{L}\p{N}]/u.test(normalized)) return null;
   const exact = parent.normalized.indexOf(normalized);
   if (exact >= 0) {
-    if (parent.normalized.indexOf(normalized, exact + 1) >= 0) return null;
-    return superMemoParentTextRange(parent, exact, exact + normalized.length);
+    if (parent.normalized.indexOf(normalized, exact + 1) < 0) {
+      return superMemoParentTextRange(parent, exact, exact + normalized.length);
+    }
+    let marked: number | null = null;
+    for (let position = exact; position >= 0; position = parent.normalized.indexOf(normalized, position + 1)) {
+      if (!isSuperMemoNativeMarked(parent, 'highlight', position, position + normalized.length)) continue;
+      if (marked !== null) return null;
+      marked = position;
+    }
+    return marked === null ? null : superMemoParentTextRange(parent, marked, marked + normalized.length);
   }
   return findWholeExcerpt(parent, quote) ?? findPunctuationAdjustedExcerpt(parent, normalized) ?? findSliceRange(parent, quote);
 }

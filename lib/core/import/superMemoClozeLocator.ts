@@ -5,7 +5,7 @@ import type { TextAnchorLocator } from '../anchors/textAnchorLocator.js';
 
 import { normalizeFullTextWithMap } from './contextExcerptFullTextNormalize.js';
 import { convertSuperMemoContent } from './superMemoContent.js';
-import { isSuperMemoReference, superMemoParentTextRange, type SuperMemoParentText } from './superMemoParentText.js';
+import { isSuperMemoNativeMarked, isSuperMemoReference, superMemoParentTextRange, type SuperMemoParentText } from './superMemoParentText.js';
 
 const BLANK_MARKER = 'FOLIOLESUPERMEMOCLOZEPLACEHOLDER';
 const CONTEXT_LENGTH = 12;
@@ -51,22 +51,17 @@ function* answerPositions(parent: string, answer: string) {
   }
 }
 
-function findAnswerPosition(parent: string, answer: string, context: NonNullable<ReturnType<typeof readBlankContext>>) {
-  let onlyPosition: number | null = null;
-  let onlyContextMatch: number | null = null;
-  let count = 0;
-  let contextCount = 0;
-  const hasContext = context.before.length + context.after.length >= MIN_CONTEXT_LENGTH;
-  for (const from of answerPositions(parent, answer)) {
-    onlyPosition = from;
-    count++;
-    if (hasContext && parent.slice(0, from).trimEnd().endsWith(context.before) &&
-      parent.slice(from + answer.length).trimStart().startsWith(context.after)) {
-      onlyContextMatch = from;
-      contextCount++;
-    }
-  }
-  return count === 1 ? onlyPosition : contextCount === 1 ? onlyContextMatch : null;
+function findAnswerPosition(parent: SuperMemoParentText, answer: string, context: NonNullable<ReturnType<typeof readBlankContext>>) {
+  const text = parent.normalized;
+  const positions = [...answerPositions(text, answer)];
+  if (positions.length <= 1) return positions[0] ?? null;
+  const contextMatches = context.before.length + context.after.length < MIN_CONTEXT_LENGTH ? [] : positions.filter(from =>
+    text.slice(0, from).trimEnd().endsWith(context.before) &&
+    text.slice(from + answer.length).trimStart().startsWith(context.after));
+  if (contextMatches.length === 1) return contextMatches[0]!;
+  const candidates = contextMatches.length ? contextMatches : positions;
+  const marked = candidates.filter(from => isSuperMemoNativeMarked(parent, 'cloze', from, from + answer.length));
+  return marked.length === 1 ? marked[0]! : null;
 }
 
 export function findSuperMemoClozeLocator(parent: SuperMemoParentText,
@@ -75,7 +70,7 @@ export function findSuperMemoClozeLocator(parent: SuperMemoParentText,
   if (!answer || !/[\p{L}\p{N}]/u.test(answer)) return null;
   const context = readBlankContext(questionHtml);
   if (!context) return null;
-  const from = findAnswerPosition(parent.normalized, answer, context);
+  const from = findAnswerPosition(parent, answer, context);
   if (from === null) return null;
   const locator = superMemoParentTextRange(parent, from, from + answer.length);
   if (!locator || locator.originalText.includes('\n') ||

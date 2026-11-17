@@ -105,6 +105,7 @@ function verifyArticleHierarchy(
   const body = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck();
   for (const [child, source, expectedKind, expectedText] of [
     [3517, 825, 'highlight', '知道别人在看着你'],
+    [1348, 1085, 'cloze', '思考'],
     [797, 1148, 'cloze', '想采取的行动'], [139, 138, 'highlight', '我们要写下那些我们担心忘记的东西']
   ] as const) {
     expect(parent.get(nodeId(child))).toBe(nodeId(source));

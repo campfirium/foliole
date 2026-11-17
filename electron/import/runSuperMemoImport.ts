@@ -3,8 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-import { findSuperMemoClozeLocator } from '../../lib/core/import/superMemoClozeLocator.js';
-import { findSuperMemoHighlightLocator } from '../../lib/core/import/superMemoHighlightLocator.js';
+import { resolveSuperMemoTextAnchor } from '../../lib/core/import/superMemoAnchorRule.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
 import { prepareSuperMemoParentText, type SuperMemoParentText } from '../../lib/core/import/superMemoParentText.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
@@ -54,7 +53,7 @@ export async function prepareSuperMemoRows(rows: Row[], elements: Map<number, Su
   for (const row of rows) {
     const element = elements.get(row.id)!;
     const body = row.outcome === 'topic' || row.outcome === 'item'
-      ? await prepareSuperMemoTopicContent(element.bodyOrQuestionHtml, directory, expectedImages) : empty;
+      ? await prepareSuperMemoTopicContent(element.bodyOrQuestionHtml, directory, expectedImages, row.outcome === 'topic') : empty;
     const answer = row.outcome === 'item' ? await prepareSuperMemoTopicContent(element.answerHtml, directory, expectedImages) : empty;
     prepared.push({ row, element, body, answer });
   }
@@ -69,7 +68,7 @@ function importedTextReceipt(kind: Row['outcome'], content: string, reveal: stri
   return {};
 }
 
-type AnchorParent = { body: string; shift: number; search?: SuperMemoParentText };
+type AnchorParent = { body: string; shift: number; nativeMarks?: Prepared['nativeMarks']; search?: SuperMemoParentText };
 
 function anchorParentFor(row: Row, parent: number | null | undefined, written: Map<number, AnchorParent>,
   options: { existingNodeIds?: ReadonlyMap<number, string>; existingParentContent?: (nodeId: string) => string | undefined }): AnchorParent | undefined {
@@ -129,13 +128,12 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
         article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat, body.content);
       if (kind === 'topic') {
         const shift = placement === 'metadata' || placement === 'topic-info' ? content.length - body.content.length : 0;
-        parentBodies.set(row.id, { body: body.content, shift });
+        parentBodies.set(row.id, { body: body.content, shift, nativeMarks: body.nativeMarks });
       }
       const source = sourceRows.get(parent ?? 0)?.outcome === 'topic' ? anchorParentFor(row, parent, parentBodies, options) : undefined;
       if (source && (kind === 'topic' || kind === 'item')) {
-        const search = source.search ??= prepareSuperMemoParentText(source.body);
-        const locator = kind === 'topic' ? findSuperMemoHighlightLocator(search, element.bodyOrQuestionHtml)
-          : findSuperMemoClozeLocator(search, element.bodyOrQuestionHtml, answer.content);
+        const search = source.search ??= prepareSuperMemoParentText(source.body, source.nativeMarks);
+        const locator = resolveSuperMemoTextAnchor(search, kind, element.bodyOrQuestionHtml, answer.content);
         if (locator) snapshot.anchorLink = { id: `anchor-${randomUUID()}`, kind: kind === 'topic' ? 'highlight' : 'cloze',
           locator: { ...locator, from: locator.from + source.shift, to: locator.to + source.shift } };
       }
