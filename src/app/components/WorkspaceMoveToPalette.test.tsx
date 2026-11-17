@@ -32,6 +32,7 @@ it('searches the full destination list and immediately moves to the keyboard sel
   renderWithLocalization(<Harness />);
 
   const dialog = screen.getByRole('dialog', { name: 'Move to' });
+  expect(within(dialog).getByRole('button', { name: 'Shelf', exact: true })).toBeVisible();
   const input = within(dialog).getByRole('textbox', { name: 'Move “How habits form” to…' });
   const toggle = within(dialog).getByRole('button', { name: 'Show shortcuts' });
   expect(toggle).toHaveAttribute('aria-expanded', 'false');

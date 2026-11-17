@@ -10,7 +10,8 @@ export function WorkspaceMoveToPalette({ state }: { state: AppMoveToNodeState })
   const t = useTranslation();
   const busy = useRef(false);
   const destinations = useMemo(() => buildNodeSearchResults(
-    state.nodeOrder, state.nodesById, state.recentNodeIds, state.trashedNodeIds, '', Infinity
+    state.nodeOrder, state.nodesById, state.recentNodeIds, state.trashedNodeIds, '',
+    { limit: Infinity, showTopLevelLabel: false }
   ).map(({ id, title, path }) => ({
     id,
     title: path ? `${path} / ${title}` : title

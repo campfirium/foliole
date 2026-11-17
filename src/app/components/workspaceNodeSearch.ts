@@ -24,10 +24,14 @@ function untitledLabel() {
   return translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
-function buildNodePathLabel(node: WorkspaceListNode, nodesById: Record<string, WorkspaceListNode>) {
+function buildNodePathLabel(
+  node: WorkspaceListNode,
+  nodesById: Record<string, WorkspaceListNode>,
+  showTopLevelLabel: boolean
+) {
   const breadcrumbItems = buildNodeBreadcrumbs(node.parentNodeId, nodesById);
   if (!breadcrumbItems.length) {
-    return translate(getStoredAppLocale(), 'desktop.search.context.topLevel');
+    return showTopLevelLabel ? translate(getStoredAppLocale(), 'desktop.search.context.topLevel') : '';
   }
   return breadcrumbItems.map((item) => item.title.trim() || untitledLabel()).join(' / ');
 }
@@ -86,7 +90,7 @@ export function buildNodeSearchResults(
   recentNodeIds: string[],
   trashedNodeIds: string[],
   query: string,
-  limit = MAX_RESULTS
+  { limit = MAX_RESULTS, showTopLevelLabel = true } = {}
 ): WorkspaceNodeSearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
   const availableNodesById = Object.fromEntries(
@@ -105,7 +109,7 @@ export function buildNodeSearchResults(
         return [];
       }
       const title = normalizeWhitespace(node.title) || untitledLabel();
-      const path = buildNodePathLabel(node, availableNodesById);
+      const path = buildNodePathLabel(node, availableNodesById, showTopLevelLabel);
       const keywords = buildNodeKeywords(node);
       const score = resolveQueryScore({
         index,
