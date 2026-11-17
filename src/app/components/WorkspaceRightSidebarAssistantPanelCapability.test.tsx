@@ -205,23 +205,33 @@ it('checks the selected model after reload', async () => {
   expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
 });
 
-it('shows an unavailable location for history threads whose topic cannot be restored', async () => {
+it('only shows available material links in history', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
-    createThread({ location: { nodeId: 'missing-topic', type: 'node' } })
+    createThread({
+      linkedMaterialIds: ['available-topic', 'trashed-topic'],
+      location: { nodeId: 'missing-topic', type: 'node' }
+    }),
+    createThread({ location: { type: 'workspace' }, providerThreadId: 'workspace-thread', title: 'Library thread' })
   ]);
   const onSelectNode = vi.fn();
 
   renderWithLocalization(
     <WorkspaceRightSidebarAssistantPanel
       activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      nodesById={{
+        'available-topic': createNode({ id: 'available-topic', title: 'Available topic' }),
+        'trashed-topic': createNode({ id: 'trashed-topic', title: 'Trashed topic' })
+      }}
       onSelectNode={onSelectNode}
+      trashedNodeIds={['trashed-topic']}
     />
   );
-  fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
-
-  expect(screen.getAllByText('Topic not available in this workspace')).not.toHaveLength(0);
-  expect(onSelectNode).not.toHaveBeenCalled();
+  const history = await screen.findByRole('list', { name: /local foliole aide history/i });
+  expect(history).not.toHaveTextContent('Topic not available in this workspace');
+  expect(history).not.toHaveTextContent('Full library');
+  expect(screen.queryByRole('button', { name: 'More linked materials' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open material: Available topic' }));
+  expect(onSelectNode).toHaveBeenCalledWith('available-topic');
 });
 
 function renderPanel(onOpenModelSettings = vi.fn()) {

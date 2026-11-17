@@ -50,7 +50,7 @@ function AssistantHistoryRow({ record, list }: {
     <li
       className={cn(
         inspectorListDividerClassName,
-        'flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
+        'group/history-row flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
         active
           ? 'bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
           : 'hover:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
@@ -67,7 +67,7 @@ function AssistantHistoryRow({ record, list }: {
             {record.title}
           </span>
           {showPreview && (
-            <span className="block truncate text-ui-sm leading-4 text-foreground/68" title={preview}>
+            <span className="line-clamp-2 break-words text-ui-sm leading-4 text-foreground/68" title={preview}>
               {preview}
             </span>
           )}
@@ -82,7 +82,7 @@ function AssistantHistoryRow({ record, list }: {
         />
       </div>
       <AppIconButton
-        className="shrink-0"
+        className="pointer-events-none opacity-0 transition-opacity group-hover/history-row:pointer-events-auto group-hover/history-row:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
         disabled={list.removingThreadId === record.providerThreadId}
         icon={<Trash2 aria-hidden className="size-3.5" strokeWidth={1.8} />}
         label={t('desktop.rightPanel.assistant.removeThread')}

@@ -31,16 +31,19 @@ function isMaterial(node: Node | undefined) {
 export function WorkspaceRightSidebarAssistantMaterialTags(props: MaterialTagsProps) {
   const t = useTranslation();
   const sourceId = props.location?.type === 'node' ? props.location.nodeId : null;
-  const materialIds = [...new Set([...(sourceId ? [sourceId] : []), ...(props.linkedMaterialIds ?? [])])]
-    .filter(id => !props.nodesById[id] || isMaterial(props.nodesById[id]));
   const history = props.appearance === 'history';
+  const materialIds = [...new Set([...(sourceId ? [sourceId] : []), ...(props.linkedMaterialIds ?? [])])]
+    .filter(id => history
+      ? isMaterial(props.nodesById[id]) && !props.trashedNodeIds?.includes(id)
+      : !props.nodesById[id] || isMaterial(props.nodesById[id]));
+  if (history && materialIds.length === 0) return null;
   const currentId = props.activeNodeId;
   const addDisabled = !currentId || !isMaterial(props.nodesById[currentId])
     || props.trashedNodeIds?.includes(currentId) || (props.draft ? props.linkedMaterialIds?.includes(currentId) : materialIds.includes(currentId))
     || props.busy;
   return (
     <div className={`flex min-w-0 items-center ${history ? 'mt-0.5 gap-2' : 'gap-1'}`}>
-      {materialIds.length === 0 ? <span className={history ? historyTagClassName : tagClassName}>
+      {materialIds.length === 0 ? <span className={tagClassName}>
         <LibraryBig aria-hidden className="size-3 shrink-0" />
         {t('desktop.rightPanel.assistant.materialTag.library')}
       </span> : null}
@@ -72,9 +75,7 @@ function MaterialTag({ id, props, single }: { id: string; props: MaterialTagsPro
   const t = useTranslation();
   const { title, unavailable, label } = useMaterialTag(id, props);
   if (props.appearance === 'history') {
-    return unavailable ? (
-      <span className={`block min-w-0 truncate text-ui-xs leading-5 text-foreground/65`} title={label}>{label}</span>
-    ) : (
+    return (
       <button
         aria-label={label}
         className={`${historyTagClassName} ${historyLinkClassName}`}

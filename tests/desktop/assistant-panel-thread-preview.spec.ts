@@ -38,11 +38,12 @@ const assistantReadyStatus = {
   state: 'ready'
 };
 
-test('Aide history keeps a continued thread title stable and updates the preview', async ({
+test('Aide history shows a two-line preview and reveals removal on hover or keyboard focus', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
   await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-app-language', 'en');
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
@@ -56,9 +57,19 @@ test('Aide history keeps a continued thread title stable and updates the preview
   await expect(desktopWindow.getByText('Follow-up answer')).toBeVisible();
   await desktopWindow.getByRole('button', { name: /^(Back to history|返回历史)$/ }).click();
 
-  await expect(desktopWindow.getByRole('button', { name: /Original prompt/i })).toBeVisible();
-  await expect(desktopWindow.getByText(/Follow-up prompt/)).toBeVisible();
-  await desktopWindow.getByRole('button', { name: /Original prompt/i }).hover();
+  const title = desktopWindow.getByRole('button', { name: /Original prompt/i });
+  const preview = title.getByText('Follow-up prompt');
+  const remove = desktopWindow.getByRole('button', { name: 'Remove from local Foliole Aide history' });
+  await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
+  await expect(remove).toHaveCSS('opacity', '0');
+  await title.hover();
+  await expect(remove).toHaveCSS('opacity', '1');
+  await desktopWindow.getByRole('heading', { name: 'Aide' }).hover();
+  await expect(remove).toHaveCSS('opacity', '0');
+  await title.focus();
+  await title.press('Tab');
+  await expect(remove).toBeFocused();
+  await expect(remove).toHaveCSS('opacity', '1');
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-thread-preview', {
