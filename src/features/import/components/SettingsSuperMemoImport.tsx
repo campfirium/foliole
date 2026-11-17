@@ -107,7 +107,7 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
   const showSource = (!parameters || update) && !result;
   function closeSession() {
     if (result) {
-      model.resetCompletedDraft();
+      void model.resetCompletedDraft();
       backToPreview();
     }
     close();
@@ -130,7 +130,7 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
             {parameters && preview && !result && !update ? (
               <SuperMemoParameters preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
             ) : null}
-            {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
+            {(!preview || (update && !parameters && !result)) && !busy ? <SuperMemoBatchAdjustments /> : null}
             {update && !parameters && !result ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
             {update && parameters && !result ? <SuperMemoDirectoryUpdate update={update} sourceFormat={sourceFormat} disabled={busy}
               onSourceFormatChange={changeSourceFormat} /> : null}
@@ -176,7 +176,7 @@ export function SuperMemoSessionProvider({ children, settingsOpen, libraryScope 
   return (
     <SuperMemoSession.Provider value={launch}>
       {children}
-      {session.grades ? <SuperMemoDraftDialog open={settingsOpen && session.open} initialGrades={session.grades}
+      {session.grades ? <SuperMemoDraftDialog key={libraryScope} open={settingsOpen && session.open} initialGrades={session.grades}
         close={() => setSession(current => ({ ...current, open: false }))} translate={session.translate} /> : null}
     </SuperMemoSession.Provider>
   );

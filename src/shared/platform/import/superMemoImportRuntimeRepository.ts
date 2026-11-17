@@ -2,13 +2,27 @@ import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../.
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { readSuperMemoXmlDraft } from '../../../../lib/core/import/superMemoXmlDraft';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import type { NativeSuperMemoPreviewArgs } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { NativeSuperMemoPreviewArgs, SuperMemoSourceLink } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
 export function selectRuntimeSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
+}
+
+export function loadRuntimeSuperMemoSourceLink() {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'restore' });
+}
+
+export async function saveRuntimeSuperMemoSourceLink(link: SuperMemoSourceLink, formOnly: boolean) {
+  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'remember', link, formOnly });
+}
+
+export async function readRuntimeSuperMemoComparison() {
+  const source = await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'comparison' });
+  if (!source) throw new Error('supermemo_source_changed');
+  return readSource(source.xml).elements;
 }
 
 export function selectRuntimeSuperMemoCollection(filePath: string, title: string, candidate?: string) {

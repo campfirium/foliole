@@ -49,12 +49,24 @@ export interface NativeSuperMemoPreview {
   directoryUpdate?: NativeSuperMemoDirectoryUpdate;
 }
 
+export interface SuperMemoMigrationForm {
+  percent: number;
+  sourceFormat: SuperMemoSourceFormat;
+  comparison?: { batchId: string; originalFilePath?: string | undefined };
+}
+
+export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
+  filePath: string;
+  collectionDirectory: string | null;
+}
+
 export interface NativeSuperMemoSource {
   filePath: string;
   name: string;
   xml: string;
   collectionDirectory: string | undefined;
   collectionCandidates?: { directory: string; name: string }[];
+  savedForm?: SuperMemoMigrationForm;
   collectionDiscoveryFailure?: 'access' | 'read';
 }
 

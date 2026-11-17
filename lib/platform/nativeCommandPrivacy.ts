@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 const SENSITIVE_NATIVE_COMMAND_ARGS = new Set<string>([
   NATIVE_COMMANDS.sendArticleToEdge,
+  NATIVE_COMMANDS.readSuperMemoSource,
   NATIVE_COMMANDS.previewSuperMemoImport,
   NATIVE_COMMANDS.runSuperMemoImport,
   NATIVE_COMMANDS.saveWebDavRelayDirectory,

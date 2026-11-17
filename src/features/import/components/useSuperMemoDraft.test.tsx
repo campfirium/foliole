@@ -7,6 +7,8 @@ import { DEFAULT_SUPER_MEMO_GRADE_MAP } from '../../../../lib/core/import/superM
 import { useSuperMemoDraft } from './useSuperMemoDraft';
 
 const runtime = vi.hoisted(() => ({
+  loadRuntimeSuperMemoSourceLink: vi.fn().mockResolvedValue(null),
+  saveRuntimeSuperMemoSourceLink: vi.fn().mockResolvedValue(undefined),
   previewRuntimeSuperMemoImport: vi.fn(),
   selectRuntimeSuperMemoSource: vi.fn()
 }));

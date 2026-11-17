@@ -5,7 +5,7 @@ import {
   AppDialogOverlay, AppDialogPortal, AppDialogTitle
 } from '../../../shared/ui';
 
-import type { SuperMemoNotice } from './useSuperMemoDraft';
+import type { SuperMemoNotice } from './superMemoDraftSourceActions';
 
 const descriptions = {
   collectionChoice: 'desktop.superMemoDrafts.collectionChoiceHelp',
@@ -17,7 +17,8 @@ const descriptions = {
   collectionRead: 'desktop.superMemoDrafts.collectionRead',
   collectionMismatch: 'desktop.superMemoDrafts.collectionMismatch',
   preview: 'desktop.superMemoDrafts.previewFailed',
-  convert: 'desktop.superMemoDrafts.convertFailed'
+  convert: 'desktop.superMemoDrafts.convertFailed',
+  save: 'desktop.superMemoDrafts.saveLinkFailed'
 } as const;
 
 export function SuperMemoLoadNotice({ error, busy, candidates, onClose, recover, retry }: {

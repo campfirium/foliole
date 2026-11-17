@@ -29,11 +29,12 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
-import { readSuperMemoSource, selectSuperMemoCollection, selectSuperMemoSource } from './readSuperMemoSource.js';
+import { selectSuperMemoCollection } from './readSuperMemoSource.js';
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { handleSuperMemoImportCommand } from './superMemoImportCommands.js';
+import { handleSuperMemoSource } from './superMemoSourceLink.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -98,10 +99,7 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   const args = (request.args ?? {}) as Record<string, unknown>;
 
   if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
-    return args.filePath === undefined
-      ? selectSuperMemoSource(resolveTargetWindow(context))
-      : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
-        ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
+    return handleSuperMemoSource(args, () => resolveTargetWindow(context));
   }
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
     return selectSuperMemoCollection(resolveTargetWindow(context), asString(args.filePath, 'filePath'),

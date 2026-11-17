@@ -127,6 +127,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const reopened = await openPreview(desktopWindow);
+  await expect(reopened.getByText('collection.xml', { exact: true })).toBeVisible();
   await reopened.getByRole('combobox').selectOption({ index: 1 });
   await reopened.getByRole('slider').press('End');
   await reopened.getByRole('button', { name: /^(Apply first review dates|应用首次复习日期)$/ }).click();

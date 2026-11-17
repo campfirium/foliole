@@ -137,6 +137,7 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.importAccess.settings': 'Open System Settings',
   'desktop.importAccess.retrySettings': 'Try opening System Settings again',
   'desktop.superMemoDrafts.xmlAccess': 'Foliole does not have permission to read the selected XML.',
+  'desktop.superMemoDrafts.saveLinkFailed': 'Foliole could not remember this XML or its migration settings. Try again.',
   'desktop.superMemoDrafts.xmlRead': 'Foliole could not read the selected XML file. Check that it is available and choose it again.',
   'desktop.superMemoDrafts.xmlSize': 'Choose a nonempty SuperMemo XML export no larger than 128 MiB.',
   'desktop.superMemoDrafts.xmlFormat': 'The file could not be parsed as a SuperMemo XML export. In SuperMemo, export all elements as XML and choose that file.',

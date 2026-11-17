@@ -139,6 +139,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.importAccess.settings': '打开系统设置',
   'desktop.importAccess.retrySettings': '再次尝试打开系统设置',
   'desktop.superMemoDrafts.xmlAccess': 'Foliole 无权读取所选的 XML 文件。',
+  'desktop.superMemoDrafts.saveLinkFailed': 'Foliole 无法记住这份 XML 或迁移设置，请重试。',
   'desktop.superMemoDrafts.xmlRead': 'Foliole 无法读取所选的 XML 文件。请确认文件仍可用，再重新选择。',
   'desktop.superMemoDrafts.xmlSize': '请选择非空且不超过 128 MiB 的 SuperMemo XML 导出文件。',
   'desktop.superMemoDrafts.xmlFormat': '无法将此文件解析为 SuperMemo XML 导出。请在 SuperMemo 中将所有元素导出为 XML，再选择导出的文件。',
