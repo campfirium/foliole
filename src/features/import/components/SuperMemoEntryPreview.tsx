@@ -66,7 +66,7 @@ function EntryContent({ row, source, tab }: { row: Row; source?: SuperMemoXmlDra
   const missing = row.unresolvedImages ?? [];
   return (
     <div className="space-y-3 break-words">
-      <h3 className="truncate text-base font-semibold" title={row.title}>{row.title || `#${row.id}`}</h3>
+      <h3 className="truncate text-sm font-semibold leading-7" title={row.title}>{row.title || `#${row.id}`}</h3>
       {row.issue ? <Notice>{t(`desktop.superMemoDrafts.issue.${row.issue}`, { history: row.historyCount })}</Notice> : null}
       {row.historyNeedsReview ? <Notice>{t('desktop.superMemoDrafts.issue.history', { history: row.historyCount })}</Notice> : null}
       {content?.body ? <div className="whitespace-pre-wrap">{content.body}</div> : null}
@@ -101,8 +101,8 @@ export function SuperMemoEntryPreview({ preview, elements }: {
   const current = rows.find(row => row.id === active) ?? (tab === 'converted' ? initial : rows[0]);
   return (
     <div className="grid min-h-0 gap-2">
-      <div className="grid h-[clamp(20rem,56vh,36rem)] min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] overflow-hidden rounded-lg border border-foreground/15 text-sm">
-        <section aria-label={t('desktop.superMemoDrafts.entries')} className="flex min-h-0 min-w-0 flex-col border-r border-foreground/10 bg-foreground/[0.025]">
+      <div className="grid h-[clamp(20rem,56vh,36rem)] min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-foreground/15 text-sm">
+        <section aria-label={t('desktop.superMemoDrafts.entries')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid border-r border-foreground/10 bg-foreground/[0.025]">
           <div className="flex min-h-11 flex-wrap items-stretch gap-4 border-b border-foreground/10 px-3">
             {tabs.map(key => (
               <button type="button" key={key} aria-pressed={tab === key} disabled={!preview}
@@ -112,7 +112,7 @@ export function SuperMemoEntryPreview({ preview, elements }: {
               </button>
             ))}
           </div>
-          <div className="min-h-0 flex-1 overflow-auto p-2">
+          <div className="min-h-0 overflow-auto p-2">
             {tab === 'converted' ? (
               <SuperMemoPreviewTree childrenByParent={childrenByParent} parent={null} active={current?.id} onSelect={setActive} />
             ) : <ul>{rows.map(row => <li key={row.id} className="flex min-w-0">
@@ -120,11 +120,11 @@ export function SuperMemoEntryPreview({ preview, elements }: {
             </li>)}</ul>}
           </div>
         </section>
-        <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="flex min-h-0 min-w-0 flex-col">
+        <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid">
           <h2 className="flex min-h-11 items-center border-b border-foreground/10 px-4 text-xs font-medium text-foreground/70">
             {t('desktop.superMemoDrafts.entryPreview')}
           </h2>
-          <div className="min-h-0 flex-1 overflow-auto px-5 py-4" key={current?.id}>
+          <div className="min-h-0 overflow-auto px-4 py-2" key={current?.id}>
             {current ? <EntryContent row={current} tab={tab} source={sources.get(current.id)} /> : (
               <p className="text-foreground/60">{t(preview ? 'desktop.superMemoDrafts.noEntries' : 'desktop.superMemoDrafts.description')}</p>
             )}
