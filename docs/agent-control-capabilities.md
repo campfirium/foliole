@@ -127,6 +127,8 @@ Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's t
 
 ### Image focus in material content
 
+Mobile body editing supports long-pressing a rendered image to copy its Markdown to the system text clipboard, then pasting it with the system text menu in another editable body in the same library. Reference-style image destinations are made self-contained in the clipboard only; the source is unchanged. This is an editor interaction, not a new Agent Control API or CLI operation. Item answers are outside this image-copy surface. Image cut is not yet included in this increment.
+
 Desktop image focus is an editor action for a stored image occurrence. Its saved rectangle can be adjusted or removed in place from its border in the editor. Its rectangle travels with the Markdown in existing full-content reads, updates, and material sync. Focus transparency is a desktop appearance setting for the mask outside the rectangle. Agent Control has no dedicated operation for image focus or its display setting. Preserve the image label and destination when copying or updating focused material.
 
 Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area at the original display width while retaining the original attachment destination and bytes. The editor can reveal the original image in place to adjust or remove a crop. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.

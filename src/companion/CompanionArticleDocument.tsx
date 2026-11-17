@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useCallback, type CSSProperties } from 'react';
 
 import type {
   EditorMissingAttachmentResourceHandler,
@@ -12,12 +12,14 @@ import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState, MarkdownEditorProps } from '../features/editor/components/markdownEditorTypes';
 
 import './companionReadableArticleAnchors.css';
+import './companionImageCopy.css';
 
 import { companionArticleMinHeightClassName } from './companionCssCompatibility';
+import { useCompanionImageCopy } from './useCompanionImageCopy';
 
 import { definedProps } from '@/shared/lib/definedProps';
 
-export function CompanionArticleDocument(props: {
+interface CompanionArticleDocumentProps {
   content: string;
   ariaLabel?: string;
   hideTitleHeading?: boolean;
@@ -35,7 +37,14 @@ export function CompanionArticleDocument(props: {
   readingTargetViewportMode?: EditorViewportMode | null;
   scrollContainer?: 'editor' | 'outer';
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
-}) {
+}
+
+export function CompanionArticleDocument(props: CompanionArticleDocumentProps) {
+  const imageCopy = useCompanionImageCopy(props.nodeId, Boolean(props.onChange) && !props.nodeId.endsWith('::answer'), props.content);
+  const onReady = useCallback((adapter: EditorAdapter | null) => {
+    imageCopy.onReady(adapter);
+    props.onEditorReady?.(adapter);
+  }, [imageCopy.onReady, props.onEditorReady]);
   const sectionClassName = props.layout === 'review' || (props.scrollContainer === 'outer' && !props.onChange)
     ? 'pt-1 min-h-0'
     : `pt-1 ${companionArticleMinHeightClassName}`;
@@ -45,8 +54,10 @@ export function CompanionArticleDocument(props: {
       data-companion-article-document="true"
       data-testid="companion-article-document"
       data-node-id={props.nodeId}
+      data-companion-image-copy-enabled={Boolean(props.onChange) && !props.nodeId.endsWith('::answer') ? 'true' : undefined}
       data-companion-readable-document={props.layout === 'review' ? undefined : 'true'}
       style={{ '--document-content-inline-padding': '0px' } as CSSProperties}
+      {...imageCopy.handlers}
     >
       <MarkdownEditor
         ariaLabel={props.ariaLabel ?? 'Topic body'}
@@ -65,7 +76,7 @@ export function CompanionArticleDocument(props: {
           onBlurCapture: props.onBlurCapture,
           onDocumentInput: props.onDocumentInput,
           onMissingAttachmentResource: props.onMissingAttachmentResource,
-          onReady: props.onEditorReady,
+          onReady,
           onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
@@ -74,6 +85,7 @@ export function CompanionArticleDocument(props: {
           textAnchorDecorations: props.textAnchorDecorations
         })}
       />
+      {imageCopy.menu}
     </section>
   );
 }
