@@ -7,10 +7,7 @@ import {
   appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName
 } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import {
-  floatingResultListClassName, floatingResultMetaClassName,
-  floatingResultPreviewClassName, floatingResultRowClassName
-} from '../../shared/ui/FloatingSurface';
+import { floatingResultListClassName } from '../../shared/ui/FloatingSurface';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, selectMaterialHistory } from './materialHistory';
@@ -82,7 +79,7 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
             saveMaterialHistoryView(next);
           }} />
         </HistorySearch>
-        <div aria-label={label} className={`${floatingResultListClassName} overscroll-contain focus:outline-none`} ref={resultsRef} role="group" tabIndex={0}>
+        <div aria-label={label} className={`${floatingResultListClassName} overscroll-contain focus:outline-none!`} ref={resultsRef} role="group" tabIndex={0}>
           {!rows.length && <p className={appFloatingEmptyStateClassName()}>{t(query.trim() ? 'desktop.history.noMatches' : 'desktop.history.empty')}</p>}
           <HistoryRows view={view} rows={rows} nodes={state.nodesById} selected={selected} onOpen={openRow} onPin={(index) => { void pinRow(index); }} />
         </div>
@@ -147,23 +144,23 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
     const bodyId = `${rowId}-body-${index}`;
     const pathId = `${rowId}-path-${index}`;
     const path = materialHistoryPath(nodes, node.id);
+    const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     const preview = (
-      <span id={bodyId} className={`pointer-events-none relative min-w-0 font-normal text-foreground ${floatingResultPreviewClassName}`}
+      <span id={bodyId} className={`pointer-events-none relative min-w-0 line-clamp-2 break-words text-ui-base leading-5 ${breadcrumbFirst ? 'text-foreground/75' : 'text-foreground/90'}`}
         style={{ WebkitLineClamp: view.lines }}>
         {materialHistoryPreview(node)}
       </span>
     );
     const metadata = (
-      <div className={`pointer-events-none relative flex min-w-0 items-center gap-1.5 ${floatingResultMetaClassName}`}>
-        {path && <span id={pathId} className="min-w-0 break-words text-foreground/75">{path}</span>}
+      <div className="pointer-events-none relative flex min-w-0 items-center gap-2">
+        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'text-ui-base font-medium leading-5 text-foreground/90' : 'text-xs leading-4 text-foreground/65'}`}>{path}</span>}
         <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
       </div>
     );
-    const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     return (
-      <div className={`group relative ${floatingResultRowClassName}`} key={node.id}>
+      <div className="group relative grid gap-0.5 px-3 py-2" key={node.id}>
         <button aria-labelledby={path ? (breadcrumbFirst ? `${pathId} ${bodyId}` : `${bodyId} ${pathId}`) : bodyId}
-          className={appFloatingItemClassName('absolute inset-0 rounded-lg')}
+          className={appFloatingItemClassName('absolute inset-0 rounded-md forced-colors:data-[active=true]:outline-1 forced-colors:data-[active=true]:outline-[Highlight]')}
           aria-current={index === selected || undefined} data-active={index === selected} onClick={() => onOpen(index)} type="button" />
         {breadcrumbFirst ? <>{metadata}{preview}</> : <>{preview}{metadata}</>}
       </div>
@@ -186,7 +183,7 @@ function HistoryBookmark({ pinned, selected, onClick }: {
     <AppTooltip>
       <AppTooltipTrigger asChild>
         <button aria-label={t('desktop.history.pin')} aria-pressed={pinned}
-          className={`ms-auto grid size-5 shrink-0 place-items-center rounded transition-colors hover:bg-[var(--app-floating-item-hover-bg)] hover:text-foreground focus-visible:text-foreground ${pinned ? 'text-foreground/65' : 'text-foreground/40'} ${visibility}`}
+          className={`ms-auto grid size-5 shrink-0 place-items-center rounded transition-colors hover:bg-[var(--app-floating-item-hover-bg)] hover:text-foreground focus-visible:text-foreground ${pinned ? 'text-foreground/75' : 'text-foreground/55'} ${visibility}`}
           onClick={onClick} type="button">
           <Icon aria-hidden="true" className="size-3.5" />
         </button>

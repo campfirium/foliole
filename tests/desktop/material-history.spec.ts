@@ -123,6 +123,9 @@ async function openFilteredChildFromKeyboard(page: Page, history: Locator) {
   await page.keyboard.press('Enter');
   await expect(history).toBeVisible();
   await page.keyboard.press('ArrowDown');
+  await expect(history.getByRole('group', { name: 'History' })).toHaveCSS('outline-style', 'none');
+  await expect(history.getByRole('button', { name: /Exact derived body/ })).toHaveAttribute('aria-current', 'true');
+  await history.screenshot({ path: '.tmp/artifacts/T774/material-history-keyboard.png' });
   await page.keyboard.press('Enter');
   await expect.poll(() => active(page)).toBe('history-child');
 }
@@ -137,13 +140,15 @@ async function scrollAndOpenOlderHistory(page: Page, history: Locator) {
   await expect(history).toBeVisible();
   await expect(history.getByRole('button', { name: 'Pin material', pressed: true })).toHaveCount(0);
   const target = history.getByRole('button', { name: /^Ordered body 2 Ordered topic 2$/ });
-  await expect(target).not.toBeInViewport();
+  const oldest = history.getByRole('button', { name: 'Ordered body 0 Ordered topic 0' });
+  await expect(oldest).not.toBeInViewport();
   await history.getByRole('button', { name: /^Ordered body 11 Ordered topic 11$/ }).hover();
   await page.mouse.wheel(0, 1500);
   await expect(target).toBeInViewport();
   await expect(selection).toHaveCount(0);
-  await expect(history.getByRole('button', { name: 'Ordered body 0 Ordered topic 0' })).toBeInViewport();
+  await expect(oldest).toBeInViewport();
   for (let index = 0; index < 3; index++) await page.keyboard.press('ArrowUp');
+  await expect(list).toHaveCSS('outline-style', 'none');
   await expect(selection).toHaveAccessibleName('Ordered body 2 Ordered topic 2');
   await expect(target).toBeInViewport();
   await page.keyboard.press('Enter');
