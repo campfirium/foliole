@@ -66,8 +66,7 @@ test('shows full localized setting and tip copy in search results', async ({ des
 
   await search.fill('relearn');
   await expect(palette.getByText('重新学习', { exact: true })).toBeVisible();
-  await expect(palette.getByText('清除此主题的学习进度。')).toBeVisible();
-  await expect(palette.getByText('之后可以从头再次学习。不影响派生材料。')).toBeVisible();
+  await expect(palette.getByText('清除此主题的学习进度。之后可以从头再次学习。不影响派生材料。')).toBeVisible();
   const tipsImage = await palette.screenshot({ path: '.tmp/artifacts/command-palette-action-tip.png' });
   await testInfo.attach('command-palette-action-tip', { body: tipsImage, contentType: 'image/png' });
 });

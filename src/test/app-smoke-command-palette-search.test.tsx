@@ -55,8 +55,7 @@ it('orders commands, settings, and tips and shows both parts of a tip immediatel
 
   fireEvent.change(input, { target: { value: 'You could not recall' } });
   expect(within(palette).getByText('Again', { exact: true })).toBeInTheDocument();
-  expect(within(palette).getByText('Show this item again soon.')).toBeInTheDocument();
-  expect(within(palette).getByText('You could not recall the answer.')).toBeInTheDocument();
+  expect(within(palette).getByText('Show this item again soon. You could not recall the answer.')).toBeInTheDocument();
   expect(within(palette).queryByText('Flow Ribbon')).toBeNull();
   fireEvent.keyDown(input, { key: 'Enter' });
   expect(input).toHaveFocus();
@@ -81,7 +80,6 @@ it('finds commands, settings, and tips by English and displays their Chinese cop
   for (const query of ['Relearn', 'renaissance', '重新学习', '清除此主题的学习进度']) {
     search(query);
     expect(within(palette).getByText('重新学习')).toBeInTheDocument();
-    expect(within(palette).getByText('清除此主题的学习进度。')).toBeInTheDocument();
-    expect(within(palette).getByText('之后可以从头再次学习。不影响派生材料。')).toBeInTheDocument();
+    expect(within(palette).getByText('清除此主题的学习进度。之后可以从头再次学习。不影响派生材料。')).toBeInTheDocument();
   }
 });

@@ -35,15 +35,14 @@ interface CommandPaletteListProps {
 const typeIconClassName = 'mt-0.5 shrink-0 text-[color:var(--role-floating-text-muted)] opacity-65';
 
 function CommandPaletteTip({ active, tip }: { active: boolean; tip: HelpKnowledgeItem }) {
+  const separator = /[。！？]$/.test(tip.body) ? '' : ' ';
+  const description = tip.detail ? `${tip.body}${separator}${tip.detail}` : tip.body;
   return (
     <div className={appFloatingItemClassName('flex items-start gap-2.5 px-3 py-2 text-sm')} data-active={active}>
       <Lightbulb aria-hidden="true" className={typeIconClassName} size={15} strokeWidth={1.5} />
       <div className="min-w-0 flex-1">
         <p className="font-medium">{tip.title}</p>
-        <div className="mt-0.5 grid grid-cols-2 gap-x-4 text-xs text-[color:var(--role-floating-text-muted)]">
-          <p className={tip.detail ? undefined : 'col-span-2'}>{tip.body}</p>
-          {tip.detail ? <p>{tip.detail}</p> : null}
-        </div>
+        <p className="mt-0.5 text-xs text-[color:var(--role-floating-text-muted)]">{description}</p>
       </div>
     </div>
   );
