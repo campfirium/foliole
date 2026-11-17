@@ -13,14 +13,13 @@ export function SidebarLayoutPreview({ percent, tier, onResize }: {
   onResize: (percent: number) => void;
 }) {
   const t = useTranslation();
-  const sliderId = useId();
   const titleId = useId();
   return (
     <section aria-labelledby={titleId} className="px-settings-panel-x pb-4">
       <h4 className="mb-2 text-ui-md font-medium" id={titleId}>{t('settings.appearance.sidebarLayout.preview')}</h4>
       <div className="mb-3 flex items-center gap-3 text-ui-md">
-        <label htmlFor={sliderId}>{t('settings.appearance.sidebarLayout.previewWidth')}</label>
-        <input className={settingsRangeClassName('min-w-0 flex-1')} id={sliderId} max={100} min={0}
+        <input aria-label={t('settings.appearance.sidebarLayout.previewWidth')}
+          className={settingsRangeClassName('min-w-0 flex-1')} max={100} min={0}
           onChange={event => onResize(event.currentTarget.valueAsNumber)} type="range" value={percent} />
         <span className="w-[4ch] text-right tabular-nums">{percent}%</span>
       </div>
@@ -42,7 +41,7 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
     <div data-sidebar-preview-panel={side} data-floating={floating || undefined}
       className={`grid min-w-0 shrink-0 place-items-center overflow-hidden text-ui-sm
         ${floating
-          ? `absolute inset-y-3 z-10 rounded-md border border-foreground/30 shadow-lg ${side === 'left' ? 'left-0' : 'right-0'}`
+          ? `absolute inset-y-0 z-10 border-x border-foreground/30 shadow-lg ${side === 'left' ? 'left-0' : 'right-0'}`
           : `text-muted-foreground border-settings-divider ${side === 'left' ? 'border-r' : 'border-l'}`}`}
       onPointerLeave={floating ? dismissHover : undefined}
       style={{ width: `${tier[side].width}%`, background: previewPanelBackground(side, floating) }}>
@@ -94,12 +93,10 @@ function previewPanelBackground(side: SidebarSide, floating: boolean) {
 }
 
 function PreviewDocument() {
-  const t = useTranslation();
   return (
     <div data-sidebar-preview-document="" className="relative min-w-0 flex-1 overflow-hidden px-4 py-3">
-      <div className="h-full min-w-0 rounded-sm border border-dashed border-foreground/30 px-3 py-2 text-ui-sm text-muted-foreground">
-        <div className="truncate font-medium">{t('settings.appearance.sidebarLayout.previewDocument')}</div>
-        <div aria-hidden="true" className="mt-2 grid gap-2">
+      <div className="grid h-full min-w-0 items-center rounded-sm border border-dashed border-foreground/30 px-3">
+        <div aria-hidden="true" className="grid gap-2">
           <div className="h-px w-full bg-foreground/35" />
           <div className="h-px w-[94%] bg-foreground/30" />
           <div className="h-px w-full bg-foreground/35" />

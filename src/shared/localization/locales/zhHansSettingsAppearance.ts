@@ -6,7 +6,6 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.sidebarLayout.preview': '布局预览',
   'settings.appearance.sidebarLayout.previewWidth': '窗口宽度',
   'settings.appearance.sidebarLayout.previewOverlay': '浮层',
-  'settings.appearance.sidebarLayout.previewDocument': '正文',
   'settings.appearance.sidebarLayout.threshold': '窗口宽度起点（%）',
   'settings.appearance.sidebarLayout.windowColumn': '窗口宽度',
   'settings.appearance.sidebarLayout.leftColumn': '左栏',

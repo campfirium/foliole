@@ -4,7 +4,6 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.sidebarLayout.preview': 'Layout preview',
   'settings.appearance.sidebarLayout.previewWidth': 'Window width',
   'settings.appearance.sidebarLayout.previewOverlay': 'Overlay',
-  'settings.appearance.sidebarLayout.previewDocument': 'Document',
   'settings.appearance.sidebarLayout.threshold': 'Minimum window width (%)',
   'settings.appearance.sidebarLayout.windowColumn': 'Window width',
   'settings.appearance.sidebarLayout.leftColumn': 'Left sidebar',

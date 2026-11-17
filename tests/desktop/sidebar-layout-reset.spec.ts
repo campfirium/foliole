@@ -127,6 +127,7 @@ test('previews each configured tier with the slider without resizing the actual 
   const document = rules.locator('[data-sidebar-preview-document]');
   const preview = rules.getByRole('region', { name: /Layout preview|布局预览/ });
   const slider = preview.getByRole('slider', { name: /^(Window width|窗口宽度)$/ });
+  await expect(preview.getByText(/^(Window width|窗口宽度|Document|正文)$/)).toBeHidden();
   const left = preview.locator('[data-sidebar-preview-panel="left"]');
   const right = preview.locator('[data-sidebar-preview-panel="right"]');
 
@@ -145,8 +146,9 @@ test('previews each configured tier with the slider without resizing the actual 
   await expect(right).toContainText(/Overlay|浮层/);
   const overlay = (await right.boundingBox())!;
   expect(overlay.x).toBeLessThan(documentBounds!.x + documentBounds!.width);
-  expect(overlay.y).toBeGreaterThan(documentBounds!.y);
-  expect(overlay.y + overlay.height).toBeLessThan(documentBounds!.y + documentBounds!.height);
+  const leftBounds = (await left.boundingBox())!;
+  expect(overlay.y).toBeCloseTo(leftBounds.y, 0);
+  expect(overlay.height).toBeCloseTo(leftBounds.height, 0);
   await expect(right.evaluate(panel => {
     const { x, y, width, height } = panel.getBoundingClientRect();
     return panel.contains(panel.ownerDocument.elementFromPoint(x + width / 2, y + height / 2));
