@@ -7,7 +7,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
   InspectorList,
-  inspectorListDividerClassName,
+  inspectorListDividerLineClassName,
   inspectorListTitleClassName
 } from '../../shared/ui';
 
@@ -49,8 +49,7 @@ function AssistantHistoryRow({ record, list }: {
   return (
     <li
       className={cn(
-        inspectorListDividerClassName,
-        'group/history-row flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
+        'group/history-row relative flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
         active
           ? 'bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
           : 'hover:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
@@ -66,27 +65,35 @@ function AssistantHistoryRow({ record, list }: {
           <span className={`${inspectorListTitleClassName} block truncate`} title={record.title}>
             {record.title}
           </span>
-          {showPreview && (
-            <span className="line-clamp-2 break-words text-ui-sm leading-4 text-foreground/68" title={preview}>
-              {preview}
-            </span>
-          )}
+          <span className="block h-10">
+            {showPreview && (
+              <span className="line-clamp-2 break-words text-ui-base leading-5 text-foreground/68" title={preview}>
+                {preview}
+              </span>
+            )}
+          </span>
         </button>
-        <WorkspaceRightSidebarAssistantMaterialTags
-          appearance="history"
-          location={record.location}
-          linkedMaterialIds={record.linkedMaterialIds}
-          nodesById={list.nodesById}
-          onOpenMaterial={list.onOpenMaterial}
-          trashedNodeIds={list.trashedNodeIds}
-        />
+        <div className="mt-0.5 h-5">
+          <WorkspaceRightSidebarAssistantMaterialTags
+            appearance="history"
+            location={record.location}
+            linkedMaterialIds={record.linkedMaterialIds}
+            nodesById={list.nodesById}
+            onOpenMaterial={list.onOpenMaterial}
+            trashedNodeIds={list.trashedNodeIds}
+          />
+        </div>
       </div>
       <AppIconButton
-        className="pointer-events-none opacity-0 transition-opacity group-hover/history-row:pointer-events-auto group-hover/history-row:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+        className="pointer-events-none opacity-0 transition-opacity group-hover/history-row:pointer-events-auto group-hover/history-row:opacity-60 focus-visible:pointer-events-auto focus-visible:opacity-100"
         disabled={list.removingThreadId === record.providerThreadId}
         icon={<Trash2 aria-hidden className="size-3.5" strokeWidth={1.8} />}
         label={t('desktop.rightPanel.assistant.removeThread')}
         onClick={() => list.onRemoveRecord(record)}
+      />
+      <span
+        aria-hidden="true"
+        className={`${inspectorListDividerLineClassName} pointer-events-none absolute inset-x-inspector-list-inset bottom-0 h-px group-last/history-row:hidden`}
       />
     </li>
   );

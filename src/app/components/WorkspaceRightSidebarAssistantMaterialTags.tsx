@@ -42,7 +42,7 @@ export function WorkspaceRightSidebarAssistantMaterialTags(props: MaterialTagsPr
     || props.trashedNodeIds?.includes(currentId) || (props.draft ? props.linkedMaterialIds?.includes(currentId) : materialIds.includes(currentId))
     || props.busy;
   return (
-    <div className={`flex min-w-0 items-center ${history ? 'mt-0.5 gap-2' : 'gap-1'}`}>
+    <div className={`flex min-w-0 items-center ${history ? 'gap-2' : 'gap-1'}`}>
       {materialIds.length === 0 ? <span className={tagClassName}>
         <LibraryBig aria-hidden className="size-3 shrink-0" />
         {t('desktop.rightPanel.assistant.materialTag.library')}

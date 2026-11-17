@@ -38,7 +38,7 @@ const assistantReadyStatus = {
   state: 'ready'
 };
 
-test('Aide history shows a two-line preview and reveals removal on hover or keyboard focus', async ({
+test('Aide history aligns history rows and reveals removal on hover or keyboard focus', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -59,11 +59,16 @@ test('Aide history shows a two-line preview and reveals removal on hover or keyb
 
   const title = desktopWindow.getByRole('button', { name: /Original prompt/i });
   const preview = title.getByText('Follow-up prompt');
-  const remove = desktopWindow.getByRole('button', { name: 'Remove from local Foliole Aide history' });
+  const row = desktopWindow.getByRole('listitem').filter({ has: title });
+  const shortRow = desktopWindow.getByRole('listitem').filter({
+    has: desktopWindow.getByRole('button', { name: 'Short prompt', exact: true })
+  });
+  const remove = row.getByRole('button', { name: 'Remove from local Foliole Aide history' });
+  expect((await row.boundingBox())?.height).toBe((await shortRow.boundingBox())?.height);
   await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
   await expect(remove).toHaveCSS('opacity', '0');
   await title.hover();
-  await expect(remove).toHaveCSS('opacity', '1');
+  await expect(remove).toHaveCSS('opacity', '0.6');
   await desktopWindow.getByRole('heading', { name: 'Aide' }).hover();
   await expect(remove).toHaveCSS('opacity', '0');
   await title.focus();
@@ -136,12 +141,18 @@ async function installAssistantIpcMock(
   }
   await electronApp.evaluate(({ ipcMain }, status) => {
     let record = createThread('Original prompt');
+    const shortRecord = {
+      ...record,
+      preview: 'Short prompt',
+      providerThreadId: 'thread-short',
+      title: 'Short prompt'
+    };
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (event, request: { command?: string }) => {
       if (request?.command === 'assistant_get_status') return status;
-      if (request?.command === 'assistant_list_thread_index') return [record];
+      if (request?.command === 'assistant_list_thread_index') return [record, shortRecord];
       if (request?.command === 'assistant_list_thread_messages') return [];
       if (request?.command === 'assistant_send_message') {
         record = createThread('Follow-up prompt');
