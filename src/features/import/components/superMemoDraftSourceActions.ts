@@ -120,8 +120,17 @@ function createCollectionRecovery(state: DraftState, pickerTitle: string, loader
   return { recover, resolveCandidates };
 }
 
+function comparisonTarget({ draft, source, target }: DraftState): DraftTarget | undefined {
+  const update = draft?.preview.directoryUpdate;
+  if (!update || !draft) return undefined;
+  return target ?? {
+    targetBatchId: update.batchId,
+    ...(!update.sourceMatch && source ? { originalElements: draft.elements, originalFilePath: source.filePath } : {})
+  };
+}
+
 export function createSourceActions(state: DraftState, pickerTitle: string) {
-  const { draft, source, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
+  const { source, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
   const loader = createCandidateLoader(state);
   const { recover, resolveCandidates } = createCollectionRecovery(state, pickerTitle, loader);
 
@@ -133,9 +142,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     try {
       const selected = await selectRuntimeSuperMemoSource();
       if (!selected) return;
-      const update = draft?.preview.directoryUpdate;
-      const nextTarget = asUpdate && update && draft
-        ? target ?? { targetBatchId: update.batchId, ...(!update.sourceMatch && source ? { originalElements: draft.elements, originalFilePath: source.filePath } : {}) } : undefined;
+      const nextTarget = asUpdate ? comparisonTarget(state) : undefined;
       try {
         const loaded = await loader.prepare(selected, nextTarget);
         if (selected.collectionDirectory && !selected.collectionDiscoveryFailure) {
@@ -164,17 +171,23 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     }
   }
 
-  async function recoverCollection(choice: boolean | string) {
-    if (!pending || busy) return;
+  async function recoverCollection(choice: boolean | string, recovery = pending) {
+    if (!recovery || busy) return;
     setBusy(true);
     try {
-      await recover(pending, choice);
+      await recover(recovery, choice);
     } catch (error) {
+      setPending(recovery);
       setError(isImportAccessDenied(error) ? 'collectionAccess' : previewFailure(error));
     } finally {
       setBusy(false);
     }
   }
+  function pairCollection() {
+    if (!source || source.collectionDirectory) return;
+    const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat };
+    return recoverCollection(true, { selected: { ...source, savedForm }, target });
+  }
 
-  return { loadSource, recoverCollection, retrySource: () => loadSource(retryAsUpdate) };
+  return { loadSource, recoverCollection, pairCollection, retrySource: () => loadSource(retryAsUpdate) };
 }

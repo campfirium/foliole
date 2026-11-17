@@ -14,7 +14,7 @@ const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 
 async function dismissLoadError(page: Page) {
-  const notice = page.getByRole('dialog', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
+  const notice = page.getByRole('region', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
   await notice.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 }
 

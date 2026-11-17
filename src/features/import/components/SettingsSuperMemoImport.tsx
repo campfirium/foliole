@@ -46,8 +46,10 @@ function useSuperMemoDraftNavigation(
   { busy, error, setError }: Pick<ReturnType<typeof useSuperMemoDraft>, 'busy' | 'error' | 'setError'>,
   open: boolean, close: () => void
 ) {
-  const [step, setStep] = useState<{ id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source'] }>();
-  const [selection, setSelection] = useState<{ signature: string; ids: number[] }>();
+  const [step, setStep] = useState<{ id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source']; comparing?: boolean }>();
+  const [selection, setSelection] = useState<{
+    source: ReturnType<typeof useSuperMemoDraft>['source']; signature: string; ids: number[];
+  }>();
 
   function resetNavigation() {
     setStep(undefined);
@@ -91,7 +93,9 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
   const previewNavigation = useSuperMemoPreviewNavigation(source);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
-  const requested = step && (step.source === source || (step.id === 'confirm' && update)) ? step.id : undefined;
+  const requested = step?.comparing
+    ? step.source === source ? 'load' : update ? 'confirm' : undefined
+    : step && (step.source === source || (step.id === 'confirm' && update)) ? step.id : undefined;
   const current = result ? 'confirm' : requested ?? (preview && !update ? 'structure' : 'load');
   const navigate = (id: SuperMemoMigrationStep) => setStep({ id, source });
   function closeSession() {
@@ -102,7 +106,7 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
     close();
   }
   const reloadSource = () => { void loadSource(); };
-  const selected = selection && selection.signature === update?.signature ? selection.ids : [];
+  const selected = selection && selection.source === source && selection.signature === update?.signature ? selection.ids : [];
   return (
     <AppDialog open={open} onOpenChange={open => { if (!open) dismissDialog(); }}>
       <AppDialogPortal>
@@ -116,11 +120,10 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
             <div className="flex min-h-0 min-w-0 flex-col">
               <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
                 onLoad={reloadSource} onLoadNew={() => {
-                  navigate('confirm');
-                  setSelection(undefined);
+                  setStep({ id: 'load', source, comparing: true });
                   void loadSource(true);
                 }}
-                onSelect={ids => { if (update) setSelection({ signature: update.signature, ids }); }} />
+                onSelect={ids => { if (update) setSelection({ source, signature: update.signature, ids }); }} />
               <SuperMemoDraftActions step={current} busy={busy} canConvert={Boolean(preview && !result)}
                 directoryUpdate={update ? { canConfirm: canConfirmUpdate(update, selected) } : undefined}
                 navigate={navigate} convert={() => void importSource(selected)} />
@@ -128,7 +131,7 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
           </div>
         </AppDialogContent>
       </AppDialogPortal>
-      <SuperMemoLoadNotice error={open && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
+      <SuperMemoLoadNotice error={open && current !== 'load' && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
         recover={choose => void model.recoverCollection(choose)} retry={() => void model.retrySource()} />
     </AppDialog>
   );
