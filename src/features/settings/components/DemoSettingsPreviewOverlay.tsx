@@ -14,6 +14,7 @@ export interface DemoSettingsPreviewOverlayProps {
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   readwiseReaderCategoryContent?: ReactNode;
   requestedCategory: SettingsCategoryId | null;
+  requestedRowId?: string | null;
 }
 
 export function DemoSettingsPreviewOverlay({
@@ -21,7 +22,8 @@ export function DemoSettingsPreviewOverlay({
   onClose,
   onRunSupportCommand,
   readwiseReaderCategoryContent,
-  requestedCategory
+  requestedCategory,
+  requestedRowId = null
 }: DemoSettingsPreviewOverlayProps) {
   return (
     <SettingsPanel
@@ -32,6 +34,7 @@ export function DemoSettingsPreviewOverlay({
       previewDesktopSettings
       readwiseReaderCategoryContent={readwiseReaderCategoryContent}
       requestedCategory={requestedCategory}
+      requestedRowId={requestedRowId}
     />
   );
 }

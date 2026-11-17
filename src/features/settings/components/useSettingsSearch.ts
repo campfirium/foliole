@@ -30,16 +30,8 @@ const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
   'duration-150'
 ];
 
-export function useSettingsSearchState(
-  setActiveCategory: (category: SettingsCategoryId) => void,
-  requestedRowId: string | null = null,
-  previewDesktopSettings = false
-) {
+export function useSettingsSearchIndex(previewDesktopSettings = false) {
   const t = useTranslation();
-  const [query, setQuery] = useState('');
-  const [activeResultIndex, setActiveResultIndex] = useState(0);
-  const [targetBlock, setTargetBlock] = useState<ScrollLogicalPosition>('center');
-  const [targetRowId, setTargetRowId] = useState<string | null>(null);
   const categories = getSettingsCategories(t);
   const hasCustomCss = Boolean(useDesktopCustomCss());
   const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
@@ -49,6 +41,19 @@ export function useSettingsSearchState(
       && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
       && (showDesktopOnlyRows || !DESKTOP_ONLY_SEARCH_ROWS.has(row.id))
   ), [hasCustomCss, showDesktopOnlyRows, showQuitOnClose, t]);
+  return { categories, rows };
+}
+
+export function useSettingsSearchState(
+  setActiveCategory: (category: SettingsCategoryId) => void,
+  requestedRowId: string | null = null,
+  previewDesktopSettings = false
+) {
+  const [query, setQuery] = useState('');
+  const [activeResultIndex, setActiveResultIndex] = useState(0);
+  const [targetBlock, setTargetBlock] = useState<ScrollLogicalPosition>('center');
+  const [targetRowId, setTargetRowId] = useState<string | null>(null);
+  const { categories, rows } = useSettingsSearchIndex(previewDesktopSettings);
   const results = querySettingsSearch(categories, rows, query);
 
   useEffect(() => setActiveResultIndex(0), [query]);

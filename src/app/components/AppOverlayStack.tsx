@@ -116,7 +116,15 @@ export function AppOverlayStack({
       <EpubImportReleaseModeDialog />
       <FormalImportAccessDialog />
       <Suspense fallback={null}>
-        {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}
+        {controller.paletteState.isOpen ? (
+          <CommandPalette
+            {...controller.paletteState}
+            onOpenSetting={({ categoryId, rowId }) => {
+              controller.paletteState.onClose();
+              controller.layoutProps.settings.onOpenSettings(categoryId, rowId);
+            }}
+          />
+        ) : null}
         <FeedbackOverlay isOpen={isFeedbackOpen} onClose={onCloseFeedback} />
         {isHelpSearchOpen ? <HelpSearch isOpen={isHelpSearchOpen} onClose={onCloseHelpSearch} /> : null}
         {controller.searchState.isOpen ? <SearchPalette {...controller.searchState} /> : null}

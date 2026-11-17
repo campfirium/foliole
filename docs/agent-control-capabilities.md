@@ -180,3 +180,5 @@ The macOS and Windows preference to quit Foliole when closing its main window is
 Material History is a desktop navigation surface for the 100 most recently visited materials in the library. The desktop left toolbar, command palette, and shortcut open Material History, which opens materials through the existing navigation flow. Its View options remember the preview line limit, breadcrumb placement, and independent preview and breadcrumb font sizes. History and Search shortcut hints start collapsed and remember each panel’s choice as a desktop UI preference. The Agent Control API and CLI do not expose the visit list, manual pins, most recently edited material, or these display preferences.
 
 Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive editing history stay in the desktop editor. Agent Control continues to use explicit material operations.
+
+The desktop command palette searches the settings index and opens the selected category or setting. The same palette shows matching action tips and reveals their text inline. These desktop UI behaviors have no Agent Control API or CLI route.

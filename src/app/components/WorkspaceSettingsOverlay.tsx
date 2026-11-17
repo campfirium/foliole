@@ -90,6 +90,7 @@ export function WorkspaceSettingsOverlay({
           onRunSupportCommand={onRunSupportCommand}
           readwiseReaderCategoryContent={<DemoReadwiseReaderSettingsPreview />}
           requestedCategory={requestedCategory}
+          requestedRowId={requestedRowId}
         />
       </Suspense>
     );
