@@ -26,9 +26,10 @@ test('topic menu help explains that Dismiss and Relearn do not affect derived ma
   for (const action of ['Dismiss', 'Relearn']) {
     await desktopWindow.getByRole('menuitem', { name: action, exact: true }).hover();
     const tooltip = desktopWindow.getByRole('tooltip');
-    await expect(tooltip).toContainText('Materials derived from it');
+    await expect(tooltip).toContainText('Does not affect derived materials.');
     await expect(tooltip).toContainText(action === 'Dismiss'
-      ? 'are not affected' : 'keep their learning progress and review schedules');
+      ? 'The topic is kept in Foliole and can still be opened manually.'
+      : 'It can be studied again from the beginning.');
     const screenshot = path.join(directory, `${action.toLowerCase()}-help.png`);
     await desktopWindow.screenshot({ path: screenshot });
     await testInfo.attach(`${action} help scope`, { contentType: 'image/png', path: screenshot });

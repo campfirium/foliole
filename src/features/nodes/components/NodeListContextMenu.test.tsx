@@ -151,9 +151,9 @@ it('keeps Rename available for a protected system root', () => {
 
 it.each([
   ['Relearn', "Clear this topic's learning progress.",
-    'Only the selected topic or item is reset. Materials derived from it keep their learning progress and review schedules.'],
+    'It can be studied again from the beginning. Does not affect derived materials.'],
   ['Dismiss', 'No longer appears automatically.',
-    'The topic stays in Foliole and can be opened manually. Materials derived from it are not affected.']
+    'The topic is kept in Foliole and can still be opened manually. Does not affect derived materials.']
 ])('shows %s help explaining that derived materials are unaffected after a long hover', (label, body, detail) => {
   vi.useFakeTimers();
   renderWithLocalization(<NodeListContextMenu {...noopProps()} />);

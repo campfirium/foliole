@@ -10,7 +10,7 @@ export interface NodeListActionHelpCopy {
 export const NODE_LIST_CONTEXT_ACTION_HELP = {
   dismiss: {
     body: 'No longer appears automatically.',
-    detail: 'The topic stays in Foliole and can be opened manually. Materials derived from it are not affected.',
+    detail: 'The topic is kept in Foliole and can still be opened manually. Does not affect derived materials.',
     id: 'actionHelp.nodeList.dismiss',
     keywords: ['automatic', 'hide', 'stop'],
     sourceLabel: 'Topic list menu',
@@ -50,7 +50,7 @@ export const NODE_LIST_CONTEXT_ACTION_HELP = {
   },
   relearn: {
     body: "Clear this topic's learning progress.",
-    detail: 'Only the selected topic or item is reset. Materials derived from it keep their learning progress and review schedules.',
+    detail: 'It can be studied again from the beginning. Does not affect derived materials.',
     id: 'actionHelp.nodeList.relearn',
     keywords: ['again', 'reset', 'review', 'study'],
     sourceLabel: 'Topic list menu',
