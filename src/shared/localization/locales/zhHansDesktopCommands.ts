@@ -72,6 +72,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.history.fontSizeDecrease': '减小字号',
   'desktop.history.fontSizeIncrease': '增大字号',
   'desktop.history.previewLines': '正文行数',
+  'desktop.history.previewLinesDecrease': '减少正文行数',
+  'desktop.history.previewLinesIncrease': '增加正文行数',
   'desktop.history.search': '搜索历史…',
   'desktop.history.noMatches': '没有匹配的材料',
   'desktop.history.select': '选择',

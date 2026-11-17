@@ -70,6 +70,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.history.fontSizeDecrease': 'Decrease font size',
   'desktop.history.fontSizeIncrease': 'Increase font size',
   'desktop.history.previewLines': 'Preview lines',
+  'desktop.history.previewLinesDecrease': 'Decrease preview lines',
+  'desktop.history.previewLinesIncrease': 'Increase preview lines',
   'desktop.history.search': 'Search history…',
   'desktop.history.noMatches': 'No matching materials',
   'desktop.history.select': 'Select',

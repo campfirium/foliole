@@ -42,14 +42,10 @@ test('history view options apply immediately and return after app restart', asyn
   await trigger.click();
   await verifyHistoryFontSizes(page);
   await expect(options.getByRole('radio', { name: 'Preview first' })).toBeChecked();
-  await expect(options.getByRole('radio', { name: '2', exact: true })).toBeChecked();
+  await expect(options.getByRole('group', { name: 'Preview lines' }).getByRole('status')).toHaveText('2');
   await options.getByText('Breadcrumb first', { exact: true }).click();
   await expect(breadcrumbFirst).toBeVisible();
-  await options.getByText('1', { exact: true }).click();
-  await expect(preview).toHaveCSS('-webkit-line-clamp', '1');
-  await options.getByRole('radio', { name: '1', exact: true }).press('ArrowRight');
-  await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
-  await options.getByText('3', { exact: true }).click();
+  await verifyHistoryPreviewLines(page);
   await expect.poll(() => preview.evaluate(element =>
     element.clientHeight / Number.parseFloat(getComputedStyle(element).lineHeight)
   )).toBe(3);
@@ -69,6 +65,23 @@ test('history view options apply immediately and return after app restart', asyn
 
   await restartAndVerify(desktopSession, page);
 });
+
+async function verifyHistoryPreviewLines(page: Page) {
+  const history = page.getByRole('dialog', { name: 'History', exact: true });
+  const lines = history.getByRole('group', { name: 'Preview lines' });
+  const decrease = lines.getByRole('button', { name: 'Decrease preview lines' });
+  const increase = lines.getByRole('button', { name: 'Increase preview lines' });
+  const preview = history.getByText(/^History preview text/);
+  await decrease.click();
+  await expect(decrease).toBeDisabled();
+  await expect(lines.getByRole('status')).toHaveText('1');
+  await expect(preview).toHaveCSS('-webkit-line-clamp', '1');
+  await increase.press('Enter');
+  await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
+  await increase.click();
+  await expect(increase).toBeDisabled();
+  await expect(lines.getByRole('status')).toHaveText('3');
+}
 
 async function verifyHistoryFontSizes(page: Page) {
   const history = page.getByRole('dialog', { name: 'History', exact: true });
@@ -136,7 +149,7 @@ async function verifyRestart(page: Page) {
   await history.getByRole('button', { name: 'View options' }).click();
   const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();
-  await expect(options.getByRole('radio', { name: '3', exact: true })).toBeChecked();
+  await expect(options.getByRole('group', { name: 'Preview lines' }).getByRole('status')).toHaveText('3');
   await expect(options.getByRole('group', { name: 'Font size' }).getByRole('status')).toHaveText('17');
   await history.getByRole('searchbox').click();
   await expect(options).toBeHidden();
