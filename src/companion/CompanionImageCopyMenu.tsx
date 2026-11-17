@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react';
+import { Copy, Scissors } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -10,6 +10,7 @@ export function CompanionImageCopyMenu(props: {
   x: number;
   y: number;
   onClose(): void;
+  onCut?: () => void;
   isCurrent(): boolean;
 }) {
   const t = useTranslation();
@@ -20,15 +21,18 @@ export function CompanionImageCopyMenu(props: {
   const left = Math.max((viewport?.offsetLeft ?? 0) + 8,
     Math.min(props.x, (viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth) - 204));
   const top = Math.max((viewport?.offsetTop ?? 0) + 8,
-    Math.min(props.y, (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - 112));
-  async function copy() {
+    Math.min(props.y, (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - (props.onCut ? 156 : 112)));
+  async function copy(cut = false) {
     if (pending.current || !props.isCurrent()) { if (!pending.current) props.onClose(); return; }
     pending.current = true;
     setCopying(true);
     setFailed(false);
     try {
       await writeClipboardText(props.markdown);
-      if (props.isCurrent()) props.onClose();
+      if (props.isCurrent()) {
+        if (cut) props.onCut?.();
+        props.onClose();
+      }
     } catch {
       if (props.isCurrent()) setFailed(true);
     } finally {
@@ -40,6 +44,9 @@ export function CompanionImageCopyMenu(props: {
     <AppSelectionDropdownMenuItem className="min-h-11" disabled={copying} onClick={() => { void copy(); }}>
       <Copy aria-hidden="true" size={16} />{t('desktop.editor.imageMenu.copy')}
     </AppSelectionDropdownMenuItem>
+    {props.onCut ? <AppSelectionDropdownMenuItem className="min-h-11" disabled={copying} onClick={() => { void copy(true); }}>
+      <Scissors aria-hidden="true" size={16} />{t('desktop.editor.imageMenu.cut')}
+    </AppSelectionDropdownMenuItem> : null}
     {failed ? <p role="alert" className="max-w-44 px-2 py-1 text-ui-sm text-destructive">{t('companion.selection.copyError')}</p> : null}
   </AppSelectionDropdownMenu>;
 }

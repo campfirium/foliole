@@ -15,6 +15,7 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
 
 const image = `![Diagram|320](asset://${'a'.repeat(64)}.png)`;
 const content = `Before\n\n${image}\n\nAfter`;
+Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [] });
 beforeEach(() => clipboard.writeClipboardText.mockReset().mockResolvedValue(undefined));
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 

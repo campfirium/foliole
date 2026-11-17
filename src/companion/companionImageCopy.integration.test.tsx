@@ -41,7 +41,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-it('copies with the actual image menu, pastes and saves without image registration, then syncs independent SQLite and reopens', async () => {
+it.each(['copy', 'cut'] as const)('%s through the actual image menu, text paste and save, then sync independent SQLite and reopen', async action => {
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor);
   host = await createJoiningMobile();
@@ -56,9 +56,13 @@ it('copies with the actual image menu, pastes and saves without image registrati
     return saveCompanionContentEdit(edit);
   }, { readSource: readCompanionContentSource });
   const draft = new ContentDraftSession('copy-target', initial, save, 60000);
+  const sourceDraft = new ContentDraftSession('attachment-holder', source, save, 60000);
+  let sourceEditor: EditorAdapter | null = null;
   let targetEditor: EditorAdapter | null = null;
   const view = renderWithLocalization(<MouseGestureSettingsProvider>
-    <CompanionArticleDocument nodeId="attachment-holder" content={source.content} onChange={() => {}} />
+    <CompanionArticleDocument nodeId="attachment-holder" content={source.content}
+      onEditorReady={value => { sourceEditor = value; }}
+      onChange={(content, meta) => sourceDraft.change(content, meta?.newImageReferences)} />
     <CompanionArticleDocument nodeId="copy-target" content={initial.content}
       onEditorReady={value => { targetEditor = value; }}
       onChange={(content, meta) => draft.change(content, meta?.newImageReferences)} />
@@ -66,22 +70,24 @@ it('copies with the actual image menu, pastes and saves without image registrati
   await waitFor(() => expect(view.container.querySelector('.cm-md-image-widget')).not.toBeNull());
   clipboard.writeClipboardText.mockResolvedValue(undefined);
   fireEvent.contextMenu(view.container.querySelector('.cm-md-image-widget')!);
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Copy image' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: action === 'copy' ? 'Copy image' : 'Cut image' }));
   await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   const markdown = clipboard.writeClipboardText.mock.calls.at(-1)![0] as string;
   expect(markdown).toBe(`![Image](asset://${attachment.key})`);
-  act(() => targetEditor!.setSelection({ from: initial.content.length, to: initial.content.length }));
-  fireEvent.paste(view.container.querySelectorAll('.cm-content')[1]!, { clipboardData: {
-    getData: (type: string) => type === 'text/plain' ? markdown : '', items: []
-  } });
+  await act(async () => { sourceEditor!.flushContentChanges?.(); await sourceDraft.flush(); });
+  const expectedSource = action === 'copy' ? source.content : '';
+  expect((await readCompanionContentSource('attachment-holder')).content).toBe(expectedSource);
+  expect(await readFile(path.join(attachment.target, attachment.key))).toEqual(attachment.bytes);
+  pasteAtEnd(targetEditor!, view.container.querySelectorAll('.cm-content')[1]!, initial.content, markdown);
   await act(async () => { targetEditor!.flushContentChanges?.(); await draft.flush(); });
-  expect((await readCompanionContentSource('attachment-holder')).content).toBe(source.content);
+  expect((await readCompanionContentSource('attachment-holder')).content).toBe(expectedSource);
   expect((await readCompanionContentSource('copy-target')).content).toBe(initial.content + markdown);
   expect((await readCompanionContentSource('copy-target')).imageReferences).toEqual([]);
   await syncJoinedMobile(host);
   const peer = new Database(host.peer.database, { readonly: true });
   try {
     expect(peer.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('copy-target')).toBe(initial.content + markdown);
+    expect(peer.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('attachment-holder')).toBe(expectedSource);
     const needs = await loadArticleAttachmentNeeds(createBetterSqliteDbPort(peer), ['copy-target']);
     expect(needs.needs.map(need => need.storageKey)).toEqual([attachment.key]);
     expect(await readFile(path.join(attachment.target, attachment.key))).toEqual(attachment.bytes);
@@ -89,6 +95,14 @@ it('copies with the actual image menu, pastes and saves without image registrati
   } finally { peer.close(); }
   view.unmount();
   host.reopen();
+  expect((await readCompanionContentSource('attachment-holder')).content).toBe(expectedSource);
   expect((await readCompanionContentSource('copy-target')).content).toBe(initial.content + markdown);
   expect((await loadArticleAttachmentNeeds(host.db, ['copy-target'])).needs.map(need => need.storageKey)).toEqual([attachment.key]);
 }, 60000);
+
+function pasteAtEnd(editor: EditorAdapter, element: Element, content: string, markdown: string) {
+  act(() => editor.setSelection({ from: content.length, to: content.length }));
+  fireEvent.paste(element, { clipboardData: {
+    getData: (type: string) => type === 'text/plain' ? markdown : '', items: []
+  } });
+}

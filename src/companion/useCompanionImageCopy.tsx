@@ -7,7 +7,7 @@ import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../sha
 import { CompanionImageCopyMenu } from './CompanionImageCopyMenu';
 import { useCompanionImageLongPress } from './useCompanionImageLongPress';
 
-type Target = ImageClipboardSource & { content: string; editor: EditorAdapter; scope: object; x: number; y: number };
+type Target = ImageClipboardSource & { content: string; editor: EditorAdapter; revision: object | null | undefined; scope: object; x: number; y: number };
 
 export function useCompanionImageCopy(nodeId: string, enabled: boolean, content: string) {
   const editor = useRef<EditorAdapter | null>(null);
@@ -16,7 +16,8 @@ export function useCompanionImageCopy(nodeId: string, enabled: boolean, content:
   const press = useCompanionImageLongPress(resolve, open);
   const close = useCallback(() => { press.cancel(); active.current = null; setTarget(null); }, [press.cancel]);
   const isCurrent = (value: Target) => enabled && active.current === value && editor.current === value.editor &&
-    getCompanionReadingScope() === value.scope && value.editor.getContent() === value.content;
+    getCompanionReadingScope() === value.scope && value.editor.getContent() === value.content &&
+    value.editor.getContentRevision?.() === value.revision;
   useEffect(() => { close(); return press.cancel; }, [enabled, nodeId, content, close, press.cancel]);
   useEffect(() => subscribeCompanionReadingScope(close), [close]);
   useEffect(() => {
@@ -35,7 +36,8 @@ export function useCompanionImageCopy(nodeId: string, enabled: boolean, content:
     if (!widget || widget.dataset.mdImageEditorNodeId !== nodeId) return null;
     const current = editor.current.getContent();
     const image = getImageClipboardSource(current, Number(widget.dataset.mdImageFrom), Number(widget.dataset.mdImageTo));
-    return image ? { ...image, content: current, editor: editor.current, scope: getCompanionReadingScope(), x, y } : null;
+    return image ? { ...image, content: current, editor: editor.current, revision: editor.current.getContentRevision?.(),
+      scope: getCompanionReadingScope(), x, y } : null;
   }
   function open(value: Target) {
     if (editor.current !== value.editor || value.scope !== getCompanionReadingScope() || value.editor.getContent() !== value.content) return;
@@ -53,6 +55,9 @@ export function useCompanionImageCopy(nodeId: string, enabled: boolean, content:
       }
     },
     menu: target ? <CompanionImageCopyMenu markdown={target.markdown} x={target.x} y={target.y}
+      {...(target.revision ? { onCut: () => {
+        if (isCurrent(target)) target.editor.replaceRange(target.from, target.to, '', { userEvent: 'delete.cut' });
+      } } : {})}
       onClose={close} isCurrent={() => isCurrent(target)} /> : null
   };
 }
