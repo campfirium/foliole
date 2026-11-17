@@ -7,6 +7,7 @@ import { SuperMemoDraftTable } from './SuperMemoDraftTable';
 import { SuperMemoEntryPreview, type useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { SuperMemoParameters } from './SuperMemoParameters';
+import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
 import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
@@ -50,7 +51,10 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {current === 'structure' && preview ? (
         <div className="min-h-0 flex-1"><SuperMemoEntryPreview navigation={navigation} preview={preview} elements={draft?.elements} /></div>
       ) : null}
-      {preview && (current === 'schedule' || current === 'grades' || current === 'source') ? (
+      {preview && current === 'schedule' ? (
+        <SuperMemoSchedulePage {...{ preview, percent, setPercent, busy }} />
+      ) : null}
+      {preview && (current === 'grades' || current === 'source') ? (
         <SuperMemoParameters step={current} preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
       ) : null}
       {current === 'confirm' && preview && !update && !result ? <SuperMemoDraftTable preview={preview} percent={percent} /> : null}

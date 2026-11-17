@@ -47,18 +47,20 @@ function SourceMatch({ match }: { match: NonNullable<NativeSuperMemoDirectoryUpd
   </section>;
 }
 
-function FirstReviewChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['firstReviewChanges'] }) {
+export function FirstReviewChanges({ changes, showHeading = true }: {
+  changes: NativeSuperMemoDirectoryUpdate['firstReviewChanges']; showHeading?: boolean;
+}) {
   const t = useTranslation();
   if (!changes.length) return null;
   return <section className="grid gap-2">
-    <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.firstReviewChanges')}</h2>
+    {showHeading ? <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.firstReviewChanges')}</h2> : null}
     <ul className="divide-y divide-foreground/10 text-sm">
       {changes.map(change => <li key={change.sourceId} className="grid gap-1 py-2">
         <span>{change.title}</span>
         <span className="text-foreground/65">
           {change.status === 'update' ? t('desktop.superMemoDrafts.directoryMove', { from: change.from ?? '', to: change.to ?? '' }) : null}
           {change.status === 'basis' ? t('desktop.superMemoDrafts.firstReviewBasis', { date: change.from ?? '' }) : null}
-              {change.status === 'protected' ? t('desktop.superMemoDrafts.firstReviewProtected', { date: change.from ?? '' }) : null}
+          {change.status === 'protected' ? t('desktop.superMemoDrafts.firstReviewProtected', { date: change.from ?? '' }) : null}
           {change.status === 'unavailable' ? t('desktop.superMemoDrafts.firstReviewUnavailable') : null}
         </span>
       </li>)}
