@@ -59,7 +59,7 @@ function openMove() {
   fireEvent.click(screen.getByRole('button', { name: 'Move to...' }));
   return screen.getByRole('searchbox', { name: 'Search destinations' });
 }
-function choose(path: string) { fireEvent.click(screen.getByRole('button', { name: path, exact: true })); }
+function choose(path: string) { fireEvent.click(screen.getByRole('button', { name: path })); }
 function confirm() {
   const input = screen.getByRole('searchbox', { name: 'Search destinations' });
   fireEvent.click(within(input.closest('form')!).getByRole('button', { name: 'Done' }));
@@ -100,7 +100,7 @@ it('searches collapsed branches and paths, preserves expansion on clear and neve
   expect(screen.getByRole('button', { name: 'Learning', expanded: true })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Learning / Memory' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Learning / Memory / Retrieval' })).toBeNull();
-  fireEvent.click(screen.getAllByRole('button', { name: 'Done', exact: true }).find(button => !button.closest('form'))!);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Done' }).find(button => !button.closest('form'))!);
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect((await stored()).nodesById.source?.parentNodeId).toBe('work');
 });
