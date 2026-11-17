@@ -13,7 +13,7 @@ import {
 
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
-const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-y-0 before:left-2 before:right-0 before:-z-local-raised before:rounded-sm before:transition-colors';
+const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-x-2 before:inset-y-0 before:-z-local-raised before:rounded-sm before:transition-colors';
 
 type ThreadListProps = {
   onOpenMaterial: (nodeId: string) => void;
@@ -48,7 +48,7 @@ function AssistantHistoryRow({ record, list }: { record: NativeAssistantThreadIn
   return (
     <li
       className={cn(
-        'group/history-row relative isolate flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2',
+        'group/history-row relative isolate flex min-w-0 items-start gap-2 px-inspector-list-inset py-2',
         rowHighlightClassName,
         active
           ? 'before:bg-[color-mix(in_srgb,var(--app-surface)_92%,rgb(var(--role-accent-rgb))_8%)]'
