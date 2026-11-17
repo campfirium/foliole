@@ -9,25 +9,38 @@ export const SuperMemoDraftTable = memo(function SuperMemoDraftTable({ preview, 
   const report = useMemo(() => makeSuperMemoPreviewReport(preview, percent), [preview, percent]);
   return (
     <article className="min-h-0 space-y-3 overflow-auto text-sm">
-      {report.shifts.length > 0 ? (
-        <table className="w-full border-collapse text-left text-xs tabular-nums [&_td]:px-2 [&_td]:py-1.5 [&_th]:px-2 [&_th]:py-1.5">
+      {report.shifts.length > 0 ? <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-right text-sm tabular-nums [&_td]:px-3 [&_td]:py-2 [&_td:first-child]:text-left [&_th]:px-3 [&_th]:py-2 [&_th:first-child]:text-left">
           <thead className="bg-foreground/5"><tr>
-            <th>{t('desktop.superMemoDrafts.intervalGroup')}</th>
-            <th>{t('desktop.superMemoDrafts.cards')}</th>
-            <th>{t('desktop.superMemoDrafts.sourceMedian')}</th>
-            <th>{t('desktop.superMemoDrafts.shiftMedian')}</th>
+            <th scope="col" className="font-semibold">{t('desktop.superMemoDrafts.intervalGroup')}</th>
+            <th scope="col" className="font-semibold">{t('desktop.superMemoDrafts.cards')}</th>
+            <th scope="col" className="font-semibold">{t('desktop.superMemoDrafts.sourceMedian')}</th>
+            <th scope="col" className="font-semibold">{t('desktop.superMemoDrafts.shiftMedian')}</th>
           </tr></thead>
           <tbody>{report.shifts.map(group => (
-            <tr className="border-b border-foreground/10" key={group.label}><td>{group.label}</td><td>{group.count}</td>
+            <tr className="border-b border-[var(--role-content-line)]" key={group.label}><td>{group.label}</td><td>{group.count}</td>
               <td>{group.source}</td><td>{group.offset > 0 ? '+' : ''}{group.offset}</td></tr>
           ))}</tbody>
         </table>
-      ) : null}
-      <p>{t('desktop.superMemoDrafts.loadChange', {
-        original: report.sourceDue, planned: report.totalDue, added: report.addedDue,
-        deferred: report.deferred, unknown: report.unknownDates, noHistory: report.noHistory
-      })}</p>
-      {report.pendingNewItems > 0 ? <p>{t('desktop.superMemoDrafts.pendingNewItems', { count: report.pendingNewItems })}</p> : null}
+      </div> : null}
+      <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+        <ScheduleCount label={t('desktop.superMemoDrafts.originallyDue')} value={report.sourceDue} />
+        <ScheduleCount label={t('desktop.superMemoDrafts.dueAfterImport')} value={report.totalDue} />
+        <ScheduleCount label={t('desktop.superMemoDrafts.newlyDue')} value={report.addedDue} />
+        <ScheduleCount label={t('desktop.superMemoDrafts.noLongerDue')} value={report.deferred} />
+        <ScheduleCount label={t('desktop.superMemoDrafts.datesUnavailable')} value={report.unknownDates} />
+        <ScheduleCount label={t('desktop.superMemoDrafts.withoutHistory')} value={report.noHistory} />
+        {report.pendingNewItems > 0 ? <ScheduleCount label={t('desktop.superMemoDrafts.newCards')} value={report.pendingNewItems} /> : null}
+      </dl>
     </article>
   );
 });
+
+function ScheduleCount({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-row-reverse items-baseline justify-end gap-1.5">
+      <dt className="text-xs text-foreground/70">{label}</dt>
+      <dd className="text-base font-semibold tabular-nums">{value.toLocaleString()}</dd>
+    </div>
+  );
+}
