@@ -36,12 +36,11 @@ export const inventoryColumns = `inventory.*,
 
 /** The persisted version identifies the fact to send, but is irrelevant to agreement on deletion. */
 function permanentDeletionEntry(row: InventoryRow, versionId: string): FramedSyncInventoryEntry {
-  const stateFactIds = ids.parse(JSON.parse(row.states_json));
   return {
     objectType: 'node', globalId: row.object_id, permanentlyDeleted: true, unready: false,
     currentVersionId: versionId, frontierFactIds: [versionId], versionStates: [],
-    requiredRelationIds: [], resourceHashes: [], reviewFactIds: [], stateFactIds,
-    sharedStateHash: sha256(new TextEncoder().encode(JSON.stringify(['permanent deletion', row.object_id, stateFactIds])))
+    requiredRelationIds: [], resourceHashes: [], reviewFactIds: [], stateFactIds: [],
+    sharedStateHash: sha256(new TextEncoder().encode(JSON.stringify(['permanent deletion', row.object_id])))
   };
 }
 

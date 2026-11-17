@@ -168,8 +168,7 @@ function differenceFrom(
   if (!hasNeed(need)) return null;
   return {
     direction, globalId: source.globalId, need,
-    objectType: source.objectType, sourceSnapshot: cloneEntry(source.permanentlyDeleted && !need.sharedState
-      ? { ...source, currentVersionId: undefined } : source)
+    objectType: source.objectType, sourceSnapshot: cloneEntry(source)
   } satisfies FramedSyncInventoryDifference;
 }
 

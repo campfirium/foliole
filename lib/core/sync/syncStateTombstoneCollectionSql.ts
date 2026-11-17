@@ -1,4 +1,4 @@
-import { NODE_CHILD_PAYLOAD_SOURCES, NODE_CHILD_STATE_TYPES_SQL, nodeChildOwnerSql } from '../database/nodeChildStateSql.js';
+import { NODE_CHILD_PAYLOAD_SOURCES, NODE_CHILD_STATE_TYPES, NODE_CHILD_STATE_TYPES_SQL, nodeChildOwnerSql } from '../database/nodeChildStateSql.js';
 import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 
 const absent = (table: string, key: string) => `NOT EXISTS (SELECT 1 FROM ${table} payload WHERE payload.${key} = state.object_id)`;
@@ -6,7 +6,7 @@ const absent = (table: string, key: string) => `NOT EXISTS (SELECT 1 FROM ${tabl
 /** A child mark may go once its node is gone and nothing on this device still holds the child itself. */
 function orphanChildSql() {
   const owner = nodeChildOwnerSql('state');
-  const payloads = NODE_CHILD_PAYLOAD_SOURCES.filter(([type]) => type !== 'import_source')
+  const payloads = NODE_CHILD_PAYLOAD_SOURCES.filter(([type]) => NODE_CHILD_STATE_TYPES.some(owned => owned === type))
     .map(([type, table, key]) => `WHEN '${type}' THEN ${absent(table, key)}`).join(' ');
   return `(state.object_type IN (${NODE_CHILD_STATE_TYPES_SQL})
     AND NOT (state.object_type = 'parent_child_order' AND state.object_id = '${ROOT_CHILD_ORDER_ID}')

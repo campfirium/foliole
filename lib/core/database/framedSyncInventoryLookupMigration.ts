@@ -4,12 +4,11 @@ import {
   dropFramedSyncInventoryTriggers, FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, FRAMED_SYNC_INVENTORY_TRIGGERS
 } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
-import { TOPIC_DAILY_OWNER_INDEX } from './nodeChildStateSql.js';
 
 /** Same inventory rows: only the lookups behind each trigger change, so nothing is rebuilt. */
 function statements() {
   const drops = dropFramedSyncInventoryTriggers();
-  return [...drops, 'DROP INDEX IF EXISTS idx_sync_topic_daily_owner', TOPIC_DAILY_OWNER_INDEX,
+  return [...drops, 'DROP INDEX IF EXISTS idx_sync_topic_daily_owner',
     ...FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, ...FRAMED_SYNC_INVENTORY_TRIGGERS];
 }
 

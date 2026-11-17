@@ -14,6 +14,14 @@ export async function appliedStateWorkspaceScope(db: DbPort, fact: CanonicalFact
     return { kind: 'nodes', nodeIds: record.object_id === ROOT_CHILD_ORDER_ID ? [] : [record.object_id], structure: true };
   }
   if (record.object_type === 'node_reading_resume') return { kind: 'nodes', nodeIds: [record.object_id] };
+  if (record.object_type === 'topic_daily_count') {
+    return { kind: 'nodes', nodeIds: [record.object_id.slice(11)] };
+  }
+  if (record.object_type === 'import_source') {
+    const [source] = await db.query<{ latest_node_id: string | null }>(
+      'SELECT latest_node_id FROM import_sources WHERE source_fingerprint = ?', [record.object_id]);
+    return source?.latest_node_id ? { kind: 'nodes', nodeIds: [source.latest_node_id] } : { kind: 'full' };
+  }
   if (fact.objectType === 'node') return { kind: 'nodes', nodeIds: [fact.globalId] };
   if (NODE_CHILD_STATE_TYPES.some(type => type === record.object_type)) {
     const [owner] = await db.query<{ node_id: string | null }>(`SELECT ${nodeChildOwnerSql('state')} AS node_id

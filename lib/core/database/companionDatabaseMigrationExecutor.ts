@@ -26,6 +26,7 @@ import {
 import { migrateCompanionDeliveryAuthorizations } from './companionDeliveryAuthorizationMigration.js';
 import { migrateCompanionFlowHistory } from './companionFlowHistoryMigration.js';
 import { migrateCompanionHostPermanentState } from './companionHostPermanentStateMigration.js';
+import { migrateCompanionNodeInventoryVersions } from './companionNodeInventoryVersions.js';
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
 import { migrateCompanionParentChildOrder } from './companionParentChildOrderMigration.js';
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
@@ -43,7 +44,6 @@ import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTri
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateCompanionFramedSyncInventoryLookups } from './framedSyncInventoryLookupMigration.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
-import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionFsrs7 } from './fsrs7Migration.js';
@@ -57,7 +57,6 @@ import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigratio
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateCompanionMaterialFlowInvalidation, migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
-import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { PARENT_CHILD_ORDER_SCHEMA_SQL } from './numberedMigrationParentChildOrder.js';
 import { migrateCompanionPdfTextArtifacts, migrateCompanionPdfTextReadingOffset } from './pdfTextArtifactMigration.js';
@@ -189,13 +188,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 115 && targetVersion >= 115) await installRelayReviewSequence(db);
   if (currentVersion < 117 && targetVersion >= 117) await migrateCompanionPdfTextReadingOffset(db);
   if (currentVersion < 118 && targetVersion >= 118) await retireCompanionParentOrderProjection(db);
-  if (currentVersion < 119 && targetVersion >= 119) {
-    for (const sql of reinstallNodeHistoryInventoryUpdates()) await db.run(sql);
-  }
-  if (currentVersion < 120 && targetVersion >= 120) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
-  if (currentVersion < 121 && targetVersion >= 121) {
-    for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) await db.run(sql);
-  }
+  await migrateCompanionNodeInventoryVersions(db, currentVersion, targetVersion);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

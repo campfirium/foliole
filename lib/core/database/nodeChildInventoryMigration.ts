@@ -11,8 +11,6 @@ function statements() {
     "SELECT object_id FROM sync_object_state WHERE object_type = 'node'").split(';').filter(sql => sql.trim());
   return [...drops, ...NODE_CHILD_OWNER_SCHEMA,
     `INSERT OR REPLACE INTO sync_node_child_owners (object_type, object_id, node_id)
-      SELECT 'import_source', source_fingerprint, latest_node_id FROM import_sources WHERE latest_node_id IS NOT NULL`,
-    `INSERT OR REPLACE INTO sync_node_child_owners (object_type, object_id, node_id)
       SELECT 'node_text_alternative', alternative_id, node_id FROM node_text_alternatives`,
     ...rebuild, ...FRAMED_SYNC_INVENTORY_TRIGGERS];
 }

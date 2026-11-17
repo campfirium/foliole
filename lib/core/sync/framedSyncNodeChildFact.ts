@@ -40,15 +40,13 @@ export function restoreFramedSyncNodeChildFact(fact: CanonicalFact) {
 function assertOwner(record: NativeSyncObjectRecord, nodeId: string) {
   let owner: unknown;
   switch (record.object_type) {
-    case 'import_source':
     case 'node_text_alternative': {
       if (record.deleted_at) return;
-      const payload = z.object({ latest_node_id: z.string().optional(), node_id: z.string().optional() })
+      const payload = z.object({ node_id: z.string() })
         .parse(JSON.parse(record.payload_json ?? 'null'));
-      owner = record.object_type === 'import_source' ? payload.latest_node_id : payload.node_id;
+      owner = payload.node_id;
       break;
     }
-    case 'topic_daily_count': owner = record.object_id.slice(11); break;
     default: owner = record.object_id;
   }
   if (owner !== nodeId) throw new Error('framed_sync_node_child_owner_invalid');
@@ -61,8 +59,7 @@ export async function applyFramedSyncNodeChildFact(db: DbPort, fact: CanonicalFa
       (await db.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [fact.globalId])).length) return false;
   if (record.object_type === 'node_text_alternative') record = await completeTopicAlternativeBody(db, fact, record, loadBody);
   const applied = await applyFramedSyncObjectStateRecord(db, record, options);
-  if (record.deleted_at &&
-      (record.object_type === 'import_source' || record.object_type === 'node_text_alternative')) {
+  if (record.deleted_at && record.object_type === 'node_text_alternative') {
     await db.run(`INSERT INTO sync_node_child_owners (object_type, object_id, node_id)
       SELECT object_type, object_id, ? FROM sync_object_state
       WHERE object_type = ? AND object_id = ? AND content_hash = ? AND deleted_at = ?

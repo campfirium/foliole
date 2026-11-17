@@ -9,15 +9,17 @@ import { expect, it } from 'vitest';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { recordTopicDailyCount } from '../../lib/core/database/reviewDailyCounts.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { restoreLegacyParentOrderTable } from './historicalMigration.test-support.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 const T = '2026-10-16T00:00:00.000Z';
-const LOOKUP_INDEX_NAMES = [...FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, 'idx_sync_topic_daily_owner_lookup']
+const LOOKUP_INDEX_NAMES = FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES
   .map((sql) => /idx_\w+/u.exec(sql)![0]);
 /** The node child lookup as the triggers ran it before the lookup indexes. */
 const PREVIOUS_TRIGGERS = FRAMED_SYNC_INVENTORY_TRIGGERS.map((sql) =>
@@ -56,18 +58,12 @@ function restorePreviousLookups(sqlite: Database.Database, companion: boolean) {
   sqlite.pragma(`user_version = ${companion ? 95 : 167}`);
 }
 
-function writeDailyCount(sqlite: Database.Database, day: string) {
-  sqlite.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, current_version_id,
-    content_hash, last_modified_by_host_name, updated_at, deleted_at)
-    VALUES ('topic_daily_count', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), NULL, ?,
-      'mobile', ?, ?)`).run(`${day}:topic`, `h-${day}`, T, T);
-}
-
 async function writeHistory(library: Awaited<ReturnType<typeof openLibrary>>, step: number) {
   const base = textBranch('base', 'Original', undefined, T);
   const head = textBranch('head', 'Revised', base, T);
   await applyConvergentSyncNodesWithDbPort(library.db, step === 0 ? [base] : [base, head]);
-  writeDailyCount(library.sqlite, `2026-10-1${step}`);
+  recordTopicDailyCount(createBetterSqlite3Driver(library.sqlite),
+    { nodeId: 'topic', hostName: 'mobile', day: `2026-10-1${step}` });
 }
 
 function schemaObjects(sqlite: Database.Database) {
@@ -83,7 +79,7 @@ it.each([false, true])('an upgraded library keeps the same inventory and lookups
       restorePreviousLookups(upgraded.sqlite, companion);
       for (const library of [created, upgraded]) await writeHistory(library, 0);
       const before = await readFramedSyncInventory(upgraded.db);
-      expect(before.find((entry) => entry.globalId === 'topic')?.stateFactIds).toHaveLength(1);
+      expect(before.filter(entry => entry.objectType === 'topic_daily_count')).toHaveLength(1);
       await upgraded.upgrade();
       expect(await readFramedSyncInventory(upgraded.db)).toEqual(before);
       expect(schemaObjects(upgraded.sqlite)).toEqual(schemaObjects(created.sqlite));
@@ -92,7 +88,7 @@ it.each([false, true])('an upgraded library keeps the same inventory and lookups
       for (const library of [created, upgraded]) await writeHistory(library, 1);
       const after = await readFramedSyncInventory(upgraded.db);
       expect(after).toEqual(await readFramedSyncInventory(created.db));
-      expect(after.find((entry) => entry.globalId === 'topic')?.stateFactIds).toHaveLength(2);
+      expect(after.filter(entry => entry.objectType === 'topic_daily_count')).toHaveLength(2);
     } finally {
       created.close();
       upgraded.close();

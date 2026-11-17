@@ -7,9 +7,10 @@ import { createBetterSqliteDbPort } from '../../../electron/database/betterSqlit
 import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from '../sync/framedSyncInventoryDigest.js';
-import { readFramedSyncInventoryEntry } from '../sync/framedSyncInventoryRead.js';
+import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
 import { applyRemoteNodeTombstone } from '../sync/syncNodeTombstoneApply.js';
+import { applySyncObjectInTransaction } from '../sync/syncObjectApplyExecutor.js';
 
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
@@ -104,5 +105,42 @@ it.each(['desktop', 'companion'])('retains only meaningful deletion facts after 
       .toEqual(['live-choice']);
     expect(sqlite.prepare('SELECT parent_id FROM parent_order_sources').pluck().all()).toEqual(['live']);
     expect(sqlite.prepare('SELECT object_id FROM sync_node_child_owners').pluck().all()).toEqual(['live-choice']);
+  } finally { sqlite.close(); }
+});
+
+it.each(['desktop', 'companion'])('replaces grouped import history in an existing %s inventory', async host => {
+  const sqlite = new Database(':memory:');
+  const db = createBetterSqliteDbPort(sqlite);
+  const previous = host === 'desktop' ? 194 : 121;
+  try {
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await createCompanionDatabase(db, previous);
+    const node = branch('root', 'Original');
+    await applySyncNodesWithDbPort(db, [node], { enqueueSearchInvalidations: false });
+    const sourceHash = '77'.repeat(32);
+    const countHash = '88'.repeat(32);
+    for (const [type, id, hash, payload] of [
+      ['import_source', 'source', sourceHash, { latest_node_id: 'node-1', last_content_fingerprint: 'file' }],
+      ['topic_daily_count', '2026-10-02:node-1', countHash, { day_key: '2026-10-02', node_id: 'node-1' }]
+    ] as const) await applySyncObjectInTransaction(db, {
+      object_type: type, object_id: id, content_hash: hash, updated_at: '2026-10-02T00:00:00Z',
+      deleted_at: null, payload_json: JSON.stringify(payload)
+    });
+    sqlite.exec("INSERT INTO sync_node_child_owners VALUES ('import_source','source','node-1')");
+    sqlite.prepare("UPDATE framed_sync_inventory SET states_json = ? WHERE object_id = 'node-1'").run(JSON.stringify([
+      JSON.stringify(['import_source', 'source', sourceHash]),
+      JSON.stringify(['topic_daily_count', '2026-10-02:node-1', countHash])
+    ]));
+    await db.transaction(tx => flushRequestSyncInventoryDigests(tx));
+    sqlite.pragma(`user_version = ${previous}`);
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await db.transaction(tx => migrateCompanionDatabase(tx, previous, previous + 1));
+    const entries = await readFramedSyncInventory(db);
+    expect(entries.find(entry => entry.globalId === 'node-1')).toMatchObject({ stateFactIds: [] });
+    expect(entries.find(entry => entry.objectType === 'import_source')).toMatchObject({ globalId: 'source' });
+    expect(entries.find(entry => entry.objectType === 'topic_daily_count')).toMatchObject({ globalId: '2026-10-02:node-1' });
+    expect(sqlite.prepare("SELECT latest_node_id FROM import_sources WHERE source_fingerprint='source'").pluck().get()).toBe('node-1');
+    expect(sqlite.prepare("SELECT count FROM topic_daily_counts WHERE day_key='2026-10-02'").pluck().get()).toBe(1);
+    expect(sqlite.prepare('SELECT * FROM sync_node_child_owners').all()).toEqual([]);
   } finally { sqlite.close(); }
 });

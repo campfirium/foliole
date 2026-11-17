@@ -65,7 +65,7 @@ function readReviewFacts(path: string) {
   } finally { sqlite.close(); }
 }
 
-it('transfers every child with its node, preserves concurrent text, and relays child deletions over HTTP', { meta: { calibratedMs: 60_000 } }, async () => {
+it('transfers node children and independent history while preserving concurrent text and deletions over HTTP', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const { left, right, leftSnapshot: a, rightSnapshot: b } = fixture;
   const round = () => left.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: b.origin,
@@ -111,7 +111,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
       expect(sqlite.prepare('SELECT * FROM node_text_alternatives WHERE alternative_id = ?').get('alternative')).toBeUndefined();
       expect(sqlite.prepare('SELECT * FROM import_sources WHERE source_fingerprint = ?').get('source')).toBeUndefined();
       const entries = await readFramedSyncInventory(db);
-      expect(entries.filter(entry => ['node_open_state', 'node_reading', 'node_review', 'import_source',
+      expect(entries.filter(entry => ['node_open_state', 'node_reading', 'node_review',
         'node_text_alternative'].includes(entry.objectType))).toEqual([]);
     });
     await relayDeletedChildren(fixture, reset);
@@ -123,16 +123,19 @@ it('transfers every child with its node, preserves concurrent text, and relays c
 
 async function assertGrouped(db: DbPort) {
   expect(await db.query('SELECT * FROM sync_node_child_owners ORDER BY object_type')).toEqual([
-    {object_type: 'import_source', object_id: 'source', node_id: nodeId},
     {object_type: 'node_text_alternative', object_id: 'alternative', node_id: nodeId}
   ]);
   const entries = await readFramedSyncInventory(db);
   const owner = entries.find(entry => entry.objectType === 'node' && entry.globalId === nodeId);
   expect(owner?.reviewFactIds).toEqual(['review-first']);
   expect(owner?.stateFactIds?.map(id => JSON.parse(id)[0]).sort()).toEqual(
-    ['import_source', 'node_open_state', 'node_reading', 'node_text_alternative', 'parent_child_order', 'topic_daily_count']);
+    ['node_open_state', 'node_reading', 'node_text_alternative', 'parent_child_order']);
   expect(entries.filter(entry => records().some(state => state.object_type === entry.objectType)))
-    .toEqual([expect.objectContaining({ objectType: 'parent_child_order', globalId: ROOT_CHILD_ORDER_ID })]);
+    .toEqual([
+      expect.objectContaining({ objectType: 'import_source', globalId: 'source' }),
+      expect.objectContaining({ objectType: 'parent_child_order', globalId: ROOT_CHILD_ORDER_ID }),
+      expect.objectContaining({ objectType: 'topic_daily_count', globalId: `2026-10-16:${nodeId}` })
+    ]);
 }
 
 async function concurrentChanges(fixture: Fixture,
@@ -186,9 +189,10 @@ async function relayDeletedChildren(fixture: Fixture, expected: ReturnType<typeo
     expect(readReviewFacts(third.snapshot.databasePath)).toEqual(expected);
     await withDb(third.snapshot.databasePath, async (db, sqlite) => {
       expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
-      expect(sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_type = 'import_source'").pluck().get())
-        .toBe(nodeId);
-      expect((await readFramedSyncInventory(db)).find(entry => entry.objectType === 'import_source')).toBeUndefined();
+      expect(sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'import_source' AND object_id = 'source'")
+        .pluck().get()).toBe('2026-10-16T04:00:00.000Z');
+      expect((await readFramedSyncInventory(db)).find(entry => entry.objectType === 'import_source'))
+        .toMatchObject({ globalId: 'source' });
       expect(sqlite.prepare('SELECT * FROM node_text_alternatives WHERE alternative_id = ?').get('alternative')).toBeUndefined();
       expect(sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node_text_alternative' AND object_id = 'alternative'").pluck().get())
         .toBe('2026-10-16T04:00:00.000Z');

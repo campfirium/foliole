@@ -107,11 +107,9 @@ export function createFramedSyncInventoryTriggers() {
     ...['node_reading', 'node_open_state'].flatMap(table =>
       triggers(table, ref => framedSyncNodeInventorySql(`${ref}.node_id`))),
     ...triggers('parent_order_sources', ref => framedSyncNodeInventorySql(`${ref}.parent_id`)),
-    ...triggers('topic_daily_count_entries', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
     ...triggers('sync_node_child_owners', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
     ...childOwnerTriggers(),
     ...triggers('node_text_alternatives', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
-    ...triggers('import_sources', ref => framedSyncNodeInventorySql(`${ref}.latest_node_id`)),
     ...triggers('node_sync_version_parents', (ref) => `
     DELETE FROM framed_sync_fact_summary WHERE kind = 3
       AND fact_id = json_array(${ref}.version_id, ${ref}.parent_version_id, ${ref}.ordinal);
@@ -136,7 +134,7 @@ export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers(
  * The inventory projection reads no column of `nodes`, so these only rewrote unchanged rows and dropped their
  * cached digests on every node write.
  */
-const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['nodes', 'node_review'].flatMap(table =>
+const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['nodes', 'node_review', 'import_sources', 'topic_daily_count_entries'].flatMap(table =>
   ['insert', 'update', 'delete'].map(action => `trg_framed_inventory_${table}_${action}`));
 
 export const RETIRED_RESOURCE_AVAILABILITY_TRIGGERS = ['insert', 'update', 'delete']
@@ -146,7 +144,8 @@ export const RETIRED_RESOURCE_AVAILABILITY_TRIGGERS = ['insert', 'update', 'dele
 export function dropFramedSyncInventoryTriggers() {
   return [
     ...FRAMED_SYNC_INVENTORY_TRIGGERS.map(dropInventoryTrigger),
-    ...[...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS, ...RETIRED_RESOURCE_AVAILABILITY_TRIGGERS]
+    ...[...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS, ...RETIRED_RESOURCE_AVAILABILITY_TRIGGERS,
+      'trg_framed_inventory_owner_import_sources_insert', 'trg_framed_inventory_owner_import_sources_update']
       .map(name => `DROP TRIGGER IF EXISTS ${name}`)
   ];
 }
@@ -163,8 +162,7 @@ export const FRAMED_SYNC_INVENTORY_SCHEMA = [
 
 function childOwnerTriggers() {
   const sources = [
-    ['node_text_alternative', 'node_text_alternatives', 'alternative_id', 'node_id'],
-    ['import_source', 'import_sources', 'source_fingerprint', 'latest_node_id']
+    ['node_text_alternative', 'node_text_alternatives', 'alternative_id', 'node_id']
   ];
   return sources.flatMap(([type, table, id, owner]) => ['INSERT', 'UPDATE'].map(action =>
     `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_owner_${table}_${action.toLowerCase()}

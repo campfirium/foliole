@@ -36,7 +36,6 @@ const DESKTOP_SCHEMA_FILES = {
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   FOREGROUND_TIME_SCHEMA: 'lib/core/database/foregroundTimeSchema.ts',
   FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',
-  TOPIC_DAILY_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
   NODE_CHILD_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
   FRAMED_SYNC_INVENTORY_TABLES: 'lib/core/database/framedSyncInventorySchema.ts',
   FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES: 'lib/core/database/framedSyncInventorySchema.ts',

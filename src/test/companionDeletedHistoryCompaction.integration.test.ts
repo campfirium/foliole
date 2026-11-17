@@ -3,13 +3,17 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver.js';
+import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.js';
 import { prepareImportedNodeDeletionVersions } from '../../electron/database/importedNodeDeletionVersions.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
+import { recordTopicDailyCount } from '../../lib/core/database/reviewDailyCounts.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport.js';
 
@@ -18,6 +22,8 @@ const sharedBody = 'Body shared with the surviving topic';
 const isolatedBody = 'Body held only in the receiver cache';
 const alternativeBody = 'Alternative held only in the receiver cache';
 const legacy = 'legacy-history';
+const importId = 'legacy-import';
+const countDay = '2026-10-05';
 const known = 'known-history';
 
 type Version = { version_id: string; snapshot_json: string };
@@ -108,6 +114,12 @@ async function prepareHistory(host: CompanionFixture, source: Database.Database,
     setLegacyAlternative(host.sqlite, localVersions[0]!);
     setLegacyAlternative(source, localVersions[0]!);
   }
+  const provenance = { latest_node_id: legacy, last_content_fingerprint: 'original-file' };
+  await applySyncObjectInTransaction(createBetterSqliteDbPort(source), {
+    object_type: 'import_source', object_id: importId, content_hash: computeSyncContentHash('import_source', provenance),
+    updated_at: deletedAt, deleted_at: null, payload_json: JSON.stringify(provenance)
+  });
+  recordTopicDailyCount(createBetterSqlite3Driver(source), { day: countDay, nodeId: legacy, hostName: 'Provider' });
   permanentDeletion(source, [legacy, ...(ordinary ? [known] : [])]);
   retireLegacyVersions(source, retired);
   setLegacyAlternative(source, retired[0]!);
@@ -161,6 +173,9 @@ it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('receives one tom
       if (ordinary) expect(blob.get(hashTextBody(sharedBody))).toEqual({ body: sharedBody });
       expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id='survivor'").get()).toEqual({ content: sharedBody });
       expect(persistedHistory(host.sqlite, legacy)).toEqual([]);
+      expect(host.sqlite.prepare('SELECT latest_node_id, last_content_fingerprint FROM import_sources WHERE source_fingerprint=?')
+        .get(importId)).toEqual({ latest_node_id: legacy, last_content_fingerprint: 'original-file' });
+      expect(host.sqlite.prepare('SELECT count FROM topic_daily_counts WHERE day_key=?').pluck().get(countDay)).toBe(1);
     };
     checkBodies();
     const deletion = tombstone(host.sqlite);
