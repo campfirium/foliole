@@ -69,6 +69,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.history.previewFirst': '正文在上',
   'desktop.history.breadcrumbFirst': '面包屑在上',
   'desktop.history.fontSize': '字号',
+  'desktop.history.fontSizeDecrease': '减小字号',
+  'desktop.history.fontSizeIncrease': '增大字号',
   'desktop.history.previewLines': '正文行数',
   'desktop.history.search': '搜索历史…',
   'desktop.history.noMatches': '没有匹配的材料',
