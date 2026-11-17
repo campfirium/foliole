@@ -78,7 +78,7 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
     handledConflictCount: conflicts.length,
     newNodeIds: records.filter((record) => !knownNodeIds.has(record.object_id))
       .map((record) => record.object_id),
-    processedNodeIds: [...new Set(records.map((record) => record.object_id))]
+    processedNodeIds: [...new Set([...records.map((record) => record.object_id), ...result.appliedIds])]
   };
 }
 

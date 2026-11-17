@@ -37,6 +37,8 @@ export function applyCurrentParentOrderRecord(port: DbPort, record: SyncObjectRe
         currentParentOrderHash(payload.parent_id, incoming) !== record.content_hash) {
       throw new Error('sync_parent_order_state_mismatch');
     }
+    const [deleted] = await tx.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [payload.parent_id]);
+    if (deleted) return false;
     const local = await loadCurrentParentOrderSources(tx, payload.parent_id);
     const sources = joinParentOrderSources(local, incoming);
     const changed = currentParentOrderHash(payload.parent_id, local) !== currentParentOrderHash(payload.parent_id, sources);

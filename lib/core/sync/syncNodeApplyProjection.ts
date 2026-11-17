@@ -52,7 +52,7 @@ async function handleTombstoneGuard(input: {
       return true;
     }
     if (await applyRemoteNodeTombstone(
-      input.tx, input.record, input.options.enqueueSearchInvalidations !== false
+      input.tx, input.record, input.options.enqueueSearchInvalidations !== false, input.result.appliedIds
     )) {
       input.result.appliedIds.push(input.record.object_id);
       input.result.workspaceStructureChanged = true;
@@ -115,9 +115,8 @@ export async function applyIncomingRecord(input: {
   if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
     const preparedTextBodyHashes = new Map<NativeSyncNodeRecord, string>();
     if (input.preparedTextBodyHash) preparedTextBodyHashes.set(record, input.preparedTextBodyHash);
-    await applyAcceptedRemoteNode({ ...input, localNode, preparedTextBodyHashes,
+    const snapshot = await applyAcceptedRemoteNode({ ...input, localNode, preparedTextBodyHashes,
       operation: options.operation ?? 'remote_sync' });
-    const snapshot = record.snapshot;
     result.workspaceStructureChanged ||= !localNode || localNode.parent_id !== snapshot.parent_id ||
       localNode.title !== snapshot.title || localNode.deleted_at !== snapshot.deleted_at ||
       localNode.created_at !== snapshot.created_at;

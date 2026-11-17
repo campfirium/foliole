@@ -24,7 +24,7 @@ export async function assertFramedSyncNodeParentDependencies(
       dependencies.set(nodeId, parents);
     }
     const error = parentId === nodeId ? 'framed_sync_node_parent_cycle'
-      : !incomingIds.has(parentId) && !prepared.present.has(parentId) ? `framed_sync_node_parent_missing:${parentId}` : undefined;
+      : !incomingIds.has(parentId) && !prepared.knownParents.has(parentId) ? `framed_sync_node_parent_missing:${parentId}` : undefined;
     if (!error) continue;
     if (!rejected) throw new Error(error);
     rejected.set(nodeId, error);
@@ -56,8 +56,8 @@ function rejectParentCycles(dependencies: ReadonlyMap<string, ReadonlySet<string
 /** Read parent requirements separately from creating roots or applying the nodes. */
 export async function prepareFramedSyncNodeParents(db: DbPort, currentNodes: readonly SyncNodeRecordMetadata[]) {
   const projections = await loadProjections(db, currentNodes.map(node => node.object_id));
-  const present = await loadPresentNodeIds(db, currentNodes.flatMap(node => node.snapshot.parent_id ? [node.snapshot.parent_id] : []));
-  return { present, async *required() {
+  const knownParents = await loadKnownParentIds(db, currentNodes.flatMap(node => node.snapshot.parent_id ? [node.snapshot.parent_id] : []));
+  return { knownParents, async *required() {
     for (const node of currentNodes) {
       if (await retainsCurrentProjection(db, node, projections.get(node.object_id))) continue;
       if (node.snapshot.parent_id) yield [node.object_id, node.snapshot.parent_id] as const;
@@ -73,9 +73,11 @@ async function loadProjections(db: DbPort, nodeIds: readonly string[]) {
   return new Map(rows.map(({ id, ...row }) => [id, row]));
 }
 
-async function loadPresentNodeIds(db: DbPort, nodeIds: readonly string[]) {
+async function loadKnownParentIds(db: DbPort, nodeIds: readonly string[]) {
   const rows = nodeIds.length ? await db.query<DbRow & { id: string }>(
-    'SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))', [JSON.stringify([...new Set(nodeIds)])]) : [];
+    `SELECT value AS id FROM json_each(?) WHERE EXISTS (
+      SELECT 1 FROM nodes WHERE id = value
+    ) OR EXISTS (SELECT 1 FROM node_sync_tombstones WHERE node_id = value)`, [JSON.stringify([...new Set(nodeIds)])]) : [];
   return new Set(rows.map(row => row.id));
 }
 

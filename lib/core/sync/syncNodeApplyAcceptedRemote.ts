@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { initializeReceivedReviewSchedule } from '../database/initialReviewSchedule.js';
 import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
+import { INBOX_NODE_ID } from '../database/specialNodeIds.js';
 
 import type { DbPort } from './dbPort.js';
 import {
@@ -21,6 +22,7 @@ import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { applyStoredNodeVersionBodyState, STORED_NODE_VERSION_BODY_REPAIR_COLUMNS, storeRetiredNodeBodyHash,
   type StoredNodeVersionBodyRepairState } from './syncNodeVersionBodyState.js';
+import { ensureSyncSpecialRootNodes } from './syncSpecialRootNodes.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
@@ -161,12 +163,22 @@ export async function applyAcceptedRemoteNode(input: {
 }) {
   assertSyncNodeTextWithinBudget(input.record.snapshot);
   const syncState = await loadAppliedNodeMutationState(input.tx, input.record.object_id, input.operation);
+  const parentId = input.record.snapshot.parent_id;
+  const [deletedParent] = parentId ? await input.tx.query(
+    'SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [parentId]) : [];
+  if (deletedParent) await ensureSyncSpecialRootNodes(input.tx, [
+    { nodeId: INBOX_NODE_ID, referencedAt: input.record.snapshot.updated_at }
+  ]);
+  // Publish the new placement through the dirty-node path while retaining the original version.
+  const projection = deletedParent
+    ? { ...input.record, snapshot: { ...input.record.snapshot, parent_id: INBOX_NODE_ID } }
+    : input.record;
   await upsertRemoteNode(
     input.tx,
-    input.record,
+    projection,
     input.preparedTextBodyHashes,
     input.localNode !== null,
-    0
+    deletedParent ? 1 : 0
   );
   if (!input.versionAlreadyRetained) await upsertRemoteVersion(input.tx, input.record);
   await recordAppliedNodeLocalOrigin(input.tx, input.record.version_id, input.operation);
@@ -188,6 +200,7 @@ export async function applyAcceptedRemoteNode(input: {
     await enqueueAppliedNodeSearchInvalidations(input.tx, input.localNode, input.record, input.invalidatedAt);
   }
   input.result.appliedIds.push(input.record.object_id);
+  return projection.snapshot;
 }
 
 export { upsertRemoteVersion };
