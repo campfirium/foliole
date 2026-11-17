@@ -118,3 +118,32 @@ test('cancels an unfinished resize when the window switches tiers', async ({ des
   await expect.poll(async () => (await right.boundingBox())?.width).toBeCloseTo(initialWidth, 0);
   expect(await readSavedTiers(page)).toEqual(before);
 });
+
+test('previews each configured tier with the slider without resizing the actual window', async ({ desktopWindow: page }, testInfo) => {
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const rules = settings.getByRole('region', { name: sidebarLayoutName });
+  await rules.getByRole('button', { name: /Restore default tiers|恢复默认档位/ }).click();
+  const actual = await rules.getByRole('status').innerText();
+  const preview = rules.getByRole('region', { name: /Layout preview|布局预览/ });
+  const slider = preview.getByRole('slider');
+  const left = preview.locator('[data-sidebar-preview-panel="left"]');
+  const right = preview.locator('[data-sidebar-preview-panel="right"]');
+
+  await slider.fill('90');
+  await expect(left).toBeVisible();
+  await expect(right).toBeVisible();
+  await slider.fill('65');
+  await expect(left).toBeVisible();
+  await expect(right).toBeHidden();
+  await preview.locator('[data-sidebar-preview-edge="right"]').hover();
+  await expect(right).toHaveAttribute('data-floating', 'true');
+  await slider.fill('45');
+  await expect(left).toBeHidden();
+  await expect(right).toBeHidden();
+  await expect(rules.locator('tr[aria-current="true"]')).toContainText('< 50%');
+  await expect(rules.getByRole('status')).toHaveText(actual);
+  await slider.fill('65');
+  const screenshot = testInfo.outputPath('sidebar-layout-with-preview.png');
+  await rules.screenshot({ path: screenshot });
+  await testInfo.attach('sidebar-layout-with-preview', { path: screenshot, contentType: 'image/png' });
+});

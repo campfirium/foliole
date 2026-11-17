@@ -1,6 +1,9 @@
 export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.sidebarLayout.title': 'Sidebar layout',
   'settings.appearance.sidebarLayout.windowWidth': 'Window width relative to the display work area',
+  'settings.appearance.sidebarLayout.preview': 'Layout preview',
+  'settings.appearance.sidebarLayout.previewWidth': 'Simulated window width',
+  'settings.appearance.sidebarLayout.previewDocument': 'Document',
   'settings.appearance.sidebarLayout.threshold': 'Minimum window width (%)',
   'settings.appearance.sidebarLayout.windowColumn': 'Window width',
   'settings.appearance.sidebarLayout.leftColumn': 'Left sidebar',

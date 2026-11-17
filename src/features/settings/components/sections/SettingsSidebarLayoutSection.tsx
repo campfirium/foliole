@@ -8,6 +8,8 @@ import {
   defaultSidebarTiers, nextSidebarThreshold, selectSidebarTier, sidebarModes, type SidebarMode, type SidebarRule, type SidebarSide, type SidebarTier
 } from '../../model/sidebarLayoutTiers';
 
+import { SidebarLayoutPreview } from './SidebarLayoutPreview';
+
 const fieldClass = 'app-focus-boundary h-9 rounded-md border border-settings-control-border bg-settings-control px-2 text-ui-md';
 const cellClass = 'px-1.5 py-1.5 first:pl-2 last:pr-2';
 
@@ -110,10 +112,12 @@ export function SettingsSidebarLayoutSection() {
   const windowPercent = useSidebarLayoutWindowPercent();
   const tiers = useSavedSidebarTiers() ?? defaultSidebarTiers;
   const [error, setError] = useState<'duplicate' | 'saveError' | null>(null);
+  const [previewPercent, setPreviewPercent] = useState<number>();
   if (windowPercent === null) return null;
 
-  const active = selectSidebarTier(tiers, windowPercent);
-  const nextThreshold = nextSidebarThreshold(tiers, windowPercent);
+  const simulatedPercent = previewPercent ?? Math.max(0, Math.min(100, Math.round(windowPercent)));
+  const active = selectSidebarTier(tiers, previewPercent ?? windowPercent);
+  const nextThreshold = nextSidebarThreshold(tiers, previewPercent ?? windowPercent);
   const rows = tiers.toSorted((a, b) => (b.threshold ?? -1) - (a.threshold ?? -1));
   const firstThreshold = rows.at(-2)?.threshold;
   const baseLabel = firstThreshold == null ? t('settings.appearance.sidebarLayout.base') : `< ${firstThreshold}%`;
@@ -132,16 +136,14 @@ export function SettingsSidebarLayoutSection() {
   };
   return (
     <SettingsSection
-      actions={(
-        <button aria-label={t('settings.appearance.sidebarLayout.reset')} className={settingsResetButtonClassName()}
-          onClick={() => save(defaultSidebarTiers)} type="button"><RotateCcw aria-hidden="true" size={18} /></button>
-      )}
+      actions={<RestoreTiersButton onClick={() => save(defaultSidebarTiers)} />}
       ariaLabel={t('settings.appearance.sidebarLayout.title')}
       title={t('settings.appearance.sidebarLayout.title')}
     >
       <SettingsRow title={t('settings.appearance.sidebarLayout.windowWidth')}>
         <output className="tabular-nums">{Math.round(windowPercent)}%</output>
       </SettingsRow>
+      {active && <SidebarLayoutPreview percent={simulatedPercent} tier={active} onResize={setPreviewPercent} />}
       <div className="px-settings-panel-x">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse whitespace-nowrap text-left text-ui-md">
@@ -162,5 +164,13 @@ export function SettingsSidebarLayoutSection() {
         {error && <p role="alert">{t(`settings.appearance.sidebarLayout.${error}`)}</p>}
       </div>
     </SettingsSection>
+  );
+}
+
+function RestoreTiersButton({ onClick }: { onClick: () => void }) {
+  const t = useTranslation();
+  return (
+    <button aria-label={t('settings.appearance.sidebarLayout.reset')} className={settingsResetButtonClassName()}
+      onClick={onClick} type="button"><RotateCcw aria-hidden="true" size={18} /></button>
   );
 }
