@@ -149,11 +149,16 @@ it('keeps Rename available for a protected system root', () => {
   expect(screen.queryByRole('menuitem', { name: 'Move to…' })).toBeNull();
 });
 
-it('shows Relearn help after a long hover', () => {
+it.each([
+  ['Relearn', "Clear this topic's learning progress.",
+    'Only the selected topic or item is reset. Materials derived from it keep their learning progress and review schedules.'],
+  ['Dismiss', 'No longer appears automatically.',
+    'The topic stays in Foliole and can be opened manually. Materials derived from it are not affected.']
+])('shows %s help explaining that derived materials are unaffected after a long hover', (label, body, detail) => {
   vi.useFakeTimers();
   renderWithLocalization(<NodeListContextMenu {...noopProps()} />);
 
-  const relearn = screen.getByRole('menuitem', { name: 'Relearn' });
+  const relearn = screen.getByRole('menuitem', { name: label });
   fireEvent.pointerMove(relearn, { pointerType: 'mouse' });
   fireEvent.pointerEnter(relearn, { pointerType: 'mouse' });
 
@@ -166,9 +171,9 @@ it('shows Relearn help after a long hover', () => {
     vi.advanceTimersByTime(1);
   });
   const helpCard = screen.getByRole('tooltip');
-  expect(helpCard).toHaveTextContent('Relearn');
-  expect(helpCard).toHaveTextContent("Clear this topic's learning progress.");
-  expect(helpCard).toHaveTextContent('It can be studied again from the beginning.');
+  expect(helpCard).toHaveTextContent(label);
+  expect(helpCard).toHaveTextContent(body);
+  expect(helpCard).toHaveTextContent(detail);
 });
 
 it('shows action help for complex topic menu actions', () => {
