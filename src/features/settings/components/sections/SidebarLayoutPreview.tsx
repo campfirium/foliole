@@ -39,12 +39,17 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
   const floating = revealed && mode(revealed.side) === 'edge' ? revealed.side : undefined;
   const dismissHover = () => { if (revealed?.fromEdge) setRevealed(undefined); };
   const panel = (side: SidebarSide, floating = false) => (
-    <div data-sidebar-preview-panel={side} data-floating={floating || undefined} className={`grid min-w-0 shrink-0 place-items-center overflow-hidden border-settings-divider text-ui-sm text-muted-foreground
-      ${side === 'left' ? 'border-r bg-[var(--role-nav-bg)]' : 'border-l bg-[var(--role-sidebar-bg)]'}
-      ${floating ? `absolute inset-y-0 z-10 shadow-control ring-1 ring-settings-control-border ${side === 'left' ? 'left-0' : 'right-0'}` : ''}`}
+    <div data-sidebar-preview-panel={side} data-floating={floating || undefined}
+      className={`grid min-w-0 shrink-0 place-items-center overflow-hidden text-ui-sm
+        ${floating
+          ? `absolute inset-y-3 z-10 rounded-md border border-foreground/30 shadow-lg ${side === 'left' ? 'left-0' : 'right-0'}`
+          : `text-muted-foreground border-settings-divider ${side === 'left' ? 'border-r' : 'border-l'}`}`}
       onPointerLeave={floating ? dismissHover : undefined}
-      style={{ width: `${tier[side].width}%` }}>
-      <span className="max-w-full truncate px-1">{t(`settings.appearance.sidebarLayout.${side}Column`)}</span>
+      style={{ width: `${tier[side].width}%`, background: previewPanelBackground(side, floating) }}>
+      <div className="min-w-0 max-w-full px-1 text-center">
+        <div className="truncate">{t(`settings.appearance.sidebarLayout.${side}Column`)}</div>
+        {floating && <div className="truncate text-xs font-semibold">{t('settings.appearance.sidebarLayout.previewOverlay')}</div>}
+      </div>
     </div>
   );
   const toggle = (side: SidebarSide) => {
@@ -70,16 +75,36 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
       </div>
       <div className="relative flex min-h-0 flex-1 overflow-hidden bg-background" onPointerLeave={dismissHover}>
         {mode('left') === 'dock' && panel('left')}
-        <div data-sidebar-preview-document="" className={`grid min-w-0 flex-1 place-items-center overflow-hidden text-ui-sm text-muted-foreground
-          ${floating ? 'outline -outline-offset-1 outline-dashed outline-settings-control-border' : ''}`}>
-          <span className="max-w-full truncate px-1">{t('settings.appearance.sidebarLayout.previewDocument')}</span>
-        </div>
+        <PreviewDocument />
         {mode('right') === 'dock' && panel('right')}
         {sides.map(side => mode(side) === 'edge' && (
           <div aria-hidden="true" data-sidebar-preview-edge={side} className={`absolute inset-y-0 w-2 ${side === 'left' ? 'left-0' : 'right-0'}`}
             key={side} onPointerEnter={() => setRevealed({ side, fromEdge: true })} />
         ))}
         {floating && panel(floating, true)}
+      </div>
+    </div>
+  );
+}
+
+
+function previewPanelBackground(side: SidebarSide, floating: boolean) {
+  const surface = side === 'left' ? 'var(--role-nav-bg)' : 'var(--role-sidebar-bg)';
+  return floating ? `color-mix(in srgb, var(--app-settings-selected-bg, ${surface}) 82%, transparent)` : surface;
+}
+
+function PreviewDocument() {
+  const t = useTranslation();
+  return (
+    <div data-sidebar-preview-document="" className="relative min-w-0 flex-1 overflow-hidden px-4 py-3">
+      <div className="h-full min-w-0 rounded-sm border border-dashed border-foreground/30 px-3 py-2 text-ui-sm text-muted-foreground">
+        <div className="truncate font-medium">{t('settings.appearance.sidebarLayout.previewDocument')}</div>
+        <div aria-hidden="true" className="mt-2 grid gap-2">
+          <div className="h-px w-full bg-foreground/35" />
+          <div className="h-px w-[94%] bg-foreground/30" />
+          <div className="h-px w-full bg-foreground/35" />
+          <div className="h-px w-[87%] bg-foreground/30" />
+        </div>
       </div>
     </div>
   );

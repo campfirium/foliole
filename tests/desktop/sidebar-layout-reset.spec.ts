@@ -142,6 +142,15 @@ test('previews each configured tier with the slider without resizing the actual 
   await expect(right).toBeVisible();
   expect(await document.boundingBox()).toEqual(documentBounds);
   await expect(right).toHaveAttribute('data-floating', 'true');
+  await expect(right).toContainText(/Overlay|浮层/);
+  const overlay = (await right.boundingBox())!;
+  expect(overlay.x).toBeLessThan(documentBounds!.x + documentBounds!.width);
+  expect(overlay.y).toBeGreaterThan(documentBounds!.y);
+  expect(overlay.y + overlay.height).toBeLessThan(documentBounds!.y + documentBounds!.height);
+  await expect(right.evaluate(panel => {
+    const { x, y, width, height } = panel.getBoundingClientRect();
+    return panel.contains(panel.ownerDocument.elementFromPoint(x + width / 2, y + height / 2));
+  })).resolves.toBe(true);
   await rightToggle.click();
   await expect(right).toBeHidden();
   await preview.locator('[data-sidebar-preview-edge="right"]').hover();
@@ -154,10 +163,14 @@ test('previews each configured tier with the slider without resizing the actual 
   await expect(rules.getByRole('status')).toHaveText(actual);
   await slider.hover();
   await slider.fill('65');
+  await expect(right).toBeHidden();
+  const beforeScreenshot = testInfo.outputPath('sidebar-layout-before-overlay.png');
+  await preview.screenshot({ path: beforeScreenshot });
+  await testInfo.attach('sidebar-layout-before-overlay', { path: beforeScreenshot, contentType: 'image/png' });
   await rightToggle.press('Space');
   await expect(right).toBeVisible();
   const screenshot = testInfo.outputPath('sidebar-layout-with-preview.png');
-  await rules.screenshot({ path: screenshot });
+  await preview.screenshot({ path: screenshot });
   await expect(right).toBeVisible();
   await testInfo.attach('sidebar-layout-with-preview', { path: screenshot, contentType: 'image/png' });
 });
