@@ -65,7 +65,7 @@
   --app-control-bg-hover-color: rgb(var(--role-ink-rgb) / 0.04);
   --app-surface-control-bg: color-mix(in srgb, var(--role-content-bg) 78%, var(--role-content-tint-bg) 22%);
   --app-surface-control-hover-bg: color-mix(in srgb, var(--role-content-bg) 68%, var(--role-content-tint-bg) 32%);
-  --app-floating-overlay-bg: color-mix(in srgb, var(--role-nav-bg) 10%, transparent);
+  --app-floating-overlay-bg: color-mix(in srgb, var(--role-nav-bg) 3%, transparent);
   --app-floating-surface-bg: color-mix(in srgb, var(--role-content-bg) 76%, var(--role-content-tint-bg) 24%);
   --app-floating-input-bg: color-mix(in srgb, var(--role-content-bg) 84%, var(--role-content-tint-bg) 16%);
   --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--role-line-strong-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
