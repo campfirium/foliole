@@ -20,7 +20,7 @@ export function SidebarLayoutPreview({ percent, tier, onResize }: {
       <h4 className="mb-2 text-ui-md font-medium" id={titleId}>{t('settings.appearance.sidebarLayout.preview')}</h4>
       <div className="mb-3 flex items-center gap-3 text-ui-md">
         <label htmlFor={sliderId}>{t('settings.appearance.sidebarLayout.previewWidth')}</label>
-        <input className={settingsRangeClassName("min-w-0 flex-1")} id={sliderId} max={100} min={0}
+        <input className={settingsRangeClassName('min-w-0 flex-1')} id={sliderId} max={100} min={0}
           onChange={event => onResize(event.currentTarget.valueAsNumber)} type="range" value={percent} />
         <span className="w-[4ch] text-right tabular-nums">{percent}%</span>
       </div>
@@ -34,13 +34,15 @@ export function SidebarLayoutPreview({ percent, tier, onResize }: {
 function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }) {
   const t = useTranslation();
   const [overrides, setOverrides] = useState<Partial<Record<SidebarSide, SidebarMode>>>({});
-  const [revealed, setRevealed] = useState<SidebarSide>();
+  const [revealed, setRevealed] = useState<{ side: SidebarSide; fromEdge: boolean }>();
   const mode = (side: SidebarSide) => overrides[side] ?? tier[side].mode;
+  const floating = revealed && mode(revealed.side) === 'edge' ? revealed.side : undefined;
+  const dismissHover = () => { if (revealed?.fromEdge) setRevealed(undefined); };
   const panel = (side: SidebarSide, floating = false) => (
     <div data-sidebar-preview-panel={side} data-floating={floating || undefined} className={`grid min-w-0 shrink-0 place-items-center overflow-hidden border-settings-divider text-ui-sm text-muted-foreground
       ${side === 'left' ? 'border-r bg-[var(--role-nav-bg)]' : 'border-l bg-[var(--role-sidebar-bg)]'}
-      ${floating ? `absolute inset-y-0 z-10 shadow-md ${side === 'left' ? 'left-0' : 'right-0'}` : ''}`}
-      onPointerLeave={floating ? () => setRevealed(undefined) : undefined}
+      ${floating ? `absolute inset-y-0 z-10 shadow-control ring-1 ring-settings-control-border ${side === 'left' ? 'left-0' : 'right-0'}` : ''}`}
+      onPointerLeave={floating ? dismissHover : undefined}
       style={{ width: `${tier[side].width}%` }}>
       <span className="max-w-full truncate px-1">{t(`settings.appearance.sidebarLayout.${side}Column`)}</span>
     </div>
@@ -48,9 +50,13 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
   const toggle = (side: SidebarSide) => {
     const Icon = side === 'left' ? PanelLeft : PanelRight;
     return (
-      <button aria-label={t(`settings.appearance.sidebarLayout.${side}`)} aria-pressed={mode(side) === 'dock'}
+      <button aria-label={t(`settings.appearance.sidebarLayout.${side}`)} aria-pressed={mode(side) === 'dock' || floating === side}
         className="app-focus-boundary grid h-7 w-7 place-items-center rounded hover:bg-settings-selected"
         onClick={() => {
+          if (mode(side) === 'edge') {
+            setRevealed(floating === side ? undefined : { side, fromEdge: false });
+            return;
+          }
           setRevealed(undefined);
           setOverrides({ ...overrides, [side]: mode(side) === 'dock' ? 'closed' : 'dock' });
         }} type="button"><Icon aria-hidden="true" size={16} /></button>
@@ -62,17 +68,18 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center border-b border-settings-divider bg-settings-control text-center text-ui-sm">
         {toggle('left')}<span className="truncate">Foliole</span>{toggle('right')}
       </div>
-      <div className="relative flex min-h-0 flex-1 overflow-hidden bg-background" onPointerLeave={() => setRevealed(undefined)}>
+      <div className="relative flex min-h-0 flex-1 overflow-hidden bg-background" onPointerLeave={dismissHover}>
         {mode('left') === 'dock' && panel('left')}
-        <div className="grid min-w-0 flex-1 place-items-center overflow-hidden text-ui-sm text-muted-foreground">
+        <div data-sidebar-preview-document="" className={`grid min-w-0 flex-1 place-items-center overflow-hidden text-ui-sm text-muted-foreground
+          ${floating ? 'outline -outline-offset-1 outline-dashed outline-settings-control-border' : ''}`}>
           <span className="max-w-full truncate px-1">{t('settings.appearance.sidebarLayout.previewDocument')}</span>
         </div>
         {mode('right') === 'dock' && panel('right')}
         {sides.map(side => mode(side) === 'edge' && (
           <div aria-hidden="true" data-sidebar-preview-edge={side} className={`absolute inset-y-0 w-2 ${side === 'left' ? 'left-0' : 'right-0'}`}
-            key={side} onPointerEnter={() => setRevealed(side)} />
+            key={side} onPointerEnter={() => setRevealed({ side, fromEdge: true })} />
         ))}
-        {revealed && mode(revealed) === 'edge' && panel(revealed, true)}
+        {floating && panel(floating, true)}
       </div>
     </div>
   );
