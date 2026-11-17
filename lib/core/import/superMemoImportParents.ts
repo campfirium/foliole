@@ -39,9 +39,11 @@ export function planSuperMemoImportParents(rows: readonly Row[]): Parents {
   for (const row of rows) {
     if (directTopicChildren.has(row.id)) parents.set(row.id, row.parentId);
   }
+  const originalParents: Parents = new Map(rows.map(row => [row.id, row.parentId]));
   for (const row of rows) {
-    if (directTopicChildren.has(row.id)) continue;
     const article = row.sourceArticleId;
+    if (directTopicChildren.has(row.id) &&
+        (article == null || hasAncestor(originalParents, row.id, article))) continue;
     if ((row.outcome !== 'topic' && row.outcome !== 'item') || article == null || article === row.id ||
         !topics.has(article) || hasAncestor(parents, row.id, article) || hasAncestor(parents, article, row.id)) {
       continue;

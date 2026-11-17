@@ -82,21 +82,29 @@ interface ImportedSourceEntry {
   sourceArticleId?: number | null;
 }
 
+function originalAncestorsContain(entries: Map<number, ImportedSourceEntry>, entry: ImportedSourceEntry) {
+  for (let parent = entry.parentId; parent != null; parent = entries.get(parent)?.parentId) {
+    if (parent === entry.sourceArticleId) return true;
+  }
+  return false;
+}
+
 function verifyArticleHierarchy(
   sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
   entries: ImportedSourceEntry[]
 ) {
   const nodeId = (id: number) => entries.find(entry => entry.id === id)!.nodeId;
   const parent = sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck();
-  expect(parent.get(nodeId(3517))).toBe(nodeId(3302));
+  expect(parent.get(nodeId(3517))).toBe(nodeId(825));
   expect(entries.find(entry => entry.id === 3517)?.sourceArticleId).toBe(825);
-  expect(parent.get(nodeId(634))).toBe(nodeId(3302));
+  expect(parent.get(nodeId(634))).toBe(nodeId(825));
   expect(parent.get(nodeId(277))).toBe(nodeId(634));
   expect(parent.get(nodeId(797))).toBe(nodeId(1148));
   expect(parent.get(nodeId(833))).toBe(nodeId(638));
   const anchor = sqlite.prepare('SELECT anchor_link FROM nodes WHERE id = ?').pluck();
   const body = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck();
   for (const [child, source, expectedKind, expectedText] of [
+    [3517, 825, 'highlight', '知道别人在看着你'],
     [797, 1148, 'cloze', '想采取的行动'], [139, 138, 'highlight', '我们要写下那些我们担心忘记的东西']
   ] as const) {
     expect(parent.get(nodeId(child))).toBe(nodeId(source));
@@ -114,7 +122,8 @@ function verifyArticleHierarchy(
   for (const entry of entries) {
     if (!entry.nodeId || entry.parentId == null || !['item', 'topic'].includes(String(kind.get(entry.nodeId)))) continue;
     const originalParent = entriesById.get(entry.parentId)?.nodeId;
-    if (originalParent && kind.get(originalParent) === 'topic') {
+    if (originalParent && kind.get(originalParent) === 'topic' &&
+        (!entry.sourceArticleId || originalAncestorsContain(entriesById, entry))) {
       expect(parent.get(entry.nodeId), `original parent for #${entry.id}`).toBe(originalParent);
     }
   }

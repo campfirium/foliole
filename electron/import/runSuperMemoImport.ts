@@ -73,7 +73,8 @@ type AnchorParent = { body: string; shift: number; search?: SuperMemoParentText 
 
 function anchorParentFor(row: Row, parent: number | null | undefined, written: Map<number, AnchorParent>,
   options: { existingNodeIds?: ReadonlyMap<number, string>; existingParentContent?: (nodeId: string) => string | undefined }): AnchorParent | undefined {
-  if (parent == null || row.parentId !== parent) return undefined;
+  if (parent == null || (row.parentId !== parent &&
+      (options.existingNodeIds || row.sourceArticleId !== parent))) return undefined;
   const prepared = written.get(parent);
   if (prepared) return prepared;
   const existingId = options.existingNodeIds?.get(parent);
