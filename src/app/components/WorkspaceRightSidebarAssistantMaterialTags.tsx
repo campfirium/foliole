@@ -6,9 +6,12 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '../../shared/ui';
 
 const tagClassName = 'inline-flex min-h-6 min-w-0 max-w-full items-center gap-1 rounded-md border border-border px-1.5 text-ui-xs text-foreground/65';
-const buttonClassName = `${tagClassName} hover:bg-foreground/[0.05] `;
+const historyTagClassName = 'inline-flex min-h-5 min-w-0 max-w-full items-center gap-1 text-ui-xs text-foreground/65';
+const historyLinkClassName = 'rounded-sm hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+const buttonClassName = `${tagClassName} hover:bg-foreground/[0.05]`;
 
 type MaterialTagsProps = {
+  appearance?: 'history';
   activeNodeId?: string | null;
   location: NativeAssistantThreadOpeningLocation | null;
   linkedMaterialIds?: string[] | undefined;
@@ -30,13 +33,14 @@ export function WorkspaceRightSidebarAssistantMaterialTags(props: MaterialTagsPr
   const sourceId = props.location?.type === 'node' ? props.location.nodeId : null;
   const materialIds = [...new Set([...(sourceId ? [sourceId] : []), ...(props.linkedMaterialIds ?? [])])]
     .filter(id => !props.nodesById[id] || isMaterial(props.nodesById[id]));
+  const history = props.appearance === 'history';
   const currentId = props.activeNodeId;
   const addDisabled = !currentId || !isMaterial(props.nodesById[currentId])
     || props.trashedNodeIds?.includes(currentId) || (props.draft ? props.linkedMaterialIds?.includes(currentId) : materialIds.includes(currentId))
     || props.busy;
   return (
-    <div className="flex min-w-0 items-center gap-1">
-      {materialIds.length === 0 ? <span className={tagClassName}>
+    <div className={`flex min-w-0 items-center ${history ? 'mt-0.5 gap-2' : 'gap-1'}`}>
+      {materialIds.length === 0 ? <span className={history ? historyTagClassName : tagClassName}>
         <LibraryBig aria-hidden className="size-3 shrink-0" />
         {t('desktop.rightPanel.assistant.materialTag.library')}
       </span> : null}
@@ -67,6 +71,22 @@ function useMaterialTag(id: string, props: MaterialTagsProps) {
 function MaterialTag({ id, props, single }: { id: string; props: MaterialTagsProps; single: boolean }) {
   const t = useTranslation();
   const { title, unavailable, label } = useMaterialTag(id, props);
+  if (props.appearance === 'history') {
+    return unavailable ? (
+      <span className={`block min-w-0 truncate text-ui-xs leading-5 text-foreground/65`} title={label}>{label}</span>
+    ) : (
+      <button
+        aria-label={label}
+        className={`${historyTagClassName} ${historyLinkClassName}`}
+        onClick={() => props.onOpenMaterial(id)}
+        title={title}
+        type="button"
+      >
+        <Link2 aria-hidden className="size-3 shrink-0" />
+        <span className={`truncate ${single ? 'max-w-[10em]' : 'max-w-[7em]'}`}>{title}</span>
+      </button>
+    );
+  }
   const width = single ? 'max-w-[12em]' : 'max-w-[8em]';
   const remove = getRemoveMaterial(id, props);
   return (
@@ -99,7 +119,8 @@ function MoreMaterials({ ids, props }: { ids: string[]; props: MaterialTagsProps
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
-        <button aria-label={t('desktop.rightPanel.assistant.materialTag.more')} className={`${buttonClassName} shrink-0`} type="button">
+        <button aria-label={t('desktop.rightPanel.assistant.materialTag.more')} className={`${props.appearance === 'history'
+          ? `${historyTagClassName} ${historyLinkClassName}` : buttonClassName} shrink-0`} type="button">
           +{ids.length}
         </button>
       </AppDropdownMenuTrigger>

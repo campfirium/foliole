@@ -2,20 +2,18 @@ import { Trash2 } from 'lucide-react';
 
 import type { NativeAssistantThreadIndexRecord } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
   InspectorList,
-  InspectorListRow,
-  inspectorListBodyClassName,
   inspectorListDividerClassName,
-  inspectorListInsetPaddingClassName,
   inspectorListTitleClassName
 } from '../../shared/ui';
 
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
-export function WorkspaceRightSidebarAssistantThreadList(props: {
+type ThreadListProps = {
   onOpenMaterial: (nodeId: string) => void;
   trashedNodeIds?: readonly string[] | undefined;
   nodesById: Record<string, Node>;
@@ -24,7 +22,9 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
   onSelectRecord: (record: NativeAssistantThreadIndexRecord) => void;
   onRemoveRecord: (record: NativeAssistantThreadIndexRecord) => void;
   removingThreadId: string | null;
-}) {
+};
+
+export function WorkspaceRightSidebarAssistantThreadList(props: ThreadListProps) {
   const t = useTranslation();
   return (
     <InspectorList
@@ -32,42 +32,62 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
       className="min-h-0 shrink-0 py-1"
     >
       {props.records.map((record) => (
-        <li className={`${inspectorListDividerClassName} flex min-w-0 items-stretch`} key={record.providerThreadId}>
-          <div className="min-w-0 flex-1">
-            <InspectorListRow
-              active={record.providerThreadId === props.selectedThreadId}
-              className={`${inspectorListInsetPaddingClassName} min-w-0 w-full pt-2 pb-1`}
-              onClick={() => props.onSelectRecord(record)}
-            >
-              <span className="min-w-0">
-                <span className={`${inspectorListTitleClassName} block truncate`}>
-                  {record.title}
-                </span>
-                <span className={`${inspectorListBodyClassName} block truncate`}>
-                  {record.preview || t('desktop.rightPanel.assistant.noPreview')}
-                </span>
-              </span>
-            </InspectorListRow>
-            <div className={`${inspectorListInsetPaddingClassName} pb-2`}>
-              <WorkspaceRightSidebarAssistantMaterialTags
-                location={record.location}
-                linkedMaterialIds={record.linkedMaterialIds}
-                nodesById={props.nodesById}
-                onOpenMaterial={props.onOpenMaterial}
-                trashedNodeIds={props.trashedNodeIds}
-              />
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center pr-2">
-            <AppIconButton
-              disabled={props.removingThreadId === record.providerThreadId}
-              icon={<Trash2 aria-hidden className="size-4" strokeWidth={1.8} />}
-              label={t('desktop.rightPanel.assistant.removeThread')}
-              onClick={() => props.onRemoveRecord(record)}
-            />
-          </div>
-        </li>
+        <AssistantHistoryRow key={record.providerThreadId} record={record} list={props} />
       ))}
     </InspectorList>
+  );
+}
+
+function AssistantHistoryRow({ record, list }: {
+  record: NativeAssistantThreadIndexRecord;
+  list: ThreadListProps;
+}) {
+  const t = useTranslation();
+  const active = record.providerThreadId === list.selectedThreadId;
+  const preview = record.preview || t('desktop.rightPanel.assistant.noPreview');
+  const showPreview = record.title.trim() !== preview.trim();
+  return (
+    <li
+      className={cn(
+        inspectorListDividerClassName,
+        'flex min-w-0 items-start gap-2 py-2 pl-inspector-list-inset pr-2 transition-colors',
+        active
+          ? 'bg-[color-mix(in_srgb,var(--app-surface)_88%,rgb(var(--role-accent-rgb))_12%)]'
+          : 'hover:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--role-ink-rgb))_4%)]'
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <button
+          aria-current={active || undefined}
+          className="block w-full min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          onClick={() => list.onSelectRecord(record)}
+          type="button"
+        >
+          <span className={`${inspectorListTitleClassName} block truncate`} title={record.title}>
+            {record.title}
+          </span>
+          {showPreview && (
+            <span className="block truncate text-ui-sm leading-4 text-foreground/68" title={preview}>
+              {preview}
+            </span>
+          )}
+        </button>
+        <WorkspaceRightSidebarAssistantMaterialTags
+          appearance="history"
+          location={record.location}
+          linkedMaterialIds={record.linkedMaterialIds}
+          nodesById={list.nodesById}
+          onOpenMaterial={list.onOpenMaterial}
+          trashedNodeIds={list.trashedNodeIds}
+        />
+      </div>
+      <AppIconButton
+        className="shrink-0"
+        disabled={list.removingThreadId === record.providerThreadId}
+        icon={<Trash2 aria-hidden className="size-3.5" strokeWidth={1.8} />}
+        label={t('desktop.rightPanel.assistant.removeThread')}
+        onClick={() => list.onRemoveRecord(record)}
+      />
+    </li>
   );
 }

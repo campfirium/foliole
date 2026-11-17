@@ -15,8 +15,10 @@ export async function installAssistantContinuationIpcMock(
   ];
   await electronApp.evaluate(({ ipcMain }, payload) => {
     let currentMessages = payload.messages;
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
     ipcMain.removeHandler('foliole:invoke');
-    ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
+    ipcMain.handle('foliole:invoke', async (event, request: { args?: unknown; command?: string }) => {
       if (request?.command === 'assistant_get_status') return payload.status;
       if (request?.command === 'assistant_list_thread_index') return payload.records;
       if (request?.command === 'assistant_list_thread_messages') {
@@ -27,7 +29,7 @@ export async function installAssistantContinuationIpcMock(
         currentMessages = [...currentMessages, ...payload.followUpMessages];
         return payload.sendResult;
       }
-      return null;
+      return handleInvokeRequest(request, { sender: event.sender });
     });
   }, {
     followUpMessages,

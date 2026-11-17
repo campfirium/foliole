@@ -46,11 +46,11 @@ test('Aide history keeps a continued thread title stable and updates the preview
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
-  await desktopWindow.reload();
   await installAssistantIpcMock(desktopApp);
+  await desktopWindow.reload();
   await openAssistantPanel(desktopWindow);
 
-  await desktopWindow.getByRole('button', { name: /Original prompt/i }).click();
+  await desktopWindow.getByRole('button', { name: 'Original prompt', exact: true }).click();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Follow-up prompt');
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
   await expect(desktopWindow.getByText('Follow-up answer')).toBeVisible();
@@ -58,6 +58,7 @@ test('Aide history keeps a continued thread title stable and updates the preview
 
   await expect(desktopWindow.getByRole('button', { name: /Original prompt/i })).toBeVisible();
   await expect(desktopWindow.getByText(/Follow-up prompt/)).toBeVisible();
+  await desktopWindow.getByRole('button', { name: /Original prompt/i }).hover();
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-thread-preview', {
@@ -75,8 +76,8 @@ test('Aide links an old conversation inline and preserves its history in the new
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
-  await desktopWindow.reload();
   await installAssistantIpcMock(desktopApp, 'thread-old');
+  await desktopWindow.reload();
   await openAssistantPanel(desktopWindow);
   await desktopWindow.getByRole('button', { name: /Original prompt/i }).click();
 
@@ -123,9 +124,11 @@ async function installAssistantIpcMock(
     return;
   }
   await electronApp.evaluate(({ ipcMain }, status) => {
-    let record = createThread('Original preview');
+    let record = createThread('Original prompt');
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
     ipcMain.removeHandler('foliole:invoke');
-    ipcMain.handle('foliole:invoke', async (_event, request: { command?: string }) => {
+    ipcMain.handle('foliole:invoke', async (event, request: { command?: string }) => {
       if (request?.command === 'assistant_get_status') return status;
       if (request?.command === 'assistant_list_thread_index') return [record];
       if (request?.command === 'assistant_list_thread_messages') return [];
@@ -138,7 +141,7 @@ async function installAssistantIpcMock(
           threadIndex: record
         };
       }
-      return null;
+      return handleInvokeRequest(request, { sender: event.sender });
     });
     function createThread(preview: string) {
       return {

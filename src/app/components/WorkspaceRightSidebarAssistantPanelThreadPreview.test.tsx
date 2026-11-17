@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
@@ -29,6 +29,23 @@ beforeEach(() => {
   assistantRuntime.loadAssistantStatus.mockResolvedValue(createReadyAssistantStatus());
   assistantRuntime.listAssistantThreadMessages.mockResolvedValue([]);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
+});
+
+it('shows a single copy of the opening prompt in history', async () => {
+  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
+    createThread({ title: 'One short prompt', preview: 'One short prompt' })
+  ]);
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+
+  const history = await screen.findByRole('list', { name: /local foliole aide history/i });
+  expect(within(history).getByRole('button', { name: 'One short prompt' })).toBeVisible();
 });
 
 it('keeps a continued thread title stable while updating the history preview', async () => {
