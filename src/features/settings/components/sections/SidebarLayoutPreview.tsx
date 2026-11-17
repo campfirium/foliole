@@ -86,7 +86,6 @@ function PreviewWindow({ tier, percent }: { tier: SidebarTier; percent: number }
   );
 }
 
-
 function previewPanelBackground(side: SidebarSide, floating: boolean) {
   const surface = side === 'left' ? 'var(--role-nav-bg)' : 'var(--role-sidebar-bg)';
   return floating ? `color-mix(in srgb, var(--app-settings-selected-bg, ${surface}) 82%, transparent)` : surface;
@@ -94,15 +93,10 @@ function previewPanelBackground(side: SidebarSide, floating: boolean) {
 
 function PreviewDocument() {
   return (
-    <div data-sidebar-preview-document="" className="relative min-w-0 flex-1 overflow-hidden px-4 py-3">
-      <div className="grid h-full min-w-0 items-center rounded-sm border border-dashed border-foreground/30 px-3">
-        <div aria-hidden="true" className="grid gap-2">
-          <div className="h-px w-full bg-foreground/35" />
-          <div className="h-px w-[94%] bg-foreground/30" />
-          <div className="h-px w-full bg-foreground/35" />
-          <div className="h-px w-[87%] bg-foreground/30" />
-        </div>
-      </div>
+    <div aria-hidden="true" data-sidebar-preview-document=""
+      className="grid min-w-0 flex-1 content-center gap-2.5 overflow-hidden px-[clamp(8px,3vw,30px)]">
+      <span className="h-px w-full bg-foreground/30" />
+      <span className="h-px w-[90%] bg-foreground/30" />
     </div>
   );
 }

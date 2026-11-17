@@ -125,6 +125,7 @@ test('previews each configured tier with the slider without resizing the actual 
   await rules.getByRole('button', { name: /Restore default tiers|恢复默认档位/ }).click();
   const actual = await rules.getByRole('status').innerText();
   const document = rules.locator('[data-sidebar-preview-document]');
+  await expect(document.locator('span')).toHaveCount(2);
   const preview = rules.getByRole('region', { name: /Layout preview|布局预览/ });
   const slider = preview.getByRole('slider', { name: /^(Window width|窗口宽度)$/ });
   await expect(preview.getByText(/^(Window width|窗口宽度|Document|正文)$/)).toBeHidden();
