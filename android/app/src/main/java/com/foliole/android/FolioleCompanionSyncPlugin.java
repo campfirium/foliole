@@ -18,7 +18,9 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService attachmentReceiveExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService syncFileExecutor = Executors.newSingleThreadExecutor();
     final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
-    private boolean lifecycleActive = true;
+    private volatile boolean lifecycleActive = true;
+    private final FolioleCompanionSyncGroupProvider.Startup providerStartup =
+        new FolioleCompanionSyncGroupProvider.Startup(this);
 
     @PluginMethod public void postRequestSyncHttp(PluginCall call) {
         FolioleCompanionRequestSyncHttp.post(getContext(), call,
@@ -117,16 +119,13 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void startSyncGroupProvider(PluginCall call) {
-        async(call, "Failed to start Sync Group provider.", () -> {
-            JSObject result = FolioleCompanionSyncGroupProvider.start(
-                getContext(), getActivity(), call, this, this::dispatchDataRequest,
-                this::dispatchProviderState, isParticipating()
-            );
-            return result;
-        });
+        async(call, "Failed to start Sync Group provider.", providerStartup.begin(
+            getContext(), getActivity(), call.getData(), payloadBudget.configuredOwner(), this::dispatchProviderState,
+            this::isParticipating));
     }
 
     @PluginMethod public void stopSyncGroupProvider(PluginCall call) {
+        providerStartup.cancel();
         async(call, "Failed to stop Sync Group provider.", () -> {
             JSObject result = FolioleCompanionSyncGroupProvider.stop(this);
             return withParticipation(result);
@@ -236,6 +235,10 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     private void setParticipation(PluginCall call, String name) {
+        if (("syncEnabled".equals(name) && Boolean.FALSE.equals(call.getBoolean("sync_enabled")))
+            || ("syncPaused".equals(name) && Boolean.TRUE.equals(call.getBoolean("sync_paused")))) {
+            providerStartup.cancel();
+        }
         async(call, "Failed to update Sync participation.", () -> {
             FolioleCompanionSyncParticipationActions.set(getContext(), call, name, lifecycleActive);
             FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
@@ -253,6 +256,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @Override protected void handleOnDestroy() {
         lifecycleActive = false;
+        providerStartup.cancel();
         payloadBudget.destroy();
         fileExecutor.execute(() -> {
             FolioleCompanionSyncGroupProvider.pause(this);
@@ -268,6 +272,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @Override protected void handleOnPause() {
         lifecycleActive = false;
+        providerStartup.suspend();
         fileExecutor.execute(() -> FolioleCompanionSyncGroupProvider.pause(this));
         super.handleOnPause();
     }
@@ -275,8 +280,13 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @Override protected void handleOnResume() {
         super.handleOnResume();
         lifecycleActive = true;
+        var retry = providerStartup.resume(getContext(), getActivity(), payloadBudget.configuredOwner(),
+            this::dispatchProviderState, this::isParticipating);
         fileExecutor.execute(() -> {
-            try { FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating()); }
+            try {
+                if (retry != null) retry.run();
+                FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
+            }
             catch (Exception error) { android.util.Log.w("FolioleSyncProvider", "Resume failed", error); }
         });
     }

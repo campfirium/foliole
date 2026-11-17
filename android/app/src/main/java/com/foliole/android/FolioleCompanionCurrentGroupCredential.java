@@ -20,7 +20,12 @@ final class FolioleCompanionCurrentGroupCredential {
 
     static FolioleCompanionCurrentGroupCredential load(String groupId,
         com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
-        JSONObject result = FolioleCompanionSyncGroupDataBridge.current().request(
+        return load(FolioleCompanionSyncGroupDataBridge.current(), groupId, budget);
+    }
+
+    static FolioleCompanionCurrentGroupCredential load(FolioleCompanionSyncGroupDataBridge bridge,
+        String groupId, com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
+        JSONObject result = bridge.request(
             "load_current_credential", new JSONObject().put("group_id", groupId.trim()), budget
         );
         String deviceId = result.optString("device_id", null);
