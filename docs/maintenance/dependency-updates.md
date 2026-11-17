@@ -170,24 +170,6 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-### November 17 Electron and web tooling batch
-
-All proposals target `campfirium/foliole:dev` and were reviewed from verified
-`app/renovate` heads. Local adoption `986c78a7f` passed a clean npm install,
-the fast gate, Electron native module rebuild, real SQLite import and sync
-tests, icon settings and mobile outline tests, and the desktop Vite build.
-The centralized batch requires full quality, including dependency hardening,
-before delivery and PR closure.
-
-| Proposal | Reviewed head | Target |
-| --- | --- | --- |
-| [#267](https://github.com/campfirium/foliole/pull/267) | `ef50e7504b00acaca27dbba3ba0d68570edc1732` | Electron 45.3.3 |
-| [#268](https://github.com/campfirium/foliole/pull/268) | `6b5a7fee9faccc6eccacbe5be07dd79c071dec28` | eslint-plugin-import-x 4.18.1 |
-| [#269](https://github.com/campfirium/foliole/pull/269) | `0eb45e97bae11879def2d4eec0142d0423822eb7` | @vitejs/plugin-react 6.3.0 |
-| [#271](https://github.com/campfirium/foliole/pull/271) | `d145db7233b19b44d628f255b80aa7fd193cef73` | Vite 8.3.7 |
-| [#277](https://github.com/campfirium/foliole/pull/277) | `c253ac6b1047372f4d77738add55309e0b00cb96` | typescript-eslint 8.72.2 |
-| [#278](https://github.com/campfirium/foliole/pull/278) | `d7a26e28b8a5bbbbf566edda7f4795915a77c573` | lucide-react 1.71.0 |
-
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -204,6 +186,30 @@ development and CI toolchain.
 
 [Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
 and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
+
+### Completed November 18 Electron and web tooling batch
+
+All proposals target `campfirium/foliole:dev` and were reviewed from verified
+`app/renovate` heads. Local adoption `986c78a7f` passed a clean npm install,
+the fast gate, Electron native module rebuild, real SQLite import and sync
+tests, icon settings and mobile outline tests, and the desktop Vite build.
+[Full quality run 44114942674, attempt 2](https://github.com/campfirium/foliole/actions/runs/44114942674/attempts/2)
+passed on `509f6cdac`, including dependency hardening. All 1,318 desktop
+source file executions passed without timeouts. The first candidate failed the
+desktop layering contract. The repair passed, and the final attempt completed
+the two iOS jobs that had been canceled before a runner was assigned.
+The integrated `15a59bbe5` tree matched the verified candidate and passed six
+targeted tests. It reached origin/dev, the QA workspace was released, and
+all six proposals were confirmed closed with their source refs absent.
+
+| Proposal | Reviewed head | Target |
+| --- | --- | --- |
+| [#267](https://github.com/campfirium/foliole/pull/267) | `ef50e7504b00acaca27dbba3ba0d68570edc1732` | Electron 45.3.3 |
+| [#268](https://github.com/campfirium/foliole/pull/268) | `6b5a7fee9faccc6eccacbe5be07dd79c071dec28` | eslint-plugin-import-x 4.18.1 |
+| [#269](https://github.com/campfirium/foliole/pull/269) | `0eb45e97bae11879def2d4eec0142d0423822eb7` | @vitejs/plugin-react 6.3.0 |
+| [#271](https://github.com/campfirium/foliole/pull/271) | `d145db7233b19b44d628f255b80aa7fd193cef73` | Vite 8.3.7 |
+| [#277](https://github.com/campfirium/foliole/pull/277) | `c253ac6b1047372f4d77738add55309e0b00cb96` | typescript-eslint 8.72.2 |
+| [#278](https://github.com/campfirium/foliole/pull/278) | `d7a26e28b8a5bbbbf566edda7f4795915a77c573` | lucide-react 1.71.0 |
 
 ### Completed November 16 centralized batch
 
