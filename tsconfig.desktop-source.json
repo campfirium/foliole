@@ -1,5 +1,30 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "vite.config.ts", "eslint.config.js"],
-  "exclude": ["src/companion/**", "src/**/*.test.ts", "src/**/*.test.tsx"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "eslint.config.js"
+  ],
+  "exclude": [
+    "src/companion/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test/**",
+    "src/**/*testSupport.ts",
+    "src/**/*testSupport.tsx",
+    "src/**/*TestSupport.ts",
+    "src/**/*TestSupport.tsx",
+    "src/**/*test-support.ts",
+    "src/**/*test-support.tsx",
+    "src/**/*testUtils.ts",
+    "src/**/*testUtils.tsx",
+    "src/**/*test-utils.ts",
+    "src/**/*test-utils.tsx",
+    "src/**/*testFixtures.ts",
+    "src/**/*testFixtures.tsx",
+    "src/**/*Fixture.ts",
+    "src/**/*Fixture.tsx",
+    "src/**/*fixture.ts",
+    "src/**/*fixture.tsx"
+  ]
 }

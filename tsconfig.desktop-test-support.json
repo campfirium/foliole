@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*testSupport.ts",
+    "src/**/*testSupport.tsx",
+    "src/**/*TestSupport.ts",
+    "src/**/*TestSupport.tsx",
+    "src/**/*test-support.ts",
+    "src/**/*test-support.tsx",
+    "src/**/*testUtils.ts",
+    "src/**/*testUtils.tsx",
+    "src/**/*test-utils.ts",
+    "src/**/*test-utils.tsx",
+    "src/**/*testFixtures.ts",
+    "src/**/*testFixtures.tsx",
+    "src/**/*Fixture.ts",
+    "src/**/*Fixture.tsx",
+    "src/**/*fixture.ts",
+    "src/**/*fixture.tsx",
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "src/companion/**",
+    "src/test/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
+  ],
+  "files": [
+    "src/test/setup.ts"
+  ]
+}

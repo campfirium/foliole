@@ -6,16 +6,9 @@ import process from 'node:process';
 import ts from 'typescript';
 import { expect, it } from 'vitest';
 
-import { electronTypecheckArgs, electronTypecheckProject } from './typecheck-electron.mjs';
-
-const hostedEnv = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' };
-
 const root = process.cwd();
 const script = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts['typecheck:desktop:raw'];
 const steps = script.split('&&').map(command => {
-  if (command.trim() === 'node scripts/typecheck-electron.mjs') {
-    return { heapMb: Number(electronTypecheckArgs(hostedEnv)[0].split('=')[1]), project: electronTypecheckProject };
-  }
   const match = /^node --max-old-space-size=(\d+) node_modules\/typescript\/bin\/tsc -p (\S+) --noEmit$/u.exec(command.trim());
   if (!match) throw new Error(`Unexpected desktop typecheck command: ${command}`);
   return { heapMb: Number(match[1]), project: match[2] };
@@ -27,12 +20,8 @@ function parsedProject(project) {
   return ts.parseJsonConfigFileContent(config, ts.sys, path.dirname(path.resolve(project)));
 }
 
-it('reserves native process overhead below the hosted RSS limit', () => {
-  for (const step of steps) expect(step.heapMb).toBeLessThanOrEqual(1536);
-});
-
-it('uses a 2 GiB heap for local Electron typechecking', () => {
-  expect(electronTypecheckArgs({})).toContain('--max-old-space-size=2048');
+it('gives every desktop TypeScript project a 2 GiB heap', () => {
+  for (const step of steps) expect(step.heapMb).toBe(2048);
 });
 
 it('typechecks every renderer test once without dropping source or host projects', () => {
@@ -48,13 +37,26 @@ it('typechecks every renderer test once without dropping source or host projects
   expect(steps.map(({ project }) => project)).toContain('electron/tsconfig.json');
 });
 
-it('keeps all production roots in the split renderer projects', () => {
+it('preserves renderer source and test support coverage without rooting helpers in desktop source', () => {
   const expected = ts.parseJsonConfigFileContent({
     extends: './tsconfig.json',
     include: ['src', 'vite.config.ts', 'eslint.config.js'],
     exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx']
   }, ts.sys, root).fileNames;
-  const actual = new Set(['tsconfig.desktop-source.json', 'tsconfig.desktop-companion-source.json']
-    .flatMap(project => parsedProject(project).fileNames));
+  const projects = [
+    'tsconfig.desktop-source.json',
+    'tsconfig.desktop-companion-source.json',
+    'tsconfig.desktop-test-support-integration.json',
+    'tsconfig.desktop-test-support.json',
+  ];
+  const actual = new Set(steps.filter(({ project }) => projects.includes(project))
+    .flatMap(({ project }) => parsedProject(project).fileNames));
   expect([...actual].sort()).toEqual(expected.sort());
+
+  const desktopRoots = parsedProject('tsconfig.desktop-source.json').fileNames;
+  const helperRoots = desktopRoots.filter(file => (
+    path.relative(root, file).startsWith(`src${path.sep}test${path.sep}`)
+    || /(?:testSupport|test-support|testUtils|test-utils|testFixtures|fixture)\.tsx?$/iu.test(file)
+  ));
+  expect(helperRoots).toEqual([]);
 });

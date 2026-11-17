@@ -126,6 +126,20 @@ describe('quality-gate-lib.sh', () => {
       .toBe(await realpath(path.join(REPO_ROOT, '.tmp', 'logs', 'quality-gate')));
   });
 
+  it('budgets process overhead for desktop typechecks through either gate entry', async () => {
+    const result = await runBash([
+      `source "${QUALITY_GATE_LIB}"`,
+      'unset QUALITY_GATE_MAX_RSS_KB QUALITY_GATE_TYPECHECK_MAX_RSS_KB QUALITY_GATE_TYPECHECK_DESKTOP_MAX_RSS_KB',
+      'printf "%s\\n" "$(resolve_quality_gate_limit typecheck max_rss_kb)"',
+      'printf "%s\\n" "$(resolve_quality_gate_limit typecheck:desktop max_rss_kb)"',
+      'QUALITY_GATE_TYPECHECK_DESKTOP_MAX_RSS_KB=123',
+      'printf "%s\\n" "$(resolve_quality_gate_limit typecheck:desktop max_rss_kb)"'
+    ].join('\n'), REPO_ROOT);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim().split('\n')).toEqual(['3145728', '3145728', '123']);
+  });
+
   it('does not apply default outer timeouts to large test buckets', async () => {
     const result = await runBash(
       [

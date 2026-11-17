@@ -65,7 +65,14 @@ resolve_quality_gate_limit() {
       ;;
     max_rss_kb)
       env_name="QUALITY_GATE_${normalized}_MAX_RSS_KB"
-      fallback="${QUALITY_GATE_MAX_RSS_KB:-2097152}"
+      local default_rss_kb=2097152
+      case "${script_name}" in
+        typecheck|typecheck:desktop|typecheck:desktop:raw)
+          # Leave room above the 2 GiB V8 heap for Node, native allocations and npm.
+          default_rss_kb=3145728
+          ;;
+      esac
+      fallback="${QUALITY_GATE_MAX_RSS_KB:-${default_rss_kb}}"
       ;;
     *)
       echo "unknown quality gate limit: ${metric}" >&2
