@@ -71,6 +71,33 @@ test('reports SuperMemo XML permission failures and retries from the picker', as
   }
 });
 
+test('offers only collection selection or XML continuation when access to the paired folder is denied', async ({ desktopWindow, desktopApp }, testInfo) => {
+  // SKIP: this fixture uses POSIX access bits | 2026-11-17 | revive: use a Windows ACL denial fixture
+  test.skip(process.platform === 'win32' || process.getuid?.() === 0);
+  const dialog = await openPreview(desktopWindow);
+  const directory = testInfo.outputPath('Export');
+  const collection = path.join(directory, 'Export');
+  await writeCollection(collection, false);
+  await chmod(collection, 0o000);
+  try {
+    await loadSource(desktopApp, dialog, directory, oneCard);
+    const notice = desktopWindow.getByRole('dialog', {
+      name: /^(Collection folder access denied|缺少资料库文件夹访问权限)$/
+    });
+    await expect(notice.getByText(/Foliole needs permission|Foliole 需要读取资料库文件夹的权限/)).toBeVisible();
+    if (process.platform === 'darwin') {
+      await expect(notice.getByText(/Privacy & Security → Files & Folders|隐私与安全性 → 文件与文件夹/)).toBeVisible();
+    }
+    await expect(notice.getByRole('button')).toHaveCount(2);
+    await expect(notice.getByRole('button', { name: chooseCollection })).toBeVisible();
+    await notice.screenshot({ path: testInfo.outputPath('supermemo-collection-access.png') });
+    await notice.getByRole('button', { name: continueXml }).click();
+    await expect(dialog.getByRole('button', { name: /Card.*#2/ })).toBeVisible();
+  } finally {
+    await chmod(collection, 0o755);
+  }
+});
+
 for (const recovery of ['paired', 'xml-only'] as const) {
   test(`converts SuperMemo after choosing ${recovery} recovery without re-reading the broken collection`, async ({ desktopWindow, desktopApp }, testInfo) => {
     const dialog = await openPreview(desktopWindow);
