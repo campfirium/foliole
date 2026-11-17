@@ -21,6 +21,7 @@ import type { HighlightRangePreview } from './codeMirrorHighlightRangePreview';
 import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
 import { getCodeMirrorOutline } from './codeMirrorOutline';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
+import { setCodeMirrorReadingSelection } from './codeMirrorReadingSelection';
 import { CodeMirrorTextHistoryController } from './codeMirrorTextHistory';
 import {
   EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS,
@@ -123,6 +124,7 @@ export class CodeMirrorEditorAdapter extends CodeMirrorEditorNavigation implemen
   focus() { this.deferredFocus.request(); }
   flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
+  getContentRevision() { return this.view.state.readOnly ? null : this.view.state.doc; }
   get outline() { return getCodeMirrorOutline(this.view); }
   bindTextHistorySource(source: import('./EditorAdapter').EditorTextHistorySource) { this.textHistory.bind(source, this.view); }
   applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo', save?: import('../model/editorTextReplaySave').EditorTextReplaySave) {
@@ -169,6 +171,7 @@ export class CodeMirrorEditorAdapter extends CodeMirrorEditorNavigation implemen
     this.applyTextAnchorDecorationsWithPreview();
     this.reconfigureLiveMarkdown();
   }
+  setReadingSelection(range: EditorSelection | null) { setCodeMirrorReadingSelection(this.view, range); }
   setHighlightRangePreview(nodeId: string, range: EditorSelection | null) {
     this.highlightRangePreview = range ? { nodeId, range } : null;
     this.applyTextAnchorDecorationsWithPreview();

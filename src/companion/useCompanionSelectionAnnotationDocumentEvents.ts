@@ -2,6 +2,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import { isAndroidSelectionTraceActive, traceAndroidSelectionSnapshot } from '../shared/platform/supportLog/androidSelectionTrace';
 
+import { suppressCompanionPressClick } from './companionPressClickSuppression';
 import * as toolbarDom from './companionSelectionToolbarDom';
 import {
   getDefaultSelectionClientPoint,
@@ -81,6 +82,7 @@ function clearFinishedOutsideTap(
 
 interface SelectionAnnotationDocumentEventsArgs {
   enabled: boolean;
+  hasAdjustableSelection?: () => boolean;
   clearSelectionAndCloseToolbar: () => void;
   closeSelectionToolbar: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
@@ -113,20 +115,26 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
-      args.closeSelectionToolbar();
+      if (args.hasAdjustableSelection?.()) {
+        if (event.type === 'pointerdown') args.clearSelectionAndCloseToolbar();
+      } else args.closeSelectionToolbar();
     };
     const handleSelectionEnd = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (toolbarDom.isCompanionHighlightRangeDragging()) return;
+      if (toolbarDom.isCompanionHighlightRangeDragging()) {
+        if (args.hasAdjustableSelection?.() && event.type === 'pointerup') suppressCompanionPressClick(document);
+        return;
+      }
       const started = tapRef.current;
       if (event.type === 'pointerup') tapRef.current = null;
       if (clearFinishedOutsideTap(event, started, args)) return;
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
-      args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current);
+      if (!args.hasAdjustableSelection?.()) args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current);
     };
     const handleSelectionChange = () => {
       recordSelectionSnapshot(args.editorRef.current);
+      if (args.hasAdjustableSelection?.()) return;
       if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       if (toolbarDom.isCompanionSelectionToolbarActiveElement()) return;
       if (toolbarDom.hasRecentSelectionInteraction(args.lastSelectionInteractionAtRef.current)) {

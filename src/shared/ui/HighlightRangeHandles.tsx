@@ -11,10 +11,12 @@ export interface HighlightRangeHandlesProps {
   disabled?: boolean | undefined;
   editor: EditorAdapter | null;
   highlight: {
-    kind: 'cloze' | 'highlight';
+    kind: 'cloze' | 'highlight' | 'selection';
     locator: { from: number; to: number };
     nodeId: string;
   } | null;
+  scrollSurface?: HTMLElement | null;
+  onPreview?: (range: { from: number; to: number } | null) => void;
   onCommit: (highlightNodeId: string, range: { from: number; to: number }) => boolean | Promise<boolean>;
 }
 
@@ -44,7 +46,7 @@ function resolvePositions(editor: EditorAdapter | null, range: { from: number; t
   }
   const from = resolveHandlePosition(editor, range.from, 'from');
   const to = resolveHandlePosition(editor, range.to, 'to');
-  return from && to ? { from, to } : null;
+  return { from, to };
 }
 
 function useMeasuredPositions(editor: EditorAdapter | null, range: { from: number; to: number } | null) {
@@ -71,7 +73,7 @@ function useResetHighlightRangePreview(args: {
   highlight: HighlightRangeHandlesProps['highlight'];
   onResetDraft: () => void;
 }) {
-  const nodeId = args.highlight?.nodeId;
+  const nodeId = args.highlight?.kind === 'selection' ? undefined : args.highlight?.nodeId;
   const from = args.highlight?.locator.from;
   const to = args.highlight?.locator.to;
   useEffect(() => {
@@ -89,7 +91,7 @@ function useResetHighlightRangePreview(args: {
 }
 
 function HighlightRangeHandle(props: {
-  kind: 'cloze' | 'highlight';
+  kind: 'cloze' | 'highlight' | 'selection';
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   position: HandlePosition;
   side: 'from' | 'to';
@@ -98,7 +100,7 @@ function HighlightRangeHandle(props: {
 }) {
   const t = useTranslation();
   const label = props.side === 'from' ? t('desktop.highlightRange.start') : t('desktop.highlightRange.end');
-  const color = props.kind === 'cloze'
+  const color = props.kind === 'selection' ? 'rgb(var(--role-selection-rgb) / 0.82)' : props.kind === 'cloze'
     ? 'rgb(var(--role-cloze-rgb) / 0.82)'
     : 'rgb(var(--role-highlight-rgb) / 0.82)';
   return (
@@ -155,17 +157,20 @@ export function HighlightRangeHandles(props: HighlightRangeHandlesProps) {
     editor: props.editor,
     highlight: props.highlight,
     onCommit: props.onCommit,
+    ...(props.scrollSurface ? { scrollSurface: props.scrollSurface } : {}),
+    ...(props.onPreview ? { onPreview: props.onPreview } : {}),
     setDraftRange
   });
 
-  if (!positions || !props.highlight || typeof document === 'undefined') {
+  if (!positions || !props.highlight || typeof document === 'undefined' ||
+    (props.highlight.kind !== 'selection' && (!positions.from || !positions.to))) {
     return null;
   }
 
   return createPortal(
     <>
-      <HighlightRangeHandle touch={props.touch} disabled={props.disabled || startDrag.saving} kind={props.highlight.kind} onPointerDown={(event) => startDrag.start('from', event)} position={positions.from} side="from" />
-      <HighlightRangeHandle touch={props.touch} disabled={props.disabled || startDrag.saving} kind={props.highlight.kind} onPointerDown={(event) => startDrag.start('to', event)} position={positions.to} side="to" />
+      {positions.from ? <HighlightRangeHandle touch={props.touch} disabled={props.disabled || startDrag.saving} kind={props.highlight.kind} onPointerDown={(event) => startDrag.start('from', event)} position={positions.from} side="from" /> : null}
+      {positions.to ? <HighlightRangeHandle touch={props.touch} disabled={props.disabled || startDrag.saving} kind={props.highlight.kind} onPointerDown={(event) => startDrag.start('to', event)} position={positions.to} side="to" /> : null}
     </>,
     document.body
   );

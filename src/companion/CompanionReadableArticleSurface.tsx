@@ -129,7 +129,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   });
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);
-    toolbar.closeSelectionToolbar();
+    toolbar.clearSelectionAndCloseToolbar();
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
   const surfaceClassName = useCompanionReadingDisplayLayout(props.flow, reading.isContentEditing);
@@ -263,7 +263,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       />
       {pdfScroll.offer && <CompanionPdfResumeNotice {...pdfScroll.offer} />}
       {model.reading.isContentEditing ? null : <>{props.endOfArticleAction}{props.footer}</>}
-      <CompanionArticleSelectionLayer articleProps={props} toolbar={model.toolbar} pending={pendingReadableArticle} />
+      <CompanionArticleSelectionLayer articleProps={props} toolbar={model.toolbar} pending={pendingReadableArticle} surface={scrollPosition.surfaceRef.current} />
     </section>
   );
 }

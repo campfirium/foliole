@@ -70,6 +70,7 @@ export interface EditorAdapter {
   destroy(): void;
   focus(): void;
   getContent(): string;
+  getContentRevision?(): object | null;
   flushContentChanges?(): void;
   getDocumentPositionAtViewportY(clientY: number): number | null;
   getDocumentPositionAtDomPoint?(node: Node, offset: number): number | null;
@@ -101,6 +102,7 @@ export interface EditorAdapter {
   replaceRange(from: number, to: number, content: string, options?: EditorReplaceRangeOptions): void;
   replaceSelection(content: string): void;
   setTextAnchorDecorations?(textAnchorDecorations: readonly EditorTextAnchorDecoration[]): void;
+  setReadingSelection?(range: EditorSelection | null): void;
   setHighlightRangePreview?(nodeId: string, range: EditorSelection | null): void;
   setReadOnly?(readOnly: boolean): void;
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null): void;

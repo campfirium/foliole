@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -19,6 +20,21 @@ public class MainActivity extends BridgeActivity {
     private static final String LOG_TAG = "FolioleMainActivity";
     private static final String WEB_ASSET_PREFS = "foliole_companion_web_assets";
     private static final String WEB_ASSET_SIGNATURE_KEY = "web_asset_signature";
+
+    private boolean singleTouch;
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) singleTouch = true;
+        if (action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_CANCEL) singleTouch = false;
+        boolean handled = super.dispatchTouchEvent(event);
+        if (action == MotionEvent.ACTION_UP && singleTouch) {
+            singleTouch = false;
+            if (getBridge() != null) getBridge().triggerDocumentJSEvent("foliole-android-reading-touch-release");
+        }
+        return handled;
+    }
 
     @Override public void onDetachedFromWindow() {
         var handle = getBridge() == null ? null : getBridge().getPlugin("FolioleCompanionSync");

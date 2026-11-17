@@ -16,12 +16,15 @@ import {
   resolveSelectionToolbarState,
   type CompanionSelectionClientPoint
 } from './companionSelectionToolbarState';
+import { useCompanionAdjustableReadingRange } from './useCompanionAdjustableReadingRange';
+import { useCompanionAndroidReadingSelection } from './useCompanionAndroidReadingSelection';
 import { useCompanionSelectionAnnotationDocumentEvents } from './useCompanionSelectionAnnotationDocumentEvents';
 import { useCompanionSelectReadingParagraph } from './useCompanionSelectReadingParagraph';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 function useCompanionSelectionAnnotationOpenHandler(args: {
   canCreateAnnotation: boolean;
+  hasAdjustableSelection: () => boolean;
   clearScheduledOpen: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
@@ -50,6 +53,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
     args.lastFallbackRef.current = fallback;
     args.lastSelectionInteractionAtRef.current = Date.now();
     window.requestAnimationFrame(() => {
+      if (args.hasAdjustableSelection()) return;
       const adapter = args.editorRef.current;
       const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
       if (payload && adapter) {
@@ -169,39 +173,34 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   const [selectionToolbar, setSelectionToolbar] = useOwnedSelectionToolbar(props.nodeId);
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastPayloadRef = useRef<CompanionSelectionAnnotationToolbarState['payload']>(null);
-  const scheduler = useCompanionSelectionAnnotationScheduler({
-    canCreateAnnotation: props.canCreateAnnotation,
-    editorRef,
-    lastPayloadRef,
-    nodeId: props.nodeId,
-    setSelectionToolbar,
-    snapshot: props.snapshot
+  const toolbarArgs = { ...props, editorRef, lastPayloadRef, setSelectionToolbar };
+  const scheduler = useCompanionSelectionAnnotationScheduler(toolbarArgs);
+  const managed = useCompanionAdjustableReadingRange({
+    ...props, editorRef, clearScheduledOpen: scheduler.clearScheduledOpen, setToolbar: setSelectionToolbar
   });
+  useCompanionAndroidReadingSelection({ enabled: props.canCreateAnnotation, nodeId: props.nodeId, editorRef, accept: managed.accept });
   const closeSelectionToolbar = useCallback(() => {
+    if (managed.hasSelection()) return;
     scheduler.clearScheduledOpen();
     toolbarDom.clearCompanionActiveHighlightElements();
     lastPayloadRef.current = null;
     setSelectionToolbar(null);
-  }, [lastPayloadRef, scheduler]);
+  }, [lastPayloadRef, managed, scheduler]);
   const handleEditorReady = useCallback((adapter: EditorAdapter | null) => {
     editorRef.current = adapter;
   }, []);
-  const clearSelectionAndCloseToolbar = useClearSelectionAndCloseToolbar({ editorRef, lastPayloadRef, scheduler, setSelectionToolbar });
+  const clearNative = useClearSelectionAndCloseToolbar({ editorRef, lastPayloadRef, scheduler, setSelectionToolbar });
+  const clearSelectionAndCloseToolbar = () => { managed.clear(); clearNative(); };
   const selectionActions = useCompanionSelectReadingParagraph({
-    ...props, editorRef, lastPayloadRef, setSelectionToolbar, scheduler
+    ...props, editorRef, lastPayloadRef, setSelectionToolbar, scheduler, managed
   });
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({
-    canCreateAnnotation: props.canCreateAnnotation,
-    ...scheduler,
-    editorRef,
-    lastPayloadRef,
-    nodeId: props.nodeId,
-    setSelectionToolbar,
-    snapshot: props.snapshot
+    ...toolbarArgs, ...scheduler, hasAdjustableSelection: managed.hasSelection
   });
 
   useCompanionSelectionAnnotationDocumentEvents({
     enabled: props.canCreateAnnotation,
+    hasAdjustableSelection: managed.hasSelection,
     clearSelectionAndCloseToolbar,
     closeSelectionToolbar,
     editorRef,
@@ -220,6 +219,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     openSelectionToolbar,
     ...selectionActions,
     selectionToolbar,
+    managed,
     setSelectionToolbar
   };
 }

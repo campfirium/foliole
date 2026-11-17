@@ -2,11 +2,12 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { CodeMirrorEditorAdapter } from '../features/editor/adapters/CodeMirrorEditorAdapter';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
@@ -15,7 +16,9 @@ import { createFakeCapacitorDatabaseManager } from '../shared/platform/companion
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { CompanionDraftProvider } from './CompanionDraftProvider';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
+import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { createCompanionSelectionAnnotationHandler } from './companionSelectionAnnotationController';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
@@ -68,7 +71,7 @@ afterEach(async () => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-function Reader({ initial }: { initial: Awaited<ReturnType<typeof loadCompanionWorkspaceSyncState>> }) {
+function Reader({ initial, immersive }: { initial: Awaited<ReturnType<typeof loadCompanionWorkspaceSyncState>>; immersive?: boolean }) {
   const [state, setState] = useState(initial);
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: true, nodeId: 'source', snapshot: state.workspace_snapshot
@@ -80,6 +83,11 @@ function Reader({ initial }: { initial: Awaited<ReturnType<typeof loadCompanionW
   const save = createCompanionSelectionAnnotationHandler({
     ...actions, state, bootstrapState: { device_id: 'test-device' }
   } as ReturnType<typeof useCompanionWorkspaceSync>);
+  if (immersive) return <MouseGestureSettingsProvider><CompanionDraftProvider>
+    <ImmersiveReadableArticle onExit={() => {}} onCreateSelectionAnnotation={save} snapshot={state.workspace_snapshot}
+      readableArticle={{ content, hideTitleHeading: false, nodeId: 'source', persistedNodeViewState: null,
+        pdfAttachmentId: null, textAnchorDecorations: [], title: 'Source' }} />
+  </CompanionDraftProvider></MouseGestureSettingsProvider>;
   return <MouseGestureSettingsProvider>
     <CompanionArticleDocument content={content} nodeId="source" onEditorReady={toolbar.handleEditorReady} />
     <SelectionAnnotationToolbarLayer editor={toolbar.editorRef.current} parentNodeId="source" snapshot={state.workspace_snapshot}
@@ -140,6 +148,69 @@ it.each(['android', 'ios'].flatMap(platform => [
   await openLibrary();
   expect(await loadCompanionWorkspaceNode(row.id)).toMatchObject({
     content: saved, reveal,
+    anchorLink: { locator: { from: prefix.length, to: prefix.length + paragraph.length, originalText: paragraph } }
+  });
+  expect(await loadCompanionWorkspaceNode('source')).toMatchObject({ content });
+});
+
+
+function touchPointer(target: Element | Document, type: string, x: number, y = 120) {
+  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, cancelable: true });
+  Object.defineProperties(event, {
+    pointerId: { value: 1 }, pointerType: { value: 'touch' }, isPrimary: { value: true }
+  });
+  fireEvent(target, event);
+}
+
+it('hands a fresh Android long-press to the reader handles and saves the range after two releases', async () => {
+  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getPositionClientRect')
+    .mockImplementation(position => new DOMRect(20 + position * 3, 100, 3, 20));
+  const { container } = renderWithLocalization(<Reader immersive initial={await loadCompanionWorkspaceSyncState()} />);
+  const surface = container.querySelector<HTMLElement>('[data-companion-reading-surface]')!;
+  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 300));
+  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getDocumentPositionAtClientPoint').mockImplementation(x =>
+    Math.min(prefix.length + paragraph.length, x + surface.scrollTop));
+  const selected = [...container.querySelectorAll('.cm-line')].filter(line => line.textContent === 'Repeat this phrase.')[1]!;
+  const native = window.getSelection()!;
+  const getRange = native.getRangeAt.bind(native);
+  vi.spyOn(native, 'getRangeAt').mockImplementation(index => Object.assign(getRange(index), {
+    getBoundingClientRect: () => new DOMRect(20, 100, 100, 20)
+  }));
+  const word = selected.firstChild!;
+  const release = () => fireEvent(document, new Event('foliole-android-reading-touch-release'));
+  fireEvent.touchStart(selected, { touches: [{ clientX: 50, clientY: 100 }] });
+  native.setBaseAndExtent(word, 0, word, 6);
+  fireEvent.touchCancel(selected, { touches: [] });
+  expect(native.toString()).toBe('Repeat');
+  expect(screen.queryByRole('button', { name: 'Adjust anchor end' })).toBeNull();
+
+  release();
+  expect(native.toString()).toBe('');
+  expect(container.querySelector('.cm-md-reading-selection')?.textContent).toBe('Repeat');
+  const end = prefix.length + 18;
+  touchPointer(screen.getByRole('button', { name: 'Adjust anchor end' }), 'pointerdown', end);
+  touchPointer(document, 'pointermove', end);
+  touchPointer(document, 'pointerup', end);
+  release();
+  expect(container.querySelector('.cm-md-reading-selection')?.textContent).toBe('Repeat this phrase');
+
+  touchPointer(screen.getByRole('button', { name: 'Adjust anchor end' }), 'pointerdown', end);
+  touchPointer(document, 'pointermove', end, 290);
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 90)); });
+  expect(surface.scrollTop).toBeGreaterThan(0);
+  touchPointer(document, 'pointerup', end, 290);
+  release();
+  expect(native.toString()).toBe('');
+  expect(screen.getByRole('button', { name: 'Highlight' })).toBeVisible();
+
+  expect(database!.prepare("SELECT id FROM nodes WHERE parent_id = 'source'").all()).toEqual([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  await waitFor(() => expect(database!.prepare("SELECT id FROM nodes WHERE parent_id = 'source'").get()).toBeDefined());
+  const row = database!.prepare("SELECT id FROM nodes WHERE parent_id = 'source'").get() as { id: string };
+  await closeIosCompanionDatabase();
+  await openLibrary();
+  expect(await loadCompanionWorkspaceNode(row.id)).toMatchObject({
+    content: paragraph,
     anchorLink: { locator: { from: prefix.length, to: prefix.length + paragraph.length, originalText: paragraph } }
   });
   expect(await loadCompanionWorkspaceNode('source')).toMatchObject({ content });

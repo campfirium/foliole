@@ -17,6 +17,10 @@ export function useCompanionSelectReadingParagraph(args: {
   editorRef: RefObject<EditorAdapter | null>;
   lastPayloadRef: RefObject<SelectionCommandPayload | null>;
   nodeId: string;
+  managed?: {
+    resolve(): SelectionCommandPayload | null;
+    setRange(range: EditorSelection): boolean;
+  };
   setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState) => void;
   scheduler: {
     clearScheduledOpen: () => void;
@@ -25,9 +29,9 @@ export function useCompanionSelectReadingParagraph(args: {
   snapshot: WorkspaceSnapshot | null;
 }) {
   const { editorRef, lastPayloadRef, nodeId } = args;
-  const resolveSelectionPayload = useCallback(() => resolveCompanionSelectionCommandPayload(
+  const resolveSelectionPayload = useCallback(() => args.managed?.resolve() ?? resolveCompanionSelectionCommandPayload(
     nodeId, editorRef.current, lastPayloadRef.current
-  ), [editorRef, lastPayloadRef, nodeId]);
+  ), [args.managed, editorRef, lastPayloadRef, nodeId]);
   const expanded = useRef<{ editor: EditorAdapter; content: string; range: EditorSelection; text: string } | null>(null);
   return {
     resolveSelectionPayload,
@@ -39,6 +43,7 @@ export function useCompanionSelectReadingParagraph(args: {
       const content = editor.getContent();
       const paragraph = findContainingReadingParagraph(content, current);
       if (!paragraph) return;
+      if (args.managed?.resolve()) { args.managed.setRange(paragraph); return; }
       editor.setNativeSelection(paragraph);
       const payload = resolveSelectionPayload();
       const range = singleRange(payload);

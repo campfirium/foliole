@@ -19,3 +19,7 @@
   background-color: var(--app-cloze-surface-color);
   border-radius: var(--radius-sm);
 }
+
+[data-companion-article-document='true'] .cm-md-reading-selection {
+  background-color: var(--app-text-selection-bg-color);
+}

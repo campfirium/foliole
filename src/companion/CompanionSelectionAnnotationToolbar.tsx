@@ -19,6 +19,8 @@ import { useCompanionSelectionApply } from './useCompanionSelectionApply';
 export type CompanionSelectionAnnotationKind = 'cloze' | 'highlight' | 'note';
 
 export interface CompanionSelectionAnnotationToolbarState {
+  selectedText?: string;
+  adjustableRange?: { from: number; to: number };
   existingHighlight?: CompanionExistingHighlightTarget;
   left: number;
   noteLeft: number;
@@ -62,6 +64,7 @@ function resolveCopyText(props: CompanionSelectionAnnotationToolbarProps) {
   if (props.state?.existingHighlight) return props.state.existingHighlight.originalText;
   const paragraphText = props.getExpandedParagraphText?.();
   if (paragraphText !== undefined) return paragraphText;
+  if (props.state?.selectedText !== undefined) return props.state.selectedText;
   if (getDevanagariSelectionMode() && props.editor?.getDocumentPositionAtDomPoint) {
     return window.getSelection()?.toString() ?? '';
   }
