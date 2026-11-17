@@ -16,12 +16,12 @@ const xml = `<SuperMemoCollection><Count>4</Count>
   </SuperMemoElement>
 </SuperMemoCollection>`;
 
-async function writeMovedExcerptCollection(directory: string) {
+async function writeMovedExcerptCollection(directory: string, articleId = 1) {
   const initial = await writeCollection(directory, true);
   const info = path.join(directory, 'info');
   const elements = Buffer.alloc(4 * 118);
   initial.copy(elements);
-  elements.writeUInt32LE(1, 2 * 118 + 93);
+  elements.writeUInt32LE(articleId, 2 * 118 + 93);
   const tree = Buffer.alloc(4 * 37);
   tree.writeInt32LE(4, 2 * 37 + 1);
   tree.writeInt32LE(3, 3 * 37 + 5);
@@ -47,6 +47,38 @@ test('previews a moved excerpt under its source article and renders its imported
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await desktopWindow.keyboard.press('Escape');
+  await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();
+  await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toHaveText(passage);
+});
+
+test('updates the same excerpt and restores its source highlight from the original export', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
+  const directory = testInfo.outputPath('source-anchor-update');
+  await writeMovedExcerptCollection(directory, 0);
+  await loadSource(desktopApp, dialog, directory, xml);
+  await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
+  await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
+  const readExcerpt = () => desktopWindow.evaluate(async () => {
+    const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
+    return Object.values(snapshot.nodesById).find(node => node.title === 'Moved excerpt');
+  });
+  const before = await readExcerpt();
+  expect(before?.id).toBeTruthy();
+  expect(before?.anchorLink).toBeNull();
+  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+
+  await writeMovedExcerptCollection(directory);
+  const update = await openPreview(desktopWindow);
+  await loadSource(desktopApp, update, directory);
+  await update.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+  await expect(update.getByText(/^(Restore the text anchor|补回文字定位)$/)).toBeVisible();
+  expect(await readExcerpt()).toEqual(before);
+  await update.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(update.getByText(/Restored 1 text anchors|已补回 1 处文字定位/)).toBeVisible();
+  expect((await readExcerpt())?.id).toBe(before?.id);
+  await update.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await desktopWindow.keyboard.press('Escape');
   await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toHaveText(passage);

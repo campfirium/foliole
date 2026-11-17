@@ -43,10 +43,11 @@ function moveWithParentOrder(moves: SuperMemoDirectoryMove[], now: string) {
 export function applySuperMemoDirectoryMoves(moves: SuperMemoDirectoryMove[], now: string, createdParents: ReadonlySet<string>) {
   const { driver } = openDatabaseConnection();
   verifyCreatedParentAnchors(moves, createdParents);
-  moveWithParentOrder(moves, now);
+  const placements = moves.filter(move => move.from !== move.to);
+  if (placements.length) moveWithParentOrder(placements, now);
   for (const move of moves) {
     if (!move.anchor) continue;
-    driver.execute(`UPDATE nodes SET anchor_link = ?, anchor_resolution_status = 'resolved', anchor_source_version_id = ?
-      WHERE id = ?`, [JSON.stringify(move.anchor.link), move.anchor.sourceVersionId, move.nodeId]);
+    driver.execute(`UPDATE nodes SET anchor_link = ?, anchor_resolution_status = 'resolved', anchor_source_version_id = ?, updated_at = ?, sync_dirty = 1
+      WHERE id = ?`, [JSON.stringify(move.anchor.link), move.anchor.sourceVersionId, now, move.nodeId]);
   }
 }

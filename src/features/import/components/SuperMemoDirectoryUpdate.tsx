@@ -99,6 +99,7 @@ function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate
               {change.status === 'add-unavailable' ? t('desktop.superMemoDrafts.directoryAddUnavailable') : null}
               {change.status === 'protected' ? t('desktop.superMemoDrafts.directoryProtected') : null}
               {change.status === 'anchor-unverified' ? t('desktop.superMemoDrafts.directoryAnchorUnverified', { to: change.to ?? root }) : null}
+              {change.restoreAnchor ? <span className={change.status === 'move' ? 'ml-2' : undefined}>{t('desktop.superMemoDrafts.directoryAnchorRestore')}</span> : null}
               {change.reanchor ? <span className="ml-2">{t('desktop.superMemoDrafts.directoryAnchorMove')}</span> : null}
               {change.status === 'unavailable' ? t('desktop.superMemoDrafts.directoryUnavailable') : null}
             </span>
@@ -117,11 +118,13 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
   const citations = result.directoryUpdate?.citationChanges.filter(change => change.status === 'update').length ?? 0;
   const text = result.directoryUpdate?.textChanges.filter(change => change.status === 'update').length ?? 0;
   const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
+  const anchors = result.directoryUpdate?.changes.filter(change => change.restoreAnchor).length ?? 0;
   const withdrawn = result.directoryUpdate?.withdrawnSourceIds.length ?? 0;
   return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
     count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
   }) + (addedParents ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }) : '')
     + (addedMaterials ? ' · ' + t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }) : '')
+    + (anchors ? ' · ' + t('desktop.superMemoDrafts.directoryAnchorsRestored', { count: anchors }) : '')
     + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
     + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
     + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '')

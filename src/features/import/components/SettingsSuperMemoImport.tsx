@@ -151,7 +151,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           <SuperMemoDraftActions
             busy={busy} canConvert={Boolean(preview && !result)} parameters={parameters}
             showPreviewFooter={!parameters && !update && !result}
-            directoryUpdate={update ? { canConfirm: (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
+            directoryUpdate={update ? { canConfirm: (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'anchor' || change.status === 'add') ||
               update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
               update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
             backToPreview={backToPreview}

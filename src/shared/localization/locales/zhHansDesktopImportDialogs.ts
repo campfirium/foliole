@@ -49,6 +49,8 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.directoryAdd': '补入漏导的父项，放在{to}',
   'desktop.superMemoDrafts.directoryAdded': '已补入 {count} 个漏导的父项',
   'desktop.superMemoDrafts.directoryAnchorUnverified': '保留当前位置。在「{to}」里无法唯一核实原来选中的文字。',
+  'desktop.superMemoDrafts.directoryAnchorRestore': '补回文字定位',
+  'desktop.superMemoDrafts.directoryAnchorsRestored': '已补回 {count} 处文字定位',
   'desktop.superMemoDrafts.directoryAnchorMove': '同时更新文字定位',
   'desktop.superMemoDrafts.citationChanges': '来源信息变化',
   'desktop.superMemoDrafts.citationUpdate': '更新来源信息',

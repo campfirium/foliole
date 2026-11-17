@@ -47,6 +47,8 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.directoryAdd': 'Import missing parent into {to}',
   'desktop.superMemoDrafts.directoryAdded': 'Missing parents imported ({count})',
   'desktop.superMemoDrafts.directoryAnchorUnverified': 'Current location kept. The selection could not be verified in {to}.',
+  'desktop.superMemoDrafts.directoryAnchorRestore': 'Restore the text anchor',
+  'desktop.superMemoDrafts.directoryAnchorsRestored': 'Restored {count} text anchors',
   'desktop.superMemoDrafts.directoryAnchorMove': 'Update the text anchor',
   'desktop.superMemoDrafts.citationChanges': 'Source information changes',
   'desktop.superMemoDrafts.citationUpdate': 'Update source information',

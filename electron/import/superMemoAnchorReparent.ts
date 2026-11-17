@@ -11,7 +11,7 @@ export interface ReparentedSuperMemoAnchor {
   sourceVersionId: string | null;
 }
 
-function findUniqueAnchorText(source: ReturnType<typeof prepareSuperMemoParentText>, text: string): TextAnchorLocator | null {
+export function findUniqueAnchorText(source: ReturnType<typeof prepareSuperMemoParentText>, text: string): TextAnchorLocator | null {
   const quote = normalizeFullTextWithMap(text).normalized.trim();
   if (!quote) return null;
   const matches = new TextOccurrences(quote);

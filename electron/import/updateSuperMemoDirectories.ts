@@ -11,6 +11,7 @@ import { applySuperMemoBatchStructure, type AdditionWriter, type Batch, type Bat
 import type { SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
 import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates } from './planSuperMemoCitationUpdates.js';
 import { applySuperMemoFirstReviewUpdates, planSuperMemoFirstReviewUpdates } from './planSuperMemoFirstReviewUpdates.js';
+import { createSuperMemoMissingAnchorPlanner } from './planSuperMemoMissingAnchor.js';
 import { persistSuperMemoExportLink, resolveSuperMemoBatch, type SuperMemoUpdateTarget } from './resolveSuperMemoBatch.js';
 import { prepareSuperMemoRows, type runSuperMemoImport, writeSuperMemoRows } from './runSuperMemoImport.js';
 import { createSuperMemoAnchorReparentPlanner, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
@@ -72,8 +73,28 @@ function classifyMove(planAnchor: ReturnType<typeof createSuperMemoAnchorReparen
   return anchor ? { status: 'move', anchor } : { status: 'anchor-unverified' };
 }
 
-function planMoves(batch: Batch, preview: NativeSuperMemoPreview, renderNewParent?: ReturnType<typeof createPendingParentRenderer>) {
+function planAddition(row: NativeSuperMemoPreview['rows'][number], target: string | null | undefined,
+  targetNode: LiveNode | undefined, targetKindValid: boolean, missingParent: boolean,
+  context: ReturnType<typeof createNodeLookup> & {
+    additions: Map<number, { pendingId: string; target: string | null }>;
+    projectedParents: ReadonlyMap<string, string | null>;
+  }): NativeSuperMemoDirectoryUpdate['changes'][number] {
+  const pendingId = `supermemo-pending:${row.id}`;
+  const canAdd = target !== undefined && targetKindValid && canMove(pendingId, target, context.read, context.projectedParents);
+  if (canAdd && target !== undefined) {
+    context.additions.set(row.id, { pendingId, target });
+    context.lookup.set(pendingId, { parent_id: target, kind: row.outcome, title: row.title, created_at: '', updated_at: '',
+      anchor_link: null, anchor_resolution_status: null, image_regions: null, deleted_at: null, virtual_filter: null });
+  }
+  return { sourceId: row.id, title: row.title, from: null, to: targetNode?.title ?? null,
+    status: canAdd ? 'add' : 'add-unavailable', ...(missingParent ? { missingParent: true } : {}),
+    ...(target === INBOX_NODE_ID ? { toInbox: true } : {}) };
+}
+
+function planMoves(batch: Batch, preview: NativeSuperMemoPreview, elements: SuperMemoXmlDraftElement[], content?: PendingParentContent) {
   const { driver } = openDatabaseConnection();
+  const renderNewParent = content && createPendingParentRenderer(elements, preview, content);
+  const recoverAnchor = content && createSuperMemoMissingAnchorPlanner(driver, elements, content.expectedImages);
   const rows = orderSuperMemoSourceRows(preview.rows);
   const parents = planSuperMemoImportParents(rows);
   const entries = new Map(batch.entries.map(entry => [entry.id, entry]));
@@ -100,30 +121,30 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview, renderNewParen
     const targetKindValid = !targetNode || targetNode.kind === 'folder' ||
       (targetNode.kind === 'topic' && row.outcome !== 'folder');
     if (!entry.nodeId && entry.outcome === 'skipped' && row.outcome !== 'skipped') {
-      const pendingId = `supermemo-pending:${row.id}`;
-      const canAdd = target !== undefined && targetKindValid && canMove(pendingId, target, read, projectedParents);
-      changes.push({ sourceId: row.id, title: row.title, from: null, to: targetNode?.title ?? null,
-        status: canAdd ? 'add' : 'add-unavailable', ...(required.has(row.id) ? { missingParent: true } : {}),
-        ...(target === INBOX_NODE_ID ? { toInbox: true } : {}) });
-      if (canAdd && target !== undefined) {
-        additions.set(row.id, { pendingId, target });
-        lookup.set(pendingId, { parent_id: target, kind: row.outcome, title: row.title, created_at: '', updated_at: '',
-          anchor_link: null, anchor_resolution_status: null, image_regions: null, deleted_at: null, virtual_filter: null });
-      }
+      changes.push(planAddition(row, target, targetNode, targetKindValid, required.has(row.id),
+        { additions, lookup, read, projectedParents }));
     }
     if (!entry.nodeId || entry.outcome !== row.outcome) continue;
     const node = read(entry.nodeId);
-    if (node && target === node.parent_id) continue;
+    const sameParent = node && target === node.parent_id;
+    const recoverable = node && targetSource != null && target && targetKindValid &&
+      !node.deleted_at && !node.virtual_filter && !node.image_regions && !node.anchor_link &&
+      node.parent_id === entry.importedParentNodeId &&
+      (targetSource === row.parentId || targetSource === row.sourceArticleId);
+    const restored = recoverable ? recoverAnchor?.(entry, targetSource, target) : null;
+    if (sameParent && !restored) continue;
     const allowedTarget = target !== undefined && targetKindValid && canMove(entry.nodeId, target, read, projectedParents);
     if (node?.anchor_link && targetSource != null && target && additions.has(targetSource) && !pendingBodies.has(target)) {
       const body = renderNewParent?.(targetSource, existingNodeIds, additions, entries);
       if (body !== undefined) pendingBodies.set(target, body);
     }
-    const { status, anchor } = classifyMove(planAnchor, entry, node, allowedTarget, target);
+    const result = classifyMove(planAnchor, entry, node, allowedTarget, target);
+    const status = sameParent && result.status === 'move' ? 'anchor' : result.status;
+    const anchor = result.status === 'move' ? restored ?? result.anchor : undefined;
     changes.push({ sourceId: row.id, title: node?.title ?? row.title,
       from: node?.parent_id ? read(node.parent_id)?.title ?? null : null, to: targetNode?.title ?? null, status,
-      ...(anchor ? { reanchor: true } : {}) });
-    if (status === 'move' && node && target !== undefined) {
+      ...(restored && anchor ? { restoreAnchor: true } : anchor ? { reanchor: true } : {}) });
+    if ((status === 'move' || status === 'anchor') && node && target !== undefined) {
       moves.push({ entry, nodeId: entry.nodeId, from: node.parent_id, to: target, ...(anchor ? { anchor } : {}) });
       projectedParents.set(entry.nodeId, target);
     }
@@ -145,7 +166,7 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
     if (sourceMatch?.status === 'verified' && batch.activeExport !== source.exportHash) sourceMatch.linkOnConfirm = true;
     const blocked = pairedSourceRequired || (sourceMatch && sourceMatch.status !== 'verified');
     const current = { ...batch, entries: usableEntries };
-    const plan = blocked ? undefined : planMoves(current, preview, content && createPendingParentRenderer(elements, preview, content));
+    const plan = blocked ? undefined : planMoves(current, preview, elements, content);
     const changes = plan?.changes ?? [];
     const citations = plan && content ? planSuperMemoCitationUpdates(driver, current, plan.rows, content, elements,
       new Map(plan.moves.map(move => [move.nodeId, move.to])), plan.additions,
