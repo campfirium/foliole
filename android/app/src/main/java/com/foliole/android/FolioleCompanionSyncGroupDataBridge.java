@@ -17,6 +17,9 @@ final class FolioleCompanionSyncGroupDataBridge {
     private static final String LOG_TAG = "FolioleSyncProvider";
     private static FolioleCompanionSyncGroupDataBridge active;
     private static Object activeOwner;
+    private static ProviderStart providerStart;
+
+    record ProviderStart(FolioleCompanionSyncGroupDataBridge bridge, FramedSyncPayloadBudget document) {}
     private final Context context;
     private volatile Dispatcher dispatcher;
     private final FolioleCompanionSyncGroupDataPending pending = new FolioleCompanionSyncGroupDataPending();
@@ -30,6 +33,7 @@ final class FolioleCompanionSyncGroupDataBridge {
         if (active == null) active = new FolioleCompanionSyncGroupDataBridge(context, dispatcher);
         else active.replaceDispatcher(dispatcher);
         activeOwner = owner;
+        providerStart = null;
     }
 
     static synchronized FolioleCompanionSyncGroupDataBridge current() {
@@ -42,6 +46,22 @@ final class FolioleCompanionSyncGroupDataBridge {
         if (active != null) active.close();
         active = null;
         activeOwner = null;
+        providerStart = null;
+    }
+
+    static synchronized ProviderStart beginProviderStart(Object owner, FramedSyncPayloadBudget document) {
+        if (active == null || activeOwner != owner) return null;
+        providerStart = new ProviderStart(active, document);
+        return providerStart;
+    }
+
+    static synchronized void invalidateProviderStart(Object owner) {
+        if (activeOwner == owner) providerStart = null;
+    }
+
+    static synchronized boolean isProviderStartCurrent(ProviderStart request) {
+        return request != null && request == providerStart
+            && (request.document() == null || !request.document().isClosed());
     }
 
     void replaceDispatcher(Dispatcher dispatcher) {

@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.app.Activity;
 import android.content.Context;
 
+import com.foliole.android.framed.FramedSyncPayloadBudget;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 
@@ -23,27 +24,94 @@ final class FolioleCompanionSyncGroupProvider {
 
     private FolioleCompanionSyncGroupProvider() {}
 
-    static synchronized JSObject start(
-        Context context, Activity activity, PluginCall call, Object owner,
-        FolioleCompanionSyncGroupDataBridge.Dispatcher dispatcher,
-        Runnable listener, boolean participating
-    ) throws Exception {
-        JSONObject group = call.getObject(key(context, "group"));
+    static final class Startup {
+        private final Object owner;
+        private record PendingStart(JSObject configuration, FramedSyncPayloadBudget document) {}
+        private PendingStart pending;
+
+        Startup(Object owner) { this.owner = owner; }
+
+        FolioleCompanionSyncAsync.Work begin(Context context, Activity activity, JSObject configuration,
+            FramedSyncPayloadBudget document, Runnable listener, Participation participation) {
+            synchronized (FolioleCompanionSyncGroupDataBridge.class) {
+                var request = FolioleCompanionSyncGroupDataBridge.beginProviderStart(owner, document);
+                pending = request == null ? null : new PendingStart(configuration, document);
+                return () -> {
+                    try { return start(context, activity, configuration, owner, request, listener, participation); }
+                    finally {
+                        synchronized (FolioleCompanionSyncGroupDataBridge.class) {
+                            if (FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)) pending = null;
+                        }
+                    }
+                };
+            }
+        }
+
+        FolioleCompanionSyncAsync.Work resume(Context context, Activity activity, FramedSyncPayloadBudget document,
+            Runnable listener, Participation participation) {
+            synchronized (FolioleCompanionSyncGroupDataBridge.class) {
+                if (pending == null) return null;
+                if (pending.document() != document || (document != null && document.isClosed())) {
+                    cancel();
+                    return null;
+                }
+                return begin(context, activity, pending.configuration(), document, listener, participation);
+            }
+        }
+
+        void suspend() { FolioleCompanionSyncGroupDataBridge.invalidateProviderStart(owner); }
+
+        void cancel() {
+            synchronized (FolioleCompanionSyncGroupDataBridge.class) {
+                pending = null;
+                suspend();
+            }
+        }
+    }
+
+    interface Participation { boolean active() throws Exception; }
+
+    static JSObject start(Context context, Activity activity, JSObject input, Object owner,
+        FolioleCompanionSyncGroupDataBridge.ProviderStart request, Runnable listener,
+        Participation participation) throws Exception {
+        if (!FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)) return state();
+        JSONObject group = input.optJSONObject(key(context, "group"));
         if (group == null) throw new IllegalArgumentException("sync_group_required");
-        FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
-        bridge.replaceDispatcher(dispatcher);
-        FolioleCompanionCurrentGroupCredential credential =
-            FolioleCompanionCurrentGroupCredential.load(group.getString("group_id"));
-        String deviceId = value(context, call, "deviceId");
+        FolioleCompanionCurrentGroupCredential credential;
+        try {
+            credential = FolioleCompanionCurrentGroupCredential.load(
+                request.bridge(), group.getString("group_id"), request.document());
+        } catch (Exception failure) {
+            if (!FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)) return state();
+            throw failure;
+        }
+        String deviceId = value(context, input, "deviceId");
         if (!credential.deviceId.equals(deviceId)) throw new SecurityException("sync_group_local_device_mismatch");
         JSONObject next = new JSONObject()
-            .put("app_version", value(context, call, "appVersion"))
+            .put("app_version", value(context, input, "appVersion"))
             .put("device_id", deviceId)
-            .put("device_name", value(context, call, "deviceName"))
-            .put("platform", value(context, call, "platform"))
+            .put("device_name", value(context, input, "deviceName"))
+            .put("platform", value(context, input, "platform"))
             .put("protocol", FolioleCompanionSyncProtocolDefinitions.currentProtocol(context))
             .put("sync_group", group)
             .put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
+        return commitStart(context, activity, owner, request, listener, participation, next, group, credential);
+    }
+
+    private static synchronized JSObject commitStart(Context context, Activity activity, Object owner,
+        FolioleCompanionSyncGroupDataBridge.ProviderStart request, Runnable listener,
+        Participation participation, JSONObject next, JSONObject group,
+        FolioleCompanionCurrentGroupCredential credential) throws Exception {
+        synchronized (FolioleCompanionSyncGroupDataBridge.class) {
+            if (!FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)
+                || !participation.active()) return state();
+            return installRuntime(context, activity, owner, request.bridge(), listener, next, group, credential);
+        }
+    }
+
+    private static JSObject installRuntime(Context context, Activity activity, Object owner,
+        FolioleCompanionSyncGroupDataBridge bridge, Runnable listener, JSONObject next, JSONObject group,
+        FolioleCompanionCurrentGroupCredential credential) throws Exception {
         boolean same = sameProvider(activeConfig, next);
         next.put("runtime_instance_id", same
             ? activeConfig.getString("runtime_instance_id") : UUID.randomUUID().toString());
@@ -51,10 +119,10 @@ final class FolioleCompanionSyncGroupProvider {
         activeContext = context.getApplicationContext(); activeConfig = next;
         activeOwner = owner; dataBridge = bridge; stateListener = listener;
         if (joinProvider == null) joinProvider = createJoinProvider(group, credential.workgroupKey);
-        if (participating && server == null) {
+        if (server == null) {
             FolioleCompanionSyncScreenAwake.attach(activity);
             startRuntime();
-        } else if (!participating) stopRuntime();
+        }
         return state();
     }
 
@@ -154,8 +222,8 @@ final class FolioleCompanionSyncGroupProvider {
                 .equals(right.optJSONObject("sync_group").optString("group_id"));
     }
 
-    private static String value(Context context, PluginCall call, String name) throws Exception {
-        String value = call.getString(key(context, name));
+    private static String value(Context context, JSObject input, String name) throws Exception {
+        String value = input.optString(key(context, name), null);
         if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(name + " is required.");
         return value.trim();
     }
