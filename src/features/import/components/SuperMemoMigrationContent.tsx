@@ -6,8 +6,8 @@ import { SuperMemoEntryPreview, type useSuperMemoPreviewNavigation } from './Sup
 import { SuperMemoGradesPage } from './SuperMemoGradeSettings';
 import { SuperMemoLoadPage } from './SuperMemoLoadPage';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
-import { SuperMemoParameters } from './SuperMemoParameters';
 import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
+import { SuperMemoSourcePage } from './SuperMemoSourcePage';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
 export function SuperMemoMigrationContent({ model, current, selected, navigation, onLoad, onLoadNew, onSelect }: {
@@ -36,8 +36,9 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
         <SuperMemoGradesPage preview={preview} percent={percent} disabled={busy} value={gradeMap}
           onChange={next => void changeGrades(next)} />
       ) : null}
-      {preview && current === 'source' ? (
-        <SuperMemoParameters step={current} preview={preview} {...{ percent, setPercent, sourceFormat, changeSourceFormat, busy }} />
+      {current === 'source' && draft ? (
+        <SuperMemoSourcePage preview={draft.preview} elements={draft.elements} value={sourceFormat} disabled={busy}
+          onChange={changeSourceFormat} />
       ) : null}
       {current === 'confirm' ? <SuperMemoConfirmMigration model={model} selected={selected} onSelect={onSelect} /> : null}
     </AppDialogBody>
