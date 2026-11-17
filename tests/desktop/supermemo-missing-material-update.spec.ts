@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { continueXml, loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
+import { loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
 
 test('imports a previously skipped card once into its saved batch', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -16,7 +16,6 @@ test('imports a previously skipped card once into its saved batch', async ({ des
       .filter(node => node.title === 'Recovered card').map(node => node.id));
   const directory = testInfo.outputPath('MissingCard');
   await loadSource(desktopApp, dialog, directory, xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   await expect(dialog.getByText(/Import skipped material into|补入上次跳过的资料/)).toBeVisible();
   expect(await readCards()).toEqual([]);
@@ -27,7 +26,6 @@ test('imports a previously skipped card once into its saved batch', async ({ des
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const reopened = await openPreview(desktopWindow);
   await loadSource(desktopApp, reopened, directory);
-  await continueXml(desktopWindow);
   await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   await expect(reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ })).toBeDisabled();
   expect(await readCards()).toEqual(after);

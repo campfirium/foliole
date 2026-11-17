@@ -5,7 +5,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { exitFlowIfNeeded, relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { type DesktopSession, expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { continueXml, loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { loadSource, openPreview, parameters } from './harness/superMemoImport';
 
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 
@@ -159,7 +159,6 @@ test('makes an imported due card available in an already prepared empty Flow', a
       <LearningData><LastRepetition>10.11.2025</LastRepetition><Interval>1</Interval></LearningData>
     </SuperMemoElement></SuperMemoCollection>`;
   await loadSource(app, dialog, testInfo.outputPath('due-card'), source);
-  await continueXml(page);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 1|已导入 1 条)/)).toBeVisible();

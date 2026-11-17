@@ -115,7 +115,7 @@ function useSuperMemoDraftNavigation(
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
   const titleId = useId();
-  const model = useSuperMemoDraft(initialGrades);
+  const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'));
   const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = model;
   const { parameters, setParameters, selection, setSelection, backToPreview, dismissDialog } = useSuperMemoDraftNavigation(model, close);
   const preview = draft?.preview;
@@ -159,7 +159,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           />
         </AppDialogContent>
       </AppDialogPortal>
-      <SuperMemoLoadNotice error={error} busy={busy} onClose={() => setError(false)}
+      <SuperMemoLoadNotice error={error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
         recover={choose => void model.recoverCollection(choose)} retry={() => void model.retrySource()} />
     </AppDialog>
   );

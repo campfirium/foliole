@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, continueXml, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
+import { card, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
 
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
@@ -28,7 +28,6 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(preview.getByRole('note')).toHaveCount(0);
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
-  await continueXml(desktopWindow);
   await expect(dialog.getByRole('button', { name: /^(Close|关闭)$/ })).toHaveCount(0);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
@@ -57,10 +56,6 @@ test('previews different XML exports and changes the interval without saving a d
   await dismissLoadError(desktopWindow);
   await expect(dialog.getByText('Learning.xml', { exact: true })).toBeVisible();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport);
-  const notice = desktopWindow.getByRole('dialog', { name: /^(Collection files not found|未找到配套资料)$/ });
-  await expect(notice).toBeVisible();
-  await desktopWindow.keyboard.press('Escape');
-  await expect(notice).toBeHidden();
   await expect(dialog.getByText('Other.xml', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
@@ -79,16 +74,17 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   const directory = testInfo.outputPath('collection');
   const elements = await writeCollection(directory, false);
   const info = path.join(directory, 'info');
-  await loadSource(desktopApp, dialog, directory, secondExport);
-  await expect(dialog.getByText('collection.xml', { exact: true })).toBeVisible();
-  const dateBasis = dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/);
-  await expect(dateBasis).toHaveCount(0);
   elements.writeUInt16LE(200, 118 + 16);
   await writeFile(path.join(info, 'ElementInfo.dat'), elements);
-  await loadSource(desktopApp, dialog, directory);
-  await dismissLoadError(desktopWindow);
+  await loadSource(desktopApp, dialog, directory, secondExport);
   await dialog.getByRole('button', { name: parameters }).click();
-  await expect(dateBasis).toBeVisible();
+  await expect(dialog.getByText(/The XML export estimates original due dates|XML 预览按上次复习日期/)).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  elements.writeUInt16LE(300, 118 + 16);
+  await writeFile(path.join(info, 'ElementInfo.dat'), elements);
+  await loadSource(desktopApp, dialog, directory);
+  await dialog.getByRole('button', { name: parameters }).click();
+  await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
   await expect(dialog.getByText(/Dismissed Topics and Items stay dismissed|已结束学习的主题和检测项保留原状态/u)).toBeVisible();
   await expect(dialog.getByRole('slider')).toHaveValue('0');
 });
@@ -152,7 +148,6 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('Grades');
   await loadSource(desktopApp, dialog, directory, secondExport);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
   const planned = dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last();
@@ -168,7 +163,6 @@ test('updates the grade mapping in a live preview and remembers it when reopened
 
   const reopened = await openPreview(desktopWindow);
   await loadSource(desktopApp, reopened, directory);
-  await continueXml(desktopWindow);
   await reopened.getByRole('button', { name: parameters }).click();
   await expect(reopened.getByRole('radio', { name: again })).toBeChecked();
   await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();

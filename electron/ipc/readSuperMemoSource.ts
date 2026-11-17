@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { lstat, open } from 'node:fs/promises';
+import { lstat, open, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { dialog, type BrowserWindow } from 'electron';
@@ -47,8 +47,11 @@ async function resolveCollection(xmlPath: string, choice?: string | null) {
   }
   try {
     const collectionDirectory = await collectionForExport(xmlPath);
-    if (collectionDirectory) await authorizeSelectedImportDirectoryPath(collectionDirectory);
-    return { collectionDirectory };
+    if (collectionDirectory) {
+      await authorizeSelectedImportDirectoryPath(collectionDirectory);
+      return { collectionDirectory };
+    }
+    return { collectionCandidates: await collectionsAt(path.dirname(xmlPath)) };
   } catch (error) {
     return { collectionDiscoveryFailure: isImportAccessDenied(error) ? 'access' as const : 'read' as const };
   }
@@ -84,4 +87,36 @@ export async function selectSuperMemoSource(window: BrowserWindow | null) {
   persistSecurityScopedBookmark(filePath, selection.bookmarks?.[0]);
   await authorizeSelectedImportFilePath(filePath).catch(rethrowImportAccessError);
   return readSuperMemoSource(filePath);
+}
+
+async function collectionsAt(location: string) {
+  if (await directoryExists(path.join(location, 'info')).catch(() => false)) {
+    await authorizeSelectedImportDirectoryPath(location);
+    return [{ directory: location, name: path.basename(location) }];
+  }
+  const entries = await readdir(location, { withFileTypes: true });
+  const roots = entries.filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
+    .map(entry => path.join(location, entry.name));
+  const candidates = [];
+  for (const directory of roots) {
+    if (!await directoryExists(path.join(directory, 'info')).catch(() => false)) continue;
+    await authorizeSelectedImportDirectoryPath(directory);
+    candidates.push({ directory, name: path.basename(directory) });
+  }
+  return candidates;
+}
+
+export async function selectSuperMemoCollection(window: BrowserWindow | null, filePath: string, title: string, candidate?: string) {
+  const xml = await assertAuthorizedImportFilePath(filePath);
+  const initial = candidate ? await assertAuthorizedImportDirectoryPath(candidate).catch(() => undefined) : undefined;
+  const options = {
+    title, defaultPath: initial ?? path.dirname(xml), properties: ['openDirectory' as const],
+    securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+  };
+  const selection = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+  const location = selection.filePaths[0];
+  if (selection.canceled || !location) return null;
+  persistSecurityScopedBookmark(location, selection.bookmarks?.[0]);
+  await authorizeSelectedImportDirectoryPath(location);
+  return collectionsAt(await assertAuthorizedImportDirectoryPath(location)).catch(rethrowImportAccessError);
 }

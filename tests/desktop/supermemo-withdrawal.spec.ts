@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { continueXml, loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
+import { loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
 
 test('withdraws a checked item and restores it from Trash', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -18,7 +18,6 @@ test('withdraws a checked item and restores it from Trash', async ({ desktopWind
   const before = await card();
   expect(before.id).toBeTruthy();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Withdrawal'), xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   const checkbox = dialog.getByRole('checkbox', { name: 'Obsolete card' });
   const confirm = dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ });

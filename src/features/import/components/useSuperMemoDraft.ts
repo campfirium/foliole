@@ -7,8 +7,10 @@ import { previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport, saveSuperMemo
   selectRuntimeSuperMemoCollection, selectRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 type Source = NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>;
+type Candidate = NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoCollection>>>[number];
+type Pending = { selected: Source; target: SuperMemoUpdateTarget | undefined; candidates?: Candidate[] };
 
-export type SuperMemoNotice = false | 'xml-only' | 'xmlAccess' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
+export type SuperMemoNotice = false | 'collectionChoice' | 'xmlAccess' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
   'collectionAccess' | 'collectionRead' | 'collectionMismatch' | 'preview' | 'convert';
 
 function previewFailure(error: unknown) {
@@ -53,7 +55,7 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
   const [result, setResult] = useState<Awaited<ReturnType<typeof runRuntimeSuperMemoImport>>>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SuperMemoNotice>(false);
-  const [pending, setPending] = useState<{ selected: Source; target: SuperMemoUpdateTarget | undefined }>();
+  const [pending, setPending] = useState<Pending>();
 
   return {
     target, setTarget, draft, setDraft, gradeMap, setGradeMap, sourceFormat, setSourceFormat, percent, setPercent,
@@ -65,37 +67,79 @@ type DraftState = ReturnType<typeof useDraftState>;
 
 function createCandidateLoader(state: DraftState) {
   const { gradeMap, sourceFormat, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError } = state;
-  return async function loadCandidate(selected: Source, nextTarget: SuperMemoUpdateTarget | undefined, showMissing: boolean) {
-    try {
-      const loaded = nextTarget
-        ? { draft: await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, nextTarget), sourceFormat }
-        : await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
-      if (selected.collectionDiscoveryFailure) {
-        if (showMissing && selected.collectionDiscoveryFailure === 'access') return 'collectionAccess';
-        setPending({ selected, target: nextTarget });
-        setError(selected.collectionDiscoveryFailure === 'access' ? 'collectionAccess' : 'collectionRead');
-        return;
-      }
-      setTarget(nextTarget);
-      setSourceFormat(loaded.sourceFormat);
-      setDraft(loaded.draft);
-      setSource(selected);
-      setPercent(0);
-      const notice = showMissing && !selected.collectionDirectory ? 'xml-only' : false;
-      setPending(notice ? { selected, target: nextTarget } : undefined);
-      setError(notice);
-    } catch (error) {
-      const reason = previewFailure(error);
-      if (showMissing && reason === 'collectionAccess') return reason;
-      setPending(reason.startsWith('collection') ? { selected, target: nextTarget } : undefined);
-      setError(reason);
-    }
-  };
+  async function prepare(selected: Source, nextTarget: SuperMemoUpdateTarget | undefined) {
+    return nextTarget
+      ? { draft: await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, nextTarget), sourceFormat }
+      : loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
+  }
+
+  function show(selected: Source, nextTarget: SuperMemoUpdateTarget | undefined, loaded: Awaited<ReturnType<typeof prepare>>) {
+    setTarget(nextTarget);
+    setSourceFormat(loaded.sourceFormat);
+    setDraft(loaded.draft);
+    setSource(selected);
+    setPercent(0);
+    setPending(undefined);
+    setError(false);
+  }
+
+  return { prepare, show };
 }
 
-function createSourceActions(state: DraftState) {
-  const { draft, target, pending, source, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
-  const loadCandidate = createCandidateLoader(state);
+function withCollection({ filePath, name, xml }: Source, collectionDirectory?: string): Source {
+  return { filePath, name, xml, collectionDirectory };
+}
+
+function createCollectionRecovery(state: DraftState, pickerTitle: string, loader: ReturnType<typeof createCandidateLoader>) {
+  const { setPending, setError } = state;
+  const { prepare, show } = loader;
+  async function resolveCandidates({ selected, target }: Pending, candidates: Candidate[], reportFailure: boolean) {
+    const matches: Candidate[] = [];
+    let first: Awaited<ReturnType<typeof prepare>> | undefined;
+    let reason: SuperMemoNotice = 'collectionRead';
+    for (const candidate of candidates) {
+      try {
+        const loaded = await prepare(withCollection(selected, candidate.directory), target);
+        first ??= loaded;
+        matches.push(candidate);
+      } catch (error) {
+        reason = previewFailure(error);
+      }
+    }
+    if (matches.length === 1 && first) {
+      show(withCollection(selected, matches[0]!.directory), target, first);
+      return true;
+    }
+    if (!matches.length && !reportFailure) return false;
+    setPending({ selected, target, candidates: matches });
+    setError(matches.length > 1 ? 'collectionChoice' : reason);
+    return true;
+  }
+
+  async function recover({ selected, target }: Pending, choice: boolean | string, initial = false) {
+    const showSource = async (source: Source) => show(source, target, await prepare(source, target));
+    if (typeof choice === 'string' || !choice) {
+      await showSource(withCollection(selected, typeof choice === 'string' ? choice : undefined));
+      return;
+    }
+
+    const candidates = await selectRuntimeSuperMemoCollection(selected.filePath, pickerTitle, selected.collectionDirectory);
+    if (!candidates) {
+      // Canceling the initial picker still opens the XML preview.
+      if (initial) await showSource(withCollection(selected));
+      return;
+    }
+
+    await resolveCandidates({ selected, target }, candidates, true);
+  }
+
+  return { recover, resolveCandidates };
+}
+
+function createSourceActions(state: DraftState, pickerTitle: string) {
+  const { draft, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
+  const loader = createCandidateLoader(state);
+  const { recover, resolveCandidates } = createCollectionRecovery(state, pickerTitle, loader);
 
   async function loadSource(asUpdate = false) {
     setBusy(true);
@@ -108,17 +152,27 @@ function createSourceActions(state: DraftState) {
       const update = draft?.preview.directoryUpdate;
       const nextTarget = asUpdate && update && draft
         ? target ?? { targetBatchId: update.batchId, ...(!update.sourceMatch ? { originalElements: draft.elements } : {}) } : undefined;
-      if (await loadCandidate(selected, nextTarget, true) !== 'collectionAccess') return;
-      setPending({ selected, target: nextTarget });
-      let directory: string | null;
       try {
-        directory = await selectRuntimeSuperMemoCollection();
+        const loaded = await loader.prepare(selected, nextTarget);
+        if (selected.collectionDirectory && !selected.collectionDiscoveryFailure) {
+          loader.show(selected, nextTarget, loaded);
+          return;
+        }
       } catch (error) {
-        setError(isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead');
-        return;
+        const reason = previewFailure(error);
+        if (!reason.startsWith('collection')) {
+          setError(reason);
+          return;
+        }
       }
-      const { filePath, name, xml } = selected;
-      await loadCandidate({ filePath, name, xml, collectionDirectory: directory ?? undefined }, nextTarget, false);
+      const recovery = { selected, target: nextTarget };
+      try {
+        if (selected.collectionCandidates?.length && await resolveCandidates(recovery, selected.collectionCandidates, false)) return;
+        await recover(recovery, true, true);
+      } catch (error) {
+        setPending(recovery);
+        setError(isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead');
+      }
     } catch (error) {
       setError(isImportAccessDenied(error) ? 'xmlAccess' : /invalid_supermemo_xml_size/.test(String(error)) ? 'xmlSize' : 'xmlRead');
     } finally {
@@ -126,21 +180,13 @@ function createSourceActions(state: DraftState) {
     }
   }
 
-  async function recoverCollection(chooseFolder: boolean) {
+  async function recoverCollection(choice: boolean | string) {
     if (!pending || busy) return;
-    if (!chooseFolder && pending.selected === source && !source.collectionDirectory) {
-      setError(false);
-      setPending(undefined);
-      return;
-    }
     setBusy(true);
     try {
-      const directory = chooseFolder ? await selectRuntimeSuperMemoCollection() : undefined;
-      if (chooseFolder && !directory) return;
-      const { filePath, name, xml } = pending.selected;
-      await loadCandidate({ filePath, name, xml, collectionDirectory: directory ?? undefined }, pending.target, false);
+      await recover(pending, choice);
     } catch (error) {
-      setError(isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead');
+      setError(isImportAccessDenied(error) ? 'collectionAccess' : previewFailure(error));
     } finally {
       setBusy(false);
     }
@@ -149,7 +195,7 @@ function createSourceActions(state: DraftState) {
   return { loadSource, recoverCollection, retrySource: () => loadSource(retryAsUpdate) };
 }
 
-export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
+export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle: string) {
   const state = useDraftState(initialGrades);
   const { source, result, sourceFormat, target, gradeMap, percent, draft, setBusy, setError, setGradeMap, setDraft,
     setSourceFormat, setResult, setPending } = state;
@@ -188,5 +234,5 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
 
   const { busy, error, setPercent } = state;
   return { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, sourceFormat,
-    changeGrades, changeSourceFormat, importSource, ...createSourceActions(state) };
+    changeGrades, changeSourceFormat, importSource, candidates: state.pending?.candidates, ...createSourceActions(state, pickerTitle) };
 }

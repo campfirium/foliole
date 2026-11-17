@@ -11,8 +11,8 @@ export function selectRuntimeSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
 }
 
-export function selectRuntimeSuperMemoCollection() {
-  return requireInvoke()(NATIVE_COMMANDS.selectImportDirectory, {});
+export function selectRuntimeSuperMemoCollection(filePath: string, title: string, candidate?: string) {
+  return requireInvoke()(NATIVE_COMMANDS.selectSuperMemoCollection, { filePath, title, ...(candidate ? { candidate } : {}) });
 }
 
 function requireInvoke() {

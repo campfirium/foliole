@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
+import type { BrowserWindow, OpenDialogOptions } from 'electron';
 
 import type { SuperMemoXmlDraftElement } from '../../../lib/core/import/superMemoXmlDraft.js';
 import type { NativeSuperMemoPreviewRow } from '../../../lib/platform/nativeSuperMemoImportContract.js';
@@ -27,19 +28,18 @@ export async function openPreview(page: Page) {
 export const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
 
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
-  sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/) {
+  sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/, collectionLocation?: string) {
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, path.basename(directory) + '.xml');
   if (xml !== undefined) await writeFile(file, xml);
-  await app.evaluate(({ dialog }, selected) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
-  }, file);
+  await app.evaluate(({ dialog }, { file, collectionLocation }) => {
+    dialog.showOpenDialog = async (first: BrowserWindow | OpenDialogOptions, second?: OpenDialogOptions) => {
+      const options = second ?? first as OpenDialogOptions;
+      const selection = options.properties?.includes('openDirectory') ? collectionLocation : file;
+      return selection ? { canceled: false, filePaths: [selection] } : { canceled: true, filePaths: [] };
+    };
+  }, { file, collectionLocation });
   await dialog.getByRole('button', { name: sourceButton }).click();
-}
-
-export async function continueXml(page: Page) {
-  const notice = page.getByRole('dialog', { name: /^(Collection files not found|未找到配套资料)$/ });
-  await notice.getByRole('button', { name: /^(Continue with XML|继续使用 XML)$/ }).click();
 }
 
 export async function writeCollection(directory: string, includeTopic: boolean) {

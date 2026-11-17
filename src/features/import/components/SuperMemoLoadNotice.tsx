@@ -8,7 +8,7 @@ import {
 import type { SuperMemoNotice } from './useSuperMemoDraft';
 
 const descriptions = {
-  'xml-only': 'desktop.superMemoDrafts.collectionHelp',
+  collectionChoice: 'desktop.superMemoDrafts.collectionChoiceHelp',
   xmlAccess: 'desktop.superMemoDrafts.xmlAccess',
   xmlRead: 'desktop.superMemoDrafts.xmlRead',
   xmlSize: 'desktop.superMemoDrafts.xmlSize',
@@ -20,16 +20,17 @@ const descriptions = {
   convert: 'desktop.superMemoDrafts.convertFailed'
 } as const;
 
-export function SuperMemoLoadNotice({ error, busy, onClose, recover, retry }: {
-  error: SuperMemoNotice; busy: boolean; onClose(): void; recover(chooseFolder: boolean): void; retry(): void;
+export function SuperMemoLoadNotice({ error, busy, candidates, onClose, recover, retry }: {
+  error: SuperMemoNotice; busy: boolean; candidates?: { directory: string; name: string }[] | undefined;
+  onClose(): void; recover(choice: boolean | string): void; retry(): void;
 }) {
   const t = useTranslation();
   if (!error) return null;
-  const collection = error === 'xml-only' || error.startsWith('collection');
+  const collection = error.startsWith('collection');
   const collectionAccess = error === 'collectionAccess';
   const showMacPermissions = error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos';
   const title = collectionAccess ? 'desktop.superMemoDrafts.collectionAccessTitle'
-    : error === 'xml-only' ? 'desktop.superMemoDrafts.noCollection' : 'desktop.superMemoDrafts.loadFailed';
+    : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' : 'desktop.superMemoDrafts.loadFailed';
   return (
     <AppDialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
       <AppDialogPortal>
@@ -41,6 +42,10 @@ export function SuperMemoLoadNotice({ error, busy, onClose, recover, retry }: {
               {t(descriptions[error])}
               {showMacPermissions ? <span className="mt-2 block">{t('desktop.superMemoDrafts.macPermissionLocation')}</span> : null}
             </AppDialogDescription>
+            {error === 'collectionChoice' ? <div className="flex flex-col items-start gap-2">
+              {candidates?.map(candidate => <AppButton key={candidate.directory} disabled={busy}
+                onClick={() => recover(candidate.directory)}>{candidate.name}</AppButton>)}
+            </div> : null}
           </AppDialogBody>
           <AppDialogActions className="flex-wrap">
             {!collectionAccess ? <AppDialogClose asChild>

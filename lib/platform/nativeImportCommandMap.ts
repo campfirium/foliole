@@ -24,6 +24,10 @@ import type {
 
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.readSuperMemoSource]: { args: { filePath?: string; collectionDirectory?: string | null }; result: NativeSuperMemoSource | null };
+  [NATIVE_COMMANDS.selectSuperMemoCollection]: {
+    args: { filePath: string; title: string; candidate?: string };
+    result: { directory: string; name: string }[] | null;
+  };
   [NATIVE_COMMANDS.listSuperMemoImports]: {
     args: undefined;
     result: { batchId: string; percent: number; imported: number; skipped: number; unresolvedImages: number }[];

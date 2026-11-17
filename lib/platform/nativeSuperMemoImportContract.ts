@@ -54,6 +54,7 @@ export interface NativeSuperMemoSource {
   name: string;
   xml: string;
   collectionDirectory: string | undefined;
+  collectionCandidates?: { directory: string; name: string }[];
   collectionDiscoveryFailure?: 'access' | 'read';
 }
 

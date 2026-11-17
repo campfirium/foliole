@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { card, continueXml, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
+import { card, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
 
 test('updates the directory of an already imported card after previewing the original export', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -13,7 +13,6 @@ test('updates the directory of an already imported card after previewing the ori
     return { article: nodes.find(node => node.title === 'Source article'), card: nodes.find(node => node.title === 'Card') };
   });
   await loadSource(desktopApp, dialog, directory, xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
@@ -52,7 +51,6 @@ test('shows and confirms a missing parent and its existing child as one update',
   ], { 1: { outcome: 'skipped' } });
   expect(batch).toMatchObject({ imported: 1, skipped: 1 });
   await loadSource(desktopApp, dialog, testInfo.outputPath('MissingParent'), xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   await expect(dialog.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
   await expect(dialog.getByText(/→ Missing parent/)).toBeVisible();
@@ -94,8 +92,7 @@ for (const missingParent of [false, true]) {
     const before = await readLink();
     expect(before).toMatchObject({ parent: 'Previous parent', anchor: { kind: 'highlight', locator: { from: 0 } } });
     await loadSource(desktopApp, dialog, testInfo.outputPath('ExistingHighlight'), xml);
-    await continueXml(desktopWindow);
-    await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
+      await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
     if (missingParent) await expect(dialog.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
     await expect(dialog.getByText(/Update the text anchor|同时更新文字定位/)).toBeVisible();
     await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
@@ -155,7 +152,6 @@ test('previews a changed conversion result and updates the answer in place', asy
   const before = await readCard();
   expect(before).toMatchObject({ content: 'Original question', reveal: 'Old answer' });
   await loadSource(desktopApp, dialog, testInfo.outputPath('TextUpdate'), xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   await expect(dialog.getByRole('heading', { name: /^(Text changes|文字内容变化)$/ })).toBeVisible();
   await expect(dialog.getByText(/^Converted card · (Answer|答案)$/)).toBeVisible();
@@ -186,7 +182,6 @@ test('previews and recalculates an imported first review date', async ({ desktop
   const before = await readCard();
   expect(before.day).toBe(new Date('2027-08-01T00:00:00').toISOString());
   await loadSource(desktopApp, dialog, testInfo.outputPath('FirstReview'), xml);
-  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
   await expect(dialog.getByRole('heading', { name: /^(First review dates|首次到期日变化)$/ })).toBeVisible();
   await expect(dialog.getByText('2027-08-01 → 2027-09-06')).toBeVisible();

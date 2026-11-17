@@ -29,7 +29,7 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
-import { readSuperMemoSource, selectSuperMemoSource } from './readSuperMemoSource.js';
+import { readSuperMemoSource, selectSuperMemoCollection, selectSuperMemoSource } from './readSuperMemoSource.js';
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
@@ -102,6 +102,10 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
       ? selectSuperMemoSource(resolveTargetWindow(context))
       : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
         ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
+  }
+  if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
+    return selectSuperMemoCollection(resolveTargetWindow(context), asString(args.filePath, 'filePath'),
+      asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'));
   }
   const draftResult = await handleSuperMemoImportCommand(request.command, args, refreshDesktopDailyFlowAfterSuperMemoWrite);
   if (draftResult !== undefined) {
