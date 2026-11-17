@@ -1,0 +1,6 @@
+{
+  "settings.search.editorImmersiveDoubleClick.title": "बदलाव करने के लिए मुख्य टेक्स्ट पर डबल क्लिक करें",
+  "settings.search.editorImmersiveDoubleClick.description": "ध्यान से पढ़ने वाले मोड में टेक्स्ट बदलने के लिए दस्तावेज़ के मुख्य हिस्से पर डबल क्लिक करें। इसे बंद करने पर डबल क्लिक टेक्स्ट चुनने के काम आएगा। Enter दबाकर तब भी बदलाव कर सकते हैं।",
+  "settings.editor.readingMode.section": "पढ़ने का मोड",
+  "settings.editor.readingMode.aria": "पढ़ने के मोड की सेटिंग"
+}

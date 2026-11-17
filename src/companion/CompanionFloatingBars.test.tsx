@@ -32,7 +32,11 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
   });
 
-  it.each(['zh-Hans', 'zh-Hant'] as const)('uses the active language for bottom navigation in %s', async (locale) => {
+  it.each([
+    ['hi', 'सेटिंग'],
+    ['zh-Hans', '设置'],
+    ['zh-Hant', '設定']
+  ] as const)('uses the active language for bottom navigation in %s', async (locale, settingsLabel) => {
     expect(await preloadTranslationCatalog(locale)).toBe(true);
     function LocalizedContent() {
       const t = useTranslation();
@@ -48,7 +52,7 @@ describe('CompanionBottomTabBar', () => {
       const name = translate(locale, key);
       expect(screen.getByRole('button', { name })).toHaveTextContent(name);
     }
-    expect(screen.getByRole('heading')).toHaveTextContent(locale === 'zh-Hans' ? '设置' : '設定');
+    expect(screen.getByRole('heading')).toHaveTextContent(settingsLabel);
   });
 
   it('uses the theme color for the active tab without a filled indicator', () => {

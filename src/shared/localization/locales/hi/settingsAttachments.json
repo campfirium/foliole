@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "दिनों की संख्या तय करें",
+  "settings.attachments.daysUnit": "दिन",
+  "settings.attachments.title": "इस डिवाइस के अटैचमेंट",
+  "settings.attachments.error": "अटैचमेंट पर कार्रवाई पूरी नहीं हुई। फिर कोशिश करें।",
+  "settings.attachments.used": "इस्तेमाल हुई जगह",
+  "settings.attachments.refresh": "फिर से लोड करें",
+  "settings.attachments.thresholdValue": "{count} दिन",
+  "settings.attachments.thresholdInvalid": "0 से बड़ी कोई पूर्ण संख्या डालें।",
+  "settings.attachments.threshold": "सफ़ाई से पहले बिना इस्तेमाल के दिन",
+  "settings.attachments.thresholdHint": "जिन चित्रों और फ़ाइलों का कोई विषय अब इस्तेमाल नहीं करता, वे इतने दिनों तक बिना इस्तेमाल के रहने पर सफ़ाई के लिए तैयार माने जाएँगे। सिर्फ़ वे दिन गिने जाएँगे जब आप Foliole खोलेंगे।",
+  "settings.attachments.automatic": "अपने आप सफ़ाई",
+  "settings.attachments.automaticHint": "लंबे समय से इस्तेमाल न हुए अटैचमेंट अपने आप सफ़ाई के लिए तैयार माने जाएँगे।",
+  "settings.attachments.eligible": "इस्तेमाल न हुए अटैचमेंट",
+  "settings.attachments.eligibleHint": "तय दिनों से इस्तेमाल नहीं हुआ",
+  "settings.attachments.clean": "सफ़ाई के लिए तैयार चिह्नित करें",
+  "settings.attachments.trash": "सफ़ाई के लिए तैयार",
+  "settings.attachments.trashHint": "सफ़ाई होने तक वापस ला सकते हैं",
+  "settings.attachments.restore": "सभी वापस लाएँ",
+  "settings.attachments.empty": "सफ़ाई करें",
+  "settings.attachments.emptyTitle": "इन अटैचमेंट की सफ़ाई करें?",
+  "settings.attachments.emptyHint": "इन्हें हमेशा के लिए मिटा दिया जाएगा और {size} जगह खाली होगी। इन्हें वापस नहीं ला सकेंगे। किसी विषय पर असर नहीं पड़ेगा।"
+}

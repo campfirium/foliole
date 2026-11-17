@@ -1,0 +1,22 @@
+{
+  "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+  "desktop.wordpressPublish.postTitle": "पोस्ट का शीर्षक",
+  "desktop.wordpressPublish.target": "किस साइट पर भेजें",
+  "desktop.wordpressPublish.mode": "कार्रवाई",
+  "desktop.wordpressPublish.mode.create": "नई पोस्ट बनाएँ",
+  "desktop.wordpressPublish.mode.update": "जुड़ी हुई पोस्ट अपडेट करें",
+  "desktop.wordpressPublish.status": "पोस्ट की स्थिति",
+  "desktop.wordpressPublish.status.draft": "ड्राफ़्ट",
+  "desktop.wordpressPublish.status.publish": "प्रकाशित करें",
+  "desktop.wordpressPublish.category.placeholder": "श्रेणी चुनें",
+  "desktop.wordpressPublish.category.create": "“{name}” बनाएँ",
+  "desktop.wordpressPublish.catalog.loading": "श्रेणियाँ और टैग लोड हो रहे हैं",
+  "desktop.wordpressPublish.catalog.error": "श्रेणियाँ और टैग लोड नहीं हो सके। पैनल फिर खोलकर देखें।",
+  "desktop.wordpressPublish.confirm": "प्रकाशित करें",
+  "desktop.wordpressPublish.publishing": "प्रकाशित हो रहा है...",
+  "desktop.wordpressPublish.created": "WordPress पर प्रकाशित हो गया।",
+  "desktop.wordpressPublish.updated": "WordPress पर पोस्ट अपडेट हो गई।",
+  "desktop.wordpressPublish.viewPost": "पोस्ट देखें",
+  "desktop.wordpressPublish.error.publish": "WordPress पर प्रकाशित नहीं हो सका।",
+  "desktop.wordpressPublish.error.localSave": "पोस्ट साइट पर सहेजी गई, लेकिन Foliole उससे जुड़ा लिंक सहेज नहीं सका।"
+}

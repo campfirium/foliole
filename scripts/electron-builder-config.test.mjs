@@ -53,7 +53,7 @@ describe('electron-builder release packaging config', () => {
     ]);
 
     expect(config.electronLanguages).toEqual([
-      'de', 'en-US', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-CN', 'zh-TW'
+      'de', 'en-US', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-CN', 'zh-TW'
     ]);
     expect(config.files).toContain('dist/desktop/**/*');
     expect(config.files).not.toContain('dist/**/*');

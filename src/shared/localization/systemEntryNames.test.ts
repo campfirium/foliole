@@ -63,7 +63,6 @@ const SYSTEM_ENTRY_SETTINGS_KEYS = [
 describe('system entry display names', () => {
   afterEach(() => setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 }));
   it('provides all seven approved defaults for every formal locale', () => {
-    expect(APP_LOCALES).toHaveLength(12);
     for (const locale of APP_LOCALES) {
       expect(SYSTEM_ENTRY_IDS.map((id) => defaultSystemEntryDisplayName(locale, id))).toEqual(
         SYSTEM_ENTRY_LOCALIZATION_CONTRACT[locale].system

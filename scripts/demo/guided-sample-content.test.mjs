@@ -13,9 +13,9 @@ it('keeps committed guided sample packs synchronized with the Guide sources', as
   try {
     const outputPath = path.join(tempDir, 'generated', 'guidedSamplePacks.ts');
     const packs = await buildGuidedSampleContent({ contentRoot: 'docs/i18n/guides', outputPath });
-    expect(Object.keys(packs)).toEqual(['en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-Hans', 'zh-Hant']);
+    expect(Object.keys(packs)).toEqual(['en', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-Hans', 'zh-Hant']);
     await expect(readFile(outputPath, 'utf8')).resolves.toBe(await readFile(GUIDED_OUTPUT, 'utf8'));
-    for (const fileName of ['en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt_BR', 'ru', 'zh_Hans', 'zh_Hant']) {
+    for (const fileName of ['en', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt_BR', 'ru', 'zh_Hans', 'zh_Hant']) {
       await expect(readFile(path.join(tempDir, 'generated', 'locales', `${fileName}.ts`), 'utf8')).resolves.toBe(
         await readFile(path.join(path.dirname(GUIDED_OUTPUT), 'locales', `${fileName}.ts`), 'utf8')
       );
@@ -67,7 +67,7 @@ it('rejects review items inside the Desktop welcome subtree', async () => {
 it('rejects nested topics inside the Desktop welcome subtree', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-guided-sample-nested-'));
   try {
-    for (const locale of ['en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant']) {
+    for (const locale of ['en', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant']) {
       await mkdir(path.join(tempDir, locale), { recursive: true });
     }
     await writeFile(path.join(tempDir, 'guide.yml'), [

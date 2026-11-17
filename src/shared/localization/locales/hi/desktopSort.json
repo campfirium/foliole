@@ -1,0 +1,15 @@
+{
+  "desktop.sort.order.az": "A -> Z",
+  "desktop.sort.order.za": "Z -> A",
+  "desktop.sort.order.newest": "नए पहले",
+  "desktop.sort.order.oldest": "पुराने पहले",
+  "desktop.sort.order.manual": "हाथ से तय किया गया क्रम",
+  "desktop.sort.key.dateModified": "बदलाव की तारीख",
+  "desktop.sort.key.lastOpened": "पिछली बार खोला गया",
+  "desktop.sort.key.name": "नाम",
+  "desktop.sort.key.manual": "मैन्युअल",
+  "desktop.sort.fallback.dateImported": "इंपोर्ट की तारीख",
+  "desktop.sort.listBy": "सूची को {label} के हिसाब से क्रम में लगाएँ",
+  "desktop.sort.sortBy": "क्रम का आधार",
+  "desktop.sort.order": "क्रम"
+}

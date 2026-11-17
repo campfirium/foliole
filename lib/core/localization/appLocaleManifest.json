@@ -4,6 +4,7 @@
     "de": { "nativeName": "Deutsch", "systemLanguagePrefixes": ["de"] },
     "es": { "nativeName": "Español", "systemLanguagePrefixes": ["es"] },
     "fr": { "nativeName": "Français", "systemLanguagePrefixes": ["fr"] },
+    "hi": { "nativeName": "हिन्दी", "systemLanguagePrefixes": ["hi"] },
     "it": { "nativeName": "Italiano", "systemLanguagePrefixes": ["it"] },
     "ja": { "nativeName": "日本語", "systemLanguagePrefixes": ["ja"] },
     "ko": { "nativeName": "한국어", "systemLanguagePrefixes": ["ko"] },

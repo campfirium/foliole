@@ -1,0 +1,16 @@
+{
+  "companion.share.incomplete": "साझा नहीं किया जा सका। फिर कोशिश करें।",
+  "companion.search.unavailable": "यह नतीजा अब उपलब्ध नहीं है।",
+  "companion.search.refresh": "फिर से खोजें",
+  "companion.link.unavailable": "यह लिंक इस लाइब्रेरी में नहीं खोला जा सकता।",
+  "companion.link.dismiss": "बंद करें",
+  "companion.app.retry": "फिर कोशिश करें",
+  "companion.app.starting.eyebrow": "मोबाइल ऐप",
+  "companion.app.starting.message": "विषय खोलने से पहले इस डिवाइस की स्थायी पहचान और मोबाइल ऐप की स्थानीय स्टोरेज तैयार की जा रही हैं।",
+  "companion.app.starting.title": "मोबाइल ऐप शुरू हो रहा है",
+  "companion.app.bootstrap.module": "मोबाइल ऐप का स्टार्टअप",
+  "companion.app.bootstrapFailed": "मोबाइल ऐप शुरू नहीं हो सका",
+  "companion.app.iosPrepared.eyebrow": "iPhone के लिए Foliole",
+  "companion.app.iosPrepared.message": "स्थानीय स्टोरेज तैयार है। इस बिल्ड में विषय ब्राउज़ करने, अभ्यास दोहराने और सिंक की सुविधाएँ उपलब्ध नहीं हैं।",
+  "companion.app.iosPrepared.title": "यह iPhone तैयार है"
+}

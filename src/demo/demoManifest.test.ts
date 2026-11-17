@@ -79,7 +79,7 @@ describe('Demo manifest contract', () => {
       { locale: 'pt', hreflang: 'pt-BR', path: '/pt/guides/welcome-to-foliole/' },
       { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' }
     ]));
-    expect(manifestTopic.alternates).toHaveLength(12);
+    expect(manifestTopic.alternates).toHaveLength(13);
     expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
     expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
     expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -95,8 +95,8 @@ describe('Demo manifest contract', () => {
 
     expect(first.contractVersion).toBe(3);
     expect(first.publishedLocales).toEqual(DEMO_PUBLISHED_LOCALES);
-    expect(first.localePublishPacks.map((pack) => pack.locale)).toHaveLength(12);
-    expect(first.publishedLocales.map((locale) => locale.locale)).toHaveLength(12);
+    expect(first.localePublishPacks.map((pack) => pack.locale)).toHaveLength(13);
+    expect(first.publishedLocales.map((locale) => locale.locale)).toHaveLength(13);
     expect(first.localePublishPacks.find((pack) => pack.locale === 'zh-hans')?.topics[0]).toMatchObject({
       locale: 'zh-hans', hreflang: 'zh-Hans', canonicalPath: '/zh-hans/guides/welcome-to-foliole/', demoPath: '/zh-hans/demo/'
     });

@@ -55,6 +55,15 @@ const SYSTEM_ENTRY_NAMES: Record<AppLocale, Record<SystemEntryId, string>> = {
     shelved: 'En attente',
     removed: 'Retirés'
   },
+  hi: {
+    home: 'होम',
+    inbox: 'इनबॉक्स',
+    trash: 'ट्रैश',
+    'virtual-root': 'इंडेक्स',
+    published: 'प्रकाशित',
+    shelved: 'बाद के लिए रखे गए',
+    removed: 'हटाए गए'
+  },
   it: {
     home: 'Inizio',
     inbox: 'Posta in arrivo',

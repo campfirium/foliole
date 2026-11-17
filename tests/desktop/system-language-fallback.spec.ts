@@ -50,17 +50,18 @@ test('uses the host primary language, preserves a manual language, and returns t
     const manualSaved = desktopWindow.evaluate(() => new Promise<void>((resolve) => {
       window.addEventListener('foliole:runtime-app-settings-saved', () => resolve(), { once: true });
     }));
-    await language.selectOption('ja');
+    await expect(language.getByRole('option', { name: 'हिन्दी' })).toHaveAttribute('value', 'hi');
+    await language.selectOption('hi');
     await manualSaved;
-    await expect(dialog.getByRole('combobox', { name: 'アプリ言語' })).toHaveValue('ja');
+    await expect(dialog.getByRole('combobox', { name: 'ऐप की भाषा' })).toHaveValue('hi');
 
     await desktopSession.electronApp.close();
     restartedSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
-    await restartedSession.firstWindow.getByRole('button', { name: '設定', exact: true }).click();
+    await restartedSession.firstWindow.getByRole('button', { name: 'सेटिंग', exact: true }).click();
     dialog = restartedSession.firstWindow.getByRole('dialog');
-    await dialog.getByRole('button', { name: '一般', exact: true }).click();
-    language = dialog.getByRole('combobox', { name: 'アプリ言語' });
-    await expect(language).toHaveValue('ja');
+    await dialog.getByRole('button', { name: 'सामान्य', exact: true }).click();
+    language = dialog.getByRole('combobox', { name: 'ऐप की भाषा' });
+    await expect(language).toHaveValue('hi');
 
     const systemSaved = restartedSession.firstWindow.evaluate(() => new Promise<void>((resolve) => {
       window.addEventListener('foliole:runtime-app-settings-saved', () => resolve(), { once: true });

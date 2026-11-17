@@ -1,0 +1,18 @@
+{
+  "settings.demoPreview.banner.title": "डेस्कटॉप सेटिंग की झलक",
+  "settings.demoPreview.banner.description": "इस पैनल में डेस्कटॉप की सभी सेटिंग हैं। इससे आप देख सकते हैं कि Foliole की सुविधाएँ कैसे व्यवस्थित हैं। यहाँ किए गए बदलाव ऑनलाइन डेमो पर लागू नहीं होंगे।",
+  "settings.demoPreview.control.desktopOnly": "सिर्फ़ डेस्कटॉप पर",
+  "settings.demoPreview.control.previewOnly": "सिर्फ़ झलक",
+  "settings.demoPreview.downloadDesktop": "डेस्कटॉप ऐप डाउनलोड करें",
+  "settings.demoPreview.empty": "झलक उपलब्ध नहीं है",
+  "settings.demoPreview.emptyDescription": "सेटिंग का यह समूह डेस्कटॉप ऐप में उपलब्ध है।",
+  "settings.demoPreview.about.title": "Foliole के बारे में",
+  "settings.demoPreview.hotkeys.title": "कीबोर्ड शॉर्टकट",
+  "settings.demoPreview.hotkeys.search": "खोज का शॉर्टकट",
+  "settings.demoPreview.hotkeys.settings": "सेटिंग का शॉर्टकट",
+  "settings.demoPreview.hotkeys.study": "अध्ययन का शॉर्टकट",
+  "settings.demoPreview.mouseGestures.title": "माउस जेस्चर का व्यवहार",
+  "settings.demoPreview.readwise.status": "Readwise Reader की स्थिति",
+  "settings.demoPreview.note.label": "फ़ोल्डर ऐक्सेस",
+  "settings.demoPreview.note.externalFolders": "इस डेमो में बाहरी फ़ोल्डर की सुविधाएँ सीमित हैं। डेस्कटॉप ऐप में पूरी सुविधाएँ उपलब्ध हैं।"
+}

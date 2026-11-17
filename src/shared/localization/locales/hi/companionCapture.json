@@ -1,0 +1,21 @@
+{
+  "companion.capture.import.readingModeDescription": "चुनें कि अध्याय दोहराने की कतार में कैसे जुड़ें।",
+  "companion.capture.title": "सामग्री जोड़ें",
+  "companion.capture.text": "टेक्स्ट जोड़ें",
+  "companion.capture.placeholder": "नया विषय लिखें",
+  "companion.capture.paste": "क्लिपबोर्ड से पेस्ट करें",
+  "companion.capture.error.clipboardEmpty": "क्लिपबोर्ड में कोई टेक्स्ट नहीं मिला।",
+  "companion.capture.error.clipboardFailed": "क्लिपबोर्ड पढ़ा नहीं जा सका। क्लिपबोर्ड की अनुमति दें और फिर कोशिश करें।",
+  "companion.capture.upload": "फ़ाइल अपलोड करें",
+  "companion.capture.import.imagesUnavailable": "टेक्स्ट इंपोर्ट हो गया। चुनी हुई फ़ाइल से कुछ स्थानीय चित्र इंपोर्ट नहीं हो सके।",
+  "companion.capture.import.conversionIncomplete": "फ़ाइल इंपोर्ट हो गई। उसकी कुछ फ़ॉर्मैटिंग या अंदर जोड़ी गई सामग्री बदली नहीं जा सकी।",
+  "companion.capture.close": "बंद करें",
+  "companion.capture.refresh": "फिर से लोड करें",
+  "companion.capture.refreshing": "फिर से लोड हो रहा है...",
+  "companion.capture.error.refreshFailed": "विषय सहेजा गया। सूची फिर से लोड नहीं हो सकी। दोबारा कोशिश करें।",
+  "companion.capture.save": "सहेजें",
+  "companion.capture.saving": "सहेजा जा रहा है...",
+  "companion.capture.error.inboxUnavailable": "नया विषय सहेजने से पहले इस डिवाइस को सिंक करें।",
+  "companion.capture.error.targetUnavailable": "यह जगह अब उपलब्ध नहीं है। सामग्री जोड़ने की विंडो बंद करें और दूसरी जगह चुनें।",
+  "companion.capture.error.saveFailed": "यह विषय सहेजा नहीं जा सका। फिर कोशिश करें।"
+}

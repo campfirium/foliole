@@ -9,6 +9,7 @@ const REGION_EXCERPT_NAMES = {
   en: 'Region excerpt',
   es: 'Extracto de región',
   fr: 'Extrait de zone',
+  hi: 'चुने हिस्से का अंश',
   it: 'Estratto di area',
   ja: '範囲の抜粋',
   ko: '영역 발췌',

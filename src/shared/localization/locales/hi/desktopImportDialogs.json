@@ -1,0 +1,21 @@
+{
+  "desktop.epubImport.mode.title": "पढ़ने का मोड चुनें",
+  "desktop.epubImport.mode.description": "आप इसे बाद में विषय पर राइट क्लिक करके खुले मेनू से बदल सकते हैं।",
+  "desktop.epubImport.mode.aria": "EPUB पढ़ने का मोड",
+  "desktop.epubImport.mode.sequential.label": "क्रम से पढ़ें",
+  "desktop.epubImport.mode.sequential.suitability": "नई सामग्री के लिए",
+  "desktop.epubImport.mode.sequential.description": "अध्याय क्रम से पढ़ें। मौजूदा अध्याय हटाने के बाद अगला अध्याय दोहराने की कतार में जुड़ेगा।",
+  "desktop.epubImport.mode.free.label": "किसी भी क्रम में पढ़ें",
+  "desktop.epubImport.mode.free.suitability": "पहले से मौजूद सामग्री के लिए",
+  "desktop.epubImport.mode.free.description": "हर अध्याय उपलब्ध रहता है और किसी भी क्रम में दोहराने की कतार में जुड़ सकता है।",
+  "desktop.readwise.importDialog.blockedTitle": "पहले इंपोर्ट की झलक देखें",
+  "desktop.readwise.importDialog.ok": "ठीक है",
+  "desktop.readwise.importDialog.title": "Readwise से इंपोर्ट",
+  "desktop.readwise.importDialog.previewTitle": "Readwise से इंपोर्ट की झलक",
+  "desktop.readwise.importDialog.preparing": "झलक तैयार हो रही है...",
+  "desktop.readwise.importDialog.cancel": "रद्द करें",
+  "desktop.readwise.importDialog.cancelling": "रद्द किया जा रहा है",
+  "desktop.readwise.importDialog.import": "इंपोर्ट करें",
+  "desktop.readwise.importDialog.importing": "इंपोर्ट हो रहा है",
+  "desktop.readwise.previewSample.highlightMissing": "यह हाइलाइट मूल विषय के टेक्स्ट में नहीं मिला।"
+}

@@ -1,0 +1,22 @@
+{
+  "desktop.rightPanel.assistant.provider.label": "नई बातचीत की सेवा",
+  "desktop.rightPanel.assistant.provider.byok": "आपका मॉडल · {model}",
+  "desktop.rightPanel.assistant.provider.historyByok": "आपका मॉडल",
+  "desktop.rightPanel.assistant.provider.unconfiguredModel": "सेट नहीं किया गया",
+  "desktop.rightPanel.assistant.model.settings": "मॉडल और प्रदर्शन की सेटिंग",
+  "desktop.rightPanel.assistant.model.loading": "उपलब्ध मॉडल और प्रदर्शन की सेटिंग लोड हो रही हैं...",
+  "desktop.rightPanel.assistant.model.unavailable": "मॉडल और प्रदर्शन की सेटिंग उपलब्ध नहीं हैं। संदेशों के लिए Codex की डिफ़ॉल्ट सेटिंग इस्तेमाल होगी।",
+  "desktop.rightPanel.assistant.model.tooltip": "मॉडल: {model} · तर्क का स्तर: {effort} · गति: {speed}",
+  "desktop.rightPanel.assistant.model.model": "मॉडल",
+  "desktop.rightPanel.assistant.model.reasoning": "तर्क का स्तर",
+  "desktop.rightPanel.assistant.model.effort.none": "कोई नहीं",
+  "desktop.rightPanel.assistant.model.effort.minimal": "न्यूनतम",
+  "desktop.rightPanel.assistant.model.effort.low": "कम",
+  "desktop.rightPanel.assistant.model.effort.medium": "मध्यम",
+  "desktop.rightPanel.assistant.model.effort.high": "ज़्यादा",
+  "desktop.rightPanel.assistant.model.effort.xhigh": "बहुत ज़्यादा",
+  "desktop.rightPanel.assistant.model.effort.max": "अधिकतम",
+  "desktop.rightPanel.assistant.model.effort.ultra": "अति उच्च",
+  "desktop.rightPanel.assistant.model.speed": "गति",
+  "desktop.rightPanel.assistant.model.defaultSpeed": "डिफ़ॉल्ट"
+}

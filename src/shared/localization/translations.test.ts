@@ -15,6 +15,7 @@ const FRONTMATTER_DESCRIPTIONS = {
   en: 'Customize which fields appear directly in the body metadata bar; use the meta button in the bar to expand the remaining YAML metadata.',
   es: 'Personaliza los campos que se muestran directamente en la barra de metadatos del cuerpo; el resto de los metadatos YAML se puede desplegar con el botón meta de la barra.',
   fr: 'Personnalisez les champs affichés directement dans la barre de métadonnées du corps du texte ; les autres métadonnées YAML peuvent être développées avec le bouton meta de la barre.',
+  hi: 'चुनें कि दस्तावेज़ की मेटाडेटा बार में कौन से फ़ील्ड सीधे दिखें। बाकी YAML मेटाडेटा देखने के लिए बार में meta बटन दबाएँ।',
   it: 'Personalizza i campi mostrati direttamente nella barra dei metadati del corpo; gli altri metadati YAML possono essere espansi con il pulsante meta nella barra.',
   ja: '本文のメタデータ欄に直接表示するフィールドをカスタマイズします。その他の YAML メタデータは、欄内の meta ボタンから展開できます。',
   ko: '본문 메타데이터 표시줄에 직접 표시할 필드를 사용자 지정합니다. 나머지 YAML 메타데이터는 표시줄의 meta 버튼으로 펼쳐 볼 수 있습니다.',
@@ -87,4 +88,10 @@ describe('translation catalog loading', () => {
     );
     expect(translate('zh-Hans', 'desktop.readwise.sync.action')).toBe('立即同步');
   });
+});
+
+it('uses English for the deferred SuperMemo copy in the Hindi interface', async () => {
+  expect(await preloadTranslationCatalog('hi')).toBe(true);
+  expect(translate('hi', 'settings.title')).toBe('सेटिंग');
+  expect(translate('hi', 'desktop.superMemoDrafts.title')).toBe('SuperMemo import preview');
 });

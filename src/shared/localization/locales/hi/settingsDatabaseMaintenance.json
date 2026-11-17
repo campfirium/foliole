@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "डेटाबेस के रखरखाव की सेटिंग",
+  "settings.backups.database.sectionTitle": "डेटाबेस",
+  "settings.backups.database.title": "डेटाबेस का स्टोरेज",
+  "settings.backups.database.description": "कुल {size} · {reclaimable} जगह खाली की जा सकती है ({percent}%)",
+  "settings.backups.database.unavailable": "डेटाबेस के स्टोरेज की जानकारी उपलब्ध नहीं है।",
+  "settings.backups.database.action": "डेटाबेस की खाली जगह वापस पाएँ",
+  "settings.backups.database.compacting": "डेटाबेस की जगह खाली की जा रही है...",
+  "settings.backups.database.success": "डेटाबेस की खाली जगह वापस मिल गई।",
+  "settings.backups.database.failed": "डेटाबेस की खाली जगह वापस नहीं मिल सकी: {message}",
+  "settings.backups.kind.preCompact": "डेटाबेस की जगह खाली करने से पहले लिया गया सुरक्षा स्नैपशॉट"
+}

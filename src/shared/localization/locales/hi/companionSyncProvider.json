@@ -1,0 +1,20 @@
+{
+  "companion.sync.joinRequest.description": "यह डिवाइस आपके सिंक समूह में शामिल होना चाहता है।",
+  "companion.sync.joinRequest.error": "Foliole यह अनुरोध अपडेट नहीं कर सका। फिर कोशिश करें।",
+  "companion.sync.joinRequest.approve": "मंज़ूर करें",
+  "companion.sync.joinRequest.reject": "अस्वीकार करें",
+  "companion.sync.group.current": "मौजूदा सिंक समूह",
+  "companion.sync.group.details": "जानकारी",
+  "companion.sync.group.open": "सिंक समूह देखें",
+  "companion.sync.leave.button": "सिंक समूह छोड़ें",
+  "companion.sync.leave.description": "यह डिवाइस इस सिंक समूह के साथ सिंक होना बंद कर देगा। विषय और अटैचमेंट इस डिवाइस पर बने रहेंगे।",
+  "companion.sync.leave.error": "Foliole किसी दूसरे डिवाइस से समूह छोड़ने की पुष्टि नहीं कर सका। जब कोई दूसरा डिवाइस उपलब्ध हो, तब फिर कोशिश करें।",
+  "companion.sync.leave.progress": "सिंक समूह छोड़ा जा रहा है",
+  "companion.sync.participation.sync": "सिंक",
+  "companion.sync.participation.turnOn": "चालू करें",
+  "companion.sync.participation.turnOff": "बंद करें",
+  "companion.sync.participation.pause": "सिंक रोकें",
+  "companion.sync.participation.resume": "सिंक जारी रखें",
+  "companion.sync.participation.inactive": "कनेक्ट या सिंक करने से पहले सिंक चालू करें और उसे जारी रखें।",
+  "companion.sync.provider.foregroundHint": "डेटा भेजते समय Foliole स्क्रीन चालू रखता है। वहीं से आगे बढ़ने के लिए Foliole पर लौटें।"
+}

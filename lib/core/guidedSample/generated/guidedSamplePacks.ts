@@ -4,6 +4,7 @@ import { DE_GUIDED_SAMPLE_PACK } from './locales/de.js';
 import { EN_GUIDED_SAMPLE_PACK } from './locales/en.js';
 import { ES_GUIDED_SAMPLE_PACK } from './locales/es.js';
 import { FR_GUIDED_SAMPLE_PACK } from './locales/fr.js';
+import { HI_GUIDED_SAMPLE_PACK } from './locales/hi.js';
 import { IT_GUIDED_SAMPLE_PACK } from './locales/it.js';
 import { JA_GUIDED_SAMPLE_PACK } from './locales/ja.js';
 import { KO_GUIDED_SAMPLE_PACK } from './locales/ko.js';
@@ -18,6 +19,7 @@ export const GENERATED_GUIDED_SAMPLE_PACKS: Record<string, GuidedSampleContentPa
   "de": DE_GUIDED_SAMPLE_PACK,
   "es": ES_GUIDED_SAMPLE_PACK,
   "fr": FR_GUIDED_SAMPLE_PACK,
+  "hi": HI_GUIDED_SAMPLE_PACK,
   "it": IT_GUIDED_SAMPLE_PACK,
   "ja": JA_GUIDED_SAMPLE_PACK,
   "ko": KO_GUIDED_SAMPLE_PACK,

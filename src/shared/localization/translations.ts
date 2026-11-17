@@ -102,6 +102,7 @@ const CATALOG_LOADERS: Record<Exclude<AppLocale, 'en'>, () => Promise<Translatio
   de: () => import('./locales/de').then((module) => module.TRANSLATIONS),
   es: () => import('./locales/es').then((module) => module.TRANSLATIONS),
   fr: () => import('./locales/fr').then((module) => module.TRANSLATIONS),
+  hi: () => import('./locales/hi').then((module) => module.TRANSLATIONS),
   it: () => import('./locales/it').then((module) => module.TRANSLATIONS),
   ja: () => import('./locales/ja').then((module) => module.TRANSLATIONS),
   ko: () => import('./locales/ko').then((module) => module.TRANSLATIONS),

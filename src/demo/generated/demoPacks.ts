@@ -1617,6 +1617,410 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
       }
     ]
   },
+  "hi": {
+    "contractVersion": 3,
+    "generatedAt": "1970-01-01T00:00:00.000Z",
+    "sourceLocale": "hi",
+    "translatableFields": [
+      "topics[].title",
+      "topics[].description",
+      "topics[].summary",
+      "topics[].blocks[].text",
+      "topics[].highlights[].title",
+      "topics[].highlights[].excerpt",
+      "topics[].reviewItems[].title",
+      "topics[].reviewItems[].prompt",
+      "topics[].reviewItems[].answer"
+    ],
+    "source": {
+      "rootNodeId": null,
+      "rootTitle": "docs/i18n/guides",
+      "warnings": []
+    },
+    "topics": [
+      {
+        "id": "welcome-to-foliole",
+        "slug": "welcome-to-foliole",
+        "parentId": null,
+        "childTopicIds": [
+          "welcome-to-foliole.reading-break-the-whole-into-pieces",
+          "welcome-to-foliole.highlight-extract-the-essence",
+          "welcome-to-foliole.cloze-create-a-test-item",
+          "welcome-to-foliole.test-make-it-stick",
+          "welcome-to-foliole.rewrite-clarify-understanding",
+          "welcome-to-foliole.schedule-show-it-at-the-right-time",
+          "welcome-to-foliole.repeat-internalize-knowledge"
+        ],
+        "title": "Foliole में आपका स्वागत है",
+        "description": "शुरू करने के लिए नीचे की क्रिया पट्टी में Read चुनें, या 3 या F दबाएँ।",
+        "summary": "शुरू करने के लिए नीचे की क्रिया पट्टी में Read चुनें, या 3 या F दबाएँ।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "शुरू करने के लिए नीचे की क्रिया पट्टी में Read चुनें, या 3 या F दबाएँ।",
+            "id": "welcome-to-foliole-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.reading-break-the-whole-into-pieces",
+        "slug": "welcome-to-foliole.reading-break-the-whole-into-pieces",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "पढ़ना: सामग्री को छोटे हिस्सों में बाँटें",
+        "description": "सारी सामग्री एक ही बार में पढ़ना ज़रूरी नहीं है। अपनी ज़रूरत के हिसाब से चुनें: मौजूदा सामग्री जल्द फिर दिखाने के लिए नीचे की क्रिया पट्टी में Soon चुनें (या 1 दबाएँ), बाद में दिखाने के लिए Later (या 2), इस बार जितना पढ़ा है उसके बाद फिर दिखाने के लिए Read (या 3), और पढ़ना पूरा हो जाने पर अपने आप फिर न दिखाने के लिए Dismiss (या 4) चुनें।",
+        "summary": "सारी सामग्री एक ही बार में पढ़ना ज़रूरी नहीं है। अपनी ज़रूरत के हिसाब से चुनें: मौजूदा सामग्री जल्द फिर दिखाने के लिए नीचे की क्रिया पट्टी में Soon चुनें (या 1 दबाएँ), बाद में दिखाने के लिए Later (या 2), इस बार जितना पढ़ा है उसके बाद फिर दिखाने के लिए Read (या 3), और पढ़ना पूरा हो जाने पर अपने आप फिर न दिखाने के लिए Dismiss (या 4) चुनें।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.reading-break-the-whole-into-pieces"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "सारी सामग्री एक ही बार में पढ़ना ज़रूरी नहीं है।\nअपनी ज़रूरत के हिसाब से चुनें: मौजूदा सामग्री जल्द फिर दिखाने के लिए नीचे की क्रिया पट्टी में Soon चुनें (या 1 दबाएँ), बाद में दिखाने के लिए Later (या 2), इस बार जितना पढ़ा है उसके बाद फिर दिखाने के लिए Read (या 3), और पढ़ना पूरा हो जाने पर अपने आप फिर न दिखाने के लिए Dismiss (या 4) चुनें।",
+            "id": "welcome-to-foliole.reading-break-the-whole-into-pieces-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.highlight-extract-the-essence",
+        "slug": "welcome-to-foliole.highlight-extract-the-essence",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "हाइलाइट: ज़रूरी अंश निकालें",
+        "description": "जिस अंश को निकालना चाहते हैं, उसे चुनें। एक फ़्लोटिंग टूलबार दिखाई देगा।",
+        "summary": "जिस अंश को निकालना चाहते हैं, उसे चुनें। एक फ़्लोटिंग टूलबार दिखाई देगा।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.highlight-extract-the-essence"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "जिस अंश को निकालना चाहते हैं, उसे चुनें। एक फ़्लोटिंग टूलबार दिखाई देगा।",
+            "id": "welcome-to-foliole.highlight-extract-the-essence-block-1"
+          },
+          {
+            "kind": "paragraph",
+            "text": "उसमें Highlight चुनें या Alt + Z दबाएँ। इससे चुना हुआ अंश हाइलाइट होगा और उसका एक नया उपविषय बनेगा।",
+            "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.cloze-create-a-test-item",
+        "slug": "welcome-to-foliole.cloze-create-a-test-item",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "रिक्त स्थान: जाँच के लिए सवाल बनाएँ",
+        "description": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+        "summary": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.cloze-create-a-test-item"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें।\nफ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ।\nFoliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+            "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.test-make-it-stick",
+        "slug": "welcome-to-foliole.test-make-it-stick",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "जाँच: याददाश्त मज़बूत करें",
+        "description": "जब रिक्त स्थान से बना सवाल (Item) सामने आए, तो पहले जवाब याद करने की कोशिश करें। फिर नीचे की क्रिया पट्टी में अपने जवाब की रेटिंग दें: जवाब याद न आया हो तो Again चुनें (या 1 दबाएँ), कुछ हिस्सा याद आया हो तो Hard (या 2), जवाब याद आ गया हो तो Good (या 3), और सवाल बहुत आसान लगा हो तो Easy (या 4) चुनें। आपकी रेटिंग तय करने में मदद करती है कि सवाल फिर कब दिखेगा। याद करने की यह कोशिश भी याददाश्त मज़बूत करती है।",
+        "summary": "जब रिक्त स्थान से बना सवाल (Item) सामने आए, तो पहले जवाब याद करने की कोशिश करें। फिर नीचे की क्रिया पट्टी में अपने जवाब की रेटिंग दें: जवाब याद न आया हो तो Again चुनें (या 1 दबाएँ), कुछ हिस्सा याद आया हो तो Hard (या 2), जवाब याद आ गया हो तो Good (या 3), और सवाल बहुत आसान लगा हो तो Easy (या 4) चुनें। आपकी रेटिंग तय करने में मदद करती है कि सवाल फिर कब दिखेगा। याद करने की यह कोशिश भी याददाश्त मज़बूत करती है।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.test-make-it-stick"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "जब रिक्त स्थान से बना सवाल (Item) सामने आए, तो पहले जवाब याद करने की कोशिश करें।\nफिर नीचे की क्रिया पट्टी में अपने जवाब की रेटिंग दें: जवाब याद न आया हो तो Again चुनें (या 1 दबाएँ), कुछ हिस्सा याद आया हो तो Hard (या 2), जवाब याद आ गया हो तो Good (या 3), और सवाल बहुत आसान लगा हो तो Easy (या 4) चुनें।\nआपकी रेटिंग तय करने में मदद करती है कि सवाल फिर कब दिखेगा। याद करने की यह कोशिश भी याददाश्त मज़बूत करती है।",
+            "id": "welcome-to-foliole.test-make-it-stick-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.rewrite-clarify-understanding",
+        "slug": "welcome-to-foliole.rewrite-clarify-understanding",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "दोबारा लिखना: अपनी समझ साफ़ करें",
+        "description": "जब सामग्री बाद की पुनरावृत्तियों में फिर सामने आए, तो आप उसे फिर से लिख सकते हैं, ताकि उसे समझना और याद रखना आसान हो जाए।",
+        "summary": "जब सामग्री बाद की पुनरावृत्तियों में फिर सामने आए, तो आप उसे फिर से लिख सकते हैं, ताकि उसे समझना और याद रखना आसान हो जाए।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.rewrite-clarify-understanding"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "जब सामग्री बाद की पुनरावृत्तियों में फिर सामने आए, तो आप उसे फिर से लिख सकते हैं, ताकि उसे समझना और याद रखना आसान हो जाए।",
+            "id": "welcome-to-foliole.rewrite-clarify-understanding-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.schedule-show-it-at-the-right-time",
+        "slug": "welcome-to-foliole.schedule-show-it-at-the-right-time",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "समय तय करना: सही समय पर फिर दिखाएँ",
+        "description": "सामग्री की प्राथमिकता, पढ़ते समय चुनी गई क्रियाएँ और सवालों पर दी गई रेटिंग, तीनों मिलकर Foliole को तय करने में मदद करते हैं कि सामग्री फिर कब दिखाई जाए।",
+        "summary": "सामग्री की प्राथमिकता, पढ़ते समय चुनी गई क्रियाएँ और सवालों पर दी गई रेटिंग, तीनों मिलकर Foliole को तय करने में मदद करते हैं कि सामग्री फिर कब दिखाई जाए।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.schedule-show-it-at-the-right-time"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "सामग्री की प्राथमिकता, पढ़ते समय चुनी गई क्रियाएँ और सवालों पर दी गई रेटिंग, तीनों मिलकर Foliole को तय करने में मदद करते हैं कि सामग्री फिर कब दिखाई जाए।",
+            "id": "welcome-to-foliole.schedule-show-it-at-the-right-time-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "welcome-to-foliole.repeat-internalize-knowledge",
+        "slug": "welcome-to-foliole.repeat-internalize-knowledge",
+        "parentId": "welcome-to-foliole",
+        "childTopicIds": [],
+        "title": "दोहराना: ज्ञान को आत्मसात करें",
+        "description": "अंतराल देकर दोहराने से ज्ञान धीरे-धीरे पक्का होता है। चरणों में पढ़ने से आप सामग्री को पूरा पढ़ पाते हैं। Foliole चरणों में पढ़ना आसान बनाता है।",
+        "summary": "अंतराल देकर दोहराने से ज्ञान धीरे-धीरे पक्का होता है। चरणों में पढ़ने से आप सामग्री को पूरा पढ़ पाते हैं। Foliole चरणों में पढ़ना आसान बनाता है।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "welcome-to-foliole.repeat-internalize-knowledge"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "अंतराल देकर दोहराने से ज्ञान धीरे-धीरे पक्का होता है।\nचरणों में पढ़ने से आप सामग्री को पूरा पढ़ पाते हैं।\nFoliole चरणों में पढ़ना आसान बनाता है।",
+            "id": "welcome-to-foliole.repeat-internalize-knowledge-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "what-the-foliole-demo-is-for",
+        "slug": "what-the-foliole-demo-is-for",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "Foliole का डेमो किस लिए है?",
+        "description": "हो सकता है आप लंबे समय से SuperMemo का इस्तेमाल कर रहे हों और देखना चाहते हों कि Foliole उससे कैसे अलग है।",
+        "summary": "हो सकता है आप लंबे समय से SuperMemo का इस्तेमाल कर रहे हों और देखना चाहते हों कि Foliole उससे कैसे अलग है।",
+        "runtime": {
+          "state": "topic",
+          "topicId": "what-the-foliole-demo-is-for"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "हो सकता है आप लंबे समय से SuperMemo का इस्तेमाल कर रहे हों और देखना चाहते हों कि Foliole उससे कैसे अलग है।",
+            "id": "what-the-foliole-demo-is-for-block-1"
+          },
+          {
+            "kind": "paragraph",
+            "text": "या शायद आप Obsidian जैसे पढ़ने और नोट लेने के टूल का काफ़ी इस्तेमाल करते हों और अपनी सामग्री के साथ पढ़ने और हाइलाइट करने से आगे बढ़ना चाहते हों।",
+            "id": "what-the-foliole-demo-is-for-block-2"
+          },
+          {
+            "kind": "paragraph",
+            "text": "या हो सकता है चरणों में पढ़ने का तरीका आपके लिए नया हो और आप अभी तय न कर पाए हों कि यह आपके काम आएगा या नहीं।",
+            "id": "what-the-foliole-demo-is-for-block-3"
+          },
+          {
+            "kind": "paragraph",
+            "text": "हमने यह ऑनलाइन डेमो बनाया है ताकि आप खुद Foliole आज़माकर देख सकें।",
+            "id": "what-the-foliole-demo-is-for-block-4"
+          },
+          {
+            "kind": "paragraph",
+            "text": "कुछ भी इंस्टॉल करने की ज़रूरत नहीं है। पेज खोलें और अपने ब्राउज़र में आज़माना शुरू करें। यहाँ आप Foliole की मार्गदर्शिकाएँ पढ़ सकते हैं, जिन्हें समय के साथ अपडेट किया जाता रहेगा। आप अपने Markdown दस्तावेज़ आयात करके चरणों में पढ़ने की मुख्य प्रक्रिया भी आज़मा सकते हैं।",
+            "id": "what-the-foliole-demo-is-for-block-5"
+          },
+          {
+            "kind": "paragraph",
+            "text": "ऑनलाइन डेमो में सिम्युलेट की गई तारीखें उपलब्ध हैं, ताकि आप जल्दी देख सकें कि Foliole सामग्री को दोबारा दिखाने का समय कैसे तय करता है। सेटिंग्स पैनल में डेस्कटॉप सेटिंग्स का पूर्वावलोकन है। उसमें डेस्कटॉप ऐप की पूरी सेटिंग्स दिखाई जाती हैं, ताकि आप समझ सकें कि Foliole की सुविधाएँ कैसे व्यवस्थित हैं। वहाँ किए गए बदलावों का ऑनलाइन डेमो पर कोई असर नहीं पड़ता।",
+            "id": "what-the-foliole-demo-is-for-block-6"
+          },
+          {
+            "kind": "paragraph",
+            "text": "ऑनलाइन डेमो डेटा को आपके ब्राउज़र में ही सहेजता है, इसलिए इसे अपना इकलौता बैकअप न मानें। इसमें डेस्कटॉप ऐप की कई मुख्य सुविधाएँ भी नहीं हैं, जैसे PDF, EPUB और इमेज देखना, बाहरी दस्तावेज़ लाइब्रेरी, उन्नत खोज, Obsidian और Readwise Reader के साथ इंटीग्रेशन, Markdown मिरर और स्थानीय नेटवर्क (LAN) पर सिंक।",
+            "id": "what-the-foliole-demo-is-for-block-7"
+          },
+          {
+            "kind": "paragraph",
+            "text": "ऑनलाइन डेमो को डेस्कटॉप ऐप के साथ अपडेट किया जाता रहेगा। इसमें आने वाली समस्याएँ डेस्कटॉप ऐप की समस्याओं से अलग हो सकती हैं। आप बाईं साइडबार से सीधे प्रतिक्रिया भेज सकते हैं। GitHub पर प्रोजेक्ट को फ़ॉलो करने, समस्याएँ रिपोर्ट करने या चर्चा में शामिल होने के लिए भी आपका स्वागत है।",
+            "id": "what-the-foliole-demo-is-for-block-8"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      }
+    ]
+  },
   "it": {
     "contractVersion": 3,
     "generatedAt": "1970-01-01T00:00:00.000Z",

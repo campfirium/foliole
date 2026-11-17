@@ -10,7 +10,7 @@ function clonePack(): DemoPack {
 describe('Demo Pack contract', () => {
   it('publishes complete localized Guides without English fallbacks', () => {
     expect(Object.keys(GENERATED_DEMO_PACKS).sort()).toEqual([
-      'de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant'
+      'de', 'en', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'zh-hans', 'zh-hant'
     ]);
     expect(Object.values(GENERATED_DEMO_PACKS).every((pack) => (
       pack.topics.length === 9 && pack.source.warnings.length === 0

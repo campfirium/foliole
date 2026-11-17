@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "बैकअप खोज की सेटिंग",
+  "settings.backups.search.sectionTitle": "बैकअप की सामग्री में खोजें",
+  "settings.backups.search.description": "मौजूदा बैकअप एक-एक करके खोलें और उनकी सामग्री में खोजें।",
+  "settings.backups.search.action": "बैकअप की सामग्री में खोजें",
+  "settings.backups.search.title": "बैकअप की सामग्री में खोजें",
+  "settings.backups.search.input": "खोज का शब्द",
+  "settings.backups.search.placeholder": "खोज का शब्द डालें",
+  "settings.backups.search.submit": "खोजें",
+  "settings.backups.search.cancel": "रद्द करें",
+  "settings.backups.search.continue": "खोज जारी रखें",
+  "settings.backups.search.noMoreResults": "और नतीजे नहीं हैं",
+  "settings.backups.search.initial": "खोज का शब्द डालें।",
+  "settings.backups.search.searchingBackups": "बैकअप की सामग्री में खोज हो रही है...",
+  "settings.backups.search.failed": "बैकअप की खोज रुक गई। {message}",
+  "settings.backups.search.cancelled": "बैकअप की खोज रद्द हो गई।",
+  "settings.backups.search.complete": "खोज से मेल खाती और सामग्री नहीं मिली।",
+  "settings.backups.search.completePartial": "पढ़ी जा सकने वाली सामग्री में और नतीजे नहीं मिले। {count} बैकअप फ़ाइलें पढ़ी नहीं जा सकीं।",
+  "settings.backups.search.trashed": "ट्रैश में"
+}

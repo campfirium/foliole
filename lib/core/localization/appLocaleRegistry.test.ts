@@ -10,12 +10,13 @@ import {
 describe('formal app locale registry', () => {
   it('registers the README locale set in product order', () => {
     expect(APP_LOCALES).toEqual([
-      'en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-Hans', 'zh-Hant'
+      'en', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt-BR', 'ru', 'zh-Hans', 'zh-Hant'
     ]);
   });
 
   it('maps only semantically matching primary language tags', () => {
     expect(resolveRegisteredAppLocale('de-AT')).toBe('de');
+    expect(resolveRegisteredAppLocale('hi-IN')).toBe('hi');
     expect(resolveRegisteredAppLocale('pt')).toBe('pt-BR');
     expect(resolveRegisteredAppLocale('pt-BR')).toBe('pt-BR');
     expect(resolveRegisteredAppLocale('pt-PT')).toBeNull();

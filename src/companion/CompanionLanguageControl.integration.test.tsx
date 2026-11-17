@@ -94,3 +94,25 @@ it('keeps the previous language and saved preference on failure and permits retr
   expect(screen.getByRole('status')).toHaveTextContent('设置');
   expect(localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('zh-Hans');
 });
+
+it('switches to Hindi, keeps it when reopened, and follows Hindi (India) in System mode', async () => {
+  const view = openSettings();
+  const select = screen.getByRole('combobox', { name: 'App language' });
+  expect(screen.getByRole('option', { name: 'हिन्दी' })).toHaveValue('hi');
+  fireEvent.change(select, { target: { value: 'hi' } });
+  expect(await screen.findByRole('combobox', { name: 'ऐप की भाषा' })).toHaveValue('hi');
+  expect(screen.getByRole('status')).toHaveTextContent('सेटिंग');
+  expect(localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('hi');
+  view.unmount();
+
+  const reopened = openSettings();
+  expect(await screen.findByRole('combobox', { name: 'ऐप की भाषा' })).toHaveValue('hi');
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'system' } });
+  expect(localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('system');
+  reopened.unmount();
+
+  vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['hi-IN']);
+  openSettings();
+  expect(await screen.findByRole('combobox', { name: 'ऐप की भाषा' })).toHaveValue('system');
+  expect(screen.getByRole('status')).toHaveTextContent('सेटिंग');
+});

@@ -1,0 +1,9 @@
+{
+  "language.system": "सिस्टम की भाषा",
+  "language.en": "अंग्रेज़ी",
+  "language.zhHans": "सरलीकृत चीनी",
+  "shared.textLimit.exceeded": "यह बदलाव सहेजा नहीं गया, क्योंकि एक टेक्स्ट फ़ील्ड में अधिकतम 1 MiB (UTF-8) की अनुमति है। टेक्स्ट छोटा करके फिर कोशिश करें।",
+  "shared.titleLimit.shortened": "शीर्षक के पहले 100 अक्षर सहेजे गए।",
+  "common.cancel": "रद्द करें",
+  "common.done": "हो गया"
+}
