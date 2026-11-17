@@ -23,13 +23,12 @@ const known = 'known-history';
 type Version = { version_id: string; snapshot_json: string };
 
 function instrument(sqlite: Database.Database) {
-  sqlite.exec('CREATE TABLE version_writes (seq INTEGER PRIMARY KEY, id, op, has_body, compact, tombstone)');
+  sqlite.exec('CREATE TABLE version_writes (seq INTEGER PRIMARY KEY, id, op, has_body, compact)');
   for (const event of ['INSERT', 'UPDATE']) sqlite.exec(`CREATE TRIGGER version_writes_${event}
     AFTER ${event} ON node_sync_versions BEGIN
-      INSERT INTO version_writes(id, op, has_body, compact, tombstone)
+      INSERT INTO version_writes(id, op, has_body, compact)
         VALUES (NEW.version_id, '${event}', NEW.body_text IS NOT NULL,
-          json_type(NEW.snapshot_json,'$.deleted_version_metadata_digest') IS NOT NULL,
-          EXISTS(SELECT 1 FROM node_sync_tombstones WHERE node_id=NEW.object_id));
+          json_type(NEW.snapshot_json,'$.deleted_version_metadata_digest') IS NOT NULL);
     END`);
 }
 
@@ -153,14 +152,14 @@ it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('compacts receive
       expect(reads.get(localVersions[0]!.version_id) ?? []).toEqual([]);
       expect(reads.get(localVersions[1]!.version_id)).toEqual(['bytes']);
     }
-    const trace = host.sqlite.prepare('SELECT op,has_body,compact,tombstone FROM version_writes WHERE id=? ORDER BY seq');
+    const trace = host.sqlite.prepare('SELECT op,has_body,compact FROM version_writes WHERE id=? ORDER BY seq');
     for (const version of [old, later]) {
       const writes = trace.all(version.version_id);
       if (mode === 'ordinary retry') {
         expect(writes[0]).toMatchObject({ op: 'INSERT', has_body: 0 });
-        expect(writes.at(-1)).toMatchObject({ has_body: 0, compact: 1, tombstone: 1 });
+        expect(writes.at(-1)).toMatchObject({ has_body: 0, compact: 1 });
       } else {
-        expect(writes).toEqual([{ op: 'INSERT', has_body: 0, compact: 1, tombstone: 1 }]);
+        expect(writes).toEqual([{ op: 'INSERT', has_body: 0, compact: 1 }]);
       }
     }
     const hashes = [sharedBody, isolatedBody, alternativeBody].map(hashTextBody);

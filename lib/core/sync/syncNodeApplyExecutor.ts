@@ -5,7 +5,7 @@ import type {
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbPort } from './dbPort.js';
-import { canApplyDeletionBeforeHistory } from './requestSyncNewDeletedHistory.js';
+import { canStageFreshDeletionHistory } from './requestSyncNewDeletedHistory.js';
 import type { SyncNodeAnchorRepairRecord, SyncNodeAnchorUnmappedRecord } from './syncNodeAnchorRepair.js';
 import { applyIncomingRecord, loadLocalNodeSyncState } from './syncNodeApplyProjection.js';
 import { decideIncomingNodeApply, latestBranchHeadRecords, orderNodesForApply, type SyncNodeApplyOperation } from './syncNodeApplyRules.js';
@@ -106,14 +106,16 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
     const batchTombstones = options.isolateNodeWrites ? await loadBatchNodeSyncTombstones(tx, ordered) : undefined;
     async function applyRecords(records: readonly M[], versions: readonly M[], target: ApplySyncNodeSourceResult<M>) {
       const releaseHashes = options.deletedHistoryReleaseHashes;
-      if (releaseHashes && await canApplyDeletionBeforeHistory(tx, records, versions, historySource, retain.isNew)) {
+      if (releaseHashes && await canStageFreshDeletionHistory(tx, records, versions, historySource, retain.isNew)) {
         const record = await source.load(tx, records[0]!);
+        const hashes = new Set<string>();
+        // Publish the deletion head last so the inventory does not rebuild the growing
+        // history on every version and parent edge. A rejected head rolls back the history.
+        await retain.write(tx, historySource, versions, options.deferBodyRetirement ?? false, hashes);
         await applyIncomingRecord({ tx, record, result: target, options, invalidatedAt, remoteNodeIdsInBatch,
           preparedTextBodyHash: undefined, versionAlreadyRetained: false,
           batchTombstone: batchTombstones?.get(record.object_id) });
         if (!target.appliedIds.includes(record.object_id)) throw new Error('request_sync_new_deletion_not_applied');
-        const hashes = new Set<string>();
-        await retain.write(tx, historySource, versions, options.deferBodyRetirement ?? false, hashes);
         releaseHashes.set(record.object_id, hashes);
         return;
       }

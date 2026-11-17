@@ -8,8 +8,8 @@ export function canCompactIncomingHistory(record: SyncNodeRecordMetadata) {
   return !record.is_tombstone && record.snapshot.body_deleted === true && !record.snapshot.deleted_version_metadata_digest;
 }
 
-/** A fresh deletion can be applied first, without changing an existing head or tombstone comparison. */
-export async function canApplyDeletionBeforeHistory<M extends SyncNodeRecordMetadata>(
+/** Brand-new identity-only history can be compacted in the same transaction as its deletion. */
+export async function canStageFreshDeletionHistory<M extends SyncNodeRecordMetadata>(
   tx: DbPort, records: readonly M[], history: readonly M[], source: SyncNodeRecordSource<M>,
   isNew: (record: M) => boolean
 ) {
