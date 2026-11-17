@@ -1,0 +1,18 @@
+export const EN_SUPER_MEMO_CONFIRM_TRANSLATIONS = {
+  'desktop.superMemoDrafts.confirmNew': 'Import a new batch',
+  'desktop.superMemoDrafts.confirmExisting': 'Update an existing batch',
+  'desktop.superMemoDrafts.confirmSavedBlend': 'Use the ratio saved for this batch',
+  'desktop.superMemoDrafts.confirmBlend': '{percent}% toward Foliole',
+  'desktop.superMemoDrafts.confirmExceptions': 'Conversion exceptions',
+  'desktop.superMemoDrafts.confirmTotals': '{converted} to import · {skipped} to skip',
+  'desktop.superMemoDrafts.confirmIssue.empty-topic': 'Empty topics to skip ({count})',
+  'desktop.superMemoDrafts.confirmIssue.empty-item': 'Empty cards to skip ({count})',
+  'desktop.superMemoDrafts.confirmIssue.missing-question': 'Cards missing a question ({count})',
+  'desktop.superMemoDrafts.confirmIssue.missing-answer': 'Cards missing an answer ({count})',
+  'desktop.superMemoDrafts.confirmIssue.unsupported-type': 'Unsupported entries to skip ({count})',
+  'desktop.superMemoDrafts.confirmHistory': 'Entries whose review history could not be replayed ({count})',
+  'desktop.superMemoDrafts.confirmAudio': 'Audio components to skip ({count})',
+  'desktop.superMemoDrafts.confirmNoExceptions': 'No conversion exceptions found.',
+  'desktop.superMemoDrafts.confirmTrash': 'Selected to move to Trash ({count})',
+  'desktop.superMemoDrafts.confirmResult': 'Migration result',
+} as const;

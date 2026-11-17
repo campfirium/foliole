@@ -1,0 +1,18 @@
+export const ZH_HANS_SUPER_MEMO_CONFIRM_TRANSLATIONS = {
+  'desktop.superMemoDrafts.confirmNew': '导入新批次',
+  'desktop.superMemoDrafts.confirmExisting': '更新已有批次',
+  'desktop.superMemoDrafts.confirmSavedBlend': '沿用该批次保存的比例',
+  'desktop.superMemoDrafts.confirmBlend': '向 Foliole 调整 {percent}%',
+  'desktop.superMemoDrafts.confirmExceptions': '转换异常',
+  'desktop.superMemoDrafts.confirmTotals': '将导入 {converted} 条 · 跳过 {skipped} 条',
+  'desktop.superMemoDrafts.confirmIssue.empty-topic': '跳过空 Topic（{count} 条）',
+  'desktop.superMemoDrafts.confirmIssue.empty-item': '跳过空卡片（{count} 张）',
+  'desktop.superMemoDrafts.confirmIssue.missing-question': '缺少问题的卡片（{count} 张）',
+  'desktop.superMemoDrafts.confirmIssue.missing-answer': '缺少答案的卡片（{count} 张）',
+  'desktop.superMemoDrafts.confirmIssue.unsupported-type': '跳过不支持的条目（{count} 条）',
+  'desktop.superMemoDrafts.confirmHistory': '无法重放复习历史的条目（{count} 条）',
+  'desktop.superMemoDrafts.confirmAudio': '跳过音频组件（{count} 个）',
+  'desktop.superMemoDrafts.confirmNoExceptions': '未发现转换异常。',
+  'desktop.superMemoDrafts.confirmTrash': '已选中 {count} 条，确认后移至废纸篓',
+  'desktop.superMemoDrafts.confirmResult': '迁移结果',
+} as const;

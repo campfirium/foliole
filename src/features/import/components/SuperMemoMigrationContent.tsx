@@ -2,13 +2,11 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { AppButton, AppDialogBody } from '../../../shared/ui';
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
-import { SuperMemoDirectoryUpdate, SuperMemoResult } from './SuperMemoDirectoryUpdate';
-import { SuperMemoDraftTable } from './SuperMemoDraftTable';
+import { SuperMemoConfirmMigration } from './SuperMemoConfirmMigration';
 import { SuperMemoEntryPreview, type useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { SuperMemoParameters } from './SuperMemoParameters';
 import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
-import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
 function DraftSourcePicker({ disabled, name, onLoad }: { disabled: boolean; name?: string | undefined; onLoad(): void }) {
@@ -57,12 +55,7 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {preview && (current === 'grades' || current === 'source') ? (
         <SuperMemoParameters step={current} preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
       ) : null}
-      {current === 'confirm' && preview && !update && !result ? <SuperMemoDraftTable preview={preview} percent={percent} /> : null}
-      {current === 'confirm' && update && !result ? <>
-        <SuperMemoDirectoryUpdate update={update} sourceFormat={sourceFormat} disabled={busy} onSourceFormatChange={changeSourceFormat} />
-        <SuperMemoWithdrawals candidates={update.withdrawals} selected={selected} disabled={busy} onChange={onSelect} />
-      </> : null}
-      {result ? <SuperMemoResult result={result} /> : null}
+      {current === 'confirm' ? <SuperMemoConfirmMigration model={model} selected={selected} onSelect={onSelect} /> : null}
     </AppDialogBody>
   );
 }
