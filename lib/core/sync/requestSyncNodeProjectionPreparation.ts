@@ -19,9 +19,14 @@ export async function prepareFramedNodeApplication(tx: DbPort, received: SyncNod
   const eligible = { ...validated, records: validated.records.filter(record => !rejected?.has(record.object_id)) };
   const references = options.currentVersions?.references.filter(reference => !rejected?.has(reference.globalId));
   const inBatchHeads = rejected && references && await selectReceivedHeads(tx, eligible, references);
+  const reference = options.currentVersion;
+  // Let the deletion apply and compact new retired history in the same write as a batch does.
+  const receivedDeletion = reference && eligible.records.some(record => record.is_tombstone &&
+    record.object_id === reference.globalId && record.version_id === reference.versionId);
   const selected = inBatchHeads || (references
     ? await withRequestSyncCurrentVersions(tx, eligible, references, rejected)
-    : await withRequestSyncCurrentVersion(tx, eligible, options.currentVersion));
+    : await withRequestSyncCurrentVersion(tx, eligible, reference, receivedDeletion));
+  if (receivedDeletion) return { nodeSource: selected, historySource: eligible };
   const hasStoredReference = selected.records.some(record => !eligible.records.includes(record));
   const prepared = await prepareProjectionSources(tx, selected, eligible, rejected, hasStoredReference);
   if (!hasStoredReference) return prepared;
