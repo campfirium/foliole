@@ -162,7 +162,7 @@ function touchPointer(target: Element | Document, type: string, x: number, y = 1
   fireEvent(target, event);
 }
 
-it('hands a fresh Android long-press to the reader handles and saves the extended range after scrolling the body', async () => {
+it.each(['long press cancellation', 'native release'])('hands off Android selection on %s and saves after scrolling', async (handoff) => {
   vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getPositionClientRect')
     .mockImplementation(position => new DOMRect(20 + position * 3, 100, 3, 20));
   const { container } = renderWithLocalization(<Reader immersive initial={await loadCompanionWorkspaceSyncState()} />);
@@ -180,9 +180,11 @@ it('hands a fresh Android long-press to the reader handles and saves the extende
   const release = () => fireEvent(document, new Event('foliole-android-reading-touch-release'));
   fireEvent.touchStart(selected, { touches: [{ clientX: 50, clientY: 100 }] });
   native.setBaseAndExtent(word, 0, word, 6);
+  const beforeRelease = handoff === 'long press cancellation';
+  if (beforeRelease) fireEvent.contextMenu(selected);
   fireEvent.touchCancel(selected, { touches: [] });
-  expect(native.toString()).toBe('Repeat');
-  expect(screen.queryByRole('button', { name: 'Adjust anchor end' })).toBeNull();
+  expect(native.toString()).toBe(beforeRelease ? '' : 'Repeat');
+  expect(Boolean(screen.queryByRole('button', { name: 'Adjust anchor end' }))).toBe(beforeRelease);
 
   release();
   expect(native.toString()).toBe('');
