@@ -5,7 +5,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { exitFlowIfNeeded, relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { type DesktopSession, expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { confirmStep, loadSource, openPreview, parameters } from './harness/superMemoImport';
 
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 
@@ -70,6 +70,7 @@ async function importLearning(page: Page, app: ElectronApplication, outputPath: 
   await expect(dialog.getByText(/Candidate dates and priority order come from the paired collection|候选日期和优先顺序来自配对资料库/)).toBeVisible();
   expect(Object.keys(await readWorkspace(page))).toEqual(before);
   expect(await readImportedIds(app)).toBeNull();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/Imported 3434 · skipped 17 · 243 unresolved image references|已导入 3434 条 · 跳过 17 条 · 未找到图片 243 处/))
     .toBeVisible({ timeout: 120_000 });
@@ -165,6 +166,7 @@ test('makes an imported due card available in an already prepared empty Flow', a
   expect(await question.textContent()).toBe('Imported question\n\nSecond paragraph');
   await dialog.screenshot({ path: testInfo.outputPath('wrapped-question-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 1|已导入 1 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();

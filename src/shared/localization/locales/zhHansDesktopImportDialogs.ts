@@ -2,6 +2,15 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'desktop.superMemoDrafts.title': 'SuperMemo 导入预览',
+  'desktop.superMemoDrafts.steps': '迁移步骤',
+  'desktop.superMemoDrafts.loadStep': '载入数据',
+  'desktop.superMemoDrafts.structureStep': '确认结构',
+  'desktop.superMemoDrafts.scheduleStep': '首次到期',
+  'desktop.superMemoDrafts.gradesStep': '评分对应',
+  'desktop.superMemoDrafts.sourceStep': '来源信息',
+  'desktop.superMemoDrafts.confirmStep': '确认迁移',
+  'desktop.superMemoDrafts.continueStep': '继续',
+  'desktop.superMemoDrafts.prepareTitle': '准备 XML 导出文件',
   'desktop.superMemoDrafts.open': '开始迁移',
   'desktop.superMemoDrafts.description': '载入 SuperMemo 的 XML 导出，即可查看预览。',
   'desktop.superMemoDrafts.conversionNote': '即使文章和派生资料分散在不同分支，Foliole 也能恢复它们的归属。能定位时会标出摘录和挖空的位置。音频不会导入。',
@@ -91,6 +100,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.exportLinked': '已将新导出关联到原批次。',
   'desktop.superMemoDrafts.directoryUpdated': '已更新 {count} 个条目的位置。',
   'desktop.superMemoDrafts.reapplyNote': '转换后可以重新调整首次到期日期。已在 Foliole 复习过的卡片会保留当前排程。',
+  'desktop.superMemoDrafts.scheduleImpact': '到期变化预览',
   'desktop.superMemoDrafts.scheduleTitle': '卡片首次到期',
   'desktop.superMemoDrafts.scheduleDetails': '关于这些日期',
   'desktop.superMemoDrafts.sourceTopicInfo': '原生 Topic 的来源信息',

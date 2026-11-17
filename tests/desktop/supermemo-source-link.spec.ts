@@ -5,7 +5,7 @@ import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-h
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
+import { card, loadSource, openPreview, parameters, sourceStep, writeCollection } from './harness/superMemoImport';
 
 const xml = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 const close = /^(Close|关闭)$/;
@@ -24,6 +24,7 @@ test('remembers the last valid XML link and migration form across an app restart
   await desktopWindow.getByRole('dialog', { name: noticeTitle }).getByRole('button', { name: close }).click();
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
+  await dialog.getByRole('button', { name: sourceStep }).click();
   await dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
   await dialog.getByRole('button', { name: close }).click();
   await desktopWindow.keyboard.press('Escape');
@@ -39,6 +40,7 @@ test('remembers the last valid XML link and migration form across an app restart
     await expect(reopened.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
     await reopened.getByRole('button', { name: parameters }).click();
     await expect(reopened.getByRole('slider')).toHaveValue('100');
+    await reopened.getByRole('button', { name: sourceStep }).click();
     await expect(reopened.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ })).toBeChecked();
 
     await rename(path.join(folder, 'Remembered.xml'), path.join(folder, 'Moved.xml'));

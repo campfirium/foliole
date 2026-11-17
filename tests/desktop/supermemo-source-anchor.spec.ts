@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
-import { card, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
+import { card, confirmStep, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
 
 const passage = 'A verified selection in the source article.';
 const xml = `<SuperMemoCollection><Count>4</Count>
@@ -44,6 +44,7 @@ test('previews a moved excerpt under its source article and renders its imported
   const articleBranch = articleButton.locator('xpath=ancestor::li[1]');
   await expect(articleBranch.getByRole('button', { name: /^Moved excerpt\s*#3$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
@@ -59,6 +60,7 @@ test('updates the same excerpt and restores its source highlight from the origin
   await writeMovedExcerptCollection(directory, 0);
   await loadSource(desktopApp, dialog, directory, xml);
   await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
   const readExcerpt = () => desktopWindow.evaluate(async () => {

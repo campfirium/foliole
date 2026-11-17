@@ -25,7 +25,11 @@ export async function openPreview(page: Page) {
   return page.getByRole('dialog', { name: title });
 }
 
-export const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
+export const parameters = /^(First review dates|首次到期)$/;
+export const structureStep = /^(Confirm structure|确认结构)$/;
+export const sourceStep = /^(Source information|来源信息)$/;
+export const gradesStep = /^(Grade mapping|评分对应)$/;
+export const confirmStep = /^(Confirm migration|确认迁移)$/;
 
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
   sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/, collectionLocation?: string) {
@@ -39,6 +43,7 @@ export async function loadSource(app: ElectronApplication, dialog: Locator, dire
       return selection ? { canceled: false, filePaths: [selection] } : { canceled: true, filePaths: [] };
     };
   }, { file, collectionLocation });
+  await dialog.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
   await dialog.getByRole('button', { name: sourceButton }).click();
 }
 

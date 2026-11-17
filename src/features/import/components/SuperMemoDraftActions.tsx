@@ -1,37 +1,33 @@
+import { ArrowRight } from 'lucide-react';
+
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppButton, AppDialogActions } from '../../../shared/ui';
 
-export function SuperMemoDraftActions({
-  busy, canConvert, parameters, showPreviewFooter, directoryUpdate, backToPreview, openParameters, convert
-}: {
-  busy: boolean; canConvert: boolean; parameters: boolean; showPreviewFooter: boolean;
-  directoryUpdate?: { canConfirm: boolean; } | undefined;
-  backToPreview(): void; openParameters(): void; convert(): void;
+import type { SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
+
+const nextStep = {
+  load: 'structure', structure: 'schedule', schedule: 'grades', grades: 'source', source: 'confirm'
+} as const;
+
+export function SuperMemoDraftActions({ step, busy, canConvert, directoryUpdate, navigate, convert }: {
+  step: SuperMemoMigrationStep; busy: boolean; canConvert: boolean;
+  directoryUpdate?: { canConfirm: boolean } | undefined;
+  navigate(step: SuperMemoMigrationStep): void; convert(): void;
 }) {
   const t = useTranslation();
-  if (showPreviewFooter) {
-    return (
-      <footer className="flex shrink-0 items-center justify-end gap-2 px-6 pb-6">
-        <p role="note" className="flex min-h-8 min-w-0 max-w-[72ch] items-center text-end text-xs leading-4 text-foreground/65">{t('desktop.superMemoDrafts.conversionNote')}</p>
-        {canConvert ? <AppButton className="shrink-0" disabled={busy} onClick={openParameters}>
-          {t('desktop.superMemoDrafts.parameters')}
-        </AppButton> : null}
-      </footer>
-    );
-  }
   if (!canConvert) return null;
   return (
-    <AppDialogActions>
-      {(parameters ? <>
-        <AppButton disabled={busy} variant="ghost" onClick={() => backToPreview()}>
-          {t('desktop.superMemoDrafts.backToPreview')}
-        </AppButton>
-        <AppButton disabled={busy || directoryUpdate?.canConfirm === false} onClick={() => convert()}>
-          {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
-        </AppButton>
-      </> : (
-        <AppButton disabled={busy} onClick={() => openParameters()}>{t(directoryUpdate ? 'desktop.superMemoDrafts.updateByRules' : 'desktop.superMemoDrafts.parameters')}</AppButton>
-      ))}
+    <AppDialogActions className="shrink-0 flex-wrap border-t border-settings-divider px-4 py-3 sm:px-6">
+      {step === 'structure' && !directoryUpdate ? <p role="note" className="mr-auto min-w-0 max-w-[72ch] flex-1 text-xs leading-4 text-foreground/70">
+        {t('desktop.superMemoDrafts.conversionNote')}
+      </p> : null}
+      {step === 'confirm' ? <AppButton variant="emphasis" disabled={busy || directoryUpdate?.canConfirm === false} onClick={convert}>
+        {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
+      </AppButton> : <AppButton variant="emphasis" disabled={busy} onClick={() => navigate(directoryUpdate && step === 'load' ? 'confirm' : nextStep[step])}>
+        {t(directoryUpdate && step === 'load' ? 'desktop.superMemoDrafts.updateByRules' :
+          step === 'structure' ? 'desktop.superMemoDrafts.parameters' : 'desktop.superMemoDrafts.continueStep')}
+        <ArrowRight aria-hidden className="size-4" />
+      </AppButton>}
     </AppDialogActions>
   );
 }

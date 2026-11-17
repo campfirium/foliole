@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { FileText, X } from 'lucide-react';
 import { createContext, type ReactNode, useContext, useId, useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
@@ -6,44 +6,31 @@ import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/na
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { loadSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 import {
-  AppButton, AppDialog, AppDialogBody, AppDialogClose, AppDialogContent,
+  AppButton, AppDialog, AppDialogClose, AppDialogContent,
   AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow
 } from '../../../shared/ui';
 import { settingsDialogBounds } from '../../../shared/ui/settingsDialogBounds';
 import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface';
 
-import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
-import { SuperMemoDirectoryUpdate, SuperMemoResult } from './SuperMemoDirectoryUpdate';
 import { SuperMemoDraftActions } from './SuperMemoDraftActions';
-import { SuperMemoEntryPreview, useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
+import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
-import { SuperMemoParameters } from './SuperMemoParameters';
-import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
+import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
+import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
 
-function DraftSourcePicker({ disabled, onLoad }: { disabled: boolean; onLoad(): void }) {
-  const t = useTranslation();
-  return <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/15 px-4 py-3">
-    <div className="min-w-0">
-      <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.sourceTitle')}</h2>
-      <p className="mt-1 max-w-prose text-sm text-foreground/70">{t('desktop.superMemoDrafts.prepareSource')}</p>
-    </div>
-    <AppButton disabled={disabled} onClick={onLoad}>{t('desktop.superMemoDrafts.loadSource')}</AppButton>
-  </div>;
-}
-
-function DraftHeader({ titleId, name, disabled, onReload, onLoadNew }: {
-  titleId: string; name: string | undefined; disabled: boolean; onReload(): void; onLoadNew?: (() => void) | undefined;
+function DraftHeader({ titleId, name, disabled }: {
+  titleId: string; name: string | undefined; disabled: boolean;
 }) {
   const t = useTranslation();
   return (
     <AppDialogTitle asChild className="flex-wrap gap-x-3 gap-y-1">
       <header>
         <h2 id={titleId} className="shrink-0">{t('desktop.superMemoDrafts.title')}</h2>
-        {name ? <span title={name} className="min-w-0 flex-1 truncate text-sm text-foreground/70">{name}</span> : null}
+        {name ? <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground/70" title={name}>
+          <FileText aria-hidden className="size-3.5 shrink-0" /><span className="truncate">{name}</span>
+        </span> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          {name ? <AppButton size="sm" disabled={disabled} onClick={onReload}>{t('desktop.superMemoDrafts.reloadSource')}</AppButton> : null}
-          {onLoadNew ? <AppButton size="sm" disabled={disabled} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
           <AppDialogClose asChild>
             <AppButton size="sm" variant="ghost" disabled={disabled} aria-label={t('desktop.superMemoDrafts.close')}>
               <X aria-hidden className="size-4" />
@@ -59,11 +46,11 @@ function useSuperMemoDraftNavigation(
   { busy, error, setError }: Pick<ReturnType<typeof useSuperMemoDraft>, 'busy' | 'error' | 'setError'>,
   open: boolean, close: () => void
 ) {
-  const [parameters, setParameters] = useState(false);
+  const [step, setStep] = useState<{ id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source'] }>();
   const [selection, setSelection] = useState<{ signature: string; ids: number[] }>();
 
-  function backToPreview() {
-    setParameters(false);
+  function resetNavigation() {
+    setStep(undefined);
     setSelection(undefined);
   }
 
@@ -80,7 +67,7 @@ function useSuperMemoDraftNavigation(
     }
   });
 
-  return { parameters, setParameters, selection, setSelection, backToPreview, dismissDialog };
+  return { step, setStep, selection, setSelection, resetNavigation, dismissDialog };
 }
 
 function canConfirmUpdate(
@@ -99,20 +86,22 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
   const t = useTranslation();
   const titleId = useId();
   const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'));
-  const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = model;
-  const { parameters, setParameters, selection, setSelection, backToPreview, dismissDialog } = useSuperMemoDraftNavigation(model, open, closeSession);
+  const { draft, source, busy, error, setError, result, loadSource, importSource } = model;
+  const { step, setStep, selection, setSelection, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation(model, open, closeSession);
   const previewNavigation = useSuperMemoPreviewNavigation(source);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
-  const showSource = (!parameters || update) && !result;
+  const requested = step && (step.source === source || (step.id === 'confirm' && update)) ? step.id : undefined;
+  const current = result ? 'confirm' : requested ?? (preview && !update ? 'structure' : 'load');
+  const navigate = (id: SuperMemoMigrationStep) => setStep({ id, source });
   function closeSession() {
     if (result) {
       void model.resetCompletedDraft();
-      backToPreview();
+      resetNavigation();
     }
     close();
   }
-  const reloadSource = () => { setSelection(undefined); void loadSource(); };
+  const reloadSource = () => { void loadSource(); };
   const selected = selection && selection.signature === update?.signature ? selection.ids : [];
   return (
     <AppDialog open={open} onOpenChange={open => { if (!open) dismissDialog(); }}>
@@ -121,30 +110,22 @@ function SuperMemoDraftDialog({ open, close, initialGrades, translate }: {
         <AppDialogContent layout="task" aria-labelledby={titleId} aria-describedby={undefined} className={settingsDialogBounds}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
           onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
-          <DraftHeader titleId={titleId} name={showSource ? source?.name : undefined} disabled={busy} onReload={reloadSource}
-            onLoadNew={showSource && update ? () => { setParameters(true); setSelection(undefined); void loadSource(true); } : undefined} />
-          <AppDialogBody className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-            {showSource && !source ? <DraftSourcePicker disabled={busy} onLoad={reloadSource} /> : null}
-            {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
-            {!result && !update ? <div hidden={parameters}><SuperMemoEntryPreview navigation={previewNavigation} preview={preview} elements={draft?.elements} /></div> : null}
-            {parameters && preview && !result && !update ? (
-              <SuperMemoParameters preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
-            ) : null}
-            {(!preview || (update && !parameters && !result)) && !busy ? <SuperMemoBatchAdjustments /> : null}
-            {update && !parameters && !result ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
-            {update && parameters && !result ? <SuperMemoDirectoryUpdate update={update} sourceFormat={sourceFormat} disabled={busy}
-              onSourceFormatChange={changeSourceFormat} /> : null}
-            {update && parameters && !result ? <SuperMemoWithdrawals candidates={update.withdrawals} selected={selected}
-              disabled={busy} onChange={ids => setSelection({ signature: update.signature, ids })} /> : null}
-            {result ? <SuperMemoResult result={result} /> : null}
-          </AppDialogBody>
-          <SuperMemoDraftActions
-            busy={busy} canConvert={Boolean(preview && !result)} parameters={parameters}
-            showPreviewFooter={!parameters && !update && !result}
-            directoryUpdate={update ? { canConfirm: canConfirmUpdate(update, selected) } : undefined}
-            backToPreview={backToPreview}
-            openParameters={() => setParameters(true)} convert={() => void importSource(selected)}
-          />
+          <DraftHeader titleId={titleId} name={current === 'load' || result ? undefined : source?.name} disabled={busy} />
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(10rem,19%)_minmax(0,1fr)] sm:grid-rows-1">
+            <SuperMemoMigrationSteps current={current} disabled={Boolean(result)} onChange={navigate} />
+            <div className="flex min-h-0 min-w-0 flex-col">
+              <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
+                onLoad={reloadSource} onLoadNew={() => {
+                  navigate('confirm');
+                  setSelection(undefined);
+                  void loadSource(true);
+                }}
+                onSelect={ids => { if (update) setSelection({ signature: update.signature, ids }); }} />
+              <SuperMemoDraftActions step={current} busy={busy} canConvert={Boolean(preview && !result)}
+                directoryUpdate={update ? { canConfirm: canConfirmUpdate(update, selected) } : undefined}
+                navigate={navigate} convert={() => void importSource(selected)} />
+            </div>
+          </div>
         </AppDialogContent>
       </AppDialogPortal>
       <SuperMemoLoadNotice error={open && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}

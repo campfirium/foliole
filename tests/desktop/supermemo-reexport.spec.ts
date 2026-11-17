@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { confirmStep, loadSource, openPreview, parameters } from './harness/superMemoImport';
 
 function exportXml(questions: string[]) {
   return `<SuperMemoCollection><Count>${questions.length}</Count>${questions.map((question, index) => `
@@ -14,6 +14,7 @@ test('links a verified new export to the original batch and refuses a mismatched
   const first = await openPreview(desktopWindow);
   await loadSource(desktopApp, first, original, exportXml(['First original question', 'Second original question']));
   await first.getByRole('button', { name: parameters }).click();
+  await first.getByRole('button', { name: confirmStep }).click();
   await first.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(first.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   await first.getByRole('button', { name: /^(Close|关闭)$/ }).click();

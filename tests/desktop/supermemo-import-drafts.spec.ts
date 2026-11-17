@@ -5,13 +5,12 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
 
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
   <ID>4</ID><Type>Topic</Type><Ordinal>0</Ordinal><Content><Question>Welcome sample</Question></Content><SuperMemoElement>
   <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
-const back = /^(Back to preview|返回资料预览)$/;
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 
 async function dismissLoadError(page: Page) {
@@ -25,12 +24,14 @@ test('previews different XML exports and retains the conversion draft after dism
   const preview = dialog.getByRole('region', { name: /^(Preview|预览)$/ });
   await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toHaveCount(0);
   const note = dialog.getByRole('note');
-  await expect(note).toBeVisible();
   await expect(preview.getByRole('note')).toHaveCount(0);
   const settingsBounds = await desktopWindow.locator('[data-settings-root-dialog]').boundingBox();
   expect(settingsBounds).not.toBeNull();
   expect(await dialog.boundingBox()).toEqual(settingsBounds);
   await desktopWindow.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
+  await dialog.getByRole('button', { name: confirmStep }).click();
+  await expect(dialog.getByRole('heading', { name: confirmStep })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
@@ -58,7 +59,7 @@ test('previews different XML exports and retains the conversion draft after dism
   await expect(desktopWindow.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toBeHidden();
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('slider')).toHaveValue('100');
-  await reopened.getByRole('button', { name: back }).click();
+  await reopened.getByRole('button', { name: structureStep }).click();
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
   await expect(note).toBeVisible();
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
@@ -85,13 +86,15 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   await loadSource(desktopApp, dialog, directory, secondExport);
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByText(/The XML export estimates original due dates|XML 预览按上次复习日期/)).toBeVisible();
-  await dialog.getByRole('button', { name: back }).click();
+  await dialog.getByRole('button', { name: structureStep }).click();
   elements.writeUInt16LE(300, 118 + 16);
   await writeFile(path.join(info, 'ElementInfo.dat'), elements);
   await loadSource(desktopApp, dialog, directory);
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
+  await dialog.getByRole('button', { name: gradesStep }).click();
   await expect(dialog.getByText(/Dismissed Topics and Items stay dismissed|已结束学习的主题和检测项保留原状态/u)).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByRole('slider')).toHaveValue('0');
 });
 
@@ -115,6 +118,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(media).toBeHidden();
   await expect(dialog.getByRole('combobox')).toHaveCount(0);
+  await dialog.getByRole('button', { name: sourceStep }).click();
   const sourceOption = dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ });
   await sourceOption.click();
   await expect(sourceOption).toBeChecked();
@@ -123,6 +127,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   const activeDraft = await openPreview(desktopWindow);
   await expect(activeDraft.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ })).toBeChecked();
   await dialog.screenshot({ path: '.tmp/artifacts/T762/desktop/supermemo-parameters.png' });
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
@@ -165,6 +170,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   const defaultDays = await planned.textContent();
   const good = /^(SuperMemo grade 4 · Good|SuperMemo 评分 4 · 良好)$/;
   const again = /^(SuperMemo grade 4 · Again|SuperMemo 评分 4 · 重来)$/;
+  await dialog.getByRole('button', { name: gradesStep }).click();
   const trigger = dialog.getByRole('button', { name: good });
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -176,7 +182,10 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await trigger.click();
   await menu.getByRole('menuitemradio', { name: /^(Again|重来)$/ }).click();
   await expect(dialog.getByRole('button', { name: again })).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   await expect(planned).not.toHaveText(defaultDays!);
+  await expect(dialog.getByRole('slider')).toHaveValue('100');
+  await dialog.getByRole('button', { name: gradesStep }).click();
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-grade-mapping.png') });
   await desktopWindow.setViewportSize({ width: 780, height: 840 });
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-parameters-narrow.png') });

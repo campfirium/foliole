@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { card, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
+import { card, confirmStep, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
 
 test('updates the directory of an already imported card after previewing the original export', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -14,6 +14,7 @@ test('updates the directory of an already imported card after previewing the ori
   });
   await loadSource(desktopApp, dialog, directory, xml);
   await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   const before = await readNodes();
@@ -111,6 +112,7 @@ test('changes source information on the existing card from the saved batch', asy
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, directory, xml);
   await dialog.getByRole('button', { name: parameters }).click();
+  await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   const readCard = () => desktopWindow.evaluate(async () => {
