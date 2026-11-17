@@ -13,7 +13,7 @@ import {
 
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
-const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-x-inspector-list-inset before:inset-y-px before:-z-10 before:transition-colors';
+const rowHighlightClassName = 'before:pointer-events-none before:absolute before:inset-x-inspector-list-inset before:inset-y-px before:-z-local-raised before:transition-colors';
 
 type ThreadListProps = {
   onOpenMaterial: (nodeId: string) => void;
