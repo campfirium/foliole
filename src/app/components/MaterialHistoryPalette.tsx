@@ -7,10 +7,7 @@ import {
   appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName
 } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import {
-  floatingResultListClassName, floatingResultMetaClassName, floatingResultPreviewClassName,
-  floatingResultPrimaryTextClassName
-} from '../../shared/ui/FloatingSurface';
+import { floatingResultListClassName } from '../../shared/ui/FloatingSurface';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, selectMaterialHistory } from './materialHistory';
@@ -134,6 +131,12 @@ function visibleHistoryRow(results: HTMLDivElement, direction: 1 | -1) {
   return index < 0 ? 0 : index;
 }
 
+const historyTextStyles = {
+  small: { content: 'text-[13px] leading-[19px]', primaryPath: 'text-[15px] leading-[21px]', secondaryPath: 'text-[11px] leading-[15px]' },
+  default: { content: 'text-[15px] leading-[21px]', primaryPath: 'text-[17px] leading-[23px]', secondaryPath: 'text-[12px] leading-[17px]' },
+  large: { content: 'text-[17px] leading-[24px]', primaryPath: 'text-[19px] leading-[26px]', secondaryPath: 'text-[14px] leading-[19px]' }
+} satisfies Record<MaterialHistoryView['fontSize'], Record<'content' | 'primaryPath' | 'secondaryPath', string>>;
+
 function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
   view: MaterialHistoryView;
   rows: ReturnType<typeof selectMaterialHistory>;
@@ -143,20 +146,21 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
   onPin: (index: number) => void;
 }) {
   const rowId = useId();
+  const text = historyTextStyles[view.fontSize];
   return rows.map(({ node, pinned }, index) => {
     const bodyId = `${rowId}-body-${index}`;
     const pathId = `${rowId}-path-${index}`;
     const path = materialHistoryPath(nodes, node.id);
     const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     const preview = (
-      <span id={bodyId} className={`pointer-events-none relative min-w-0 ${floatingResultPreviewClassName}`}
+      <span id={bodyId} className={`pointer-events-none relative min-w-0 line-clamp-2 break-words text-foreground/60 ${text.content}`}
         style={{ WebkitLineClamp: view.lines }}>
         {materialHistoryPreview(node)}
       </span>
     );
     const metadata = (
       <div className="pointer-events-none relative flex min-w-0 items-center gap-2">
-        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? floatingResultPrimaryTextClassName : floatingResultMetaClassName}`}>{path}</span>}
+        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? `font-semibold text-foreground ${text.primaryPath}` : `text-foreground/45 ${text.secondaryPath}`}`}>{path}</span>}
         <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
       </div>
     );

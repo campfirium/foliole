@@ -17,6 +17,7 @@ test('history view options apply immediately and return after app restart', asyn
   await expectWorkspaceShell(page);
   await page.evaluate(async ({ title, content }) => {
     window.localStorage.setItem('foliole-app-language', 'en');
+    window.localStorage.setItem('foliole-material-history-view', JSON.stringify({ first: 'preview', lines: 2 }));
     await window.__folioleWorkspaceDebug!.seedNodes([
       { id: 'history-layout', kind: 'topic', parentNodeId: 'special-inbox', title, content }
     ], { persist: true });
@@ -39,6 +40,7 @@ test('history view options apply immediately and return after app restart', asyn
   await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
 
   await trigger.click();
+  await verifyHistoryFontSizes(page);
   await expect(options.getByRole('radio', { name: 'Preview first' })).toBeChecked();
   await expect(options.getByRole('radio', { name: '2', exact: true })).toBeChecked();
   await options.getByText('Breadcrumb first', { exact: true }).click();
@@ -68,6 +70,21 @@ test('history view options apply immediately and return after app restart', asyn
   await restartAndVerify(desktopSession, page);
 });
 
+async function verifyHistoryFontSizes(page: Page) {
+  const history = page.getByRole('dialog', { name: 'History', exact: true });
+  const options = history.getByRole('group', { name: 'Font size' });
+  const preview = history.getByText(/^History preview text/);
+  const breadcrumb = history.getByText(title, { exact: true });
+  await expect(options.getByRole('radio', { name: 'Default' })).toBeChecked();
+  await expect(preview).toHaveCSS('font-size', '15px');
+  await options.getByText('Small', { exact: true }).click();
+  await expect(preview).toHaveCSS('font-size', '13px');
+  await expect(breadcrumb).toHaveCSS('font-size', '11px');
+  await options.getByText('Large', { exact: true }).click();
+  await expect(preview).toHaveCSS('font-size', '17px');
+  await expect(breadcrumb).toHaveCSS('font-size', '14px');
+}
+
 async function expectHistoryPreferencesSaved(page: Page) {
   await expect.poll(() => page.evaluate(async () => {
     const settings = await window.electronAPI.invoke('load_app_settings_state', {});
@@ -76,7 +93,7 @@ async function expectHistoryPreferencesSaved(page: Page) {
       view: value && JSON.parse(value),
       shortcutsCollapsed: settings?.['foliole-material-history-shortcuts-collapsed']
     };
-  })).toEqual({ view: { first: 'breadcrumb', lines: 3 }, shortcutsCollapsed: 'false' });
+  })).toEqual({ view: { first: 'breadcrumb', lines: 3, fontSize: 'large' }, shortcutsCollapsed: 'false' });
 
 }
 
@@ -102,6 +119,8 @@ async function verifyRestart(page: Page) {
   const history = await openHistory(page);
   await expect(history.getByRole('button', { name: /^.*History layout topic History preview text/ })).toBeVisible();
   await expect(history.getByText(/^History preview text/)).toHaveCSS('-webkit-line-clamp', '3');
+  await expect(history.getByText(/^History preview text/)).toHaveCSS('font-size', '17px');
+  await expect(history.getByText(title, { exact: true })).toHaveCSS('font-size', '19px');
   const collapseShortcuts = history.getByRole('button', { name: 'Collapse history shortcuts' });
   await expect(collapseShortcuts).toHaveAttribute('aria-expanded', 'true');
   await collapseShortcuts.click();
@@ -110,6 +129,7 @@ async function verifyRestart(page: Page) {
   const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();
   await expect(options.getByRole('radio', { name: '3', exact: true })).toBeChecked();
+  await expect(options.getByRole('radio', { name: 'Large', exact: true })).toBeChecked();
   await history.getByRole('searchbox').click();
   await expect(options).toBeHidden();
 }

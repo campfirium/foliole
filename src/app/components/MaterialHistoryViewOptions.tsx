@@ -17,6 +17,12 @@ export function MaterialHistoryViewOptions({ view, onChange }: {
         ] as const)} onChange={first => onChange({ ...view, first })} />
       <PanelViewChoiceGroup label={t('desktop.history.previewLines')} value={view.lines}
         choices={previewLineChoices} onChange={lines => onChange({ ...view, lines })} />
+      <PanelViewChoiceGroup label={t('desktop.history.fontSize')} value={view.fontSize}
+        choices={([
+          { value: 'small', label: t('desktop.history.fontSizeSmall') },
+          { value: 'default', label: t('desktop.history.fontSizeDefault') },
+          { value: 'large', label: t('desktop.history.fontSizeLarge') }
+        ] as const)} onChange={fontSize => onChange({ ...view, fontSize })} />
     </PanelViewOptions>
   );
 }
