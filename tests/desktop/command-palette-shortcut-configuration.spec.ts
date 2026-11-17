@@ -49,3 +49,25 @@ test('shows native shortcut symbols and opens the matching Hotkeys row', async (
     'page'
   );
 });
+
+test('shows full localized setting and tip copy in search results', async ({ desktopWindow }, testInfo) => {
+  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-app-language', 'zh-Hans'));
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+
+  await desktopWindow.getByRole('button', { name: '命令面板', exact: true }).click();
+  const palette = desktopWindow.getByRole('dialog', { name: '命令面板' });
+  const search = palette.getByRole('textbox', { name: '搜索命令' });
+  await search.fill('导入');
+  await expect(palette.getByRole('button', { name: '导入文件', exact: true })).toBeVisible();
+  await expect(palette.getByRole('button', { name: '允许导入学习进度', exact: true })).toHaveAccessibleDescription(/./);
+  const settingsImage = await palette.screenshot({ path: '.tmp/artifacts/command-palette-settings-results.png' });
+  await testInfo.attach('command-palette-settings-results', { body: settingsImage, contentType: 'image/png' });
+
+  await search.fill('relearn');
+  await expect(palette.getByText('重新学习', { exact: true })).toBeVisible();
+  await expect(palette.getByText('清除此主题的学习进度。')).toBeVisible();
+  await expect(palette.getByText('之后可以从头再次学习。不影响派生材料。')).toBeVisible();
+  const tipsImage = await palette.screenshot({ path: '.tmp/artifacts/command-palette-action-tip.png' });
+  await testInfo.attach('command-palette-action-tip', { body: tipsImage, contentType: 'image/png' });
+});

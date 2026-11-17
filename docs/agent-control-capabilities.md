@@ -181,4 +181,4 @@ Material History is a desktop navigation surface for the 100 most recently visit
 
 Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive editing history stay in the desktop editor. Agent Control continues to use explicit material operations.
 
-The desktop command palette searches the settings index and opens the selected category or setting. The same palette shows matching action tips and reveals their text inline. These desktop UI behaviors have no Agent Control API or CLI route.
+The desktop command palette searches the settings index and opens the selected category or setting. The palette matches English and localized labels and descriptions, and shows matching action tips inline. These desktop UI behaviors have no Agent Control API or CLI route.

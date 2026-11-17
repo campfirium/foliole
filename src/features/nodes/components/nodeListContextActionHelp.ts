@@ -52,7 +52,7 @@ export const NODE_LIST_CONTEXT_ACTION_HELP = {
     body: "Clear this topic's learning progress.",
     detail: 'It can be studied again from the beginning. Does not affect derived materials.',
     id: 'actionHelp.nodeList.relearn',
-    keywords: ['again', 'reset', 'review', 'study'],
+    keywords: ['again', 'reset', 'review', 'study', 'renaissance'],
     sourceLabel: 'Topic list menu',
     title: 'Relearn'
   },

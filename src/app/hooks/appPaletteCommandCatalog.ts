@@ -4,6 +4,7 @@ import {
 } from '../../shared/commands/contentRegionScaleCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { translate } from '../../shared/localization/translations';
 
 import { APP_PALETTE_COMMANDS } from './appPaletteCommandList';
 import {
@@ -218,6 +219,11 @@ export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
   ).map((command) => ({
     ...command,
     enabled: isPaletteCommandEnabled(command.id, options),
+    keywords: [
+      ...(command.keywords ?? []),
+      command.title,
+      localizePaletteCommandTitle(command.id, command.title, (key, params) => translate('en', key, params))
+    ],
     section: localizePaletteCommandSection(command.section, options.t),
     sectionId: command.section,
     title: resolvePaletteTitle(command.id, options, command.title)

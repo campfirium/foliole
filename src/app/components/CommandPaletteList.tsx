@@ -1,5 +1,5 @@
-import { CirclePlus } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { CirclePlus, Command, Lightbulb, Settings2 } from 'lucide-react';
+import { useEffect, useId, useRef } from 'react';
 
 import type { HelpKnowledgeItem } from '../../features/help/model/helpKnowledge';
 import type { SettingsSearchResult } from '../../features/settings/model/settingsSearch';
@@ -16,7 +16,6 @@ import { floatingResultListClassName } from '../../shared/ui/FloatingSurface';
 
 export interface PaletteResult extends CommandPaletteItem {
   setting?: SettingsSearchResult;
-  subtitle?: string;
   tip?: HelpKnowledgeItem;
 }
 
@@ -29,20 +28,40 @@ interface CommandPaletteListProps {
   activeItems: PaletteResult[];
   displaySections: PaletteSection[];
   emptyLabel: string;
-  expandedTipId: string | null;
   onConfigureItem: (item: CommandPaletteItem) => void;
   onRunItem: (item: PaletteResult | undefined) => void;
 }
 
+const typeIconClassName = 'mt-0.5 shrink-0 text-[color:var(--role-floating-text-muted)] opacity-65';
+
+function CommandPaletteTip({ active, tip }: { active: boolean; tip: HelpKnowledgeItem }) {
+  return (
+    <div className={appFloatingItemClassName('flex items-start gap-2.5 px-3 py-2 text-sm')} data-active={active}>
+      <Lightbulb aria-hidden="true" className={typeIconClassName} size={15} strokeWidth={1.5} />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{tip.title}</p>
+        <div className="mt-0.5 grid grid-cols-2 gap-x-4 text-xs text-[color:var(--role-floating-text-muted)]">
+          <p className={tip.detail ? undefined : 'col-span-2'}>{tip.body}</p>
+          {tip.detail ? <p>{tip.detail}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommandPaletteRow(props: {
   active: boolean;
-  expanded: boolean;
   item: PaletteResult;
   onConfigureItem: CommandPaletteListProps['onConfigureItem'];
   onRunItem: CommandPaletteListProps['onRunItem'];
 }) {
   const t = useTranslation();
   const shortcutLabel = formatShortcutSetDisplayLabel(props.item.shortcuts);
+  const { item } = props;
+  const descriptionId = useId();
+  if (item.tip) return <CommandPaletteTip active={props.active} tip={item.tip} />;
+
+  const Icon = item.setting ? Settings2 : Command;
   return (
     <div
       className={appFloatingItemClassName('flex items-stretch p-0 text-sm')}
@@ -50,20 +69,23 @@ function CommandPaletteRow(props: {
       data-disabled={!props.item.enabled}
     >
       <button
-        aria-expanded={props.item.tip ? props.expanded : undefined}
+        aria-describedby={item.setting?.description ? descriptionId : undefined}
         aria-keyshortcuts={formatAriaKeyShortcuts(props.item.shortcuts)}
-        aria-label={props.item.subtitle && (props.item.setting || props.item.tip) ? `${props.item.title} — ${props.item.subtitle}` : props.item.title}
-        className="min-w-0 flex-1 px-3 py-2 text-left"
+        aria-label={item.title}
+        className="flex min-w-0 flex-1 items-start gap-2.5 px-3 py-2 text-left"
         disabled={!props.item.enabled}
         onClick={() => props.onRunItem(props.item)}
         type="button"
       >
-        <span className="block truncate font-medium text-[color:var(--role-floating-text-primary)]">{props.item.title}</span>
-        {props.item.subtitle ? (
-          <span className="block truncate text-xs text-[color:var(--role-floating-text-muted)]">{props.item.subtitle}</span>
-        ) : null}
+        <Icon aria-hidden="true" className={typeIconClassName} size={15} strokeWidth={1.5} />
+        <span className="min-w-0">
+          <span className="block truncate font-medium text-[color:var(--role-floating-text-primary)]">{item.title}</span>
+          {item.setting?.description ? (
+            <span className="mt-0.5 block text-xs text-[color:var(--role-floating-text-muted)]" id={descriptionId}>{item.setting.description}</span>
+          ) : null}
+        </span>
       </button>
-      {props.item.setting || props.item.tip ? null : (
+      {item.setting ? null : (
         <button
           aria-label={t('desktop.palette.command.configureShortcut', { title: props.item.title })}
           className="flex shrink-0 items-center px-3 text-[color:var(--role-floating-text-muted)] hover:text-[color:var(--role-floating-text-primary)] focus-visible:text-[color:var(--role-floating-text-primary)]"
@@ -80,11 +102,10 @@ function CommandPaletteRow(props: {
 export function CommandPaletteList(props: CommandPaletteListProps) {
   const listRef = useRef<HTMLUListElement>(null);
   const activeId = props.activeItems[props.activeIndex]?.id;
-  const isActiveExpanded = Boolean(activeId && activeId === props.expandedTipId);
   useEffect(() => {
     const activeRow = listRef.current?.querySelector('[data-active="true"]');
-    (isActiveExpanded ? activeRow?.closest('li') : activeRow)?.scrollIntoView?.({ block: 'nearest' });
-  }, [activeId, isActiveExpanded]);
+    activeRow?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeId]);
 
   if (!props.activeItems.length && !props.displaySections.some((section) => section.items.length)) {
     return (
@@ -107,17 +128,10 @@ export function CommandPaletteList(props: CommandPaletteListProps) {
             <li key={item.id}>
               <CommandPaletteRow
                 active={item.enabled && enabledIndex === props.activeIndex}
-                expanded={props.expandedTipId === item.id}
                 item={item}
                 onConfigureItem={props.onConfigureItem}
                 onRunItem={props.onRunItem}
               />
-              {item.tip && props.expandedTipId === item.id ? (
-                <div className="space-y-1 px-3 pb-3 text-sm text-[color:var(--role-floating-text-primary)]">
-                  <p>{item.tip.body}</p>
-                  {item.tip.detail ? <p className="text-[color:var(--role-floating-text-muted)]">{item.tip.detail}</p> : null}
-                </div>
-              ) : null}
             </li>
           );
         })

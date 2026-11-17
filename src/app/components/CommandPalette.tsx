@@ -55,14 +55,12 @@ function useCommandPaletteSections(args: CommandPaletteProps, query: string) {
 function useCommandPaletteState(args: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [expandedTipId, setExpandedTipId] = useState<string | null>(null);
   const displaySections = useCommandPaletteSections(args, query);
   const activeItems = displaySections.flatMap((section) => section.items).filter((item) => item.enabled);
 
   useEffect(() => {
     if (!args.isOpen) {
       setQuery('');
-      setExpandedTipId(null);
       setActiveIndex(0);
     }
   }, [args.isOpen]);
@@ -80,19 +78,15 @@ function useCommandPaletteState(args: CommandPaletteProps) {
   const runItem = (item: PaletteResult | undefined) => {
     if (!item?.enabled) return;
     if (item.setting) args.onOpenSetting?.(item.setting);
-    else if (item.tip) {
-      setActiveIndex(activeItems.findIndex(({ id }) => id === item.id));
-      setExpandedTipId((current) => current === item.id ? null : item.id);
-    } else args.onRunCommand(item.id);
+    else if (!item.tip) args.onRunCommand(item.id);
   };
 
   const updateQuery = (value: string) => {
     setActiveIndex(0);
-    setExpandedTipId(null);
     setQuery(value);
   };
 
-  return { activeIndex, activeItems, displaySections, expandedTipId, query, runItem, setActiveIndex, updateQuery };
+  return { activeIndex, activeItems, displaySections, query, runItem, setActiveIndex, updateQuery };
 }
 
 export function CommandPalette(props: CommandPaletteProps) {
@@ -138,7 +132,6 @@ export function CommandPalette(props: CommandPaletteProps) {
           activeItems={state.activeItems}
           displaySections={state.displaySections}
           emptyLabel={t('desktop.palette.command.empty')}
-          expandedTipId={state.expandedTipId}
           onConfigureItem={(item) => {
             hotkeys.onConfigureShortcut(item.id);
             onRunCommand(APP_COMMAND_IDS.openSettings);

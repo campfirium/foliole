@@ -38,13 +38,14 @@ function matchesSearchText(values: Array<string | undefined>, query: string) {
 export function querySettingsSearch(
   categories: SettingsCategoryOption[],
   rows: SettingsSearchRowMeta[],
-  rawQuery: string
+  rawQuery: string,
+  alternateMatches: ReadonlySet<string> = new Set()
 ): SettingsSearchResult[] {
   const query = normalizeSearchText(rawQuery);
   if (!query) return [];
 
   const categoryResults = categories.filter((category) =>
-    matchesSearchText([category.label, category.description], query)
+    alternateMatches.has(`category:${category.id}`) || matchesSearchText([category.label, category.description], query)
   ).map<SettingsSearchResult>((category) => ({
     categoryId: category.id,
     description: category.description,
@@ -54,7 +55,7 @@ export function querySettingsSearch(
   }));
 
   const rowResults = rows.filter((row) =>
-    matchesSearchText([row.title, row.description, ...(row.searchTerms ?? [])], query)
+    alternateMatches.has(`row:${row.id}`) || matchesSearchText([row.title, row.description, ...(row.searchTerms ?? [])], query)
   ).map<SettingsSearchResult>((row) => ({
     categoryId: row.categoryId,
     description: row.description,
