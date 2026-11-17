@@ -7,7 +7,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { SearchPaletteInputAndFilters } from './SearchPaletteInputAndFilters';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList, SearchPaletteLoadingState } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
-import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './SearchPaletteShortcutsFooter';
+import { SearchPaletteShortcutsFooter } from './SearchPaletteShortcutsFooter';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { SearchPaletteViewOptions } from './SearchPaletteViewOptions';
 import { useSearchPaletteView, type SearchPaletteView } from './searchPaletteViewPreference';
@@ -34,7 +34,6 @@ export function SearchPalette(props: SearchPaletteProps) {
   const [isComposingQuery, setIsComposingQuery] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [view, setView] = useSearchPaletteView();
-  const shortcuts = useSearchPaletteShortcuts();
   const searchState = useSearchResults(props, query, isComposingQuery);
   const results = useOrderedSearchResults(searchState.results, props.nodesById, searchState.aliasSpellings.length > 0);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
@@ -82,7 +81,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           sourceDetailsByNodeId={sourceDetailsByNodeId}
           view={view}
         />
-        <SearchPaletteShortcutsFooter collapsed={shortcuts.collapsed} onToggle={shortcuts.toggle} />
+        <SearchPaletteShortcutsFooter />
       </WorkspacePaletteFrame>
     </div>
   );

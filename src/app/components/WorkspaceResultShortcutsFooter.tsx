@@ -1,4 +1,10 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
+
+type ShortcutPreference = 'materialHistoryShortcutsCollapsed' | 'searchPaletteShortcutsCollapsed';
 
 interface ShortcutHintProps {
   keys: string[];
@@ -6,15 +12,22 @@ interface ShortcutHintProps {
 }
 
 export function WorkspaceResultShortcutsFooter(props: {
-  collapsed: boolean;
-  onToggle: () => void;
+  preference?: ShortcutPreference;
   showLabel: string;
   collapseLabel: string;
   hints: ShortcutHintProps[];
 }) {
+  const key = props.preference && APP_SETTINGS_STORAGE_KEYS[props.preference];
+  const [collapsed, setCollapsed] = useState(() => !key || getWhitelistedLocalStorageItem(key) !== 'false');
+
+  function toggle() {
+    setCollapsed(!collapsed);
+    if (key) setWhitelistedLocalStorageItem(key, String(!collapsed));
+  }
+
   return (
     <footer className="relative flex min-h-14 shrink-0 items-center justify-center border-t border-[var(--app-floating-divider-color)] px-12 py-2.5 text-xs text-foreground/45">
-      {props.collapsed ? (
+      {collapsed ? (
         null
       ) : (
         <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-center">
@@ -22,13 +35,13 @@ export function WorkspaceResultShortcutsFooter(props: {
         </span>
       )}
       <button
-        aria-label={props.collapsed ? props.showLabel : props.collapseLabel}
-        aria-expanded={!props.collapsed}
+        aria-label={collapsed ? props.showLabel : props.collapseLabel}
+        aria-expanded={!collapsed}
         className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 "
-        onClick={props.onToggle}
+        onClick={toggle}
         type="button"
       >
-        {props.collapsed ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
+        {collapsed ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
       </button>
     </footer>
   );

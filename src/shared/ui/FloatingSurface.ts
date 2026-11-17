@@ -90,7 +90,8 @@ export const floatingResultListClassName = appFloatingListClassName(
   '[--app-scrollbar-thumb-hover-color:color-mix(in_srgb,var(--app-floating-border-color)_52%,transparent)]'
 );
 export const floatingResultRowClassName = 'grid gap-[3px] rounded-lg px-4 py-2.5';
-export const floatingResultPreviewClassName = 'line-clamp-2 break-words text-ui-lg leading-[21px]';
+export const floatingResultPrimaryTextClassName = 'text-[17px] font-semibold leading-[23px] text-foreground';
+export const floatingResultPreviewClassName = 'line-clamp-2 break-words text-ui-lg leading-[21px] text-foreground/60';
 export const floatingResultMetaClassName = 'text-xs leading-[17px] text-foreground/45';
 
 export function appFloatingItemClassName(className?: string) {

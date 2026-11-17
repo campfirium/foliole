@@ -26,6 +26,10 @@ test('history view options apply immediately and return after app restart', asyn
   await page.getByRole('treeitem', { name: title, exact: true }).click();
 
   const history = await openHistory(page);
+  const showShortcuts = history.getByRole('button', { name: 'Show history shortcuts' });
+  await expect(showShortcuts).toHaveAttribute('aria-expanded', 'false');
+  await showShortcuts.click();
+  await expect(history.getByText('Space', { exact: true })).toBeVisible();
   const trigger = history.getByRole('button', { name: 'View options' });
   const options = history.getByRole('group', { name: 'View options' });
   const preview = history.getByText(/^History preview text/);
@@ -53,11 +57,7 @@ test('history view options apply immediately and return after app restart', asyn
   await expect(options).toBeHidden();
   await expect(history).toBeVisible();
   await expect(trigger).toBeFocused();
-  await expect.poll(() => page.evaluate(async () => {
-    const settings = await window.electronAPI.invoke('load_app_settings_state', {});
-    const value = settings?.['foliole-material-history-view'];
-    return value && JSON.parse(value);
-  })).toEqual({ first: 'breadcrumb', lines: 3 });
+  await expectHistoryPreferencesSaved(page);
 
   await page.keyboard.press('Escape');
   await expect(history).toBeHidden();
@@ -65,7 +65,26 @@ test('history view options apply immediately and return after app restart', asyn
   await expect(breadcrumbFirst).toBeVisible();
   await expect(preview).toHaveCSS('-webkit-line-clamp', '3');
 
-  await page.evaluate(() => window.localStorage.removeItem('foliole-material-history-view'));
+  await restartAndVerify(desktopSession, page);
+});
+
+async function expectHistoryPreferencesSaved(page: Page) {
+  await expect.poll(() => page.evaluate(async () => {
+    const settings = await window.electronAPI.invoke('load_app_settings_state', {});
+    const value = settings?.['foliole-material-history-view'];
+    return {
+      view: value && JSON.parse(value),
+      shortcutsCollapsed: settings?.['foliole-material-history-shortcuts-collapsed']
+    };
+  })).toEqual({ view: { first: 'breadcrumb', lines: 3 }, shortcutsCollapsed: 'false' });
+
+}
+
+async function restartAndVerify(desktopSession: DesktopSession, page: Page) {
+  await page.evaluate(() => {
+    window.localStorage.removeItem('foliole-material-history-view');
+    window.localStorage.removeItem('foliole-material-history-shortcuts-collapsed');
+  });
   await desktopSession.electronApp.close();
   const restarted = await launchDesktopSession({
     env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: desktopSession.target.runtimeStateRoot }
@@ -76,13 +95,17 @@ test('history view options apply immediately and return after app restart', asyn
   } finally {
     await restarted.close();
   }
-});
+}
 
 async function verifyRestart(page: Page) {
   await expectWorkspaceShell(page);
   const history = await openHistory(page);
   await expect(history.getByRole('button', { name: /^.*History layout topic History preview text/ })).toBeVisible();
   await expect(history.getByText(/^History preview text/)).toHaveCSS('-webkit-line-clamp', '3');
+  const collapseShortcuts = history.getByRole('button', { name: 'Collapse history shortcuts' });
+  await expect(collapseShortcuts).toHaveAttribute('aria-expanded', 'true');
+  await collapseShortcuts.click();
+  await expect(history.getByText('Space', { exact: true })).toBeHidden();
   await history.getByRole('button', { name: 'View options' }).click();
   const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();

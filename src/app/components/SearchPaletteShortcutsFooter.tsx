@@ -1,31 +1,12 @@
-import { useState } from 'react';
-
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
-import { loadSearchPaletteShortcutsCollapsed, saveSearchPaletteShortcutsCollapsed } from './searchPaletteShortcutsPreference';
 import { WorkspaceResultShortcutsFooter } from './WorkspaceResultShortcutsFooter';
 
-export function useSearchPaletteShortcuts() {
-  const [collapsed, setCollapsed] = useState(loadSearchPaletteShortcutsCollapsed);
-
-  return {
-    collapsed,
-    toggle: () => {
-      const nextCollapsed = !collapsed;
-      setCollapsed(nextCollapsed);
-      saveSearchPaletteShortcutsCollapsed(nextCollapsed);
-    }
-  };
-}
-
-export function SearchPaletteShortcutsFooter(props: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
+export function SearchPaletteShortcutsFooter() {
   const t = useTranslation();
   return (
     <WorkspaceResultShortcutsFooter
-      {...props}
+      preference="searchPaletteShortcutsCollapsed"
       collapseLabel={t('desktop.search.shortcuts.collapse')}
       showLabel={t('desktop.search.shortcuts.show')}
       hints={[

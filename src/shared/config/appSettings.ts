@@ -149,6 +149,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   rightSidebarCollapsed: 'foliole-workspace-right-sidebar-collapsed',
   rightSidebarWidth: 'foliole-workspace-right-sidebar-width',
   rightSidebarActivePanel: 'foliole-workspace-right-sidebar-active-panel',
+  materialHistoryShortcutsCollapsed: 'foliole-material-history-shortcuts-collapsed',
   materialHistoryView: 'foliole-material-history-view',
   searchPaletteView: 'foliole-search-palette-view',
   rightSidebarPanelOrder: 'foliole-workspace-right-sidebar-panel-order',

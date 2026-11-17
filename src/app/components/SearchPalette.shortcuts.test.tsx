@@ -52,20 +52,19 @@ beforeEach(() => {
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
 });
 
-it('persists the collapsed search shortcut footer preference', () => {
-  const { unmount } = renderPalette();
+it('defaults to collapsed and remembers both explicit shortcut footer states', () => {
+  const first = renderPalette();
+  expect(screen.queryByText('Open')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Show search shortcuts' }));
+  expect(screen.getByText('Open')).toBeInTheDocument();
+  first.unmount();
 
+  const reopened = renderPalette();
   expect(screen.getByText('Open')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Collapse search shortcuts' }));
+  reopened.unmount();
 
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchPaletteShortcutsCollapsed)).toBe('true');
-  expect(screen.queryByText('Open')).not.toBeInTheDocument();
-  expect(screen.queryByText('Shortcuts')).not.toBeInTheDocument();
-
-  unmount();
   renderPalette();
-
   expect(screen.queryByText('Open')).not.toBeInTheDocument();
-  expect(screen.queryByText('Shortcuts')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show search shortcuts' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show search shortcuts' })).toHaveAttribute('aria-expanded', 'false');
 });

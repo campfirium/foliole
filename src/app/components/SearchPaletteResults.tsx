@@ -11,7 +11,7 @@ import {
 } from '../../shared/ui';
 import {
   floatingResultListClassName, floatingResultMetaClassName,
-  floatingResultPreviewClassName, floatingResultRowClassName
+  floatingResultPreviewClassName, floatingResultPrimaryTextClassName, floatingResultRowClassName
 } from '../../shared/ui/FloatingSurface';
 
 import {
@@ -152,10 +152,10 @@ function SearchPaletteResultItem(props: {
         onMouseEnter={() => props.onSetActiveIndex(props.index)}
         type="button"
       >
-        <span className="min-w-0 truncate text-[17px] font-semibold leading-[23px] text-foreground">
+        <span className={`min-w-0 truncate ${floatingResultPrimaryTextClassName}`}>
           {renderSearchResultText(item.title, highlightQuery, { project: projectResultText })}
         </span>
-        <span className={`${floatingResultPreviewClassName} text-foreground/60`} style={{ WebkitLineClamp: props.lines }}>
+        <span className={floatingResultPreviewClassName} style={{ WebkitLineClamp: props.lines }}>
           {renderSearchResultText(resolveSearchResultContext(item), highlightQuery, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta

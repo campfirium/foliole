@@ -39,9 +39,6 @@ async function captureSearchPanelFrame(page: Page) {
 async function expectSearchPanelLayout(history: Locator, frame: Awaited<ReturnType<typeof captureSearchPanelFrame>>) {
   const panel = history.getByRole('searchbox').locator('../..');
   expect(await panel.boundingBox()).toEqual(frame);
-  const collapse = history.getByRole('button', { name: 'Collapse history shortcuts' });
-  await expect(history.getByText('Enter', { exact: true })).toBeVisible();
-  await collapse.click();
   await expect(history.getByText('Enter', { exact: true })).toBeHidden();
   await history.getByRole('button', { name: 'Show history shortcuts' }).click();
   await expect(history.getByText('Space', { exact: true })).toBeVisible();

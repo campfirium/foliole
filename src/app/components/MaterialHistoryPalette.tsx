@@ -7,7 +7,10 @@ import {
   appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName
 } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import { floatingResultListClassName } from '../../shared/ui/FloatingSurface';
+import {
+  floatingResultListClassName, floatingResultMetaClassName, floatingResultPreviewClassName,
+  floatingResultPrimaryTextClassName
+} from '../../shared/ui/FloatingSurface';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, selectMaterialHistory } from './materialHistory';
@@ -146,14 +149,14 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
     const path = materialHistoryPath(nodes, node.id);
     const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     const preview = (
-      <span id={bodyId} className={`pointer-events-none relative min-w-0 line-clamp-2 break-words text-ui-base leading-5 ${breadcrumbFirst ? 'text-foreground/75' : 'text-foreground/90'}`}
+      <span id={bodyId} className={`pointer-events-none relative min-w-0 ${floatingResultPreviewClassName}`}
         style={{ WebkitLineClamp: view.lines }}>
         {materialHistoryPreview(node)}
       </span>
     );
     const metadata = (
       <div className="pointer-events-none relative flex min-w-0 items-center gap-2">
-        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'text-ui-base font-medium leading-5 text-foreground/90' : 'text-xs leading-4 text-foreground/65'}`}>{path}</span>}
+        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? floatingResultPrimaryTextClassName : floatingResultMetaClassName}`}>{path}</span>}
         <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
       </div>
     );
@@ -197,11 +200,9 @@ function HistoryBookmark({ pinned, selected, onClick }: {
 
 function HistoryFooter() {
   const t = useTranslation();
-  const [collapsed, setCollapsed] = useState(false);
   return (
     <WorkspaceResultShortcutsFooter
-      collapsed={collapsed}
-      onToggle={() => setCollapsed((value) => !value)}
+      preference="materialHistoryShortcutsCollapsed"
       collapseLabel={t('desktop.history.collapseShortcuts')}
       showLabel={t('desktop.history.showShortcuts')}
       hints={[
