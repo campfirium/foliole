@@ -87,8 +87,8 @@ export function SettingsAppearanceSection(props: {
     <>
       <AppearanceColorModeSection {...state} />
       <SettingsDisplayScaleSection />
-      <SettingsSidebarLayoutSection />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
+      <SettingsSidebarLayoutSection />
       <WorkspaceDividerSettingsSection />
       <FolderSectionSettings />
       <AppearanceReadingColorSection

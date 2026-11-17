@@ -4,6 +4,28 @@ import { openSettingsCategory, resizeWorkspaceWindow, setActiveSidebarTierDocked
 const sidebarLayoutName = /^(Sidebar layout|侧栏布局)$/;
 const thresholdName = /^(Minimum window width \(%\)|窗口宽度起点（%）)$/;
 
+test('places the preview-style sidebar rules immediately below workspace surface colors', async ({ desktopWindow: page }, testInfo) => {
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const surface = settings.getByRole('region', { name: /Workspace surface color|工作区表面颜色/i });
+  const rules = settings.getByRole('region', { name: sidebarLayoutName });
+  const surfaceElement = await surface.elementHandle();
+  await expect.poll(() => rules.evaluate((section, colors) => colors?.nextElementSibling === section, surfaceElement)).toBe(true);
+
+  const table = rules.getByRole('table');
+  await expect(table.getByRole('columnheader')).toHaveText([
+    /Window width|窗口宽度/, /Left sidebar|左栏/, /Width|宽度/,
+    /Right sidebar|右栏/, /Width|宽度/, ''
+  ]);
+  await expect(table.locator('tbody tr[aria-current="true"] > td')).toHaveCount(6);
+  await expect(rules.locator('[data-settings-section-header]').getByRole('button', {
+    name: /^(Restore default tiers|恢复默认档位)$/
+  })).toBeVisible();
+  await expect(rules.getByRole('button', { name: /^(Add tier|添加档位)$/ })).toBeVisible();
+  const screenshot = testInfo.outputPath('sidebar-layout-settings.png');
+  await rules.screenshot({ path: screenshot });
+  await testInfo.attach('sidebar-layout-settings', { path: screenshot, contentType: 'image/png' });
+});
+
 function readSavedTiers(page: DesktopSession['firstWindow']) {
   return page.evaluate(async () => {
     const settings = await window.electronAPI!.invoke('load_app_settings_state');
@@ -44,10 +66,14 @@ test('edits tier rows, rejects duplicate thresholds and restores the default tab
   await setActiveSidebarTierDockedWidths(page, 40, 35);
   await openSection();
   const rows = section.locator('tbody tr');
-  await expect(rows.first().getByRole('button', { name: /^(Delete tier|删除档位)$/ })).toHaveCount(0);
+  const base = rows.last();
+  await expect(base.getByRole('button', { name: /^(Delete tier|删除档位)$/ })).toHaveCount(0);
+  await expect(base.getByRole('cell').first()).toHaveText(/<\s*50%/);
   await section.getByRole('button', { name: /^(Add tier|添加档位)$/ }).click();
   await expect(rows).toHaveCount(4);
-  const added = rows.last();
+  const addedRule = (await readSavedTiers(page)).find(tier => !defaults.some(rule => rule.id === tier.id))!;
+  const thresholdAt = (value: number) => page.getByRole('spinbutton', { name: thresholdName }).and(page.locator(`input[value="${value}"]`));
+  const added = rows.filter({ has: thresholdAt(addedRule.threshold!) });
   await expect(added.getByRole('spinbutton', { name: /Left sidebar|左侧导航/ })).toHaveValue('40');
   await expect(added.getByRole('spinbutton', { name: /Right sidebar|右侧检查器/ })).toHaveValue('35');
   const threshold = added.getByRole('spinbutton', { name: thresholdName });
@@ -58,9 +84,10 @@ test('edits tier rows, rejects duplicate thresholds and restores the default tab
   await expect(threshold).toHaveValue(originalThreshold);
   await threshold.fill('1');
   await threshold.press('Enter');
-  await expect(threshold).toHaveValue('1');
+  const updated = thresholdAt(1);
+  await expect(updated).toHaveValue('1');
   await expect(section.getByRole('alert')).toHaveCount(0);
-  await added.getByRole('button', { name: /^(Delete tier|删除档位)$/ }).click();
+  await rows.filter({ has: updated }).getByRole('button', { name: /^(Delete tier|删除档位)$/ }).click();
   await expect(rows).toHaveCount(3);
   await restore();
   await expect.poll(() => readSavedTiers(page)).toEqual(defaults);

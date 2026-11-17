@@ -1,34 +1,39 @@
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { SettingsRow, SettingsSection, settingsResetButtonClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 import { saveSidebarTiers, useSavedSidebarTiers, useSidebarLayoutWindowPercent } from '../../model/sidebarLayoutPreference';
 import {
   defaultSidebarTiers, nextSidebarThreshold, selectSidebarTier, sidebarModes, type SidebarMode, type SidebarRule, type SidebarSide, type SidebarTier
 } from '../../model/sidebarLayoutTiers';
 
-const fieldClass = 'app-focus-boundary rounded border border-settings-control-border bg-settings-control px-2 py-1';
+const fieldClass = 'app-focus-boundary h-9 rounded-md border border-settings-control-border bg-settings-control px-2 text-ui-md';
+const cellClass = 'px-1.5 py-1.5 first:pl-2 last:pr-2';
 
 function NumberField(props: { label: string; value: number; onChange: (value: number) => boolean; integer?: boolean }) {
   return (
-    <input
-      aria-label={props.label}
-      className={`${fieldClass} w-20`}
-      defaultValue={props.value}
-      key={props.value}
-      max={100}
-      min={0}
-      onBlur={({ currentTarget }) => {
-        const value = currentTarget.valueAsNumber;
-        if (!currentTarget.validity.valid || !Number.isFinite(value) || !props.onChange(value)) {
-          currentTarget.value = String(props.value);
-        }
-      }}
-      onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-      step={props.integer ? 1 : 'any'}
-      type="number"
-    />
+    <span className="inline-flex items-center gap-1 tabular-nums">
+      {props.integer && <span aria-hidden="true">≥</span>}
+      <input
+        aria-label={props.label}
+        className={`${fieldClass} w-[3.875rem]`}
+        defaultValue={props.value}
+        key={props.value}
+        max={100}
+        min={0}
+        onBlur={({ currentTarget }) => {
+          const value = currentTarget.valueAsNumber;
+          if (!currentTarget.validity.valid || !Number.isFinite(value) || !props.onChange(value)) {
+            currentTarget.value = String(props.value);
+          }
+        }}
+        onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+        step={props.integer ? 1 : 'any'}
+        type="number"
+      />
+      <span aria-hidden="true">%</span>
+    </span>
   );
 }
 
@@ -36,28 +41,31 @@ function SideFields({ rule, side, onChange }: { rule: SidebarRule; side: Sidebar
   const t = useTranslation();
   const sideLabel = t(side === 'left' ? 'settings.appearance.sidebarLayout.left' : 'settings.appearance.sidebarLayout.right');
   return (
-    <td className="p-2">
-      <div className="flex gap-2">
+    <>
+      <td className={cellClass}>
         <select
           aria-label={sideLabel}
-          className={fieldClass}
+          className={`${fieldClass} w-full min-w-[5.75rem]`}
           onChange={event => onChange({ ...rule, mode: event.currentTarget.value as SidebarMode })}
           value={rule.mode}
         >
           {sidebarModes.map(mode => <option key={mode} value={mode}>{t(`settings.appearance.sidebarLayout.${mode}`)}</option>)}
         </select>
+      </td>
+      <td className={cellClass}>
         <NumberField label={`${sideLabel} (%)`} value={rule.width} onChange={width => {
           if (width !== rule.width) onChange({ ...rule, width });
           return true;
         }} />
-      </div>
-    </td>
+      </td>
+    </>
   );
 }
 
 function TierRow(props: {
   tier: SidebarTier;
   active: boolean;
+  baseLabel: string;
   update: (tier: SidebarTier) => void;
   remove: () => void;
   changeThreshold: (threshold: number) => boolean;
@@ -65,20 +73,35 @@ function TierRow(props: {
   const t = useTranslation();
   const { tier, update } = props;
   return (
-    <tr aria-current={props.active ? 'true' : undefined} className={props.active ? 'bg-settings-control' : undefined}>
-      <td className="p-2">
-        {tier.threshold === null ? t('settings.appearance.sidebarLayout.base') : (
+    <tr aria-current={props.active ? 'true' : undefined} className={props.active ? 'bg-settings-selected' : undefined}>
+      <td className={cellClass}>
+        {tier.threshold === null ? props.baseLabel : (
           <NumberField label={t('settings.appearance.sidebarLayout.threshold')} value={tier.threshold} integer onChange={props.changeThreshold} />
         )}
       </td>
       <SideFields rule={tier.left} side="left" onChange={left => update({ ...tier, left })} />
       <SideFields rule={tier.right} side="right" onChange={right => update({ ...tier, right })} />
-      <td className="p-2">
+      <td className={`${cellClass} w-px text-right`}>
         {tier.threshold !== null && (
-          <button aria-label={t('settings.appearance.sidebarLayout.remove')} onClick={props.remove} type="button"><Trash2 size={16} /></button>
+          <button aria-label={t('settings.appearance.sidebarLayout.remove')} className={settingsUtilityIconButtonClassName()}
+            onClick={props.remove} type="button"><Trash2 aria-hidden="true" size={16} /></button>
         )}
       </td>
     </tr>
+  );
+}
+
+function TierTableHeader() {
+  const t = useTranslation();
+  return (
+    <thead>
+      <tr className="border-b border-settings-divider text-ui-sm text-muted-foreground">
+        {(['windowColumn', 'leftColumn', 'widthColumn', 'rightColumn', 'widthColumn'] as const).map((column, index) => (
+          <th className={`${cellClass} font-medium`} key={index} scope="col">{t(`settings.appearance.sidebarLayout.${column}`)}</th>
+        ))}
+        <th aria-label={t('settings.appearance.sidebarLayout.actionsColumn')} scope="col" />
+      </tr>
+    </thead>
   );
 }
 
@@ -91,6 +114,9 @@ export function SettingsSidebarLayoutSection() {
 
   const active = selectSidebarTier(tiers, windowPercent);
   const nextThreshold = nextSidebarThreshold(tiers, windowPercent);
+  const rows = tiers.toSorted((a, b) => (b.threshold ?? -1) - (a.threshold ?? -1));
+  const firstThreshold = rows.at(-2)?.threshold;
+  const baseLabel = firstThreshold == null ? t('settings.appearance.sidebarLayout.base') : `< ${firstThreshold}%`;
   const save = (next: SidebarTier[]) => {
     setError(null);
     void saveSidebarTiers(next).then(saved => { if (!saved) setError('saveError'); });
@@ -105,32 +131,34 @@ export function SettingsSidebarLayoutSection() {
     return true;
   };
   return (
-    <SettingsSection ariaLabel={t('settings.appearance.sidebarLayout.title')} title={t('settings.appearance.sidebarLayout.title')}>
+    <SettingsSection
+      actions={(
+        <button aria-label={t('settings.appearance.sidebarLayout.reset')} className={settingsResetButtonClassName()}
+          onClick={() => save(defaultSidebarTiers)} type="button"><RotateCcw aria-hidden="true" size={18} /></button>
+      )}
+      ariaLabel={t('settings.appearance.sidebarLayout.title')}
+      title={t('settings.appearance.sidebarLayout.title')}
+    >
       <SettingsRow title={t('settings.appearance.sidebarLayout.windowWidth')}>
-        <output>{Math.round(windowPercent)}%</output>
+        <output className="tabular-nums">{Math.round(windowPercent)}%</output>
       </SettingsRow>
-      <div className="overflow-x-auto px-settings-panel-x">
-        <table className="w-full text-left text-sm">
-          <thead><tr>
-            <th className="p-2">{t('settings.appearance.sidebarLayout.threshold')}</th>
-            <th className="p-2">{t('settings.appearance.sidebarLayout.left')}</th>
-            <th className="p-2">{t('settings.appearance.sidebarLayout.right')}</th>
-            <th />
-          </tr></thead>
-          <tbody>
-            {tiers.map(tier => (
-              <TierRow key={tier.id} tier={tier} active={active?.id === tier.id} update={update}
-                changeThreshold={threshold => updateThreshold(tier, threshold)}
-                remove={() => save(tiers.filter(existing => existing.id !== tier.id))} />
-            ))}
-          </tbody>
-        </table>
-        <div className="flex gap-3 py-2">
-          <button className={fieldClass} disabled={nextThreshold === undefined || !active} onClick={() => {
-            if (nextThreshold !== undefined && active) save([...tiers, { ...active, id: crypto.randomUUID(), threshold: nextThreshold }]);
-          }} type="button">{t('settings.appearance.sidebarLayout.add')}</button>
-          <button className={fieldClass} aria-label={t('settings.appearance.sidebarLayout.reset')} onClick={() => save(defaultSidebarTiers)} type="button"><RotateCcw size={16} /></button>
+      <div className="px-settings-panel-x">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse whitespace-nowrap text-left text-ui-md">
+            <TierTableHeader />
+            <tbody>
+              {rows.map(tier => (
+                <TierRow key={tier.id} tier={tier} active={active?.id === tier.id} baseLabel={baseLabel} update={update}
+                  changeThreshold={threshold => updateThreshold(tier, threshold)}
+                  remove={() => save(tiers.filter(existing => existing.id !== tier.id))} />
+              ))}
+            </tbody>
+          </table>
         </div>
+        <button className="app-focus-boundary mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border text-ui-md text-muted-foreground hover:bg-settings-control hover:text-foreground disabled:opacity-45"
+          disabled={nextThreshold === undefined || !active} onClick={() => {
+            if (nextThreshold !== undefined && active) save([...tiers, { ...active, id: crypto.randomUUID(), threshold: nextThreshold }]);
+          }} type="button"><Plus aria-hidden="true" size={16} />{t('settings.appearance.sidebarLayout.add')}</button>
         {error && <p role="alert">{t(`settings.appearance.sidebarLayout.${error}`)}</p>}
       </div>
     </SettingsSection>
