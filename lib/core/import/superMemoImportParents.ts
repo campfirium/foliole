@@ -34,6 +34,7 @@ function hasAncestor(parents: Parents, id: number, target: number) {
 }
 
 export function planSuperMemoImportParents(rows: readonly Row[]): Parents {
+  if (rows.every(row => row.structure)) return new Map(rows.map(row => [row.id, row.structure!.parentId]));
   const parents = directoryParents(rows);
   const topics = new Set(rows.filter(row => row.outcome === 'topic').map(row => row.id));
   const directTopicChildren = new Set(rows.filter(row => (row.outcome === 'item' || row.outcome === 'topic') &&

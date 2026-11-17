@@ -8,6 +8,7 @@ import { SuperMemoLoadPage } from './SuperMemoLoadPage';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
 import { SuperMemoSourcePage } from './SuperMemoSourcePage';
+import { SuperMemoStructurePage } from './SuperMemoStructurePage';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
 export function SuperMemoMigrationContent({ model, current, selected, navigation, onLoad, onLoadNew, onSelect }: {
@@ -27,7 +28,9 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
       {current !== 'load' && !preview && !busy && !result ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && preview ? (
-        <div className="min-h-0 flex-1"><SuperMemoEntryPreview navigation={navigation} preview={preview} elements={draft?.elements} /></div>
+        draft && !preview.directoryUpdate ? <SuperMemoStructurePage preview={preview} elements={draft.elements}
+          navigation={navigation} busy={busy} onChange={model.changeFolder} /> :
+          <div className="min-h-0 flex-1"><SuperMemoEntryPreview navigation={navigation} preview={preview} elements={draft?.elements} /></div>
       ) : null}
       {preview && current === 'schedule' ? (
         <SuperMemoSchedulePage {...{ preview, percent, setPercent, busy }} />
@@ -39,6 +42,10 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {current === 'source' && draft ? (
         <SuperMemoSourcePage preview={draft.preview} elements={draft.elements} value={sourceFormat} disabled={busy}
           onChange={changeSourceFormat} />
+      ) : null}
+      {current === 'confirm' && !result && preview?.rows.some(row => row.structure && row.outcome !== 'skipped' &&
+        row.structure.parentId !== row.parentId) ? (
+        <p role="note" className="text-sm">{t('desktop.superMemoDrafts.structureConfirmNotice')}</p>
       ) : null}
       {current === 'confirm' ? <SuperMemoConfirmMigration model={model} selected={selected} onSelect={onSelect} /> : null}
     </AppDialogBody>

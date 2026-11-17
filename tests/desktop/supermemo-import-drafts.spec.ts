@@ -35,6 +35,7 @@ test('previews different XML exports and retains the conversion draft after dism
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
+  await dialog.getByRole('button', { name: /^(Expand entry|展开条目) #1$/ }).click();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
   await expect(preview.getByText('Question', { exact: true })).toBeVisible();
   await expect(preview.getByText('Answer', { exact: true })).toBeVisible();
@@ -98,6 +99,14 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   await expect(dialog.getByRole('slider')).toHaveValue('0');
 });
 
+function readImportedTopicLocation(page: Page) {
+  return page.evaluate(async () => {
+    const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const topic = Object.values(snapshot.nodesById).find(node => node.title === 'Imported map topic');
+    return { nodeId: topic?.id, parentNodeId: topic?.parentNodeId };
+  });
+}
+
 test('imports a Topic with an inline image and reopens a saved import batch', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('collection');
@@ -140,15 +149,13 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await rm(directory, { recursive: true });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
-  const nodeId = await desktopWindow.evaluate(async () => {
-    const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
-    return Object.values(snapshot.nodesById).find(node => node.title === 'Imported map topic')?.id;
-  });
+  const { nodeId, parentNodeId } = await readImportedTopicLocation(desktopWindow);
   const importedCard = await desktopWindow.evaluate(async () => {
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
     return Object.values(snapshot.nodesById).find(node => node.title === 'Card');
   });
-  expect(importedCard?.parentNodeId).toBe(nodeId);
+  expect(parentNodeId).toBeTruthy();
+  expect(importedCard?.parentNodeId).toBe(parentNodeId);
   const cardDocument = await desktopWindow.evaluate(id => window.electronAPI!.invoke('load_node_document', { nodeId: id! }), importedCard?.id);
   expect(cardDocument?.content).toContain(`Source: [[node-id:${nodeId}|Imported map topic]]`);
   expect(cardDocument?.reveal).toBe('Answer');

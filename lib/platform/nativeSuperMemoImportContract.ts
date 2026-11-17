@@ -3,6 +3,8 @@ import type { SuperMemoGradeMap } from '../core/import/superMemoSchedulePreview.
 import type { SuperMemoSourceFormat } from '../core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../core/import/superMemoXmlDraft.js';
 
+export type SuperMemoFolderChoice = { id: number; folder: boolean };
+
 export interface NativeSuperMemoPreviewArgs {
   elements: SuperMemoXmlDraftElement[];
   collectionDirectory?: string;
@@ -10,6 +12,7 @@ export interface NativeSuperMemoPreviewArgs {
   gradeMap?: SuperMemoGradeMap;
   targetBatchId?: string;
   originalElements?: SuperMemoXmlDraftElement[];
+  folderChoices?: SuperMemoFolderChoice[];
 }
 
 export interface NativeSuperMemoPreviewRow {
@@ -39,6 +42,7 @@ export interface NativeSuperMemoPreviewRow {
   sourceBibliography?: SuperMemoBibliography;
   sourceReferenceId?: number | null;
   sourceChildren?: number[];
+  structure?: { parentId: number | null; editable: boolean; folderBody: boolean };
 }
 
 export interface NativeSuperMemoPreview {
@@ -52,6 +56,7 @@ export interface NativeSuperMemoPreview {
 export interface SuperMemoMigrationForm {
   percent: number;
   sourceFormat: SuperMemoSourceFormat;
+  folderChoices?: SuperMemoFolderChoice[];
   comparison?: { batchId: string; originalFilePath?: string | undefined };
 }
 

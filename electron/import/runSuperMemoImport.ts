@@ -12,7 +12,7 @@ import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourc
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots.js';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.js';
-import type { NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoPreview, SuperMemoFolderChoice } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { replaceNodeImageResourceReferences } from '../database/nodeResources.js';
@@ -53,7 +53,7 @@ export async function prepareSuperMemoRows(rows: Row[], elements: Map<number, Su
   const prepared = [];
   for (const row of rows) {
     const element = elements.get(row.id)!;
-    const body = row.outcome === 'topic' || row.outcome === 'item'
+    const body = row.outcome === 'topic' || row.outcome === 'item' || row.structure?.folderBody
       ? await prepareSuperMemoTopicContent(element.bodyOrQuestionHtml, directory, expectedImages, row.outcome === 'topic') : empty;
     const answer = row.outcome === 'item' ? await prepareSuperMemoTopicContent(element.answerHtml, directory, expectedImages) : empty;
     prepared.push({ row, element, body, answer });
@@ -91,6 +91,10 @@ function allocateImportedNodeIds(prepared: PreparedRows, existing?: ReadonlyMap<
     if (row.outcome !== 'skipped') nodeIds.set(row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`);
   }
   return nodeIds;
+}
+
+function persistFolderBody(snapshot: Snapshot, body: Prepared) {
+  persistSuperMemoTopic({ ...snapshot, nodeId: randomUUID(), parentNodeId: snapshot.nodeId, reading: null }, body);
 }
 
 export function writeSuperMemoRows(prepared: PreparedRows, options: {
@@ -145,6 +149,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
         importedCitation = citation;
       }
       persistElement(snapshot, element, { ...body, content }, { ...answer, content: reveal }, due, offset, row.sourceState, gradeMap);
+      if (row.structure?.folderBody) persistFolderBody(snapshot, body);
     }
     return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceEvidence: superMemoSourceEvidence(element),
       ...importedTextReceipt(kind, body.content, answer.content), sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
@@ -153,6 +158,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
 }
 
 export async function runSuperMemoImport(input: {
+  folderChoices?: SuperMemoFolderChoice[] | undefined;
   elements: SuperMemoXmlDraftElement[]; preview: NativeSuperMemoPreview; percent: number;
   offset: string; collectionDirectory?: string | undefined; gradeMap: SuperMemoGradeMap; scheduler: ReviewSchedulerSettings; sourceFormat: SuperMemoSourceFormat; expectedImages: ReadonlyMap<string, string | null>;
 }) {
@@ -181,7 +187,7 @@ export async function runSuperMemoImport(input: {
     const imported = entries.filter(entry => entry.nodeId).length;
     const result = { batchId: fingerprint, imported, skipped: entries.length - imported,
       unresolvedImages: entries.reduce((sum, entry) => sum + entry.unresolvedImages.length, 0) };
-    const batch = { ...result, rootNodeId, formatVersion: 1, ruleVersion: SUPER_MEMO_CONVERSION_RULE_VERSION,
+    const batch = { ...result, ...(input.folderChoices ? { folderChoices: input.folderChoices } : {}), rootNodeId, formatVersion: 1, ruleVersion: SUPER_MEMO_CONVERSION_RULE_VERSION,
       percent: input.percent, offset: input.offset, gradeMap: input.gradeMap, scheduler: input.scheduler, sourceFormat: input.sourceFormat, entries };
     driver.execute('INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)', [key, JSON.stringify(batch), now]);
     return result;

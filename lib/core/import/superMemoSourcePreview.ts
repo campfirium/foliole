@@ -29,7 +29,7 @@ Pick<NativeSuperMemoPreviewRow, 'outcome' | 'issue'> {
 }
 
 export function describeSuperMemoSource(elements: SuperMemoXmlDraftElement[], offset: string,
-  settings: ReviewSchedulerSettings, gradeMap?: SuperMemoGradeMap): (NativeSuperMemoPreviewRow & { localImageReferences: [string, number][] })[] {
+  settings: ReviewSchedulerSettings, gradeMap?: SuperMemoGradeMap, includeConceptBody = false): (NativeSuperMemoPreviewRow & { localImageReferences: [string, number][] })[] {
   return elements.map(element => {
     const sourceBody = convertSuperMemoContent(element.bodyOrQuestionHtml);
     const sourceAnswer = convertSuperMemoContent(element.answerHtml);
@@ -46,7 +46,7 @@ export function describeSuperMemoSource(elements: SuperMemoXmlDraftElement[], of
       lastRepetition: element.learning?.lastRepetition ?? null,
       historyCount: element.learning?.history.length ?? 0,
       localImageReferences: [
-        ...(result.outcome === 'topic' || result.outcome === 'item' ? sourceBody.localSources : []),
+        ...(result.outcome === 'topic' || result.outcome === 'item' || (includeConceptBody && element.sourceType === 'Concept') ? sourceBody.localSources : []),
         ...(result.outcome === 'item' ? sourceAnswer.localSources : [])
       ],
       localImages: sourceBody.localImages + sourceAnswer.localImages,

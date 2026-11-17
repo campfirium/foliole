@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 
 import type { ElectronApplication, Page } from '@playwright/test';
 
@@ -8,15 +8,17 @@ import { expectWorkspaceShell } from './harness/settings';
 import { confirmStep, loadSource, openPreview, parameters } from './harness/superMemoImport';
 
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
+const collection = process.env.FOLIOLE_SUPERMEMO_VALIDATION_COLLECTION;
 
 function readWorkspace(page: Page) {
   return page.evaluate(async () => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById);
 }
 
 function readImportedIds(app: ElectronApplication) {
-  return app.evaluate(({ app }) => {
+  return app.evaluate(async ({ app }) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
     const { openDatabaseConnection, runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
+    await new Promise<void>(resolve => setImmediate(resolve));
     return runWithDatabaseConnectionOwner(() => {
       const rows = openDatabaseConnection().sqlite.prepare(
         "SELECT value FROM workspace_meta WHERE key GLOB 'supermemo-import:*'"
@@ -33,7 +35,7 @@ function expectImportedHierarchy(nodes: Awaited<ReturnType<typeof readWorkspace>
   const root = Object.values(nodes).filter(node => node.kind === 'folder' && node.title === 'SuperMemo' && node.parentNodeId === null);
   expect(root).toHaveLength(1);
   expect(nodes[ids[56]!]?.parentNodeId).toBe(root[0]!.id);
-  expect(nodes[ids[3517]!]).toMatchObject({ parentNodeId: ids[825], anchorLink: { kind: 'highlight' } });
+  expect(nodes[ids[3517]!]?.parentNodeId).toBe(ids[3302]);
   expect(nodes[ids[1148]!]?.parentNodeId).toBe(ids[3302]);
   expect(nodes[ids[797]!]).toMatchObject({ parentNodeId: ids[1148], anchorLink: { kind: 'cloze' } });
   expect(nodes[ids[75]!]?.reading?.state).toBe('dismissed');
@@ -58,13 +60,10 @@ async function importLearning(page: Page, app: ElectronApplication, outputPath: 
   const before = Object.keys(await readWorkspace(page));
   expect(await readImportedIds(app)).toBeNull();
   const dialog = await openPreview(page);
-  await app.evaluate(({ dialog }, selected) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
-  }, xml!);
-  await dialog.getByRole('button', { name: /^(Load XML|载入 XML)$/ }).click();
+  await loadSource(app, dialog, outputPath('Learning'), await readFile(xml!, 'utf8'), undefined, collection);
   await expect(dialog.getByRole('button', { name: /^(Missing images|缺图) 243$/ })).toBeVisible({ timeout: 90_000 });
-  const tree = dialog.getByRole('region', { name: /^(Entries|条目)$/ });
-  await expect(tree.getByText('SuperMemo', { exact: true })).toBeVisible();
+  const tree = dialog.getByRole('region', { name: /^(Original structure|原始结构)$/ });
+  await expect(tree.getByRole('button', { name: /TODO.*#56/ })).toBeVisible();
   await dialog.screenshot({ path: outputPath('learning-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from the paired collection|候选日期和优先顺序来自配对资料库/)).toBeVisible();
@@ -72,7 +71,7 @@ async function importLearning(page: Page, app: ElectronApplication, outputPath: 
   expect(await readImportedIds(app)).toBeNull();
   await dialog.getByRole('button', { name: confirmStep }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/Imported 3434 · skipped 17 · 243 unresolved image references|已导入 3434 条 · 跳过 17 条 · 未找到图片 243 处/))
+  await expect(dialog.getByText(/Imported 3450 · skipped 1 · 243 unresolved image references|已导入 3450 条 · 跳过 1 条 · 未找到图片 243 处/))
     .toBeVisible({ timeout: 120_000 });
   await dialog.screenshot({ path: outputPath('learning-import-result.png') });
   const ids = await readImportedIds(app);
@@ -123,8 +122,8 @@ async function restoreAndAdjustLearning(page: Page, app: ElectronApplication, so
 }
 
 test('imports paired Learning, studies, relaunches, and restores the saved batch', async ({ desktopSession }, testInfo) => {
-  // SKIP: requires the private paired Learning export | 2026-11-17 | revive: supply the XML path with adjacent collection
-  test.skip(!xml, 'Learning export is required');
+  // SKIP: requires the private paired Learning export | 2026-11-17 | revive: supply both validation paths
+  test.skip(!xml || !collection, 'Learning export and collection are required');
   test.setTimeout(240_000);
   const { firstWindow: page, electronApp: app } = desktopSession;
   await clearStarterTopics(page);
@@ -161,6 +160,7 @@ test('makes an imported due card available in an already prepared empty Flow', a
       <LearningData><LastRepetition>10.11.2025</LastRepetition><Interval>1</Interval></LearningData>
     </SuperMemoElement></SuperMemoCollection>`;
   await loadSource(app, dialog, testInfo.outputPath('due-card'), source);
+  await dialog.getByRole('button', { name: /Due imported card.*#1/ }).click();
   const question = dialog.getByText(/Imported question\s+Second paragraph/);
   await expect(question).toBeVisible();
   expect(await question.textContent()).toBe('Imported question\n\nSecond paragraph');

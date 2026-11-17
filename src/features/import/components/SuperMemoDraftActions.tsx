@@ -19,7 +19,7 @@ export function SuperMemoDraftActions({ step, busy, canConvert, directoryUpdate,
   return (
     <AppDialogActions className="shrink-0 flex-wrap border-t border-settings-divider px-4 py-3 sm:px-6">
       {step === 'structure' && !directoryUpdate ? <p role="note" className="mr-auto min-w-0 max-w-[72ch] flex-1 text-xs leading-4 text-foreground/70">
-        {t('desktop.superMemoDrafts.conversionNote')}
+        {t('desktop.superMemoDrafts.structureConversionNote')}
       </p> : null}
       {step === 'confirm' ? <AppButton variant="emphasis" disabled={busy || directoryUpdate?.canConfirm === false} onClick={convert}>
         {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}

@@ -44,13 +44,24 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
 
 export type DraftState = ReturnType<typeof useDraftState>;
 
+function updateDraftFolder(state: DraftState, id: number, folder: boolean) {
+  const { source, draft, gradeMap, sourceFormat, target, percent, setDraft, setBusy, setError } = state;
+  if (state.busy || !source || !draft || draft.preview.directoryUpdate) return;
+  const folderChoices = [...draft.folderChoices.filter(choice => choice.id !== id), { id, folder }];
+  void refreshSourceFormat(async () => {
+    const next = await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, sourceFormat, target, folderChoices);
+    await rememberDraftSource(source, percent, sourceFormat, target, true, folderChoices);
+    setDraft(next);
+  }, setBusy, setError);
+}
+
 export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle: string) {
   const state = useDraftState(initialGrades);
   const { source, result, sourceFormat, target, gradeMap, percent, draft, setBusy, setError, setGradeMap, setDraft,
     setSourceFormat, setResult, setPending } = state;
   const changeGrades = (next: SuperMemoGradeMap) => refreshSourceFormat(async () => {
     const nextPreview = source && !result
-      ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat, target) : undefined;
+      ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat, target, draft?.folderChoices) : undefined;
     await saveSuperMemoGradeMap(next);
     setGradeMap(next);
     if (nextPreview) setDraft(nextPreview);
@@ -85,7 +96,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
     setError(false);
     try {
       setResult(await runRuntimeSuperMemoImport(source.filePath, percent, gradeMap, draft.preview.previewSignature, sourceFormat,
-        draft.preview.directoryUpdate?.signature, withdrawSourceIds, target, source.collectionDirectory ?? null));
+        draft.preview.directoryUpdate?.signature, withdrawSourceIds, target, source.collectionDirectory ?? null, draft.folderChoices));
     } catch (error) {
       const reason = previewFailure(error);
       if (reason.startsWith('collection')) {
@@ -103,7 +114,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   const { busy, error } = state;
 
   return { draft, percent, setPercent: changePercent, source, busy, error, setError, result, gradeMap, sourceFormat,
-    changeGrades, changeSourceFormat, importSource, resetCompletedDraft, candidates: state.pending?.candidates,
+    changeGrades, changeFolder: (id: number, folder: boolean) => updateDraftFolder(state, id, folder), changeSourceFormat, importSource, resetCompletedDraft, candidates: state.pending?.candidates,
     ...createSourceActions(state, pickerTitle) };
 }
 

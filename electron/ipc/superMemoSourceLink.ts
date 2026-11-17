@@ -16,6 +16,7 @@ const linkSchema = z.object({
   collectionDirectory: z.string().min(1).nullable(),
   percent: z.number().min(0).max(100),
   sourceFormat: z.object({ placement: z.enum(['metadata', 'body', 'topic-info', 'content-end']), template: z.string().max(4000) }),
+  folderChoices: z.array(z.object({ id: z.number().int().positive(), folder: z.boolean() })).optional(),
   comparison: z.object({ batchId: z.string().regex(/^[a-f0-9]{64}$/), originalFilePath: z.string().min(1).optional() }).optional()
 });
 
@@ -36,7 +37,7 @@ async function rememberLink(value: unknown, formOnly: boolean) {
     if (!previous || previous.filePath !== link.filePath || previous.collectionDirectory !== link.collectionDirectory) {
       throw new Error('supermemo_source_changed');
     }
-    writeLink(file, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat });
+    writeLink(file, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat, ...(link.folderChoices ? { folderChoices: link.folderChoices } : {}) });
   } else {
     await assertPickerPaths(link);
     writeLink(file, link);
@@ -63,9 +64,9 @@ function writeLink(file: string, link: z.infer<typeof linkSchema>) {
 async function restoreLink() {
   const link = readLink();
   if (!link) return null;
-  const { filePath, collectionDirectory, comparison, percent, sourceFormat } = link;
+  const { filePath, collectionDirectory, comparison, percent, sourceFormat, folderChoices } = link;
   await restoreSelectedImportPaths(filePath, null);
-  const savedForm = { percent, sourceFormat, ...(comparison ? { comparison } : {}) };
+  const savedForm = { percent, sourceFormat, ...(folderChoices ? { folderChoices } : {}), ...(comparison ? { comparison } : {}) };
   try {
     if (collectionDirectory) await restoreSelectedImportPaths(filePath, collectionDirectory);
   } catch {

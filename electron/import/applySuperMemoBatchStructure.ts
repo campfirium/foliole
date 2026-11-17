@@ -1,5 +1,5 @@
 import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
-import type { NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoPreview, SuperMemoFolderChoice } from '../../lib/platform/nativeSuperMemoImportContract.js';
 
 import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
 import type { SuperMemoContentBatchEntry } from './planSuperMemoCitationUpdates.js';
@@ -16,6 +16,7 @@ export interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFi
 export interface Batch {
   entries: BatchEntry[];
   activeExport?: string;
+  folderChoices?: SuperMemoFolderChoice[];
   rootNodeId?: string;
   directoryRequiresCollection?: boolean;
   sourceFormat?: SuperMemoSourceFormat;
