@@ -20,7 +20,7 @@ export function useMarkdownImagePreview(hostRef: MutableRefObject<HTMLElement | 
       if (!detail?.src) {
         return;
       }
-      setPreviewImage({ alt: detail.alt ?? '', presentation: detail.presentation ?? null, src: detail.src });
+      setPreviewImage({ ...detail, alt: detail.alt ?? '', presentation: detail.presentation ?? null });
     };
 
     host.addEventListener(MARKDOWN_IMAGE_PREVIEW_EVENT, handlePreviewRequest as EventListener);

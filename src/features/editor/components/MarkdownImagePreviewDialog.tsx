@@ -5,6 +5,7 @@ import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDial
 import { imageFocusMaskStyle } from '../model/markdownImageFocus';
 import type { MarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
+import { MarkdownImagePreviewSelection } from './MarkdownImagePreviewSelection';
 import { MarkdownImagePreviewViewport } from './MarkdownImagePreviewViewport';
 
 function resolveRegionState(props: { hiddenRegionIds: Set<string>; outlinedRegionIds: Set<string>; regionId: string }) {
@@ -59,6 +60,12 @@ function renderPreviewImage(
   );
 }
 
+function keepPreviewOpenForEditing(event: KeyboardEvent) {
+  if (event.target instanceof Element && event.target.closest('[data-image-preview-annotation-host], .cm-md-image-region-controls')) {
+    event.preventDefault();
+  }
+}
+
 export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProps) {
   const t = useTranslation();
   const hiddenRegionIds = new Set(props.image?.presentation?.hiddenRegionIds ?? []);
@@ -91,6 +98,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
         <AppDialogOverlay className="bg-[var(--app-floating-overlay-bg)]" />
         <AppDialogContent
           aria-describedby={undefined}
+          onEscapeKeyDown={keepPreviewOpenForEditing}
           className="left-4 top-4 right-4 bottom-4 z-preview-dialog max-w-none translate-x-0 translate-y-0 overflow-visible border-transparent bg-transparent p-0 shadow-none"
         >
           <AppDialogTitle className="sr-only">{t('desktop.editorPreview.imageTitle')}</AppDialogTitle>
@@ -110,7 +118,9 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
                 onClick={handleDismiss}
               />
             </div>
-            {props.image ? renderPreviewImage(props.image, hiddenRegionIds, outlinedRegionIds) : null}
+            {props.image?.mountEditor ? (
+              <MarkdownImagePreviewSelection mountEditor={props.image.mountEditor} />
+            ) : props.image ? renderPreviewImage(props.image, hiddenRegionIds, outlinedRegionIds) : null}
           </div>
         </AppDialogContent>
       </AppDialogPortal>

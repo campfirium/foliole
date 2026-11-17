@@ -10,6 +10,8 @@ import { refreshMarkdownImageWidgetPresentation } from './liveMarkdownImagePrese
 import { attachMarkdownImageResize } from './liveMarkdownImageResize';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 import { canReuseMarkdownImageWidgetDom, updateMarkdownImageWidgetDomRange } from './liveMarkdownImageWidgetDom';
+import { bindMarkdownImagePreviewEditor } from './markdownImagePreviewBindings';
+import { mountMarkdownImagePreviewEditor } from './markdownImagePreviewSelection';
 import { getRetainedRemoteImageSource } from './retainedRemoteImageDisplay';
 
 function parseWidgetRangeValue(value: string | undefined, fallback: number) {
@@ -92,6 +94,9 @@ class MarkdownImageWidget extends WidgetType {
     attachMarkdownImageResize(widgetDom, view, this.imageMatch);
     enableMarkdownImageFocus(widgetDom, view, this.imageMatch);
     enableMarkdownImageCrop(widgetDom, view, this.imageMatch);
+    bindMarkdownImagePreviewEditor(widgetDom, this.imageMatch, (match, src, host, annotationHost) =>
+      mountMarkdownImagePreviewEditor({ view, match, src, host, annotationHost, editorNodeId: this.editorNodeId })
+    );
     return widgetDom;
   }
 

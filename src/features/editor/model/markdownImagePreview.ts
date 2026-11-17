@@ -9,6 +9,7 @@ export interface MarkdownImagePreviewRequest {
   focus?: ImageFocusRect;
   presentation: ImageClozeEditorPresentation | null;
   src: string;
+  mountEditor?: (host: HTMLElement, annotationHost: HTMLElement) => () => void;
 }
 
 export function dispatchMarkdownImagePreviewRequest(target: HTMLElement, detail: MarkdownImagePreviewRequest) {

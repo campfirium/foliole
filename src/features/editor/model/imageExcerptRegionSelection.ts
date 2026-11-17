@@ -5,9 +5,15 @@ export interface ImageExcerptRegionRect {
   y: number;
 }
 
+export interface ImageExcerptTarget {
+  host: HTMLElement;
+  signal: AbortSignal;
+}
+
 export interface ImageExcerptRegionSelection {
   attachmentId: string;
   image: HTMLImageElement;
+  target?: ImageExcerptTarget;
   imageRange: { from: number; to: number };
   left: number;
   rect: ImageExcerptRegionRect;

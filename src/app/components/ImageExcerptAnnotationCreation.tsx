@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
 import { buildCanonicalAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
@@ -70,6 +71,25 @@ async function saveAnnotatedImageExcerpt(args: {
   ));
 }
 
+function usePreviewAnnotationDismissal(
+  previewSignal: AbortSignal | undefined,
+  setPending: (value: null) => void,
+  setDraft: (value: string) => void,
+  setSaving: (value: boolean) => void
+) {
+  useEffect(() => {
+    if (!previewSignal) return;
+    const dismiss = () => {
+      setDraft('');
+      setPending(null);
+      setSaving(false);
+    };
+    if (previewSignal.aborted) dismiss();
+    else previewSignal.addEventListener('abort', dismiss, { once: true });
+    return () => previewSignal.removeEventListener('abort', dismiss);
+  }, [previewSignal, setPending, setDraft, setSaving]);
+}
+
 export function ImageExcerptAnnotationCreation(props: {
   activeNodeId: string | null;
   editor: EditorAdapter | null;
@@ -92,7 +112,9 @@ export function ImageExcerptAnnotationCreation(props: {
     setSaving(false);
     cancelImageExcerptRegionSelection();
   }, [props.activeNodeId, props.editorNodeId]);
-  if (!pending) return null;
+  const previewSignal = pending?.target?.signal;
+  usePreviewAnnotationDismissal(previewSignal, selection.setPending, setDraft, setSaving);
+  if (!pending || previewSignal?.aborted) return null;
   const position = resolvePanelPosition(pending);
   const save = async () => {
     const note = draft.trim();
@@ -115,7 +137,7 @@ export function ImageExcerptAnnotationCreation(props: {
       setSaving(false);
     }
   };
-  return (
+  const panel = (
     <AnnotationNotePanel
       draft={draft}
       left={position.left}
@@ -125,4 +147,5 @@ export function ImageExcerptAnnotationCreation(props: {
       top={position.top}
     />
   );
+  return pending.target ? createPortal(panel, pending.target.host) : panel;
 }

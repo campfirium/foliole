@@ -2,6 +2,7 @@ import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
 import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageExcerptTarget } from '../model/imageExcerptRegionSelection';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 import { dispatchMarkdownImagePreviewRequest } from '../model/markdownImagePreview';
 
@@ -12,6 +13,7 @@ import { attachImageExcerptRegionInteractions } from './imageExcerptRegionIntera
 import { createImageCropEditButton } from './liveMarkdownImageCrop';
 import { createImageCropPlane, setImageOverlayCrop } from './liveMarkdownImageCropFrame';
 import { createImageFocusMask, createImageFocusOutline } from './liveMarkdownImageFocus';
+import { getMarkdownImagePreviewEditor } from './markdownImagePreviewBindings';
 
 function isWholeImageHighlightRegion(region: { height: number; width: number; x: number; y: number }) {
   return region.x <= 0.001 && region.y <= 0.001 && region.width >= 0.999 && region.height >= 0.999;
@@ -47,7 +49,8 @@ function createImagePreviewTrigger(args: { alt: string; image: HTMLImageElement;
     event.preventDefault();
     event.stopPropagation();
     const src = args.image.currentSrc || args.image.getAttribute('src');
-    if (src) dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, ...(args.focus ? { focus: args.focus } : {}), src });
+    if (src) dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, ...(args.focus ? { focus: args.focus } : {}), src,
+      ...getMarkdownImagePreviewEditor(button, src) });
   });
   return button;
 }
@@ -134,6 +137,7 @@ interface ImageClozeImageSurfaceArgs {
   previewPresentation: ImageClozeEditorPresentation | null;
   renderImage: () => HTMLImageElement;
   to: number;
+  annotationTarget?: ImageExcerptTarget;
 }
 
 export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
@@ -145,7 +149,9 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
   const regionLayer = createSavedRegionLayer(args.presentation ?? null, isDesktopRuntime());
   plane.append(regionLayer);
   if (args.crop) wrapper.append(createImageCropEditButton(args.crop));
-  wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation, ...(args.focus ? { focus: args.focus } : {}) }));
+  if (!args.annotationTarget) wrapper.append(createImagePreviewTrigger({
+    alt: args.previewAlt, image, presentation: args.previewPresentation, ...(args.focus ? { focus: args.focus } : {})
+  }));
   focusImageRegionInViewport(wrapper, args.presentation ?? null);
   if (!args.attachmentId) {
     return wrapper;
@@ -170,6 +176,7 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
     wrapper.classList.add('cm-md-image-surface-clozeable');
     wrapper.dataset.mdImageClozeActive = 'false';
     const controls = attachImageClozeOverlayInteractions({
+      ...(args.annotationTarget && args.editorNodeId ? { annotation: { target: args.annotationTarget, image } } : {}),
       attachmentId: args.attachmentId,
       draftRectElement,
       from: args.from,
@@ -192,7 +199,7 @@ export function createImageClozeImageSurface(args: ImageClozeImageSurfaceArgs) {
     wrapper.addEventListener('pointerdown', controls.handlePointerDown, { capture: true });
     wrapper.addEventListener('pointermove', controls.handlePointerMove, { capture: true });
     wrapper.addEventListener('pointerenter', controls.showOverlay);
-    wrapper.addEventListener('pointerleave', controls.handlePointerLeave);
+    if (!args.annotationTarget) wrapper.addEventListener('pointerleave', controls.handlePointerLeave);
   }
 
   return wrapper;

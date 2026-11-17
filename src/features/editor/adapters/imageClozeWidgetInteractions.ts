@@ -1,5 +1,6 @@
 import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageExcerptTarget } from '../model/imageExcerptRegionSelection';
 import type { ImageFocusRect } from '../model/markdownImageFocus';
 
 import { prunePresentationRegion } from './imageClozePresentationMutation';
@@ -59,7 +60,7 @@ function createSelectionPointerHandlers(args: {
       const originalPoint = originalImagePoint(args.overlay, point);
       const region = findImageRegionNearBorder(args.presentation, args.attachmentId, originalPoint);
       if (region) event.preventDefault();
-      if (region?.openNodeId) {
+      if (region?.openNodeId && args.presentation?.onOpenNode) {
         event.stopImmediatePropagation();
         args.presentation?.onOpenNode?.(region.openNodeId);
         return;
@@ -148,6 +149,7 @@ function createSelectionHandlers(args: {
 }
 
 type OverlayInteractionArgs = {
+  annotation?: { target: ImageExcerptTarget; image: HTMLImageElement };
   attachmentId: string;
   draftRectElement: HTMLElement;
   from: number;
@@ -163,6 +165,7 @@ type OverlayInteractionArgs = {
 function createDraftControllerForOverlay(args: OverlayInteractionArgs, host: HTMLElement) {
   const draft = createImageClozeDraftController({
     attachmentId: args.attachmentId,
+    keepActionsInView: Boolean(args.annotation),
     draftRectElement: args.draftRectElement,
     from: args.from,
     overlay: args.overlay,
@@ -172,6 +175,7 @@ function createDraftControllerForOverlay(args: OverlayInteractionArgs, host: HTM
   });
   appendImageClozeDraftButtons({
     attachmentId: args.attachmentId,
+    ...(args.annotation ? { annotation: args.annotation } : {}),
     draft,
     from: args.from,
     ...(args.getImageRange ? { getImageRange: args.getImageRange } : {}),

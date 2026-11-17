@@ -133,7 +133,7 @@ Desktop image focus is an editor action for a stored image occurrence. Its saved
 
 Desktop image crop also travels with the individual Markdown image occurrence in full-content reads, updates, and material sync. The crop changes the displayed area at the original display width while retaining the original attachment destination and bytes. The editor can reveal the original image in place to adjust or remove a crop. Agent Control has no dedicated crop operation. Preserve the label to keep the crop when editing neighboring content.
 
-Desktop image cloze borders show in-place range handles that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation. The desktop image preview also accepts drag selections for image cloze creation, annotation, focus, and crop where the source editor permits them. These gestures reuse the existing material operations and have no dedicated Agent Control commands.
+Desktop image cloze borders show in-place range handles that updates the existing review item and source projection. Range editing is an editor action. Agent Control has no dedicated image cloze range operation. The desktop image preview uses the editor’s image controls in place for cloze creation and range adjustment, annotation, focus, and crop where the source editor permits them. Saved changes are reflected in the open preview and in the source document. These gestures reuse the existing material operations and have no dedicated Agent Control commands.
 
 ### Paging search results
 

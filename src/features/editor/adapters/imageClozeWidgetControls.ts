@@ -2,6 +2,7 @@ import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
 import type { ImageClozeDraftRegion } from '../../image-cloze/model/imageCloze';
 import type { ImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageExcerptTarget } from '../model/imageExcerptRegionSelection';
 
 import { attachOverlayDragHandlers, updateDraftRectElement } from './imageClozeWidgetDraft';
 import {
@@ -13,6 +14,7 @@ import {
   toRelativeImagePoint
 } from './imageClozeWidgetInteractionHelpers';
 import { createImageRegionElement } from './imageClozeWidgetOverlayHelpers';
+import { createImageAnnotationDraftButton } from './imageExcerptRegionInteractions';
 import { createImageCropDraftButton } from './liveMarkdownImageCrop';
 import { originalImageDraft, originalImagePoint } from './liveMarkdownImageCropFrame';
 import { IMAGE_FOCUS_EVENT } from './liveMarkdownImageFocus';
@@ -46,8 +48,22 @@ export function createDeleteControl(onClick: (event: MouseEvent) => void): Image
   return { button, container };
 }
 
+function positionDraftActions(actions: HTMLElement, point: { x: number; y: number } | null) {
+  actions.style.left = point ? `${point.x}px` : '';
+  actions.style.top = point ? `${point.y}px` : '';
+}
+
+function alignPreviewActions(actions: HTMLElement, overlay: HTMLElement, point: { x: number; y: number }) {
+  actions.hidden = false;
+  const bounds = overlay.getBoundingClientRect();
+  const x = Math.min(point.x, window.innerWidth - bounds.left - actions.offsetWidth - 18);
+  const y = Math.min(window.innerHeight - bounds.top - 28, Math.max(28 - bounds.top, point.y));
+  positionDraftActions(actions, { x, y });
+}
+
 export function createImageClozeDraftController(args: {
   attachmentId: string;
+  keepActionsInView?: boolean;
   draftRectElement: HTMLElement;
   from: number;
   overlay: HTMLElement;
@@ -66,16 +82,15 @@ export function createImageClozeDraftController(args: {
     draftRectElement: args.draftRectElement,
     onFinalize: (anchorPoint) => {
       actionAnchorPoint = anchorPoint;
-      draftActions.style.left = `${anchorPoint.x}px`;
-      draftActions.style.top = `${anchorPoint.y}px`;
+      positionDraftActions(draftActions, anchorPoint);
+      if (args.keepActionsInView) alignPreviewActions(draftActions, args.overlay, anchorPoint);
     },
     overlay: args.overlay
   });
   const resetDraft = () => {
     actionAnchorPoint = null;
     draftActions.hidden = true;
-    draftActions.style.left = '';
-    draftActions.style.top = '';
+    positionDraftActions(draftActions, null);
     updateDraftRectElement(args.draftRectElement, null);
   };
   const syncPendingPreview = () => {
@@ -113,6 +128,7 @@ type ImageClozeDraftButtonArgs = {
   from: number;
   getImageRange?: () => { from: number; to: number };
   host: HTMLElement;
+  annotation?: { target: ImageExcerptTarget; image: HTMLImageElement };
   overlay: HTMLElement;
   to: number;
 };
@@ -210,4 +226,8 @@ export function appendImageClozeDraftButtons(args: ImageClozeDraftButtonArgs) {
     createCancelDraftButton(args),
     createAddDraftRegionButton(args)
   );
+  if (args.annotation) args.draft.draftActions.append(createImageAnnotationDraftButton({ ...args.annotation,
+    attachmentId: args.attachmentId, draft: args.draft, overlay: args.overlay,
+    getImageRange: () => getDraftImageRange(args)
+  }));
 }

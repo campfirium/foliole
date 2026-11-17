@@ -1,4 +1,5 @@
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
+import type { ImageExcerptTarget } from '../model/imageExcerptRegionSelection';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import { selectImageClozeOccurrencePresentation } from './imageClozeOccurrencePresentation';
@@ -21,12 +22,15 @@ export function createImageSurface(
     requestMeasure?: RequestEditorMeasure;
     isActive?: () => boolean;
     existingImage?: HTMLImageElement;
+    annotationTarget?: ImageExcerptTarget;
   } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
   const imagePresentation = selectImageClozeOccurrencePresentation(presentation, imageMatch);
+  if (imagePresentation && imageOptions.annotationTarget) delete imagePresentation.onOpenNode;
   const surface = createImageClozeImageSurface({
     attachmentId: imageMatch.attachmentId,
+    ...(imageOptions.annotationTarget ? { annotationTarget: imageOptions.annotationTarget } : {}),
     display: imageMatch.display,
     ...(imageMatch.crop && !needsFullImageForReview(imagePresentation) ? { crop: imageMatch.crop } : {}),
     ...(imageMatch.displayWidth ? { displayWidth: imageMatch.displayWidth } : {}),

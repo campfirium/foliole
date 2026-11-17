@@ -1143,6 +1143,30 @@ b {
   display: none;
 }
 
+.cm-md-image-preview-selection {
+  cursor: default;
+}
+
+.cm-md-image-preview-widget .cm-md-image-surface {
+  --preview-ratio: var(--preview-crop-ratio, var(--preview-image-ratio, 1));
+  aspect-ratio: var(--preview-ratio);
+  max-width: none;
+  width: min(var(--preview-image-width, 0px), 88vw, calc(88vh * var(--preview-image-ratio, 1)), calc(88vh * var(--preview-ratio)));
+}
+
+.cm-md-image-preview-widget .cm-md-image-surface[data-md-image-region-edit='crop'] {
+  --preview-ratio: var(--preview-image-ratio, 1);
+}
+
+.cm-md-image-preview-widget .cm-md-image-element {
+  max-height: none;
+}
+
+.cm-md-image-preview-selection
+  .cm-md-image-cloze-actions[data-md-image-cloze-grouping='true'] .cm-md-image-preview-annotate {
+  display: none;
+}
+
 .cm-md-image-cloze-delete {
   position: absolute;
   transform: translate(10px, -50%);

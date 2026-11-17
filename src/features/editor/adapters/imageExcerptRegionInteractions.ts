@@ -1,13 +1,17 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import {
   cancelImageExcerptRegionSelection,
   finishImageExcerptRegionSelection,
   IMAGE_EXCERPT_SELECTION_MODE_EVENT,
   isImageExcerptRegionSelectionActive,
   registerImageExcerptSelectionSurface,
+  type ImageExcerptTarget,
   type ImageExcerptRegionRect
 } from '../model/imageExcerptRegionSelection';
 
-import { toRelativeImagePoint } from './imageClozeWidgetInteractionHelpers';
+import type { ImageClozeDraftController } from './imageClozeWidgetControls';
+import { createImageClozeActionButton, toRelativeImagePoint } from './imageClozeWidgetInteractionHelpers';
 import { originalImageDraft } from './liveMarkdownImageCropFrame';
 
 type DragState = { pointerId: number; start: { x: number; y: number } };
@@ -133,4 +137,30 @@ export function attachImageExcerptRegionInteractions(args: InteractionArgs) {
 export function disposeImageExcerptRegionInteractions(surface: HTMLElement) {
   cleanupBySurface.get(surface)?.();
   cleanupBySurface.delete(surface);
+}
+
+
+export function createImageAnnotationDraftButton(args: {
+  attachmentId: string;
+  draft: ImageClozeDraftController;
+  getImageRange: () => { from: number; to: number };
+  image: HTMLImageElement;
+  overlay: HTMLElement;
+  target: ImageExcerptTarget;
+}) {
+  const button = createImageClozeActionButton({
+    ariaLabel: translate(getStoredAppLocale(), 'desktop.command.annotateSelection'),
+    iconPath: 'M3 3h10v8H7l-4 3Z',
+    onClick: event => {
+      const rect = args.draft.dragHandlers.getDraftRect();
+      if (!rect || args.draft.hasPendingRegions()) return;
+      finishImageExcerptRegionSelection({
+        attachmentId: args.attachmentId, image: args.image, imageRange: args.getImageRange(),
+        left: event.clientX, top: event.clientY, rect: originalImageDraft(args.overlay, rect), target: args.target
+      });
+      args.draft.resetDraft();
+    }
+  });
+  button.classList.add('cm-md-image-preview-annotate');
+  return button;
 }

@@ -12,7 +12,7 @@ import { createImageClozeActionButton } from './imageClozeWidgetInteractionHelpe
 import { originalImageDraft } from './liveMarkdownImageCropFrame';
 import { showImageRegionEditor } from './liveMarkdownImageRegionEditor';
 
-const EDIT_CROP_EVENT = 'foliole:editor-edit-image-crop';
+export const EDIT_CROP_EVENT = 'foliole:editor-edit-image-crop';
 const CROP_ICON_PATH = 'M5 2v9h9M2 5h9v9';
 
 function createCropButton(label: string, className: string, selection: () => ImageFocusRect | null, iconPath = CROP_ICON_PATH) {
@@ -54,7 +54,7 @@ function commitImageCrop(widget: HTMLElement, view: EditorView, crop: ImageFocus
   if (edit && markdown.slice(edit.from, edit.to) !== edit.insert) {
     view.dispatch({ changes: edit, userEvent: 'input.image.crop', annotations: isolateHistory.of('full') });
   }
-  view.focus();
+  if (view.dom.contains(widget)) view.focus();
 }
 
 export function enableMarkdownImageCrop(widget: HTMLElement, view: EditorView, match: MarkdownImageMatch) {
