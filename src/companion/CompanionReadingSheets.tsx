@@ -3,6 +3,7 @@ import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
@@ -15,7 +16,8 @@ import { CompanionReadingDisplayControls } from './CompanionReadingDisplayContro
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
-import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
+import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceMenuActions } from './CompanionWorkspaceMenuActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
 export { ReadingBottomSheet };
@@ -73,6 +75,7 @@ function useDocumentSearchFocusHandoff(openSearch: () => void) {
 
 export function ReadingActionsSheet(props: {
   editHistory?: CompanionEditHistoryActionsProps;
+  nodeId?: string;
   priorityNodeId?: string;
   onFindInDocument(): void;
   onOpenOutline?: () => void;
@@ -91,14 +94,13 @@ export function ReadingActionsSheet(props: {
     props.onOpenReadingSheet(sheet);
   };
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}
+    <ReadingBottomSheet showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}
       onCloseAutoFocus={search.onCloseAutoFocus}>
-      <div className="border-t border-companion-divider">
+      <ReadingWorkspaceActions nodeId={props.nodeId} onClose={() => props.onOpenChange(false)} hasRestoreAction={Boolean(props.onRestoreFromTrash)}>
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <CompanionNodePrioritySlider nodeId={props.priorityNodeId} allowFlowTopic onSaved={() => props.onOpenChange(false)} />
-        <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.find')}
@@ -126,9 +128,23 @@ export function ReadingActionsSheet(props: {
           onClick={props.onOpenClozeRemoval}
         /> : null}
         {props.onRestoreFromTrash && <ReadingTrashRestoreAction restore={restore} />}
-      </div>
+      </ReadingWorkspaceActions>
     </ReadingBottomSheet>
   );
+}
+
+function ReadingWorkspaceActions({ nodeId, onClose, hasRestoreAction, children }: {
+  nodeId?: string | undefined;
+  onClose(): void;
+  hasRestoreAction: boolean;
+  children: ReactNode;
+}) {
+  const workspace = useCompanionWorkspaceActions();
+  if (!workspace || !nodeId || !isAvailableNativeCompanionRuntime()) return children;
+  return <CompanionWorkspaceMenuActions nodeId={nodeId} shortcuts hasRestoreAction={hasRestoreAction}
+    onSaved={onClose} onSelect={state => { onClose(); workspace.open(state); }}>
+    {children}
+  </CompanionWorkspaceMenuActions>;
 }
 
 function ReadingArticleHandoff(props: { run(): void; error: string | null }) {

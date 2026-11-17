@@ -100,7 +100,6 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
     <CompanionWorkspaceActionsProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? 'preview'}
       snapshot={model.workspaceSync.state.workspace_snapshot} refresh={model.workspaceSync.refreshAfterMutation}
       captureFlow={model.surface.captureFlowHistoryContext}
-      currentNodeId={model.surface.readableArticle?.nodeId ?? model.surface.selectedBrowseNodeId}
       flush={() => model.surface.readingActivity.flush()} restoreFlow={model.surface.restoreFlowHistorySession}
       flowActive={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing}
       applyFlow={model.surface.handleFlowHistory}>

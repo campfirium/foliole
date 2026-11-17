@@ -38,7 +38,8 @@ export function ReadingActionsLayer(props: {
   );
   return (
     <ReadingActionsSheet
-      key={props.readableArticle.nodeId}
+      key={readableArticle.nodeId}
+      nodeId={readableArticle.nodeId}
       onFindInDocument={props.onFindInDocument}
       onOpenChange={props.onOpenActions}
       onOpenReadingSheet={props.onOpenReadingSheet}

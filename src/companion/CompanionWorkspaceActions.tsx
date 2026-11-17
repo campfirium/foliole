@@ -19,7 +19,7 @@ import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransact
 
 type Mode = 'undo' | 'redo';
 type Actions = {
-  snapshot: WorkspaceSnapshot | null; currentNodeId: string | null; flowActive: boolean; busy: boolean; pending: boolean; error: boolean; canUndo: boolean; canRedo: boolean;
+  snapshot: WorkspaceSnapshot | null; flowActive: boolean; busy: boolean; pending: boolean; error: boolean; canUndo: boolean; canRedo: boolean;
   open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand, onSaved?: () => void): Promise<void>;
   convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
@@ -31,7 +31,6 @@ export const useCompanionWorkspaceActions = () => useContext(Context);
 
 export function CompanionWorkspaceActionsProvider(props: {
   children: ReactNode; snapshot: WorkspaceSnapshot | null; refresh(): Promise<unknown>;
-  currentNodeId?: string | null;
   flush(): Promise<unknown>; restoreFlow(session: ReviewSessionState): void;
   captureFlow?: () => { session: ReviewSessionState; mode: ReviewSessionMode };
   flowActive: boolean; applyFlow(mode: Mode): Promise<void>;
@@ -54,7 +53,7 @@ export function CompanionWorkspaceActionsProvider(props: {
       if (restored && (entry.type !== 'nodes.change' || entry.beforeSession)) props.restoreFlow(restored);
     });
   }
-  const actions: Actions = { snapshot: props.snapshot, currentNodeId: props.currentNodeId ?? null, flowActive: props.flowActive, busy, pending, error, ...availability, open: setSheet,
+  const actions: Actions = { snapshot: props.snapshot, flowActive: props.flowActive, busy, pending, error, ...availability, open: setSheet,
     convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter)),
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId)),
     retryRefresh: () => void run(async () => {}),
@@ -90,15 +89,4 @@ export function CompanionWorkspaceCreateAction() {
   if (!actions || !isAvailableNativeCompanionRuntime()) return null;
   return <button type="button" className="min-h-11 w-full border-b border-companion-divider text-left" disabled={actions.busy || actions.pending}
     onClick={() => actions.open({ mode: 'create', nodeId: null, parentNodeId: null })}>{t('desktop.command.createFolder')}</button>;
-}
-
-export function CompanionWorkspaceCurrentNodeAction(props: { onSelect(): void }) {
-  const actions = useCompanionWorkspaceActions();
-  const t = useTranslation();
-  if (!actions?.currentNodeId || !isAvailableNativeCompanionRuntime()) return null;
-  return <button type="button" className="min-h-11 w-full border-b border-companion-divider py-3 text-left text-sm"
-    disabled={actions.busy || actions.pending} onClick={() => {
-      props.onSelect();
-      actions.open({ mode: 'menu', nodeId: actions.currentNodeId, parentNodeId: null });
-    }}>{t('companion.workspace.manage')}</button>;
 }

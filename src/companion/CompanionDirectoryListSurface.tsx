@@ -75,7 +75,7 @@ function DirectoryRow(props: DirectoryRowProps) {
       />
     </button>
     {props.item.source === 'virtual' && <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title} />}
-    {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title} metadata={meta ?? ''} onOpen={() => props.onSelectItem(props.item)} />}
+    {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title} metadata={meta ?? ''} />}
     </div>
   );
 }

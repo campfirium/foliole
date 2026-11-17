@@ -14,7 +14,7 @@ function Harness(props: { visible?: boolean; entries?: string[]; menus?: boolean
     <CompanionListViewportProvider scrollRef={scrollRef} sortIdentity="title">
       {props.visible !== false ? <CompanionListViewport viewKey="test" items={props.entries ?? items}
         getItemKey={(item) => item} estimateSize={() => 50}
-        renderItem={(item) => <><button>{item}</button>{props.menus ? <CompanionTopicListMenu title={item} metadata="" onOpen={() => undefined} /> : null}</>} /> : <div>Reader</div>}
+        renderItem={(item) => <><button>{item}</button>{props.menus ? <CompanionTopicListMenu title={item} metadata="" /> : null}</>} /> : <div>Reader</div>}
     </CompanionListViewportProvider>
   </div>;
 }
