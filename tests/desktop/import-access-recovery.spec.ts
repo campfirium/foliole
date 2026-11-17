@@ -1,6 +1,8 @@
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { BrowserWindow, OpenDialogOptions } from 'electron';
+
 import { expect, test } from './harness/fixtures';
 import { card, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
 
@@ -71,32 +73,38 @@ test('reports SuperMemo XML permission failures and retries from the picker', as
   }
 });
 
-test('offers only collection selection or XML continuation when access to the paired folder is denied', async ({ desktopWindow, desktopApp }, testInfo) => {
-  // SKIP: this fixture uses POSIX access bits | 2026-11-17 | revive: use a Windows ACL denial fixture
-  test.skip(process.platform === 'win32' || process.getuid?.() === 0);
-  const dialog = await openPreview(desktopWindow);
-  const directory = testInfo.outputPath('Export');
-  const collection = path.join(directory, 'Export');
-  await writeCollection(collection, false);
-  await chmod(collection, 0o000);
-  try {
-    await loadSource(desktopApp, dialog, directory, oneCard);
-    const notice = desktopWindow.getByRole('dialog', {
-      name: /^(Collection folder access denied|缺少资料库文件夹访问权限)$/
-    });
-    await expect(notice.getByText(/Foliole needs permission|Foliole 需要读取资料库文件夹的权限/)).toBeVisible();
-    if (process.platform === 'darwin') {
-      await expect(notice.getByText(/Privacy & Security → Files & Folders|隐私与安全性 → 文件与文件夹/)).toBeVisible();
+for (const recovery of ['paired', 'xml-only'] as const) {
+  test(`opens the folder picker on SuperMemo access denial and previews ${recovery}`, async ({ desktopWindow, desktopApp }, testInfo) => {
+    // SKIP: this fixture uses POSIX access bits | 2026-11-17 | revive: use a Windows ACL denial fixture
+    test.skip(process.platform === 'win32' || process.getuid?.() === 0);
+    const dialog = await openPreview(desktopWindow);
+    const directory = testInfo.outputPath('Export');
+    const collection = path.join(directory, 'Export');
+    const table = path.join(collection, 'info', 'ElementInfo.dat');
+    const xml = path.join(directory, 'Export.xml');
+    await writeCollection(collection, false);
+    await writeFile(xml, oneCard);
+    await chmod(table, 0o000);
+    try {
+      await desktopApp.evaluate(({ dialog: picker }, { xml, collection, table, recovery }) => {
+        picker.showOpenDialog = async (first: BrowserWindow | OpenDialogOptions, second?: OpenDialogOptions) => {
+          const options = second ?? first as OpenDialogOptions;
+          if (!options.properties?.includes('openDirectory')) return { canceled: false, filePaths: [xml] };
+          if (recovery === 'xml-only') return { canceled: true, filePaths: [] };
+          await process.getBuiltinModule('node:fs/promises')!.chmod(table, 0o644);
+          return { canceled: false, filePaths: [collection] };
+        };
+      }, { xml, collection, table, recovery });
+      await dialog.getByRole('button', { name: /^(Load XML|载入 XML)$/ }).click();
+      await expect(dialog.getByRole('button', { name: /Card.*#2/ })).toBeVisible();
+      await dialog.getByRole('button', { name: parameters }).click();
+      const dateBasis = dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/);
+      await expect(dateBasis).toHaveCount(recovery === 'paired' ? 1 : 0);
+    } finally {
+      await chmod(table, 0o644);
     }
-    await expect(notice.getByRole('button')).toHaveCount(2);
-    await expect(notice.getByRole('button', { name: chooseCollection })).toBeVisible();
-    await notice.screenshot({ path: testInfo.outputPath('supermemo-collection-access.png') });
-    await notice.getByRole('button', { name: continueXml }).click();
-    await expect(dialog.getByRole('button', { name: /Card.*#2/ })).toBeVisible();
-  } finally {
-    await chmod(collection, 0o755);
-  }
-});
+  });
+}
 
 for (const recovery of ['paired', 'xml-only'] as const) {
   test(`converts SuperMemo after choosing ${recovery} recovery without re-reading the broken collection`, async ({ desktopWindow, desktopApp }, testInfo) => {

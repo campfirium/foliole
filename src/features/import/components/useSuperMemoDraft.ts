@@ -71,6 +71,7 @@ function createCandidateLoader(state: DraftState) {
         ? { draft: await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, nextTarget), sourceFormat }
         : await loadDraftWithSavedFormat(selected, gradeMap, sourceFormat);
       if (selected.collectionDiscoveryFailure) {
+        if (showMissing && selected.collectionDiscoveryFailure === 'access') return 'collectionAccess';
         setPending({ selected, target: nextTarget });
         setError(selected.collectionDiscoveryFailure === 'access' ? 'collectionAccess' : 'collectionRead');
         return;
@@ -85,6 +86,7 @@ function createCandidateLoader(state: DraftState) {
       setError(notice);
     } catch (error) {
       const reason = previewFailure(error);
+      if (showMissing && reason === 'collectionAccess') return reason;
       setPending(reason.startsWith('collection') ? { selected, target: nextTarget } : undefined);
       setError(reason);
     }
@@ -106,7 +108,17 @@ function createSourceActions(state: DraftState) {
       const update = draft?.preview.directoryUpdate;
       const nextTarget = asUpdate && update && draft
         ? target ?? { targetBatchId: update.batchId, ...(!update.sourceMatch ? { originalElements: draft.elements } : {}) } : undefined;
-      await loadCandidate(selected, nextTarget, true);
+      if (await loadCandidate(selected, nextTarget, true) !== 'collectionAccess') return;
+      setPending({ selected, target: nextTarget });
+      let directory: string | null;
+      try {
+        directory = await selectRuntimeSuperMemoCollection();
+      } catch (error) {
+        setError(isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead');
+        return;
+      }
+      const { filePath, name, xml } = selected;
+      await loadCandidate({ filePath, name, xml, collectionDirectory: directory ?? undefined }, nextTarget, false);
     } catch (error) {
       setError(isImportAccessDenied(error) ? 'xmlAccess' : /invalid_supermemo_xml_size/.test(String(error)) ? 'xmlSize' : 'xmlRead');
     } finally {

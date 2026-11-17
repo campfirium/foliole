@@ -1,6 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection, type CapacitorSQLitePlugin } from '@capacitor-community/sqlite';
 
-import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
+import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract.js';
 
 /** Native connections survive document replacement; their transactions must not. */
 export class CompanionDatabaseManager extends SQLiteConnection {

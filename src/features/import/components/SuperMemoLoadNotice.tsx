@@ -27,7 +27,7 @@ export function SuperMemoLoadNotice({ error, busy, onClose, recover, retry }: {
   if (!error) return null;
   const collection = error === 'xml-only' || error.startsWith('collection');
   const collectionAccess = error === 'collectionAccess';
-  const showMacPermissions = (collectionAccess || error === 'xmlAccess') && resolveRuntimeOperatingSystem() === 'macos';
+  const showMacPermissions = error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos';
   const title = collectionAccess ? 'desktop.superMemoDrafts.collectionAccessTitle'
     : error === 'xml-only' ? 'desktop.superMemoDrafts.noCollection' : 'desktop.superMemoDrafts.loadFailed';
   return (
