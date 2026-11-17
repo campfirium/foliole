@@ -170,6 +170,24 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
+### November 17 Electron and web tooling batch
+
+All proposals target `campfirium/foliole:dev` and were reviewed from verified
+`app/renovate` heads. Local adoption `986c78a7f` passed a clean npm install,
+the fast gate, Electron native module rebuild, real SQLite import and sync
+tests, icon settings and mobile outline tests, and the desktop Vite build.
+The centralized batch requires full quality, including dependency hardening,
+before delivery and PR closure.
+
+| Proposal | Reviewed head | Target |
+| --- | --- | --- |
+| [#267](https://github.com/campfirium/foliole/pull/267) | `ef50e7504b00acaca27dbba3ba0d68570edc1732` | Electron 45.3.3 |
+| [#268](https://github.com/campfirium/foliole/pull/268) | `6b5a7fee9faccc6eccacbe5be07dd79c071dec28` | eslint-plugin-import-x 4.18.1 |
+| [#269](https://github.com/campfirium/foliole/pull/269) | `0eb45e97bae11879def2d4eec0142d0423822eb7` | @vitejs/plugin-react 6.3.0 |
+| [#271](https://github.com/campfirium/foliole/pull/271) | `d145db7233b19b44d628f255b80aa7fd193cef73` | Vite 8.3.7 |
+| [#277](https://github.com/campfirium/foliole/pull/277) | `c253ac6b1047372f4d77738add55309e0b00cb96` | typescript-eslint 8.72.2 |
+| [#278](https://github.com/campfirium/foliole/pull/278) | `d7a26e28b8a5bbbbf566edda7f4795915a77c573` | lucide-react 1.71.0 |
+
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -388,7 +406,9 @@ the current proposal's local validation blocker is recorded below.
 ## Reviewed proposals and deferred adoption
 
 [#242](https://github.com/campfirium/foliole/pull/242) at reviewed head
-`bd40dae804874ad2c1bd6c4a11c3296d654f3c2f` remains open. jsdom 31.0.0
+`510e56c8c0b6de4be843a18c9c8e1fda1f04ab59` remains open. On November 17
+the refreshed proposal still targeted the same jsdom 31.0.0 release and CSS
+engine. The existing failure evidence remains applicable. jsdom 31.0.0
 changed computed style and transform behavior in desktop, shared and Android
 source tests on [run 43609770128](https://github.com/campfirium/foliole/actions/runs/43609770128).
 `440d79b9c` restored 30.1.3. Recheck the upgrade when the implicated CSS
