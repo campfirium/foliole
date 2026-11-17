@@ -1,6 +1,6 @@
 import { CornerDownRight, Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
 import type { JSX } from 'react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -64,6 +64,19 @@ function ToolbarButton(props: {
   );
 }
 
+function fitNotePanel(panel: HTMLElement, left: number, top: number) {
+  const viewport = window.visualViewport;
+  const gap = 8;
+  const minTop = (viewport?.offsetTop ?? 0) + gap;
+  const minLeft = (viewport?.offsetLeft ?? 0) + gap;
+  const height = Math.max(0, (viewport?.height ?? window.innerHeight) - gap * 2);
+  const width = Math.max(0, (viewport?.width ?? window.innerWidth) - gap * 2);
+  panel.style.maxHeight = `${height}px`;
+  panel.style.maxWidth = `${width}px`;
+  panel.style.top = `${Math.max(minTop, Math.min(top + gap, minTop + height - panel.offsetHeight))}px`;
+  panel.style.left = `${Math.max(minLeft, Math.min(left, minLeft + width - panel.offsetWidth))}px`;
+}
+
 export function CompanionSelectionNotePanel(props: {
   draft: string;
   status?: ReactNode;
@@ -75,8 +88,27 @@ export function CompanionSelectionNotePanel(props: {
   top: number;
 }) {
   const t = useTranslation();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { left, top } = props;
+  useLayoutEffect(() => {
+    const panel = panelRef.current!;
+    const viewport = window.visualViewport;
+    const update = () => fitNotePanel(panel, left, top);
+    update();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update);
+    observer?.observe(panel);
+    viewport?.addEventListener('resize', update);
+    viewport?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    return () => {
+      observer?.disconnect();
+      viewport?.removeEventListener('resize', update);
+      viewport?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [left, top]);
   return (
-    <div className={cn(appFloatingSurfaceClassName('popover'), 'mt-2 w-64 rounded-md p-2')} style={{ left: props.left, position: 'absolute', top: props.top }}>
+    <div ref={panelRef} className={cn(appFloatingSurfaceClassName('popover'), 'w-64 overflow-auto rounded-md p-2')} style={{ position: 'fixed' }}>
       {props.status}
       <textarea
         disabled={props.disabled}
@@ -90,7 +122,7 @@ export function CompanionSelectionNotePanel(props: {
         placeholder={t('companion.selection.addAnnotation')}
         value={props.draft}
       />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="mt-2 flex flex-wrap justify-end gap-2">
         <AppButton onClick={props.onCancel} size="sm" variant="ghost">{t('common.cancel')}</AppButton>
         <AppButton data-testid="companion-selection-note-save" disabled={props.disabled || !props.draft.trim()} onClick={props.onSave} size="sm">{t('companion.selection.save')}</AppButton>
       </div>

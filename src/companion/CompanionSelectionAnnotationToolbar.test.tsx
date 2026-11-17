@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { definedProps } from '../shared/lib/definedProps';
@@ -38,7 +38,8 @@ const longerPayload: CompanionSelectionAnnotationToolbarState['payload'] = {
 function renderToolbar(
   onApply = vi.fn(),
   resolveSelectionPayload?: () => typeof payload | null,
-  statePayload = payload
+  statePayload = payload,
+  noteTop = 52
 ) {
   const onClose = vi.fn();
   const onAddExistingHighlightNote = vi.fn();
@@ -52,7 +53,7 @@ function renderToolbar(
       state={{
         left: 12,
         noteLeft: 12,
-        noteTop: 52,
+        noteTop,
         payload: statePayload,
         top: 12
       }}
@@ -192,27 +193,6 @@ it('loads the existing highlight note before saving', () => {
   expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('Saved note');
 });
 
-it('keeps the note panel open until its permanent write completes', async () => {
-  let resolveApply: () => void = () => undefined;
-  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = () => resolve(); }));
-  const { onClose } = renderToolbar(onApply);
-
-  const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });
-  expect(fireEvent.pointerDown(addCommentButton)).toBe(false);
-  fireEvent.click(addCommentButton);
-  fireEvent.change(screen.getByPlaceholderText('Add annotation...'), {
-    target: { value: 'Reader note' }
-  });
-  const saveButton = screen.getByRole('button', { name: 'Save' });
-  expect(fireEvent.pointerDown(saveButton)).toBe(true);
-  fireEvent.click(saveButton);
-
-  expect(onApply).toHaveBeenCalledWith('note', payload, 'Reader note');
-  expect(onClose).not.toHaveBeenCalled();
-  resolveApply();
-  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-});
-
 it('keeps the toolbar open and reports permanent write failures', async () => {
   const error = new Error('write failed');
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -244,3 +224,49 @@ it('allows retrying the same annotation after a permanent write failure', async 
   expect(onApply).toHaveBeenCalledTimes(2);
   consoleError.mockRestore();
 });
+
+it('keeps an annotation above a changing keyboard and saves the draft to the original selection', async () => {
+  const viewport = Object.assign(new EventTarget(), { height: 800, width: 375, offsetTop: 0, offsetLeft: 0 });
+  vi.stubGlobal('visualViewport', viewport);
+  const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(140);
+  try {
+    let resolveApply!: () => void;
+    const { onApply, onClose } = renderToolbar(
+      vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; })), undefined, payload, 590
+    );
+    const commentButton = screen.getByRole('button', { name: 'Add Comment' });
+    expect(fireEvent.pointerDown(commentButton)).toBe(false);
+    fireEvent.click(commentButton);
+    const textbox = screen.getByRole('textbox');
+    const panel = textbox.parentElement!;
+    expect(panelTopInViewport(panel)).toBeGreaterThan(500);
+    fireEvent.change(textbox, { target: { value: 'Keyboard draft' } });
+
+    act(() => {
+      viewport.height = 300;
+      viewport.offsetTop = 24;
+      viewport.dispatchEvent(new Event('resize'));
+    });
+    const panelTop = panelTopInViewport(panel);
+    expect(panelTop).toBeGreaterThanOrEqual(viewport.offsetTop);
+    expect(panelTop + panel.offsetHeight).toBeLessThanOrEqual(viewport.offsetTop + viewport.height);
+    expect(textbox).toHaveFocus();
+    expect(textbox).toHaveValue('Keyboard draft');
+
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    expect(fireEvent.pointerDown(saveButton)).toBe(true);
+    fireEvent.click(saveButton);
+    expect(onApply).toHaveBeenCalledWith('note', payload, 'Keyboard draft');
+    expect(onClose).not.toHaveBeenCalled();
+    resolveApply();
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  } finally {
+    height.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});
+
+function panelTopInViewport(panel: HTMLElement) {
+  const anchorTop = panel.style.position === 'absolute' ? parseFloat(panel.parentElement!.style.top) : 0;
+  return anchorTop + parseFloat(panel.style.top);
+}

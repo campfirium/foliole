@@ -145,7 +145,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
         <HighlightStatus session={session} onClose={props.onClose} />
       </div> : null}
       {note.isOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} onClose={props.onClose} /> : creation.error ? <CreationStatus creation={creation} /> : null}
-        left={state.noteLeft - state.left} top={state.noteTop - state.top}
+        left={state.noteLeft} top={state.noteTop}
         onCancel={note.close} onChange={isExistingHighlight ? session.setDraft : note.setDraft}
         onSave={() => isExistingHighlight ? applyExistingNote() : creation.apply('note', note.draft)} /> : null}
     </div>
