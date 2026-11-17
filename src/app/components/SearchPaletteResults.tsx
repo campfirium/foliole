@@ -113,7 +113,7 @@ export function SearchPaletteList(props: SearchPaletteListProps) {
           query={props.query}
           selectedSpelling={props.selectedSpelling}
           sourceDetails={props.sourceDetailsByNodeId[item.id]}
-          lines={props.view.lines}
+          view={props.view}
           dateFormat={props.view.showTimestamp ? dateFormat : null}
         />
       ))}
@@ -126,14 +126,15 @@ function SearchPaletteResultItem(props: {
   dateFormat: Intl.DateTimeFormat | null;
   index: number;
   item: WorkspaceSearchResult;
-  lines: SearchPaletteView['lines'];
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   selectedSpelling: string | null;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
+  view: SearchPaletteView;
 }) {
+  const { lines, titleFontSize, previewFontSize, metadataFontSize } = props.view;
   const item = props.item;
   const projectResultText = item.kind === 'node';
   const highlightQuery = props.selectedSpelling
@@ -152,15 +153,18 @@ function SearchPaletteResultItem(props: {
         onMouseEnter={() => props.onSetActiveIndex(props.index)}
         type="button"
       >
-        <span className={`min-w-0 truncate ${floatingResultPrimaryTextClassName}`}>
+        <span className={`min-w-0 truncate ${floatingResultPrimaryTextClassName}`}
+          style={{ fontSize: titleFontSize, lineHeight: `${titleFontSize + 6}px` }}>
           {renderSearchResultText(item.title, highlightQuery, { project: projectResultText })}
         </span>
-        <span className={floatingResultPreviewClassName} style={{ WebkitLineClamp: props.lines }}>
+        <span className={floatingResultPreviewClassName}
+          style={{ fontSize: previewFontSize, lineHeight: `${previewFontSize + 6}px`, WebkitLineClamp: lines }}>
           {renderSearchResultText(resolveSearchResultContext(item), highlightQuery, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta
           item={item}
           dateFormat={props.dateFormat}
+          fontSize={metadataFontSize}
           nodesById={props.nodesById}
           sourceDetails={props.sourceDetails}
         />
@@ -171,6 +175,7 @@ function SearchPaletteResultItem(props: {
 
 function SearchPaletteResultMeta(props: {
   dateFormat: Intl.DateTimeFormat | null;
+  fontSize: number;
   item: WorkspaceSearchResult;
   nodesById: WorkspaceListNodesById;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
@@ -178,7 +183,8 @@ function SearchPaletteResultMeta(props: {
   const t = useTranslation();
   const pathLabel = resolveSearchResultPathLabel(props.item, props.nodesById, t) ?? t('desktop.search.context.topLevel');
   return (
-    <span className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${floatingResultMetaClassName}`}>
+    <span className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${floatingResultMetaClassName}`}
+      style={{ fontSize: props.fontSize, lineHeight: `${props.fontSize + 5}px` }}>
       <span className="min-w-0 truncate">
         {pathLabel}
       </span>

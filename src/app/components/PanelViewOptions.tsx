@@ -43,8 +43,6 @@ export function PanelViewOptions({ label, children }: { label: string; children:
   );
 }
 
-export const previewLineChoices = ([1, 2, 3] as const).map(value => ({ label: String(value), value }));
-
 export function PanelViewChoiceGroup<T extends string | number>({ label, choices, value, onChange }: {
   label: string;
   choices: readonly { value: T; label: string }[];
