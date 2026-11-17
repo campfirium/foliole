@@ -26,7 +26,7 @@ export function WorkspaceResultShortcutsFooter(props: {
   }
 
   return (
-    <footer className="relative flex min-h-14 shrink-0 items-center justify-center border-t border-[var(--app-floating-divider-color)] px-12 py-2.5 text-xs text-foreground/45">
+    <footer className="relative flex min-h-14 shrink-0 items-center justify-center border-t border-[var(--app-floating-divider-color)] px-12 py-2.5 text-xs text-[color:var(--role-floating-text-muted)]">
       {collapsed ? (
         null
       ) : (
@@ -52,7 +52,7 @@ function ShortcutHint(props: ShortcutHintProps) {
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <span className="inline-flex items-center gap-0.5">
         {props.keys.map((key) => (
-          <kbd className="font-semibold leading-none text-foreground/55" key={key}>
+          <kbd className="font-semibold leading-none text-[color:var(--role-floating-text-muted)]" key={key}>
             {key}
           </kbd>
         ))}

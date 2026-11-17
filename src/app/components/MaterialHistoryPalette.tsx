@@ -147,14 +147,14 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
     const path = materialHistoryPath(nodes, node.id);
     const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     const preview = (
-      <span id={bodyId} className="pointer-events-none relative min-w-0 line-clamp-2 break-words text-foreground/82"
+      <span id={bodyId} className={`pointer-events-none relative min-w-0 line-clamp-2 break-words ${breadcrumbFirst ? 'text-[color:var(--role-floating-text-secondary)]' : 'text-[color:var(--role-floating-text-primary)]'}`}
         style={{ fontSize: previewSize, lineHeight: `${previewSize + 6}px`, WebkitLineClamp: view.lines }}>
         {materialHistoryPreview(node)}
       </span>
     );
     const metadata = (
       <div className="pointer-events-none relative flex min-w-0 items-center gap-2">
-        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'font-medium text-foreground/88' : 'text-foreground/68'}`}
+        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'font-medium text-[color:var(--role-floating-text-primary)]' : 'text-[color:var(--role-floating-text-muted)]'}`}
           style={{ fontSize: breadcrumbSize, lineHeight: `${breadcrumbSize + 5}px` }}>{path}</span>}
         <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
       </div>

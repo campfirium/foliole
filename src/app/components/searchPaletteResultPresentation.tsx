@@ -154,14 +154,14 @@ export function renderSearchResultSourceLabel(
   if (!label) {
     return null;
   }
-  return <span className={appFloatingMetaBadgeClassName('text-[11px]')}>{label}</span>;
+  return <span className={appFloatingMetaBadgeClassName('text-[11px] text-[color:var(--role-floating-text-muted)]')}>{label}</span>;
 }
 
 export function renderSearchResultMetaBadge(label: string | null): ReactNode {
   if (!label) {
     return null;
   }
-  return <span className={appFloatingMetaBadgeClassName('text-[11px]')}>{label}</span>;
+  return <span className={appFloatingMetaBadgeClassName('text-[11px] text-[color:var(--role-floating-text-muted)]')}>{label}</span>;
 }
 
 export function resolveExternalFolderLabel(result: WorkspaceSearchResult) {

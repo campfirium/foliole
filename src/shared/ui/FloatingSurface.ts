@@ -9,11 +9,11 @@ const floatingSurfaceBaseClassName = [
 const floatingOverlayBaseClassName =
   'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
-  'app-focus-caret w-full appearance-none border-x-0 border-t-0 border-b border-transparent bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-foreground shadow-none outline-none [box-shadow:none]',
+  'app-focus-caret w-full appearance-none border-x-0 border-t-0 border-b border-transparent bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-[color:var(--role-floating-text-primary)] shadow-none outline-none [box-shadow:none]',
   appFocusSilentClassName,
   'focus:border-transparent focus:shadow-none focus:[box-shadow:none]',
   'focus-visible:border-transparent focus-visible:shadow-none focus-visible:[box-shadow:none]',
-  'placeholder:text-foreground/42'
+  'placeholder:text-[color:var(--role-floating-text-muted)]'
 ].join(' ');
 const floatingListBaseClassName =
   'app-scrollbar max-h-[50vh] overflow-y-auto px-2 py-2 [--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]';
@@ -47,8 +47,8 @@ const floatingWorkspaceTitleBaseClassName = 'text-ui-md font-normal text-foregro
 const floatingWorkspaceFormBaseClassName = 'flex items-center gap-2';
 const floatingWorkspaceInputBaseClassName = [
   'app-focus-boundary h-9 min-w-0 flex-1 appearance-none rounded-md border border-[var(--app-floating-border-color)]',
-  'bg-[var(--app-floating-input-bg)] px-3 text-ui-md text-foreground outline-none transition-colors',
-  'placeholder:text-foreground/42 hover:bg-[var(--app-floating-item-hover-bg)]',
+  'bg-[var(--app-floating-input-bg)] px-3 text-ui-md text-[color:var(--role-floating-text-primary)] outline-none transition-colors',
+  'placeholder:text-[color:var(--role-floating-text-muted)] hover:bg-[var(--app-floating-item-hover-bg)]',
   'focus-visible:border-border-strong focus-visible:ring-1 focus-visible:ring-ring',
   'disabled:cursor-not-allowed disabled:opacity-45'
 ].join(' ');
@@ -90,9 +90,9 @@ export const floatingResultListClassName = appFloatingListClassName(
   '[--app-scrollbar-thumb-hover-color:color-mix(in_srgb,var(--app-floating-border-color)_52%,transparent)]'
 );
 export const floatingResultRowClassName = 'grid gap-[3px] rounded-lg px-4 py-2.5';
-export const floatingResultPrimaryTextClassName = 'text-[17px] font-semibold leading-[23px] text-foreground';
-export const floatingResultPreviewClassName = 'line-clamp-2 break-words text-ui-lg leading-[21px] text-foreground/60';
-export const floatingResultMetaClassName = 'text-xs leading-[17px] text-foreground/45';
+export const floatingResultPrimaryTextClassName = 'text-[17px] font-semibold leading-[23px] text-[color:var(--role-floating-text-primary)]';
+export const floatingResultPreviewClassName = 'line-clamp-2 break-words text-ui-lg leading-[21px] text-[color:var(--role-floating-text-secondary)]';
+export const floatingResultMetaClassName = 'text-xs leading-[17px] text-[color:var(--role-floating-text-muted)]';
 
 export function appFloatingItemClassName(className?: string) {
   return cn(floatingItemBaseClassName, className);

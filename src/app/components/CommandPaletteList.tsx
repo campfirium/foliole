@@ -42,11 +42,11 @@ function CommandPaletteRow(props: {
         onClick={() => props.onRunItem(props.item)}
         type="button"
       >
-        <span className="block truncate font-medium text-foreground">{props.item.title}</span>
+        <span className="block truncate font-medium text-[color:var(--role-floating-text-primary)]">{props.item.title}</span>
       </button>
       <button
         aria-label={t('desktop.palette.command.configureShortcut', { title: props.item.title })}
-        className="flex shrink-0 items-center px-3 text-foreground/55 hover:text-foreground focus-visible:text-foreground"
+        className="flex shrink-0 items-center px-3 text-[color:var(--role-floating-text-muted)] hover:text-[color:var(--role-floating-text-primary)] focus-visible:text-[color:var(--role-floating-text-primary)]"
         onClick={() => props.onConfigureItem(props.item)}
         type="button"
       >
@@ -69,7 +69,7 @@ export function CommandPaletteList(props: CommandPaletteListProps) {
   return (
     <ul className={floatingResultListClassName}>
       {props.displaySections.flatMap((section) => [
-        <li className="px-3 pb-1 pt-2 text-xs font-semibold text-foreground/45 first:pt-1" key={section.id}>
+        <li className="px-3 pb-1 pt-2 text-xs font-semibold text-[color:var(--role-floating-text-muted)] first:pt-1" key={section.id}>
           {section.title}
         </li>,
         ...section.items.map((item) => {

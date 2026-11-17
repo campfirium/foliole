@@ -14,7 +14,7 @@ export function SearchPaletteViewOptions({ view, onChange }: {
     <PanelViewOptions label={t('desktop.search.viewOptions')}>
       <PanelViewChoiceGroup label={t('desktop.search.previewLines')} value={view.lines}
         choices={previewLineChoices} onChange={lines => onChange({ ...view, lines })} />
-      <div className="flex items-center justify-between gap-3 text-xs font-medium text-foreground/75">
+      <div className="flex items-center justify-between gap-3 text-xs font-medium text-[color:var(--role-floating-text-primary)]">
         <span>{timestampLabel}</span>
         <AppSwitch aria-label={timestampLabel} checked={view.showTimestamp} compact
           onCheckedChange={showTimestamp => onChange({ ...view, showTimestamp })} />

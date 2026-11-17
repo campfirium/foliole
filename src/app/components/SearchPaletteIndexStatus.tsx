@@ -35,7 +35,7 @@ export function SearchPaletteIndexStatus({ isOpen }: { isOpen: boolean }) {
 
   if (status?.status === 'rebuilding') {
     return (
-      <p className="border-b border-border/60 px-5 py-2 text-xs text-foreground/60" role="status">
+      <p className="border-b border-border/60 px-5 py-2 text-xs text-[color:var(--role-floating-text-muted)]" role="status">
         {t('desktop.search.indexStatus.updating')}
       </p>
     );

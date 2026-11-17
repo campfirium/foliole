@@ -99,6 +99,9 @@
   --role-content-text: var(--role-text);
   --role-text: rgb(var(--role-ink-rgb));
   --role-text-secondary: rgb(var(--role-ink-muted-rgb));
+  --role-floating-text-primary: var(--role-text);
+  --role-floating-text-secondary: color-mix(in srgb, var(--role-text) 50%, var(--role-text-secondary));
+  --role-floating-text-muted: var(--role-text-secondary);
   --role-legacy-muted-bg: rgb(var(--role-legacy-muted-rgb));
   --role-content-line: color-mix(
     in oklab,

@@ -179,7 +179,7 @@ function SearchPaletteResultMeta(props: {
   const pathLabel = resolveSearchResultPathLabel(props.item, props.nodesById, t) ?? t('desktop.search.context.topLevel');
   return (
     <span className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 ${floatingResultMetaClassName}`}>
-      <span className="min-w-0 truncate opacity-85">
+      <span className="min-w-0 truncate">
         {pathLabel}
       </span>
       <span className="flex shrink-0 items-center gap-1">
