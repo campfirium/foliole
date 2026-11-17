@@ -131,7 +131,6 @@ export function SuperMemoEntryPreview({ preview, elements }: {
           </div>
         </section>
       </div>
-      <p className="px-1 text-xs leading-relaxed text-foreground/75">{t('desktop.superMemoDrafts.conversionNote')}</p>
       {media.local || media.remote || media.audio ? <p className="px-1 text-xs text-foreground/65">
         {t('desktop.superMemoDrafts.media', media)}
       </p> : null}

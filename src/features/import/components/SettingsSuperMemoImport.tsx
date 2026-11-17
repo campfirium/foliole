@@ -73,11 +73,11 @@ function DraftHeader({ titleId, name, disabled, onReload, onLoadNew }: {
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {name ? <AppButton size="sm" disabled={disabled} onClick={onReload}>{t('desktop.superMemoDrafts.reloadSource')}</AppButton> : null}
           {onLoadNew ? <AppButton size="sm" disabled={disabled} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
-          <AppDialogClose asChild>
+          {!name ? <AppDialogClose asChild>
             <AppButton size="sm" variant="ghost" disabled={disabled} aria-label={t('desktop.superMemoDrafts.close')}>
               <X aria-hidden className="size-4" />
             </AppButton>
-          </AppDialogClose>
+          </AppDialogClose> : null}
         </div>
       </header>
     </AppDialogTitle>
@@ -150,6 +150,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           </AppDialogBody>
           <SuperMemoDraftActions
             busy={busy} canConvert={Boolean(preview && !result)} parameters={parameters}
+            showPreviewFooter={!parameters && !update && !result}
             directoryUpdate={update ? { canConfirm: (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 || update.changes.some(change => change.status === 'move' || change.status === 'add') ||
               update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
               update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis') } : undefined}
