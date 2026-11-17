@@ -2,6 +2,7 @@ import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName } from '../../../shared/ui';
+import { settingsDialogBounds } from '../../../shared/ui/settingsDialogBounds';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
@@ -121,7 +122,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
         <AppDialogContent
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
-          className={settingsDialogSurfaceClassName(`grid h-[min(860px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${canDrag ? '[-webkit-app-region:no-drag]' : ''} ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
+          className={settingsDialogSurfaceClassName(`${settingsDialogBounds} grid grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${canDrag ? '[-webkit-app-region:no-drag]' : ''} ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
           inert={props.isPreviewActive}
           ref={drag.panelRef}

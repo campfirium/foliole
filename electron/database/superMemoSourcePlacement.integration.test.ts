@@ -19,7 +19,7 @@ vi.mock('./connection.js', () => ({
   runWithDatabaseConnectionOwner: (fn: () => unknown) => fn()
 }));
 
-it('does not fabricate a source when importing an XML-only card', async () => {
+it('accepts a placement choice made after preview without fabricating a source for an XML-only card', async () => {
   const fixture = await restoreFixture();
   const peer = fixture.peer('source');
   try {
@@ -34,7 +34,8 @@ it('does not fabricate a source when importing an XML-only card', async () => {
     const elements = readSuperMemoXmlDraft(xmlDocument);
     const sourceFormat = { placement: 'content-end', template: 'Source: {articleLink}' };
     const args = { elements, sourceFormat, percent: 0 };
-    const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, args);
+    const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport,
+      { ...args, sourceFormat: { ...sourceFormat, placement: 'topic-info' } });
     if (!preview || !('rows' in preview)) throw new Error('missing import preview');
     expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, { ...args, previewSignature: preview.previewSignature }))
       .toMatchObject({ imported: 1 });

@@ -1,10 +1,12 @@
+import { memo, useMemo } from 'react';
+
 import { makeSuperMemoPreviewReport } from '../../../../lib/core/import/superMemoPreviewReport';
 import type { NativeSuperMemoPreview } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
-export function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuperMemoPreview; percent: number }) {
+export const SuperMemoDraftTable = memo(function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuperMemoPreview; percent: number }) {
   const t = useTranslation();
-  const report = makeSuperMemoPreviewReport(preview, percent);
+  const report = useMemo(() => makeSuperMemoPreviewReport(preview, percent), [preview, percent]);
   return (
     <article className="min-h-0 space-y-3 overflow-auto text-sm">
       {report.shifts.length > 0 ? (
@@ -28,4 +30,4 @@ export function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuper
       {report.pendingNewItems > 0 ? <p>{t('desktop.superMemoDrafts.pendingNewItems', { count: report.pendingNewItems })}</p> : null}
     </article>
   );
-}
+});

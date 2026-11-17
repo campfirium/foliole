@@ -84,12 +84,23 @@ function EntryContent({ row, source, tab }: { row: Row; source?: SuperMemoXmlDra
   );
 }
 
-export function SuperMemoEntryPreview({ preview, elements }: {
+export function useSuperMemoPreviewNavigation(source: object | undefined) {
+  const [state, setState] = useState<{ source: object | undefined; tab: Tab; active?: number | undefined; branches: Record<number, boolean> }>();
+  const current = state?.source === source && state ? state : { source, tab: 'converted' as const, active: undefined, branches: {} };
+  return {
+    ...current,
+    selectTab: (tab: Tab) => setState({ ...current, tab, active: undefined }),
+    selectEntry: (active: number) => setState({ ...current, active }),
+    toggleBranch: (id: number, open: boolean) => setState({ ...current, branches: { ...current.branches, [id]: open } })
+  };
+}
+
+export function SuperMemoEntryPreview({ preview, elements, navigation }: {
+  navigation: ReturnType<typeof useSuperMemoPreviewNavigation>;
   preview?: NativeSuperMemoPreview | undefined; elements?: SuperMemoXmlDraftElement[] | undefined;
 }) {
   const t = useTranslation();
-  const [tab, setTab] = useState<Tab>('converted');
-  const [active, setActive] = useState<number>();
+  const { tab, active, selectTab, selectEntry, branches, toggleBranch } = navigation;
   const collectionRoot = elements?.find(row => row.parentId === null && row.ordinal === '0' && !row.title && row.children.length);
   const { childrenByParent, lists, missingCount, media, initial } = useMemo(() => prepareEntries(
     (preview?.rows ?? []).map(row => row.id === collectionRoot?.id
@@ -107,16 +118,17 @@ export function SuperMemoEntryPreview({ preview, elements }: {
             {tabs.map(key => (
               <button type="button" key={key} aria-pressed={tab === key} disabled={!preview}
                 className="border-b-2 border-transparent py-1 text-xs text-foreground/65 hover:text-foreground aria-pressed:border-[var(--role-accent)] aria-pressed:font-semibold aria-pressed:text-foreground disabled:opacity-50"
-                onClick={() => { setTab(key); setActive(undefined); }}>
+                onClick={() => selectTab(key)}>
                 {t(`desktop.superMemoDrafts.entries.${key}`, { count: key === 'missing' ? missingCount : lists[key].length })}
               </button>
             ))}
           </div>
           <div className="min-h-0 overflow-auto p-2">
             {tab === 'converted' ? (
-              preview ? <SuperMemoPreviewDestination childrenByParent={childrenByParent} active={current?.id} onSelect={setActive} /> : null
+              preview ? <SuperMemoPreviewDestination childrenByParent={childrenByParent} active={current?.id} onSelect={selectEntry}
+                branches={branches} toggleBranch={toggleBranch} /> : null
             ) : <ul>{rows.map(row => <li key={row.id} className="flex min-w-0">
-              <SuperMemoEntryButton row={row} active={current?.id} onSelect={setActive} />
+              <SuperMemoEntryButton row={row} active={current?.id} onSelect={selectEntry} />
             </li>)}</ul>}
           </div>
         </section>
@@ -125,9 +137,9 @@ export function SuperMemoEntryPreview({ preview, elements }: {
             {t('desktop.superMemoDrafts.entryPreview')}
           </h2>
           <div className="min-h-0 overflow-auto px-4 py-2" key={current?.id}>
-            {current ? <EntryContent row={current} tab={tab} source={sources.get(current.id)} /> : (
-              <p className="text-foreground/60">{t(preview ? 'desktop.superMemoDrafts.noEntries' : 'desktop.superMemoDrafts.description')}</p>
-            )}
+            {current ? <EntryContent row={current} tab={tab} source={sources.get(current.id)} /> : preview ? (
+              <p className="text-foreground/60">{t('desktop.superMemoDrafts.noEntries')}</p>
+            ) : null}
           </div>
         </section>
       </div>

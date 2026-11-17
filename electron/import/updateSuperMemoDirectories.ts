@@ -178,7 +178,7 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
     const candidates = plan ? planSuperMemoWithdrawals(driver, usableEntries, plan.rows) : [];
     const withdrawals = candidates.map(candidate => candidate.change);
     const signature = createHash('sha256').update(JSON.stringify({ batchId, exportHash: source.exportHash, sourceMatch, pairedSourceRequired, changes, withdrawals,
-      citations: citations?.signature, firstReviews: firstReviews?.changes,
+      sourceFormat: content?.sourceFormat, citations: citations?.signature, firstReviews: firstReviews?.changes,
       firstReviewWrites: firstReviews?.writes.map(({ nodeId, instant, offset, percent }) => [nodeId, instant, offset, percent]),
       moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');

@@ -1,5 +1,4 @@
 import { ChevronDown, ChevronRight, Folder } from 'lucide-react';
-import { useState } from 'react';
 
 import { SUPER_MEMO_IMPORT_FOLDER_TITLE } from '../../../../lib/core/import/superMemoImportParents';
 import type { NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -9,6 +8,8 @@ interface TreeProps {
   childrenByParent: ReadonlyMap<number | null, readonly Row[]>;
   parent: number | null;
   depth?: number;
+  branches: Readonly<Partial<Record<number, boolean>>>;
+  toggleBranch(id: number, open: boolean): void;
   active: number | undefined;
   onSelect(id: number): void;
 }
@@ -30,7 +31,7 @@ export function SuperMemoEntryButton({ row, active, onSelect }: {
 function Branch({ row, ...tree }: TreeProps & { row: Row }) {
   const t = useTranslation();
   const depth = tree.depth ?? 0;
-  const [open, setOpen] = useState(depth < 2);
+  const open = tree.branches[row.id] ?? depth < 2;
   const childRows = tree.childrenByParent.get(row.id);
   const Icon = open ? ChevronDown : ChevronRight;
   return (
@@ -39,7 +40,7 @@ function Branch({ row, ...tree }: TreeProps & { row: Row }) {
         {childRows?.length ? (
           <button type="button" aria-expanded={open}
             aria-label={t(open ? 'desktop.superMemoDrafts.collapseEntry' : 'desktop.superMemoDrafts.expandEntry', { id: row.id })}
-            onClick={() => setOpen(value => !value)}
+            onClick={() => tree.toggleBranch(row.id, !open)}
             className="flex size-6 shrink-0 items-center justify-center rounded hover:bg-foreground/5">
             <Icon aria-hidden className="size-3.5" />
           </button>

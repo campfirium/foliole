@@ -11,8 +11,8 @@ export function SuperMemoDraftActions({
   const t = useTranslation();
   if (showPreviewFooter) {
     return (
-      <footer className="flex shrink-0 items-stretch justify-between gap-4 px-6 pb-6">
-        <p role="note" className="flex min-h-8 min-w-0 max-w-[72ch] items-center border-s border-foreground/15 ps-3 text-xs leading-4 text-foreground/65">{t('desktop.superMemoDrafts.conversionNote')}</p>
+      <footer className="flex shrink-0 items-center justify-end gap-2 px-6 pb-6">
+        <p role="note" className="flex min-h-8 min-w-0 max-w-[72ch] items-center text-end text-xs leading-4 text-foreground/65">{t('desktop.superMemoDrafts.conversionNote')}</p>
         {canConvert ? <AppButton className="shrink-0" disabled={busy} onClick={openParameters}>
           {t('desktop.superMemoDrafts.parameters')}
         </AppButton> : null}

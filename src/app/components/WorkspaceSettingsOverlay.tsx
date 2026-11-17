@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 
 import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
@@ -74,7 +74,10 @@ export function WorkspaceSettingsOverlay({
 }: WorkspaceSettingsOverlayProps) {
   const { isDemo } = useDemoRuntimeState();
 
-  if (!isSettingsOpen) {
+  const [openedDesktopSettings, setOpenedDesktopSettings] = useState(isSettingsOpen && !isDemo);
+  if (isSettingsOpen && !isDemo && !openedDesktopSettings) setOpenedDesktopSettings(true);
+
+  if (!isSettingsOpen && (isDemo || !openedDesktopSettings)) {
     return null;
   }
 
@@ -95,6 +98,7 @@ export function WorkspaceSettingsOverlay({
   return (
     <Suspense fallback={null}>
       <WorkspaceSettingsOverlayContent
+        isSettingsOpen={isSettingsOpen}
         onClose={onClose}
         onRunSupportCommand={onRunSupportCommand}
         requestedCategory={requestedCategory}

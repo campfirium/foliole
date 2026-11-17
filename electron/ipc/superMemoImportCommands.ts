@@ -94,6 +94,15 @@ function handleSuperMemoAdjustment(args: unknown, previewOnly: boolean, afterWri
   });
 }
 
+function getSuperMemoPreviewSignature(
+  preview: NativeSuperMemoPreview,
+  evidence: { elements: unknown; collectionDirectory: string | undefined; offset: string; scheduler: unknown; gradeMap: unknown; images: unknown }
+) {
+  // Placement is a conversion choice; its generated sample does not identify the source.
+  const rows = preview.rows.map(row => ({ ...row, sourceExample: undefined }));
+  return createHash('sha256').update(JSON.stringify({ ...evidence, preview: { ...preview, rows } })).digest('hex');
+}
+
 export async function handleSuperMemoImportCommand(command: string, args: unknown, afterWrite?: () => Promise<void>) {
   if (command === NATIVE_COMMANDS.listSuperMemoImports) return runWithDatabaseConnectionOwner(listSuperMemoImports);
   const previewAdjustment = command === NATIVE_COMMANDS.previewSuperMemoAdjustment;
@@ -141,8 +150,8 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
           ...(reset ? { recalculatedDue: null, replayedCount: 0, historyNeedsReview: false } : {}) };
       })
     };
-    preview.previewSignature = createHash('sha256')
-      .update(JSON.stringify({ elements, collectionDirectory, preview, offset, scheduler, gradeMap, sourceFormat, images: [...images] })).digest('hex');
+    preview.previewSignature = getSuperMemoPreviewSignature(preview,
+      { elements, collectionDirectory, offset, scheduler, gradeMap, images: [...images] });
     if (write && previewSignature && preview.previewSignature !== previewSignature) {
       throw new Error('supermemo_preview_changed');
     }

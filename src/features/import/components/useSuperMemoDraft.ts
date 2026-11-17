@@ -207,10 +207,16 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
     if (nextPreview) setDraft(nextPreview);
   }, setBusy, setError);
 
-  const changeSourceFormat = (next: SuperMemoSourceFormat) => refreshSourceFormat(async () => {
-    if (source && !result) setDraft(await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next, target));
-    setSourceFormat(next);
-  }, setBusy, setError);
+  function changeSourceFormat(next: SuperMemoSourceFormat) {
+    if (!source || result || !draft?.preview.directoryUpdate) {
+      setSourceFormat(next);
+      return;
+    }
+    void refreshSourceFormat(async () => {
+      setDraft(await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next, target));
+      setSourceFormat(next);
+    }, setBusy, setError);
+  }
 
   async function importSource(withdrawSourceIds: number[]) {
     if (!source || !draft?.preview.previewSignature) return;
@@ -233,6 +239,15 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   }
 
   const { busy, error, setPercent } = state;
+  function resetCompletedDraft() {
+    setDraft(undefined);
+    state.setSource(undefined);
+    state.setTarget(undefined);
+    setResult(undefined);
+    setPercent(0);
+    setSourceFormat({ ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' });
+  }
+
   return { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, sourceFormat,
-    changeGrades, changeSourceFormat, importSource, candidates: state.pending?.candidates, ...createSourceActions(state, pickerTitle) };
+    changeGrades, changeSourceFormat, importSource, resetCompletedDraft, candidates: state.pending?.candidates, ...createSourceActions(state, pickerTitle) };
 }

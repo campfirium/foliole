@@ -11,6 +11,7 @@ const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty exa
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
   <ID>4</ID><Type>Topic</Type><Ordinal>0</Ordinal><Content><Question>Welcome sample</Question></Content><SuperMemoElement>
   <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
+const back = /^(Back to preview|返回资料预览)$/;
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 
 async function dismissLoadError(page: Page) {
@@ -18,17 +19,19 @@ async function dismissLoadError(page: Page) {
   await notice.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 }
 
-test('previews different XML exports and changes the interval without saving a draft', async ({ desktopWindow, desktopApp }, testInfo) => {
+test('previews different XML exports and retains the conversion draft after dismissing the panel', async ({ desktopWindow, desktopApp }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const dialog = await openPreview(desktopWindow);
   const preview = dialog.getByRole('region', { name: /^(Preview|预览)$/ });
-  await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toBeVisible();
+  await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toHaveCount(0);
   const note = dialog.getByRole('note');
   await expect(note).toBeVisible();
   await expect(preview.getByRole('note')).toHaveCount(0);
-  await dialog.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
+  const settingsBounds = await desktopWindow.locator('[data-settings-root-dialog]').boundingBox();
+  expect(settingsBounds).not.toBeNull();
+  expect(await dialog.boundingBox()).toEqual(settingsBounds);
+  await desktopWindow.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
-  await expect(dialog.getByRole('button', { name: /^(Close|关闭)$/ })).toHaveCount(0);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
@@ -46,7 +49,16 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(slider).toHaveValue('100');
   await expect(note).toBeHidden();
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
+  await desktopWindow.mouse.click(3, 3);
+  await expect(slider).toHaveValue('100');
   await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(desktopWindow.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(desktopWindow.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toBeHidden();
+  const reopened = await openPreview(desktopWindow);
+  await expect(reopened.getByRole('slider')).toHaveValue('100');
+  await reopened.getByRole('button', { name: back }).click();
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
   await expect(note).toBeVisible();
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
@@ -60,13 +72,7 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
-  await desktopWindow.keyboard.press('Escape');
-  await expect(dialog.getByRole('button', { name: parameters })).toBeVisible();
-  await desktopWindow.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await expect(desktopWindow.getByRole('button', { name: /^(Start migration|开始迁移)$/ })).toBeVisible();
-  const reopened = await openPreview(desktopWindow);
-  await expect(reopened.getByRole('slider')).toHaveCount(0);
+
 });
 
 test('pairs the selected collection and preserves XML preview after a mismatch', async ({ desktopWindow, desktopApp }, testInfo) => {
@@ -79,7 +85,7 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   await loadSource(desktopApp, dialog, directory, secondExport);
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByText(/The XML export estimates original due dates|XML 预览按上次复习日期/)).toBeVisible();
-  await desktopWindow.keyboard.press('Escape');
+  await dialog.getByRole('button', { name: back }).click();
   elements.writeUInt16LE(300, 118 + 16);
   await writeFile(path.join(info, 'ElementInfo.dat'), elements);
   await loadSource(desktopApp, dialog, directory);
@@ -112,6 +118,10 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   const sourceOption = dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ });
   await sourceOption.click();
   await expect(sourceOption).toBeChecked();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  const activeDraft = await openPreview(desktopWindow);
+  await expect(activeDraft.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ })).toBeChecked();
   await dialog.screenshot({ path: '.tmp/artifacts/T762/desktop/supermemo-parameters.png' });
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
@@ -162,8 +172,6 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 
   const reopened = await openPreview(desktopWindow);
-  await loadSource(desktopApp, reopened, directory);
-  await reopened.getByRole('button', { name: parameters }).click();
   await expect(reopened.getByRole('radio', { name: again })).toBeChecked();
   await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();
   await expect(reopened.getByRole('radio', { name: good })).toBeChecked();
