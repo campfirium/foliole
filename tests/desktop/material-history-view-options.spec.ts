@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
@@ -17,7 +17,7 @@ test('history view options apply immediately and return after app restart', asyn
   await expectWorkspaceShell(page);
   await page.evaluate(async ({ title, content }) => {
     window.localStorage.setItem('foliole-app-language', 'en');
-    window.localStorage.setItem('foliole-material-history-view', JSON.stringify({ first: 'preview', lines: 2 }));
+    window.localStorage.setItem('foliole-material-history-view', JSON.stringify({ first: 'preview', lines: 2, fontSize: 15 }));
     await window.__folioleWorkspaceDebug!.seedNodes([
       { id: 'history-layout', kind: 'topic', parentNodeId: 'special-inbox', title, content }
     ], { persist: true });
@@ -39,12 +39,15 @@ test('history view options apply immediately and return after app restart', asyn
   await expect(previewFirst).toBeVisible();
   await expect(preview).toHaveCSS('-webkit-line-clamp', '2');
 
+  await verifyHistoryRowContrast(history, previewFirst, preview);
   await trigger.click();
   await verifyHistoryFontSizes(page);
   await expect(options.getByRole('radio', { name: 'Preview first' })).toBeChecked();
   await expect(options.getByRole('group', { name: 'Preview lines' }).getByRole('status')).toHaveText('2');
   await options.getByText('Breadcrumb first', { exact: true }).click();
   await expect(breadcrumbFirst).toBeVisible();
+  await expect(preview).toHaveCSS('font-size', '17px');
+  await expect(history.getByText(title, { exact: true })).toHaveCSS('font-size', '13px');
   await verifyHistoryPreviewLines(page);
   await expect.poll(() => preview.evaluate(element =>
     element.clientHeight / Number.parseFloat(getComputedStyle(element).lineHeight)
@@ -66,6 +69,29 @@ test('history view options apply immediately and return after app restart', asyn
   await restartAndVerify(desktopSession, page);
 });
 
+async function colorOpacity(element: Locator, property: 'backgroundColor' | 'color') {
+  return element.evaluate((node, property) => {
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.fillStyle = getComputedStyle(node)[property];
+    context.fillRect(0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data[3] / 255;
+  }, property);
+}
+
+async function verifyHistoryRowContrast(history: Locator, row: Locator, preview: Locator) {
+  await row.hover();
+  const rowOpacity = () => colorOpacity(row, 'backgroundColor');
+  await expect.poll(rowOpacity).toBeGreaterThan(0.3);
+  await expect.poll(rowOpacity).toBeLessThan(0.65);
+  const search = history.getByRole('searchbox');
+  await search.hover();
+  await search.press('ArrowDown');
+  await expect(row).toHaveAttribute('aria-current', 'true');
+  await expect.poll(rowOpacity).toBeGreaterThan(0.3);
+  await expect.poll(rowOpacity).toBeLessThan(0.65);
+  expect(await colorOpacity(preview, 'color')).toBeGreaterThan(0.75);
+}
+
 async function verifyHistoryPreviewLines(page: Page) {
   const history = page.getByRole('dialog', { name: 'History', exact: true });
   const lines = history.getByRole('group', { name: 'Preview lines' });
@@ -85,9 +111,9 @@ async function verifyHistoryPreviewLines(page: Page) {
 
 async function verifyHistoryFontSizes(page: Page) {
   const history = page.getByRole('dialog', { name: 'History', exact: true });
-  const size = history.getByRole('group', { name: 'Font size' });
-  const decrease = size.getByRole('button', { name: 'Decrease font size' });
-  const increase = size.getByRole('button', { name: 'Increase font size' });
+  const size = history.getByRole('group', { name: 'Preview size' });
+  const decrease = size.getByRole('button', { name: 'Decrease preview size' });
+  const increase = size.getByRole('button', { name: 'Increase preview size' });
   const value = size.getByRole('status');
   const preview = history.getByText(/^History preview text/);
   const breadcrumb = history.getByText(title, { exact: true });
@@ -97,13 +123,18 @@ async function verifyHistoryFontSizes(page: Page) {
   await expect(value).toHaveText('10');
   await expect(decrease).toBeDisabled();
   await expect(preview).toHaveCSS('font-size', '10px');
-  await expect(breadcrumb).toHaveCSS('font-size', '10px');
+  await expect(breadcrumb).toHaveCSS('font-size', '12px');
   await increase.press('Enter');
   await expect(value).toHaveText('11');
   for (let step = 0; step < 6; step++) await increase.click();
   await expect(value).toHaveText('17');
   await expect(preview).toHaveCSS('font-size', '17px');
-  await expect(breadcrumb).toHaveCSS('font-size', '14px');
+  await expect(breadcrumb).toHaveCSS('font-size', '12px');
+  const breadcrumbSize = history.getByRole('group', { name: 'Breadcrumb size' });
+  await breadcrumbSize.getByRole('button', { name: 'Increase breadcrumb size' }).click();
+  await expect(breadcrumbSize.getByRole('status')).toHaveText('13');
+  await expect(breadcrumb).toHaveCSS('font-size', '13px');
+  await expect(preview).toHaveCSS('font-size', '17px');
 }
 
 async function expectHistoryPreferencesSaved(page: Page) {
@@ -114,7 +145,7 @@ async function expectHistoryPreferencesSaved(page: Page) {
       view: value && JSON.parse(value),
       shortcutsCollapsed: settings?.['foliole-material-history-shortcuts-collapsed']
     };
-  })).toEqual({ view: { first: 'breadcrumb', lines: 3, fontSize: 17 }, shortcutsCollapsed: 'false' });
+  })).toEqual({ view: { first: 'breadcrumb', lines: 3, previewSize: 17, breadcrumbSize: 13 }, shortcutsCollapsed: 'false' });
 
 }
 
@@ -141,7 +172,7 @@ async function verifyRestart(page: Page) {
   await expect(history.getByRole('button', { name: /^.*History layout topic History preview text/ })).toBeVisible();
   await expect(history.getByText(/^History preview text/)).toHaveCSS('-webkit-line-clamp', '3');
   await expect(history.getByText(/^History preview text/)).toHaveCSS('font-size', '17px');
-  await expect(history.getByText(title, { exact: true })).toHaveCSS('font-size', '19px');
+  await expect(history.getByText(title, { exact: true })).toHaveCSS('font-size', '13px');
   const collapseShortcuts = history.getByRole('button', { name: 'Collapse history shortcuts' });
   await expect(collapseShortcuts).toHaveAttribute('aria-expanded', 'true');
   await collapseShortcuts.click();
@@ -150,7 +181,8 @@ async function verifyRestart(page: Page) {
   const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();
   await expect(options.getByRole('group', { name: 'Preview lines' }).getByRole('status')).toHaveText('3');
-  await expect(options.getByRole('group', { name: 'Font size' }).getByRole('status')).toHaveText('17');
+  await expect(options.getByRole('group', { name: 'Preview size' }).getByRole('status')).toHaveText('17');
+  await expect(options.getByRole('group', { name: 'Breadcrumb size' }).getByRole('status')).toHaveText('13');
   await history.getByRole('searchbox').click();
   await expect(options).toBeHidden();
 }

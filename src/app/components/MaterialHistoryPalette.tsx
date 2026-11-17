@@ -140,31 +140,34 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
   onPin: (index: number) => void;
 }) {
   const rowId = useId();
-  const { fontSize } = view;
-  const secondaryPathSize = Math.max(10, Math.round(12 + (fontSize - 15) * 0.75));
+  const { previewSize, breadcrumbSize } = view;
   return rows.map(({ node, pinned }, index) => {
     const bodyId = `${rowId}-body-${index}`;
     const pathId = `${rowId}-path-${index}`;
     const path = materialHistoryPath(nodes, node.id);
     const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     const preview = (
-      <span id={bodyId} className="pointer-events-none relative min-w-0 line-clamp-2 break-words text-foreground/60"
-        style={{ fontSize, lineHeight: `${fontSize + 6}px`, WebkitLineClamp: view.lines }}>
+      <span id={bodyId} className="pointer-events-none relative min-w-0 line-clamp-2 break-words text-foreground/82"
+        style={{ fontSize: previewSize, lineHeight: `${previewSize + 6}px`, WebkitLineClamp: view.lines }}>
         {materialHistoryPreview(node)}
       </span>
     );
-    const pathSize = breadcrumbFirst ? fontSize + 2 : secondaryPathSize;
     const metadata = (
       <div className="pointer-events-none relative flex min-w-0 items-center gap-2">
-        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'font-semibold text-foreground' : 'text-foreground/45'}`}
-          style={{ fontSize: pathSize, lineHeight: `${pathSize + (breadcrumbFirst ? 6 : 5)}px` }}>{path}</span>}
+        {path && <span id={pathId} className={`min-w-0 break-words ${breadcrumbFirst ? 'font-medium text-foreground/88' : 'text-foreground/68'}`}
+          style={{ fontSize: breadcrumbSize, lineHeight: `${breadcrumbSize + 5}px` }}>{path}</span>}
         <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
       </div>
     );
     return (
       <div className="group relative grid gap-0.5 px-3 py-2" key={node.id}>
         <button aria-labelledby={path ? (breadcrumbFirst ? `${pathId} ${bodyId}` : `${bodyId} ${pathId}`) : bodyId}
-          className={appFloatingItemClassName('absolute inset-0 rounded-md forced-colors:data-[active=true]:outline-1 forced-colors:data-[active=true]:outline-[Highlight]')}
+          className={appFloatingItemClassName(
+            'absolute inset-0 rounded-md ' +
+            'hover:bg-[color-mix(in_srgb,var(--app-floating-item-hover-bg)_55%,transparent)] ' +
+            'data-[active=true]:bg-[color-mix(in_srgb,var(--app-floating-item-active-bg)_45%,transparent)] ' +
+            'forced-colors:data-[active=true]:outline-1 forced-colors:data-[active=true]:outline-[Highlight]'
+          )}
           aria-current={index === selected || undefined} data-active={index === selected} onClick={() => onOpen(index)} type="button" />
         {breadcrumbFirst ? <>{metadata}{preview}</> : <>{preview}{metadata}</>}
       </div>

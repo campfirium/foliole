@@ -1,31 +1,37 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 
+import { normalizePanelViewFontSize, PANEL_FONT_SIZE_DEFAULT } from './panelViewFontSize';
+
 export interface MaterialHistoryView {
   first: 'preview' | 'breadcrumb';
   lines: 1 | 2 | 3;
-  fontSize: number;
+  previewSize: number;
+  breadcrumbSize: number;
 }
 
 const key = APP_SETTINGS_STORAGE_KEYS.materialHistoryView;
-export const HISTORY_FONT_SIZE_MIN = 10;
-export const HISTORY_FONT_SIZE_MAX = 24;
-const defaultView: MaterialHistoryView = { first: 'preview', lines: 2, fontSize: 15 };
+const defaultView: MaterialHistoryView = { first: 'preview', lines: 2, previewSize: PANEL_FONT_SIZE_DEFAULT, breadcrumbSize: 12 };
 
-function loadFontSize(value: unknown) {
+function loadLegacyFontSize(value: unknown) {
   if (value === 'small') return 13;
   if (value === 'large') return 17;
-  if (typeof value !== 'number' || !Number.isFinite(value)) return defaultView.fontSize;
-  return Math.max(HISTORY_FONT_SIZE_MIN, Math.min(HISTORY_FONT_SIZE_MAX, Math.round(value)));
+  return normalizePanelViewFontSize(value);
 }
 
 export function loadMaterialHistoryView(): MaterialHistoryView {
   try {
     const value = JSON.parse(getWhitelistedLocalStorageItem(key) ?? 'null');
+    const first = value?.first === 'breadcrumb' ? 'breadcrumb' : defaultView.first;
+    const legacyPreview = loadLegacyFontSize(value?.fontSize);
+    const legacyBreadcrumb = first === 'breadcrumb'
+      ? legacyPreview + 2
+      : Math.round(defaultView.breadcrumbSize + (legacyPreview - defaultView.previewSize) * 0.75);
     return {
-      first: value?.first === 'breadcrumb' ? 'breadcrumb' : defaultView.first,
+      first,
       lines: value?.lines === 1 || value?.lines === 3 ? value.lines : defaultView.lines,
-      fontSize: loadFontSize(value?.fontSize)
+      previewSize: normalizePanelViewFontSize(value?.previewSize ?? legacyPreview),
+      breadcrumbSize: normalizePanelViewFontSize(value?.breadcrumbSize ?? legacyBreadcrumb)
     };
   } catch {
     return defaultView;

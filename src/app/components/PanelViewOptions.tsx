@@ -1,4 +1,4 @@
-import { Check, Settings2 } from 'lucide-react';
+import { Check, Minus, Plus, Settings2 } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { onWindowPriorityEscape } from '../../shared/platform/keyboard';
@@ -79,5 +79,30 @@ function ViewChoice({ checked, name, label, onSelect }: {
         <span>{label}</span>
       </span>
     </label>
+  );
+}
+
+export function PanelViewStepper(props: {
+  label: string;
+  decreaseLabel: string;
+  increaseLabel: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3" role="group" aria-label={props.label}>
+      <span className="text-xs font-medium text-foreground/75">{props.label}</span>
+      <div className="flex items-center gap-0.5 rounded-lg border border-[var(--app-floating-divider-color)] bg-[var(--app-surface-control-bg)] p-0.5">
+        <AppIconButton className="size-7" disabled={props.value <= props.min}
+          icon={<Minus aria-hidden="true" className="size-4" />} label={props.decreaseLabel}
+          onClick={() => props.onChange(props.value - 1)} />
+        <output className="w-6 text-center text-ui-base tabular-nums text-foreground">{props.value}</output>
+        <AppIconButton className="size-7" disabled={props.value >= props.max}
+          icon={<Plus aria-hidden="true" className="size-4" />} label={props.increaseLabel}
+          onClick={() => props.onChange(props.value + 1)} />
+      </div>
+    </div>
   );
 }
