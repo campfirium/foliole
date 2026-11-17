@@ -177,3 +177,35 @@ test('inherits the previous sidebar preferences once and restores them after cro
   await expect(right).toHaveAttribute('aria-pressed', 'false');
   expect(await saved()).toEqual(initial);
 });
+
+test('reaches the narrowest tier and keeps both navigation columns usable while docked', async ({
+  desktopApp, desktopWindow: page
+}, testInfo) => {
+  await expectWorkspaceShell(page);
+  await resizeWorkspaceWindow(desktopApp, page, { percent: 90 });
+  await setActiveSidebarTierDockedWidths(page, 26.5, 15.2);
+  const workspace = page.locator('main[data-sidebar-tiers]');
+  const left = workspace.locator('[data-workspace-side-column="list"]');
+  const folder = left.locator('[data-panel-scale-id="folder-navigation"]');
+  const topics = left.locator('[data-panel-scale-id="topic-navigation"]');
+
+  await resizeWorkspaceWindow(desktopApp, page, { width: 960 });
+  // The desktop harness fixes the renderer viewport independently of native bounds.
+  await page.setViewportSize({ width: 960, height: 850 });
+  await expect.poll(() => page.evaluate(() => innerWidth)).toBe(960);
+  const leftToggle = workspace.locator('[data-workspace-sidebar-toggle="left"]');
+  await expect(leftToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await folder.boundingBox())?.width ?? 0).toBeGreaterThan(80);
+  await expect.poll(async () => (await topics.boundingBox())?.width ?? 0).toBeGreaterThan(95);
+  const screenshot = testInfo.outputPath('sidebar-layout-narrow-docked.png');
+  await workspace.screenshot({ path: screenshot });
+  await testInfo.attach('sidebar-layout-narrow-docked', { path: screenshot, contentType: 'image/png' });
+
+  const browserWindow = await desktopApp.browserWindow(page);
+  const minWidth = await browserWindow.evaluate(window => window.getMinimumSize()[0]);
+  expect(minWidth).toBeLessThan(480);
+  const ratio = await resizeWorkspaceWindow(desktopApp, page, { percent: 48 });
+  expect(ratio).toBeLessThan(50);
+  await expect(leftToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(workspace.locator('[data-workspace-sidebar-toggle="right"]')).toHaveAttribute('aria-pressed', 'false');
+});

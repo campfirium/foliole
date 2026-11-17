@@ -30,7 +30,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
   return {
     width: 1400,
     height: 900,
-    minWidth: 960,
+    minWidth: 440,
     minHeight: 640,
     ...createMainWindowChromeOptions(),
     backgroundColor: '#ffffff',

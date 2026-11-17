@@ -95,3 +95,11 @@ it('starts maximized windows at the matching display work area before presentati
     y: 0
   });
 });
+
+it('restores a narrow workspace at its saved width using the native minimum', () => {
+  expect(applyWindowStateToOptions(
+    { minHeight: 640, minWidth: 440 },
+    { height: 720, width: 470, x: 30, y: 40, isFullScreen: false, isMaximized: false },
+    [{ height: 1000, width: 960, x: 0, y: 0 }]
+  )).toMatchObject({ height: 720, width: 470, x: 30, y: 40 });
+});

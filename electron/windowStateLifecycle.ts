@@ -29,7 +29,7 @@ function calculateIntersectionArea(bounds: WorkAreaBounds, workArea: WorkAreaBou
   return Math.max(0, horizontal) * Math.max(0, vertical);
 }
 
-function resolveMaximizedStartupBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[]) {
+function resolveMaximizedStartupBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[], minimum: Pick<WorkAreaBounds, 'width' | 'height'>) {
   if (!state.isMaximized || workAreas.length === 0) {
     return null;
   }
@@ -37,8 +37,8 @@ function resolveMaximizedStartupBounds(state: PersistedWindowState, workAreas: W
     return workAreas[0] ?? null;
   }
   const normalBounds = {
-    height: Math.max(640, Math.round(state.height)),
-    width: Math.max(960, Math.round(state.width)),
+    height: Math.max(minimum.height, Math.round(state.height)),
+    width: Math.max(minimum.width, Math.round(state.width)),
     x: Math.round(state.x),
     y: Math.round(state.y)
   };
@@ -57,13 +57,13 @@ function resolveMaximizedStartupBounds(state: PersistedWindowState, workAreas: W
   };
 }
 
-function resolveVisibleBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[]): ResolvedWindowBounds {
-  const maximizedBounds = resolveMaximizedStartupBounds(state, workAreas);
+function resolveVisibleBounds(state: PersistedWindowState, workAreas: WorkAreaBounds[], minimum: Pick<WorkAreaBounds, 'width' | 'height'>): ResolvedWindowBounds {
+  const maximizedBounds = resolveMaximizedStartupBounds(state, workAreas, minimum);
   if (maximizedBounds) {
     return maximizedBounds;
   }
-  const width = Math.max(960, Math.round(state.width));
-  const height = Math.max(640, Math.round(state.height));
+  const width = Math.max(minimum.width, Math.round(state.width));
+  const height = Math.max(minimum.height, Math.round(state.height));
   const x = typeof state.x === 'number' ? Math.round(state.x) : undefined;
   const y = typeof state.y === 'number' ? Math.round(state.y) : undefined;
   const bounds = {
@@ -75,13 +75,7 @@ function resolveVisibleBounds(state: PersistedWindowState, workAreas: WorkAreaBo
   if (x === undefined || y === undefined || workAreas.length === 0) {
     return bounds;
   }
-  const windowBounds = {
-    height: Math.max(640, Math.round(state.height)),
-    width: Math.max(960, Math.round(state.width)),
-    x,
-    y
-  };
-  const visible = workAreas.some((workArea) => hasVisibleIntersection(windowBounds, workArea));
+  const visible = workAreas.some((workArea) => hasVisibleIntersection({ height, width, x, y }, workArea));
   return visible ? bounds : { height, width };
 }
 
@@ -93,7 +87,7 @@ export function applyWindowStateToOptions(
   if (!state) {
     return options;
   }
-  const bounds = resolveVisibleBounds(state, workAreas);
+  const bounds = resolveVisibleBounds(state, workAreas, { width: options.minWidth ?? 1, height: options.minHeight ?? 1 });
   return {
     ...options,
     width: bounds.width,
