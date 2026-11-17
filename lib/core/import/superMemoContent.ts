@@ -1,10 +1,27 @@
 import { parseFragment, serialize, type DefaultTreeAdapterTypes } from 'parse5';
 
 import { convertHtmlToMarkdownCompatible } from './htmlToMarkdownCompatible.js';
+import { BLOCK_TAGS, CONTENT_STRIP_TAGS, EMBEDDED_TAGS } from './htmlToMarkdownCompatibleUtils.js';
 
 type HtmlParent = DefaultTreeAdapterTypes.ParentNode;
 type ImageDestinations = ReadonlyMap<string, string>;
 interface MediaCounts { localImages: number; remoteImages: number; audio: number; localSources: Map<string, number> }
+
+const STRUCTURAL_TAGS = new Set([...BLOCK_TAGS, 'li', 'tbody', 'thead', 'tfoot', 'tr', 'td', 'th']);
+const OPAQUE_TAGS = new Set([...CONTENT_STRIP_TAGS, ...EMBEDDED_TAGS, 'svg', 'math', 'template']);
+
+function unwrapStructuralContainers(parent: HtmlParent) {
+  parent.childNodes = parent.childNodes.flatMap(node => {
+    if (!('tagName' in node) || OPAQUE_TAGS.has(node.tagName)) return [node];
+    unwrapStructuralContainers(node);
+    // Exported web components can hide block content from the Markdown converter.
+    if (!node.tagName.includes('-') || !node.childNodes.some(child => 'tagName' in child && STRUCTURAL_TAGS.has(child.tagName))) {
+      return [node];
+    }
+    for (const child of node.childNodes) child.parentNode = parent;
+    return node.childNodes;
+  });
+}
 
 function prepareFragment(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations, inReference = false) {
   parent.childNodes = parent.childNodes.filter(node => {
@@ -54,6 +71,7 @@ export function convertSuperMemoContent(parts: string[], imageDestinations?: Ima
   const content = parts.map(part => {
     const fragment = parseFragment(part);
     prepareFragment(fragment, media, imageDestinations);
+    unwrapStructuralContainers(fragment);
     return convertHtmlToMarkdownCompatible(serialize(fragment)).content;
   }).filter(Boolean).join('\n');
   return { content, ...media };

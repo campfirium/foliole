@@ -37,3 +37,14 @@ it('puts resolved local images inline at their original position in the Topic bo
   );
   expect(content).toBe(`Before ![Route](${destination}) after.`);
 });
+
+it('preserves paragraphs, lists and tables nested in exported custom containers', () => {
+  const { content } = convertSuperMemoContent([
+    '<ms-text-chunk><ms-cmark-node><p><custom-inline><strong>Review</strong></custom-inline></p>'
+      + '<p>Introduction.</p><ul><ms-cmark-node><li>First point</li></ms-cmark-node></ul>'
+      + '<table><tr><th>Key</th><th>Value</th></tr><tr><td>One</td><td>Two</td></tr></table>'
+      + '</ms-cmark-node></ms-text-chunk>'
+  ]);
+  expect(content).toBe('**Review**\n\nIntroduction.\n\n- First point\n\n'
+    + '| Key | Value |\n| --- | --- |\n| One | Two |');
+});

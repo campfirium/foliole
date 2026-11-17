@@ -155,10 +155,15 @@ test('makes an imported due card available in an already prepared empty Flow', a
   const dialog = await openPreview(page);
   const source = `<SuperMemoCollection><Count>1</Count>
     <SuperMemoElement><ID>1</ID><Type>Item</Type><Title>Due imported card</Title>
-      <Content><Question>Imported question</Question><Answer>Imported answer</Answer></Content>
+      <Content><Question><![CDATA[<ms-text-chunk><p>Imported question</p><p>Second paragraph</p></ms-text-chunk>]]></Question>
+        <Answer>Imported answer</Answer></Content>
       <LearningData><LastRepetition>10.11.2025</LastRepetition><Interval>1</Interval></LearningData>
     </SuperMemoElement></SuperMemoCollection>`;
   await loadSource(app, dialog, testInfo.outputPath('due-card'), source);
+  const question = dialog.getByText(/Imported question\s+Second paragraph/);
+  await expect(question).toBeVisible();
+  expect(await question.textContent()).toBe('Imported question\n\nSecond paragraph');
+  await dialog.screenshot({ path: testInfo.outputPath('wrapped-question-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 1|已导入 1 条)/)).toBeVisible();

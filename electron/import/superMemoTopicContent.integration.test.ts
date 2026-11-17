@@ -46,7 +46,8 @@ it('persists the inline image in a reopened Topic and leaves unresolved source p
       nodeId: 'topic', parentNodeId: null, title: 'Maps', isTitleManual: true, anchorLink: null,
       position: null, createdAt: now, updatedAt: now
     }, [
-      '<p>Before <img alt="Map" src="file:///[PrimaryStorage]17/178.png"> after.</p>',
+      '<sr-rd-content><p>Route overview.</p>'
+        + '<p>Before <img alt="Map" src="file:///[PrimaryStorage]17/178.png"> after.</p></sr-rd-content>',
       '<img src="map%20old.png"><img src="outside.png"><img src="file:///[PrimaryStorage]../outside.png"><img src="missing.png"><audio src="voice.mp3"></audio>'
     ], source);
     sqlite.exec(`CREATE TEMP TRIGGER fail_image_owner BEFORE UPDATE OF resource_references ON nodes
@@ -69,7 +70,7 @@ it('persists the inline image in a reopened Topic and leaves unresolved source p
       snapshot_json: string;
     };
     expect(JSON.parse(JSON.parse(version.snapshot_json).resource_references)).toEqual(references);
-    expect(document?.content).toContain(`Before ![Map](asset://${key}) after.`);
+    expect(document?.content).toContain(`Route overview.\n\nBefore ![Map](asset://${key}) after.`);
     expect(document?.content).toContain('missing.png');
     expect(document?.content).not.toContain('voice.mp3');
     const file = resolveAttachmentFileForSync(key);
