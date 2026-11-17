@@ -12,6 +12,7 @@ import { migrateExternalFolderDisplayPaths } from './externalFolderDisplayPathMi
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateFramedSyncInventoryLookups } from './framedSyncInventoryLookupMigration.js';
+import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
 import { migrateFsrs7 } from './fsrs7Migration.js';
 import { migrateIndependentTopicAlternatives } from './independentTopicAlternativesMigration.js';
 import { migrateInitialReviewSchedule } from './initialReviewScheduleMigration.js';
@@ -80,5 +81,9 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 189, migrate: db => db.exec(READING_RESUME_SCHEMA) },
   // Keep the version readable for development libraries that opened the import preview prototype.
   { version: 190, migrate: () => {} },
-  { version: 191, migrate: retireParentOrderProjection }
+  { version: 191, migrate: retireParentOrderProjection },
+  { version: 192, migrate: db => {
+    for (const sql of reinstallNodeHistoryInventoryUpdates()) db.exec(sql);
+  } },
+  { version: 193, migrate: db => db.exec(INVALIDATE_ALL_SYNC_DIGESTS) }
 ];

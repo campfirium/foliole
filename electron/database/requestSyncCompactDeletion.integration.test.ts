@@ -56,9 +56,10 @@ it('compacts on a real local delete and retains the deletion through two forward
     target.reopen();
     await send(target, observer);
     observer.reopen();
-    for (const peer of [source, target, observer]) {
-      expect(peer.sqlite.prepare("SELECT json_type(snapshot_json, '$.deleted_version_metadata_digest') FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBe('text');
-      expect(peer.sqlite.prepare("SELECT json_type(snapshot_json, '$.attachments') FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBeNull();
+    expect(source.sqlite.prepare("SELECT json_type(snapshot_json, '$.deleted_version_metadata_digest') FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBe('text');
+    expect(source.sqlite.prepare("SELECT json_type(snapshot_json, '$.attachments') FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBeNull();
+    for (const peer of [target, observer]) {
+      expect(peer.sqlite.prepare("SELECT version_id FROM node_sync_versions WHERE object_id='topic'").all()).toEqual([]);
       expect(peer.sqlite.prepare("SELECT count(*) FROM node_sync_tombstones WHERE node_id='topic'").pluck().get()).toBe(1);
       expect(peer.sqlite.prepare("SELECT count(*) FROM nodes WHERE id='topic'").pluck().get()).toBe(0);
     }
@@ -88,7 +89,7 @@ it('compacts a previously unknown old version on replay without reviving the del
 });
 
 
-it('retains both ordered merge parents across interrupted delivery, retry, and onward transfer', async () => {
+it('keeps a deleted merge history at the source through interrupted delivery, retry, and onward transfer', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target'); const observer = fixture.peer('observer');
   try {
@@ -129,10 +130,10 @@ it('retains both ordered merge parents across interrupted delivery, retry, and o
     observer.reopen();
     for (const peer of [source, target, observer]) {
       const parents = peer.sqlite.prepare("SELECT parent_version_id FROM node_sync_version_parents WHERE version_id='merge' ORDER BY ordinal").pluck().all();
-      expect(parents).toEqual(['original', 'fork']);
+      expect(parents).toEqual(peer === source ? ['original', 'fork'] : []);
       expect(peer.sqlite.prepare("SELECT count(*) FROM nodes WHERE id='topic'").pluck().get()).toBe(0);
       expect(peer.sqlite.prepare("SELECT count(*) FROM node_sync_tombstones WHERE node_id='topic'").pluck().get()).toBe(1);
-      expect(peer.sqlite.prepare("SELECT json_type(snapshot_json, '$.attachments') FROM node_sync_versions WHERE version_id='merge'").pluck().get()).toBeNull();
+      expect(peer.sqlite.prepare("SELECT json_type(snapshot_json, '$.attachments') FROM node_sync_versions WHERE version_id='merge'").pluck().get()).toBe(peer === source ? null : undefined);
     }
   } finally { await fixture.close(); }
 });

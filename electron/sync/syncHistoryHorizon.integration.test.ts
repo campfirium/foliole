@@ -59,3 +59,30 @@ it('keeps history and deletions while a member has not caught up, then reclaims 
   expect(await groupRound(started.process, fixture.leftSnapshot)).toMatchObject({ complete: true });
   expect(nodeTraces(third.databasePath, DELETED).node).toBe(0);
 }));
+
+it('agrees on independent permanent deletions and still protects a third device returning with an old node', async () => withFixture(async (fixture, trackThird) => {
+  const { process: third, snapshot } = await fixture.startThird();
+  trackThird(third);
+  const left = fixture.leftSnapshot;
+  const right = fixture.rightSnapshot;
+  await seedHistory(fixture);
+  expect(await groupRound(fixture.left, right)).toMatchObject({ complete: true });
+  expect(await groupRound(third, left)).toMatchObject({ complete: true });
+  await fixture.right.seed({ nodeId: DELETED, content: 'An offline edit', title: 'Deleted' });
+  const time = new Date().toISOString();
+  for (const peer of [left, right]) deletePermanently(peer.databasePath, DELETED, time);
+  const deletion = (path: string) => withDb(path, db => db.prepare(
+    'SELECT version_id FROM node_sync_tombstones WHERE node_id = ?').pluck().get(DELETED));
+  const original = [deletion(left.databasePath), deletion(right.databasePath)];
+  expect(original[0]).toBeDefined();
+  expect(original[0]).not.toEqual(original[1]);
+  expect(await groupRound(fixture.left, right)).toMatchObject({ complete: true });
+  expect(await groupRound(fixture.right, left)).toMatchObject({ complete: true });
+  expect([deletion(left.databasePath), deletion(right.databasePath)]).toEqual(original);
+  expect(nodeTraces(snapshot.databasePath, DELETED).node).toBe(1);
+  expect(await groupRound(third, right)).toMatchObject({ complete: true });
+  const traces = nodeTraces(snapshot.databasePath, DELETED);
+  expect(traces).toMatchObject({ node: 0, tombstone: 1 });
+  expect(await groupRound(third, left)).toMatchObject({ complete: true });
+  expect(nodeTraces(snapshot.databasePath, DELETED)).toEqual(traces);
+}));

@@ -84,13 +84,9 @@ it('receives an already deleted family into an empty receiver and retains origin
     }
     const factsWithoutText = (facts: typeof originalFacts) => facts.map(fact => ({ ...fact, snapshot_json: withoutText(fact.snapshot_json) }));
     expect(factsWithoutText(tombstones(source))).toEqual(factsWithoutText(originalFacts));
-    // History identities match; the receiver keeps no text of any deleted version.
-    const identities = 'SELECT version_id, parent_version_id, content_hash FROM node_sync_versions ORDER BY version_id';
-    expect(target.sqlite.prepare(identities).all()).toEqual(source.sqlite.prepare(identities).all());
-    const currentBodies = `SELECT version.version_id, version.body_text FROM node_sync_versions version
-      JOIN node_sync_tombstones tomb ON tomb.version_id = version.version_id ORDER BY version.version_id`;
-    expect(target.sqlite.prepare(currentBodies).all()).toEqual(source.sqlite.prepare(currentBodies).all()
-      .map(row => ({ ...(row as Record<string, unknown>), body_text: null })));
+    expect(source.sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBeGreaterThan(0);
+    expect(target.sqlite.prepare('SELECT version_id FROM node_sync_versions').all()).toEqual([]);
+    expect(target.sqlite.prepare('SELECT version_id FROM node_sync_version_parents').all()).toEqual([]);
     expect(target.sqlite.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
   } finally { await fixture.close(); }

@@ -20,6 +20,7 @@ export interface InventoryRow extends DbRow {
   reviews_json: string;
   states_json: string;
   version_body_hashes_json: string;
+  tombstone_version_id?: string | null;
 }
 const ids = z.array(z.string().min(1));
 const hashes = z.array(z.string().regex(/^[a-f0-9]{64}$/u));
@@ -27,10 +28,25 @@ const versionBodyHashes = z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/
 const inventoryState = z.tuple([z.string(), z.string().nullable(),
   z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
     z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]);
-export const inventoryColumns = `inventory.*, (SELECT json_group_object(version_id, body_hash)
-  FROM framed_sync_version_summary WHERE object_id = inventory.object_id) AS version_body_hashes_json`;
+export const inventoryColumns = `inventory.*,
+  (SELECT tomb.version_id FROM node_sync_tombstones tomb WHERE tomb.node_id = inventory.object_id
+    AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = tomb.node_id)) AS tombstone_version_id,
+  (SELECT json_group_object(version_id, body_hash)
+    FROM framed_sync_version_summary WHERE object_id = inventory.object_id) AS version_body_hashes_json`;
+
+/** The persisted version identifies the fact to send, but is irrelevant to agreement on deletion. */
+function permanentDeletionEntry(row: InventoryRow, versionId: string): FramedSyncInventoryEntry {
+  const stateFactIds = ids.parse(JSON.parse(row.states_json));
+  return {
+    objectType: 'node', globalId: row.object_id, permanentlyDeleted: true, unready: false,
+    currentVersionId: versionId, frontierFactIds: [versionId], versionStates: [],
+    requiredRelationIds: [], resourceHashes: [], reviewFactIds: [], stateFactIds,
+    sharedStateHash: sha256(new TextEncoder().encode(JSON.stringify(['permanent deletion', row.object_id, stateFactIds])))
+  };
+}
 
 export function inventoryEntryFromRow(row: InventoryRow): FramedSyncInventoryEntry {
+  if (row.tombstone_version_id) return permanentDeletionEntry(row, row.tombstone_version_id);
   const state = row.content_hash.startsWith('[') ? inventoryState.parse(JSON.parse(row.content_hash)) : null;
   if (state) {
     const bodies = versionBodyHashes.parse(JSON.parse(row.version_body_hashes_json));

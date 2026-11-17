@@ -7,6 +7,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
+import { deletePermanently, nodeTraces } from '../../../../../../electron/sync/syncHistoryHorizon.testSupport.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { hostedAttachments, hostedLegalVersion } from '../../../../../../scripts/ios/ios-hosted-request-seed-data.js';
 import { seedIosHostedRequestLibrary } from '../../../../../../scripts/ios/ios-hosted-request-seed.js';
@@ -34,6 +35,26 @@ it('finishes first adoption into an empty companion and sends a later local capt
       expect.objectContaining({ id: 't326-first-adoption-source', content: 'Provider body' })
     ]);
   }
+});
+
+it('adopts and reopens with a permanent deletion and no downloaded version history', async () => {
+  host = await createCompanionRequestFixture();
+  const { fixture } = host;
+  const id = 'first-adoption-deleted';
+  const provider = fixture.rightSnapshot;
+  for (const content of ['First draft', 'Second draft']) {
+    await fixture.right.seed({ nodeId: id, content, title: 'Deleted material' });
+  }
+  deletePermanently(provider.databasePath, id, new Date().toISOString());
+  expect(nodeTraces(provider.databasePath, id).versions).toBeGreaterThan(1);
+  await beginSyncGroupLocalAdoption(host.db, { endpointUrl: provider.origin,
+    groupId: 't326-group', libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
+    providerDeviceId: provider.deviceId, providerDeviceName: 'Provider', providerPlatform: 'darwin' });
+  expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+  expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
+  await host.restart();
+  expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+  expect(nodeTraces(fixture.leftSnapshot.databasePath, id)).toEqual({ node: 0, tombstone: 1, versions: 0, inventory: 1 });
 });
 
 it('leaves only the three unavailable attachments pending in the iOS content corpus', { meta: { calibratedMs: 20000 } }, async () => {

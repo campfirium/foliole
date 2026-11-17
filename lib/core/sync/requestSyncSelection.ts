@@ -27,7 +27,14 @@ export async function selectRequestSyncNodeSource(db: DbPort, current: FramedSyn
   difference: FramedSyncInventoryDifference) {
   assertRequestedFactsAvailable(current, difference);
   const selected = difference.sourceSnapshot.currentVersionId;
+  if (current.permanentlyDeleted && !selected && !difference.need.sharedState && !difference.need.frontierFactIds.length) {
+    return { ...current, currentVersionId: undefined };
+  }
   if (!selected || !current.currentVersionId) throw new Error('framed_sync_source_changed');
+  if (current.permanentlyDeleted) {
+    if (selected !== current.currentVersionId) throw new Error('framed_sync_source_changed');
+    return current;
+  }
   const graph = await readRequestSyncNodeGraph(db, current.globalId);
   if (selected !== current.currentVersionId &&
       !await isSelectedAncestor(db, current, selected, graph)) throw new Error('framed_sync_source_changed');

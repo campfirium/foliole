@@ -120,8 +120,8 @@ function tombstone(db: Database.Database) {
 }
 
 async function rejectHistoryAndReopen(host: CompanionFixture) {
-  host.sqlite.exec(`CREATE TRIGGER reject_received_history BEFORE INSERT ON node_sync_versions
-    WHEN NEW.object_id = '${legacy}' BEGIN SELECT RAISE(ABORT, 'reject_received_history'); END`);
+  host.sqlite.exec(`CREATE TRIGGER reject_received_history BEFORE INSERT ON node_sync_tombstones
+    WHEN NEW.node_id = '${legacy}' BEGIN SELECT RAISE(ABORT, 'reject_received_history'); END`);
   expect((await host.sync()).remainingStructureChangeCount).toBeGreaterThan(0);
   expect(persistedHistory(host.sqlite, legacy)).toEqual([]);
   expect(tombstone(host.sqlite)).toBeUndefined();
@@ -141,7 +141,7 @@ async function syncAndObserveVersionReads(host: CompanionFixture) {
   return reads;
 }
 
-it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('compacts received deletion history during %s', async mode => {
+it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('receives one tombstone and no remote history during %s', async mode => {
   const host = await createCompanionRequestFixture();
   const source = new Database(host.fixture.rightSnapshot.databasePath);
   const ordinary = mode !== 'first adoption';
@@ -151,38 +151,22 @@ it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('compacts receive
     const reads = await syncAndObserveVersionReads(host);
     if (mode === 'ordinary sync') {
       expect(reads.get(localVersions[0]!.version_id) ?? []).toEqual([]);
-      expect(reads.get(localVersions[1]!.version_id)).toEqual(['bytes']);
+      expect(host.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id=?').get(localVersions[1]!.version_id))
+        .toEqual({ body_text: null });
     }
     const trace = host.sqlite.prepare('SELECT op,has_body,compact,tombstone FROM version_writes WHERE id=? ORDER BY seq');
-    for (const version of [old, later]) {
-      const writes = trace.all(version.version_id);
-      if (mode === 'ordinary retry') {
-        expect(writes[0]).toMatchObject({ op: 'INSERT', has_body: 0 });
-        expect(writes.at(-1)).toMatchObject({ has_body: 0, compact: 1, tombstone: 1 });
-      } else {
-        expect(writes).toEqual([{ op: 'INSERT', has_body: 0, compact: 1, tombstone: 1 }]);
-      }
-    }
-    const hashes = [sharedBody, isolatedBody, alternativeBody].map(hashTextBody);
+    for (const version of [old, later]) expect(trace.all(version.version_id)).toEqual([]);
     const checkBodies = () => {
       const blob = host.sqlite.prepare('SELECT CAST(data AS TEXT) AS body FROM content_blob_data WHERE hash=?');
-      if (ordinary) expect(blob.get(hashes[0])).toEqual({ body: sharedBody });
-      expect(blob.get(hashes[1])).toBeUndefined();
-      expect(blob.get(hashes[2])).toBeUndefined();
+      if (ordinary) expect(blob.get(hashTextBody(sharedBody))).toEqual({ body: sharedBody });
       expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id='survivor'").get()).toEqual({ content: sharedBody });
+      expect(persistedHistory(host.sqlite, legacy)).toEqual([]);
     };
     checkBodies();
-    const saved = persistedHistory(host.sqlite, legacy);
-    expect(saved).toEqual(expect.arrayContaining([
-      expect.objectContaining({ version_id: old.version_id, body_text: null, parent_edges: '[]' }),
-      expect.objectContaining({ version_id: later.version_id, body_text: null, parent_version_id: old.version_id,
-        parent_edges: JSON.stringify([[old.version_id, 0]]) })
-    ]));
     const deletion = tombstone(host.sqlite);
     expect(deletion).toEqual(tombstone(source));
     await host.restart();
     expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
-    expect(persistedHistory(host.sqlite, legacy)).toEqual(saved);
     expect(tombstone(host.sqlite)).toEqual(deletion);
     checkBodies();
   } finally {
@@ -190,23 +174,6 @@ it.each(['first adoption', 'ordinary sync', 'ordinary retry'])('compacts receive
     await host.close();
   }
 }, 60000);
-
-it('rolls back the deletion when the compact version insert changes no rows', async () => {
-  const host = await createCompanionRequestFixture();
-  const source = new Database(host.fixture.rightSnapshot.databasePath);
-  try {
-    const { old } = await prepareHistory(host, source, false);
-    host.sqlite.exec(`CREATE TRIGGER ignore_received_history BEFORE INSERT ON node_sync_versions
-      WHEN NEW.object_id = '${legacy}' BEGIN SELECT RAISE(IGNORE); END`);
-    await expect(syncAndObserveVersionReads(host)).rejects.toThrow(`request_sync_deleted_history_not_new:${old.version_id}`);
-    await host.restart();
-    expect(persistedHistory(host.sqlite, legacy)).toEqual([]);
-    expect(tombstone(host.sqlite)).toBeUndefined();
-  } finally {
-    source.close();
-    await host.close();
-  }
-});
 
 function observeVersionReads(db: DbPort, reads: Map<string, string[]>, sqlite: Database.Database): DbPort {
   const totalChanges = sqlite.prepare('SELECT total_changes()').pluck();

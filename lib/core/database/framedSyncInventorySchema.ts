@@ -5,11 +5,23 @@ import {
 } from './framedSyncInventoryProjectionSql.js';
 import { NODE_CHILD_OWNER_SCHEMA, nodeChildOwnerSql } from './nodeChildStateSql.js';
 
-function triggers(table: string, task: (reference: string) => string) {
-  return ['INSERT', 'UPDATE', 'DELETE'].map((action) => {
+function triggers(table: string, task: (reference: string) => string, keys: readonly string[] = []) {
+  const sameKey = keys.map(key => `OLD.${key} IS NEW.${key}`).join(' AND ');
+  return ['INSERT', 'UPDATE', 'DELETE'].flatMap((action) => {
+    const name = `trg_framed_inventory_${table}_${action.toLowerCase()}`;
+    const definition = `AFTER ${action} ON ${table}`;
+    if (action === 'UPDATE' && sameKey) {
+      return [
+        `CREATE TRIGGER IF NOT EXISTS ${name} ${definition} WHEN NOT (${sameKey})
+          BEGIN ${task('OLD')}
+          ${task('NEW')} END`,
+        `CREATE TRIGGER IF NOT EXISTS ${name}_same_key ${definition} WHEN ${sameKey}
+          BEGIN ${task('NEW')} END`
+      ];
+    }
     const references = action === 'INSERT' ? ['NEW'] : action === 'DELETE' ? ['OLD'] : ['OLD', 'NEW'];
-    return `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_${table}_${action.toLowerCase()}
-      AFTER ${action} ON ${table} BEGIN ${references.map(task).join('\n')} END`;
+    return `CREATE TRIGGER IF NOT EXISTS ${name}
+      ${definition} BEGIN ${references.map(task).join('\n')} END`;
   });
 }
 
@@ -49,23 +61,32 @@ export const FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_node_sync_tombstones_version_id ON node_sync_tombstones(version_id)'
 ] as const;
 
+const NODE_HISTORY_TRIGGERS = [
+  ...triggers('node_sync_versions', (ref) => `
+  DELETE FROM framed_sync_fact_summary WHERE kind = 3
+    AND json_extract(fact_id, '$[0]') = ${ref}.version_id
+    AND NOT EXISTS (SELECT 1 FROM node_sync_versions WHERE version_id = ${ref}.version_id);
+  DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
+  ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
+  ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
+  ${framedSyncNodeInventorySql(`${ref}.object_id`)}`, ['version_id', 'object_id']),
+  ...triggers('node_sync_tombstones', (ref) => `
+  DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
+  ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
+  ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
+  ${framedSyncNodeInventorySql(`${ref}.node_id`)}`, ['version_id', 'node_id'])
+];
+
+export function reinstallNodeHistoryInventoryUpdates() {
+  const updates = NODE_HISTORY_TRIGGERS.filter(sql => sql.includes('AFTER UPDATE ON'));
+  return [...updates.map(dropInventoryTrigger), ...updates];
+}
+
 function nodeVersionTriggers() {
   return [
     ...triggers('sync_object_state', (ref) =>
-    framedSyncNodeInventorySql(`SELECT ${ref}.object_id UNION SELECT ${nodeChildOwnerSql(ref)}`)),
-    ...triggers('node_sync_versions', (ref) => `
-    DELETE FROM framed_sync_fact_summary WHERE kind = 3
-      AND json_extract(fact_id, '$[0]') = ${ref}.version_id
-      AND NOT EXISTS (SELECT 1 FROM node_sync_versions WHERE version_id = ${ref}.version_id);
-    DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
-    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
-    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
-    ${framedSyncNodeInventorySql(`${ref}.object_id`)}`),
-    ...triggers('node_sync_tombstones', (ref) => `
-    DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
-    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
-    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
-    ${framedSyncNodeInventorySql(`${ref}.node_id`)}`),
+      framedSyncNodeInventorySql(`SELECT ${ref}.object_id UNION SELECT ${nodeChildOwnerSql(ref)}`)),
+    ...NODE_HISTORY_TRIGGERS,
     `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_node_head_body
     AFTER UPDATE OF current_version_id ON nodes
     WHEN NEW.current_version_id IS NOT OLD.current_version_id BEGIN
@@ -123,13 +144,17 @@ export const RETIRED_RESOURCE_AVAILABILITY_TRIGGERS = ['insert', 'update', 'dele
 
 /** Drops every current and retired inventory trigger, so a rebuild never leaves an older definition behind. */
 export function dropFramedSyncInventoryTriggers() {
-  const current = FRAMED_SYNC_INVENTORY_TRIGGERS.map(sql => {
-    const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)?.[1];
-    if (!name) throw new Error('framed_sync_inventory_trigger_name_invalid');
-    return name;
-  });
-  return [...current, ...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS, ...RETIRED_RESOURCE_AVAILABILITY_TRIGGERS]
-    .map(name => `DROP TRIGGER IF EXISTS ${name}`);
+  return [
+    ...FRAMED_SYNC_INVENTORY_TRIGGERS.map(dropInventoryTrigger),
+    ...[...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS, ...RETIRED_RESOURCE_AVAILABILITY_TRIGGERS]
+      .map(name => `DROP TRIGGER IF EXISTS ${name}`)
+  ];
+}
+
+function dropInventoryTrigger(sql: string) {
+  const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)?.[1];
+  if (!name) throw new Error('framed_sync_inventory_trigger_name_invalid');
+  return `DROP TRIGGER IF EXISTS ${name}`;
 }
 
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [

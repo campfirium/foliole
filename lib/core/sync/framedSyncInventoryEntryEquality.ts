@@ -26,6 +26,7 @@ export function sameFramedSyncInventoryEntry(left: FramedSyncInventoryEntry, rig
     sameStrings(left.dailyFlowNodeIds ?? [], right.dailyFlowNodeIds ?? []) &&
     left.dailyFlowRootId === right.dailyFlowRootId &&
     left.dailyFlowComplete === right.dailyFlowComplete && left.dailyFlowCurrent === right.dailyFlowCurrent &&
+    left.permanentlyDeleted === right.permanentlyDeleted &&
     left.currentVersionId === right.currentVersionId && Boolean(left.unready) === Boolean(right.unready) &&
     sameStrings(left.versionStates ?? [], right.versionStates ?? []) &&
     sameStrings(left.frontierFactIds, right.frontierFactIds) &&

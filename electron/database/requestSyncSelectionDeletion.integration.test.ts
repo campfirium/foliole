@@ -27,9 +27,6 @@ it.each([false, true])('does not resurrect after a tombstone and old delivery, r
     const v1 = textBranch('v1', 'Original');
     await applyConvergentSyncNodesWithDbPort(source.db, [v1], { collectVersionPayloads: false });
     const old = await selection(source);
-    const deleted = { ...textBranch('deleted', 'Original', v1), is_tombstone: true };
-    deleted.snapshot.deleted_at = new Date().toISOString();
-    await applyConvergentSyncNodesWithDbPort(source.db, [deleted], { collectVersionPayloads: false });
     const send = async (difference: typeof old) => withRequestSyncFiles(createDesktopFramedSyncFiles(root), async files => {
       const selected = await writeRequestSyncSnapshot(source.db, difference, files);
       await applyFramedFactSources(target.db, [() => files.readFacts()], {
@@ -37,19 +34,29 @@ it.each([false, true])('does not resurrect after a tombstone and old delivery, r
         currentVersion: { globalId: 'topic', versionId: selected.currentVersionId! }
       });
     });
-    await send(old);
-    expect((await target.current()).version_id).toBe('v1');
-    await send(await selection(source));
-    expect(await target.db.query("SELECT id FROM nodes WHERE id = 'topic'")).toEqual([]);
-    if (purgeHistory) {
-      await target.db.run("DELETE FROM node_sync_version_parents");
-      await target.db.run("DELETE FROM node_sync_versions");
-    } else {
-      await send({ ...old, need: { frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [],
-        stateFactIds: [], resourceHashes: [], sharedState: true } });
-      expect(await target.db.query("SELECT id FROM nodes WHERE id = 'topic'")).toEqual([]);
-    }
-    await send(old);
+    await withRequestSyncFiles(createDesktopFramedSyncFiles(root), async frozen => {
+      await writeRequestSyncSnapshot(source.db, old, frozen);
+      await send(old);
+      expect((await target.current()).version_id).toBe('v1');
+      const deleted = { ...textBranch('deleted', 'Original', v1), is_tombstone: true };
+      deleted.snapshot.deleted_at = new Date().toISOString();
+      await applyConvergentSyncNodesWithDbPort(source.db, [deleted], { collectVersionPayloads: false });
+      await send(await selection(source));
+      await expect(send(old)).rejects.toThrow('framed_sync_source_changed');
+      if (purgeHistory) {
+        await target.db.run("DELETE FROM node_sync_version_parents");
+        await target.db.run("DELETE FROM node_sync_versions");
+      } else {
+        await applyFramedFactSources(target.db, [], {
+          requireCompleteVersionGraph: true, loadBody: (_db, blob) => frozen.loadBody(blob),
+          currentVersion: { globalId: 'topic', versionId: 'v1' }
+        });
+      }
+      await applyFramedFactSources(target.db, [() => frozen.readFacts()], {
+        requireCompleteVersionGraph: true, loadBody: (_db, blob) => frozen.loadBody(blob),
+        currentVersion: { globalId: 'topic', versionId: 'v1' }
+      });
+    });
     expect(await target.db.query("SELECT id FROM nodes WHERE id = 'topic'")).toEqual([]);
     expect(await target.db.query("SELECT version_id FROM node_sync_tombstones WHERE node_id = 'topic'"))
       .toEqual([{ version_id: 'deleted' }]);

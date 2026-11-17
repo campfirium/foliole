@@ -6,9 +6,10 @@ import { expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { restoreEmptyLegacyDailyFlowSchema, restoreLegacyParentOrderTable } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
-import { flushRequestSyncInventoryDigests } from '../sync/framedSyncInventoryDigest.js';
+import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from '../sync/framedSyncInventoryDigest.js';
 import { readFramedSyncInventoryEntry } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
+import { applyRemoteNodeTombstone } from '../sync/syncNodeTombstoneApply.js';
 
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
@@ -44,5 +45,31 @@ it.each(['desktop', 'companion'])('rebuilds %s node digests cached before histor
     const entry = await readFramedSyncInventoryEntry(db, { globalId: 'node-1', objectType: 'node' });
     expect(cached()).toBe(bytesToHex(entry!.sharedStateHash));
     expect(sqlite.pragma('user_version', { simple: true })).toBe(host === 'desktop' ? DATABASE_SCHEMA_VERSION : previous + 1);
+  } finally { sqlite.close(); }
+});
+
+it.each(['desktop', 'companion'])('rebuilds %s deletion digests from the durable tombstone after upgrade', async host => {
+  const sqlite = new Database(':memory:');
+  const db = createBetterSqliteDbPort(sqlite);
+  const previous = host === 'desktop' ? 192 : 119;
+  try {
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await createCompanionDatabase(db, previous);
+    const root = branch('root', 'Original');
+    await applySyncNodesWithDbPort(db, [root], { enqueueSearchInvalidations: false });
+    await applyRemoteNodeTombstone(db, {
+      ...root, is_tombstone: true, snapshot: { ...root.snapshot, deleted_at: '2026-10-02T00:00:00.000Z' }
+    }, false);
+    const key = { globalId: 'node-1', objectType: 'node' };
+    sqlite.prepare('INSERT OR REPLACE INTO framed_sync_node_digest VALUES (?, ?, 1)').run(key.globalId, STALE);
+    sqlite.pragma(`user_version = ${previous}`);
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await db.transaction(tx => migrateCompanionDatabase(tx, previous, previous + 1));
+    const read = () => readRequestSyncInventorySummaries(db, [key.globalId]);
+    const entry = (await read())[0];
+    expect(entry?.unready).toBe(false);
+    expect(bytesToHex(entry!.sharedStateHash)).not.toBe(STALE);
+    await db.transaction(tx => flushRequestSyncInventoryDigests(tx));
+    expect(await read()).toEqual([entry]);
   } finally { sqlite.close(); }
 });
