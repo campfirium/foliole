@@ -1,13 +1,14 @@
 import path from 'node:path';
 
-import type { ISQLiteConnection } from '@capacitor-community/sqlite';
 import Database from 'better-sqlite3';
 
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements.js';
 import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort.js';
 
-type FakeDatabaseManager = Pick<ISQLiteConnection,
+import type { CompanionDatabaseManager } from './companion/runtime/companionDatabaseManager.js';
+
+type FakeDatabaseManager = Pick<CompanionDatabaseManager,
   'closeConnection' | 'createConnection' | 'isConnection' | 'isDatabase' | 'retrieveConnection'>;
 
 export function installCompanionNodeSchema(database: Database.Database) {

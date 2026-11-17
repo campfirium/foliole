@@ -69,7 +69,8 @@ it('projects stored sync events when activity startup and Browse navigation are 
   const parent = path.resolve('.tmp/artifacts');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'sync-projection-lifecycle-'));
-  const javaHome = process.env.JAVA_HOME;
+  const javaHome = process.env.JAVA_HOME ?? (process.platform === 'darwin'
+    ? '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home' : null);
   const binary = name => javaHome ? path.join(javaHome, 'bin', name) : name;
   try {
     const files = [];

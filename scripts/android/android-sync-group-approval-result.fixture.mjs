@@ -8,7 +8,8 @@ public class JSONObject {
   private final java.util.Map<String,Object> values = new java.util.HashMap<>();
   public JSONObject put(String key, Object value) { values.put(key, value); return this; }
   public String getString(String key) { return (String) values.get(key); }
-  public String optString(String key) { return (String) values.getOrDefault(key, ""); }
+  public String optString(String key) { return optString(key, ""); }
+  public String optString(String key, String fallback) { return (String) values.getOrDefault(key, fallback); }
   public JSONObject getJSONObject(String key) { return (JSONObject) values.get(key); }
   public JSONObject optJSONObject(String key) { return getJSONObject(key); }
   public Object get(String key) { return values.get(key); }
@@ -21,6 +22,8 @@ public class PluginCall {
   public org.json.JSONObject getObject(String key) { return null; }
   public String getString(String key) { return "request"; }
 }`,
+  'com/foliole/android/framed/FramedSyncPayloadBudget.java': `package com.foliole.android.framed;
+public class FramedSyncPayloadBudget { public boolean isClosed() { return false; } }`,
   'com/foliole/android/ApprovalFixture.java': `package com.foliole.android;
 import android.content.Context;
 import android.app.Activity;
@@ -58,9 +61,13 @@ class FolioleCompanionNsdAdvertisement {
   String state() { return "registered"; } void stop() {}
 }
 class FolioleCompanionSyncGroupDataBridge {
-  interface Dispatcher {}
-  static FolioleCompanionSyncGroupDataBridge current() { return null; }
-  void replaceDispatcher(Dispatcher d) {}
+  record ProviderStart(FolioleCompanionSyncGroupDataBridge bridge,
+    com.foliole.android.framed.FramedSyncPayloadBudget document) {}
+  static ProviderStart beginProviderStart(Object owner, com.foliole.android.framed.FramedSyncPayloadBudget document) {
+    throw new AssertionError("Approval must not start the provider");
+  }
+  static void invalidateProviderStart(Object owner) { throw new AssertionError("Unexpected startup invalidation"); }
+  static boolean isProviderStartCurrent(ProviderStart request) { return false; }
   JSONObject request(String operation, JSONObject value) {
     ApprovalFixture.registered = "register_device".equals(operation); return new JSONObject();
   }
@@ -86,8 +93,12 @@ class FolioleCompanionSyncGroupServer {
 }
 class FolioleCompanionCurrentGroupCredential {
   String deviceId; String workgroupKey;
-  static FolioleCompanionCurrentGroupCredential load(String id) { return null; }
+  static FolioleCompanionCurrentGroupCredential load(FolioleCompanionSyncGroupDataBridge bridge, String id,
+    com.foliole.android.framed.FramedSyncPayloadBudget document) {
+    throw new AssertionError("Approval must not load startup credentials");
+  }
 }
+class FolioleCompanionSyncAsync { interface Work { JSObject run() throws Exception; } }
 class FolioleCompanionSyncProtocolDefinitions {
   static JSONObject currentProtocol(Context c) { return new JSONObject(); }
 }
