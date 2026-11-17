@@ -20,6 +20,7 @@ export function CompanionBottomSheet(props: {
   scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   leadingAction?: ReactNode;
   retainReadingToolbar?: boolean;
+  showScrollIndicator?: boolean;
   onCloseAutoFocus?: (event: Event) => void;
   onOpenChange(open: boolean): void;
   open: boolean;
@@ -53,7 +54,7 @@ export function CompanionBottomSheet(props: {
                 <Check aria-hidden="true" className="h-5 w-5" />
               </AppDialogClose>
             </div>
-            <div className={`app-scrollbar min-h-0 overflow-y-auto ${props.retainReadingToolbar ? 'flex-1' : ''}`} ref={props.scrollElementRef}>{props.children}</div>
+            <div className={`app-scrollbar min-h-0 overflow-y-auto ${props.retainReadingToolbar ? 'flex-1' : ''} ${props.showScrollIndicator ? 'companion-sheet-scroll-indicator' : ''}`} ref={props.scrollElementRef}>{props.children}</div>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

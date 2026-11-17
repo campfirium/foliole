@@ -35,7 +35,7 @@ function Menu() {
     <CompanionWorkspaceCreateAction /><CompanionWorkspaceHistoryActions />
     {Object.values(actions.snapshot?.nodesById ?? {}).filter(node => !node.id.startsWith('special-') && !node.deletedAt).map(node =>
       <div key={node.id}>
-        <button onClick={() => actions.open({ mode: 'menu', nodeId: node.id, parentNodeId: null })}>{node.title}</button>
+        <button>{node.title}</button>
         <CompanionTopicListMenu nodeId={node.id} title={node.title} metadata="" onOpen={() => {}} />
       </div>)}
   </>;
@@ -71,8 +71,10 @@ it('creates and renames a folder from the real menu, then undoes and redoes both
   render(<Harness />);
   await createFolder();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'Created folder' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More: Created folder' }));
+  const menu = within(screen.getByRole('dialog', { name: 'More' }));
+  expect(menu.queryByRole('button', { name: 'Manage' })).toBeNull();
+  fireEvent.click(menu.getByRole('button', { name: 'Rename' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Renamed folder' } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Renamed folder' })).toBeInTheDocument());
@@ -127,6 +129,19 @@ async function seedPriorityHierarchy() {
   }, 'Search', `base-${node.id}`))));
   initial = await stored();
 }
+
+it('creates the chosen child type from the first-level topic menu', async () => {
+  await seedPriorityHierarchy();
+  render(<Harness />);
+  fireEvent.click(screen.getByRole('button', { name: 'More: topic' }));
+  const menu = within(screen.getByRole('dialog', { name: 'More' }));
+  fireEvent.click(menu.getByRole('button', { name: 'Create Item' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Child question' } });
+  fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'More: Child question' })).toBeVisible());
+  const saved = Object.values((await stored()).nodesById).find(node => node.title === 'Child question');
+  expect(saved).toMatchObject({ kind: 'item', parentNodeId: 'topic' });
+});
 
 it('saves the priority from the active Flow Topic and reads it back in Flow and Browse', async () => {
   await seedPriorityHierarchy();

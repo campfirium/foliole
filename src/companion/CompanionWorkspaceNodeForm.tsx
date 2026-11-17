@@ -2,18 +2,19 @@ import { useState } from 'react';
 
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
+import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 
 import { CompanionMoveDestinationPicker } from './CompanionMoveDestinationPicker';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
-export function CompanionWorkspaceNodeForm(props: { mode: 'rename' | 'move' | 'create' | 'delete'; node: WorkspaceNodeSnapshot | undefined; parentNodeId: string | null }) {
+export function CompanionWorkspaceNodeForm(props: { mode: 'rename' | 'move' | 'create' | 'delete'; node: WorkspaceNodeSnapshot | undefined; parentNodeId: string | null; initialKind?: NodeKind | undefined }) {
   const t = useTranslation();
   const actions = useCompanionWorkspaceActions()!;
   const { mode, node } = props;
   const [title, setTitle] = useState(mode === 'rename' ? node?.title ?? '' : '');
-  const [kind, setKind] = useState<'folder' | 'topic' | 'item'>(() => actions.snapshot?.nodesById[props.parentNodeId ?? '']?.kind === 'topic' ? 'topic' : 'folder');
+  const [kind, setKind] = useState<NodeKind>(() => props.initialKind ?? (actions.snapshot?.nodesById[props.parentNodeId ?? '']?.kind === 'topic' ? 'topic' : 'folder'));
   const [parentId, setParentId] = useState(props.parentNodeId ?? node?.parentNodeId ?? '');
   const nodes = actions.snapshot?.nodesById ?? {};
   const disabled = actions.busy || actions.pending;

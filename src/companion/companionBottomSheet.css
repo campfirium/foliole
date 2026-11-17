@@ -4,3 +4,10 @@
   height: auto;
   max-height: none;
 }
+
+.companion-sheet .companion-sheet-scroll-indicator {
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  --app-scrollbar-thumb-color: var(--companion-divider-strong);
+  --app-scrollbar-thumb-hover-color: var(--companion-divider-strong);
+}
