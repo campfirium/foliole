@@ -57,6 +57,8 @@ function assertOwner(record: NativeSyncObjectRecord, nodeId: string) {
 export async function applyFramedSyncNodeChildFact(db: DbPort, fact: CanonicalFact,
   options?: ApplySyncObjectsWithDbPortOptions, loadBody?: FramedBodyLoader) {
   let record = restoreFramedSyncNodeChildFact(fact);
+  if (record.object_type === 'node_text_alternative' &&
+      (await db.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [fact.globalId])).length) return false;
   if (record.object_type === 'node_text_alternative') record = await completeTopicAlternativeBody(db, fact, record, loadBody);
   const applied = await applyFramedSyncObjectStateRecord(db, record, options);
   if (record.deleted_at &&

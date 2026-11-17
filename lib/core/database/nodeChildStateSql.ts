@@ -1,3 +1,21 @@
+export const TOMBSTONE_DIRECT_STATE_TYPES = [
+  'node_reading', 'node_open_state', 'node_reading_resume', 'parent_child_order'
+] as const;
+
+export const TOMBSTONE_DIRECT_STATE_TYPES_SQL = TOMBSTONE_DIRECT_STATE_TYPES.map(type => `'${type}'`).join(',');
+
+export const RETIRE_NODE_CHILD_STATE_SQL = [
+  `DELETE FROM sync_object_state WHERE object_id = ? AND object_type IN (${TOMBSTONE_DIRECT_STATE_TYPES_SQL})`,
+  `DELETE FROM sync_object_state WHERE object_type = 'node_text_alternative' AND object_id IN (
+    SELECT object_id FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND node_id = ?
+  )`,
+  "DELETE FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND node_id = ?"
+] as const;
+
+export function nodeTombstoneAbsorbsState(type: string) {
+  return type === 'node_text_alternative' || TOMBSTONE_DIRECT_STATE_TYPES.some(owned => owned === type);
+}
+
 export const NODE_CHILD_STATE_TYPES = [
   'node_reading', 'node_open_state', 'parent_child_order',
   'node_text_alternative', 'topic_daily_count', 'import_source'

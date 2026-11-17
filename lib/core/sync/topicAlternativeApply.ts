@@ -11,6 +11,7 @@ export async function applyTopicAlternativeRecord(db: DbPort, record: SyncObject
   if (record.deleted_at) {
     const [owner] = await db.query<{ node_id: string }>(
       "SELECT node_id FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND object_id = ?", [record.object_id]);
+    if (owner && (await db.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [owner.node_id])).length) return null;
     await deleteTopicAlternative(db, record.object_id, record.deleted_at, record.content_hash, owner?.node_id);
     return `node_text_alternative:${record.object_id}`;
   }
@@ -20,11 +21,7 @@ export async function applyTopicAlternativeRecord(db: DbPort, record: SyncObject
     || incoming.updated_at !== record.updated_at) throw new Error('text_alternative_state_hash_mismatch');
   const [deleted] = await db.query("SELECT 1 FROM sync_object_state WHERE object_type = 'node_text_alternative' AND object_id = ? AND deleted_at IS NOT NULL", [record.object_id]);
   if (deleted) return null;
-  const [parent] = await db.query<{ deleted_at: string }>('SELECT deleted_at FROM node_sync_tombstones WHERE node_id = ?', [incoming.node_id]);
-  if (parent) {
-    await deleteTopicAlternative(db, incoming.alternative_id, parent.deleted_at, undefined, incoming.node_id);
-    return `node_text_alternative:${record.object_id}`;
-  }
+  if ((await db.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [incoming.node_id])).length) return null;
   const changed = await writeTopicAlternative(db, incoming, false);
   if (changed) await publishTopicAlternative(db, incoming);
   return changed ? `node_text_alternative:${record.object_id}` : null;

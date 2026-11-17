@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { nodeTombstoneAbsorbsState } from '../database/nodeChildStateSql.js';
+
 import type { FramedSyncInventoryEntry, FramedSyncInventoryNeed } from './framedSyncInventory.js';
 
 const version = z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
@@ -57,7 +59,8 @@ export function permanentDeletionNeed(source: FramedSyncInventoryEntry,
   return {
     frontierFactIds: sendDeletion ? [...source.frontierFactIds] : [],
     requiredRelationIds: [], resourceHashes: [], reviewFactIds: [],
-    stateFactIds: source.permanentlyDeleted ? (source.stateFactIds ?? []).filter(id => !knownState.has(id)) : [],
+    stateFactIds: source.permanentlyDeleted ? (source.stateFactIds ?? []).filter(id =>
+      !knownState.has(id) && (!id.startsWith('[') || !nodeTombstoneAbsorbsState(JSON.parse(id)[0]))) : [],
     sharedState: sendDeletion
   };
 }

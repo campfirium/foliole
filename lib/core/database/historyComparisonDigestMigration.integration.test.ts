@@ -73,3 +73,36 @@ it.each(['desktop', 'companion'])('rebuilds %s deletion digests from the durable
     expect(await read()).toEqual([entry]);
   } finally { sqlite.close(); }
 });
+
+it.each(['desktop', 'companion'])('retains only meaningful deletion facts after %s child state upgrade', async host => {
+  const sqlite = new Database(':memory:');
+  const db = createBetterSqliteDbPort(sqlite);
+  const previous = host === 'desktop' ? 193 : 120;
+  try {
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await createCompanionDatabase(db, previous);
+    const root = branch('root', 'Original');
+    await applySyncNodesWithDbPort(db, [root], { enqueueSearchInvalidations: false });
+    await applyRemoteNodeTombstone(db, {
+      ...root, is_tombstone: true, snapshot: { ...root.snapshot, deleted_at: '2026-10-02T00:00:00.000Z' }
+    }, false);
+    sqlite.exec(`INSERT INTO parent_order_sources VALUES ('node-1','old',1,'[]'), ('live','old',1,'[]');
+      INSERT INTO sync_node_child_owners VALUES
+        ('node_text_alternative','old-choice','node-1'), ('node_text_alternative','live-choice','live');
+      INSERT INTO sync_object_state
+        (object_type,object_id,state_seq,content_hash,last_modified_by_host_name,updated_at,deleted_at)
+      VALUES ('parent_child_order','node-1',10,'hash','old','now',NULL),
+        ('node_reading','node-1',11,'hash','old','now','now'),
+        ('node_text_alternative','old-choice',12,'hash','old','now','now'),
+        ('node_text_alternative','live-choice',13,'hash','old','now','now');`);
+    sqlite.pragma(`user_version = ${previous}`);
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await db.transaction(tx => migrateCompanionDatabase(tx, previous, previous + 1));
+    const entry = await readFramedSyncInventoryEntry(db, { globalId: 'node-1', objectType: 'node' });
+    expect(entry).toMatchObject({ permanentlyDeleted: true, stateFactIds: [] });
+    expect(sqlite.prepare("SELECT object_id FROM sync_object_state WHERE object_type <> 'node'").pluck().all())
+      .toEqual(['live-choice']);
+    expect(sqlite.prepare('SELECT parent_id FROM parent_order_sources').pluck().all()).toEqual(['live']);
+    expect(sqlite.prepare('SELECT object_id FROM sync_node_child_owners').pluck().all()).toEqual(['live-choice']);
+  } finally { sqlite.close(); }
+});

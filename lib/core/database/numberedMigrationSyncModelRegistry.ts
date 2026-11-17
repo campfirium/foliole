@@ -22,6 +22,7 @@ import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateMaterialFlowInvalidation, migrateParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireNodePositions } from './nodePositionRetirementMigration.js';
+import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementMigration.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
@@ -85,5 +86,8 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 192, migrate: db => {
     for (const sql of reinstallNodeHistoryInventoryUpdates()) db.exec(sql);
   } },
-  { version: 193, migrate: db => db.exec(INVALIDATE_ALL_SYNC_DIGESTS) }
+  { version: 193, migrate: db => db.exec(INVALIDATE_ALL_SYNC_DIGESTS) },
+  { version: 194, migrate: db => {
+    for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) db.exec(sql);
+  } }
 ];

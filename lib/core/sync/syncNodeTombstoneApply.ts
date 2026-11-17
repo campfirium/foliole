@@ -1,12 +1,12 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { markCompactDeletionSnapshot } from '../database/deletedNodeBodyRelease.js';
+import { RETIRE_NODE_CHILD_STATE_SQL, TOMBSTONE_DIRECT_STATE_TYPES_SQL } from '../database/nodeChildStateSql.js';
 import { INBOX_NODE_ID } from '../database/specialNodeIds.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { enqueueAppliedNodeDeleteSearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { ensureSyncSpecialRootNodes } from './syncSpecialRootNodes.js';
-import { deleteTopicAlternative } from './topicAlternativeApply.js';
 import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
 export interface NodeTombstoneRow extends DbRow {
@@ -48,7 +48,7 @@ const LOCAL_NODE_CLEANUP_TARGETS = [
   'node_reading WHERE node_id = ?',
   'node_reading_host_state WHERE node_id = ?',
   'parent_order_sources WHERE parent_id = ?',
-  "sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume', 'parent_child_order') AND object_id = ?",
+  'node_text_alternatives WHERE node_id = ?',
   // Phones keep a per-device reading position that references the node without cascading.
   'node_view_state WHERE node_id = ?',
   'nodes WHERE id = ?'
@@ -59,22 +59,25 @@ const LOCAL_NODE_CLEANUP_SQL = `
     SELECT id FROM nodes WHERE parent_id = ? ORDER BY id
   )
   UNION ALL
-  SELECT 'alternative', alternative_id FROM node_text_alternatives WHERE node_id = ?
+  SELECT 'owned_state', 0 WHERE EXISTS (
+    SELECT 1 FROM sync_object_state WHERE object_id = ? AND object_type IN (${TOMBSTONE_DIRECT_STATE_TYPES_SQL})
+    UNION ALL SELECT 1 FROM sync_node_child_owners WHERE object_type = 'node_text_alternative' AND node_id = ?
+  )
   UNION ALL
   ${LOCAL_NODE_CLEANUP_TARGETS.map((target, index) =>
     `SELECT 'cleanup', ${index} WHERE EXISTS (SELECT 1 FROM ${target})`).join(' UNION ALL ')}`;
 
 async function deleteLocalNodeRows(port: DbPort, nodeId: string, deletedAt: string, movedChildIds: string[]) {
-  const rows = await port.query<{ kind: 'child' | 'alternative'; id: string } | { kind: 'cleanup'; id: number }>(
-    LOCAL_NODE_CLEANUP_SQL, [nodeId, nodeId, ...LOCAL_NODE_CLEANUP_TARGETS.map(() => nodeId)]);
+  const rows = await port.query<{ kind: 'child'; id: string } | { kind: 'cleanup' | 'owned_state'; id: number }>(
+    LOCAL_NODE_CLEANUP_SQL, [nodeId, nodeId, nodeId, ...LOCAL_NODE_CLEANUP_TARGETS.map(() => nodeId)]);
   const children = rows.flatMap(row => row.kind === 'child' ? [row.id] : []);
   if (children.length) {
     await ensureSyncSpecialRootNodes(port, [{ nodeId: INBOX_NODE_ID, referencedAt: deletedAt }]);
     await port.run('UPDATE nodes SET parent_id = ?, sync_dirty = 1 WHERE parent_id = ?', [INBOX_NODE_ID, nodeId]);
     movedChildIds.push(...children);
   }
-  for (const row of rows) {
-    if (row.kind === 'alternative') await deleteTopicAlternative(port, row.id, deletedAt, undefined, nodeId);
+  if (rows.some(row => row.kind === 'owned_state')) {
+    for (const sql of RETIRE_NODE_CHILD_STATE_SQL) await port.run(sql, [nodeId]);
   }
   const cleanupTargets = new Set(rows.flatMap(row => row.kind === 'cleanup' ? [row.id] : []));
   for (const [index, target] of LOCAL_NODE_CLEANUP_TARGETS.entries()) {

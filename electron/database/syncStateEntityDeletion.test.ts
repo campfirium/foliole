@@ -8,6 +8,7 @@ import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedM
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
 
 import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
@@ -36,7 +37,7 @@ function learning(sqlite: Database.Database) {
   };
 }
 
-it('records reading deletion and clears review facts and caches when permanently deleting their node', () => {
+it('absorbs reading deletion and clears review facts and caches when permanently deleting their node', () => {
   const peer = createPeer('source');
   edit(peer, 'body');
   relatedStates(peer);
@@ -47,9 +48,7 @@ it('records reading deletion and clears review facts and caches when permanently
   deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], deletedAt });
 
   expect(peer.db.prepare(`SELECT object_type, deleted_at, sync_dirty FROM sync_object_state
-    WHERE object_type IN ('node_reading', 'node_review') ORDER BY object_type`).all()).toEqual([
-    { object_type: 'node_reading', deleted_at: deletedAt, sync_dirty: 1 }
-  ]);
+    WHERE object_type IN ('node_reading', 'node_review') ORDER BY object_type`).all()).toEqual([]);
   expect(peer.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
   expect(learning(peer.db)).toEqual({ reading: [], reviews: [], logs: [] });
   expect(peer.db.prepare("SELECT node_id FROM node_sync_tombstones").pluck().get()).toBe('topic');
@@ -158,11 +157,48 @@ it('preserves learning through soft deletion and clears it through permanent del
     try {
       expect(reopened.prepare(`SELECT object_type, deleted_at FROM sync_object_state
         WHERE object_type IN ('node_reading', 'node_review') ORDER BY object_type`).all())
-        .toEqual([{ object_type: 'node_reading', deleted_at: deletedAt }]);
+        .toEqual([]);
       expect(reopened.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
       expect(reopened.prepare('SELECT node_id, deleted_at FROM node_sync_tombstones').all())
         .toEqual([{ node_id: 'topic', deleted_at: deletedAt }]);
       expect(learning(reopened)).toEqual({ reading: [], reviews: [], logs: [] });
     } finally { reopened.close(); }
   }
+});
+
+it('ignores delayed reading and text choices after the owner tombstone', async () => {
+  const source = createPeer('source');
+  const target = createPeer('target');
+  joinPeers(source, target);
+  edit(source, 'Original note');
+  source.db.exec("INSERT INTO node_reading (node_id, last_handled_at, next_at) VALUES ('topic', 'now', 'now')");
+  upsertSyncObjectState(source.driver, {
+    objectType: 'node_reading', objectId: 'topic', contentHash: hashTextBody('old reading'),
+    lastModifiedByHostName: source.name, updatedAt: '2026-09-30T00:00:00.000Z', syncDirty: true
+  });
+  const now = new Date().toISOString();
+  await writeTopicAlternative(source.port, { alternative_id: 'old-choice', node_id: 'topic',
+    source_version_id: 'other-branch', source_host_name: 'other-device', body_text: 'Alternative',
+    body_blob_hash: hashTextBody('Alternative'), created_at: now, updated_at: now,
+    expires_at: new Date(Date.parse(now) + 86400000).toISOString(), status: 'available',
+    resource_references: '[]', image_sources: null }, true);
+  await withLibraryRequestSnapshot(source, target, async replay => {
+    await replay();
+    expect(target.db.prepare("SELECT node_id FROM node_reading WHERE node_id = 'topic'").pluck().get()).toBe('topic');
+    expect(target.db.prepare("SELECT node_id FROM node_text_alternatives WHERE alternative_id = 'old-choice'")
+      .pluck().get()).toBe('topic');
+    target.db.exec("ATTACH DATABASE ':memory:' AS search");
+    initializeWorkspaceSearchSidecar({ sqlite: target.db, driver: target.driver });
+    const deletedAt = '2026-10-01T00:00:01Z';
+    prepareImportedNodeDeletionVersions(target.driver, ['topic'], deletedAt);
+    deleteNodesPermanently(target.driver, { nodeIds: ['topic'], deletedAt });
+    await replay();
+    expect(target.db.prepare("SELECT node_id FROM node_reading WHERE node_id = 'topic'").get()).toBeUndefined();
+    expect(target.db.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'topic'")
+      .get()).toBeUndefined();
+    expect(target.db.prepare("SELECT node_id FROM node_text_alternatives WHERE alternative_id = 'old-choice'")
+      .get()).toBeUndefined();
+    expect(target.db.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'old-choice'")
+      .get()).toBeUndefined();
+  });
 });

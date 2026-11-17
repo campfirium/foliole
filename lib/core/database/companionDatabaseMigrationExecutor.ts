@@ -57,6 +57,7 @@ import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigratio
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateCompanionMaterialFlowInvalidation, migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
+import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { PARENT_CHILD_ORDER_SCHEMA_SQL } from './numberedMigrationParentChildOrder.js';
 import { migrateCompanionPdfTextArtifacts, migrateCompanionPdfTextReadingOffset } from './pdfTextArtifactMigration.js';
@@ -192,6 +193,9 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
     for (const sql of reinstallNodeHistoryInventoryUpdates()) await db.run(sql);
   }
   if (currentVersion < 120 && targetVersion >= 120) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
+  if (currentVersion < 121 && targetVersion >= 121) {
+    for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) await db.run(sql);
+  }
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

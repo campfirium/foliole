@@ -1,7 +1,7 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
-import { NODE_CHILD_STATE_TYPES } from '../database/nodeChildStateSql.js';
+import { NODE_CHILD_STATE_TYPES, TOMBSTONE_DIRECT_STATE_TYPES } from '../database/nodeChildStateSql.js';
 import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 
 import { applyDailyFlowTable } from './dailyFlowTableApply.js';
@@ -95,6 +95,8 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
 
 async function readAppliedStateHash(db: DbPort, input: RequestSyncObjectInput) {
   if (input.objectType === 'node_review') return undefined;
+  if (TOMBSTONE_DIRECT_STATE_TYPES.some(type => type === input.objectType) &&
+      (await db.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [input.globalId])).length) return undefined;
   const standaloneChild = NODE_CHILD_STATE_TYPES.some(type => type === input.objectType)
     && !(input.objectType === 'parent_child_order' && input.globalId === ROOT_CHILD_ORDER_ID);
   if (standaloneChild) {
