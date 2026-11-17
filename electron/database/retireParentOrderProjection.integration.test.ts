@@ -58,13 +58,14 @@ it.each(['desktop', 'companion'] as const)('retires stale projection storage ato
     await initialize(true);
     expect(retired(db)).toEqual([]);
     const currentVersion = host === 'desktop' ? DATABASE_SCHEMA_VERSION : COMPANION_DATABASE_VERSION;
-    seedPreviousVersion(db, currentVersion - 1);
+    const previousVersion = host === 'desktop' ? 190 : 117;
+    seedPreviousVersion(db, previousVersion);
     const before = evidence(db);
     expect(before.order).toEqual(['b', 'a']);
     const originalSchema = retired(db);
     expect(originalSchema).toHaveLength(6);
     await expect(initialize(false, () => { throw new Error('interrupted upgrade'); })).rejects.toThrow('interrupted upgrade');
-    expect(db.pragma('user_version', { simple: true })).toBe(currentVersion - 1);
+    expect(db.pragma('user_version', { simple: true })).toBe(previousVersion);
     expect(retired(db)).toEqual(originalSchema);
     expect(evidence(db)).toEqual(before);
     await initialize(false);

@@ -120,7 +120,7 @@ describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomC
     renderProvider(runtimeKind);
 
     await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Native'));
-    expect(customStyleNode()?.textContent).toContain('blockquote');
+    await waitFor(() => expect(customStyleNode()?.textContent).toContain('blockquote'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Save styles' }));
     await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Saved'));

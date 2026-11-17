@@ -2,13 +2,16 @@ export const approvalFixtureSources = {
   'android/content/Context.java': `package android.content;
 public class Context { public Context getApplicationContext() { return this; } }`,
   'android/app/Activity.java': 'package android.app; public class Activity {}',
+  'com/foliole/android/framed/FramedSyncPayloadBudget.java': `package com.foliole.android.framed;
+public class FramedSyncPayloadBudget { public boolean isClosed() { return false; } }`,
   'org/json/JSONObject.java': `package org.json;
 public class JSONObject {
   public static final Object NULL = new Object();
   private final java.util.Map<String,Object> values = new java.util.HashMap<>();
   public JSONObject put(String key, Object value) { values.put(key, value); return this; }
   public String getString(String key) { return (String) values.get(key); }
-  public String optString(String key) { return (String) values.getOrDefault(key, ""); }
+  public String optString(String key) { return optString(key, ""); }
+  public String optString(String key, String fallback) { return (String) values.getOrDefault(key, fallback); }
   public JSONObject getJSONObject(String key) { return (JSONObject) values.get(key); }
   public JSONObject optJSONObject(String key) { return getJSONObject(key); }
   public Object get(String key) { return values.get(key); }
@@ -26,6 +29,7 @@ import android.content.Context;
 import android.app.Activity;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -58,12 +62,18 @@ class FolioleCompanionNsdAdvertisement {
   String state() { return "registered"; } void stop() {}
 }
 class FolioleCompanionSyncGroupDataBridge {
-  interface Dispatcher {}
-  static FolioleCompanionSyncGroupDataBridge current() { return null; }
-  void replaceDispatcher(Dispatcher d) {}
+  record ProviderStart(FolioleCompanionSyncGroupDataBridge bridge, FramedSyncPayloadBudget document) {}
+  static ProviderStart beginProviderStart(Object owner, FramedSyncPayloadBudget document) {
+    throw new UnsupportedOperationException("approval fixture does not start a provider");
+  }
+  static boolean isProviderStartCurrent(ProviderStart request) { return false; }
+  static void invalidateProviderStart(Object owner) {}
   JSONObject request(String operation, JSONObject value) {
     ApprovalFixture.registered = "register_device".equals(operation); return new JSONObject();
   }
+}
+class FolioleCompanionSyncAsync {
+  interface Work { JSObject run() throws Exception; }
 }
 class FolioleCompanionJoinRequestProvider {
   boolean accepted;
@@ -86,7 +96,8 @@ class FolioleCompanionSyncGroupServer {
 }
 class FolioleCompanionCurrentGroupCredential {
   String deviceId; String workgroupKey;
-  static FolioleCompanionCurrentGroupCredential load(String id) { return null; }
+  static FolioleCompanionCurrentGroupCredential load(FolioleCompanionSyncGroupDataBridge bridge,
+    String id, FramedSyncPayloadBudget document) { return null; }
 }
 class FolioleCompanionSyncProtocolDefinitions {
   static JSONObject currentProtocol(Context c) { return new JSONObject(); }

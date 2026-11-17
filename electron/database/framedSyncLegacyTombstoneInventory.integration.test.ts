@@ -47,10 +47,10 @@ async function resources(peer: Peer) {
     .map((hash) => Buffer.from(hash).toString('hex'));
 }
 
-it('discovers the canonical empty body of a proven legacy permanent tombstone without a current version pointer', async () => {
+it('advertises a legacy permanent deletion without historical resources or a current version pointer', async () => {
   const peer = legacyTombstone();
   const before = protectedFacts(peer);
-  expect(await resources(peer)).toEqual([EMPTY_BODY_HASH]);
+  expect(await resources(peer)).toEqual([]);
   expect(protectedFacts(peer)).toEqual(before);
   expect(peer.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
 });
@@ -69,15 +69,15 @@ it.each(['desktop', 'companion'])('repairs the %s derived inventory through a nu
     peer.db.pragma('user_version = 143');
     migrateNumberedFixtureTo(peer.db, 144);
   } else await peer.port.transaction((tx) => migrateCompanionDatabase(tx, 72, 73));
-  expect(await resources(peer)).toEqual([EMPTY_BODY_HASH]);
+  expect(await resources(peer)).toEqual([]);
   expect(protectedFacts(peer)).toEqual(before);
   peer.db.prepare("UPDATE sync_object_state SET updated_at = updated_at WHERE object_id = 'topic'").run();
-  expect(await resources(peer)).toEqual([EMPTY_BODY_HASH]);
+  expect(await resources(peer)).toEqual([]);
   const reopened = new Database(peer.file, { readonly: true });
   try {
     const entries = await readFramedSyncInventory(createBetterSqliteDbPort(reopened));
-    expect(entries.find((item) => item.objectType === 'node' && item.globalId === 'topic')?.resourceHashes
-      .map((hash) => Buffer.from(hash).toString('hex'))).toEqual([EMPTY_BODY_HASH]);
+    expect(entries.find((item) => item.objectType === 'node' && item.globalId === 'topic'))
+      .toMatchObject({ permanentlyDeleted: true, resourceHashes: [] });
   } finally { reopened.close(); }
 });
 

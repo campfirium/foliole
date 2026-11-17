@@ -52,7 +52,9 @@ export async function loadStoredSyncNodeVersionRecord(
 }
 
 /** Retired bodies remain original version facts and cannot be used as current text. */
-export async function loadRetainedSyncNodeVersionFact(port: DbPort, versionId: string, includeAncestors = true) {
+export async function loadRetainedSyncNodeVersionFact(
+  port: DbPort, versionId: string, includeAncestors = true, scope?: 'deletion-only'
+) {
   const [row] = await port.query<StoredSyncNodeVersionRow>(
     `SELECT tomb.version_id, tomb.node_id AS object_id, tomb.parent_version_id, tomb.host_name, tomb.created_at,
       tomb.content_hash, version.body_text, tomb.snapshot_json, 1 AS is_tombstone
@@ -61,7 +63,18 @@ export async function loadRetainedSyncNodeVersionFact(port: DbPort, versionId: s
       UNION ALL SELECT version_id, object_id, parent_version_id, host_name, created_at,
         content_hash, body_text, snapshot_json, 0 AS is_tombstone
       FROM node_sync_versions WHERE version_id = ? LIMIT 1`, [versionId, versionId]);
-  return row ? storedVersionToRecord(port, row, includeAncestors, undefined, false) : null;
+  if (!row) return null;
+  if (scope === 'deletion-only') {
+    if (row.is_tombstone !== 1) return null;
+    const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
+    return storedVersionToRecord(port, {
+      ...row, body_text: null, snapshot_json: JSON.stringify({
+        ...snapshot, content: null, opening_text: null, title: '',
+        text_alternatives: [], text_alternative_bodies: []
+      })
+    }, includeAncestors, undefined, false);
+  }
+  return storedVersionToRecord(port, row, includeAncestors, undefined, false);
 }
 
 export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds: string[]) {

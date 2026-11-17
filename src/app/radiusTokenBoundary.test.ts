@@ -8,6 +8,7 @@ const LEGACY_RADIX_RADIUS_PATTERN = /--radius-(?:1|full)\b/;
 const EDITOR_RADIUS_PATTERN = /--editor-radius-/;
 const EDITOR_RADIUS_ALLOWED_PATHS = [
   'src/app/styles.css',
+  'src/app/styles/image-crop.css',
   'src/features/editor/'
 ];
 

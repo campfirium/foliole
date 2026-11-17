@@ -62,7 +62,9 @@ it('keeps provider lifecycle state complete and owned by one active bridge', asy
   const bridge = await readJava('FolioleCompanionSyncGroupDataBridge.java');
   const plugin = await readJava('FolioleCompanionSyncPlugin.java');
   const provider = await readJava('FolioleCompanionSyncGroupProvider.java');
-  expect(provider).toContain('bridge.replaceDispatcher(dispatcher)');
+  expect(provider).toContain('FolioleCompanionSyncGroupDataBridge.beginProviderStart(owner, document)');
+  expect(provider).toContain('FolioleCompanionSyncGroupDataBridge.isProviderStartCurrent(request)');
+  expect(provider).toContain('activeOwner = owner; dataBridge = bridge;');
   expect(provider).toContain('server = new FolioleCompanionSyncGroupServer');
   expect(provider).toContain('advertisement = FolioleCompanionNsdAdvertisement.start');
   expect(provider).toContain('advertisement = null; server = null;');

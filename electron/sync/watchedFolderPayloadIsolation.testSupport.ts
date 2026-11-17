@@ -34,17 +34,14 @@ export function state(peer: RestorePeer) {
 export async function withSnapshot(source: RestorePeer, target: RestorePeer, type: Kind, id: string,
   execute: (replay: (patch?: Payload) => Promise<unknown>, payload: Payload) => Promise<void>) {
   const local = await readRequestSyncInventorySnapshot(source.db);
-  const owner = type === 'import_source' ? source.sqlite.prepare('SELECT latest_node_id FROM import_sources WHERE source_fingerprint = ?').pluck().get(id) : null;
   const difference = compareFramedSyncInventories({ local, remote: [] })
-    .find(value => owner ? value.objectType === 'node' && value.globalId === owner : value.objectType === type && value.globalId === id);
+    .find(value => value.objectType === type && value.globalId === id);
   if (!difference) throw new Error('test_request_missing');
   await withRequestSyncFiles(source.host.files, async request => {
     const selected = await writeRequestSyncSnapshot(source.db, difference, request);
     const facts: CanonicalFact[] = [];
     for await (const value of request.readFacts()) facts.push(value);
-    const original = facts.find(fact => fact.kind === 1 && (owner
-      ? JSON.parse(fact.factId)[0] === type && JSON.parse(fact.factId)[1] === id
-      : fact.objectType === type && fact.globalId === id));
+    const original = facts.find(fact => fact.kind === 1 && fact.objectType === type && fact.globalId === id);
     if (!original) throw new Error('test_state_fact_missing');
     const serialized = original.body.find(field => field.name === 'payload_json')?.value;
     if (serialized?.kind !== 'string') throw new Error('test_payload_missing');
@@ -53,7 +50,7 @@ export async function withSnapshot(source: RestorePeer, target: RestorePeer, typ
       const changed = { ...payload, ...patch };
       const hash = computeSyncContentHash(type, changed);
       const fact = !patch ? original : { ...original, sharedStateHash: hexToBytes(hash),
-        factId: owner ? JSON.stringify([type, id, hash]) : framedSyncObjectStateFactId(type, hash), body: original.body.map(field => {
+        factId: framedSyncObjectStateFactId(type, hash), body: original.body.map(field => {
           const value = field.name === 'payload_json' ? JSON.stringify(changed) : field.name === 'content_hash' ? hash
             : field.name === 'updated_at' ? '2026-06-01T00:00:00.000Z' : null;
           return value === null ? field : { ...field, value: { kind: 'string' as const, value } };

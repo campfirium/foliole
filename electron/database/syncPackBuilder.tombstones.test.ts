@@ -35,9 +35,7 @@ it('advertises and transfers a historical permanent deletion without a live node
         FROM node_sync_tombstones`).all()).toEqual([{ node_id: 'prior-deletion', version_id: 'desktop#deleted',
         parent_version_id: null, host_name: 'desktop', content_hash: deleted.content_hash, deleted_at: deletedAt, created_at: deletedAt }]);
       expect(target.sqlite.prepare('SELECT * FROM nodes').all()).toEqual([]);
-      expect(target.sqlite.prepare(`SELECT version_id, object_id, host_name, content_hash, body_text, parent_version_id
-        FROM node_sync_versions`).all()).toEqual([{ version_id: 'desktop#deleted', object_id: 'prior-deletion',
-        host_name: 'desktop', content_hash: deleted.content_hash, body_text: null, parent_version_id: null }]);
+      expect(target.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual([]);
       expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
       expect(source.sqlite.prepare('SELECT * FROM node_sync_tombstones').all()).toEqual(original);
       expect(source.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual([]);

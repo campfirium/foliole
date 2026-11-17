@@ -69,7 +69,9 @@ describe('CompanionBottomTabBar', () => {
     const inactivePill = inactiveTab.querySelector('span');
     expect(inactivePill?.className ?? '').not.toContain('bg-companion-accent-soft');
   });
+});
 
+describe('CompanionBottomTabBar WebView compatibility', () => {
   it('keeps a plain WebView fallback before safe-area and focus-visible enhancements', () => {
     renderBottomBar();
 

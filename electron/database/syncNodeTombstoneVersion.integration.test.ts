@@ -98,8 +98,6 @@ it('keeps an authenticated retired deletion version without its text or reviving
   expect(receiver.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .pluck().get(tombstone.version_id) ?? null).toBeNull();
   expect(receiver.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
-  expect((await readFramedSyncInventory(receiver.port)).find((item) => item.globalId === 'topic')
-    ?.resourceHashes.map((hash) => Buffer.from(hash).toString('hex')))
-    // Only the fixed empty-body placeholder of a deletion without text, never the deleted body.
-    .toEqual(['e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855']);
+  expect((await readFramedSyncInventory(receiver.port)).find((item) => item.globalId === 'topic'))
+    .toMatchObject({ permanentlyDeleted: true, resourceHashes: [] });
 });

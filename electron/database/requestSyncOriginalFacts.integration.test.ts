@@ -7,7 +7,6 @@ import { afterEach, expect, it } from 'vitest';
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
-import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { applyFramedFactSources } from '../../lib/core/sync/framedSyncFactApply.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
@@ -35,7 +34,7 @@ afterEach(async () => {
 function device() { const host = textDevice(); hosts.push(host); return host; }
 
 it.each(['matching', 'standalone', 'mismatch'] as const)(
-  'transfers %s deletion and complete alternatives without rewriting source proof', async mode => {
+  'transfers the %s deletion without history and preserves the source proof', async mode => {
     const source = device(); const target = device();
     await source.receive([textBranch('earlier', 'Earlier', undefined, time)]);
     const record = textBranch('deleted', proofBody, undefined, time);
@@ -53,8 +52,7 @@ it.each(['matching', 'standalone', 'mismatch'] as const)(
       for await (const fact of request.readFacts()) for (const blob of fact.blobs) {
         texts.push(new TextDecoder('utf-8', { ignoreBOM: true }).decode(await request.loadBody(blob)));
       }
-      expect(texts).toContain(mode === 'matching' ? proofBody : '');
-      expect(texts).toContain(alternativeBody);
+      expect(texts).toEqual(['']);
       await receive(target, request);
       await receive(target, request);
     });
@@ -63,11 +61,12 @@ it.each(['matching', 'standalone', 'mismatch'] as const)(
     expect(target.sqlite.prepare('SELECT node_id, version_id, content_hash, deleted_at FROM node_sync_tombstones').all())
       .toEqual([{ node_id: 'topic', version_id: 'deleted', content_hash: record.content_hash, deleted_at: time }]);
     const stored = JSON.parse(String(target.sqlite.prepare('SELECT snapshot_json FROM node_sync_tombstones').pluck().get()));
-    expect(stored.text_alternative_bodies).toContainEqual({ hash: hashTextBody(alternativeBody), text: alternativeBody });
+    expect(stored.text_alternative_bodies ?? []).toEqual([]);
+    expect(target.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual([]);
     expect(target.sqlite.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
     for (const table of ['node_sync_versions', 'node_sync_tombstones']) source.sqlite.exec(
       `UPDATE ${table} SET snapshot_json = json_remove(snapshot_json, '$.text_alternative_bodies')`);
-    await expect(snapshot(source, async () => undefined)).rejects.toThrow('text_alternative_body_unavailable');
+    await snapshot(source, request => receive(target, request));
   });
 
 it('keeps a receiver original body when request history forwards the identity-only version', async () => {

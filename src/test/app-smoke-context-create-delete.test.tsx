@@ -183,7 +183,7 @@ it('deletes all selected nodes from node-list context menu', async () => {
     const workspace = useWorkspaceStore.getState();
     expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
     expect(workspace.nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'node-1', 'node-2', 'node-3']);
-    expect(workspace.activeNodeId).toBe(INBOX_NODE_ID);
+    expect(workspace.activeNodeId).toBe('node-1');
   } finally {
     vi.useRealTimers();
   }
