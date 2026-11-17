@@ -2,19 +2,17 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { AppButton, AppDialogActions } from '../../../shared/ui';
 
 export function SuperMemoDraftActions({
-  busy, showRules, canConvert, parameters, directoryUpdate, toggleRules, backToPreview, openParameters, convert
+  busy, canConvert, parameters, directoryUpdate, backToPreview, openParameters, convert
 }: {
-  busy: boolean; showRules: boolean; canConvert: boolean; parameters: boolean;
+  busy: boolean; canConvert: boolean; parameters: boolean;
   directoryUpdate?: { canConfirm: boolean; } | undefined;
-  toggleRules(): void; backToPreview(): void; openParameters(): void; convert(): void;
+  backToPreview(): void; openParameters(): void; convert(): void;
 }) {
   const t = useTranslation();
+  if (!canConvert) return null;
   return (
     <AppDialogActions>
-      <AppButton disabled={busy} variant="ghost" onClick={() => toggleRules()}>
-        {t(showRules ? 'desktop.superMemoRules.back' : 'desktop.superMemoRules.title')}
-      </AppButton>
-      {!showRules && canConvert ? (parameters ? <>
+      {(parameters ? <>
         <AppButton disabled={busy} variant="ghost" onClick={() => backToPreview()}>
           {t('desktop.superMemoDrafts.backToPreview')}
         </AppButton>
@@ -23,7 +21,7 @@ export function SuperMemoDraftActions({
         </AppButton>
       </> : (
         <AppButton disabled={busy} onClick={() => openParameters()}>{t(directoryUpdate ? 'desktop.superMemoDrafts.updateByRules' : 'desktop.superMemoDrafts.parameters')}</AppButton>
-      )) : null}
+      ))}
     </AppDialogActions>
   );
 }

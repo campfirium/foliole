@@ -1,7 +1,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -13,17 +13,6 @@ const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
   <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 
-const rules = /^(Conversion rules|转换细则)$/;
-const backToConversion = /^(Back to conversion|返回转换)$/;
-
-async function openConversionRules(page: Page, dialog: Locator) {
-  await dialog.getByRole('button', { name: rules }).click();
-  const help = page.getByRole('dialog', { name: rules });
-  await expect(help.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ })).toBeVisible();
-  await expect(help.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ })).toBeVisible();
-  return help;
-}
-
 async function dismissLoadError(page: Page) {
   const notice = page.getByRole('dialog', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
   await notice.getByRole('button', { name: /^(Close|关闭)$/ }).click();
@@ -34,9 +23,13 @@ test('previews different XML exports and changes the interval without saving a d
   const dialog = await openPreview(desktopWindow);
   const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
   await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toBeVisible();
-  const rulesBeforeLoading = await openConversionRules(desktopWindow, dialog);
-  await expect(rulesBeforeLoading.getByRole('button', { name: /^(Load XML|载入 XML)$/ })).toHaveCount(0);
-  await rulesBeforeLoading.getByRole('button', { name: backToConversion }).click();
+  const entries = dialog.getByRole('region', { name: /^(Entries|条目)$/ });
+  const materials = entries.getByRole('heading', { name: /^(Materials and folders|资料与目录)$/ });
+  const annotations = preview.getByRole('heading', { name: /^(Highlight and cloze locations|高亮与挖空定位)$/ });
+  await expect(materials).toBeVisible();
+  await expect(annotations).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Conversion rules|转换细则)$/ })).toHaveCount(0);
+  await dialog.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await continueXml(desktopWindow);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
@@ -54,15 +47,14 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).toHaveText('0');
   await slider.press('End');
   await expect(slider).toHaveValue('100');
-  const rulesFromSettings = await openConversionRules(desktopWindow, dialog);
-  await expect(rulesFromSettings.getByRole('slider')).toHaveCount(0);
-  await expect(rulesFromSettings.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
-  await rulesFromSettings.screenshot({ path: testInfo.outputPath('supermemo-conversion-rules.png') });
-  await desktopWindow.keyboard.press('Escape');
+  await expect(materials).toBeHidden();
+  await expect(annotations).toBeHidden();
   await expect(slider).toHaveValue('100');
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
+  await expect(materials).toBeVisible();
+  await expect(annotations).toBeVisible();
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });

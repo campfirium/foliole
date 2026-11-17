@@ -7,6 +7,7 @@ import type { SuperMemoXmlDraftElement } from '../../../../lib/core/import/super
 import type { NativeSuperMemoPreview, NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
+import { SuperMemoConversionNote } from './SuperMemoConversionNote';
 import { SuperMemoEntryButton, SuperMemoPreviewTree } from './SuperMemoPreviewTree';
 
 const tabs = ['converted', 'skipped', 'missing'] as const;
@@ -101,9 +102,9 @@ export function SuperMemoEntryPreview({ preview, elements }: {
   const current = rows.find(row => row.id === active) ?? (tab === 'converted' ? initial : rows[0]);
   return (
     <div className="grid min-h-0 gap-2">
-      <div className="grid h-[min(56vh,36rem)] min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] overflow-hidden rounded-lg border border-foreground/15 text-sm">
-        <section className="flex min-h-0 min-w-0 flex-col border-r border-foreground/10 bg-foreground/[0.025]">
-          <div className="flex min-h-11 flex-wrap items-stretch gap-4 border-b border-foreground/10 px-3" aria-label={t('desktop.superMemoDrafts.entries')}>
+      <div className="grid h-[clamp(20rem,56vh,36rem)] min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] overflow-hidden rounded-lg border border-foreground/15 text-sm">
+        <section aria-label={t('desktop.superMemoDrafts.entries')} className="flex min-h-0 min-w-0 flex-col border-r border-foreground/10 bg-foreground/[0.025]">
+          <div className="flex min-h-11 flex-wrap items-stretch gap-4 border-b border-foreground/10 px-3">
             {tabs.map(key => (
               <button type="button" key={key} aria-pressed={tab === key} disabled={!preview}
                 className="border-b-2 border-transparent py-1 text-xs text-foreground/65 hover:text-foreground aria-pressed:border-[var(--role-accent)] aria-pressed:font-semibold aria-pressed:text-foreground disabled:opacity-50"
@@ -119,6 +120,7 @@ export function SuperMemoEntryPreview({ preview, elements }: {
               <SuperMemoEntryButton row={row} active={current?.id} onSelect={setActive} />
             </li>)}</ul>}
           </div>
+          <SuperMemoConversionNote section="materials" />
         </section>
         <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="flex min-h-0 min-w-0 flex-col">
           <h2 className="flex min-h-11 items-center border-b border-foreground/10 px-4 text-xs font-medium text-foreground/70">
@@ -129,6 +131,7 @@ export function SuperMemoEntryPreview({ preview, elements }: {
               <p className="text-foreground/60">{t(preview ? 'desktop.superMemoDrafts.noEntries' : 'desktop.superMemoDrafts.description')}</p>
             )}
           </div>
+          <SuperMemoConversionNote section="annotations" />
         </section>
       </div>
       {media.local || media.remote || media.audio ? <p className="px-1 text-xs text-foreground/65">
