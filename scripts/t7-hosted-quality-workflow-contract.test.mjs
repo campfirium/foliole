@@ -50,9 +50,9 @@ describe('T7 hosted quality workflow contract', () => {
   it('serializes scheduled and manual dev quality while release keeps its own group', () => {
     expect(dispatchDefaults).toMatchObject({ mobile_distribution: 'none', mobile_quality_run_id: '' });
     expect(concurrencyFor('refs/heads/dev')).toEqual({ group: 'quality-dev', 'cancel-in-progress': true });
-    expect(concurrencyFor('refs/heads/check')).toEqual({ group: 'quality-qa', 'cancel-in-progress': true });
+    expect(concurrencyFor('refs/heads/review')).toEqual({ group: 'quality-qa', 'cancel-in-progress': true });
     for (const distribution of ['ios', 'android']) {
-      expect(concurrencyFor('refs/heads/check', { mobile_distribution: distribution }))
+      expect(concurrencyFor('refs/heads/review', { mobile_distribution: distribution }))
         .toEqual({ group: 'quality-qa-mobile', 'cancel-in-progress': false });
     }
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
@@ -64,14 +64,14 @@ describe('T7 hosted quality workflow contract', () => {
   });
 
   it('keeps iOS distribution resume in the non-cancelling mobile group', () => {
-    expect(concurrencyFor('refs/heads/check', {
+    expect(concurrencyFor('refs/heads/review', {
       scope: 'full', mobile_distribution: 'ios', mobile_quality_run_id: '42',
     })).toEqual({ group: 'quality-qa-mobile', 'cancel-in-progress': false });
   });
 
-  it.each(['refs/heads/dev', 'refs/heads/check'])('accepts an empty distribution on %s', (ref) => {
+  it.each(['refs/heads/dev', 'refs/heads/review'])('accepts an empty distribution on %s', (ref) => {
     expect(concurrencyFor(ref, { mobile_distribution: '' })).toEqual({
-      group: ref === 'refs/heads/check' ? 'quality-qa' : 'quality-dev',
+      group: ref === 'refs/heads/review' ? 'quality-qa' : 'quality-dev',
       'cancel-in-progress': true,
     });
   });

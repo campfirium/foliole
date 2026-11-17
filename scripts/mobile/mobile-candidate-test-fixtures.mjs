@@ -4,7 +4,7 @@ export function registrationFixture(lane = 'dev-remote') {
   const sha = 'a'.repeat(40);
   const release = lane === 'release-t7';
   const run = { id: 42, run_attempt: 2, head_sha: sha, status: 'in_progress',
-    head_branch: release ? 'release' : 'check', event: release ? 'push' : 'workflow_dispatch',
+    head_branch: release ? 'release' : 'review', event: release ? 'push' : 'workflow_dispatch',
     path: release ? '.github/workflows/t7-release.yml' : '.github/workflows/remote-quality.yml',
     head_repository: { full_name: 'campfirium/foliole' },
     display_title: `Dev Quality Check (full) @ ${sha.slice(0, 9)} [mobile:android]` };

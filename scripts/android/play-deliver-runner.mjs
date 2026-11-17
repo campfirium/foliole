@@ -19,7 +19,7 @@ export async function resolvePlayDeliveryRegistration(github, env, registrarSha)
   const runId = env.GITHUB_RUN_ID;
   if (!/^[1-9]\d*$/u.test(runId ?? '')) throw new Error('Original distribution run is required');
   const run = await github('GET', `actions/runs/${runId}`);
-  const branch = { 'release-t7': 'release', 'qa-mobile-beta': 'check' }[env.EXECUTION_LANE];
+  const branch = { 'release-t7': 'release', 'qa-mobile-beta': 'review' }[env.EXECUTION_LANE];
   const workflow = branch === 'release' ? '.github/workflows/t7-release.yml' : '.github/workflows/remote-quality.yml';
   if (!branch || run.head_branch !== branch || run.path !== workflow || run.status !== 'in_progress' ||
       !['push', 'workflow_dispatch'].includes(run.event) || run.head_repository?.full_name !== MOBILE_REPOSITORY ||

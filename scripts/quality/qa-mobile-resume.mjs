@@ -43,7 +43,7 @@ export async function runQaMobileResume({ args, cwd, repo, runner, monitor = mon
   const result = await monitor({ cwd, repo, runner, runId: selected.runId, ...waitOptions });
   if (result.failed) throw new Error(`Mobile distribution failed: ${selected.url}`);
   const identity = JSON.parse(await requireSuccess(runner, 'gh', ['api', `repos/${repo}/actions/runs/${selected.runId}`], { cwd }));
-  if (identity.head_branch !== 'check' || identity.head_sha !== sourceSha ||
+  if (identity.head_branch !== 'review' || identity.head_sha !== sourceSha ||
       parseRemoteQualityRun(identity)?.qualityRunId !== qualityRunId) throw new Error('Mobile run identity differs');
   readCompleted({ repository: repo, runId: selected.runId, sourceSha, cwd });
   record.run = { ...selected, passed: true };
@@ -56,7 +56,7 @@ async function selectMobileResume({ record, sourceSha, qualityRunId, cwd, repo, 
   let selected = same(record.run) ? record.run : null;
   if (!selected) {
     const { workflow_runs: runs } = JSON.parse(await requireSuccess(runner, 'gh', ['api',
-      `repos/${repo}/actions/workflows/remote-quality.yml/runs?branch=check&per_page=50`], { cwd }));
+      `repos/${repo}/actions/workflows/remote-quality.yml/runs?branch=review&per_page=50`], { cwd }));
     const matches = run => run.head_sha === sourceSha && parseRemoteQualityRun(run)?.scope === 'mobile_resume' &&
       parseRemoteQualityRun(run)?.qualityRunId === qualityRunId;
     if (record.dispatchPending) {
@@ -77,13 +77,13 @@ async function selectMobileResume({ record, sourceSha, qualityRunId, cwd, repo, 
       if (qaGit(cwd, 'rev-parse', 'HEAD') !== sourceSha || qaGit(cwd, 'status', '--porcelain')) {
         throw new Error('QA changed during distribution checks');
       }
-      await requireSuccess(runner, 'git', ['push', 'origin', 'HEAD:refs/heads/check'], { cwd });
+      await requireSuccess(runner, 'git', ['push', 'origin', 'HEAD:refs/heads/review'], { cwd });
       record.dispatchPending = { kind: 'mobile-resume', targetSha: sourceSha, qualityRunId, startedAt: new Date().toISOString() };
       saveQaRecord(record);
       const response = JSON.parse(await requireSuccess(runner, 'gh', ['api', '--method', 'POST',
         '-H', 'X-GitHub-Api-Version: 2026-03-10',
         `repos/${repo}/actions/workflows/remote-quality.yml/dispatches`, '--input', '-'], { cwd,
-        input: JSON.stringify({ ref: 'check', inputs: { scope: 'full', target_sha: sourceSha,
+        input: JSON.stringify({ ref: 'review', inputs: { scope: 'full', target_sha: sourceSha,
           trigger_short: sourceSha.slice(0, 9), mobile_distribution: 'ios', mobile_quality_run_id: qualityRunId } }) }));
       if (!response.workflow_run_id || !response.html_url) throw new Error('Dispatch response is unknown; recover it before retrying');
       selected = resumeRun(response.workflow_run_id, response.html_url, sourceSha, qualityRunId);

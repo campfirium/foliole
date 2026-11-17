@@ -101,12 +101,12 @@ export async function runRemoteQuality(options = {}) {
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
   const branch = await requireSuccess(runner, 'git', ['branch', '--show-current'], { cwd });
-  if (branch === 'check') {
+  if (branch === 'review') {
     return runQaRemoteQuality({ args, cwd, repo: repoInfo.nameWithOwner, runner,
       preflight: options.qaPreflight, readVerdict: options.readChainVerdict,
       monitor: options.qaMonitor, pollIntervalMs: options.pollIntervalMs, wait: options.wait });
   }
-  if (args.mobileDistribution) throw new Error('Mobile distribution requires the registered check QA workspace');
+  if (args.mobileDistribution) throw new Error('Mobile distribution requires the registered review QA workspace');
   const sourceBranch = assertRemoteQualityRepositoryContext({
     defaultBranch: repoInfo.defaultBranchRef.name, localBranch: branch, sourceRef: args.sourceRef
   });

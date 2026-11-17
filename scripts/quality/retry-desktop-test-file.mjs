@@ -25,7 +25,7 @@ function gh(args) {
 function downloadOriginal({ repo, runId, sha, host }) {
   if (!/^[1-9]\d*$/u.test(runId)) throw new Error('Expected a numeric source run ID');
   const run = JSON.parse(gh(['api', `repos/${repo}/actions/runs/${runId}`]));
-  if (run.path !== '.github/workflows/remote-quality.yml' || run.head_branch !== 'check' ||
+  if (run.path !== '.github/workflows/remote-quality.yml' || run.head_branch !== 'review' ||
       run.status !== 'completed' || run.head_sha !== sha || !Number.isSafeInteger(run.run_attempt)) {
     throw new Error('Source must be a completed Remote Quality check of this exact candidate');
   }

@@ -15,7 +15,7 @@ import { readReservedPlayHistory } from './play-candidate-history.mjs';
 export function playRunnerIdentity(env, root) {
   const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version;
-  const ref = { 'qa-mobile-beta': 'refs/heads/check', 'release-t7': 'refs/heads/release' }[env.EXECUTION_LANE];
+  const ref = { 'qa-mobile-beta': 'refs/heads/review', 'release-t7': 'refs/heads/release' }[env.EXECUTION_LANE];
   if (!ref || env.GITHUB_REF !== ref || env.TRIGGER_REF !== ref || env.GITHUB_SHA !== sourceSha ||
       env.TARGET_SHA !== sourceSha || env.ACCEPTED_SHA !== sourceSha || env.TARGET_VERSION !== version ||
       !/^[1-9]\d*$/u.test(env.GITHUB_RUN_ID ?? '')) throw new Error('Play requires the exact accepted release or full QA candidate');

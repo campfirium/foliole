@@ -8,7 +8,7 @@ const root = path.resolve('.tmp/desktop-timeout-history');
 mkdirSync(root, { recursive: true });
 try {
   const output = execFileSync('gh', ['run', 'list', '--repo', GITHUB_REPOSITORY, '--workflow',
-    'remote-quality.yml', '--branch', 'check', '--status', 'completed', '--limit', '20',
+    'remote-quality.yml', '--branch', 'review', '--status', 'completed', '--limit', '20',
     '--json', 'databaseId,displayTitle'], { encoding: 'utf8', timeout: 20_000 });
   const host = RUNNER_OS === 'Windows' ? 'Windows' : 'Ubuntu';
   for (const { databaseId, displayTitle } of JSON.parse(output)) {

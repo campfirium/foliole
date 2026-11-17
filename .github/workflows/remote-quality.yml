@@ -63,7 +63,7 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: ${{ inputs.scope == 'desktop-file-retry' && format('quality-desktop-file-retry-{0}-{1}', inputs.retry_source_run, inputs.retry_host) || inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
+  group: ${{ inputs.scope == 'desktop-file-retry' && format('quality-desktop-file-retry-{0}-{1}', inputs.retry_source_run, inputs.retry_host) || inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/review' && 'quality-qa' || 'quality-dev') }}
   cancel-in-progress: ${{ inputs.scope != 'desktop-file-retry' && (inputs.mobile_distribution == 'none' || inputs.mobile_distribution == '') }}
   queue: ${{ inputs.mobile_distribution == 'android' && 'max' || 'single' }}
 
@@ -72,10 +72,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require a quality source branch
-        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/check'
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/review'
         run: exit 1
       - name: Require the exact QA source and workflow snapshot
-        if: github.ref == 'refs/heads/check'
+        if: github.ref == 'refs/heads/review'
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
           WORKFLOW_SHA: ${{ github.workflow_sha }}
@@ -88,7 +88,7 @@ jobs:
         run: |
           case "$MOBILE" in
             none|'') ;;
-            ios|android) test "$GITHUB_REF" = refs/heads/check && test "$SCOPE" = full ;;
+            ios|android) test "$GITHUB_REF" = refs/heads/review && test "$SCOPE" = full ;;
             *) exit 1 ;;
           esac
       - name: Validate mobile quality reuse selection
@@ -98,7 +98,7 @@ jobs:
           SCOPE: ${{ inputs.scope }}
         run: |
           if [ -n "$QUALITY_RUN" ]; then
-            test "$GITHUB_REF" = refs/heads/check && test "$MOBILE" = ios && test "$SCOPE" = full
+            test "$GITHUB_REF" = refs/heads/review && test "$MOBILE" = ios && test "$SCOPE" = full
             node -e 'if (!/^[1-9]\d*$/.test(process.env.QUALITY_RUN)) throw new Error("Invalid quality run")'
           fi
       - name: Require an explicit replay selection
@@ -115,13 +115,13 @@ jobs:
           TRIGGER_SHORT: ${{ inputs.trigger_short }}
         run: node -e "if (!/^([0-9a-f]{9})?$/.test(process.env.TRIGGER_SHORT ?? '')) throw new Error('trigger_short must be empty or a 9-character lowercase SHA prefix')"
 
-      - name: Require an isolated check retry
+      - name: Require an isolated review retry
         if: inputs.scope == 'desktop-file-retry'
         env:
           RETRY_HOST: ${{ inputs.retry_host }}
           MOBILE: ${{ inputs.mobile_distribution }}
           REUSE: ${{ inputs.mobile_quality_run_id }}
-        run: test "$GITHUB_REF" = refs/heads/check && test "$MOBILE" = none && test -z "$REUSE" && { test "$RETRY_HOST" = Windows || test "$RETRY_HOST" = Ubuntu; }
+        run: test "$GITHUB_REF" = refs/heads/review && test "$MOBILE" = none && test -z "$REUSE" && { test "$RETRY_HOST" = Windows || test "$RETRY_HOST" = Ubuntu; }
 
   desktop-file-retry:
     if: inputs.scope == 'desktop-file-retry' && needs.dev-ref.result == 'success'

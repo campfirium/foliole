@@ -19,7 +19,7 @@ it('dispatches explicit iPhone distribution on the registered QA candidate and r
   expect(second.runId).toBe(first.runId);
   const dispatches = f.calls.filter(call => call.args.includes('--method'));
   expect(dispatches).toHaveLength(1);
-  expect(JSON.parse(dispatches[0].options.input)).toEqual({ ref: 'check', inputs: {
+  expect(JSON.parse(dispatches[0].options.input)).toEqual({ ref: 'review', inputs: {
     scope: 'full', mobile_distribution: 'ios', target_sha: f.identity.head_sha,
     trigger_short: f.identity.head_sha.slice(0, 9)
   } });
@@ -35,7 +35,7 @@ it('does not treat an ordinary full pass as an uploaded build', async () => {
 
 it('does not adopt an active ordinary QA run as a distribution run', async () => {
   const f = fixture();
-  f.active.push({ id: 33, head_branch: 'check', head_sha: f.identity.head_sha,
+  f.active.push({ id: 33, head_branch: 'review', head_sha: f.identity.head_sha,
     display_title: `Dev Quality Check (full) @ ${f.identity.head_sha.slice(0, 9)}`,
     status: 'in_progress', html_url: 'https://github.test/runs/33' });
   await expect(runQaRemoteQuality({ ...f.options, args })).rejects.toThrow(/already has an active/u);
@@ -68,7 +68,7 @@ it('recovers the matching distribution dispatch without creating another upload'
   };
   await expect(runQaRemoteQuality({ ...f.options, args, runner })).rejects.toThrow(/EOF/u);
   uncertain = false;
-  f.active.push({ id: 42, head_branch: 'check', head_sha: f.identity.head_sha,
+  f.active.push({ id: 42, head_branch: 'review', head_sha: f.identity.head_sha,
     display_title: `Dev Quality Check (full) @ ${f.identity.head_sha.slice(0, 9)} [mobile:ios]`,
     created_at: '2999-01-01T00:00:00Z', status: 'in_progress', html_url: 'https://github.test/runs/42' });
   await expect(runQaRemoteQuality({ ...f.options, args, runner })).resolves.toMatchObject({ runId: 42 });
@@ -90,6 +90,6 @@ it('rejects mobile distribution from development rather than sending it on dev',
   const runner = async (command, values, options) => command === 'git' && values[0] === 'branch'
     ? { code: 0, stdout: 'dev', stderr: '' } : f.options.runner(command, values, options);
   await expect(runRemoteQuality({ args: ['--scope', 'full', '--mobile-distribution', 'ios'],
-    cwd: f.dev, runner })).rejects.toThrow(/registered check/u);
+    cwd: f.dev, runner })).rejects.toThrow(/registered review/u);
   expect(f.calls.some(call => call.args.includes('--method'))).toBe(false);
 });

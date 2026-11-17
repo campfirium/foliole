@@ -25,7 +25,7 @@ function fixture() {
   git(cwd, 'config', 'core.fsmonitor', 'false');
   const qualitySourceSha = commit(cwd, 'src/product.ts', 'export const value = 1;');
   const sourceSha = commit(cwd, 'scripts/ios/testflight-archive.mjs', 'automatic archive signing');
-  const run = { id: 42, run_attempt: 1, head_sha: qualitySourceSha, head_branch: 'check',
+  const run = { id: 42, run_attempt: 1, head_sha: qualitySourceSha, head_branch: 'review',
     head_repository: { full_name: 'owner/repo' }, status: 'completed', conclusion: 'failure',
     event: 'workflow_dispatch', path: '.github/workflows/remote-quality.yml',
     display_title: `Dev Quality Check (full) @ ${qualitySourceSha.slice(0, 9)} [mobile:ios]` };

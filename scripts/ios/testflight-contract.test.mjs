@@ -33,7 +33,7 @@ function live(state = 'IN_BETA_TESTING') {
 
 describe('TestFlight exact candidate and public availability', () => {
   it('accepts the complete QA candidate only on its explicit distribution lane', () => {
-    const qa = { ...input, executionLane: 'qa-mobile-beta', ref: 'refs/heads/check' };
+    const qa = { ...input, executionLane: 'qa-mobile-beta', ref: 'refs/heads/review' };
     expect(createTestflightCandidate(qa)).toMatchObject({ sourceSha: sha, acceptedSha: sha });
     for (const change of [{ executionLane: 'dev-remote' }, { ref: 'refs/heads/dev' },
       { executionLane: 'release-t7' }, { acceptedSha: 'b'.repeat(40) }, { runSha: 'b'.repeat(40) }]) {

@@ -153,8 +153,8 @@ export async function submissionFixture() {
   f.env = (id = 42) => {
     const run = f.sources.get(String(id)).run;
     return { GITHUB_RUN_ID: String(id), GITHUB_RUN_ATTEMPT: String(run.run_attempt),
-      GITHUB_SHA: run.head_sha, TARGET_SHA: run.head_sha, GITHUB_REF: 'refs/heads/check',
-      TRIGGER_REF: 'refs/heads/check', TARGET_VERSION: '0.7.17', EXECUTION_LANE: 'qa-mobile-beta' };
+      GITHUB_SHA: run.head_sha, TARGET_SHA: run.head_sha, GITHUB_REF: 'refs/heads/review',
+      TRIGGER_REF: 'refs/heads/review', TARGET_VERSION: '0.7.17', EXECUTION_LANE: 'qa-mobile-beta' };
   };
   f.release = state => { f.releases = [{ track: 'beta', releaseName: 'previous', activeArtifacts: [{ versionCode: 3 }],
     releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${state}` }]; };

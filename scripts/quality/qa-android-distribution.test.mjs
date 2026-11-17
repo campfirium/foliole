@@ -28,7 +28,7 @@ it('preserves unknown Android dispatches and refuses another channel while deliv
   await expect(runQaRemoteQuality({ ...f.options, args, runner })).rejects.toThrow('EOF');
   expect(readQaWorkspace(f.cwd).dispatchPending.mobileDistribution).toBe('android');
   await expect(runQaRemoteQuality({ ...f.options, runner })).rejects.toThrow(/original request/u);
-  f.active.push({ id: 42, head_branch: 'check', head_sha: f.identity.head_sha,
+  f.active.push({ id: 42, head_branch: 'review', head_sha: f.identity.head_sha,
     display_title: `Dev Quality Check (full) @ ${f.identity.head_sha.slice(0, 9)} [mobile:android]`,
     created_at: '2999-01-01T00:00:00Z', status: 'in_progress', html_url: 'https://github.test/runs/42' });
   await expect(runQaRemoteQuality({ ...f.options, args, runner })).resolves.toMatchObject({ runId: 42 });

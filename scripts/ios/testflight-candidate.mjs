@@ -8,7 +8,7 @@ const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 
 export function createTestflightCandidate({ headSha, acceptedSha, runSha, version, packageVersion,
   runId, buildNumber, ref, executionLane }) {
-  const expectedRef = { 'release-t7': 'refs/heads/release', 'qa-mobile-beta': 'refs/heads/check' }[executionLane];
+  const expectedRef = { 'release-t7': 'refs/heads/release', 'qa-mobile-beta': 'refs/heads/review' }[executionLane];
   if (!expectedRef || ref !== expectedRef) throw new Error('iPhone packages require the exact authorized lane and branch');
   if (!SHA.test(headSha) || headSha !== acceptedSha || headSha !== runSha) {
     throw new Error('iPhone source must match this run and its accepted quality SHA');

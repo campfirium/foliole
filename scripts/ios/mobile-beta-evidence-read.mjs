@@ -27,7 +27,7 @@ export function readMobileResumeEvidence({ repository, runId, sourceSha, cwd, ap
   const base = `repos/${repository}/actions`;
   const run = JSON.parse(api(`${base}/runs/${runId}`));
   if (run.status !== 'completed' || run.conclusion !== 'success' || run.head_sha !== sourceSha ||
-      run.head_branch !== 'check' || run.event !== 'workflow_dispatch' ||
+      run.head_branch !== 'review' || run.event !== 'workflow_dispatch' ||
       (run.path !== '.github/workflows/remote-quality.yml' || parseRemoteQualityRun(run)?.scope !== 'mobile_resume') || run.head_repository?.full_name !== repository) {
     throw new Error('Mobile resume is not a matching successful run');
   }
@@ -53,7 +53,7 @@ export function readMobileResumeEvidence({ repository, runId, sourceSha, cwd, ap
 
 if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
   const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-  if (process.env.GITHUB_REF !== 'refs/heads/check' || sourceSha !== process.env.GITHUB_SHA) {
+  if (process.env.GITHUB_REF !== 'refs/heads/review' || sourceSha !== process.env.GITHUB_SHA) {
     throw new Error('Mobile evidence must use the exact registered QA workflow source');
   }
   const evidence = readMobileQualityEvidence({ cwd: process.cwd(), sourceSha,

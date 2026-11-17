@@ -24,7 +24,7 @@ it('admits Android only after full QA accepted the exact registered check candid
     expect(evaluate(remote.jobs['mobile-android'].if, context)).toBe(mode === 'android' && result === 'success');
   }
   const guard = remote.jobs['dev-ref'].steps.find(step => step.env?.MOBILE);
-  for (const [ref, scope, allowed] of [['check', 'full', true], ['dev', 'full', false], ['check', 'android', false]]) {
+  for (const [ref, scope, allowed] of [['review', 'full', true], ['dev', 'full', false], ['review', 'android', false]]) {
     const result = spawnSync('bash', ['-e', '-c', guard.run], { env: { GITHUB_REF: `refs/heads/${ref}`, SCOPE: scope, MOBILE: 'android' } });
     expect(result.status === 0).toBe(allowed);
   }
@@ -33,7 +33,7 @@ it('admits Android only after full QA accepted the exact registered check candid
 it('executes the real Android candidate guard before credentials or build and rejects changed identity', () => {
   const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const version = JSON.parse(readFileSync('package.json')).version;
-  const env = { GITHUB_REF: 'refs/heads/check', TRIGGER_REF: 'refs/heads/check', EXECUTION_LANE: 'qa-mobile-beta',
+  const env = { GITHUB_REF: 'refs/heads/review', TRIGGER_REF: 'refs/heads/review', EXECUTION_LANE: 'qa-mobile-beta',
     TARGET_SHA: sha, ACCEPTED_SHA: sha, GITHUB_SHA: sha, TARGET_VERSION: version, GITHUB_RUN_ID: '42' };
   const guard = workflow.jobs.play.steps.find(step => step.name === 'Require exact accepted QA identity');
   const run = change => spawnSync('bash', ['-e', '-c', guard.run], { env: { ...process.env, ...env, ...change } });
@@ -65,7 +65,7 @@ it('isolates signing and API secrets from package scripts and preserves the sign
       expect(step.run).toMatch(/^node scripts\/android\/play-release.mjs (prepare|upload|commit|observe)$/u);
     }
   }
-  const context = { inputs: { mobile_distribution: 'android' }, github: { ref: 'refs/heads/check' } };
+  const context = { inputs: { mobile_distribution: 'android' }, github: { ref: 'refs/heads/review' } };
   expect(evaluate(remote.concurrency['cancel-in-progress'], context)).toBe(false);
   expect(workflow.on.workflow_dispatch).toBeUndefined();
 });

@@ -85,7 +85,7 @@ jobs:
         run: >-
           node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
       - name: Load desktop test timing history
-        if: github.ref == 'refs/heads/check'
+        if: github.ref == 'refs/heads/review'
         env:
           GH_TOKEN: ${{ github.token }}
           DESKTOP_HISTORY_BUCKET: ${{ matrix.bucket }}

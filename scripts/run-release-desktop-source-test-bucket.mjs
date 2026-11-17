@@ -157,7 +157,7 @@ export async function runDesktopSourceTests([reportPath, shard], { timeoutMs } =
   const files = collectReleaseDesktopSourceTestFiles();
   const allBuckets = buildReleaseDesktopSourceBuckets(files);
   assertReleaseDesktopSourceBucketCoverage(files, allBuckets);
-  const isolated = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/check';
+  const isolated = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/review';
   const history = isolated ? readDesktopTimeoutHistory(process.env.FOLIOLE_DESKTOP_TIMEOUT_HISTORY) : new Map();
   const selected = buildReleaseDesktopSourceShardBuckets(shard, allBuckets);
   const buckets = isolated ? selected.flatMap(bucket => bucket.targets.map((file, index) => ({

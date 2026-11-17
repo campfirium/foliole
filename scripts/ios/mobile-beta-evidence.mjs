@@ -28,7 +28,7 @@ const requireFact = (valid, reason) => { if (!valid) throw new Error(`Mobile qua
 export function verifyMobileQualitySource({ run, artifact, receipt, jobs, repository }) {
   const identity = parseRemoteQualityRun(run);
   requireFact(run?.status === 'completed' && ['success', 'failure'].includes(run.conclusion), 'quality run is not a completed result');
-  requireFact(run.head_branch === 'check' && run.event === 'workflow_dispatch' &&
+  requireFact(run.head_branch === 'review' && run.event === 'workflow_dispatch' &&
     run.path === '.github/workflows/remote-quality.yml' && run.head_repository?.full_name === repository,
   'quality workflow or repository identity differs');
   requireFact(identity?.scope === 'full' && identity.mobileDistribution === 'ios' &&

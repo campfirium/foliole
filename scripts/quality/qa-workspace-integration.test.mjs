@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync,
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
+import { QA_BRANCH, qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
 import { startQaWorkspace } from './qa-workspace.mjs';
 import { integrateQaWorkspace, saveQaRecord } from './qa-workspace-integration.mjs';
 import { finishQaWorkspace } from './qa-workspace-finish.mjs';
@@ -26,9 +26,14 @@ function fixture() {
   writeFileSync(path.join(dev, 'package.json'), '{"type":"module"}');
   cpSync('scripts/git', path.join(dev, 'scripts/git'), { recursive: true });
   cpSync('.githooks', path.join(dev, '.githooks'), { recursive: true });
+  // This fixture supplies commit hooks but does not install the build preflight.
+  rmSync(path.join(dev, '.githooks', 'pre-push'));
   qaGit(dev, 'config', 'core.hooksPath', '.githooks');
   qaGit(dev, 'add', '.');
   qaGit(dev, 'commit', '-m', '000001 base');
+  const remote = path.join(root, 'origin.git');
+  execFileSync('git', ['init', '--bare', remote], { stdio: 'pipe' });
+  qaGit(dev, 'remote', 'add', 'origin', remote);
   const state = startQaWorkspace({ repoRoot: dev, volumeRoot: root, worktreePath: path.join(root, 'qa'),
     owner: 'test-owner', verifyVolume: value => value });
   return { dev, qa: state.worktreePath, root, verifyRun: vi.fn(async () => {}), verifyVolume: value => value };
@@ -60,6 +65,7 @@ it('returns only a verified prefix, then the rest, with real hooks and independe
     expect(existsSync(path.join(cwd, 'repair-two'))).toBe(false);
     expect(readFileSync(path.join(cwd, 'new-feature'), 'utf8')).toBe('development');
   });
+  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/preview')).toBe('');
   expect(qaGit(f.qa, 'rev-parse', 'HEAD')).toBe(second);
   green(f, second);
   await integrate(f, async cwd => expect(readFileSync(path.join(cwd, 'repair-two'), 'utf8')).toBe('second'));
@@ -67,12 +73,20 @@ it('returns only a verified prefix, then the rest, with real hooks and independe
   expect(qaGit(f.dev, 'status', '--porcelain', '--untracked-files=no')).toBe('');
   expect(realpathSync(path.join(f.dev, '.cache'))).toBe(path.join(f.root, 'cache'));
   const finish = { repoRoot: f.dev, verifyRun: f.verifyRun, verifyVolume: f.verifyVolume, removeRemote: async () => {} };
+  qaGit(f.qa, 'push', 'origin', `HEAD:refs/heads/${QA_BRANCH}`);
+  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/preview')).toBe('');
   expect(await finishQaWorkspace(finish)).toEqual({ phase: 'idle' });
+  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/preview')).toBe(`${second}\trefs/heads/preview`);
   expect(JSON.parse(readFileSync(path.join(f.dev, '.tmp/artifacts/qa/42/workspace.json'), 'utf8')).cleanupTip).toBe(second);
   expect(existsSync(f.qa)).toBe(false);
   const next = startQaWorkspace({ repoRoot: f.dev, volumeRoot: f.root, worktreePath: f.qa,
     owner: 'next-owner', verifyVolume: f.verifyVolume });
   expect(next.base).toBe(qaGit(f.dev, 'rev-parse', 'HEAD'));
+  qaGit(next.worktreePath, 'push', 'origin', `HEAD:refs/heads/${QA_BRANCH}`);
+  green(f, next.base, 'mobile-resume');
+  await integrate(f, async () => {});
+  await finishQaWorkspace(finish);
+  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/preview')).toBe(`${second}\trefs/heads/preview`);
 });
 
 it('refuses dirty dev without touching it and detects merge conflicts before starting a merge', async () => {
