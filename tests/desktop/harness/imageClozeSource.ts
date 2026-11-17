@@ -10,8 +10,7 @@ import { expect } from './fixtures';
 
 export const OWNER_ID = 'hidden-native-image-source';
 
-export async function seedImageSource(page: Page, imageCount = 1) {
-  const bytes = fs.readFileSync(path.resolve('assets/brand/foliole-leaf-tight.png'));
+export async function seedImageSource(page: Page, imageCount = 1, bytes = fs.readFileSync(path.resolve('assets/brand/foliole-leaf-tight.png'))) {
   const hash = createHash('sha256').update(bytes).digest('hex');
   await page.evaluate(async ({ hash, bytesBase64, ownerId, imageCount }) => {
     const debug = window.__folioleWorkspaceDebug!;

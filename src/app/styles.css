@@ -1126,9 +1126,9 @@ b {
 }
 
 .cm-md-image-cloze-draft {
-  background: transparent;
   border: 2px dashed rgb(var(--role-ink-rgb) / 0.92);
   border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--role-content-bg);
   position: absolute;
 }
 
