@@ -4,11 +4,20 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 export interface MaterialHistoryView {
   first: 'preview' | 'breadcrumb';
   lines: 1 | 2 | 3;
-  fontSize: 'small' | 'default' | 'large';
+  fontSize: number;
 }
 
 const key = APP_SETTINGS_STORAGE_KEYS.materialHistoryView;
-const defaultView: MaterialHistoryView = { first: 'preview', lines: 2, fontSize: 'default' };
+export const HISTORY_FONT_SIZE_MIN = 10;
+export const HISTORY_FONT_SIZE_MAX = 24;
+const defaultView: MaterialHistoryView = { first: 'preview', lines: 2, fontSize: 15 };
+
+function loadFontSize(value: unknown) {
+  if (value === 'small') return 13;
+  if (value === 'large') return 17;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return defaultView.fontSize;
+  return Math.max(HISTORY_FONT_SIZE_MIN, Math.min(HISTORY_FONT_SIZE_MAX, Math.round(value)));
+}
 
 export function loadMaterialHistoryView(): MaterialHistoryView {
   try {
@@ -16,7 +25,7 @@ export function loadMaterialHistoryView(): MaterialHistoryView {
     return {
       first: value?.first === 'breadcrumb' ? 'breadcrumb' : defaultView.first,
       lines: value?.lines === 1 || value?.lines === 3 ? value.lines : defaultView.lines,
-      fontSize: value?.fontSize === 'small' || value?.fontSize === 'large' ? value.fontSize : defaultView.fontSize
+      fontSize: loadFontSize(value?.fontSize)
     };
   } catch {
     return defaultView;

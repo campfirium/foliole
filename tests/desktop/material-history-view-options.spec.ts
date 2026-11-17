@@ -72,15 +72,19 @@ test('history view options apply immediately and return after app restart', asyn
 
 async function verifyHistoryFontSizes(page: Page) {
   const history = page.getByRole('dialog', { name: 'History', exact: true });
-  const options = history.getByRole('group', { name: 'Font size' });
+  const size = history.getByRole('slider', { name: 'Font size' });
   const preview = history.getByText(/^History preview text/);
   const breadcrumb = history.getByText(title, { exact: true });
-  await expect(options.getByRole('radio', { name: 'Default' })).toBeChecked();
+  await expect(size).toHaveValue('15');
+  await expect(history.getByText('15', { exact: true })).toBeVisible();
   await expect(preview).toHaveCSS('font-size', '15px');
-  await options.getByText('Small', { exact: true }).click();
-  await expect(preview).toHaveCSS('font-size', '13px');
-  await expect(breadcrumb).toHaveCSS('font-size', '11px');
-  await options.getByText('Large', { exact: true }).click();
+  await size.press('Home');
+  await expect(size).toHaveValue('10');
+  await expect(history.getByText('10', { exact: true })).toBeVisible();
+  await expect(preview).toHaveCSS('font-size', '10px');
+  await expect(breadcrumb).toHaveCSS('font-size', '10px');
+  for (let step = 0; step < 7; step++) await size.press('ArrowRight');
+  await expect(size).toHaveValue('17');
   await expect(preview).toHaveCSS('font-size', '17px');
   await expect(breadcrumb).toHaveCSS('font-size', '14px');
 }
@@ -93,7 +97,7 @@ async function expectHistoryPreferencesSaved(page: Page) {
       view: value && JSON.parse(value),
       shortcutsCollapsed: settings?.['foliole-material-history-shortcuts-collapsed']
     };
-  })).toEqual({ view: { first: 'breadcrumb', lines: 3, fontSize: 'large' }, shortcutsCollapsed: 'false' });
+  })).toEqual({ view: { first: 'breadcrumb', lines: 3, fontSize: 17 }, shortcutsCollapsed: 'false' });
 
 }
 
@@ -129,7 +133,7 @@ async function verifyRestart(page: Page) {
   const options = history.getByRole('group', { name: 'View options' });
   await expect(options.getByRole('radio', { name: 'Breadcrumb first' })).toBeChecked();
   await expect(options.getByRole('radio', { name: '3', exact: true })).toBeChecked();
-  await expect(options.getByRole('radio', { name: 'Large', exact: true })).toBeChecked();
+  await expect(options.getByRole('slider', { name: 'Font size' })).toHaveValue('17');
   await history.getByRole('searchbox').click();
   await expect(options).toBeHidden();
 }
