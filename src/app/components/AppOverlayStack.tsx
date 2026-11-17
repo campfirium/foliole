@@ -4,6 +4,7 @@ import { APP_FEEDBACK_ENDPOINT } from '../../shared/feedback/feedbackEndpoint';
 import type { useAppController } from '../hooks/useAppController';
 
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
+import { FormalImportAccessDialog } from './FormalImportAccessDialog';
 import { ReadwiseImportDeviceDialog } from './ReadwiseImportDeviceDialog';
 import { SyncGroupJoinRequestsDialog } from './SyncGroupJoinRequestsDialog';
 import { WatchedFolderConflictDialog } from './WatchedFolderConflictDialog';
@@ -113,6 +114,7 @@ export function AppOverlayStack({
       <WatchedFolderConflictDialog />
       <ReadwiseImportDeviceDialog />
       <EpubImportReleaseModeDialog />
+      <FormalImportAccessDialog />
       <Suspense fallback={null}>
         {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}
         <FeedbackOverlay isOpen={isFeedbackOpen} onClose={onCloseFeedback} />

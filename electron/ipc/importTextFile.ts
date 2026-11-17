@@ -14,6 +14,7 @@ import { recordPreparedImportFailure, runPreparedImport } from '../database/impo
 import { logMainProcessOperationFailure } from '../diagnostics/mainProcessDiagnostics.js';
 import { buildImportNodeMutationPatch, withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
+import { persistSecurityScopedBookmark, shouldRequestSecurityScopedBookmarks } from '../securityScopedBookmarks.js';
 
 import { loadEpubPreview, runEpubImport } from './epubImport.js';
 import {
@@ -50,7 +51,8 @@ export function toNativeTextImportResult(record: PersistedImportRecord): NativeT
 function getImportFileDialogOptions() {
   return {
     filters: [{ name: 'Markdown / HTML / Text / EPUB / PDF', extensions: ['md', 'markdown', 'html', 'htm', 'txt', 'epub', 'pdf'] }],
-    properties: ['openFile', 'multiSelections']
+    properties: ['openFile', 'multiSelections'],
+    ...(shouldRequestSecurityScopedBookmarks() ? { securityScopedBookmarks: true } : {})
   } satisfies OpenDialogOptions;
 }
 
@@ -62,6 +64,7 @@ async function selectImportFilePaths(window?: BrowserWindow | null) {
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
+  selection.filePaths.forEach((filePath, index) => persistSecurityScopedBookmark(filePath, selection.bookmarks?.[index]));
   await authorizeSelectedImportFilePaths(selection.filePaths);
   return selection.filePaths;
 }

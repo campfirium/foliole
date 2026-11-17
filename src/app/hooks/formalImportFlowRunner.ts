@@ -4,6 +4,7 @@ import {
 } from '../../shared/platform/importExecutionRuntimeRepository';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
+import { notifyFormalImportAccessDenied, notifyFormalImportResultAccessDenied } from './formalImportAccessNotice';
 import {
   applyCancelledImportStatus,
   applyImportFailureStatus,
@@ -23,7 +24,8 @@ export async function runImportFlow<Result extends RuntimeTextImportResult | Run
   runner: () => Promise<Result | null>,
   shouldRehydrate: (result: Result) => boolean,
   refreshOverview: () => Promise<void>,
-  applyResultStatus?: (result: Result) => void
+  applyResultStatus?: (result: Result) => void,
+  chooseAgain?: () => void
 ) {
   if (useFormalImportState.getState().isImporting) {
     return false;
@@ -52,9 +54,11 @@ export async function runImportFlow<Result extends RuntimeTextImportResult | Run
     }
     await refreshOverview();
     useFormalImportState.setState({ isImporting: false });
+    notifyFormalImportResultAccessDenied(importResult, chooseAgain);
     return true;
   } catch (error) {
     applyImportFailureStatus(error instanceof Error ? error.message : 'Unknown import failure');
+    notifyFormalImportAccessDenied(error, chooseAgain);
     return false;
   }
 }

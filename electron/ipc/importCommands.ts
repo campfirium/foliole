@@ -23,6 +23,7 @@ import {
 import { asString } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
+import { rethrowImportAccessError } from './importAccessError.js';
 import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
@@ -87,7 +88,7 @@ async function selectImportDirectory(args: Record<string, unknown>, context?: In
   const selectedPath = selection.filePaths[0] ?? null;
   if (selectedPath) {
     persistSecurityScopedBookmark(selectedPath, selection.bookmarks?.[0]);
-    await authorizeSelectedImportDirectoryPath(selectedPath);
+    await authorizeSelectedImportDirectoryPath(selectedPath).catch(rethrowImportAccessError);
   }
   return selectedPath;
 }
@@ -98,7 +99,8 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
     return args.filePath === undefined
       ? selectSuperMemoSource(resolveTargetWindow(context))
-      : readSuperMemoSource(asString(args.filePath, 'filePath'));
+      : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
+        ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
   }
   const draftResult = await handleSuperMemoImportCommand(request.command, args);
   if (draftResult !== undefined) {
@@ -182,7 +184,7 @@ async function handleTextImportCommand(
 ) {
   if (request.command === NATIVE_COMMANDS.runTextFileImport) {
     const originWindow = resolveTargetWindow(context);
-    const result = await runTextFileImport(originWindow, args);
+    const result = await runTextFileImport(originWindow, args).catch(rethrowImportAccessError);
     notifyIfTextImportChanged(result, originWindow);
     return result;
   }
@@ -194,12 +196,12 @@ async function handleTextImportCommand(
   }
   if (request.command === NATIVE_COMMANDS.runDirectoryImport) {
     const originWindow = resolveTargetWindow(context);
-    const result = await runDirectoryImport(originWindow, args);
+    const result = await runDirectoryImport(originWindow, args).catch(rethrowImportAccessError);
     notifyIfDirectoryImportChanged(result, originWindow);
     return result;
   }
   if (request.command === NATIVE_COMMANDS.selectImportTextFile) {
-    return selectImportTextFile(resolveTargetWindow(context));
+    return selectImportTextFile(resolveTargetWindow(context)).catch(rethrowImportAccessError);
   }
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
     const documentId = typeof args.document_id === 'string' ? args.document_id.trim() : '';

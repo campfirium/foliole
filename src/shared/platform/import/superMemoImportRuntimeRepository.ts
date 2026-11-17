@@ -11,6 +11,10 @@ export function selectRuntimeSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
 }
 
+export function selectRuntimeSuperMemoCollection() {
+  return requireInvoke()(NATIVE_COMMANDS.selectImportDirectory, {});
+}
+
 function requireInvoke() {
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('supermemo_import_unavailable');
@@ -19,7 +23,12 @@ function requireInvoke() {
 
 function readSource(xml: string, collectionDirectory?: string) {
   if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('invalid_supermemo_xml');
-  const elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+  let elements;
+  try {
+    elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+  } catch (error) {
+    throw new Error('invalid_supermemo_xml', { cause: error });
+  }
   return { elements, ...(collectionDirectory ? { collectionDirectory } : {}) };
 }
 
@@ -53,9 +62,11 @@ export async function previewRuntimeSuperMemoImport(xml: string, collectionDirec
 }
 
 export async function runRuntimeSuperMemoImport(filePath: string, percent: number,
-  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat, updateSignature?: string, withdrawSourceIds?: number[], target?: SuperMemoUpdateTarget) {
+  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat, updateSignature?: string, withdrawSourceIds?: number[], target?: SuperMemoUpdateTarget, collectionChoice?: string | null) {
   const invoke = requireInvoke();
-  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
+  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, {
+    filePath, ...(collectionChoice === undefined ? {} : { collectionDirectory: collectionChoice })
+  });
   if (!source) throw new Error('supermemo_source_changed');
   return invoke(NATIVE_COMMANDS.runSuperMemoImport,
     { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat,

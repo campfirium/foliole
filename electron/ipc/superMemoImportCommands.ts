@@ -16,6 +16,7 @@ import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
 import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
+import { isImportAccessDenied } from './importAccessError.js';
 import { readSuperMemoCollection } from './readSuperMemoCollection.js';
 
 const elementSchema = z.object({
@@ -73,6 +74,16 @@ async function finishSuperMemoImport(input: Parameters<typeof runSuperMemoImport
     unresolvedImages: update.unresolvedImages, directoryUpdate: update };
 }
 
+async function readCollectionForImport(collectionDirectory: string, elements: Parameters<typeof readSuperMemoCollection>[1]) {
+  try {
+    return await readSuperMemoCollection(collectionDirectory, elements);
+  } catch (error) {
+    const reason = isImportAccessDenied(error) ? 'supermemo_collection_access_denied'
+      : error instanceof Error && error.message === 'supermemo_collection_mismatch' ? error.message : 'supermemo_collection_unreadable';
+    throw new Error(reason, { cause: error });
+  }
+}
+
 export async function handleSuperMemoImportCommand(command: string, args: unknown) {
   if (command === NATIVE_COMMANDS.listSuperMemoImports) return runWithDatabaseConnectionOwner(listSuperMemoImports);
   const previewAdjustment = command === NATIVE_COMMANDS.previewSuperMemoAdjustment;
@@ -84,13 +95,14 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
   const write = command === NATIVE_COMMANDS.runSuperMemoImport;
   if (!write && command !== NATIVE_COMMANDS.previewSuperMemoImport) return undefined;
   const percent = write ? z.object({ percent: z.number().int().min(0).max(100) }).parse(args).percent : 0;
-  const { elements, collectionDirectory, gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP, previewSignature, updateSignature, withdrawSourceIds, targetBatchId, originalElements, sourceFormat = DEFAULT_SUPER_MEMO_SOURCE_FORMAT } = previewSchema.parse(args);
+  const { elements, collectionDirectory: selectedDirectory, gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP, previewSignature, updateSignature, withdrawSourceIds, targetBatchId, originalElements, sourceFormat = DEFAULT_SUPER_MEMO_SOURCE_FORMAT } = previewSchema.parse(args);
   const seen = new Set<number>();
   for (const { id, parentId } of elements) {
     if (seen.has(id) || (parentId !== null && !seen.has(parentId))) throw new Error('invalid_supermemo_element_tree');
     seen.add(id);
   }
-  const collection = collectionDirectory ? await readSuperMemoCollection(collectionDirectory, elements) : null;
+  const collection = selectedDirectory ? await readCollectionForImport(selectedDirectory, elements) : null;
+  const collectionDirectory = collection?.root;
   return runWithDatabaseConnectionOwner(async () => {
     const now = new Date();
     const offset = sourceOffset(now);

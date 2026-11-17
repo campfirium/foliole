@@ -1,3 +1,4 @@
+import { isImportAccessDenied } from '../../shared/platform/import/importAccess';
 import {
   runRuntimeTextFileImport,
   selectRuntimeImportTextFile,
@@ -41,7 +42,7 @@ export async function runFormalImportFileFlow(options: FormalImportFileFlowOptio
     const result = await runRuntimeTextFileImport(undefined, undefined, { filePath: selectedFile.filePath });
     if (!result) continue;
     lastResult = result;
-    if (result.resultStatus === 'failed') failedResult ??= result;
+    if (result.resultStatus === 'failed' && (!failedResult || isImportAccessDenied(result.failureReason))) failedResult = result;
     await applyImportedFile(selectedFile, result);
   }
   return failedResult ?? lastResult;

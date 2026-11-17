@@ -54,6 +54,7 @@ export interface NativeSuperMemoSource {
   name: string;
   xml: string;
   collectionDirectory: string | undefined;
+  collectionDiscoveryFailure?: 'access' | 'read';
 }
 
 export interface NativeSuperMemoCitationChange {

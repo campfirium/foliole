@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useLocalization, type Translate } from '../../shared/localization/LocalizationProvider';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { isImportAccessDenied } from '../../shared/platform/import/importAccess';
 import {
   getFormalImportFailureMessage,
   getFormalImportLatestResult
@@ -30,6 +31,7 @@ function formatLoadingMessage(kind: ImportNoticeKind, t: Translate) {
 }
 
 function formatFailureMessage(message: string | null, t: Translate) {
+  if (isImportAccessDenied(message)) return t('desktop.importAccess.title');
   return message === 'Unknown import failure'
     ? t('desktop.importOverview.unknownFailure')
     : message;

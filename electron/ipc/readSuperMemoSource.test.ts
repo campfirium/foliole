@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { authorizeSelectedImportFilePath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
+import { authorizeSelectedImportDirectoryPath, authorizeSelectedImportFilePath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 import { readSuperMemoSource } from './readSuperMemoSource.js';
 
 vi.mock('electron', () => ({ dialog: {} }));
@@ -45,4 +45,19 @@ it('ignores a matching collection name that points outside the export folder', a
   await symlink(otherFolder, path.join(folder, 'Learning'), 'junction');
   await authorizeSelectedImportFilePath(xml);
   await expect(readSuperMemoSource(xml)).resolves.toMatchObject({ collectionDirectory: undefined });
+});
+
+it('reuses the collection chosen during preview, including an explicit XML-only selection', async () => {
+  const folder = await createFolder();
+  const replacement = await createFolder();
+  const xml = path.join(folder, 'Learning.xml');
+  await writeFile(xml, 'export');
+  await mkdir(path.join(folder, 'info'));
+  await authorizeSelectedImportFilePath(xml);
+  await expect(readSuperMemoSource(xml, replacement)).rejects.toThrow('supermemo_collection_unreadable');
+  await authorizeSelectedImportDirectoryPath(replacement);
+  await expect(readSuperMemoSource(xml, replacement)).resolves.toMatchObject({
+    collectionDirectory: expect.stringContaining(path.basename(replacement))
+  });
+  await expect(readSuperMemoSource(xml, null)).resolves.toMatchObject({ xml: 'export', collectionDirectory: undefined });
 });

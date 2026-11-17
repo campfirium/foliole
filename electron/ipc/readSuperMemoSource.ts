@@ -7,8 +7,9 @@ import { dialog, type BrowserWindow } from 'electron';
 import type { NativeSuperMemoSource } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { persistSecurityScopedBookmark, shouldRequestSecurityScopedBookmarks } from '../securityScopedBookmarks.js';
 
+import { isImportAccessDenied, rethrowImportAccessError } from './importAccessError.js';
 import {
-  assertAuthorizedImportFilePath, authorizeSelectedImportDirectoryPath, authorizeSelectedImportFilePath
+  assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, authorizeSelectedImportDirectoryPath, authorizeSelectedImportFilePath
 } from './importPathAuthorization.js';
 
 const MAX_XML_BYTES = 128 * 1024 * 1024;
@@ -31,7 +32,29 @@ async function collectionForExport(xmlPath: string) {
   return await directoryExists(sibling) && await directoryExists(path.join(sibling, 'info')) ? sibling : undefined;
 }
 
-export async function readSuperMemoSource(filePath: string): Promise<NativeSuperMemoSource> {
+export async function readSuperMemoSource(filePath: string, collectionChoice?: string | null): Promise<NativeSuperMemoSource> {
+  return readSource(filePath, collectionChoice).catch(rethrowImportAccessError);
+}
+
+async function resolveCollection(xmlPath: string, choice?: string | null) {
+  if (choice === null) return {};
+  if (choice !== undefined) {
+    try {
+      return { collectionDirectory: await assertAuthorizedImportDirectoryPath(choice) };
+    } catch (error) {
+      throw new Error(isImportAccessDenied(error) ? 'supermemo_collection_access_denied' : 'supermemo_collection_unreadable', { cause: error });
+    }
+  }
+  try {
+    const collectionDirectory = await collectionForExport(xmlPath);
+    if (collectionDirectory) await authorizeSelectedImportDirectoryPath(collectionDirectory);
+    return { collectionDirectory };
+  } catch (error) {
+    return { collectionDiscoveryFailure: isImportAccessDenied(error) ? 'access' as const : 'read' as const };
+  }
+}
+
+async function readSource(filePath: string, collectionChoice?: string | null): Promise<NativeSuperMemoSource> {
   const xmlPath = await assertAuthorizedImportFilePath(filePath);
   if (path.extname(xmlPath).toLowerCase() !== '.xml') throw new Error('invalid_supermemo_xml_path');
   const file = await open(xmlPath, constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0));
@@ -41,9 +64,9 @@ export async function readSuperMemoSource(filePath: string): Promise<NativeSuper
     const bytes = Buffer.alloc(stat.size);
     const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
     if (bytesRead !== bytes.length || (await file.stat()).size !== stat.size) throw new Error('supermemo_source_changed');
-    const collectionDirectory = await collectionForExport(xmlPath);
-    if (collectionDirectory) await authorizeSelectedImportDirectoryPath(collectionDirectory);
-    return { filePath: xmlPath, name: path.basename(xmlPath), xml: bytes.toString('utf8'), collectionDirectory };
+    const collection = await resolveCollection(xmlPath, collectionChoice);
+    return { filePath: xmlPath, name: path.basename(xmlPath), xml: bytes.toString('utf8'),
+      collectionDirectory: undefined, ...collection };
   } finally {
     await file.close();
   }
@@ -59,6 +82,6 @@ export async function selectSuperMemoSource(window: BrowserWindow | null) {
   const filePath = selection.filePaths[0];
   if (selection.canceled || !filePath) return null;
   persistSecurityScopedBookmark(filePath, selection.bookmarks?.[0]);
-  await authorizeSelectedImportFilePath(filePath);
+  await authorizeSelectedImportFilePath(filePath).catch(rethrowImportAccessError);
   return readSuperMemoSource(filePath);
 }

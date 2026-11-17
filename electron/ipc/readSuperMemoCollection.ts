@@ -24,7 +24,7 @@ export async function readSuperMemoCollection(directory: string, elements: Super
   );
   const fields = matchSuperMemoCollection(elements, { tree: tree!, elements: binary!, repetitions: repetitions!, priorities: priorities!, history: history! });
   const [groups, bibliography] = await Promise.all([readConceptGroups(root, elements, fields), readBibliography(root, fields)]);
-  return { fields, groups, bibliography };
+  return { root, fields, groups, bibliography };
 }
 
 async function readConceptGroups(root: string, elements: SuperMemoXmlDraftElement[],

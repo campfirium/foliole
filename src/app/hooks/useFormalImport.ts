@@ -8,6 +8,7 @@ import {
 import { loadRuntimeImportOverview } from '../../shared/platform/importOverviewRuntimeRepository';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
+import { useFormalImportAccessNotice } from './formalImportAccessNotice';
 import { runFormalImportFileFlow, type FormalImportFileFlowOptions } from './formalImportFileFlow';
 import {
   runImportFlow,
@@ -79,6 +80,7 @@ async function refreshFormalImportOverview(
 }
 
 export function resetFormalImportState() {
+  useFormalImportAccessNotice.setState({ notice: null });
   managedInboxRefreshInFlight = null;
   managedInboxQueuedRefreshImportId = null;
   resetAppliedImportWorkspacePatches();
@@ -121,6 +123,34 @@ function useFormalImportBootstrap(isAvailable: boolean, hasLoadedOverview: boole
   useManagedInboxFocusRefresh(isAvailable, refreshManagedInboxOverview);
 }
 
+function useFileImportActions() {
+  const startImportFile = useCallback(
+    function chooseFile(options?: FormalImportFileFlowOptions) {
+      return runImportFlow(
+        () => runFormalImportFileFlow(options),
+        shouldRehydrateWorkspace,
+        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false }),
+        applyImportResultStatus,
+        () => { void chooseFile(options); }
+      );
+    },
+    []
+  );
+  const startImportDirectory = useCallback(
+    function chooseDirectory() {
+      return runImportFlow(
+        runRuntimeDirectoryImport,
+        shouldRehydrateDirectoryImport,
+        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false }),
+        undefined,
+        () => { void chooseDirectory(); }
+      );
+    },
+    []
+  );
+  return { startImportFile, startImportDirectory };
+}
+
 function useFormalImportActions() {
   const startClipboardImport = useCallback(
     (detail?: { targetParentNodeId?: string }) =>
@@ -136,25 +166,7 @@ function useFormalImportActions() {
       ),
     []
   );
-  const startImportFile = useCallback(
-    (options?: FormalImportFileFlowOptions) =>
-      runImportFlow(
-        () => runFormalImportFileFlow(options),
-        shouldRehydrateWorkspace,
-        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false }),
-        applyImportResultStatus
-      ),
-    []
-  );
-  const startImportDirectory = useCallback(
-    () =>
-      runImportFlow(
-        runRuntimeDirectoryImport,
-        shouldRehydrateDirectoryImport,
-        () => refreshFormalImportOverview(undefined, { rehydrateFreshResult: false })
-      ),
-    []
-  );
+  const fileImportActions = useFileImportActions();
   const resetImportData = useCallback(
     () =>
       runResetImportDataFlow({
@@ -175,7 +187,7 @@ function useFormalImportActions() {
       }),
     []
   );
-  return { resetImportData, startClipboardImport, startImportDirectory, startImportFile };
+  return { resetImportData, startClipboardImport, ...fileImportActions };
 }
 
 export function useFormalImport() {

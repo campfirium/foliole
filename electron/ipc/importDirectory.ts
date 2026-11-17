@@ -106,7 +106,7 @@ export async function runDirectoryImport(
     if (!rootPath) {
       return null;
     }
-    assertSafeDirectoryImportRoot(rootPath, sourceAdapter);
+    await runWithDatabaseConnectionOwner(() => assertSafeDirectoryImportRoot(rootPath, sourceAdapter));
 
     const highlightPolicy = resolveImportHighlightPolicy(args);
     const titleStrategy = args?.title_strategy

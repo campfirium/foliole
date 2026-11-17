@@ -70,8 +70,7 @@ async function loadDesktopHostCapabilities() {
   return getDesktopHostCapabilities(process.platform, app.isPackaged, getGlobalClipShortcutStatus(), permission);
 }
 
-async function openSyncGroupLocalNetworkSettings() {
-  if (process.platform !== 'darwin') throw new Error('local_network_settings_unavailable');
+async function openSystemSettings() {
   const error = await shell.openPath('/System/Applications/System Settings.app');
   if (error) throw new Error(error);
   return null;
@@ -109,9 +108,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     }
     return shell.openPath(targetPath).then(() => null);
   }
-  if (request.command === NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings) {
-    return openSyncGroupLocalNetworkSettings();
-  }
+
   if (request.command === NATIVE_COMMANDS.resolveAppPaths) {
     return resolveAppPaths();
   }
@@ -150,6 +147,13 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  if (request.command === NATIVE_COMMANDS.openImportPermissionSettings) {
+    return process.platform === 'darwin' ? openSystemSettings() : null;
+  }
+  if (request.command === NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings) {
+    if (process.platform !== 'darwin') throw new Error('local_network_settings_unavailable');
+    return openSystemSettings();
+  }
   if (request.command === NATIVE_COMMANDS.desktopSupportLog) {
     return runDesktopSupportLogAction(request.args?.action);
   }

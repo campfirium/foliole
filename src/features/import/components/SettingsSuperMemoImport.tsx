@@ -6,7 +6,7 @@ import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMem
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { loadSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 import {
-  AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription,
+  AppButton, AppDialog, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription,
   AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow
 } from '../../../shared/ui';
 import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface';
@@ -18,6 +18,7 @@ import { SuperMemoDraftActions } from './SuperMemoDraftActions';
 import { SuperMemoDraftTable } from './SuperMemoDraftTable';
 import { SuperMemoEntryPreview } from './SuperMemoEntryPreview';
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
+import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 import { SuperMemoSourceSettings } from './SuperMemoSourceSettings';
 import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
@@ -48,27 +49,6 @@ function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGra
     </div>
     <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)} disabled={busy} />
   </div>);
-}
-
-function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; onClose(): void }) {
-  const t = useTranslation();
-  return (
-    <AppDialog open={Boolean(error)} onOpenChange={open => { if (!open) onClose(); }}>
-      <AppDialogPortal>
-        <AppDialogOverlay />
-        <AppDialogContent layout="notice">
-          <AppDialogTitle>{t(error === 'xml-only' ? 'desktop.superMemoDrafts.noCollection' : 'desktop.superMemoDrafts.loadFailed')}</AppDialogTitle>
-          <AppDialogBody>
-            <AppDialogDescription>{t(error === 'xml-only' ? 'desktop.superMemoDrafts.collectionHelp' : 'desktop.superMemoDrafts.importFailed')}</AppDialogDescription>
-          </AppDialogBody>
-          <AppDialogActions>
-            <AppDialogClose asChild><AppButton>{t(error === 'xml-only'
-              ? 'desktop.superMemoDrafts.continueXml' : 'desktop.superMemoDrafts.close')}</AppButton></AppDialogClose>
-          </AppDialogActions>
-        </AppDialogContent>
-      </AppDialogPortal>
-    </AppDialog>
-  );
 }
 
 function DraftSourcePicker({ name, disabled, onLoad, onLoadNew }: {
@@ -170,7 +150,8 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           />
         </AppDialogContent>
       </AppDialogPortal>
-      <SuperMemoLoadNotice error={error} onClose={() => setError(false)} />
+      <SuperMemoLoadNotice error={error} busy={busy} onClose={() => setError(false)}
+        recover={choose => void model.recoverCollection(choose)} retry={() => void model.retrySource()} />
     </AppDialog>
   );
 }
