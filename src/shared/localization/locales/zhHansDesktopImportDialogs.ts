@@ -134,6 +134,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.sourceExample': '来源预览',
   'desktop.superMemoDrafts.gradeMapping': '评分对应表',
   'desktop.superMemoDrafts.sourceGrade': 'SuperMemo 评分 {grade}',
+  'desktop.superMemoDrafts.gradeHistoryHelp': 'Foliole 按这里的对应关系重算首次复习日期，SuperMemo 的原始评分仍保留在来源历史中。',
   'desktop.superMemoDrafts.resetGrades': '恢复默认',
   'desktop.superMemoDrafts.originallyDue': '原本到期',
   'desktop.superMemoDrafts.dueAfterImport': '导入后到期',

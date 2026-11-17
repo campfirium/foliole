@@ -132,6 +132,7 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.sourceExample': 'Source preview',
   'desktop.superMemoDrafts.gradeMapping': 'Grade mapping',
   'desktop.superMemoDrafts.sourceGrade': 'SuperMemo grade {grade}',
+  'desktop.superMemoDrafts.gradeHistoryHelp': 'Foliole uses these ratings to recalculate first review dates. The original SuperMemo scores stay in the source history.',
   'desktop.superMemoDrafts.resetGrades': 'Restore defaults',
   'desktop.superMemoDrafts.originallyDue': 'Originally due',
   'desktop.superMemoDrafts.dueAfterImport': 'Due after import',

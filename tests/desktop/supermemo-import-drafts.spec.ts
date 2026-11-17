@@ -166,11 +166,21 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await loadSource(desktopApp, dialog, directory, secondExport);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
-  const planned = dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last();
-  const defaultDays = await planned.textContent();
+  const intervalShift = (scope: typeof dialog) => scope.getByRole('row', { name: /^200\+/ }).getByRole('cell').last();
+  const defaultDays = (await intervalShift(dialog).innerText()).trim();
   const good = /^(SuperMemo grade 4 · Good|SuperMemo 评分 4 · 良好)$/;
   const again = /^(SuperMemo grade 4 · Again|SuperMemo 评分 4 · 重来)$/;
   await dialog.getByRole('button', { name: gradesStep }).click();
+  const mapping = dialog.getByRole('region', { name: /^(Grade mapping|评分对应表)$/ });
+  const impact = dialog.getByRole('region', { name: /^(Due after conversion|到期变化预览)$/ });
+  const defaults = ['Again|重来', 'Again|重来', 'Again|重来', 'Hard|困难', 'Good|良好', 'Easy|简单'];
+  for (const [grade, rating] of defaults.entries()) {
+    await expect(mapping.getByRole('button', {
+      name: new RegExp(`^SuperMemo (grade|评分) ${grade} · (${rating})$`)
+    })).toBeVisible();
+  }
+  await expect(impact).toContainText('100%');
+  await expect(intervalShift(impact)).toHaveText(defaultDays);
   const trigger = dialog.getByRole('button', { name: good });
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -182,8 +192,10 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await trigger.click();
   await menu.getByRole('menuitemradio', { name: /^(Again|重来)$/ }).click();
   await expect(dialog.getByRole('button', { name: again })).toBeVisible();
+  await expect(intervalShift(impact)).not.toHaveText(defaultDays);
+  const updatedDays = (await intervalShift(impact).innerText()).trim();
   await dialog.getByRole('button', { name: parameters }).click();
-  await expect(planned).not.toHaveText(defaultDays!);
+  await expect(intervalShift(dialog)).toHaveText(updatedDays);
   await expect(dialog.getByRole('slider')).toHaveValue('100');
   await dialog.getByRole('button', { name: gradesStep }).click();
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-grade-mapping.png') });
@@ -194,6 +206,15 @@ test('updates the grade mapping in a live preview and remembers it when reopened
 
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('button', { name: again })).toBeVisible();
+  await expect(intervalShift(impact)).toHaveText(updatedDays);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await openPreview(desktopWindow);
+  await expect(dialog.getByText('Grades.xml', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await expect(dialog.getByRole('button', { name: again })).toBeVisible();
+  await expect(intervalShift(impact)).toHaveText(updatedDays);
   await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();
   await expect(reopened.getByRole('button', { name: good })).toBeVisible();
+  await expect(intervalShift(impact)).toHaveText(defaultDays);
 });

@@ -1,23 +1,18 @@
-import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
 import { SuperMemoDraftTable } from './SuperMemoDraftTable';
-import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 import { SuperMemoSourceSettings } from './SuperMemoSourceSettings';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
-export function SuperMemoParameters({ step, preview, percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }: {
-  step: 'schedule' | 'grades' | 'source';
+export function SuperMemoParameters({ step, preview, percent, setPercent, sourceFormat, changeSourceFormat, busy }: {
+  step: 'schedule' | 'source';
   preview: NonNullable<ReturnType<typeof useSuperMemoDraft>['draft']>['preview'];
-  percent: number; setPercent(value: number): void; gradeMap: SuperMemoGradeMap;
-  changeGrades(value: SuperMemoGradeMap): Promise<void>; sourceFormat: SuperMemoSourceFormat;
+  percent: number; setPercent(value: number): void; sourceFormat: SuperMemoSourceFormat;
   changeSourceFormat(value: SuperMemoSourceFormat): void; busy: boolean;
 }) {
   const t = useTranslation();
-  if (step === 'grades') return <SuperMemoGradeSettings disabled={busy} value={gradeMap}
-    onChange={next => void changeGrades(next)} hasPairedCollection={preview.pairedCollection === true} />;
   if (step === 'source') return <SuperMemoSourceSettings compact value={sourceFormat} onChange={changeSourceFormat} disabled={busy} />;
   return (
     <div className="mx-auto grid w-full max-w-6xl items-start gap-5">
