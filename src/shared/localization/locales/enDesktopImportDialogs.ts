@@ -48,6 +48,8 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.continueXml': 'Continue with XML',
   'desktop.superMemoDrafts.chooseXml': 'Choose XML',
   'desktop.superMemoDrafts.entries': 'Entries',
+  'desktop.superMemoDrafts.folderCandidate': 'Possible folder',
+  'desktop.superMemoDrafts.entries.folders': 'Possible folders {count}',
   'desktop.superMemoDrafts.entries.converted': 'Convert {count}',
   'desktop.superMemoDrafts.entries.skipped': 'Skipped {count}',
   'desktop.superMemoDrafts.entries.missing': 'Missing images {count}',

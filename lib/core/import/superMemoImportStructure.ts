@@ -33,8 +33,7 @@ export function applySuperMemoStructure(rows: Row[], elements: SuperMemoXmlDraft
       ((row.sourceType === 'Concept' || row.sourceType === 'Topic') && hasSourceBody(source));
     const concept = row.sourceType === 'Concept';
     const editable = concept || (row.sourceType === 'Topic' && !hasBody && row.id !== wrapper);
-    const firstLevel = row.parentId === null || row.parentId === wrapper;
-    const folder = editable && (overrides.get(row.id) ?? (concept || (firstLevel && source.children.length > 0)));
+    const folder = editable && (overrides.get(row.id) ?? concept);
     const outcome = folder ? 'folder' : concept || row.sourceType === 'Topic' ? 'topic' : row.outcome;
     const parentId = resolveDestination(row, outcome, resolved, wrapper);
     resolved.set(row.id, {

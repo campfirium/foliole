@@ -50,6 +50,8 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.continueXml': '继续使用 XML',
   'desktop.superMemoDrafts.chooseXml': '选择 XML',
   'desktop.superMemoDrafts.entries': '条目',
+  'desktop.superMemoDrafts.folderCandidate': '疑似文件夹',
+  'desktop.superMemoDrafts.entries.folders': '疑似文件夹 {count}',
   'desktop.superMemoDrafts.entries.converted': '转换 {count}',
   'desktop.superMemoDrafts.entries.skipped': '跳过 {count}',
   'desktop.superMemoDrafts.entries.missing': '缺图 {count}',

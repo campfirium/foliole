@@ -24,7 +24,8 @@ function useRestorePanel(state: DraftState) {
       const { elements, preview } = selection.snapshot;
       const folderChoices = selection.savedForm.folderChoices ?? [];
       const overrides = new Map(folderChoices.map(choice => [choice.id, choice.folder]));
-      const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row => applySuperMemoFolderDisplay(row, overrides.get(row.id)));
+      const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row =>
+        applySuperMemoFolderDisplay(row, overrides.get(row.id) ?? row.sourceType === 'Concept'));
       setSource({ ...selection, xml: '' });
       setDraft({ preview: { ...preview, rows }, elements: elements.map(element => ({
         ...element, bodyOrQuestionHtml: [], answerHtml: []

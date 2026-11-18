@@ -15,7 +15,7 @@ import type { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 
 type Navigation = ReturnType<typeof useSuperMemoPreviewNavigation>;
 const emptyChildren = new Map<number | null, Row[]>();
-const tabs = ['converted', 'skipped', 'missing'] as const;
+const tabs = ['converted', 'folders', 'skipped', 'missing'] as const;
 
 const kindKey = {
   folder: 'desktop.superMemoDrafts.folder', topic: 'desktop.superMemoDrafts.topic',
@@ -33,6 +33,9 @@ function sourceTree(preview: Preview, elements: SuperMemoXmlDraftElement[]) {
     siblings.push(row);
     children.set(parent, siblings);
   }
+  const folders = rows.filter(row => row.sourceType === 'Topic' && row.structure?.editable &&
+    row.structure.sourceHasBody === false && (row.sourceState == null || row.sourceState === 'dismissed') &&
+    Boolean(children.get(row.id)?.length));
   const skipped = rows.filter(row => row.outcome === 'skipped');
   const missing = rows.filter(row => row.unresolvedImages?.length);
   const missingCount = missing.reduce((total, row) =>
@@ -47,7 +50,7 @@ function sourceTree(preview: Preview, elements: SuperMemoXmlDraftElement[]) {
       descendants.set(row.parentId, (descendants.get(row.parentId) ?? 0) + 1 + (descendants.get(row.id) ?? 0));
     }
   }
-  return { byId, children, descendants, wrapper, skipped, missing, missingCount, media };
+  return { byId, children, descendants, wrapper, folders, skipped, missing, missingCount, media };
 }
 
 type TreeProps = {
@@ -56,6 +59,7 @@ type TreeProps = {
   navigation: Navigation;
   busy: boolean;
   readOnly: boolean;
+  folders: ReadonlySet<number>;
   wrapper?: number | undefined;
   onChange(id: number, folder: boolean): void;
 };
@@ -80,9 +84,13 @@ function StructureRow({ row, depth, tree }: { row: Row; depth: number; tree: Tre
       </button> : <span className="w-7 shrink-0" />}
       <button type="button" title={label} aria-current={navigation.active === row.id ? 'true' : undefined}
         onClick={() => navigation.selectEntry(row.id)}
+        aria-description={tree.folders.has(row.id) ? t('desktop.superMemoDrafts.folderCandidate') : undefined}
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-2 text-left hover:bg-foreground/5 aria-[current=true]:bg-[var(--role-selection-surface)]">
         <Icon aria-hidden className="size-4 shrink-0" />
         <span className="truncate">{title}</span>
+        {tree.folders.has(row.id) && navigation.tab !== 'folders' ? <span aria-hidden className="shrink-0 text-xs text-foreground/65">
+          {t('desktop.superMemoDrafts.folderCandidate')}
+        </span> : null}
         {count ? <span className="shrink-0 text-xs text-foreground/65">({count})</span> : null}
         {row.sourceTitle || row.title || isRoot ? <span className="shrink-0 text-xs text-foreground/65">#{row.id}</span> : null}
 
@@ -161,10 +169,13 @@ export function SuperMemoStructurePage({ preview, elements, loaded, filePath, ..
   preview: Preview; elements: SuperMemoXmlDraftElement[]; loaded: SuperMemoXmlDraftElement[] | undefined; filePath: string;
 } & Pick<TreeProps, 'navigation' | 'busy' | 'onChange'>) {
   const t = useTranslation();
-  const { children, descendants, byId, wrapper, skipped, missing, missingCount, media } = useMemo(() => sourceTree(preview, elements), [preview, elements]);
+  const { children, descendants, byId, wrapper, folders, skipped, missing, missingCount, media } = useMemo(() => sourceTree(preview, elements), [preview, elements]);
   const readOnly = Boolean(preview.directoryUpdate);
   const { tab, active, selectTab } = controls.navigation;
-  const filtered = tab === 'skipped' ? skipped : tab === 'missing' ? missing : undefined;
+  const folderIds = useMemo(() => new Set(folders.map(row => row.id)), [folders]);
+  const filters = { folders, skipped, missing };
+  const filtered = tab === 'converted' ? undefined : filters[tab];
+  const counts = { folders: folders.length, skipped: skipped.length, missing: missingCount };
   const current = byId.get(active ?? 0) ?? filtered?.[0];
   const content = useSourceContent(Boolean(current), loaded, filePath);
   return <>
@@ -176,12 +187,12 @@ export function SuperMemoStructurePage({ preview, elements, loaded, filePath, ..
             className="border-b-2 border-transparent px-1.5 py-2 text-xs aria-pressed:border-[var(--role-accent)] aria-pressed:font-semibold"
             onClick={() => selectTab(key)}>
             {key === 'converted' ? t('desktop.superMemoDrafts.structureSource') :
-              t(`desktop.superMemoDrafts.entries.${key}`, { count: key === 'skipped' ? skipped.length : missingCount })}
+              t(`desktop.superMemoDrafts.entries.${key}`, { count: counts[key] })}
           </button>)}
         </div>
         <ul className="min-h-0 overflow-auto p-2">
           {(filtered ?? children.get(null))?.map(row => <StructureRow key={row.id} row={row} depth={0}
-            tree={{ ...controls, children: filtered ? emptyChildren : children, descendants, wrapper, readOnly }} />)}
+            tree={{ ...controls, children: filtered ? emptyChildren : children, descendants, wrapper, readOnly, folders: folderIds }} />)}
         </ul>
       </section>
       <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid">

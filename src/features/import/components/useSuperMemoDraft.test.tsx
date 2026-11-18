@@ -57,6 +57,20 @@ it('restores the saved migration and its settings without reading the source', a
   expect(runtime.previewRuntimeSuperMemoImport).not.toHaveBeenCalled();
 });
 
+it('preserves explicit folder choices and discards the old implicit folder default on restore', async () => {
+  const savedForm = { percent: 0, sourceFormat: { placement: 'topic-info', template: '{title}' },
+    folderChoices: [{ id: 2, folder: true }] };
+  const structure = { parentId: null, editable: true, folderBody: false, sourceHasBody: false };
+  const rows = [1, 2].map(id => ({ id, sourceType: 'Topic', outcome: 'folder', structure }));
+  runtime.getRuntimeSuperMemoSourceSelection.mockResolvedValueOnce({
+    name: 'Learning.xml', filePath: '/exports/Learning.xml', savedForm,
+    snapshot: { elements: [], preview: { rows, referenceDay: '2026-11-18' } }
+  });
+
+  const { result } = renderHook(() => useSuperMemoDraft(DEFAULT_SUPER_MEMO_GRADE_MAP, 'Choose collection'));
+  await waitFor(() => expect(result.current.draft?.preview.rows.map(row => row.outcome)).toEqual(['topic', 'folder']));
+});
+
 it('opens on Load data and skips source checks when no migration has been saved', async () => {
   render(<SuperMemoDraftDialog open close={vi.fn()} initialGrades={DEFAULT_SUPER_MEMO_GRADE_MAP} translate={undefined} />);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Choose XML' })).toBeEnabled());

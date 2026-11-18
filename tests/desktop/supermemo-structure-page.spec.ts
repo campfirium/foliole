@@ -124,10 +124,27 @@ function directSourceRows(dialog: Locator, parent: number) {
   return sourceEntry(dialog, parent).locator('xpath=../..').locator(':scope > ul > li > div > button[title]');
 }
 
-async function confirmLearning(dialog: Locator, page: Page) {
+async function reviewLearningFolderCandidates(dialog: Locator, screenshot: string) {
+  await dialog.getByRole('button', { name: /^(Possible folders|疑似文件夹) 13$/ }).click();
+  for (const id of [59, 483, 596, 791, 1097, 1303, 1352, 1383, 1512, 1975, 2276, 2707, 3558]) {
+    await expect(sourceEntry(dialog, id)).toHaveAttribute('aria-description', /^(Possible folder|疑似文件夹)$/);
+    await expect(folderSwitch(dialog, id)).not.toBeChecked();
+  }
+  await expect(sourceEntry(dialog, 1441)).toHaveCount(0);
+  await expect(sourceEntry(dialog, 56)).toHaveCount(0);
+  await dialog.screenshot({ path: screenshot });
+  await folderSwitch(dialog, 483).click();
+  await folderSwitch(dialog, 1383).click();
+  await expect(folderSwitch(dialog, 1383)).toBeChecked();
+}
+
+async function confirmLearning(dialog: Locator, page: Page, candidateScreenshot: string) {
   await expect(sourceEntry(dialog, 1)).toHaveAttribute('title', 'Root', { timeout: 90_000 });
   await expect(sourceEntry(dialog, 56)).toHaveAttribute('title', 'TODO (3212)');
   await expect(sourceEntry(dialog, 483)).toHaveAttribute('title', 'archive (236)');
+  await expect(folderSwitch(dialog, 483)).not.toBeChecked();
+  await reviewLearningFolderCandidates(dialog, candidateScreenshot);
+  await dialog.getByRole('button', { name: /^(Original structure|原始结构)$/ }).click();
   await expect(folderSwitch(dialog, 483)).toBeChecked();
   await expand(dialog, 483);
   await expect(directSourceRows(dialog, 483).nth(0)).toHaveAttribute('title', 'motto');
@@ -158,7 +175,7 @@ test('imports the paired Learning tree by original number and sibling order', as
   test.setTimeout(240_000);
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, info.outputPath('Learning'), await readFile(learningXml!, 'utf8'), undefined, learningCollection);
-  await confirmLearning(dialog, desktopWindow);
+  await confirmLearning(dialog, desktopWindow, info.outputPath('learning-folder-candidates.png'));
   await desktopWindow.reload();
   const restored = await openPreview(desktopWindow);
   await expect(sourceEntry(restored, 56)).toBeVisible();
@@ -168,9 +185,10 @@ test('imports the paired Learning tree by original number and sibling order', as
   await expect(document(restored).locator('.cm-content')).toContainText('Refold', { timeout: 30_000 });
   await restored.screenshot({ path: info.outputPath('learning-structure.png') });
   await convert(restored);
-  const { nodes, root } = await readBatch(desktopApp, [56, 483, 791, 1303, 6, 1441, 3302, 825]);
+  const { nodes, root } = await readBatch(desktopApp, [56, 483, 791, 1303, 6, 1383, 1441, 3302, 825]);
   expect(nodes[56]).toMatchObject({ kind: 'folder', parent: root });
   expect(nodes[483]).toMatchObject({ kind: 'folder', parent: root });
+  expect(nodes[1383]).toMatchObject({ kind: 'folder', parent: nodes[483]!.id });
   expect(nodes[791]).toMatchObject({ kind: 'folder', parent: nodes[56]!.id });
   expect(nodes[1303]).toMatchObject({ kind: 'folder', parent: nodes[56]!.id });
   expect(nodes[791]!.children.map(child => child.id).slice(0, 2)).toEqual([nodes[6]!.id, nodes[1441]!.id]);
