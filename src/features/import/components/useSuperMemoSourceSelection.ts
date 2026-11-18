@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMemoImportStructure';
+import { applySuperMemoFolderDisplay, defaultSuperMemoFolder } from '../../../../lib/core/import/superMemoImportStructure';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import {
@@ -24,8 +24,10 @@ function useRestorePanel(state: DraftState) {
       const { elements, preview } = selection.snapshot;
       const folderChoices = selection.savedForm.folderChoices ?? [];
       const overrides = new Map(folderChoices.map(choice => [choice.id, choice.folder]));
+      const parents = new Set(elements.filter(element => element.children?.length).map(element => element.id));
       const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row =>
-        applySuperMemoFolderDisplay(row, overrides.get(row.id) ?? row.sourceType === 'Concept'));
+        applySuperMemoFolderDisplay(row, overrides.get(row.id) ??
+          defaultSuperMemoFolder(row, parents.has(row.id), row.structure?.sourceHasBody)));
       setSource({ ...selection, xml: '' });
       setDraft({ preview: { ...preview, rows }, elements: elements.map(element => ({
         ...element, bodyOrQuestionHtml: [], answerHtml: []

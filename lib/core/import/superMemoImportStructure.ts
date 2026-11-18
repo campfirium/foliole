@@ -16,6 +16,15 @@ function hasSourceBody(element: SuperMemoXmlDraftElement) {
   }) || element.skippedAudioComponents > 0;
 }
 
+export function isSuperMemoFolderCandidate(row: Row, hasChildren: boolean, hasBody: boolean | undefined) {
+  return row.sourceType === 'Topic' && hasChildren && hasBody === false &&
+    (row.sourceState == null || row.sourceState === 'dismissed');
+}
+
+export function defaultSuperMemoFolder(row: Row, hasChildren: boolean, hasBody: boolean | undefined) {
+  return row.sourceType === 'Concept' || isSuperMemoFolderCandidate(row, hasChildren, hasBody);
+}
+
 export function applySuperMemoFolderDisplay(row: Row, folder: boolean | undefined): Row {
   if (folder === undefined || !row.structure?.editable) return row;
   return { ...row, outcome: folder ? 'folder' : 'topic',
@@ -33,7 +42,7 @@ export function applySuperMemoStructure(rows: Row[], elements: SuperMemoXmlDraft
       ((row.sourceType === 'Concept' || row.sourceType === 'Topic') && hasSourceBody(source));
     const concept = row.sourceType === 'Concept';
     const editable = concept || (row.sourceType === 'Topic' && !hasBody && row.id !== wrapper);
-    const folder = editable && (overrides.get(row.id) ?? concept);
+    const folder = editable && (overrides.get(row.id) ?? defaultSuperMemoFolder(row, source.children.length > 0, hasBody));
     const outcome = folder ? 'folder' : concept || row.sourceType === 'Topic' ? 'topic' : row.outcome;
     const parentId = resolveDestination(row, outcome, resolved, wrapper);
     resolved.set(row.id, {

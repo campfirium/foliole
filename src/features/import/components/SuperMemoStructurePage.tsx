@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { convertSuperMemoContent } from '../../../../lib/core/import/superMemoContent';
 import { orderSuperMemoSourceRows } from '../../../../lib/core/import/superMemoImportParents';
-import { isSuperMemoCollectionRoot } from '../../../../lib/core/import/superMemoImportStructure';
+import { isSuperMemoCollectionRoot, isSuperMemoFolderCandidate } from '../../../../lib/core/import/superMemoImportStructure';
 import type { SuperMemoXmlDraftElement } from '../../../../lib/core/import/superMemoXmlDraft';
 import type { NativeSuperMemoPreview as Preview, NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
@@ -33,9 +33,8 @@ function sourceTree(preview: Preview, elements: SuperMemoXmlDraftElement[]) {
     siblings.push(row);
     children.set(parent, siblings);
   }
-  const folders = rows.filter(row => row.sourceType === 'Topic' && row.structure?.editable &&
-    row.structure.sourceHasBody === false && (row.sourceState == null || row.sourceState === 'dismissed') &&
-    Boolean(children.get(row.id)?.length));
+  const folders = rows.filter(row => row.structure?.editable &&
+    isSuperMemoFolderCandidate(row, Boolean(children.get(row.id)?.length), row.structure.sourceHasBody));
   const skipped = rows.filter(row => row.outcome === 'skipped');
   const missing = rows.filter(row => row.unresolvedImages?.length);
   const missingCount = missing.reduce((total, row) =>
@@ -88,9 +87,6 @@ function StructureRow({ row, depth, tree }: { row: Row; depth: number; tree: Tre
         className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-2 text-left hover:bg-foreground/5 aria-[current=true]:bg-[var(--role-selection-surface)]">
         <Icon aria-hidden className="size-4 shrink-0" />
         <span className="truncate">{title}</span>
-        {tree.folders.has(row.id) && navigation.tab !== 'folders' ? <span aria-hidden className="shrink-0 text-xs text-foreground/65">
-          {t('desktop.superMemoDrafts.folderCandidate')}
-        </span> : null}
         {count ? <span className="shrink-0 text-xs text-foreground/65">({count})</span> : null}
         {row.sourceTitle || row.title || isRoot ? <span className="shrink-0 text-xs text-foreground/65">#{row.id}</span> : null}
 
