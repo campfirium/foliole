@@ -4,7 +4,7 @@ import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMe
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import {
-  clearRuntimeSuperMemoSourceSelection, getRuntimeSuperMemoSourceSelection, saveRuntimeSuperMemoPanel
+  getRuntimeSuperMemoSourceSelection, saveRuntimeSuperMemoPanel
 } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 import type { DraftState } from './useSuperMemoDraft';
@@ -39,7 +39,7 @@ function useRestorePanel(state: DraftState) {
 }
 
 export function useSuperMemoSourceSelection(state: DraftState) {
-  const { remembered, setBusy, setError, setRemembered } = state;
+  const { remembered, setError, setRemembered } = state;
   useRestorePanel(state);
 
   async function savePanel(panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) {
@@ -53,36 +53,11 @@ export function useSuperMemoSourceSelection(state: DraftState) {
     }
   }
 
-  function clearPreview() {
-    state.setResult(undefined);
-    state.setDraft(undefined);
-    state.setTarget(undefined);
-    state.setPending(undefined);
-    setError(false);
-  }
-
-  async function removeSelection() {
-    if (state.busy) return;
-    setBusy(true);
-    try {
-      await clearRuntimeSuperMemoSourceSelection();
-      setRemembered(undefined);
-      state.setSource(undefined);
-      clearPreview();
-      state.setPercent(0);
-      state.setSourceFormat(initialSourceFormat);
-    } catch {
-      setError('save');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function resetCompletedDraft() {
     state.setResult(undefined);
     state.setPending(undefined);
     setError(false);
   }
 
-  return { resetCompletedDraft, removeSelection, savePanel };
+  return { resetCompletedDraft, savePanel };
 }

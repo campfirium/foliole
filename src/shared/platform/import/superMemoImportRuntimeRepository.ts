@@ -7,16 +7,16 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
-export function selectRuntimeSuperMemoSource() {
-  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
+export function pickRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.pickSuperMemoSource);
+}
+
+export function readRuntimeSuperMemoSource(filePath: string) {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
 }
 
 export async function getRuntimeSuperMemoSourceSelection() {
   return requireInvoke()(NATIVE_COMMANDS.getSuperMemoSourceSelection);
-}
-
-export function clearRuntimeSuperMemoSourceSelection() {
-  return requireInvoke()(NATIVE_COMMANDS.clearSuperMemoSourceSelection);
 }
 
 export async function saveRuntimeSuperMemoPanel(source: SuperMemoSourceSelection, panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) {

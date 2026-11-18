@@ -23,6 +23,7 @@ import type {
 } from './nativeWatchedFolderContract.js';
 
 export type NativeImportCommandMap = {
+  [NATIVE_COMMANDS.pickSuperMemoSource]: { args: undefined; result: string | null };
   [NATIVE_COMMANDS.readSuperMemoSource]: {
     args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore'; xmlOnly?: boolean } | { action: 'check' } |
       { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean; snapshot?: SuperMemoMigrationSnapshot; xmlHash?: string } |

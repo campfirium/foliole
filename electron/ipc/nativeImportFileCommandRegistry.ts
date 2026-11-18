@@ -6,6 +6,7 @@ export const NATIVE_IMPORT_FILE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.runClipboardImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.runDirectoryImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.runTextFileImport, route: 'import', capability: 'importMutation' },
+  { command: NATIVE_COMMANDS.pickSuperMemoSource, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.readSuperMemoSource, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.getSuperMemoSourceSelection, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.clearSuperMemoSourceSelection, route: 'import', capability: 'importMutation' },

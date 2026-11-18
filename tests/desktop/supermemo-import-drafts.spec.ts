@@ -68,9 +68,9 @@ test('previews different XML exports and retains the conversion draft after dism
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });
   await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>');
   await dismissLoadError(desktopWindow);
-  await expect(dialog.getByText('Learning.xml', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/[/\\]Learning\.xml$/)).toBeVisible();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport);
-  await expect(dialog.getByText('Other.xml', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Other', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
@@ -109,8 +109,7 @@ function readImportedTopicLocation(page: Page) {
 
 async function checkRestoredBatchWithoutSource(page: Page) {
   const restored = await openPreview(page);
-  await expect(restored.getByText('collection.xml', { exact: true })).toBeVisible();
-  await expect(restored.getByText(/^(Last conversion · 2 imported|上次转换 · 导入 2 条)/)).toBeVisible();
+  await expect(restored.getByText(/[/\\]collection\.xml$/)).toBeVisible();
   await expect(restored.getByRole('slider')).toHaveValue('100');
   await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await page.keyboard.press('Escape');
@@ -151,8 +150,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await rm(directory, { recursive: true });
   const reopened = await openPreview(desktopWindow);
-  await expect(reopened.getByText('collection.xml', { exact: true })).toBeVisible();
-  await expect(reopened.getByText(/^(Last conversion · 2 imported|上次转换 · 导入 2 条)/)).toBeVisible();
+  await expect(reopened.getByText(/[/\\]collection\.xml$/)).toBeVisible();
   await reopened.getByRole('combobox').selectOption({ index: 1 });
   await reopened.getByRole('slider').press('End');
   await reopened.getByRole('button', { name: /^(Apply first review dates|应用首次复习日期)$/ }).click();
@@ -228,7 +226,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
   await openPreview(desktopWindow);
-  await expect(dialog.getByText('Grades.xml', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Grades', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: structureStep }).click();
   await dialog.getByRole('button', { name: gradesStep }).click();
   await expect(dialog.getByRole('button', { name: again })).toBeVisible();

@@ -29,7 +29,7 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
-import { selectSuperMemoCollection } from './readSuperMemoSource.js';
+import { pickSuperMemoSource, selectSuperMemoCollection } from './readSuperMemoSource.js';
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
@@ -98,9 +98,8 @@ async function selectImportDirectory(args: Record<string, unknown>, context?: In
 export async function handleImportCommand(request: InvokeRequest, context?: InvokeContext) {
   const args = (request.args ?? {}) as Record<string, unknown>;
 
-  if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
-    return handleSuperMemoSource(args, () => resolveTargetWindow(context));
-  }
+  if (request.command === NATIVE_COMMANDS.pickSuperMemoSource) return pickSuperMemoSource(resolveTargetWindow(context));
+  if (request.command === NATIVE_COMMANDS.readSuperMemoSource) return handleSuperMemoSource(args);
   if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) return getSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.clearSuperMemoSourceSelection) return clearSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {

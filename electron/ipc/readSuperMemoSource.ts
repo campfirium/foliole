@@ -79,7 +79,7 @@ async function readSource(filePath: string, collectionChoice?: string | null): P
   }
 }
 
-export async function selectSuperMemoSource(window: BrowserWindow | null) {
+export async function pickSuperMemoSource(window: BrowserWindow | null) {
   const options = {
     properties: ['openFile' as const],
     filters: [{ name: 'SuperMemo XML', extensions: ['xml'] }],
@@ -90,7 +90,7 @@ export async function selectSuperMemoSource(window: BrowserWindow | null) {
   if (selection.canceled || !filePath) return null;
   persistSecurityScopedBookmark(filePath, selection.bookmarks?.[0]);
   await authorizeSelectedImportFilePath(filePath).catch(rethrowImportAccessError);
-  return readSuperMemoSource(filePath);
+  return filePath;
 }
 
 async function collectionsAt(location: string) {

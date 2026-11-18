@@ -27,7 +27,7 @@ test('opens SuperMemo migration from the command palette and shares the draft wi
 
   const xml = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
   await loadSource(desktopApp, preview, testInfo.outputPath('Example'), xml);
-  await expect(preview.getByText('Example.xml', { exact: true })).toBeVisible();
+  await expect(preview.getByText('Example', { exact: true })).toBeVisible();
   await preview.getByRole('button', { name: parameters }).click();
   await preview.getByRole('slider').press('End');
   await expect(preview.getByRole('slider')).toHaveValue('100');
@@ -43,5 +43,5 @@ test('opens SuperMemo migration from the command palette and shares the draft wi
 
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('slider')).toHaveValue('100');
-  await expect(reopened.getByText('Example.xml', { exact: true })).toBeVisible();
+  await expect(reopened.getByText('Example', { exact: true })).toBeVisible();
 });

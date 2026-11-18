@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { app, type BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { z } from 'zod';
 
 import type { RememberedSuperMemoSource, SuperMemoMigrationSnapshot } from '../../lib/platform/nativeSuperMemoImportContract.js';
@@ -11,7 +11,7 @@ import { resolveDatabasePath } from '../database/connection.js';
 import { asString } from './commandParsers.js';
 import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportPaths } from './importPathAuthorization.js';
 import { superMemoCollectionStamp } from './readSuperMemoCollection.js';
-import { readSuperMemoSource, selectSuperMemoSource } from './readSuperMemoSource.js';
+import { readSuperMemoSource } from './readSuperMemoSource.js';
 
 const count = z.number().int().nonnegative();
 const batchId = z.string().regex(/^[a-f0-9]{64}$/);
@@ -157,13 +157,11 @@ async function checkLink() {
   return null;
 }
 
-export function handleSuperMemoSource(args: Record<string, unknown>, window: () => BrowserWindow | null) {
+export function handleSuperMemoSource(args: Record<string, unknown>) {
   if (args.action === 'restore') return restoreLink(args.xmlOnly === true);
   if (args.action === 'check') return checkLink();
   if (args.action === 'remember') return rememberLink(args.link, args.formOnly === true, args.snapshot, args.xmlHash);
   if (args.action === 'rememberPanel') return rememberPanel(args);
-  return args.filePath === undefined
-    ? selectSuperMemoSource(window())
-    : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
-      ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
+  return readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
+    ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
 }

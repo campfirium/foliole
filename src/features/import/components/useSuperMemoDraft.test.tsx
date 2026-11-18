@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { DEFAULT_SUPER_MEMO_GRADE_MAP } from '../../../../lib/core/import/superMemoSchedulePreview';
@@ -15,14 +15,15 @@ const runtime = vi.hoisted(() => ({
   saveRuntimeSuperMemoPanel: vi.fn().mockResolvedValue(undefined),
   saveRuntimeSuperMemoSourceLink: vi.fn().mockResolvedValue(undefined),
   previewRuntimeSuperMemoImport: vi.fn(),
-  selectRuntimeSuperMemoSource: vi.fn()
+  pickRuntimeSuperMemoSource: vi.fn().mockResolvedValue('Learning.xml'),
+  readRuntimeSuperMemoSource: vi.fn()
 }));
 vi.mock('../../../shared/platform/import/superMemoImportRuntimeRepository', () => runtime);
 
 beforeEach(() => vi.clearAllMocks());
 
 it('changes source placement in a new draft without waiting for the source to be read again', async () => {
-  runtime.selectRuntimeSuperMemoSource.mockResolvedValue({
+  runtime.readRuntimeSuperMemoSource.mockResolvedValue({
     name: 'Learning.xml', filePath: 'Learning.xml', xml: '<collection/>', collectionDirectory: 'Learning'
   });
   runtime.previewRuntimeSuperMemoImport.mockResolvedValueOnce({
@@ -61,6 +62,28 @@ it('opens on Load data and skips source checks when no migration has been saved'
   await waitFor(() => expect(screen.getByRole('button', { name: 'Choose XML' })).toBeEnabled());
   expect(screen.getByRole('button', { name: 'Load data' }).getAttribute('aria-current')).toBe('step');
   expect(runtime.checkRuntimeSuperMemoSource).not.toHaveBeenCalled();
+});
+
+it('shows the XML button spinner only after choosing a file', async () => {
+  const picker = Promise.withResolvers<string | null>();
+  const reading = Promise.withResolvers<null>();
+  runtime.pickRuntimeSuperMemoSource.mockReturnValueOnce(picker.promise);
+  runtime.readRuntimeSuperMemoSource.mockReturnValueOnce(reading.promise);
+  render(<SuperMemoDraftDialog open close={vi.fn()} initialGrades={DEFAULT_SUPER_MEMO_GRADE_MAP} translate={undefined} />);
+  const button = screen.getByRole('button', { name: 'Choose XML' });
+  await waitFor(() => expect(button).toBeEnabled());
+
+  fireEvent.click(button);
+  expect(button).not.toHaveAttribute('aria-busy');
+  expect(runtime.readRuntimeSuperMemoSource).not.toHaveBeenCalled();
+
+  await act(async () => picker.resolve('/exports/Learning.xml'));
+  expect(button).toHaveAttribute('aria-busy', 'true');
+  expect(runtime.readRuntimeSuperMemoSource).toHaveBeenCalledWith('/exports/Learning.xml');
+
+  await act(async () => reading.resolve(null));
+  expect(button).toBeEnabled();
+  expect(button).not.toHaveAttribute('aria-busy');
 });
 
 it('updates folder choices immediately using the prepared structure', async () => {

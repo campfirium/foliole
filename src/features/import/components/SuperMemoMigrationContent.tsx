@@ -32,7 +32,6 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
           current === 'grades' ? 'desktop.superMemoDrafts.gradeMapping' : superMemoMigrationStepLabel(current)
       )}</h3>
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
-      {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
       {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && draft ? (
         <SuperMemoStructurePage preview={draft.preview} elements={draft.elements}

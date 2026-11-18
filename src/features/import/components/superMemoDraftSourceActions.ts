@@ -3,7 +3,7 @@ import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMem
 import type { NativeSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationSnapshot, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import { previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, saveRuntimeSuperMemoSourceLink, selectRuntimeSuperMemoCollection,
-  selectRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+  pickRuntimeSuperMemoSource, readRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 import type { DraftState } from './useSuperMemoDraft';
 
@@ -27,7 +27,7 @@ export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> 
   return 'preview';
 }
 
-export async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>,
+export async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof readRuntimeSuperMemoSource>>>,
   gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, useBatchFormat = true) {
   const first = await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, undefined, selected.savedForm?.folderChoices);
   const savedFormat = useBatchFormat ? first.preview.directoryUpdate?.sourceFormat : undefined;
@@ -164,18 +164,24 @@ function comparisonTarget({ draft, source, target }: DraftState): DraftTarget | 
   };
 }
 
+async function pickAndReadSource(setLoadingXml: (loading: boolean) => void) {
+  const filePath = await pickRuntimeSuperMemoSource();
+  if (!filePath) return null;
+  setLoadingXml(true);
+  return readRuntimeSuperMemoSource(filePath);
+}
+
 export function createSourceActions(state: DraftState, pickerTitle: string) {
-  const { source, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
+  const { pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
   const loader = createCandidateLoader(state);
   const { recover, resolveCandidates } = createCollectionRecovery(state, pickerTitle, loader);
-
   async function loadSource(asUpdate = false) {
     setBusy(true);
     setError(false);
     setPending(undefined);
     setRetryAsUpdate(asUpdate);
     try {
-      const selected = await selectRuntimeSuperMemoSource();
+      const selected = await pickAndReadSource(state.setLoadingXml);
       if (!selected) return;
       const nextTarget = asUpdate ? comparisonTarget(state) : undefined;
       try {
@@ -194,6 +200,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
       const recovery = { selected, target: nextTarget };
       try {
         if (selected.collectionCandidates?.length && await resolveCandidates(recovery, selected.collectionCandidates, false)) return;
+        state.setLoadingXml(false);
         await recover(recovery, true, true);
       } catch (error) {
         setPending(recovery);
@@ -202,6 +209,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     } catch (error) {
       setError(isImportAccessDenied(error) ? 'xmlAccess' : /invalid_supermemo_xml_size/.test(String(error)) ? 'xmlSize' : 'xmlRead');
     } finally {
+      state.setLoadingXml(false);
       setBusy(false);
     }
   }
@@ -218,11 +226,11 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
       setBusy(false);
     }
   }
-  function pairCollection() {
-    if (!source || !state.draft) return;
-    const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat, folderChoices: state.draft.folderChoices };
-    return recoverCollection(true, { selected: { ...source, savedForm }, target });
-  }
+  return { loadSource, recoverCollection, pairCollection: () => pairCollection(state, recoverCollection), retrySource: () => loadSource(retryAsUpdate) };
+}
 
-  return { loadSource, recoverCollection, pairCollection, retrySource: () => loadSource(retryAsUpdate) };
+function pairCollection(state: DraftState, recover: (choice: boolean, pending: Pending) => Promise<void>) {
+  if (!state.source || !state.draft) return;
+  const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat, folderChoices: state.draft.folderChoices };
+  return recover(true, { selected: { ...state.source, savedForm }, target: state.target });
 }

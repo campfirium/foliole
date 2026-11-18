@@ -49,7 +49,7 @@ test('reviews the current settings and actual exceptions before a first import',
   await rename(original, moved);
   await dialog.getByRole('button', { name: close }).click();
   const reopened = await openPreview(desktopWindow);
-  await expect(reopened.getByText('ConfirmFirst', { exact: true })).toBeVisible();
+  await expect(reopened.getByText(/[/\\]ConfirmFirst\.xml$/)).toBeVisible();
   await expect(reopened.getByRole('alert')).toHaveCount(0);
   await rename(moved, original);
   await reopened.getByRole('button', { name: structureStep }).click();

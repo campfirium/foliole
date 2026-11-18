@@ -12,32 +12,23 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
   model: ReturnType<typeof useSuperMemoDraft>; onLoad(): void; onLoadNew(): void;
 }) {
   const t = useTranslation();
-  const { busy, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
+  const { busy, loadingXml, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
   const update = model.draft?.preview.directoryUpdate;
   const collectionDirectory = selection?.collectionDirectory;
-  const collectionName = collectionDirectory?.split(/[/\\]/u).at(-1) || collectionDirectory;
   return (
     <>
       <SettingsSection className="mb-0 !pt-0 before:!hidden">
         <SettingsRow className={sourceRowLayout} title={t('desktop.superMemoDrafts.xmlExportFile')}
-          description={<>
-            {selection ? <span className="block break-words" title={selection.filePath}>{selection.name.replace(/\.xml$/iu, '') || selection.name}</span> : null}
-            {selection?.panel?.elementCount !== undefined ? <span className="block">
-              {t('desktop.superMemoDrafts.lastSourceCount', { count: selection.panel.elementCount })}
-            </span> : null}
-            {selection?.panel?.result ? <span className="block">
-              {t('desktop.superMemoDrafts.lastResult', selection.panel.result)}
-            </span> : null}
-            {t('desktop.superMemoDrafts.exportAllElements')}
-          </>}>
+          description={selection ? <span className="block break-all">{selection.filePath}</span>
+            : t('desktop.superMemoDrafts.exportAllElements')}>
           <SettingsControlSlot className={sourceControlLayout}>
-            <AppButton disabled={busy} onClick={onLoad}>
+            <AppButton disabled={busy} loading={loadingXml} onClick={onLoad}>
               {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
             </AppButton>
           </SettingsControlSlot>
         </SettingsRow>
         <SettingsRow className={sourceRowLayout} title={t('desktop.superMemoDrafts.originalCollectionFolder')}
-          description={collectionName ? <span className="break-words" title={collectionDirectory}>{collectionName}</span>
+          description={collectionDirectory ? <span className="block break-all">{collectionDirectory}</span>
             : t(selection ? 'desktop.superMemoDrafts.sourceXmlOnly' : 'desktop.superMemoDrafts.keepCollectionNearby')}>
           {!error ? <SettingsControlSlot className={sourceControlLayout}>
             <AppButton disabled={busy || !model.draft}
@@ -46,11 +37,6 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
             </AppButton>
           </SettingsControlSlot> : null}
         </SettingsRow>
-        {selection ? <div className="flex flex-wrap gap-2 py-2">
-          <AppButton variant="ghost" disabled={busy} onClick={() => void model.removeSelection()}>
-            {t('desktop.superMemoDrafts.removeSelection')}
-          </AppButton>
-        </div> : null}
       </SettingsSection>
       <SuperMemoLoadNotice inline error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
         recover={choice => void recoverCollection(choice)} retry={() => void retrySource()} />

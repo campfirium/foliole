@@ -2,6 +2,7 @@ export const NATIVE_IMPORT_FILE_COMMANDS = {
   runClipboardImport: 'run_clipboard_import',
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',
+  pickSuperMemoSource: 'pick_supermemo_source',
   readSuperMemoSource: 'read_supermemo_source',
   getSuperMemoSourceSelection: 'get_supermemo_source_selection',
   clearSuperMemoSourceSelection: 'clear_supermemo_source_selection',

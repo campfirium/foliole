@@ -11,7 +11,7 @@ test('previews an actual card citation and saves the applied format through migr
   await writeCollection(directory, true);
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, directory, xml);
-  await expect(dialog.getByText('PairedExport.xml', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('PairedExport', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: sourceStep }).click();
   const preview = dialog.getByRole('region', { name: /^(Source preview|来源预览)$/ });
   const sample = preview.getByRole('article');
@@ -50,7 +50,7 @@ test('previews an actual card citation and saves the applied format through migr
 test('explains that an XML-only export has no source details to preview', async ({ desktopApp, desktopWindow }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, testInfo.outputPath('XmlOnly'), xml);
-  await expect(dialog.getByText('XmlOnly.xml', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('XmlOnly', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: sourceStep }).click();
   const preview = dialog.getByRole('region', { name: /^(Source preview|来源预览)$/ });
   await expect(preview.getByText(/The loaded files contain no source details to preview|已载入的文件中没有可预览的来源信息/)).toBeVisible();

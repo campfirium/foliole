@@ -19,14 +19,14 @@ test('remembers the last valid XML link and migration form across an app restart
   await expect(dialog.getByRole('button', { name: load })).toBeEnabled();
   const folder = testInfo.outputPath('Remembered');
   await loadSource(desktopApp, dialog, folder, xml);
-  await expect(dialog.getByText(/^Remembered(?:\.xml)?$/)).toBeVisible();
+  await expect(dialog.getByText(/(?:^Remembered$|[/\\]Remembered\.xml$)/)).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
   await dialog.getByRole('button', { name: sourceStep }).click();
   await dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>');
   await desktopWindow.getByRole('region', { name: noticeTitle }).getByRole('button', { name: close }).click();
-  await expect(dialog.getByText(/^Remembered(?:\.xml)?$/)).toBeVisible();
+  await expect(dialog.getByText(/(?:^Remembered$|[/\\]Remembered\.xml$)/)).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByRole('slider')).toHaveValue('100');
   await dialog.getByRole('button', { name: close }).click();
@@ -56,13 +56,9 @@ test('remembers the last valid XML link and migration form across an app restart
     await expect(reopened.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ })).toBeChecked();
 
     await reopened.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
-    await reopened.getByRole('button', { name: /^(Remove selection|移除选择)$/ }).click();
-    await expect(reopened.getByRole('button', { name: load })).toBeEnabled();
-    await page.reload();
-    await expectWorkspaceShell(page);
-    await openPreview(page);
-    await expect(reopened.getByRole('button', { name: load })).toBeEnabled();
-    await expect(reopened.getByText(/^Remembered(?:\.xml)?$/)).toHaveCount(0);
+    await expect(reopened.getByText(await realpath(folder) + '/Remembered.xml', { exact: true })).toBeVisible();
+    await expect(reopened.getByRole('button', { name: /^(Remove selection|移除选择)$/ })).toHaveCount(0);
+    await expect(reopened.getByText(/File → Export|Last loaded|上次载入/)).toHaveCount(0);
   } finally {
     await restarted.close();
   }
@@ -85,13 +81,13 @@ test('can reopen a linked XML when its paired collection moves', async ({ deskto
   await expect(reopened.getByRole('button', { name: structureStep })).toHaveAttribute('aria-current', 'step');
   await expect(reopened.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
   const notice = desktopWindow.getByRole('dialog', { name: noticeTitle });
-  await expect(reopened.getByText(/^Export(?:\.xml)?$/)).toBeVisible();
+  await expect(reopened.getByText(/(?:^Export$|[/\\]Export\.xml$)/)).toBeVisible();
   await expect(notice).toHaveCount(0);
   await reopened.getByRole('button', { name: confirmStep }).click();
   await reopened.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(notice.getByText(/could not read the original collection files|无法读取原资料库的配套文件/)).toBeVisible();
   await notice.getByRole('button', { name: /^(Continue with XML|继续使用 XML)$/ }).click();
-  await expect(reopened.getByText(/^Export(?:\.xml)?$/)).toBeVisible();
+  await expect(reopened.getByText(/(?:^Export$|[/\\]Export\.xml$)/)).toBeVisible();
   await reopened.getByRole('button', { name: parameters }).click();
   await expect(reopened.getByRole('slider')).toHaveValue('100');
 });
@@ -110,7 +106,7 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await dialog.getByRole('slider').press('End');
   await loadStep.click();
   await expect(dialog.getByText(/No folder matched|未配对/)).toBeVisible();
-  await expect(dialog.getByText(/^Export(?:\.xml)?$/)).toBeVisible();
+  await expect(dialog.getByText(/(?:^Export$|[/\\]Export\.xml$)/)).toBeVisible();
   const elements = await writeCollection(collection, false);
   elements.writeUInt16LE(200, 118 + 16);
   const elementInfo = path.join(collection, 'info', 'ElementInfo.dat');
@@ -119,7 +115,7 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await loadSource(desktopApp, dialog, exportFolder, undefined, pickCollection, collection);
   const recovery = dialog.getByRole('region', { name: noticeTitle });
   await expect(recovery.getByText(/does not match this XML export|此 XML 导出不匹配|与此 XML 导出不匹配/)).toBeVisible();
-  await expect(dialog.getByText(/^Export(?:\.xml)?$/)).toBeVisible();
+  await expect(dialog.getByText(/(?:^Export$|[/\\]Export\.xml$)/)).toBeVisible();
 
   elements.writeUInt16LE(300, 118 + 16);
   await writeFile(elementInfo, elements);
@@ -128,12 +124,12 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await expect(dialog.getByRole('slider')).toHaveValue('100');
   await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
   await loadStep.click();
-  await expect(dialog.getByText('Moved collection', { exact: true })).toHaveAttribute('title', await realpath(collection));
+  await expect(dialog.getByText(await realpath(collection), { exact: true })).toBeVisible();
   await dialog.screenshot({ path: testInfo.outputPath('load-data-paired.png') });
 
   const changeCollection = /^(Change folder|更换文件夹)$/;
   await loadSource(desktopApp, dialog, exportFolder, undefined, changeCollection);
-  await expect(dialog.getByText('Moved collection', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(await realpath(collection), { exact: true })).toBeVisible();
 
   const replacement = testInfo.outputPath('Replacement collection');
   const replacementElements = await writeCollection(replacement, false);
@@ -142,14 +138,14 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await writeFile(replacementInfo, replacementElements);
   await loadSource(desktopApp, dialog, exportFolder, undefined, changeCollection, replacement);
   await expect(recovery.getByText(/export it again in SuperMemo|请在 SuperMemo 中重新导出/)).toBeVisible();
-  await expect(dialog.getByText('Moved collection', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(await realpath(collection), { exact: true })).toBeVisible();
 
   replacementElements.writeUInt16LE(300, 118 + 16);
   await writeFile(replacementInfo, replacementElements);
   await recovery.getByRole('button', { name: pickCollection }).click();
   await expect(recovery).toBeHidden();
   await loadStep.click();
-  await expect(dialog.getByText('Replacement collection', { exact: true })).toBeVisible();
+  await expect(dialog.getByText(await realpath(replacement), { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByRole('slider')).toHaveValue('100');
 
@@ -157,7 +153,7 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await expectWorkspaceShell(desktopWindow);
   const reopened = await openPreview(desktopWindow);
   await reopened.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
-  await expect(reopened.getByText('Replacement collection', { exact: true })).toBeVisible();
+  await expect(reopened.getByText(await realpath(replacement), { exact: true })).toBeVisible();
 });
 
 test('starts fresh when the saved data has no migration state', async ({ desktopApp, desktopWindow }, info) => {

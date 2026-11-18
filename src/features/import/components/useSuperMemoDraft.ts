@@ -35,13 +35,14 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
   const [remembered, setRemembered] = useState<RememberedSuperMemoSource>();
   const [result, setResult] = useState<Awaited<ReturnType<typeof runRuntimeSuperMemoImport>>>();
   const [busy, setBusy] = useState(true);
+  const [loadingXml, setLoadingXml] = useState(false);
   const [error, setError] = useState<SuperMemoNotice>(false);
   const [pending, setPending] = useState<Pending>();
 
   return {
     target, setTarget, draft, setDraft, gradeMap, setGradeMap, sourceFormat, setSourceFormat, percent, setPercent,
     retryAsUpdate, setRetryAsUpdate, source, setSource, remembered, setRemembered, result, setResult,
-    busy, setBusy, error, setError, pending, setPending
+    busy, setBusy, loadingXml, setLoadingXml, error, setError, pending, setPending
   };
 }
 
@@ -99,7 +100,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
 
   const { busy, error } = state;
 
-  return { draft, percent, setPercent: changePercent, source, selection: remembered, busy, error, setError,
+  return { draft, percent, setPercent: changePercent, source, selection: remembered, busy, loadingXml: state.loadingXml, error, setError,
     result, gradeMap, sourceFormat, changeGrades, changeFolder: (id: number, folder: boolean) => updateDraftFolder(state, id, folder),
     changeSourceFormat, importSource: (ids: number[]) => importDraft(state, ids, selectionActions.savePanel),
     candidates: state.pending?.candidates, ...selectionActions,
