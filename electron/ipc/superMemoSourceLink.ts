@@ -44,8 +44,12 @@ function linkPath() {
   return path.join(app.getPath('userData'), 'supermemo-migration', `${scope}.json`);
 }
 
+const savedLinkSchema = linkSchema.required({ snapshot: true, xmlHash: true });
+
 function readLink(file = linkPath()) {
-  return fs.existsSync(file) ? linkSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8'))) : null;
+  if (!fs.existsSync(file)) return null;
+  const parsed = savedLinkSchema.safeParse(JSON.parse(fs.readFileSync(file, 'utf8')));
+  return parsed.success ? parsed.data : null;
 }
 
 export function getSuperMemoSourceSelection(): RememberedSuperMemoSource | null {
@@ -55,7 +59,7 @@ export function getSuperMemoSourceSelection(): RememberedSuperMemoSource | null 
   const savedForm = { percent: link.percent, sourceFormat: link.sourceFormat, gradeMap: link.gradeMap,
     folderChoices: link.folderChoices, comparison: link.comparison };
   return { filePath, name: path.basename(filePath), collectionDirectory: collectionDirectory ?? undefined,
-    savedForm, hasDraft: Boolean(link.snapshot), ...(link.snapshot ? { snapshot: link.snapshot } : {}), ...(panel ? { panel } : {}) };
+    savedForm, snapshot: link.snapshot, ...(panel ? { panel } : {}) };
 }
 
 export function clearSuperMemoSourceSelection() {
@@ -76,7 +80,7 @@ async function rememberLink(value: unknown, formOnly: boolean, snapshot: unknown
   } else {
     await assertPickerPaths(link, readLink(file)?.filePath);
     const collectionStamp = link.collectionDirectory ? await superMemoCollectionStamp(link.collectionDirectory) : undefined;
-    writeLink(file, linkSchema.required({ snapshot: true, xmlHash: true }).parse({ ...link, snapshot, xmlHash, collectionStamp }));
+    writeLink(file, savedLinkSchema.parse({ ...link, snapshot, xmlHash, collectionStamp }));
   }
   return null;
 }

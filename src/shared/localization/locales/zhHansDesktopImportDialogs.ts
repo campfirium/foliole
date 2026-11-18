@@ -41,7 +41,6 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.lastResult': '上次转换 · 导入 {imported} 条 · 跳过 {skipped} 条 · 未找到图片 {unresolvedImages} 处',
   'desktop.superMemoDrafts.removeSelection': '移除选择',
   'desktop.superMemoDrafts.selectionReadFailed': 'Foliole 无法读取已保存的选择。',
-  'desktop.superMemoDrafts.createSavedDraft': '重新载入一次，即可保存为迁移草稿。',
   'desktop.superMemoDrafts.exportAllElements': '在 SuperMemo 的 File → Export 中导出 XML 数据。',
   'desktop.superMemoDrafts.keepCollectionNearby': '将 XML 放在原资料库文件夹旁，Foliole 会尝试自动匹配。配对后可读取本地图片和更多学习记录。',
   'desktop.superMemoDrafts.chooseXmlAndCollection': '在此载入 XML。如果 Foliole 无法自动匹配原资料库，可以选择原库文件夹，或仅使用 XML 继续。',

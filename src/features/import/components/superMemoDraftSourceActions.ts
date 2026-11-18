@@ -84,7 +84,7 @@ function createCandidateLoader(state: DraftState) {
       elementCount: loaded.draft.elements.length, batchId: update?.batchId };
     const snapshot = migrationSnapshot(loaded.draft);
     await rememberDraftSource(selected, savedForm, false, panel, snapshot, selected.xmlHash);
-    setRemembered({ filePath, name, collectionDirectory, savedForm, panel, hasDraft: true });
+    setRemembered({ filePath, name, collectionDirectory, savedForm, panel, snapshot });
     setTarget(nextTarget);
     setSourceFormat(loaded.sourceFormat);
     setDraft(loaded.draft);
@@ -164,12 +164,6 @@ function comparisonTarget({ draft, source, target }: DraftState): DraftTarget | 
   };
 }
 
-async function pickSource(legacy: DraftState['remembered']) {
-  const picked = await selectRuntimeSuperMemoSource();
-  return picked && legacy?.hasDraft === false && legacy.filePath === picked.filePath
-    ? { ...picked, savedForm: legacy.savedForm } : picked;
-}
-
 export function createSourceActions(state: DraftState, pickerTitle: string) {
   const { source, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
   const loader = createCandidateLoader(state);
@@ -181,7 +175,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     setPending(undefined);
     setRetryAsUpdate(asUpdate);
     try {
-      const selected = await pickSource(state.remembered);
+      const selected = await selectRuntimeSuperMemoSource();
       if (!selected) return;
       const nextTarget = asUpdate ? comparisonTarget(state) : undefined;
       try {

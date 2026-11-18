@@ -39,7 +39,6 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.lastResult': 'Last conversion · {imported} imported · {skipped} skipped · {unresolvedImages} unresolved image references',
   'desktop.superMemoDrafts.removeSelection': 'Remove selection',
   'desktop.superMemoDrafts.selectionReadFailed': 'Foliole could not read the saved selection.',
-  'desktop.superMemoDrafts.createSavedDraft': 'Load this export once to create a saved draft.',
   'desktop.superMemoDrafts.exportAllElements': 'In SuperMemo, choose File → Export → XML to export the entire collection. Export it again after the collection changes.',
   'desktop.superMemoDrafts.keepCollectionNearby': 'Place the XML beside the original collection folder so Foliole can look for it automatically. A matching folder provides local images and more learning history.',
   'desktop.superMemoDrafts.chooseXmlAndCollection': 'Load the XML in Foliole. If Foliole cannot match the collection automatically, choose the original folder or continue with XML alone.',

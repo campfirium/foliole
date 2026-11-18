@@ -89,8 +89,7 @@ export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
 
 export interface RememberedSuperMemoSource extends SuperMemoSourceSelection {
   savedForm: SuperMemoMigrationForm;
-  hasDraft?: boolean;
-  snapshot?: SuperMemoMigrationSnapshot;
+  snapshot: SuperMemoMigrationSnapshot;
   panel?: SuperMemoMigrationPanel;
 }
 

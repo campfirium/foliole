@@ -160,7 +160,7 @@ test('pairs an already loaded XML from Load data without replacing its draft set
   await expect(reopened.getByText('Replacement collection', { exact: true })).toBeVisible();
 });
 
-test('opens preview pages for an older path-only selection and loads the draft there', async ({ desktopApp, desktopWindow }, info) => {
+test('starts fresh when the saved data has no migration state', async ({ desktopApp, desktopWindow }, info) => {
   const dialog = await openPreview(desktopWindow);
   const folder = info.outputPath('Legacy');
   await loadSource(desktopApp, dialog, folder, xml);
@@ -180,20 +180,11 @@ test('opens preview pages for an older path-only selection and loads the draft t
 
   await desktopWindow.reload();
   const reopened = await openPreview(desktopWindow);
-  await expect(reopened.getByText(/Load this export once|重新载入一次/)).toBeVisible();
-  for (const step of [confirmStep, structureStep]) {
-    const button = reopened.getByRole('button', { name: step });
-    await button.click();
-    await expect(button).toHaveAttribute('aria-current', 'step');
-    await expect(reopened.getByText(/Load this export once|重新载入一次/)).toBeVisible();
-    await expect(desktopWindow.getByRole('dialog', { name: noticeTitle })).toHaveCount(0);
-  }
+  await expect(reopened.getByRole('button', { name: load })).toBeEnabled();
+  await expect(reopened.getByRole('button', { name: /^(Load data|载入数据)$/ })).toHaveAttribute('aria-current', 'step');
+  await expect(reopened.getByText('Legacy', { exact: true })).toHaveCount(0);
+  await expect(desktopWindow.getByRole('dialog', { name: noticeTitle })).toHaveCount(0);
 
-  await reopened.getByRole('button', { name: /^(Change XML|更换 XML)$/ }).click();
+  await loadSource(desktopApp, reopened, folder);
   await expect(reopened.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
-  await expect(reopened.getByRole('button', { name: /^(Next|下一步)$/ })).toBeEnabled();
-  await reopened.screenshot({ path: info.outputPath('legacy-structure.png') });
-  await reopened.getByRole('button', { name: confirmStep }).click();
-  await expect(reopened.getByRole('button', { name: /^(Convert|转换)$/ })).toBeEnabled();
-  await reopened.screenshot({ path: info.outputPath('legacy-confirm.png') });
 });

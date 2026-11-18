@@ -28,7 +28,7 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
             {selection?.panel?.result ? <span className="block">
               {t('desktop.superMemoDrafts.lastResult', selection.panel.result)}
             </span> : null}
-            {t(selection?.hasDraft === false ? 'desktop.superMemoDrafts.createSavedDraft' : 'desktop.superMemoDrafts.exportAllElements')}
+            {t('desktop.superMemoDrafts.exportAllElements')}
           </>}>
           <SettingsControlSlot className={sourceControlLayout}>
             <AppButton disabled={busy} onClick={onLoad}>

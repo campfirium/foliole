@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useEffect, useEffectEvent, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -96,10 +96,7 @@ function stepNeedsDraft(step: SuperMemoMigrationStep | undefined) {
   return step === 'structure' || step === 'confirm';
 }
 
-function useRequestedPreview(model: ReturnType<typeof useSuperMemoDraft>, open: boolean) {
-  const [openingPreview, setOpeningPreview] = useState(false);
-  const reportError = useRef(false);
-
+function useSourceCheck(model: ReturnType<typeof useSuperMemoDraft>, open: boolean) {
   const { setError } = model;
   const selectedPath = model.selection?.filePath;
   useEffect(() => {
@@ -110,26 +107,6 @@ function useRequestedPreview(model: ReturnType<typeof useSuperMemoDraft>, open: 
     });
     return () => { active = false; };
   }, [open, selectedPath, setError]);
-
-  function preparePreview() {
-    if (model.busy || model.draft || !model.selection || model.selection.hasDraft === false) return;
-    setOpeningPreview(true);
-    void model.prepareRememberedSource(() => reportError.current).finally(() => setOpeningPreview(false));
-  }
-
-  const prepareOnOpen = useEffectEvent(preparePreview);
-  const sourcePath = model.selection?.hasDraft === false ? undefined : model.selection?.filePath;
-  useEffect(() => {
-    if (open && sourcePath) prepareOnOpen();
-    return () => { reportError.current = false; };
-  }, [open, sourcePath]);
-
-  function openPreviewFor(step: SuperMemoMigrationStep) {
-    reportError.current = stepNeedsDraft(step) || step === 'source';
-    if (reportError.current) preparePreview();
-  }
-
-  return { openingPreview, openPreviewFor, dismissPreview: () => { reportError.current = false; } };
 }
 
 type SuperMemoDraftDialogProps = {
@@ -141,9 +118,8 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
   const titleId = useId();
   const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'));
   const { draft, source, busy, error, setError, result, loadSource, importSource } = model;
-  const { openingPreview, openPreviewFor, dismissPreview } = useRequestedPreview(model, open);
-  const blocking = busy && !openingPreview;
-  const { step, setStep, selection, setSelection, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy: blocking, error, setError }, open, closeSession);
+  useSourceCheck(model, open);
+  const { step, setStep, selection, setSelection, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy: busy, error, setError }, open, closeSession);
   const previewNavigation = useSuperMemoPreviewNavigation(source);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
@@ -154,10 +130,8 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
     setStep({ id, source, filePath: model.selection?.filePath });
     setError(false);
     void model.savePanel({ step: id });
-    openPreviewFor(id);
   }
   function closeSession() {
-    dismissPreview();
     if (result) model.resetCompletedDraft();
     if (result || (!draft && stepNeedsDraft(current))) resetNavigation();
     close();
@@ -170,19 +144,19 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
         <AppDialogContent aria-labelledby={titleId} aria-describedby={undefined}
           className={settingsDialogSurfaceClassName(settingsDialogGrid)}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
-          onEscapeKeyDown={event => { if (error || blocking) event.preventDefault(); }}>
-          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={blocking || Boolean(result)} onChange={navigate} />
+          onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
+          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy || Boolean(result)} onChange={navigate} />
           <div className={settingsDialogPane}>
-            <DraftHeader name={current === 'load' || result ? undefined : model.selection?.name} disabled={blocking} />
+            <DraftHeader name={current === 'load' || result ? undefined : model.selection?.name} disabled={busy} />
             <div key={current} className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-7 py-7 [scrollbar-gutter:stable]">
               <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
-                onLoad={() => void loadSource()} openingPreview={openingPreview} onLoadNew={() => {
+                onLoad={() => void loadSource()} onLoadNew={() => {
                   setStep({ id: 'load', source, comparing: true });
                   void loadSource(true);
                 }}
                 onSelect={ids => { if (update) setSelection({ source, signature: update.signature, ids }); }} />
             </div>
-            <SuperMemoDraftActions step={current} busy={current === 'confirm' ? busy : blocking} hasPreview={Boolean(preview && !result)}
+            <SuperMemoDraftActions step={current} busy={busy} hasPreview={Boolean(preview && !result)}
               canProceed={Boolean(preview || (current !== 'load' && model.selection))}
               directoryUpdate={update ? { canConfirm: canConfirmUpdate(update, selected) } : undefined}
               navigate={navigate} convert={() => void importSource(selected)} />
