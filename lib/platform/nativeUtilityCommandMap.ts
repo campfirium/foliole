@@ -34,6 +34,7 @@ import type {
   NativeUpdateLibraryPathSettingArgs
 } from './nativeUtilityContract.js';
 import type { NativeWindowControlCommandMap } from './nativeWindowControlCommandMap.js';
+import type { SupportRecordingEntry } from './supportRecordingEntry.js';
 
 export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
   [NATIVE_COMMANDS.maintainAttachments]: { args: AttachmentMaintenanceRequest; result: AttachmentMaintenanceResult };
@@ -135,7 +136,7 @@ export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
     result: NativeClearLinkPanelBrowsingDataResult;
   };
   [NATIVE_COMMANDS.desktopSupportLog]: {
-    args: { action: NativeSupportLogAction };
+    args: { action: NativeSupportLogAction } | { action: 'record'; startedAt: number; entry: SupportRecordingEntry };
     result: NativeSupportLogState;
   };
   [NATIVE_COMMANDS.copyDiagnosticReport]: {

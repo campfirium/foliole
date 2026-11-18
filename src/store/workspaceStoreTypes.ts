@@ -13,6 +13,7 @@ import type { WorkspaceActionHistoryState } from './workspaceActionHistory';
 import type { WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
 import type { WorkspaceDeleteContinuation } from './workspaceDeleteContinuation';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
+import type { WorkspaceReviewGradeObserver } from './workspaceReviewGradeObserver';
 
 export interface WorkspaceState {
   browserDailyFlow?: import('../shared/platform/runtime/browserDailyFlowState').BrowserDailyFlowState;
@@ -83,7 +84,7 @@ export interface WorkspaceState {
   resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => string | false | Promise<string | false>;
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void | Promise<void>;
   revealReviewAnswer: () => void;
-  gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
+  gradeReviewCard: (grade: ReviewGrade, now?: string, observer?: WorkspaceReviewGradeObserver) => Promise<boolean>;
   readReviewTopic: (now?: string, options?: ReadReviewTopicOptions) => Promise<boolean>;
   postponeReviewTopic: (now?: string) => Promise<boolean>;
   setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string, expectedReading?: Node['reading'], unit?: 'weeks' | 'days') => Promise<boolean>;

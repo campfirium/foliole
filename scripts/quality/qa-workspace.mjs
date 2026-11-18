@@ -16,10 +16,11 @@ import {
   readQaWorkspace, verifyMountedQaVolume
 } from './qa-workspace-state.mjs';
 
-export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner,
+export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner, source = 'dev',
   verifyVolume = verifyMountedQaVolume }) {
   const devRoot = realpathSync(repoRoot);
-  if (qaGit(devRoot, 'branch', '--show-current') !== 'dev') throw new Error('Start QA from dev');
+  if (!['dev', 'preview'].includes(source)) throw new Error('QA source must be dev or preview');
+  if (qaGit(devRoot, 'branch', '--show-current') !== source) throw new Error(`Start QA from ${source}`);
   if (!owner?.trim()) throw new Error('QA requires its owning chat ID');
   const existing = readQaWorkspace(devRoot);
   if (existing.phase !== 'idle') throw new Error(`QA occupied by ${existing.owner}; recover the existing workspace`);
@@ -30,7 +31,7 @@ export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner,
     throw new Error('QA path must be a new directory on the mounted QA volume');
   }
   const record = { schemaVersion: 1, branch: QA_BRANCH, devRoot, volumeRoot: volume, worktreePath: target,
-    owner, base: qaGit(devRoot, 'rev-parse', 'HEAD'), phase: 'preparing' };
+    owner, source, base: qaGit(devRoot, 'rev-parse', `refs/heads/${source}`), phase: 'preparing' };
   writeFileSync(qaRecordPath(devRoot), `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx' });
   return prepareQaWorkspace(record);
 }
@@ -96,7 +97,8 @@ async function main(args) {
       if (!options.includes(name) || !value(name)) throw new Error(`${name} is required`);
     }
     return console.log(JSON.stringify(startQaWorkspace({ repoRoot, volumeRoot: value('--volume'),
-      worktreePath: value('--path'), owner: value('--owner') }), null, 2));
+      worktreePath: value('--path'), owner: value('--owner'),
+      source: options.includes('--source') ? value('--source') ?? '' : undefined }), null, 2));
   }
   if (args[0] === 'run') {
     if (separator < 0) throw new Error('QA run requires -- before the command');

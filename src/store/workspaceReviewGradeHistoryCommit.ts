@@ -20,6 +20,7 @@ import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptan
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { isSameNodeReview } from './workspaceNodeLearningComparison';
 import { createReviewGradeHistoryEntry, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
+import type { WorkspaceReviewGradeObserver } from './workspaceReviewGradeObserver';
 import type { WorkspaceReviewPersistenceAdapter } from './workspaceReviewPersistence';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -76,19 +77,23 @@ function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<Re
   return { applied, undoRequested };
 }
 
-export async function commitWorkspaceReviewGrade(args: {
+type GradeCommitArgs = {
   applicationEntryId?: string;
   currentNodeId: string;
   get: () => WorkspaceState;
   grade: ReviewGrade;
   now: string;
+  observer?: WorkspaceReviewGradeObserver;
   persistence: WorkspaceReviewPersistenceAdapter;
   result: SharedReviewGradeResult;
   rendererBefore?: WorkspaceState;
   set: WorkspaceSet;
   snapshot: WorkspaceState;
-}) {
+};
+
+export async function commitWorkspaceReviewGrade(args: GradeCommitArgs) {
   const entry = createPendingGradeEntry(args);
+  args.observer?.stage('history-admission');
   if (!beginReviewGradeHistory(args.set, entry, args.rendererBefore ?? args.snapshot)) return false;
   let review: WorkspaceReviewGradeHistoryEntry['afterReview'] = args.result.nodePatch.review;
   let persisted: boolean;
@@ -98,24 +103,14 @@ export async function commitWorkspaceReviewGrade(args: {
   let receiptNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   let mutationTimestamp = args.now;
   try {
-    const result = hasPersistentDailyFlow(args.snapshot.reviewSession)
-      ? await saveDailyGrade(args.snapshot.reviewSession, entry, { nodeId: args.currentNodeId,
-        grade: args.grade, reviewedAt: args.result.reviewedAt, schedulerVersion: args.result.schedulerVersion,
-        cardBefore: args.result.cardBefore, cardAfter: args.result.cardAfter }, args.get().nodesById)
-      : await persistReviewGradeMutation({
-      currentNodeId: args.currentNodeId,
-      opId: entry.id,
-      grade: args.grade,
-      reviewedAt: args.result.reviewedAt,
-      schedulerVersion: args.result.schedulerVersion,
-      cardBefore: args.result.cardBefore,
-      cardAfter: args.result.cardAfter
-    }, args.persistence);
+    const result = await persistWorkspaceGrade(args, entry);
+    args.observer?.stage('persist-rejected');
     persisted = Boolean(result);
     if (result && typeof result !== 'boolean' && 'mutationTimestamp' in result && result.mutationTimestamp) mutationTimestamp = result.mutationTimestamp;
     if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; receiptLearning = result.learning; persistedSource = result.sourceSession; }
     if (result && typeof result !== 'boolean') review = result.card ? toNodeReviewProfile(result.card) : null;
   } catch (error) {
+    args.observer?.stage('persist-error');
     await recoverWorkspaceDailyFlow(args.set, args.get, error, args.now);
     persisted = false;
   }
@@ -125,6 +120,10 @@ export async function commitWorkspaceReviewGrade(args: {
     }));
     return false;
   }
+  if (persistedSession) {
+    args.observer?.saved(args.grade, args.currentNodeId, review?.due ?? null, args.result.reviewedAt, persistedSession.currentNodeId);
+  }
+  args.observer?.stage('projection');
   const computed = buildGradedReviewState({ snapshot: { ...args.snapshot, nodesById: mergeDailyFlowReceiptNodes(args.snapshot.nodesById, {}, receiptNodes, receiptLearning) }, currentNodeId: args.currentNodeId,
     nodePatch: { review }, now: args.now, ...(persistedSession ? { persistedSession } : {}) });
   if (!computed) return false;
@@ -132,9 +131,35 @@ export async function commitWorkspaceReviewGrade(args: {
     mutationTimestamp,
     ...(persistedSource ? { beforeContext: { ...computed.historyEntry.beforeContext, reviewSession: persistedSource } } : {}) } };
   const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, (args.rendererBefore ?? args.snapshot).nodesById, receiptNodes, receiptLearning);
-  if (!applied) return false;
+  if (!applied) {
+    args.observer?.stage('projection-rejected');
+    return false;
+  }
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
+  args.observer?.stage(null);
   return true;
+}
+
+function persistWorkspaceGrade(args: GradeCommitArgs, entry: WorkspaceReviewGradeHistoryEntry) {
+  if (hasPersistentDailyFlow(args.snapshot.reviewSession)) {
+    return saveDailyGrade(args.snapshot.reviewSession, entry, {
+      nodeId: args.currentNodeId,
+      grade: args.grade,
+      reviewedAt: args.result.reviewedAt,
+      schedulerVersion: args.result.schedulerVersion,
+      cardBefore: args.result.cardBefore,
+      cardAfter: args.result.cardAfter
+    }, args.get().nodesById);
+  }
+  return persistReviewGradeMutation({
+    currentNodeId: args.currentNodeId,
+    opId: entry.id,
+    grade: args.grade,
+    reviewedAt: args.result.reviewedAt,
+    schedulerVersion: args.result.schedulerVersion,
+    cardBefore: args.result.cardBefore,
+    cardAfter: args.result.cardAfter
+  }, args.persistence);
 }
 
 function createPendingGradeEntry(args: Parameters<typeof commitWorkspaceReviewGrade>[0]) {

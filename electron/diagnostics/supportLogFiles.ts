@@ -114,10 +114,10 @@ export class SupportLogFiles {
     });
   }
 
-  append(format: () => string) {
+  append(format: () => string, startedAt?: number) {
     return this.enqueue(async () => {
       const active = this.active;
-      if (!active) return;
+      if (!active || (startedAt !== undefined && active.startedAt !== startedAt)) return;
       const text = format() + '\n';
       const bytes = Buffer.byteLength(text);
       const reserved = active.bytes + bytes + endMarkerReserve;

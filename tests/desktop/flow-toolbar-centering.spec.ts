@@ -18,7 +18,9 @@ async function expectCentered(page: Page, scenario: string, kind: 'reading' | 'g
   const geometry = await actions.evaluate((group, paneSelector) => {
     const pane = document.querySelector(paneSelector)!.getBoundingClientRect();
     const bounds = group.getBoundingClientRect();
+    const toolbar = group.closest('[aria-label="Flow toolbar"]')!.getBoundingClientRect();
     return {
+      toolbarOffset: toolbar.x + toolbar.width / 2 - pane.x - pane.width / 2,
       offset: bounds.x + bounds.width / 2 - pane.x - pane.width / 2,
       fits: bounds.left >= pane.left && bounds.right <= pane.right,
       paneWidth: pane.width,
@@ -29,6 +31,7 @@ async function expectCentered(page: Page, scenario: string, kind: 'reading' | 'g
   await page.screenshot({ path: `.tmp/artifacts/desktop-acceptance/flow-toolbar-centering/${scenario}.png` });
   expect.soft(Math.abs(geometry.offset), `${scenario}: ${JSON.stringify(geometry)}`).toBeLessThanOrEqual(1);
   expect.soft(geometry.fits, `${scenario}: all primary actions fit the reading pane`).toBe(true);
+  expect.soft(Math.abs(geometry.toolbarOffset), `${scenario}: ${JSON.stringify(geometry)}`).toBeLessThanOrEqual(1);
   return actions;
 }
 
@@ -99,6 +102,23 @@ test('Flow reading actions follow the reading pane as sidebars and zoom change',
     await page.setViewportSize({ width, height: 650 });
     await expectCentered(page, `viewport-${width}`);
   }
+});
+
+test('the whole immersive Flow toolbar centers with an asymmetric saved sidebar layout', async ({
+  desktopApp, desktopWindow: page
+}) => {
+  await expectWorkspaceShell(page);
+  const host = await desktopApp.browserWindow(page);
+  // Approximate the reported app area in device-independent pixels.
+  await page.setViewportSize({ width: 1488, height: 864 });
+  await host.evaluate((window) => window.webContents.setZoomFactor(1.2));
+  await expect.poll(() => host.evaluate((window) => window.webContents.getZoomFactor())).toBeCloseTo(1.2, 4);
+  await setActiveSidebarTierDockedWidths(page, 39, 25);
+  await enterFlow(page);
+  await sidebarToggle(page, 'right').click();
+  await expect(sidebarToggle(page, 'right')).toHaveAttribute('aria-pressed', 'false');
+  await setImmersive(page, true);
+  await expectCentered(page, 'immersive-left-docked-right-collapsed-120');
 });
 
 test('Flow grades stay centered after revealing an answer and entering immersive reading', async ({

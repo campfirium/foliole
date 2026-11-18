@@ -49,6 +49,7 @@ vi.mock('@codemirror/view', () => ({
     decorations: { of: vi.fn((value) => value) },
     domEventHandlers: mockDomEventHandlers,
     lineWrapping: 'line-wrapping',
+    scrollMargins: { of: vi.fn((value) => value) },
     updateListener: { of: vi.fn((value) => value) }
   },
   highlightActiveLine: vi.fn(() => 'highlight-active-line'),

@@ -110,6 +110,19 @@ it('uses a verified ancestor rather than a newer green dev snapshot outside QA',
   expect(await qaPreflightBase({ ...f.options, targetSha: f.identity.head_sha, scope: 'full' })).toBe(f.identity.head_sha);
 });
 
+it('finds the published preview baseline in historical check runs', async () => {
+  const f = fixture();
+  const sha = f.identity.head_sha;
+  const runner = async (command, args, options) => {
+    const query = args.find(value => value.includes('status=success'));
+    if (!query) return f.options.runner(command, args, options);
+    const runs = query.includes('branch=check&')
+      ? [{ head_sha: sha, display_title: `Dev Quality Check (full) @ ${sha.slice(0, 9)}` }] : [];
+    return { code: 0, stdout: JSON.stringify(runs), stderr: '' };
+  };
+  expect(await qaPreflightBase({ ...f.options, runner, targetSha: sha, scope: 'full' })).toBe(sha);
+});
+
 it('preserves an ambiguous dispatch and refuses to send another blindly', async () => {
   const f = fixture();
   const runner = async (command, args, options) => {

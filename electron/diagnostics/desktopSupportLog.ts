@@ -2,13 +2,22 @@ import path from 'node:path';
 
 import { app, shell } from 'electron';
 
+import { readSupportRecordingEntry } from '../../lib/platform/supportRecordingEntry.js';
+
 import { copyDiagnosticReport, formatRecord } from './diagnosticBundle.js';
 import { SupportLogFiles } from './supportLogFiles.js';
 
 const files = new SupportLogFiles(() => path.join(app.getPath('userData'), 'logs', 'support-recordings'));
 
-export function runDesktopSupportLogAction(action: unknown) {
+export async function runDesktopSupportLogAction(action: unknown, startedAt?: unknown, input?: unknown) {
   switch (action) {
+    case 'record': {
+      const entry = readSupportRecordingEntry(input);
+      if (entry && files.recording && typeof startedAt === 'number' && Number.isSafeInteger(startedAt)) {
+        await files.append(() => JSON.stringify({ at: new Date().toISOString(), ...entry }), startedAt);
+      }
+      return files.status();
+    }
     case 'status': return files.status();
     case 'start': return files.start(async () => (await copyDiagnosticReport({ app })).report_text);
     case 'stop': return files.stop();

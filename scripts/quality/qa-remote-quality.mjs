@@ -18,7 +18,8 @@ function saveRun(cwd, run) {
 }
 
 export async function qaPreflightBase({ cwd, repo, runner, targetSha, scope }) {
-  for (const branch of [QA_BRANCH, 'dev']) {
+  // The lane was named check before review; its passing commits remain valid baselines.
+  for (const branch of [QA_BRANCH, 'dev', 'check']) {
     const runs = JSON.parse(await requireSuccess(runner, 'gh', ['api',
       `repos/${repo}/actions/workflows/remote-quality.yml/runs?branch=${encodeURIComponent(branch)}&status=success&per_page=50`,
       '--jq', '.workflow_runs'], { cwd }));

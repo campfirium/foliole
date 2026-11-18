@@ -1,6 +1,6 @@
 # QA workspace
 
-One registered QA workspace holds a committed `dev` snapshot while development continues.
+One registered QA workspace holds a committed `dev` or `preview` snapshot while development continues.
 The workspace is preparation only: it does not dispatch hosted checks or start an agent.
 
 ```sh
@@ -18,6 +18,12 @@ Run these commands from the development checkout. Preparation records the commit
 snapshot and owning chat in the shared Git administrative directory, outside disposable
 build artifacts. A second start refuses to replace an occupied workspace. A missing
 external workspace remains occupied for recovery.
+
+For a source-built hotfix, check out the committed `preview` candidate in the main
+checkout and pass `--source preview` to `start`. The same `review` lane validates
+the candidate with the workflow at its exact SHA. Return the main checkout to a
+clean `dev` before integration and finish. A full pass and normal integration
+allow the exact tested commit to fast-forward `origin/preview`.
 
 Run `quality:remote` from the registered QA checkout instead. Its owning chat commits
 repairs there, uses Mac preflight, normally pushes only the QA branch and retains the

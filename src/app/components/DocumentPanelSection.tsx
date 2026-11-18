@@ -1,3 +1,5 @@
+import { useLayoutEffect, useSyncExternalStore } from 'react';
+
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -5,7 +7,11 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
+import {
+  getDesktopSupportRecordingStart, subscribeDesktopSupportRecording
+} from '../../shared/platform/supportLog/desktopSupportLog';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
+import { publishFlowGradeDisplay } from '../hooks/desktopFlowGradeTrace';
 
 import { useDocumentPanelSectionDiagnostic } from './documentPanelSectionDiagnostic';
 import { getDocumentPanelView } from './documentPanelSectionModel';
@@ -111,11 +117,20 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
 
 export type DocumentPanelSectionModel = ReturnType<typeof useDocumentPanelSectionModel>;
 
+function useFlowGradeDisplay(model: DocumentPanelSectionModel) {
+  const recording = useSyncExternalStore(subscribeDesktopSupportRecording, getDesktopSupportRecordingStart);
+  const displayedId = recording !== undefined && model.panelKind === 'document' && !model.bodyProps.emptyState
+    ? model.bodyProps.editorNodeId : null;
+  useLayoutEffect(() => { publishFlowGradeDisplay(displayedId); }, [displayedId, recording]);
+  useLayoutEffect(() => () => { publishFlowGradeDisplay(null); }, []);
+}
+
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
   useDocumentPanelSectionDiagnostic(props);
   const draftProps = useDocumentPanelDraftProps(props);
   const model = useDocumentPanelSectionModel(draftProps);
+  useFlowGradeDisplay(model);
   const interactions = useDocumentPanelInteractions(draftProps);
   const { handlePreviewNodeLink, preview } = useNodeLinkHoverPreview(draftProps);
   const resolvedProps = buildResolvedDocumentPanelProps(draftProps);
