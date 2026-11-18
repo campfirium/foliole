@@ -122,12 +122,12 @@ function ReviewToolbarSessionFrame({
 }) {
   if (surface === 'overlay') {
     return (
-      <div className={cn('flex items-center gap-2.5', className)}>
-        <div className="flex min-w-0 justify-center">{modeControl}</div>
+      <div className={cn('flex items-center gap-2.5 max-[540px]:gap-1', className)}>
+        <div className="flex w-8 justify-center">{modeControl}</div>
         <ReviewOverlayDivider />
         <div className="flex min-w-0 items-center justify-center">{actions}</div>
         <ReviewOverlayDivider />
-        <div className="flex min-w-0 justify-center">{summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}</div>
+        <div className="flex w-8 justify-center">{summary ? <ReviewToolbarSessionSummaryMenu summary={summary} /> : null}</div>
       </div>
     );
   }

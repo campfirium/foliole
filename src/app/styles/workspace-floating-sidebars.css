@@ -203,3 +203,29 @@
 [data-sidebar-tiers] :is([data-workspace-tier-divider], [data-workspace-surface-divider], .window-titlebar-right-zone):not([hidden]) {
   display: flex;
 }
+
+.workspace-footer-document[data-surface='panel'][data-review-item-kind] {
+  container: flow-footer / inline-size;
+}
+
+@container flow-footer (width < 480px) {
+  [data-review-toolbar-kind] {
+    gap: 4px;
+  }
+
+  [data-review-toolbar-kind] button {
+    min-width: 0;
+    padding-inline: clamp(4px, 1.5cqi, 12px);
+  }
+}
+
+@media (width <= 540px) {
+  .workspace-footer-document[data-surface='overlay'] [data-review-toolbar-kind] {
+    gap: 4px;
+  }
+
+  .workspace-footer-document[data-surface='overlay'] [data-review-toolbar-kind] button {
+    min-width: 0;
+    padding-inline: clamp(4px, 1.5vw, 12px);
+  }
+}
