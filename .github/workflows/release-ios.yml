@@ -71,7 +71,7 @@ jobs:
         run: |
           test "$GITHUB_REF" = "$TRIGGER_REF"
           case "$EXECUTION_LANE:$TRIGGER_REF" in
-            release-t7:refs/heads/release|qa-mobile-beta:refs/heads/check) ;;
+            release-t7:refs/heads/release|qa-mobile-beta:refs/heads/review) ;;
             *) exit 1 ;;
           esac
           test "$GITHUB_SHA" = "$TARGET_SHA"

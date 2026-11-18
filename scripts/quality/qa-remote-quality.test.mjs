@@ -25,12 +25,12 @@ it('pushes and checks the registered QA snapshot while dev continues independent
   const result = await runRemoteQuality({ args: ['--scope', 'full'], cwd: f.cwd,
     runner: f.options.runner, qaPreflight: f.preflight, qaMonitor: f.monitor, readChainVerdict: f.readVerdict });
   const dispatch = f.calls.find(call => call.args.includes('--method'));
-  expect(JSON.parse(dispatch.options.input)).toEqual({ ref: 'check', inputs: {
+  expect(JSON.parse(dispatch.options.input)).toEqual({ ref: 'review', inputs: {
     scope: 'full', target_sha: f.identity.head_sha, trigger_short: f.identity.head_sha.slice(0, 9)
   } });
-  expect(qaGit(f.cwd, 'ls-remote', 'origin', 'refs/heads/check')).toContain(f.identity.head_sha);
+  expect(qaGit(f.cwd, 'ls-remote', 'origin', 'refs/heads/review')).toContain(f.identity.head_sha);
   expect(f.preflight).toHaveBeenCalledWith(expect.objectContaining({ targetSha: f.identity.head_sha, base: f.identity.head_sha }));
-  expect(result.sourceRef).toBe('refs/heads/check');
+  expect(result.sourceRef).toBe('refs/heads/review');
   expect(readQaWorkspace(f.cwd).run).toMatchObject({ runId: 42, passed: true });
   expect(qaGit(f.dev, 'rev-parse', 'HEAD')).not.toBe(result.targetSha);
 });
@@ -93,7 +93,7 @@ it('rejects dirty repairs, Windows preflight, and a mismatched remote source ide
 
 it('refuses to replace an active QA run of another snapshot', async () => {
   const f = fixture();
-  f.active.push({ id: 33, head_branch: 'check', head_sha: 'b'.repeat(40),
+  f.active.push({ id: 33, head_branch: 'review', head_sha: 'b'.repeat(40),
     status: 'in_progress', html_url: 'https://github.test/runs/33' });
   await expect(runQaRemoteQuality(f.options)).rejects.toThrow(/already has an active/u);
   expect(f.calls.some(call => call.args.includes('--method'))).toBe(false);
@@ -108,6 +108,19 @@ it('uses a verified ancestor rather than a newer green dev snapshot outside QA',
     f.green.push({ head_sha: sha, display_title: `Dev Quality Check (full) @ ${sha.slice(0, 9)}` });
   }
   expect(await qaPreflightBase({ ...f.options, targetSha: f.identity.head_sha, scope: 'full' })).toBe(f.identity.head_sha);
+});
+
+it('finds the published preview baseline in historical check runs', async () => {
+  const f = fixture();
+  const sha = f.identity.head_sha;
+  const runner = async (command, args, options) => {
+    const query = args.find(value => value.includes('status=success'));
+    if (!query) return f.options.runner(command, args, options);
+    const runs = query.includes('branch=check&')
+      ? [{ head_sha: sha, display_title: `Dev Quality Check (full) @ ${sha.slice(0, 9)}` }] : [];
+    return { code: 0, stdout: JSON.stringify(runs), stderr: '' };
+  };
+  expect(await qaPreflightBase({ ...f.options, runner, targetSha: sha, scope: 'full' })).toBe(sha);
 });
 
 it('preserves an ambiguous dispatch and refuses to send another blindly', async () => {

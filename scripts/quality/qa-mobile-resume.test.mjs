@@ -21,7 +21,7 @@ function fixture() {
   qaGit(dev, 'config', 'core.fsmonitor', 'false');
   writeFileSync(path.join(dev, '.gitignore'), '.tmp/\n.cache/\n.lab/\nAGENTS.local.md\n');
   writeFileSync(path.join(dev, 'product'), 'unchanged'); qaGit(dev, 'add', '.'); qaGit(dev, 'commit', '-m', 'base');
-  const state = startQaWorkspace({ repoRoot: dev, worktreePath: path.join(root, 'check'),
+  const state = startQaWorkspace({ repoRoot: dev, worktreePath: path.join(root, 'review'),
     volumeRoot: root, owner: 'original-owner', verifyVolume: value => value });
   const cwd = state.worktreePath; const sourceSha = qaGit(cwd, 'rev-parse', 'HEAD');
   const calls = [];
@@ -32,7 +32,7 @@ function fixture() {
     if (args.includes('--method')) return { code: 0,
       stdout: args.includes('X-GitHub-Api-Version: 2026-03-10') ? JSON.stringify(response) : '', stderr: '' };
     if (args.some(arg => arg.includes('runs?branch='))) return { code: 0, stdout: '{"workflow_runs":[]}', stderr: '' };
-    return { code: 0, stdout: JSON.stringify({ head_branch: 'check', head_sha: sourceSha,
+    return { code: 0, stdout: JSON.stringify({ head_branch: 'review', head_sha: sourceSha,
       display_title: `Dev Quality Check (mobile_resume) @ ${sourceSha.slice(0, 9)} [mobile:ios] [reuse:42]` }), stderr: '' };
   });
   const options = { args: parseRemoteQualityArgs(['--scope', 'full', '--mobile-distribution', 'ios', '--reuse-mobile-quality', '42']),
@@ -47,7 +47,7 @@ it('dispatches only distribution reuse, preserves original quality identity and 
   expect(f.options.readQuality).toHaveBeenCalledWith(expect.objectContaining({ qualityRunId: '42', sourceSha: f.sourceSha }));
   expect(f.options.validate).toHaveBeenCalledOnce();
   const post = f.calls.find(call => call.args.includes('--method'));
-  expect(JSON.parse(post.options.input)).toEqual({ ref: 'check', inputs: { scope: 'full',
+  expect(JSON.parse(post.options.input)).toEqual({ ref: 'review', inputs: { scope: 'full',
     target_sha: f.sourceSha, trigger_short: f.sourceSha.slice(0, 9), mobile_distribution: 'ios', mobile_quality_run_id: '42' } });
   expect(readQaWorkspace(f.dev)).toMatchObject({ owner: 'original-owner', run: {
     scope: 'mobile-resume', qualityRunId: '42', targetSha: f.sourceSha, runId: 88, passed: true } });
@@ -104,7 +104,7 @@ it('refuses terminal evidence for a different source without recording success',
   const runner = f.options.runner.getMockImplementation();
   f.options.runner.mockImplementation(async (command, args, options) => {
     if (command === 'gh' && args.includes('repos/owner/repo/actions/runs/88')) {
-      return { code: 0, stdout: JSON.stringify({ head_branch: 'check', head_sha: 'b'.repeat(40) }), stderr: '' };
+      return { code: 0, stdout: JSON.stringify({ head_branch: 'review', head_sha: 'b'.repeat(40) }), stderr: '' };
     }
     return runner(command, args, options);
   });

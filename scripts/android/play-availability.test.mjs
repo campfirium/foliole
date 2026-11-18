@@ -176,7 +176,7 @@ it('rechecks the available build on schedule and retains exact manual refresh', 
 
 it('refuses local execution and non-default or untrusted workflow events before external calls', async () => {
   await expect(runPlayReviewCheck({})).rejects.toThrow(/hosted-only/u);
-  const env = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', GITHUB_REF: 'refs/heads/check', GITHUB_EVENT_NAME: 'workflow_dispatch' };
+  const env = { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', GITHUB_REF: 'refs/heads/review', GITHUB_EVENT_NAME: 'workflow_dispatch' };
   await expect(runPlayReviewCheck(env)).rejects.toThrow(/trusted default-branch/u);
   await expect(runPlayReviewCheck({ ...env, GITHUB_REF: 'refs/heads/dev', GITHUB_EVENT_NAME: 'pull_request' })).rejects.toThrow(/trusted default-branch/u);
 });

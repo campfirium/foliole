@@ -16,7 +16,7 @@ export function verifyPlaySourceIdentity(run) {
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
   const remote = parseRemoteQualityRun(run);
-  const qa = run.head_branch === 'check' && run.path === '.github/workflows/remote-quality.yml' &&
+  const qa = run.head_branch === 'review' && run.path === '.github/workflows/remote-quality.yml' &&
     run.event === 'workflow_dispatch' && remote?.scope === 'full' &&
     remote.mobileDistribution === 'android' && remote.testedSha === run.head_sha;
   if (!release && !qa) fail('not an authorized release or explicit Android full QA');

@@ -33,7 +33,7 @@ it('retains a passing file and runs a later assertion after a file blocks the wo
     const runner = pathToFileURL(path.join(repo, 'scripts/run-release-desktop-source-test-bucket.mjs'));
     expect(() => execFileSync(process.execPath, ['--input-type=module', '-e',
       `import { runDesktopSourceTests } from '${runner}'; process.exitCode = await runDesktopSourceTests(['.tmp/report.json', 'one'], { timeoutMs: 4000 });`
-    ], { cwd: fixture, env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/check' },
+    ], { cwd: fixture, env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/review' },
       timeout: 25000, stdio: 'pipe' })).toThrow(expect.objectContaining({ status: 1 }));
     const read = name => JSON.parse(readFileSync(path.join(fixture, name), 'utf8'));
     const reports = [1, 2, 3].map(index =>
@@ -52,7 +52,7 @@ it('retains a passing file and runs a later assertion after a file blocks the wo
     for (const name of ['b', 'c']) rmSync(path.join(fixture, `src/app/${name}.test.mjs`));
     execFileSync(process.execPath, ['--input-type=module', '-e',
       `import { runDesktopSourceTests } from '${runner}'; process.exitCode = await runDesktopSourceTests(['.tmp/report.json', 'one']);`
-    ], { cwd: fixture, env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/check',
+    ], { cwd: fixture, env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/review',
       FOLIOLE_DESKTOP_TIMEOUT_HISTORY: history }, timeout: 25000, stdio: 'pipe' });
     expect(read('.tmp/vitest/release-desktop-src-app-01-file-1.json.execution.json').timeoutMs).toBe(120_000);
   } finally {
@@ -62,7 +62,7 @@ it('retains a passing file and runs a later assertion after a file blocks the wo
 
 it('continues the check job after a shard fails and returns failure', () => {
   vi.stubEnv('GITHUB_ACTIONS', 'true');
-  vi.stubEnv('GITHUB_REF', 'refs/heads/check');
+  vi.stubEnv('GITHUB_REF', 'refs/heads/review');
   try {
     const executed = [];
     expect(() => runHostedQualityBucket('desktop-source', '["one","two"]', (_definition, item) => {

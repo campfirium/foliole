@@ -53,7 +53,7 @@ export function parseHostedQualityBucket(kind, value) {
 export function runHostedQualityBucket(kind, value, runItem = runQualityItem) {
   const { definition, items } = parseHostedQualityBucket(kind, value);
   const continueOnFailure = kind === 'desktop-source' &&
-    process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/check';
+    process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/review';
   const failures = [];
   for (const item of items) {
     try {

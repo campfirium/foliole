@@ -136,7 +136,7 @@ instead of repeating installs or commits because the PR is still open.
 The next centralized check task reads pending entries at batch start and owns
 validation and PR closure for updates contained in its frozen candidate and
 covered by its checks. The original dependency task need not return. Active QA
-and repairs use the registered workspace on `check`: workspace operations use
+and repairs use the registered workspace on `review`: workspace operations use
 `quality:qa:workspace` from dev, while `quality:remote` runs from the clean QA
 checkout. Its owner handles preflight, hosted checks, repairs, integration and
 workspace release. Scheduled dev and release workflows retain their own lanes.

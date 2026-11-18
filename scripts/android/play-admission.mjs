@@ -15,7 +15,7 @@ import { pendingPlayBlockers, playSubmissionContext, playSubmissionReadiness } f
 export async function registerAcceptedPlaySubmission({ github, play, env, registrarSha, prebuilt = false, upload = false }) {
   const evidence = await readPlayQueueEvidence(github, env.GITHUB_RUN_ID, upload ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
   const { run, lane, version } = evidence;
-  const branch = lane === 'release-t7' ? 'release' : 'check';
+  const branch = lane === 'release-t7' ? 'release' : 'review';
   if (run.status !== 'in_progress' || run.run_attempt !== Number(env.GITHUB_RUN_ATTEMPT) ||
       run.head_sha !== env.TARGET_SHA || env.GITHUB_SHA !== run.head_sha || env.TARGET_VERSION !== version ||
       env.GITHUB_REF !== `refs/heads/${branch}` || env.TRIGGER_REF !== env.GITHUB_REF ||

@@ -15,13 +15,13 @@ const execute = (step, env) => spawnSync('bash', ['-e', '-c', step.run], {
   env: { ...process.env, ...env }, encoding: 'utf8'
 });
 
-it('allows normal quality but requires full check QA for any mobile side effect', () => {
-  for (const GITHUB_REF of ['refs/heads/dev', 'refs/heads/check']) {
+it('allows normal quality but requires full review QA for any mobile side effect', () => {
+  for (const GITHUB_REF of ['refs/heads/dev', 'refs/heads/review']) {
     expect(execute(guard, { GITHUB_REF, MOBILE: 'none', SCOPE: 'ios' }).status).toBe(0);
   }
-  expect(execute(guard, { GITHUB_REF: 'refs/heads/check', MOBILE: 'ios', SCOPE: 'full' }).status).toBe(0);
+  expect(execute(guard, { GITHUB_REF: 'refs/heads/review', MOBILE: 'ios', SCOPE: 'full' }).status).toBe(0);
   for (const env of [{ GITHUB_REF: 'refs/heads/dev' }, { SCOPE: 'ios' }, { MOBILE: 'windows' }]) {
-    expect(execute(guard, { GITHUB_REF: 'refs/heads/check', MOBILE: 'ios', SCOPE: 'full', ...env }).status).not.toBe(0);
+    expect(execute(guard, { GITHUB_REF: 'refs/heads/review', MOBILE: 'ios', SCOPE: 'full', ...env }).status).not.toBe(0);
   }
 });
 
@@ -50,7 +50,7 @@ it('requires successful full quality or verified reuse before mobile signing', (
 });
 
 it('serializes distribution requests without letting ordinary QA cancel an upload', () => {
-  const context = mode => ({ github: { ref: 'refs/heads/check' }, inputs: { mobile_distribution: mode } });
+  const context = mode => ({ github: { ref: 'refs/heads/review' }, inputs: { mobile_distribution: mode } });
   expect(evaluate(remote.concurrency.group, context('ios'))).not.toBe(evaluate(remote.concurrency.group, context('none')));
   expect(evaluate(remote.concurrency['cancel-in-progress'], context('ios'))).toBe(false);
   expect(evaluate(remote.concurrency['cancel-in-progress'], context('none'))).toBe(true);
@@ -62,7 +62,7 @@ it('executes the signing guard for both authorized lanes and rejects mismatched 
   const sha = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim();
   const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
   const base = { TARGET_SHA: sha, GITHUB_SHA: sha, TARGET_VERSION: version };
-  for (const [EXECUTION_LANE, GITHUB_REF] of [['release-t7', 'refs/heads/release'], ['qa-mobile-beta', 'refs/heads/check']]) {
+  for (const [EXECUTION_LANE, GITHUB_REF] of [['release-t7', 'refs/heads/release'], ['qa-mobile-beta', 'refs/heads/review']]) {
     const env = { ...base, EXECUTION_LANE, GITHUB_REF, TRIGGER_REF: GITHUB_REF };
     expect(execute(step, env).status).toBe(0);
     for (const change of [{ TARGET_SHA: 'b'.repeat(40) }, { GITHUB_SHA: 'b'.repeat(40) },
@@ -78,7 +78,7 @@ it('rejects a quality receipt for another commit before resolving the upload con
 });
 
 it('preserves every pending Android distribution while retaining ordinary QA cancellation', () => {
-  const context = mode => ({ github: { ref: 'refs/heads/check' }, inputs: { mobile_distribution: mode } });
+  const context = mode => ({ github: { ref: 'refs/heads/review' }, inputs: { mobile_distribution: mode } });
   expect(evaluate(remote.concurrency.queue, context('android'))).toBe('max');
   expect(evaluate(remote.concurrency['cancel-in-progress'], context('android'))).toBe(false);
   expect(evaluate(remote.concurrency.queue, context('none'))).toBe('single');

@@ -16,6 +16,11 @@ export function removeQaRemote(record) {
   qaGit(record.devRoot, 'push', 'origin', '--delete', record.branch);
 }
 
+function publishQaPreview(record) {
+  if (record.run.scope !== 'full') return;
+  qaGit(record.devRoot, 'push', 'origin', `${record.cleanupTip}:refs/heads/preview`);
+}
+
 function qaGitHub(record, args) {
   const result = spawnSync('gh', args, { cwd: record.devRoot, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || 'Cannot inspect QA activity');
@@ -31,7 +36,7 @@ function retainQaEvidence(record) {
 }
 
 export async function finishQaWorkspace({ repoRoot, verifyRun = verifyQaRun,
-  removeRemote = removeQaRemote, verifyVolume = verifyMountedQaVolume,
+  removeRemote = removeQaRemote, publishPreview = publishQaPreview, verifyVolume = verifyMountedQaVolume,
   finishLocal = finishTransientWorktree }) {
   const record = readQaWorkspace(repoRoot);
   if (!['prepared', 'finishing'].includes(record.phase)) throw new Error('No available QA workspace to finish');
@@ -51,6 +56,7 @@ export async function finishQaWorkspace({ repoRoot, verifyRun = verifyQaRun,
   }
   retainQaEvidence(record);
   // Keep the owner record until remote and local cleanup both succeed.
+  await publishPreview(record);
   await removeRemote(record);
   if (existsSync(record.worktreePath)) {
     finishLocal({ repoRoot: record.devRoot, worktreePath: record.worktreePath, releaseRetention: true });

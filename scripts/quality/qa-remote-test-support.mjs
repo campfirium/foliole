@@ -28,7 +28,7 @@ export function fixture() {
   const calls = [];
   const active = [];
   const green = [];
-  const identity = { head_branch: 'check', head_sha: state.base };
+  const identity = { head_branch: 'review', head_sha: state.base };
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ command, args, options });
     if (command === 'gh' && args[0] === 'auth') return { code: 0, stdout: '', stderr: '' };
