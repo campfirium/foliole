@@ -6,7 +6,7 @@ import { translate, type TranslationKey } from '../../../shared/localization/tra
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import { normalizeWorkspaceRailCommandId } from './workspaceRailCommandIds';
-import { DEFAULT_WORKSPACE_RAIL_ITEMS, WORKSPACE_RAIL_COMMAND_LABELS } from './workspaceRailDefaults';
+import { DEFAULT_WORKSPACE_RAIL_ITEMS, isWorkspaceRailItemAvailable, WORKSPACE_RAIL_COMMAND_LABELS } from './workspaceRailDefaults';
 
 export type WorkspaceRailSection = 'top' | 'bottom' | 'fixed';
 
@@ -64,10 +64,6 @@ export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig, t?: Rai
   );
 }
 
-function cloneItem(item: WorkspaceRailItemConfig): WorkspaceRailItemConfig {
-  return { ...item };
-}
-
 function defaultItemById(id: string) {
   return DEFAULT_WORKSPACE_RAIL_ITEMS.find((item) => item.id === id);
 }
@@ -119,17 +115,19 @@ function normalizeSection(items: WorkspaceRailItemConfig[], section: WorkspaceRa
   return ordered.map((item, order) => ({ ...item, order }));
 }
 
-export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = DEFAULT_WORKSPACE_RAIL_ITEMS) {
+export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = []) {
   const seen = new Set<string>();
   const persisted = items
     .filter(isValidPersistedItem)
     .map((item) => ({ ...item, commandId: normalizeWorkspaceRailCommandId(item.commandId) }));
   const byId = new Map(persisted.map((item) => [item.id, item]));
 
-  const systemItems = DEFAULT_WORKSPACE_RAIL_ITEMS.map((defaultItem) => {
-    seen.add(defaultItem.id);
-    return normalizeDefaultItem(byId.get(defaultItem.id) ?? defaultItem);
-  });
+  const systemItems = DEFAULT_WORKSPACE_RAIL_ITEMS
+    .filter((item) => byId.has(item.id) || isWorkspaceRailItemAvailable(item))
+    .map((defaultItem) => {
+      seen.add(defaultItem.id);
+      return normalizeDefaultItem(byId.get(defaultItem.id) ?? defaultItem);
+    });
 
   const userItems = persisted.filter((item) => {
     if (seen.has(item.id) || item.source !== 'user') {
@@ -149,11 +147,11 @@ export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = D
 }
 
 export function resetWorkspaceRailItems() {
-  return normalizeWorkspaceRailItems(DEFAULT_WORKSPACE_RAIL_ITEMS.map(cloneItem));
+  return normalizeWorkspaceRailItems();
 }
 
 export function getWorkspaceRailSectionItems(items: WorkspaceRailItemConfig[], section: WorkspaceRailSection) {
-  return normalizeWorkspaceRailItems(items).filter((item) => item.section === section);
+  return normalizeWorkspaceRailItems(items).filter((item) => item.section === section && isWorkspaceRailItemAvailable(item));
 }
 
 export function toggleWorkspaceRailItemVisibility(
@@ -252,7 +250,7 @@ export function loadWorkspaceRailItems() {
   }
   try {
     const parsed = JSON.parse(raw);
-    return normalizeWorkspaceRailItems(Array.isArray(parsed) ? parsed : DEFAULT_WORKSPACE_RAIL_ITEMS);
+    return normalizeWorkspaceRailItems(Array.isArray(parsed) ? parsed : undefined);
   } catch {
     return resetWorkspaceRailItems();
   }

@@ -64,6 +64,7 @@ export const APP_COMMAND_IDS = {
   importSingleFile: 'import.singleFileToInbox',
   openLocalFile: 'localFile.open',
   importFolder: 'import.folderToInbox',
+  importSuperMemo: 'import.superMemo',
   clipboardImport: 'import.clipboard',
   globalCaptureToInbox: GLOBAL_CAPTURE_COMMAND_ID,
   resetImportData: 'dev.resetImportData',
