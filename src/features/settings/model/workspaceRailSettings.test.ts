@@ -259,7 +259,7 @@ it('resets the rail model back to the default layout', () => {
   const reset = resetWorkspaceRailItems();
 
   expect(changed.find((item) => item.id === 'system.import-clipboard')?.visible).toBe(false);
-  expect(reset).toEqual(normalizeWorkspaceRailItems(DEFAULT_WORKSPACE_RAIL_ITEMS));
+  expect(reset).toEqual(normalizeWorkspaceRailItems());
 });
 
 it('persists normalized rail items through whitelisted storage', () => {
