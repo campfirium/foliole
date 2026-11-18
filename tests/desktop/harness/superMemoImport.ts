@@ -26,13 +26,14 @@ export async function openPreview(page: Page) {
 }
 
 export const parameters = /^(First review dates|首次到期)$/;
-export const structureStep = /^(Confirm structure|确认结构)$/;
+export const structureStep = /^(Import structure|Confirm structure|导入结构|确认结构)$/;
 export const sourceStep = /^(Source information|来源信息)$/;
 export const gradesStep = /^(Grade mapping|评分对应)$/;
 export const confirmStep = /^(Confirm migration|确认迁移)$/;
+export const preparePreview = /^(View source preview|查看原始预览)$/;
 
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
-  sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/, collectionLocation?: string) {
+  sourceButton = /^(Choose XML|Change XML|Load XML|Load another XML|选择 XML|更换 XML|载入 XML|重新载入)$/, collectionLocation?: string) {
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, path.basename(directory) + '.xml');
   if (xml !== undefined) await writeFile(file, xml);

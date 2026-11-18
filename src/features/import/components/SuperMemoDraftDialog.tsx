@@ -45,7 +45,10 @@ function useSuperMemoDraftNavigation(
   { busy, error, setError }: Pick<ReturnType<typeof useSuperMemoDraft>, 'busy' | 'error' | 'setError'>,
   open: boolean, close: () => void
 ) {
-  const [step, setStep] = useState<{ id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source']; comparing?: boolean }>();
+  const [step, setStep] = useState<{
+    id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source'];
+    filePath?: string | undefined; comparing?: boolean;
+  }>();
   const [selection, setSelection] = useState<{
     source: ReturnType<typeof useSuperMemoDraft>['source']; signature: string; ids: number[];
   }>();
@@ -86,7 +89,7 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
 }) {
   const t = useTranslation();
   const titleId = useId();
-  const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'));
+  const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'), open);
   const { draft, source, busy, error, setError, result, loadSource, importSource } = model;
   const { step, setStep, selection, setSelection, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation(model, open, closeSession);
   const previewNavigation = useSuperMemoPreviewNavigation(source);
@@ -94,12 +97,18 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
   const update = preview?.directoryUpdate;
   const requested = step?.comparing
     ? step.source === source ? 'load' : update ? 'confirm' : undefined
-    : step && (step.source === source || (step.id === 'confirm' && update)) ? step.id : undefined;
-  const current = result ? 'confirm' : requested ?? (preview && !update ? 'structure' : 'load');
-  const navigate = (id: SuperMemoMigrationStep) => setStep({ id, source });
+    : step && (step.source === source || (!step.source && step.filePath === model.selection?.filePath) ||
+      (step.id === 'confirm' && update)) ? step.id : undefined;
+  const current = result ? 'confirm' : requested ?? model.selection?.panel?.step ?? (preview && !update ? 'structure' : 'load');
+  function navigate(id: SuperMemoMigrationStep) {
+    setStep({ id, source, filePath: model.selection?.filePath });
+    setError(false);
+    void model.savePanel({ step: id });
+    if (id === 'structure') void model.prepareRememberedSource();
+  }
   function closeSession() {
     if (result) {
-      void model.resetCompletedDraft();
+      model.resetCompletedDraft();
       resetNavigation();
     }
     close();
@@ -113,12 +122,12 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
         <AppDialogContent layout="task" aria-labelledby={titleId} aria-describedby={undefined} className={settingsDialogBounds}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
           onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
-          <DraftHeader titleId={titleId} name={current === 'load' || result ? undefined : source?.name} disabled={busy} />
+          <DraftHeader titleId={titleId} name={current === 'load' || result ? undefined : model.selection?.name} disabled={busy} />
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[minmax(10rem,19%)_minmax(0,1fr)] sm:grid-rows-1">
-            <SuperMemoMigrationSteps current={current} disabled={Boolean(result)} onChange={navigate} />
+            <SuperMemoMigrationSteps current={current} disabled={busy || Boolean(result)} onChange={navigate} />
             <div className="flex min-h-0 min-w-0 flex-col">
               <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
-                onLoad={reloadSource} onLoadNew={() => {
+                onLoad={reloadSource} onViewSource={() => navigate('structure')} onLoadNew={() => {
                   setStep({ id: 'load', source, comparing: true });
                   void loadSource(true);
                 }}

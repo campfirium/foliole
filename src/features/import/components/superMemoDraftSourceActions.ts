@@ -1,6 +1,6 @@
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import type { NativeSuperMemoSource, SuperMemoFolderChoice, SuperMemoMigrationForm } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { NativeSuperMemoSource, SuperMemoMigrationForm, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import { previewRuntimeSuperMemoImport, saveRuntimeSuperMemoSourceLink, selectRuntimeSuperMemoCollection,
   selectRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
@@ -12,7 +12,7 @@ type Candidate = NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoCol
 export type DraftTarget = SuperMemoUpdateTarget & { targetBatchId: string; originalFilePath?: string | undefined };
 export type Pending = { selected: Source; target: DraftTarget | undefined; candidates?: Candidate[] };
 
-export type SuperMemoNotice = false | 'collectionChoice' | 'xmlAccess' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
+export type SuperMemoNotice = false | 'selectionRead' | 'collectionChoice' | 'xmlAccess' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
   'collectionAccess' | 'collectionRead' | 'collectionMismatch' | 'preview' | 'convert' | 'save';
 
 export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> {
@@ -35,19 +35,24 @@ export async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<Ret
   return { draft: loaded, sourceFormat: savedFormat ?? sourceFormat };
 }
 
-export async function rememberDraftSource(source: Source, percent: number, sourceFormat: SuperMemoSourceFormat, target: DraftTarget | undefined, formOnly = false, folderChoices?: SuperMemoFolderChoice[]) {
-  const comparison: SuperMemoMigrationForm['comparison'] = target
-    ? { batchId: target.targetBatchId, originalFilePath: target.originalFilePath } : undefined;
+export async function rememberDraftSource(source: SuperMemoSourceSelection, form: SuperMemoMigrationForm, formOnly: boolean, panel?: SuperMemoSourceLink['panel']) {
+  const link = { filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null,
+    ...form, ...(panel ? { panel } : {}) };
   try {
-    await saveRuntimeSuperMemoSourceLink({ filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null,
-      percent, sourceFormat, ...(folderChoices ? { folderChoices } : {}), ...(comparison ? { comparison } : {}) }, formOnly);
+    await saveRuntimeSuperMemoSourceLink(link, formOnly);
   } catch (error) {
     throw new Error('supermemo_link_save_failed', { cause: error });
   }
 }
 
+function comparisonForm(target: DraftTarget | undefined) {
+  const comparison: SuperMemoMigrationForm['comparison'] = target
+    ? { batchId: target.targetBatchId, originalFilePath: target.originalFilePath } : undefined;
+  return comparison ? { comparison } : {};
+}
+
 function createCandidateLoader(state: DraftState) {
-  const { gradeMap, sourceFormat, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError } = state;
+  const { gradeMap, sourceFormat, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError, setRemembered } = state;
   async function prepare(selected: Source, nextTarget: DraftTarget | undefined) {
     const format = selected.savedForm?.sourceFormat ?? sourceFormat;
     return nextTarget
@@ -57,7 +62,16 @@ function createCandidateLoader(state: DraftState) {
 
   async function show(selected: Source, nextTarget: DraftTarget | undefined, loaded: Awaited<ReturnType<typeof prepare>>) {
     const percent = selected.savedForm?.percent ?? 0;
-    await rememberDraftSource(selected, percent, loaded.sourceFormat, nextTarget, false, loaded.draft.folderChoices);
+    const { filePath, name, collectionDirectory } = selected;
+    const savedForm = { percent, sourceFormat: loaded.sourceFormat, gradeMap,
+      folderChoices: loaded.draft.folderChoices, ...comparisonForm(nextTarget) };
+    const update = loaded.draft.preview.directoryUpdate;
+    const sameExport = filePath === state.remembered?.filePath;
+    const panel = { ...(sameExport ? state.remembered?.panel : undefined),
+      step: update ? 'load' as const : 'structure' as const,
+      elementCount: loaded.draft.elements.length, batchId: update?.batchId };
+    await rememberDraftSource(selected, savedForm, false, panel);
+    setRemembered({ filePath, name, collectionDirectory, savedForm, panel });
     setTarget(nextTarget);
     setSourceFormat(loaded.sourceFormat);
     setDraft(loaded.draft);

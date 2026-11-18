@@ -56,20 +56,39 @@ export interface NativeSuperMemoPreview {
 export interface SuperMemoMigrationForm {
   percent: number;
   sourceFormat: SuperMemoSourceFormat;
-  folderChoices?: SuperMemoFolderChoice[];
-  comparison?: { batchId: string; originalFilePath?: string | undefined };
+  gradeMap?: SuperMemoGradeMap | undefined;
+  folderChoices?: SuperMemoFolderChoice[] | undefined;
+  comparison?: { batchId: string; originalFilePath?: string | undefined } | undefined;
+}
+
+export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'source' | 'confirm';
+
+export interface SuperMemoMigrationPanel {
+  step?: SuperMemoMigrationStep | undefined;
+  elementCount?: number | undefined;
+  batchId?: string | undefined;
+  result?: { imported: number; skipped: number; unresolvedImages: number } | undefined;
 }
 
 export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
   filePath: string;
   collectionDirectory: string | null;
+  panel?: SuperMemoMigrationPanel;
 }
 
-export interface NativeSuperMemoSource {
+export interface RememberedSuperMemoSource extends SuperMemoSourceSelection {
+  savedForm: SuperMemoMigrationForm;
+  panel?: SuperMemoMigrationPanel;
+}
+
+export interface SuperMemoSourceSelection {
   filePath: string;
   name: string;
-  xml: string;
   collectionDirectory: string | undefined;
+}
+
+export interface NativeSuperMemoSource extends SuperMemoSourceSelection {
+  xml: string;
   collectionCandidates?: { directory: string; name: string }[];
   savedForm?: SuperMemoMigrationForm;
   collectionDiscoveryFailure?: 'access' | 'read';

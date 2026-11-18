@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, structureStep } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, preparePreview, parameters, structureStep } from './harness/superMemoImport';
 
 const oneDate = card.replace('<ID>2</ID>', '<ID>3</ID>').replace('<Title>Card</Title>', '<Title>Source only</Title>')
   .replace(/<RepHist>.*<\/RepHist>/, '');
@@ -47,6 +47,8 @@ test('compares real first review dates and restores the selected proportion', as
   await expectWorkspaceShell(desktopWindow);
 
   const restored = await openPreview(desktopWindow);
+  await restored.getByRole('button', { name: preparePreview }).click();
+  await restored.getByRole('button', { name: structureStep }).click();
   await expect(restored.getByRole('button', { name: structureStep })).toHaveAttribute('aria-current', 'step');
   await restored.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('100');
@@ -58,6 +60,7 @@ test('compares real first review dates and restores the selected proportion', as
   await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const existing = await openPreview(desktopWindow);
   await expect(existing.getByRole('combobox', { name: previousImport })).toBeVisible();
+  await existing.getByRole('button', { name: preparePreview }).click();
   await existing.getByRole('button', { name: parameters }).click();
   await expect(existing.getByText(/batch’s saved proportion|批次已保存的比例/)).toBeVisible();
   await expect(slider).toHaveCount(0);

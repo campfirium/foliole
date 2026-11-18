@@ -3,6 +3,8 @@ export const NATIVE_IMPORT_FILE_COMMANDS = {
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',
   readSuperMemoSource: 'read_supermemo_source',
+  getSuperMemoSourceSelection: 'get_supermemo_source_selection',
+  clearSuperMemoSourceSelection: 'clear_supermemo_source_selection',
   selectSuperMemoCollection: 'select_supermemo_collection',
   listSuperMemoImports: 'list_supermemo_imports',
   previewSuperMemoAdjustment: 'preview_supermemo_adjustment',

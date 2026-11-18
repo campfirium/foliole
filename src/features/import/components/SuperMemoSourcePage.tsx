@@ -81,18 +81,18 @@ function SourceSample({ sample, citation, protectedCitation }: {
 }
 
 export function SuperMemoSourcePage({ preview, elements, value, disabled, onChange }: {
-  preview: NativeSuperMemoPreview; elements: SuperMemoXmlDraftElement[]; value: SuperMemoSourceFormat;
+  preview: NativeSuperMemoPreview | undefined; elements: SuperMemoXmlDraftElement[] | undefined; value: SuperMemoSourceFormat;
   disabled: boolean; onChange(next: SuperMemoSourceFormat): void;
 }) {
   const t = useTranslation();
   const group = useId();
   const [sampleId, setSampleId] = useState<number>();
-  const candidates = useMemo(() => sourceCandidates(preview.rows, elements), [preview.rows, elements]);
+  const candidates = useMemo(() => preview && elements ? sourceCandidates(preview.rows, elements) : [], [preview, elements]);
   const citationFor = ({ row, parent, article }: Candidate) => describeSuperMemoCitation(row, parent, article, value);
   const sample = candidates.find(candidate => candidate.row.id === sampleId) ?? candidates.find(citationFor) ?? candidates[0];
   const choices = value.placement === 'metadata' || value.placement === 'body'
     ? [[value.placement, legacyPlacementLabels[value.placement]] as const, ...placements] : placements;
-  const protectedCitation = preview.directoryUpdate?.citationChanges.some(change =>
+  const protectedCitation = preview?.directoryUpdate?.citationChanges.some(change =>
     change.sourceId === sample?.row.id && change.status === 'protected') ?? false;
 
   return <div className="mx-auto grid w-full max-w-3xl gap-5 text-sm">
@@ -108,7 +108,7 @@ export function SuperMemoSourcePage({ preview, elements, value, disabled, onChan
     </fieldset>
     {value.placement === 'content-end' || value.placement === 'body' ? <SourceTemplate key={value.template}
       template={value.template} disabled={disabled} onApply={template => onChange({ ...value, template })} /> : null}
-    <section aria-label={t('desktop.superMemoDrafts.sourceExample')} className="grid min-w-0 gap-3">
+    {preview ? <section aria-label={t('desktop.superMemoDrafts.sourceExample')} className="grid min-w-0 gap-3">
       <h3 className="font-semibold">{t('desktop.superMemoDrafts.sourceExample')}</h3>
       {preview.directoryUpdate && <p className="text-xs text-foreground/70">{t('desktop.superMemoDrafts.sourceSampleExport')}</p>}
       {sample ? <>
@@ -118,6 +118,6 @@ export function SuperMemoSourcePage({ preview, elements, value, disabled, onChan
         </select>
         <SourceSample sample={sample} citation={protectedCitation ? null : citationFor(sample)} protectedCitation={protectedCitation} />
       </> : <p className="text-foreground/70">{t('desktop.superMemoDrafts.sourceSampleNone')}</p>}
-    </section>
+    </section> : null}
   </div>;
 }

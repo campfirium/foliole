@@ -1,5 +1,6 @@
 import { CalendarDays, CheckCheck, ClipboardList, FolderTree, ListChecks, Upload } from 'lucide-react';
 
+import type { SuperMemoMigrationStep } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppButton, settingsSidebarItemClassName } from '../../../shared/ui';
 
@@ -12,7 +13,7 @@ const steps = [
   { id: 'confirm', label: 'confirmStep', Icon: CheckCheck }
 ] as const;
 
-export type SuperMemoMigrationStep = (typeof steps)[number]['id'];
+export type { SuperMemoMigrationStep } from '../../../../lib/platform/nativeSuperMemoImportContract';
 
 export function superMemoMigrationStepLabel(id: SuperMemoMigrationStep) {
   return `desktop.superMemoDrafts.${steps.find(step => step.id === id)!.label}` as const;

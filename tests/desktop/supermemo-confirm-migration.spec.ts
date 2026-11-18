@@ -1,8 +1,11 @@
+import { rename } from 'node:fs/promises';
+import path from 'node:path';
+
 import type { Page } from '@playwright/test';
 
 import { relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { expect, test } from './harness/fixtures';
-import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, sourceStep } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, preparePreview, parameters, sourceStep } from './harness/superMemoImport';
 
 const convert = /^(Convert|转换)$/;
 const confirmUpdate = /^(Confirm Update|确认更新)$/;
@@ -18,9 +21,10 @@ function readImportedNodes(page: Page) {
 
 test('reviews the current settings and actual exceptions before a first import', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
+  const directory = testInfo.outputPath('ConfirmFirst');
   const xml = `<SuperMemoCollection><Count>2</Count>${card}
     <SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty card</Title></SuperMemoElement></SuperMemoCollection>`;
-  await loadSource(desktopApp, dialog, testInfo.outputPath('ConfirmFirst'), xml);
+  await loadSource(desktopApp, dialog, directory, xml);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
   await dialog.getByRole('button', { name: sourceStep }).click();
@@ -40,8 +44,15 @@ test('reviews the current settings and actual exceptions before a first import',
   await expect(dialog.getByRole('button', { name: convert })).toHaveCount(0);
   const written = await readImportedNodes(desktopWindow);
   expect(written.map(node => node.title)).toEqual(['Card']);
+  const original = path.join(directory, 'ConfirmFirst.xml');
+  const moved = path.join(directory, 'Moved.xml');
+  await rename(original, moved);
   await dialog.getByRole('button', { name: close }).click();
   const reopened = await openPreview(desktopWindow);
+  await expect(reopened.getByText('ConfirmFirst.xml', { exact: true })).toBeVisible();
+  await expect(reopened.getByRole('alert')).toHaveCount(0);
+  await rename(moved, original);
+  await reopened.getByRole('button', { name: preparePreview }).click();
   await reopened.getByRole('button', { name: confirmStep }).click();
   await expect(reopened.getByRole('heading', { name: /^(Update an existing batch|更新已有批次)$/ })).toBeVisible();
   await expect(reopened.getByRole('button', { name: convert })).toHaveCount(0);
@@ -69,7 +80,7 @@ test('confirms a batch update once and reads its durable result after restarting
   await loadSource(desktopApp, reopened, directory);
   await loadSource(desktopApp, reopened, newer,
     xml.replace('<Count>2</Count>', '<Count>3</Count>').replace('</SuperMemoCollection>', added + '</SuperMemoCollection>'),
-    /^(Load newer export|载入重新导出的 XML)$/);
+    /^(Choose newer XML|Load newer export|选择新版 XML|载入重新导出的 XML)$/);
   await expect(reopened.getByText(/^(Use the ratio saved for this batch|沿用该批次保存的比例)$/)).toBeVisible();
   await expect(reopened.getByText(/Matched 2 existing entries|已核实 2 条已有资料/)).toBeVisible();
   await reopened.screenshot({ path: testInfo.outputPath('update-confirmation.png') });
@@ -85,6 +96,7 @@ test('confirms a batch update once and reads its durable result after restarting
   const second = await relaunchGoldenJourney(desktopSession);
   try {
     const reloaded = await openPreview(second.firstWindow);
+    await reloaded.getByRole('button', { name: preparePreview }).click();
     await reloaded.getByRole('button', { name: confirmStep }).click();
     await expect(reloaded.getByRole('button', { name: confirmUpdate })).toBeDisabled();
     expect(await readImportedNodes(second.firstWindow)).toEqual(written);

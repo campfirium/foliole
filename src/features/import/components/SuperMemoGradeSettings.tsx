@@ -52,7 +52,7 @@ function GradeChoice({ grade, rating, onChange, disabled }: {
 
 export function SuperMemoGradesPage({ value, onChange, disabled, preview, percent }: {
   value: SuperMemoGradeMap; onChange(value: SuperMemoGradeMap): void; disabled: boolean;
-  preview: NativeSuperMemoPreview; percent: number;
+  preview: NativeSuperMemoPreview | undefined; percent: number;
 }) {
   const t = useTranslation();
   return (
@@ -74,20 +74,20 @@ export function SuperMemoGradesPage({ value, onChange, disabled, preview, percen
               onChange={next => onChange(value.map((current, index) => index === grade ? next : current))} />
           ))}
         </div>
-        {preview.pairedCollection ? <p className="max-w-prose text-xs leading-relaxed text-foreground/70">
+        {preview?.pairedCollection ? <p className="max-w-prose text-xs leading-relaxed text-foreground/70">
           {t('desktop.superMemoDrafts.pairedLearningHelp')}
         </p> : null}
       </section>
-      {preview.directoryUpdate ? <p className="text-xs text-foreground/70">
+      {preview?.directoryUpdate ? <p className="text-xs text-foreground/70">
         {t('desktop.superMemoDrafts.existingBatch')}
-      </p> : <section className="grid min-w-0 gap-4 border-t border-settings-divider pt-4"
+      </p> : preview ? <section className="grid min-w-0 gap-4 border-t border-settings-divider pt-4"
         aria-label={t('desktop.superMemoDrafts.scheduleImpact')}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="font-semibold">{t('desktop.superMemoDrafts.scheduleImpact')}</h3>
           <p className="text-xs tabular-nums text-foreground/70">{t('desktop.superMemoDrafts.blend')} · {percent}%</p>
         </div>
         <SuperMemoDraftTable preview={preview} percent={percent} />
-      </section>}
+      </section> : null}
     </div>
   );
 }

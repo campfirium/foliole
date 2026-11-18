@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { confirmStep, gradesStep, loadSource, openPreview, structureStep } from './harness/superMemoImport';
+import { confirmStep, gradesStep, loadSource, openPreview, preparePreview, structureStep } from './harness/superMemoImport';
 
 function sourceEntry(dialog: Locator, id: number) {
   return dialog.getByRole('button', { name: new RegExp(`^(?!(?:Expand|Collapse|展开|折叠)).*#${id}(?:\\s|$)`) });
@@ -81,6 +81,7 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
 
   await desktopWindow.reload();
   const restored = await openPreview(desktopWindow);
+  await restored.getByRole('button', { name: preparePreview }).click();
   await expect(sourceEntry(restored, 1)).toBeVisible();
   await expand(restored, 1);
   await expect(folderSwitch(restored, 7)).toBeChecked();

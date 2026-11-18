@@ -8,6 +8,7 @@ import {
 import type { SuperMemoNotice } from './superMemoDraftSourceActions';
 
 const descriptions = {
+  selectionRead: 'desktop.superMemoDrafts.selectionReadFailed',
   collectionChoice: 'desktop.superMemoDrafts.collectionChoiceHelp',
   xmlAccess: 'desktop.superMemoDrafts.xmlAccess',
   xmlRead: 'desktop.superMemoDrafts.xmlRead',
@@ -33,7 +34,8 @@ function RecoveryActions({ error, busy, inline, onClose, recover, retry }: Notic
   const close = <AppButton variant="ghost" disabled={busy} onClick={inline ? onClose : undefined}>
     {t('desktop.superMemoDrafts.close')}
   </AppButton>;
-  const canRetryXml = error === 'xmlAccess' || (inline && !collection && error !== 'convert' && error !== 'save');
+  const canRetryXml = error === 'xmlAccess' || error === 'xmlRead' || error === 'xmlSize' || error === 'xmlFormat' ||
+    (inline && error === 'preview');
   return (
     <>
       {error !== 'collectionAccess' ? (inline ? close : <AppDialogClose asChild>{close}</AppDialogClose>) : null}

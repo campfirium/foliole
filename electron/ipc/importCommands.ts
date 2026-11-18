@@ -34,7 +34,7 @@ import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { handleSuperMemoImportCommand } from './superMemoImportCommands.js';
-import { handleSuperMemoSource } from './superMemoSourceLink.js';
+import { clearSuperMemoSourceSelection, getSuperMemoSourceSelection, handleSuperMemoSource } from './superMemoSourceLink.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -101,6 +101,8 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
     return handleSuperMemoSource(args, () => resolveTargetWindow(context));
   }
+  if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) return getSuperMemoSourceSelection();
+  if (request.command === NATIVE_COMMANDS.clearSuperMemoSourceSelection) return clearSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
     return selectSuperMemoCollection(resolveTargetWindow(context), asString(args.filePath, 'filePath'),
       asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'));

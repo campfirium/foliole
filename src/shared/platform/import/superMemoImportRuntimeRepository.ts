@@ -2,7 +2,7 @@ import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../.
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { readSuperMemoXmlDraft } from '../../../../lib/core/import/superMemoXmlDraft';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import type { NativeSuperMemoPreviewArgs, SuperMemoFolderChoice, SuperMemoSourceLink } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { NativeSuperMemoPreviewArgs, SuperMemoFolderChoice, SuperMemoMigrationPanel, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
@@ -11,7 +11,24 @@ export function selectRuntimeSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
 }
 
-export function loadRuntimeSuperMemoSourceLink() {
+export async function getRuntimeSuperMemoSourceSelection() {
+  return requireInvoke()(NATIVE_COMMANDS.getSuperMemoSourceSelection);
+}
+
+export function clearRuntimeSuperMemoSourceSelection() {
+  return requireInvoke()(NATIVE_COMMANDS.clearSuperMemoSourceSelection);
+}
+
+export async function connectRuntimeSuperMemoSource() {
+  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'connect' });
+}
+
+export async function saveRuntimeSuperMemoPanel(source: SuperMemoSourceSelection, panel: SuperMemoMigrationPanel) {
+  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource,
+    { action: 'rememberPanel', filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null, panel });
+}
+
+export function readRuntimeRememberedSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'restore' });
 }
 

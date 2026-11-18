@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, preparePreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
 
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
@@ -23,7 +23,7 @@ test('previews different XML exports and retains the conversion draft after dism
   const dialog = await openPreview(desktopWindow);
   const preview = dialog.getByRole('region', { name: /^(Preview|预览)$/ });
   await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toHaveCount(0);
-  const note = dialog.getByRole('note');
+  const note = dialog.getByText(/Audio is not imported|音频不会导入/);
   await expect(preview.getByRole('note')).toHaveCount(0);
   const settingsBounds = await desktopWindow.locator('[data-settings-root-dialog]').boundingBox();
   expect(settingsBounds).not.toBeNull();
@@ -34,7 +34,7 @@ test('previews different XML exports and retains the conversion draft after dism
   await expect(dialog.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
-  await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4|SuperMemo #4/i })).toBeVisible();
   await dialog.getByRole('button', { name: /^(Expand entry|展开条目) #1$/ }).click();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
   await expect(preview.getByText('Question', { exact: true })).toBeVisible();
@@ -107,6 +107,15 @@ function readImportedTopicLocation(page: Page) {
   });
 }
 
+async function checkRestoredBatchWithoutSource(page: Page) {
+  const restored = await openPreview(page);
+  await expect(restored.getByText('collection.xml', { exact: true })).toBeVisible();
+  await expect(restored.getByText(/^(Last conversion · 2 imported|上次转换 · 导入 2 条)/)).toBeVisible();
+  await expect(restored.getByRole('slider')).toHaveValue('100');
+  await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await page.keyboard.press('Escape');
+}
+
 test('imports a Topic with an inline image and reopens a saved import batch', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('collection');
@@ -140,15 +149,17 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
   await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await rm(directory, { recursive: true });
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByText('collection.xml', { exact: true })).toBeVisible();
+  await expect(reopened.getByText(/^(Last conversion · 2 imported|上次转换 · 导入 2 条)/)).toBeVisible();
   await reopened.getByRole('combobox').selectOption({ index: 1 });
   await reopened.getByRole('slider').press('End');
   await reopened.getByRole('button', { name: /^(Apply first review dates|应用首次复习日期)$/ }).click();
   await expect(reopened.getByText(/Updated 1|已更新 1 张/)).toBeVisible();
-  await rm(directory, { recursive: true });
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
+  await checkRestoredBatchWithoutSource(desktopWindow);
   const { nodeId, parentNodeId } = await readImportedTopicLocation(desktopWindow);
   const importedCard = await desktopWindow.evaluate(async () => {
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
@@ -218,6 +229,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await expectWorkspaceShell(desktopWindow);
   await openPreview(desktopWindow);
   await expect(dialog.getByText('Grades.xml', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: preparePreview }).click();
   await dialog.getByRole('button', { name: gradesStep }).click();
   await expect(dialog.getByRole('button', { name: again })).toBeVisible();
   await expect(intervalShift(impact)).toHaveText(updatedDays);

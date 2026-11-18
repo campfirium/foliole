@@ -22,7 +22,24 @@ function useAdjustmentPreview(selected: Batch | undefined, percent: number, setE
   return preview;
 }
 
-export function SuperMemoBatchAdjustments() {
+function BatchPicker({ batches, selected, busy, onSelect }: {
+  batches: Batch[]; selected: Batch | undefined; busy: boolean; onSelect(batch: Batch | undefined): void;
+}) {
+  const t = useTranslation();
+  if (!batches.length) return null;
+  return <label className="grid gap-1 text-sm">
+    {t('desktop.superMemoDrafts.batch')}
+    <select value={selected?.batchId ?? ''} disabled={busy}
+      onChange={event => onSelect(batches.find(entry => entry.batchId === event.currentTarget.value))}>
+      <option value="">{t('desktop.superMemoDrafts.chooseBatch')}</option>
+      {batches.map(batch => <option key={batch.batchId} value={batch.batchId}>
+        {t('desktop.superMemoDrafts.batchOption', { id: batch.batchId.slice(0, 8), count: batch.imported })}
+      </option>)}
+    </select>
+  </label>;
+}
+
+export function SuperMemoBatchAdjustments({ preferredBatchId }: { preferredBatchId?: string | undefined }) {
   const t = useTranslation();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [selected, setSelected] = useState<Batch>();
@@ -33,8 +50,16 @@ export function SuperMemoBatchAdjustments() {
   const preview = useAdjustmentPreview(selected, percent, setError);
 
   useEffect(() => {
-    void listRuntimeSuperMemoImports().then(setBatches, () => setError(true));
-  }, []);
+    let active = true;
+    void listRuntimeSuperMemoImports().then(value => {
+      if (!active) return;
+      const batch = value.find(entry => entry.batchId === preferredBatchId);
+      setBatches(value);
+      setSelected(batch);
+      setPercent(batch?.percent ?? 0);
+    }, () => { if (active) setError(true); });
+    return () => { active = false; };
+  }, [preferredBatchId]);
 
   async function apply(batch: Batch) {
     setBusy(true);
@@ -53,20 +78,11 @@ export function SuperMemoBatchAdjustments() {
   }
 
   return <>
-    {batches.length ? <label className="grid gap-1 text-sm">
-      {t('desktop.superMemoDrafts.batch')}
-      <select value={selected?.batchId ?? ''} disabled={busy} onChange={event => {
-        const batch = batches.find(entry => entry.batchId === event.currentTarget.value);
-        setSelected(batch);
-        setPercent(batch?.percent ?? 0);
-        setResult(undefined);
-      }}>
-        <option value="">{t('desktop.superMemoDrafts.chooseBatch')}</option>
-        {batches.map(batch => <option key={batch.batchId} value={batch.batchId}>
-          {t('desktop.superMemoDrafts.batchOption', { id: batch.batchId.slice(0, 8), count: batch.imported })}
-        </option>)}
-      </select>
-    </label> : null}
+    <BatchPicker {...{ batches, selected, busy }} onSelect={batch => {
+      setSelected(batch);
+      setPercent(batch?.percent ?? 0);
+      setResult(undefined);
+    }} />
     {selected ? <>
       <SuperMemoPreviewOptionFields percent={percent} onChange={setPercent} />
       {preview ? <p>{t('desktop.superMemoDrafts.adjustPreview', preview)}</p> : null}
