@@ -26,7 +26,7 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
     applySuperMemoStructure(draft.preview.rows, draft.elements, draft.folderChoices).some(row =>
       row.structure && row.outcome !== 'skipped' && row.structure.parentId !== row.parentId), [current, draft, result]);
   return (
-    <div className="flex min-w-0 flex-col gap-4 px-settings-panel-x">
+    <div className={`flex min-w-0 flex-col gap-4 px-settings-panel-x ${current === 'structure' ? 'h-full' : ''}`}>
       <h3 className="shrink-0 text-ui-lg font-semibold">{t(
         current === 'schedule' ? 'desktop.superMemoDrafts.scheduleTitle' :
           current === 'grades' ? 'desktop.superMemoDrafts.gradeMapping' : superMemoMigrationStepLabel(current)
@@ -34,7 +34,8 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
       {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && draft ? (
-        <SuperMemoStructurePage preview={draft.preview} elements={draft.elements}
+        <SuperMemoStructurePage key={selection?.filePath} preview={draft.preview} elements={draft.elements}
+          loaded={model.source?.draft?.elements} filePath={selection?.filePath ?? ''}
           navigation={navigation} busy={busy} onChange={model.changeFolder} />
       ) : null}
       {current === 'grades' && selection ? (

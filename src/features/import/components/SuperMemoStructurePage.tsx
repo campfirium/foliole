@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, FileText, Folder } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { convertSuperMemoContent } from '../../../../lib/core/import/superMemoContent';
 import { orderSuperMemoSourceRows } from '../../../../lib/core/import/superMemoImportParents';
@@ -7,7 +7,8 @@ import { isSuperMemoCollectionRoot } from '../../../../lib/core/import/superMemo
 import type { SuperMemoXmlDraftElement } from '../../../../lib/core/import/superMemoXmlDraft';
 import type { NativeSuperMemoPreview as Preview, NativeSuperMemoPreviewRow as Row } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppSwitch } from '../../../shared/ui';
+import { parseRuntimeSuperMemoSource, readRuntimeRememberedSuperMemoSource } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+import { AppSpinner, AppSwitch } from '../../../shared/ui';
 import { MarkdownEditor } from '../../editor/components/MarkdownEditor';
 
 import type { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
@@ -104,14 +105,37 @@ function PreviewMarkdown({ value }: { value: string }) {
     readOnly readOnlyInteractionMode="document" liveMarkdownEnabled scrollContainer="outer" />;
 }
 
-function SourceDocument({ row, element, wrapper, readOnly }: {
-  row: Row; element: SuperMemoXmlDraftElement | undefined; wrapper: number | undefined; readOnly: boolean;
+type SourceContent = 'loading' | 'unavailable' | ReadonlyMap<number, SuperMemoXmlDraftElement>;
+
+function useSourceContent(openEntry: boolean, loaded: SuperMemoXmlDraftElement[] | undefined, filePath: string) {
+  const inline = useMemo(() => loaded ? new Map(loaded.map(element => [element.id, element])) : undefined, [loaded]);
+  const [fetched, setFetched] = useState<{ filePath: string; content: SourceContent }>();
+  const cached = fetched?.filePath === filePath ? fetched.content : undefined;
+  useEffect(() => {
+    if (!openEntry || inline || cached) return;
+    let active = true;
+    void readRuntimeRememberedSuperMemoSource(true).then(source => {
+      if (!source || source.filePath !== filePath) throw new Error('supermemo_source_changed');
+      if (!active) return;
+      const { elements } = parseRuntimeSuperMemoSource(source.xml);
+      setFetched({ filePath, content: new Map(elements.map(element => [element.id, element])) });
+    }).catch(() => {
+      if (active) setFetched({ filePath, content: 'unavailable' });
+    });
+    return () => { active = false; };
+  }, [cached, filePath, inline, openEntry]);
+  return inline ?? cached ?? 'loading';
+}
+
+function SourceDocument({ row, content, wrapper, readOnly }: {
+  row: Row; content: SourceContent; wrapper: number | undefined; readOnly: boolean;
 }) {
   const t = useTranslation();
+  const element = typeof content === 'string' ? undefined : content.get(row.id);
   const body = convertSuperMemoContent(element?.bodyOrQuestionHtml ?? []).content;
   const answer = convertSuperMemoContent(element?.answerHtml ?? []).content;
   return <article className="space-y-3 break-words">
-    <p className="text-xs text-foreground/70">#{row.id} · {t(kindKey[row.outcome])}</p>
+    <p className="text-xs text-foreground/70">#{row.id} · {row.sourceType === 'Concept' ? <>{t('desktop.superMemoDrafts.concept')} → </> : null}{t(kindKey[row.outcome])}</p>
     <h4 className="font-semibold">{row.sourceTitle || (row.id === wrapper ? t('desktop.superMemoDrafts.collectionRoot') : row.title || `#${row.id}`)}</h4>
     {!readOnly && row.structure?.folderBody ? <p className="text-xs">{t('desktop.superMemoDrafts.structureFolderBody')}</p> : null}
     {row.issue ? <p className="text-xs">{t(`desktop.superMemoDrafts.issue.${row.issue}`, { history: row.historyCount })}</p> : null}
@@ -126,27 +150,26 @@ function SourceDocument({ row, element, wrapper, readOnly }: {
         {row.unresolvedImages.map(image => <li key={image.source}>{image.source}</li>)}
       </ul>
     </> : null}
-    {!body && !answer ? <p className="text-foreground/65">{t('desktop.superMemoDrafts.structureNoBody')}</p> : null}
+    {content === 'loading' ? <AppSpinner size="sm" label={t('desktop.superMemoDrafts.structureBodyLoading')} /> : null}
+    {content === 'unavailable' || (typeof content !== 'string' && !element) ?
+      <p className="text-foreground/65">{t('desktop.superMemoDrafts.structureBodyUnavailable')}</p> : null}
+    {element && !body && !answer ? <p className="text-foreground/65">{t('desktop.superMemoDrafts.structureNoBody')}</p> : null}
   </article>;
 }
 
-export function SuperMemoStructurePage({ preview, elements, ...controls }: {
-  preview: Preview; elements: SuperMemoXmlDraftElement[];
+export function SuperMemoStructurePage({ preview, elements, loaded, filePath, ...controls }: {
+  preview: Preview; elements: SuperMemoXmlDraftElement[]; loaded: SuperMemoXmlDraftElement[] | undefined; filePath: string;
 } & Pick<TreeProps, 'navigation' | 'busy' | 'onChange'>) {
   const t = useTranslation();
   const { children, descendants, byId, wrapper, skipped, missing, missingCount, media } = useMemo(() => sourceTree(preview, elements), [preview, elements]);
   const readOnly = Boolean(preview.directoryUpdate);
-  const sources = useMemo(() => new Map(elements.map(element => [element.id, element])), [elements]);
   const { tab, active, selectTab } = controls.navigation;
   const filtered = tab === 'skipped' ? skipped : tab === 'missing' ? missing : undefined;
   const current = byId.get(active ?? 0) ?? filtered?.[0];
+  const content = useSourceContent(Boolean(current), loaded, filePath);
   return <>
-    <div className="shrink-0 space-y-1 text-sm text-muted-foreground">
-      <p>{t(readOnly ? 'desktop.superMemoDrafts.structureUpdateHelp' : 'desktop.superMemoDrafts.structureHelp')}</p>
-      {!preview.pairedCollection ? <p className="text-xs">{t('desktop.superMemoDrafts.structureXmlOrder')}</p> : null}
-      <p>{t('desktop.superMemoDrafts.structureConversionNote')}</p>
-    </div>
-    <div className="grid h-[28rem] shrink-0 grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-settings-divider text-sm">
+    {!preview.pairedCollection ? <p className="shrink-0 text-xs text-muted-foreground">{t('desktop.superMemoDrafts.structureXmlOrder')}</p> : null}
+    <div className="grid min-h-48 flex-1 grid-cols-2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-settings-divider text-sm">
       <section aria-label={t('desktop.superMemoDrafts.structureSource')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid border-r border-settings-divider bg-settings-sidebar">
         <div className="flex flex-wrap gap-1 border-b border-settings-divider px-2">
           {tabs.map(key => <button type="button" key={key} aria-pressed={tab === key}
@@ -164,13 +187,14 @@ export function SuperMemoStructurePage({ preview, elements, ...controls }: {
       <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid">
         <h4 className="flex items-center border-b border-settings-divider px-3 py-2 font-medium">{t('desktop.superMemoDrafts.entryPreview')}</h4>
         <div key={current?.id} className="min-h-0 overflow-auto p-4">
-          {current ? <SourceDocument row={current} element={sources.get(current.id)} wrapper={wrapper} readOnly={readOnly} /> :
+          {current ? <SourceDocument row={current} content={content} wrapper={wrapper} readOnly={readOnly} /> :
             <p className="text-foreground/65">{t('desktop.superMemoDrafts.structureSelect')}</p>}
         </div>
       </section>
     </div>
-    {media.local || media.remote || media.audio ? <p className="text-xs text-foreground/70">
-      {t('desktop.superMemoDrafts.media', media)}
+    {media.local || media.remote || media.audio ? <p className="shrink-0 text-xs text-foreground/70">
+      {[media.local || media.remote ? t('desktop.superMemoDrafts.structureImages', media) : '',
+        media.audio ? t('desktop.superMemoDrafts.structureAudio', media) : ''].filter(Boolean).join(' · ')}
     </p> : null}
   </>;
 }
