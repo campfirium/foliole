@@ -57,7 +57,10 @@ function resolveRuntimeAppName(initialAppName: string, env: NodeJS.ProcessEnv) {
 }
 
 function resolveMacosIconPath(appRoot: string, env: NodeJS.ProcessEnv) {
-  const iconName = env.FOLIOLE_MACOS_DAILY_DEBUG === '1' ? 'icon-dev-macos.png' : 'icon-macos.png';
+  const dailyDev = env.FOLIOLE_MACOS_DAILY_DEBUG === '1';
+  const customIconPath = env.FOLIOLE_MACOS_DEV_ICON_PATH?.trim();
+  if (dailyDev && customIconPath && path.isAbsolute(customIconPath)) return customIconPath;
+  const iconName = dailyDev ? 'icon-dev-macos.png' : 'icon-macos.png';
   return path.join(appRoot, 'build', iconName);
 }
 
