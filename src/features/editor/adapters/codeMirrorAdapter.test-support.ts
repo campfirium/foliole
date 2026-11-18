@@ -129,6 +129,7 @@ vi.mock('@codemirror/view', () => ({
       domEventHandlers: mockDomEventHandlers,
       lineWrapping: mockLineWrapping,
       scrollIntoView: mockScrollIntoView,
+      scrollMargins: { of: vi.fn((value) => value) },
       updateListener: {
         of: vi.fn(() => mockUpdateListenerExtension)
       }
