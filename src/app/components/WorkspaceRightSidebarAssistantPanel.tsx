@@ -66,7 +66,7 @@ function FolioleAideCapabilityGate(props: {
         <h2 className="m-0 text-xl font-semibold text-foreground/62">
           {t('desktop.rightPanel.assistant.title')}
         </h2>
-        <p className="m-0 mt-3 text-ui-sm leading-5 text-foreground/50">
+        <p className="m-0 mt-3 text-balance text-ui-sm leading-5 text-foreground/50">
           {t('desktop.rightPanel.assistant.emptyDescription')}
         </p>
         <AppButton
