@@ -141,7 +141,7 @@ export function ReviewGradeActions({
   };
   return (
     <div className="flex items-center gap-2">
-      <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.grade.group')} className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
+      <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.grade.group')} data-review-toolbar-kind="grade" className={groupClassName ?? `gap-2 ${overlayDividerClass(surface)}`}>
         {renderOverlayDividedActions(
           reviewGradeButtons.map((gradeButton) => ({
             key: String(gradeButton.grade),
