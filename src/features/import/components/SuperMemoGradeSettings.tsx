@@ -56,10 +56,9 @@ export function SuperMemoGradesPage({ value, onChange, disabled, preview, percen
 }) {
   const t = useTranslation();
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 text-sm">
+    <div className="grid min-w-0 gap-4 text-sm">
       <section className="grid min-w-0 gap-3" aria-label={t('desktop.superMemoDrafts.gradeMapping')}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold">{t('desktop.superMemoDrafts.gradeMapping')}</h3>
+        <div className="flex justify-end">
           <AppButton type="button" size="sm" variant="ghost" disabled={disabled}
             onClick={() => onChange(DEFAULT_SUPER_MEMO_GRADE_MAP)}>
             {t('desktop.superMemoDrafts.resetGrades')}

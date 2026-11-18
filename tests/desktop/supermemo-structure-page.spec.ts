@@ -1,9 +1,9 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, rename } from 'node:fs/promises';
 
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { confirmStep, gradesStep, loadSource, openPreview, preparePreview, structureStep } from './harness/superMemoImport';
+import { confirmStep, gradesStep, loadSource, openPreview, structureStep } from './harness/superMemoImport';
 
 function sourceEntry(dialog: Locator, id: number) {
   return dialog.getByRole('button', { name: new RegExp(`^(?!(?:Expand|Collapse|展开|收起)).*#${id}(?:\\s|$)`) });
@@ -73,21 +73,24 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
   await expand(dialog, 5);
   await folderSwitch(dialog, 6).click();
   await sourceEntry(dialog, 6).click();
-  await expect(document(dialog).getByText(/Archive #1/)).toBeVisible();
+  await expect(document(dialog).getByRole('heading', { name: 'Nested' })).toBeVisible();
   await dialog.getByRole('button', { name: gradesStep }).click();
   await dialog.getByRole('button', { name: structureStep }).click();
   await expect(folderSwitch(dialog, 7)).toBeChecked();
   await expect(folderSwitch(dialog, 6)).toBeChecked();
   await dialog.screenshot({ path: info.outputPath('structure.png') });
 
+  const original = info.outputPath('Structure', 'Structure.xml');
+  const moved = info.outputPath('Moved.xml');
+  await rename(original, moved);
   await desktopWindow.reload();
   const restored = await openPreview(desktopWindow);
-  await restored.getByRole('button', { name: preparePreview }).click();
   await expect(sourceEntry(restored, 1)).toBeVisible();
   await expand(restored, 1);
   await expect(folderSwitch(restored, 7)).toBeChecked();
   await expand(restored, 5);
   await expect(folderSwitch(restored, 6)).toBeChecked();
+  await rename(moved, original);
   await convert(restored);
   const { nodes } = await readBatch(desktopApp, [1, 7, 9, 4, 5, 6]);
   expect(nodes[7]).toMatchObject({ kind: 'folder', parent: nodes[1]!.id });
@@ -97,11 +100,11 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
 
   await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const existing = await openPreview(desktopWindow);
-  await loadSource(desktopApp, existing, info.outputPath('Structure'));
   await existing.getByRole('button', { name: structureStep }).click();
   await expect(existing.getByRole('region', { name: /^(Original structure|原始结构)$/ })).toBeVisible();
   await expect(folderSwitch(existing, 6)).toHaveCount(0);
-  await expand(existing, 1);
+  await expect(sourceEntry(existing, 6)).toBeVisible();
+  await existing.getByRole('button', { name: /^(Collapse|收起).*#5$/ }).click();
   await expect(sourceEntry(existing, 6)).toBeHidden();
   await expand(existing, 5);
   await expect(sourceEntry(existing, 6)).toBeVisible();

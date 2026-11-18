@@ -43,7 +43,7 @@ export interface NativeSuperMemoPreviewRow {
   sourceReferenceId?: number | null;
   sourceTitle?: string;
   sourceChildren?: number[];
-  structure?: { parentId: number | null; editable: boolean; folderBody: boolean };
+  structure?: { parentId: number | null; editable: boolean; folderBody: boolean; sourceHasBody?: boolean };
 }
 
 export interface NativeSuperMemoPreview {
@@ -71,6 +71,16 @@ export interface SuperMemoMigrationPanel {
   result?: { imported: number; skipped: number; unresolvedImages: number } | undefined;
 }
 
+export interface SuperMemoSourceDraft {
+  elements: SuperMemoXmlDraftElement[];
+  originalElements?: SuperMemoXmlDraftElement[] | undefined;
+}
+
+export interface SuperMemoMigrationSnapshot {
+  elements: Omit<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>[];
+  preview: NativeSuperMemoPreview;
+}
+
 export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
   filePath: string;
   collectionDirectory: string | null;
@@ -79,6 +89,8 @@ export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
 
 export interface RememberedSuperMemoSource extends SuperMemoSourceSelection {
   savedForm: SuperMemoMigrationForm;
+  hasDraft?: boolean;
+  snapshot?: SuperMemoMigrationSnapshot;
   panel?: SuperMemoMigrationPanel;
 }
 
@@ -90,6 +102,8 @@ export interface SuperMemoSourceSelection {
 
 export interface NativeSuperMemoSource extends SuperMemoSourceSelection {
   xml: string;
+  xmlHash?: string;
+  draft?: SuperMemoSourceDraft;
   collectionCandidates?: { directory: string; name: string }[];
   savedForm?: SuperMemoMigrationForm;
   collectionDiscoveryFailure?: 'access' | 'read';

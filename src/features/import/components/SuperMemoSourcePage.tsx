@@ -95,9 +95,9 @@ export function SuperMemoSourcePage({ preview, elements, value, disabled, onChan
   const protectedCitation = preview?.directoryUpdate?.citationChanges.some(change =>
     change.sourceId === sample?.row.id && change.status === 'protected') ?? false;
 
-  return <div className="mx-auto grid w-full max-w-3xl gap-5 text-sm">
+  return <div className="grid min-w-0 gap-4 text-sm">
     <fieldset disabled={disabled} className="grid gap-2">
-      <legend className="mb-2 font-semibold">{t('desktop.superMemoDrafts.sourceInformation')}</legend>
+      <legend className="sr-only">{t('desktop.superMemoDrafts.sourceInformation')}</legend>
       {choices.map(([placement, label]) => (
         <label key={placement} className="flex cursor-pointer items-center gap-2">
           <input type="radio" name={group} className="accent-[var(--role-accent)]" checked={value.placement === placement}

@@ -161,13 +161,13 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
     const target = { ...(targetBatchId ? { targetBatchId } : {}), ...(originalElements ? { originalElements } : {}) };
     const saved = resolveSuperMemoBatch(openDatabaseConnection().driver, elements, preview, target);
     const choices = saved ? saved.batch.folderChoices : folderChoices;
+    preview.previewSignature = getSuperMemoPreviewSignature(preview,
+      { elements, collectionDirectory, offset, scheduler, gradeMap, images: [...images] });
     if (choices) {
       if (write && !previewSignature) throw new Error('supermemo_preview_required');
       const authorizedChoices = saved?.reexport ? choices.filter(choice => saved.reexport!.verified.has(choice.id)) : choices;
       preview.rows = applySuperMemoStructure(preview.rows, elements, authorizedChoices, Boolean(saved));
     }
-    preview.previewSignature = getSuperMemoPreviewSignature(preview,
-      { elements, collectionDirectory, offset, scheduler, gradeMap, images: [...images] });
     if (write && previewSignature && preview.previewSignature !== previewSignature) {
       throw new Error('supermemo_preview_changed');
     }

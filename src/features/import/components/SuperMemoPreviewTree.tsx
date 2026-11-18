@@ -21,8 +21,8 @@ export function SuperMemoEntryButton({ row, active, onSelect }: {
     <button type="button" aria-current={active === row.id}
       onClick={() => onSelect(row.id)}
       title={row.title || `#${row.id}`}
-      className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-left hover:bg-foreground/5 aria-[current=true]:bg-foreground/10">
-      {row.outcome === 'folder' ? <Folder aria-hidden className="mr-1.5 inline size-3.5 align-text-bottom" /> : null}
+      className="min-w-0 flex-1 truncate rounded-md px-2 py-1 text-left hover:bg-foreground/5 aria-[current=true]:bg-[var(--role-selection-surface)] aria-[current=true]:font-medium">
+      {row.outcome === 'folder' ? <Folder aria-hidden className="mr-1.5 inline size-3.5 align-text-bottom text-foreground/65" /> : null}
       {row.title || `#${row.id}`}{row.title ? <span className="ml-1 whitespace-nowrap text-xs text-foreground/65">#{row.id}</span> : null}
     </button>
   );

@@ -81,8 +81,7 @@ export function SuperMemoSchedulePage({ preview, percent, setPercent, busy }: {
   busy: boolean;
 }) {
   const t = useTranslation();
-  return <div className="mx-auto grid w-full max-w-6xl gap-5">
-    <h3 className="text-base font-semibold">{t('desktop.superMemoDrafts.scheduleTitle')}</h3>
+  return <div className="grid min-w-0 gap-4">
     {preview.directoryUpdate ? <>
       <p className="text-sm">{t('desktop.superMemoDrafts.scheduleUpdateHelp')}</p>
       <FirstReviewChanges changes={preview.directoryUpdate.firstReviewChanges} showHeading={false} />

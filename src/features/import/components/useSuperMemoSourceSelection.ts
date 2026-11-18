@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 
+import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMemoImportStructure';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import type { SuperMemoMigrationForm, SuperMemoMigrationPanel } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { SuperMemoMigrationForm, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import {
-  clearRuntimeSuperMemoSourceSelection, connectRuntimeSuperMemoSource, getRuntimeSuperMemoSourceSelection,
-  previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, readRuntimeSuperMemoComparison, saveRuntimeSuperMemoPanel
+  clearRuntimeSuperMemoSourceSelection, getRuntimeSuperMemoSourceSelection,
+  previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, saveRuntimeSuperMemoPanel
 } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 import { loadDraftWithSavedFormat, previewFailure, type DraftTarget, type Source } from './superMemoDraftSourceActions';
@@ -15,7 +16,7 @@ import type { DraftState } from './useSuperMemoDraft';
 export const initialSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' };
 
 function useRestorePanel(state: DraftState) {
-  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap } = state;
+  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft } = state;
   useEffect(() => {
     let active = true;
     void getRuntimeSuperMemoSourceSelection().then(selection => {
@@ -24,31 +25,35 @@ function useRestorePanel(state: DraftState) {
       setPercent(selection.savedForm.percent);
       setSourceFormat(selection.savedForm.sourceFormat);
       if (selection.savedForm.gradeMap) setGradeMap(selection.savedForm.gradeMap);
+      if (selection.snapshot) {
+        const { elements, preview } = selection.snapshot;
+        const folderChoices = selection.savedForm.folderChoices ?? [];
+        const overrides = new Map(folderChoices.map(choice => [choice.id, choice.folder]));
+        const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row => applySuperMemoFolderDisplay(row, overrides.get(row.id)));
+        setSource({ ...selection, xml: '' });
+        setDraft({ preview: { ...preview, rows }, elements: elements.map(element => ({
+          ...element, bodyOrQuestionHtml: [], answerHtml: []
+        })), folderChoices });
+      }
     }).catch(() => {
       if (active) setError('selectionRead');
     }).finally(() => {
       if (active) setBusy(false);
     });
     return () => { active = false; };
-  }, [setBusy, setError, setGradeMap, setPercent, setRemembered, setSourceFormat]);
+  }, [setBusy, setDraft, setError, setGradeMap, setPercent, setRemembered, setSource, setSourceFormat]);
 }
 
-export function useSuperMemoSourceSelection(state: DraftState, open: boolean) {
+export function useSuperMemoSourceSelection(state: DraftState) {
   const { remembered, setBusy, setError, setRemembered } = state;
-  const filePath = remembered?.filePath;
-  const collectionDirectory = remembered?.collectionDirectory;
   useRestorePanel(state);
-  useEffect(() => {
-    if (open && filePath) void connectRuntimeSuperMemoSource().catch(() => {
-      // The preview checks access when requested, so a source that comes back is usable.
-    });
-  }, [open, filePath, collectionDirectory]);
 
-  async function savePanel(panel: SuperMemoMigrationPanel) {
+  async function savePanel(panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) {
     if (!remembered) return;
-    setRemembered(current => current && { ...current, panel: { ...current.panel, ...panel } });
+    setRemembered(current => current && { ...current, panel: { ...current.panel, ...panel }, ...(snapshot ? { snapshot } : {}) });
     try {
-      await saveRuntimeSuperMemoPanel(remembered, panel);
+      if (snapshot) await saveRuntimeSuperMemoPanel(remembered, panel, snapshot);
+      else await saveRuntimeSuperMemoPanel(remembered, panel);
     } catch {
       setError('save');
     }
@@ -80,17 +85,16 @@ export function useSuperMemoSourceSelection(state: DraftState, open: boolean) {
   }
 
   function resetCompletedDraft() {
-    const { percent, sourceFormat, gradeMap, draft } = state;
-    setRemembered(current => current && { ...current,
-      savedForm: { ...current.savedForm, percent, sourceFormat, gradeMap, folderChoices: draft?.folderChoices } });
-    clearPreview();
+    state.setResult(undefined);
+    state.setPending(undefined);
+    setError(false);
   }
 
   return { resetCompletedDraft, removeSelection, savePanel,
-    prepareRememberedSource: () => prepareRememberedSource(state, savePanel) };
+    prepareRememberedSource: (reportError = () => true) => prepareRememberedSource(state, savePanel, reportError) };
 }
 
-async function prepareRememberedSource(state: DraftState, savePanel: (panel: SuperMemoMigrationPanel) => Promise<void>) {
+async function prepareRememberedSource(state: DraftState, savePanel: (panel: SuperMemoMigrationPanel) => Promise<void>, reportError: () => boolean) {
   const { gradeMap, percent, sourceFormat, setBusy, setError, setPending, setDraft } = state;
   if (state.busy || state.draft || !state.remembered) return;
   setBusy(true);
@@ -114,23 +118,23 @@ async function prepareRememberedSource(state: DraftState, savePanel: (panel: Sup
     let reason = previewFailure(error);
     if (linked?.savedForm && reason.startsWith('collection')) {
       try {
-        const target = await restoreTarget(linked.savedForm);
+        const target = restoreTarget(linked.savedForm, linked.draft?.originalElements);
         setPending({ selected: linked, target });
       } catch {
         reason = 'xmlRead';
       }
     }
-    setError(isImportAccessDenied(error) ? 'xmlAccess' : reason === 'preview' ? 'xmlRead' : reason);
+    if (reportError()) setError(isImportAccessDenied(error) ? 'xmlAccess' : reason === 'preview' ? 'xmlRead' : reason);
   } finally {
     setBusy(false);
   }
 }
 
-async function restoreTarget(form: SuperMemoMigrationForm): Promise<DraftTarget | undefined> {
+function restoreTarget(form: SuperMemoMigrationForm, originalElements: NonNullable<Source['draft']>['originalElements']): DraftTarget | undefined {
   if (!form.comparison) return undefined;
   const { batchId, originalFilePath } = form.comparison;
   return { targetBatchId: batchId, originalFilePath,
-    ...(originalFilePath ? { originalElements: await readRuntimeSuperMemoComparison() } : {}) };
+    ...(originalElements ? { originalElements } : {}) };
 }
 
 async function restorePreview(source: Source, form: SuperMemoMigrationForm, gradeMap: SuperMemoGradeMap) {
@@ -138,6 +142,6 @@ async function restorePreview(source: Source, form: SuperMemoMigrationForm, grad
   if (!form.comparison || draft.preview.directoryUpdate?.batchId === form.comparison.batchId) {
     return { draft, target: undefined };
   }
-  const target = await restoreTarget(form);
-  return { draft: await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, form.sourceFormat, target), target };
+  const target = restoreTarget(form, source.draft?.originalElements);
+  return { draft: await previewRuntimeSuperMemoImport(source.draft?.elements ?? source.xml, source.collectionDirectory, gradeMap, form.sourceFormat, target), target };
 }

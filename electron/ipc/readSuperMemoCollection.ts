@@ -18,10 +18,32 @@ async function readTable(root: string, name: string, folder = 'info') {
   return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
+const coreTables = ['contents.dat', 'ElementInfo.dat', 'repetitions.dat', 'priority.sub', 'RepetitionHistory.dat'];
+const registryTables = ['Concept.ptr', 'concept.dat', 'Text.mem', 'Text.rtx', 'reference.dat'];
+
+async function tableStamp(root: string, folder: string, name: string) {
+  const target = await realpath(path.join(root, folder, name));
+  if (!isSameOrNestedPath(target, root)) throw new Error('invalid_supermemo_collection_path');
+  const metadata = await stat(target);
+  return [metadata.size, metadata.mtimeMs, metadata.ctimeMs];
+}
+
+export async function superMemoCollectionStamp(directory: string) {
+  const root = await assertAuthorizedImportDirectoryPath(directory);
+  const stamps = await Promise.all([
+    ...coreTables.map(name => tableStamp(root, 'info', name)),
+    ...registryTables.map(name => tableStamp(root, 'registry', name).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    }))
+  ]);
+  return JSON.stringify(stamps);
+}
+
 export async function readSuperMemoCollection(directory: string, elements: SuperMemoXmlDraftElement[]) {
   const root = await assertAuthorizedImportDirectoryPath(directory);
   const [tree, binary, repetitions, priorities, history] = await Promise.all(
-    ['contents.dat', 'ElementInfo.dat', 'repetitions.dat', 'priority.sub', 'RepetitionHistory.dat'].map(name => readTable(root, name))
+    coreTables.map(name => readTable(root, name))
   );
   const fields = matchSuperMemoCollection(elements, { tree: tree!, elements: binary!, repetitions: repetitions!, priorities: priorities!, history: history! });
   const [groups, registry] = await Promise.all([readConceptGroups(root, elements, fields), readTextRegistry(root, fields)]);

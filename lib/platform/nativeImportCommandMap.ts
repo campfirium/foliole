@@ -15,7 +15,7 @@ import type {
 import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
-import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource, RememberedSuperMemoSource, SuperMemoMigrationPanel, SuperMemoSourceLink } from './nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource, RememberedSuperMemoSource, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot, SuperMemoSourceLink } from './nativeSuperMemoImportContract.js';
 import type {
   NativeWatchedFolderBinding,
   NativeWatchedFolderBindingsState,
@@ -24,9 +24,9 @@ import type {
 
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.readSuperMemoSource]: {
-    args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore' | 'comparison' | 'connect' } |
-      { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean } |
-      { action: 'rememberPanel'; filePath: string; collectionDirectory: string | null; panel: SuperMemoMigrationPanel };
+    args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore'; xmlOnly?: boolean } | { action: 'check' } |
+      { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean; snapshot?: SuperMemoMigrationSnapshot; xmlHash?: string } |
+      { action: 'rememberPanel'; filePath: string; collectionDirectory: string | null; panel: SuperMemoMigrationPanel; snapshot?: SuperMemoMigrationSnapshot };
     result: NativeSuperMemoSource | null;
   };
   [NATIVE_COMMANDS.getSuperMemoSourceSelection]: { args: undefined; result: RememberedSuperMemoSource | null };

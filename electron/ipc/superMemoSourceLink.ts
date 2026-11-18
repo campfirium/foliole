@@ -5,11 +5,12 @@ import path from 'node:path';
 import { app, type BrowserWindow } from 'electron';
 import { z } from 'zod';
 
-import type { RememberedSuperMemoSource } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import type { RememberedSuperMemoSource, SuperMemoMigrationSnapshot } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { resolveDatabasePath } from '../database/connection.js';
 
 import { asString } from './commandParsers.js';
 import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportPaths } from './importPathAuthorization.js';
+import { superMemoCollectionStamp } from './readSuperMemoCollection.js';
 import { readSuperMemoSource, selectSuperMemoSource } from './readSuperMemoSource.js';
 
 const count = z.number().int().nonnegative();
@@ -29,7 +30,13 @@ const linkSchema = z.object({
   sourceFormat: z.object({ placement: z.enum(['metadata', 'body', 'topic-info', 'content-end']), template: z.string().max(4000) }),
   folderChoices: z.array(z.object({ id: z.number().int().positive(), folder: z.boolean() })).optional(),
   comparison: z.object({ batchId, originalFilePath: z.string().min(1).optional() }).optional(),
-  panel: panelSchema.optional()
+  panel: panelSchema.optional(),
+  collectionStamp: z.string().optional(),
+  xmlHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  snapshot: z.custom<SuperMemoMigrationSnapshot>(value => {
+    const snapshot = value as SuperMemoMigrationSnapshot | undefined;
+    return Boolean(snapshot && Array.isArray(snapshot.elements) && Array.isArray(snapshot.preview?.rows));
+  }).optional()
 });
 
 function linkPath() {
@@ -44,9 +51,11 @@ function readLink(file = linkPath()) {
 export function getSuperMemoSourceSelection(): RememberedSuperMemoSource | null {
   const link = readLink();
   if (!link) return null;
-  const { filePath, collectionDirectory, panel, ...savedForm } = link;
+  const { filePath, collectionDirectory, panel } = link;
+  const savedForm = { percent: link.percent, sourceFormat: link.sourceFormat, gradeMap: link.gradeMap,
+    folderChoices: link.folderChoices, comparison: link.comparison };
   return { filePath, name: path.basename(filePath), collectionDirectory: collectionDirectory ?? undefined,
-    savedForm, ...(panel ? { panel } : {}) };
+    savedForm, hasDraft: Boolean(link.snapshot), ...(link.snapshot ? { snapshot: link.snapshot } : {}), ...(panel ? { panel } : {}) };
 }
 
 export function clearSuperMemoSourceSelection() {
@@ -54,7 +63,7 @@ export function clearSuperMemoSourceSelection() {
   return null;
 }
 
-async function rememberLink(value: unknown, formOnly: boolean) {
+async function rememberLink(value: unknown, formOnly: boolean, snapshot: unknown, xmlHash: unknown) {
   const file = linkPath();
   const link = linkSchema.parse(value);
   if (formOnly) {
@@ -65,8 +74,9 @@ async function rememberLink(value: unknown, formOnly: boolean) {
     writeLink(file, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat,
       ...(link.gradeMap ? { gradeMap: link.gradeMap } : {}), ...(link.folderChoices ? { folderChoices: link.folderChoices } : {}) });
   } else {
-    await assertPickerPaths(link);
-    writeLink(file, link);
+    await assertPickerPaths(link, readLink(file)?.filePath);
+    const collectionStamp = link.collectionDirectory ? await superMemoCollectionStamp(link.collectionDirectory) : undefined;
+    writeLink(file, linkSchema.required({ snapshot: true, xmlHash: true }).parse({ ...link, snapshot, xmlHash, collectionStamp }));
   }
   return null;
 }
@@ -77,21 +87,17 @@ function rememberPanel(args: Record<string, unknown>) {
   if (!link || link.filePath !== args.filePath || link.collectionDirectory !== args.collectionDirectory) {
     throw new Error('supermemo_source_changed');
   }
-  writeLink(file, { ...link, panel: { ...link.panel, ...panelSchema.parse(args.panel) } });
+  writeLink(file, linkSchema.parse({ ...link, panel: { ...link.panel, ...panelSchema.parse(args.panel) },
+    ...(args.snapshot ? { snapshot: args.snapshot, comparison: undefined } : {}) }));
   return null;
 }
 
-async function connectLink() {
-  const link = readLink();
-  if (link) await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
-  return null;
-}
-
-async function assertPickerPaths(link: z.infer<typeof linkSchema>) {
+async function assertPickerPaths(link: z.infer<typeof linkSchema>, rememberedPath: string | undefined) {
   const files = [link.filePath, link.comparison?.originalFilePath].filter((item): item is string => item !== undefined);
   if (files.some(item => path.extname(item).toLowerCase() !== '.xml')) throw new Error('invalid_supermemo_xml_path');
-  const canonical = await Promise.all(files.map(assertAuthorizedImportFilePath));
-  if (files.some((item, index) => item !== canonical[index])) throw new Error('Import file path changed.');
+  if (link.filePath !== rememberedPath && await assertAuthorizedImportFilePath(link.filePath) !== link.filePath) {
+    throw new Error('Import file path changed.');
+  }
   if (link.collectionDirectory && await assertAuthorizedImportDirectoryPath(link.collectionDirectory) !== link.collectionDirectory) {
     throw new Error('Import directory path changed.');
   }
@@ -103,32 +109,54 @@ function writeLink(file: string, link: z.infer<typeof linkSchema>) {
   fs.renameSync(`${file}.partial`, file);
 }
 
-async function restoreLink() {
-  const remembered = getSuperMemoSourceSelection();
-  if (!remembered) return null;
-  const { filePath, collectionDirectory, savedForm } = remembered;
-  await restoreSelectedImportPaths(filePath, null);
-  try {
-    if (collectionDirectory) await restoreSelectedImportPaths(filePath, collectionDirectory);
-  } catch {
-    const source = await readSuperMemoSource(filePath, null);
-    return { ...source, collectionDirectory: collectionDirectory ?? undefined, collectionDiscoveryFailure: 'read' as const, savedForm };
+async function restoreLink(xmlOnly: boolean) {
+  const link = readLink();
+  if (!link?.xmlHash) return null;
+  await restoreSelectedImportPaths(link.filePath, null);
+  const source = await readSuperMemoSource(link.filePath, null);
+  if (source.xmlHash !== link.xmlHash) throw new Error('supermemo_xml_updated');
+  if (xmlOnly) return source;
+  if (link.collectionDirectory) {
+    try {
+      await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
+      await verifyCollection(link.collectionDirectory, link.collectionStamp);
+    } catch (error) {
+      if (String(error).includes('supermemo_collection_updated')) throw error;
+      throw new Error('supermemo_collection_unreadable', { cause: error });
+    }
   }
-  return { ...await readSuperMemoSource(filePath, collectionDirectory ?? null), savedForm };
+  return { ...source, collectionDirectory: link.collectionDirectory ?? undefined };
 }
 
-async function restoreComparison() {
-  const filePath = readLink()?.comparison?.originalFilePath;
-  if (!filePath) return null;
-  await restoreSelectedImportPaths(filePath, null);
-  return readSuperMemoSource(filePath, null);
+async function verifyCollection(directory: string, stamp: string | undefined) {
+  if (stamp && await superMemoCollectionStamp(directory) !== stamp) throw new Error('supermemo_collection_updated');
+}
+
+async function checkLink() {
+  const link = readLink();
+  if (!link?.xmlHash) return null;
+  try {
+    await restoreSelectedImportPaths(link.filePath, null);
+    const source = await readSuperMemoSource(link.filePath, null);
+    if (source.xmlHash !== link.xmlHash) throw new Error('supermemo_xml_updated');
+  } catch (error) {
+    if (String(error).includes('supermemo_xml_updated')) throw error;
+  }
+  if (link.collectionDirectory && link.collectionStamp) {
+    try {
+      await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
+      await verifyCollection(link.collectionDirectory, link.collectionStamp);
+    } catch (error) {
+      if (String(error).includes('supermemo_collection_updated')) throw error;
+    }
+  }
+  return null;
 }
 
 export function handleSuperMemoSource(args: Record<string, unknown>, window: () => BrowserWindow | null) {
-  if (args.action === 'connect') return connectLink();
-  if (args.action === 'restore') return restoreLink();
-  if (args.action === 'comparison') return restoreComparison();
-  if (args.action === 'remember') return rememberLink(args.link, args.formOnly === true);
+  if (args.action === 'restore') return restoreLink(args.xmlOnly === true);
+  if (args.action === 'check') return checkLink();
+  if (args.action === 'remember') return rememberLink(args.link, args.formOnly === true, args.snapshot, args.xmlHash);
   if (args.action === 'rememberPanel') return rememberPanel(args);
   return args.filePath === undefined
     ? selectSuperMemoSource(window())

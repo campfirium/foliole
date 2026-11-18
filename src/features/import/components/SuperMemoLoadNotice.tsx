@@ -12,6 +12,7 @@ const descriptions = {
   collectionChoice: 'desktop.superMemoDrafts.collectionChoiceHelp',
   xmlAccess: 'desktop.superMemoDrafts.xmlAccess',
   xmlRead: 'desktop.superMemoDrafts.xmlRead',
+  xmlUpdated: 'desktop.superMemoDrafts.sourceUpdated',
   xmlSize: 'desktop.superMemoDrafts.xmlSize',
   xmlFormat: 'desktop.superMemoDrafts.xmlFormat',
   collectionAccess: 'desktop.superMemoDrafts.collectionAccess',
@@ -34,7 +35,7 @@ function RecoveryActions({ error, busy, inline, onClose, recover, retry }: Notic
   const close = <AppButton variant="ghost" disabled={busy} onClick={inline ? onClose : undefined}>
     {t('desktop.superMemoDrafts.close')}
   </AppButton>;
-  const canRetryXml = error === 'xmlAccess' || error === 'xmlRead' || error === 'xmlSize' || error === 'xmlFormat' ||
+  const canRetryXml = error === 'xmlUpdated' || error === 'xmlAccess' || error === 'xmlRead' || error === 'xmlSize' || error === 'xmlFormat' ||
     (inline && error === 'preview');
   return (
     <>
@@ -51,7 +52,8 @@ export function SuperMemoLoadNotice(props: NoticeProps) {
   const { error, busy, inline, candidates, onClose, recover } = props;
   if (!error) return null;
   const title = t(error === 'collectionAccess' ? 'desktop.superMemoDrafts.collectionAccessTitle'
-    : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' : 'desktop.superMemoDrafts.loadFailed');
+    : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' :
+      error === 'xmlUpdated' ? 'desktop.superMemoDrafts.sourceUpdatedTitle' : 'desktop.superMemoDrafts.loadFailed');
   const description = <>
     {t(descriptions[error])}
     {error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos'

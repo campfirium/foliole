@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { expect, test } from './harness/fixtures';
-import { card, confirmStep, gradesStep, loadSource, openPreview, preparePreview, parameters, sourceStep } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, structureStep, parameters, sourceStep } from './harness/superMemoImport';
 
 const convert = /^(Convert|转换)$/;
 const confirmUpdate = /^(Confirm Update|确认更新)$/;
@@ -49,10 +49,10 @@ test('reviews the current settings and actual exceptions before a first import',
   await rename(original, moved);
   await dialog.getByRole('button', { name: close }).click();
   const reopened = await openPreview(desktopWindow);
-  await expect(reopened.getByText('ConfirmFirst.xml', { exact: true })).toBeVisible();
+  await expect(reopened.getByText('ConfirmFirst', { exact: true })).toBeVisible();
   await expect(reopened.getByRole('alert')).toHaveCount(0);
   await rename(moved, original);
-  await reopened.getByRole('button', { name: preparePreview }).click();
+  await reopened.getByRole('button', { name: structureStep }).click();
   await reopened.getByRole('button', { name: confirmStep }).click();
   await expect(reopened.getByRole('heading', { name: /^(Update an existing batch|更新已有批次)$/ })).toBeVisible();
   await expect(reopened.getByRole('button', { name: convert })).toHaveCount(0);
@@ -96,7 +96,7 @@ test('confirms a batch update once and reads its durable result after restarting
   const second = await relaunchGoldenJourney(desktopSession);
   try {
     const reloaded = await openPreview(second.firstWindow);
-    await reloaded.getByRole('button', { name: preparePreview }).click();
+    await reloaded.getByRole('button', { name: structureStep }).click();
     await reloaded.getByRole('button', { name: confirmStep }).click();
     await expect(reloaded.getByRole('button', { name: confirmUpdate })).toBeDisabled();
     expect(await readImportedNodes(second.firstWindow)).toEqual(written);

@@ -1,66 +1,59 @@
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppButton } from '../../../shared/ui';
+import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../shared/ui';
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
-function ExportGuide({ expanded }: { expanded: boolean }) {
-  const t = useTranslation();
-  return (
-    <details open={expanded} className="rounded-lg border border-settings-divider p-4 text-sm">
-      <summary className="cursor-pointer font-semibold">{t('desktop.superMemoDrafts.prepareTitle')}</summary>
-      <ol className="mt-3 max-w-prose list-decimal space-y-2 pl-5 text-foreground/75">
-        <li>{t('desktop.superMemoDrafts.exportAllElements')}</li>
-        <li>{t('desktop.superMemoDrafts.keepCollectionNearby')}</li>
-        <li>{t('desktop.superMemoDrafts.chooseXmlAndCollection')}</li>
-      </ol>
-    </details>
-  );
-}
+const sourceRowLayout = 'items-center !px-0 before:!inset-x-0 max-[1080px]:flex-row max-[1080px]:items-center';
+const sourceControlLayout = 'max-[1080px]:w-auto max-[1080px]:flex-none';
 
-export function SuperMemoLoadPage({ model, onLoad, onLoadNew, onViewSource }: {
-  model: ReturnType<typeof useSuperMemoDraft>; onLoad(): void; onLoadNew(): void; onViewSource(): void;
+export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
+  model: ReturnType<typeof useSuperMemoDraft>; onLoad(): void; onLoadNew(): void;
 }) {
   const t = useTranslation();
-  const { busy, source, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
+  const { busy, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
   const update = model.draft?.preview.directoryUpdate;
-  const sourceStatus = selection?.collectionDirectory ? 'sourcePaired' : 'sourceXmlOnly';
+  const collectionDirectory = selection?.collectionDirectory;
+  const collectionName = collectionDirectory?.split(/[/\\]/u).at(-1) || collectionDirectory;
   return (
     <>
-      <section className="space-y-3 rounded-lg border border-settings-divider p-4">
-        <h4 className="text-sm font-semibold">{t('desktop.superMemoDrafts.sourceTitle')}</h4>
-        {selection ? <div className="space-y-1 text-sm">
-          <p className="text-xs text-foreground/70">{t('desktop.superMemoDrafts.lastLoadedExport')}</p>
-          <p className="break-all font-medium">{selection.name}</p>
-          <p className="break-all text-xs text-foreground/70">{selection.filePath}</p>
-          <p>{t(`desktop.superMemoDrafts.${sourceStatus}`)}</p>
-          {selection.panel?.elementCount !== undefined ? <p>
-            {t('desktop.superMemoDrafts.lastSourceCount', { count: selection.panel.elementCount })}
-          </p> : null}
-          {selection.panel?.result ? <p>
-            {t('desktop.superMemoDrafts.lastResult', selection.panel.result)}
-          </p> : null}
-          {selection.collectionDirectory ? <p className="break-all text-xs text-foreground/70">{selection.collectionDirectory}</p> : null}
-        </div> : <p className="text-sm text-foreground/75">{t('desktop.superMemoDrafts.description')}</p>}
-        <div className="flex flex-wrap gap-2">
-          {selection && !model.draft ? <AppButton disabled={busy} onClick={onViewSource}>
-            {t('desktop.superMemoDrafts.preparePreview')}
-          </AppButton> : null}
-          <AppButton disabled={busy} onClick={onLoad}>
-            {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
-          </AppButton>
-          {source && model.draft && !source.collectionDirectory && !error ? (
-            <AppButton disabled={busy} onClick={() => void pairCollection()}>{t('desktop.superMemoDrafts.chooseCollection')}</AppButton>
-          ) : null}
-          {selection ? <AppButton variant="ghost" disabled={busy} onClick={() => void model.removeSelection()}>
+      <SettingsSection className="mb-0 !pt-0 before:!hidden">
+        <SettingsRow className={sourceRowLayout} title={t('desktop.superMemoDrafts.xmlExportFile')}
+          description={<>
+            {selection ? <span className="block break-words" title={selection.filePath}>{selection.name.replace(/\.xml$/iu, '') || selection.name}</span> : null}
+            {selection?.panel?.elementCount !== undefined ? <span className="block">
+              {t('desktop.superMemoDrafts.lastSourceCount', { count: selection.panel.elementCount })}
+            </span> : null}
+            {selection?.panel?.result ? <span className="block">
+              {t('desktop.superMemoDrafts.lastResult', selection.panel.result)}
+            </span> : null}
+            {t(selection?.hasDraft === false ? 'desktop.superMemoDrafts.createSavedDraft' : 'desktop.superMemoDrafts.exportAllElements')}
+          </>}>
+          <SettingsControlSlot className={sourceControlLayout}>
+            <AppButton disabled={busy} onClick={onLoad}>
+              {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
+            </AppButton>
+          </SettingsControlSlot>
+        </SettingsRow>
+        <SettingsRow className={sourceRowLayout} title={t('desktop.superMemoDrafts.originalCollectionFolder')}
+          description={collectionName ? <span className="break-words" title={collectionDirectory}>{collectionName}</span>
+            : t(selection ? 'desktop.superMemoDrafts.sourceXmlOnly' : 'desktop.superMemoDrafts.keepCollectionNearby')}>
+          {!error ? <SettingsControlSlot className={sourceControlLayout}>
+            <AppButton disabled={busy || !model.draft}
+              onClick={() => void pairCollection()}>
+              {t(collectionDirectory ? 'desktop.superMemoDrafts.replaceCollection' : 'desktop.superMemoDrafts.chooseCollection')}
+            </AppButton>
+          </SettingsControlSlot> : null}
+        </SettingsRow>
+        {selection ? <div className="flex flex-wrap gap-2 py-2">
+          <AppButton variant="ghost" disabled={busy} onClick={() => void model.removeSelection()}>
             {t('desktop.superMemoDrafts.removeSelection')}
-          </AppButton> : null}
-        </div>
-      </section>
-      <SuperMemoLoadNotice inline {...{ error, busy, candidates }} onClose={() => setError(false)}
+          </AppButton>
+        </div> : null}
+      </SettingsSection>
+      <SuperMemoLoadNotice inline error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
         recover={choice => void recoverCollection(choice)} retry={() => void retrySource()} />
-      <ExportGuide expanded={!selection} />
       {update ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
       {update ? <AppButton className="self-start" disabled={busy} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
       {!busy ? <SuperMemoBatchAdjustments preferredBatchId={selection?.panel?.batchId} /> : null}

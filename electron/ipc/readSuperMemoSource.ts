@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, open, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -66,9 +67,12 @@ async function readSource(filePath: string, collectionChoice?: string | null): P
     if (!stat.isFile() || stat.size < 1 || stat.size > MAX_XML_BYTES) throw new Error('invalid_supermemo_xml_size');
     const bytes = Buffer.alloc(stat.size);
     const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
-    if (bytesRead !== bytes.length || (await file.stat()).size !== stat.size) throw new Error('supermemo_source_changed');
+    const current = await file.stat();
+    if (bytesRead !== bytes.length || current.size !== stat.size || current.mtimeMs !== stat.mtimeMs || current.ctimeMs !== stat.ctimeMs) {
+      throw new Error('supermemo_xml_updated');
+    }
     const collection = await resolveCollection(xmlPath, collectionChoice);
-    return { filePath: xmlPath, name: path.basename(xmlPath), xml: bytes.toString('utf8'),
+    return { filePath: xmlPath, name: path.basename(xmlPath), xml: bytes.toString('utf8'), xmlHash: createHash('sha256').update(bytes).digest('hex'),
       collectionDirectory: undefined, ...collection };
   } finally {
     await file.close();
@@ -106,8 +110,8 @@ async function collectionsAt(location: string) {
   return candidates;
 }
 
-export async function selectSuperMemoCollection(window: BrowserWindow | null, filePath: string, title: string, candidate?: string) {
-  const xml = await assertAuthorizedImportFilePath(filePath);
+export async function selectSuperMemoCollection(window: BrowserWindow | null, filePath: string, title: string, candidate?: string, remembered = false) {
+  const xml = remembered ? filePath : await assertAuthorizedImportFilePath(filePath);
   const initial = candidate ? await assertAuthorizedImportDirectoryPath(candidate).catch(() => undefined) : undefined;
   const options = {
     title, defaultPath: initial ?? path.dirname(xml), properties: ['openDirectory' as const],

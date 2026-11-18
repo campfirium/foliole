@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, gradesStep, loadSource, openPreview, preparePreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
+import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
 
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
@@ -229,7 +229,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await expectWorkspaceShell(desktopWindow);
   await openPreview(desktopWindow);
   await expect(dialog.getByText('Grades.xml', { exact: true })).toBeVisible();
-  await dialog.getByRole('button', { name: preparePreview }).click();
+  await dialog.getByRole('button', { name: structureStep }).click();
   await dialog.getByRole('button', { name: gradesStep }).click();
   await expect(dialog.getByRole('button', { name: again })).toBeVisible();
   await expect(intervalShift(impact)).toHaveText(updatedDays);

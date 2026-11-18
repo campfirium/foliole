@@ -1,8 +1,8 @@
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import type { NativeSuperMemoSource, SuperMemoMigrationForm, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { NativeSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationSnapshot, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
-import { previewRuntimeSuperMemoImport, saveRuntimeSuperMemoSourceLink, selectRuntimeSuperMemoCollection,
+import { previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, saveRuntimeSuperMemoSourceLink, selectRuntimeSuperMemoCollection,
   selectRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
 import type { DraftState } from './useSuperMemoDraft';
@@ -12,11 +12,12 @@ type Candidate = NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoCol
 export type DraftTarget = SuperMemoUpdateTarget & { targetBatchId: string; originalFilePath?: string | undefined };
 export type Pending = { selected: Source; target: DraftTarget | undefined; candidates?: Candidate[] };
 
-export type SuperMemoNotice = false | 'selectionRead' | 'collectionChoice' | 'xmlAccess' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
+export type SuperMemoNotice = false | 'selectionRead' | 'collectionChoice' | 'xmlAccess' | 'xmlUpdated' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
   'collectionAccess' | 'collectionRead' | 'collectionMismatch' | 'preview' | 'convert' | 'save';
 
 export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> {
   const message = String(error);
+  if (message.includes('supermemo_xml_updated') || message.includes('supermemo_collection_updated')) return 'xmlUpdated';
   if (message.includes('invalid_supermemo_xml_size')) return 'xmlSize';
   if (message.includes('supermemo_link_save_failed')) return 'save';
   if (message.includes('invalid_supermemo_xml')) return 'xmlFormat';
@@ -28,21 +29,32 @@ export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> 
 
 export async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>,
   gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, useBatchFormat = true) {
-  const first = await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, undefined, selected.savedForm?.folderChoices);
+  const first = await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, undefined, selected.savedForm?.folderChoices);
   const savedFormat = useBatchFormat ? first.preview.directoryUpdate?.sourceFormat : undefined;
   const loaded = savedFormat && (savedFormat.placement !== sourceFormat.placement || savedFormat.template !== sourceFormat.template)
-    ? await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, savedFormat) : first;
+    ? await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, savedFormat) : first;
   return { draft: loaded, sourceFormat: savedFormat ?? sourceFormat };
 }
 
-export async function rememberDraftSource(source: SuperMemoSourceSelection, form: SuperMemoMigrationForm, formOnly: boolean, panel?: SuperMemoSourceLink['panel']) {
+export async function rememberDraftSource(source: SuperMemoSourceSelection, form: SuperMemoMigrationForm, formOnly: boolean, panel?: SuperMemoSourceLink['panel'], snapshot?: SuperMemoMigrationSnapshot, xmlHash?: string) {
   const link = { filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null,
     ...form, ...(panel ? { panel } : {}) };
   try {
-    await saveRuntimeSuperMemoSourceLink(link, formOnly);
+    await saveRuntimeSuperMemoSourceLink(link, formOnly, snapshot, xmlHash);
   } catch (error) {
     throw new Error('supermemo_link_save_failed', { cause: error });
   }
+}
+
+export function migrationSnapshot({ elements, preview }: Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>): SuperMemoMigrationSnapshot {
+  const structuralElements = elements.map(({ id, parentId, children, sourceType, title, ordinal, skippedAudioComponents, learning }) =>
+    ({ id, parentId, children, sourceType, title, ordinal, skippedAudioComponents, learning }));
+  const rows = preview.rows.map(row => {
+    const structuralRow = { ...row };
+    delete structuralRow.sourceExample;
+    return structuralRow;
+  });
+  return { elements: structuralElements, preview: { ...preview, rows } };
 }
 
 function comparisonForm(target: DraftTarget | undefined) {
@@ -56,7 +68,7 @@ function createCandidateLoader(state: DraftState) {
   async function prepare(selected: Source, nextTarget: DraftTarget | undefined) {
     const format = selected.savedForm?.sourceFormat ?? sourceFormat;
     return nextTarget
-      ? { draft: await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, format, nextTarget), sourceFormat: format }
+      ? { draft: await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, format, nextTarget), sourceFormat: format }
       : loadDraftWithSavedFormat(selected, gradeMap, format, !selected.savedForm);
   }
 
@@ -70,12 +82,13 @@ function createCandidateLoader(state: DraftState) {
     const panel = { ...(sameExport ? state.remembered?.panel : undefined),
       step: update ? 'load' as const : 'structure' as const,
       elementCount: loaded.draft.elements.length, batchId: update?.batchId };
-    await rememberDraftSource(selected, savedForm, false, panel);
-    setRemembered({ filePath, name, collectionDirectory, savedForm, panel });
+    const snapshot = migrationSnapshot(loaded.draft);
+    await rememberDraftSource(selected, savedForm, false, panel, snapshot, selected.xmlHash);
+    setRemembered({ filePath, name, collectionDirectory, savedForm, panel, hasDraft: true });
     setTarget(nextTarget);
     setSourceFormat(loaded.sourceFormat);
     setDraft(loaded.draft);
-    setSource(selected);
+    setSource({ ...selected, xml: '', draft: { elements: loaded.draft.elements, originalElements: nextTarget?.originalElements } });
     setPercent(percent);
     setPending(undefined);
     setError(false);
@@ -84,8 +97,16 @@ function createCandidateLoader(state: DraftState) {
   return { prepare, show };
 }
 
-function withCollection({ filePath, name, xml, savedForm }: Source, collectionDirectory?: string): Source {
-  return { filePath, name, xml, collectionDirectory, ...(savedForm ? { savedForm } : {}) };
+async function restoreRecoverySource(recovery: Pending): Promise<Pending> {
+  if (recovery.selected.xml || recovery.selected.draft) return recovery;
+  const restored = await readRuntimeRememberedSuperMemoSource(true);
+  if (!restored || restored.filePath !== recovery.selected.filePath) throw new Error('supermemo_xml_updated');
+  const { xml, xmlHash } = restored;
+  return { ...recovery, selected: { ...recovery.selected, xml, ...(xmlHash ? { xmlHash } : {}) } };
+}
+
+function withCollection({ filePath, name, xml, xmlHash, savedForm, draft }: Source, collectionDirectory?: string): Source {
+  return { filePath, name, xml, ...(xmlHash ? { xmlHash } : {}), collectionDirectory, ...(draft ? { draft } : {}), ...(savedForm ? { savedForm } : {}) };
 }
 
 function createCollectionRecovery(state: DraftState, pickerTitle: string, loader: ReturnType<typeof createCandidateLoader>) {
@@ -143,6 +164,12 @@ function comparisonTarget({ draft, source, target }: DraftState): DraftTarget | 
   };
 }
 
+async function pickSource(legacy: DraftState['remembered']) {
+  const picked = await selectRuntimeSuperMemoSource();
+  return picked && legacy?.hasDraft === false && legacy.filePath === picked.filePath
+    ? { ...picked, savedForm: legacy.savedForm } : picked;
+}
+
 export function createSourceActions(state: DraftState, pickerTitle: string) {
   const { source, target, pending, busy, setBusy, setError, setPending, retryAsUpdate, setRetryAsUpdate } = state;
   const loader = createCandidateLoader(state);
@@ -154,7 +181,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     setPending(undefined);
     setRetryAsUpdate(asUpdate);
     try {
-      const selected = await selectRuntimeSuperMemoSource();
+      const selected = await pickSource(state.remembered);
       if (!selected) return;
       const nextTarget = asUpdate ? comparisonTarget(state) : undefined;
       try {
@@ -189,7 +216,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     if (!recovery || busy) return;
     setBusy(true);
     try {
-      await recover(recovery, choice);
+      await recover(await restoreRecoverySource(recovery), choice);
     } catch (error) {
       setPending(recovery);
       setError(isImportAccessDenied(error) ? 'collectionAccess' : previewFailure(error));
@@ -198,7 +225,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     }
   }
   function pairCollection() {
-    if (!source || !state.draft || source.collectionDirectory) return;
+    if (!source || !state.draft) return;
     const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat, folderChoices: state.draft.folderChoices };
     return recoverCollection(true, { selected: { ...source, savedForm }, target });
   }

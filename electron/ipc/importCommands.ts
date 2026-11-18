@@ -104,8 +104,10 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) return getSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.clearSuperMemoSourceSelection) return clearSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
-    return selectSuperMemoCollection(resolveTargetWindow(context), asString(args.filePath, 'filePath'),
-      asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'));
+    const filePath = asString(args.filePath, 'filePath');
+    return selectSuperMemoCollection(resolveTargetWindow(context), filePath,
+      asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'),
+      getSuperMemoSourceSelection()?.filePath === filePath);
   }
   const draftResult = await handleSuperMemoImportCommand(request.command, args, refreshDesktopDailyFlowAfterSuperMemoWrite);
   if (draftResult !== undefined) {

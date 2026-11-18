@@ -1,12 +1,13 @@
 import { useState } from 'react';
 
+import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMemoImportStructure';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationPanel } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
-import { previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport, saveSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+import { parseRuntimeSuperMemoSource, previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, runRuntimeSuperMemoImport, saveSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
-import { createSourceActions, previewFailure, rememberDraftSource } from './superMemoDraftSourceActions';
+import { createSourceActions, migrationSnapshot, previewFailure, rememberDraftSource } from './superMemoDraftSourceActions';
 import type { DraftTarget, Pending, Source, SuperMemoNotice } from './superMemoDraftSourceActions';
 import { initialSourceFormat, useSuperMemoSourceSelection } from './useSuperMemoSourceSelection';
 
@@ -47,24 +48,26 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
 export type DraftState = ReturnType<typeof useDraftState>;
 
 function updateDraftFolder(state: DraftState, id: number, folder: boolean) {
-  const { source, draft, gradeMap, sourceFormat, target, percent, setDraft, setBusy, setError } = state;
+  const { source, draft, sourceFormat, percent, setDraft, setError } = state;
   if (state.busy || !source || !draft || draft.preview.directoryUpdate) return;
+  const index = draft.preview.rows.findIndex(row => row.id === id);
+  const row = draft.preview.rows[index];
+  if (!row?.structure?.editable) return;
   const folderChoices = [...draft.folderChoices.filter(choice => choice.id !== id), { id, folder }];
-  void refreshSourceFormat(async () => {
-    const next = await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, sourceFormat, target, folderChoices);
-    await rememberDraftSource(source, { percent, sourceFormat, folderChoices }, true);
-    setDraft(next);
-  }, setBusy, setError);
+  const rows = draft.preview.rows.slice();
+  rows[index] = applySuperMemoFolderDisplay(row, folder);
+  setDraft({ ...draft, folderChoices, preview: { ...draft.preview, rows } });
+  void rememberDraftSource(source, { percent, sourceFormat, folderChoices }, true).catch(() => setError('save'));
 }
 
-export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle: string, open = true) {
+export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle: string) {
   const state = useDraftState(initialGrades);
   const { source, result, sourceFormat, target, gradeMap, percent, draft, setBusy, setError, setGradeMap, setDraft,
     setSourceFormat, remembered } = state;
-  const selectionActions = useSuperMemoSourceSelection(state, open);
+  const selectionActions = useSuperMemoSourceSelection(state);
   const changeGrades = (next: SuperMemoGradeMap) => refreshSourceFormat(async () => {
-    const nextPreview = source && !result
-      ? await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, next, sourceFormat, target, draft?.folderChoices) : undefined;
+    const nextPreview = source && !result && (source.draft || source.xml)
+      ? await previewRuntimeSuperMemoImport(source.draft?.elements ?? source.xml, source.collectionDirectory, next, sourceFormat, target, draft?.folderChoices) : undefined;
     await saveSuperMemoGradeMap(next);
     if (remembered) await rememberDraftSource(remembered, { percent, sourceFormat, gradeMap: next }, true);
     setGradeMap(next);
@@ -81,13 +84,13 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   }
 
   function changeSourceFormat(next: SuperMemoSourceFormat) {
-    if (!source || result || !draft?.preview.directoryUpdate) {
+    if (!source || result || !draft?.preview.directoryUpdate || (!source.draft && !source.xml)) {
       setSourceFormat(next);
       saveForm({ percent, sourceFormat: next });
       return;
     }
     void refreshSourceFormat(async () => {
-      const preview = await previewRuntimeSuperMemoImport(source.xml, source.collectionDirectory, gradeMap, next, target);
+      const preview = await previewRuntimeSuperMemoImport(source.draft?.elements ?? source.xml, source.collectionDirectory, gradeMap, next, target);
       await rememberDraftSource(source, { percent, sourceFormat: next }, true);
       setDraft(preview);
       setSourceFormat(next);
@@ -103,24 +106,43 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
     ...createSourceActions(state, pickerTitle) };
 }
 
-async function importDraft(state: DraftState, withdrawSourceIds: number[], savePanel: (panel: SuperMemoMigrationPanel) => Promise<void>) {
+async function importDraft(state: DraftState, withdrawSourceIds: number[], savePanel: (panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) => Promise<void>) {
   const { source, draft, percent, gradeMap, sourceFormat, target, setResult, setBusy, setError, setPending } = state;
   if (!source || !draft?.preview.previewSignature) return;
   setBusy(true);
   setError(false);
   try {
-    const result = await runRuntimeSuperMemoImport(source.filePath, percent, gradeMap, draft.preview.previewSignature, sourceFormat,
-      draft.preview.directoryUpdate?.signature, withdrawSourceIds, target, source.collectionDirectory ?? null, draft.folderChoices);
+    const current = await readRuntimeRememberedSuperMemoSource();
+    if (!current) throw new Error('supermemo_xml_missing');
+    if (current.filePath !== source.filePath || current.collectionDirectory !== source.collectionDirectory ||
+      (source.savedForm?.comparison && !target)) throw new Error('supermemo_xml_updated');
+    const { elements } = parseRuntimeSuperMemoSource(current.xml, current.collectionDirectory);
+    const refreshed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, target, draft.folderChoices);
+    const updateSignature = draft.preview.directoryUpdate?.signature;
+    const result = await runRuntimeSuperMemoImport({ elements, percent, gradeMap, sourceFormat,
+      previewSignature: refreshed.preview.previewSignature!, folderChoices: draft.folderChoices,
+      ...(current.collectionDirectory ? { collectionDirectory: current.collectionDirectory } : {}),
+      ...(updateSignature ? { updateSignature } : {}), ...(withdrawSourceIds.length ? { withdrawSourceIds } : {}), ...target });
     setResult(result);
     const { batchId, imported, skipped, unresolvedImages } = result;
-    await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: 'load' });
+    const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, undefined, draft.folderChoices)
+      .catch(() => undefined);
+    await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: 'load' },
+      completed ? migrationSnapshot(completed) : undefined);
+    if (completed) {
+      state.setDraft(completed);
+      state.setTarget(undefined);
+    }
   } catch (error) {
     const reason = previewFailure(error);
     if (reason.startsWith('collection')) {
       setPending({ selected: source, target });
       setError(reason);
     } else {
-      setError(isImportAccessDenied(error) ? 'xmlAccess' : 'convert');
+      const message = String(error);
+      if (reason === 'xmlUpdated' || message.includes('supermemo_preview_changed')) setError('xmlUpdated');
+      else if (message.includes('ENOENT') || message.includes('supermemo_xml_missing')) setError('xmlRead');
+      else setError(isImportAccessDenied(error) ? 'xmlAccess' : 'convert');
     }
   } finally {
     setBusy(false);
