@@ -41,6 +41,7 @@ export interface NativeSuperMemoPreviewRow {
   sourceExample?: string;
   sourceBibliography?: SuperMemoBibliography;
   sourceReferenceId?: number | null;
+  sourceTitle?: string;
   sourceChildren?: number[];
   structure?: { parentId: number | null; editable: boolean; folderBody: boolean };
 }

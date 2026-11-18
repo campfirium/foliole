@@ -95,7 +95,7 @@ function getSuperMemoPreviewSignature(
   evidence: { elements: unknown; collectionDirectory: string | undefined; offset: string; scheduler: unknown; gradeMap: unknown; images: unknown }
 ) {
   // Placement is a conversion choice; its generated sample does not identify the source.
-  const rows = preview.rows.map(row => ({ ...row, sourceExample: undefined }));
+  const rows = preview.rows.map(row => ({ ...row, sourceExample: undefined, sourceTitle: undefined }));
   return createHash('sha256').update(JSON.stringify({ ...evidence, preview: { ...preview, rows } })).digest('hex');
 }
 
@@ -119,6 +119,7 @@ async function buildSuperMemoPreview(
       const paired = collection?.fields.get(row.id);
       if (!paired) return row;
       const reset = paired.state === 'pending';
+      const sourceTitle = collection?.titles.get(row.id);
       const bibliography = paired.referenceId ? collection?.bibliography.get(paired.referenceId) : undefined;
       const article = paired.articleId ? rowsById.get(paired.articleId) : undefined;
       const sourceExample = formatSuperMemoSource(bibliography, paired.articleId,
@@ -127,7 +128,7 @@ async function buildSuperMemoPreview(
         sourceConceptGroupId: paired.conceptGroupId,
         sourceConceptFolderId: paired.conceptGroupId ? collection?.groups.get(paired.conceptGroupId) ?? null : null,
         sourceArticleId: paired.articleId, sourceReferenceId: paired.referenceId,
-        sourceRank: paired.rank, sourceChildren: paired.children,
+        sourceRank: paired.rank, sourceChildren: paired.children, ...(sourceTitle ? { sourceTitle } : {}),
         ...(reset ? { recalculatedDue: null, replayedCount: 0, historyNeedsReview: false } : {}) };
     })
   };

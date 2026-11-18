@@ -6,7 +6,7 @@ import { expect, test } from './harness/fixtures';
 import { confirmStep, gradesStep, loadSource, openPreview, preparePreview, structureStep } from './harness/superMemoImport';
 
 function sourceEntry(dialog: Locator, id: number) {
-  return dialog.getByRole('button', { name: new RegExp(`^(?!(?:Expand|Collapse|展开|折叠)).*#${id}(?:\\s|$)`) });
+  return dialog.getByRole('button', { name: new RegExp(`^(?!(?:Expand|Collapse|展开|收起)).*#${id}(?:\\s|$)`) });
 }
 
 function folderSwitch(dialog: Locator, id: number) {
@@ -60,6 +60,7 @@ const xml = `<SuperMemoCollection><Count>6</Count>
 test('keeps independent folder choices and writes the previewed hierarchy and bodies', async ({ desktopApp, desktopWindow }, info) => {
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, info.outputPath('Structure'), xml);
+  await expect(dialog.getByText(/Showing the XML export|当前显示 XML 导出中的顺序/)).toBeVisible();
   await expect(sourceEntry(dialog, 1)).toBeVisible();
   await expect(sourceEntry(dialog, 7)).toBeHidden();
   await expand(dialog, 1);
@@ -93,24 +94,49 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
   expect(nodes[7]!.children.map(child => child.id)).toEqual([nodes[9]!.id, nodes[4]!.id]);
   expect(nodes[6]).toMatchObject({ kind: 'folder', parent: nodes[1]!.id });
   expect(nodes[1]!.children).toEqual(expect.arrayContaining([expect.objectContaining({ kind: 'topic', content: 'Original folder note' })]));
+
+  await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  const existing = await openPreview(desktopWindow);
+  await loadSource(desktopApp, existing, info.outputPath('Structure'));
+  await existing.getByRole('button', { name: structureStep }).click();
+  await expect(existing.getByRole('region', { name: /^(Original structure|原始结构)$/ })).toBeVisible();
+  await expect(folderSwitch(existing, 6)).toHaveCount(0);
+  await expand(existing, 1);
+  await expect(sourceEntry(existing, 6)).toBeHidden();
+  await expand(existing, 5);
+  await expect(sourceEntry(existing, 6)).toBeVisible();
 });
 
 const learningXml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 const learningCollection = process.env.FOLIOLE_SUPERMEMO_VALIDATION_COLLECTION;
 
+function directSourceRows(dialog: Locator, parent: number) {
+  return sourceEntry(dialog, parent).locator('xpath=../..').locator(':scope > ul > li > div > button[title]');
+}
+
 async function confirmLearning(dialog: Locator, page: Page) {
-  await expect(sourceEntry(dialog, 56)).toBeVisible({ timeout: 90_000 });
-  await expect(sourceEntry(dialog, 483)).toBeVisible();
+  await expect(sourceEntry(dialog, 1)).toHaveAttribute('title', 'Root', { timeout: 90_000 });
+  await expect(sourceEntry(dialog, 56)).toHaveAttribute('title', 'TODO (3212)');
+  await expect(sourceEntry(dialog, 483)).toHaveAttribute('title', 'archive (236)');
   await expect(folderSwitch(dialog, 483)).toBeChecked();
+  await expand(dialog, 483);
+  await expect(directSourceRows(dialog, 483).nth(0)).toHaveAttribute('title', 'motto');
+  await expect(directSourceRows(dialog, 483).nth(1)).toHaveAttribute('title', '预配模板 (1)');
+  await expect(directSourceRows(dialog, 483).nth(2)).toHaveAttribute('title', '卡片笔记写作法 (36)');
   await expand(dialog, 56);
-  await expect(sourceEntry(dialog, 791)).toBeVisible();
-  await expect(sourceEntry(dialog, 1303)).toBeVisible();
+  const todo = directSourceRows(dialog, 56);
+  expect(await todo.evaluateAll(rows => rows.map(row => row.textContent?.match(/#(\d+)[^\d]*$/)?.[1]))).toEqual(
+    ['791', '2707', '1920', '2033', '1573', '507', '2348', '304', '2245', '72', '778', '2035', '3302', '825',
+      '3558', '1303', '2669', '3609', '596', '3703', '351', '1841', '3855']);
+  await expect(sourceEntry(dialog, 791)).toHaveAttribute('title', 'Refold 语言习得 (281)');
+  await expect(sourceEntry(dialog, 1303)).toHaveAttribute('title', 'tips (706)');
+  await expect(sourceEntry(dialog, 2035)).toHaveAttribute('title', '技能提升指南');
+  await expect(sourceEntry(dialog, 3302)).toHaveAttribute('title', 'Atomic Habits (791)');
+  await expect(sourceEntry(dialog, 825)).toHaveAttribute('title', 'Atomic Habits (489)');
   await folderSwitch(dialog, 791).click();
   await folderSwitch(dialog, 1303).click();
   await sourceEntry(dialog, 1441).click();
   await expect(document(dialog).getByText(/#1441/)).toBeVisible();
-  await expect(sourceEntry(dialog, 3302)).toContainText('Atomic Habits');
-  await expect(sourceEntry(dialog, 825)).toContainText('Atomic Habits');
   await page.getByRole('button', { name: gradesStep }).click();
   await dialog.getByRole('button', { name: structureStep }).click();
   await expect(folderSwitch(dialog, 791)).toBeChecked();

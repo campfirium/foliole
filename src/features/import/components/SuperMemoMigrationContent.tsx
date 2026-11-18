@@ -3,7 +3,7 @@ import { AppButton, AppDialogBody } from '../../../shared/ui';
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoConfirmMigration } from './SuperMemoConfirmMigration';
-import { SuperMemoEntryPreview, type useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
+import type { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoGradesPage } from './SuperMemoGradeSettings';
 import { SuperMemoLoadPage } from './SuperMemoLoadPage';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
@@ -30,10 +30,9 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
       {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew, onViewSource }} /> : null}
       {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
-      {current === 'structure' && preview ? (
-        draft && !preview.directoryUpdate ? <SuperMemoStructurePage preview={preview} elements={draft.elements}
-          navigation={navigation} busy={busy} onChange={model.changeFolder} /> :
-          <div className="min-h-0 flex-1"><SuperMemoEntryPreview navigation={navigation} preview={preview} elements={draft?.elements} /></div>
+      {current === 'structure' && draft ? (
+        <SuperMemoStructurePage preview={draft.preview} elements={draft.elements}
+          navigation={navigation} busy={busy} onChange={model.changeFolder} />
       ) : null}
       {current === 'grades' && selection ? (
         <SuperMemoGradesPage preview={preview} percent={percent} disabled={busy} value={gradeMap}
@@ -51,7 +50,7 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
         <SuperMemoSourcePage preview={preview} elements={draft?.elements} value={sourceFormat} disabled={busy}
           onChange={changeSourceFormat} />
       ) : null}
-      {current === 'confirm' && !result && preview?.rows.some(row => row.structure && row.outcome !== 'skipped' &&
+      {current === 'confirm' && !result && !preview?.directoryUpdate && preview?.rows.some(row => row.structure && row.outcome !== 'skipped' &&
         row.structure.parentId !== row.parentId) ? (
         <p role="note" className="text-sm">{t('desktop.superMemoDrafts.structureConfirmNotice')}</p>
       ) : null}
