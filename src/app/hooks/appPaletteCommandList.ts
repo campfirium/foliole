@@ -33,7 +33,6 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openLocalFile, title: 'Open File', section: 'Workspace', keywords: ['open', 'markdown', 'file', 'local'] },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
-  { id: APP_COMMAND_IDS.importSuperMemo, title: 'Import from SuperMemo', section: 'Import', keywords: ['migration', 'xml'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   ...DEVELOPER_PALETTE_COMMANDS,
   { id: APP_COMMAND_IDS.openReviewCalendar, title: 'Open Review Statistics', section: 'Workspace', keywords: ['calendar', 'review', 'items', 'topics', 'statistics'] },

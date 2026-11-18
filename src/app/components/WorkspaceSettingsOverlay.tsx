@@ -1,10 +1,8 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 
 import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
-import { SuperMemoSessionProvider } from '../../features/import/components/SettingsSuperMemoImport';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { settingsDesktopAdapters } from './settingsDesktopAdapters';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
@@ -76,10 +74,14 @@ export function WorkspaceSettingsOverlay({
 }: WorkspaceSettingsOverlayProps) {
   const { isDemo } = useDemoRuntimeState();
 
-  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  const [openedDesktopSettings, setOpenedDesktopSettings] = useState(isSettingsOpen && !isDemo);
+  if (isSettingsOpen && !isDemo && !openedDesktopSettings) setOpenedDesktopSettings(true);
+
+  if (!isSettingsOpen && (isDemo || !openedDesktopSettings)) {
+    return null;
+  }
 
   if (isDemo) {
-    if (!isSettingsOpen) return null;
     return (
       <Suspense fallback={null}>
         <DemoSettingsPreviewOverlay
@@ -95,18 +97,15 @@ export function WorkspaceSettingsOverlay({
   }
 
   return (
-    <SuperMemoSessionProvider settingsOpen={isSettingsOpen} libraryScope={libraryScope} listenForCommand>
-      {isSettingsOpen ? (
-        <Suspense fallback={null}>
-          <WorkspaceSettingsOverlayContent
-            onClose={onClose}
-            onRunSupportCommand={onRunSupportCommand}
-            requestedCategory={requestedCategory}
-            requestedRowId={requestedRowId}
-          />
-        </Suspense>
-      ) : null}
-    </SuperMemoSessionProvider>
+    <Suspense fallback={null}>
+      <WorkspaceSettingsOverlayContent
+        isSettingsOpen={isSettingsOpen}
+        onClose={onClose}
+        onRunSupportCommand={onRunSupportCommand}
+        requestedCategory={requestedCategory}
+        requestedRowId={requestedRowId}
+      />
+    </Suspense>
   );
 }
 

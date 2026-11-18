@@ -25,7 +25,6 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.openFile': 'Open File',
   'desktop.command.importFiles': 'Import Files',
   'desktop.command.importFolder': 'Import Folder',
-  'desktop.command.importSuperMemo': 'Import from SuperMemo',
   'desktop.command.importClipboard': 'Import Clipboard',
   'desktop.command.openTrash': 'Open {trash}',
   'desktop.command.openGuidedSample': 'Open Guided Sample',

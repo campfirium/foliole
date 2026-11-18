@@ -1,4 +1,3 @@
-import { requestSuperMemoImportOpen } from '../../features/import/model/superMemoImportRequests';
 import { requestReviewCalendarOpen } from '../../features/review/model/reviewCalendarRequests';
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import {
@@ -183,7 +182,6 @@ function createWorkspaceCommandHandlers(
 
 function createOptionalWorkspaceCommandHandlers(actions: RunAppCommandActions) {
   return {
-    [APP_COMMAND_IDS.importSuperMemo]: requestSuperMemoImportOpen,
     [APP_COMMAND_IDS.openReviewCalendar]: requestReviewCalendarOpen,
     [APP_COMMAND_IDS.sendToEdge]: actions.sendToEdge ?? (() => false),
     [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),

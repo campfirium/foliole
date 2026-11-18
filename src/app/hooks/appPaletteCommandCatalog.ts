@@ -5,7 +5,6 @@ import {
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { translate } from '../../shared/localization/translations';
-import { isDesktopRuntime } from '../../shared/platform/runtime';
 
 import { APP_PALETTE_COMMANDS } from './appPaletteCommandList';
 import {
@@ -215,11 +214,9 @@ function isPaletteCommandEnabled(id: string, options: BuildAppPaletteItemsOption
 }
 
 export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
-  return APP_PALETTE_COMMANDS.filter(({ id }) => {
-    if (id === APP_COMMAND_IDS.toggleDevTools) return options.canToggleDevTools;
-    if (id === APP_COMMAND_IDS.importSuperMemo) return isDesktopRuntime();
-    return true;
-  }).map((command) => ({
+  return APP_PALETTE_COMMANDS.filter(
+    (command) => command.id !== APP_COMMAND_IDS.toggleDevTools || options.canToggleDevTools
+  ).map((command) => ({
     ...command,
     enabled: isPaletteCommandEnabled(command.id, options),
     keywords: [
