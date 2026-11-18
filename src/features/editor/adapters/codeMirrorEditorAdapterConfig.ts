@@ -31,6 +31,9 @@ const folioleDefaultKeymap = defaultKeymap.filter(
   (binding) => binding.run !== toggleComment && binding.run !== undo && binding.run !== redo
 );
 
+// Let a selection drag reach the scroll zone before the pointer hits the window edge.
+const editorBottomScrollMargin = EditorView.scrollMargins.of(() => ({ bottom: 16 }));
+
 function createEditorUpdateListener(args: {
   nodeId: string | null;
   onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta, update: ViewUpdate) => void;
@@ -80,6 +83,7 @@ const escapeBlurKeymap = [{
 
 function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
   return [
+    ...(options.readOnlyInteractionMode === 'document' ? [] : [editorBottomScrollMargin]),
     ...(options.readOnlyInteractionMode === 'document' && getCompanionRuntimeCapability().kind === 'android-native'
       ? [] : [preserveDevanagariConjunctPointerSelection]),
     Prec.highest(keymap.of(structuredListKeymap)),

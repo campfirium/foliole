@@ -173,6 +173,8 @@ Desktop Settings → About records application events to files under the desktop
 
 Android's Devanagari annotation boundary setting is a device-local touch selection preference in Settings → Diagnostics. The API and CLI continue to take explicit stored Markdown ranges.
 
+Dragging a Markdown text selection near the bottom of the desktop reading pane scrolls the article and extends the selection. The mouse gesture stays in the reader; the API and CLI still take explicit Markdown ranges.
+
 After a long press in the Android reader, releasing the finger hands the transient range to Foliole’s drag handles. This interaction stays in the reader. Select paragraph in the mobile reading toolbar expands the transient selection using the desktop reading paragraph boundaries. Agent Control receives explicit source ranges for material operations.
 
 The macOS and Windows preference to quit Foliole when closing its main window is local to the desktop library. It stays in Settings because it controls native window behavior and the availability of background services on that device.
