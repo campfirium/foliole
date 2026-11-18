@@ -1,0 +1,32 @@
+.folder-list-text-row::after,
+.folder-list-header::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: rgb(var(--role-ink-rgb) / 0.10);
+  pointer-events: none;
+  content: '';
+}
+
+.folder-list-header::after {
+  bottom: -1px;
+  background: var(--role-content-line);
+}
+
+.folder-list-text-row[data-highlighted='true']::after,
+.folder-list-text-row:has(+ .folder-list-text-row[data-highlighted='true'])::after,
+[data-list-position-index]:has(+ [data-list-position-index] > .folder-list-text-row[data-highlighted='true']) > .folder-list-text-row::after,
+.folder-list-header:has(+ ul > .folder-list-text-row:first-child[data-highlighted='true'])::after,
+.folder-list-header:has(+ [role='list'] [data-list-position-index='0'] > .folder-list-text-row[data-highlighted='true'])::after {
+  inset-inline: -1.125rem;
+}
+
+@media (hover: hover) {
+  .folder-list-text-row:has(> button:hover)::after,
+  .folder-list-text-row:has(+ .folder-list-text-row > button:hover)::after,
+  [data-list-position-index]:has(+ [data-list-position-index] > .folder-list-text-row > button:hover) > .folder-list-text-row::after,
+  .folder-list-header:has(+ ul > .folder-list-text-row:first-child > button:hover)::after,
+  .folder-list-header:has(+ [role='list'] [data-list-position-index='0'] > .folder-list-text-row > button:hover)::after {
+    inset-inline: -1.125rem;
+  }
+}

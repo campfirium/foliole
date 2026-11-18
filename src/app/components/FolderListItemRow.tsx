@@ -1,3 +1,5 @@
+import './FolderListItemRow.css';
+
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { TruncatedTextTooltip } from '../../shared/ui';
@@ -19,16 +21,17 @@ interface FolderListTextItemProps {
 export function FolderListTextItem(props: FolderListTextItemProps) {
   return (
     <li
-      className="box-border list-none border-b border-[var(--role-content-line)]"
+      className="folder-list-text-row relative box-border list-none"
+      data-highlighted={props.active || props.isBulkSelectionActive ? 'true' : undefined}
       style={{ height: FOLDER_LIST_ROW_HEIGHT_PX }}
     >
       <button
         aria-label={props.ariaLabel}
         data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
-        className={`-mx-4 flex h-full w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors ${
+        className={`relative isolate -mx-5 flex h-full w-[calc(100%+2.5rem)] flex-col gap-3 overflow-hidden px-5 py-5 text-left before:pointer-events-none before:absolute before:inset-x-0.5 before:inset-y-0 before:-z-local-raised before:transition-colors ${
           props.active || props.isBulkSelectionActive
-            ? 'bg-[var(--app-surface-control-bg)]'
-            : 'hover:bg-[var(--app-surface-control-hover-bg)]'
+            ? 'before:bg-[rgb(var(--role-ink-rgb)/0.06)]'
+            : 'hover:before:bg-[color-mix(in_srgb,var(--app-control-bg-hover-color)_75%,transparent)]'
         }`}
         onClick={props.onClick}
         type="button"

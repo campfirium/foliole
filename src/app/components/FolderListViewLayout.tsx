@@ -32,7 +32,7 @@ interface FolderListHeaderProps {
 
 function FolderListHeader(props: FolderListHeaderProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--role-content-line)] pb-3">
+    <div className="folder-list-header relative flex flex-wrap items-center gap-3 border-b border-transparent pb-3">
       {props.showCountAndTitle ? (
         <FolderListHeaderSummary
           currentViewActions={props.currentViewActions}
