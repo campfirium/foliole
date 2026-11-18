@@ -59,11 +59,11 @@ export async function monitorRemoteQualityJobs(options) {
     const run = parseWorkflowRun(runStdout);
     const jobs = parseJobs(jobsStdout);
     for (const job of jobs.filter(isFailedJob)) {
-      if (emittedFailures.has(job.id)) continue;
+      if (emittedFailures.has(job.id) || (!job.runner_id && job.steps?.length === 0)) continue;
       const log = await emitFailedJobLog(runner, repo, job, cwd);
       if (log.code === 0) emittedFailures.add(job.id);
     }
-    if (run.status === 'completed') {
+    if (run.status === 'completed' && (!options.minimumAttempt || run.run_attempt >= options.minimumAttempt)) {
       return { failed: run.conclusion !== 'success', jobs, run };
     }
     await wait(pollIntervalMs);

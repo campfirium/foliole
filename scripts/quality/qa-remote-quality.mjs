@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { readChainVerdict } from './chain-verdict-read.mjs';
 import { runQaMobileResume } from './qa-mobile-resume.mjs';
+import { waitForQaWithRunnerRetries } from './qa-runner-retry.mjs';
 import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
 import { parseRemoteQualityRun } from './remote-quality-run-title.mjs';
 import { QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment, readQaWorkspace } from './qa-workspace-state.mjs';
@@ -116,7 +117,16 @@ export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = 
   if (identity.head_branch !== QA_BRANCH || identity.head_sha !== targetSha) {
     throw new Error('QA run identity differs from its candidate; preserve both for recovery');
   }
-  const result = await monitor({ cwd, repo, runner, runId: run.runId, ...waitOptions });
+  const monitorOptions = { cwd, repo, runner, runId: run.runId, ...waitOptions };
+  const result = run.scope === 'full' && !run.mobileDistribution
+    ? await waitForQaWithRunnerRetries({ ...monitorOptions, monitor, targetSha, branch: QA_BRANCH,
+      assertCandidate: () => {
+        const current = readQaWorkspace(cwd);
+        if (current.phase !== 'prepared' || current.head !== targetSha || current.run?.runId !== run.runId) {
+          throw new Error('QA candidate changed while waiting to retry runner allocation');
+        }
+      } })
+    : await monitor(monitorOptions);
   if (result.failed) throw new Error(`QA ${args.scope} failed: ${run.url}`);
   if (run.scope === 'full') {
     const receipt = await readVerdict({ repository: repo, runId: run.runId, targetSha });

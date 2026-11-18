@@ -24,6 +24,12 @@ repairs there, uses Mac preflight, normally pushes only the QA branch and retain
 returned run ID. Repeating the entry resumes matching evidence; an ambiguous delivery
 must be resolved before dispatching again. Scoped green is not full acceptance.
 
+For full `review` runs without mobile distribution, the waiter re-runs failed jobs
+on the same run after 5, 15, 30, then 60 minutes between attempts if GitHub confirms
+every underlying failure is an unallocated hosted runner. It keeps retrying while
+GitHub accepts retries and the registered candidate matches. A job that ran and
+failed returns its verdict for repair. The exact full receipt is still required.
+
 Installed dependencies, temporary files, build output and native build caches belong
 to QA. Do not link them to the development checkout. The npm download cache may be
 shared. Local commands run from QA under the existing development resource gate;

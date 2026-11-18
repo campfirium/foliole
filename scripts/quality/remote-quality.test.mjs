@@ -124,6 +124,20 @@ describe('remote quality dispatcher', () => {
     expect(wait).toHaveBeenCalledOnce();
   });
 
+  it('waits for the new attempt when GitHub still shows the previous completed attempt', async () => {
+    const wait = vi.fn();
+    const { runner } = createRunner({
+      runSnapshots: [
+        { conclusion: 'failure', status: 'completed', run_attempt: 2 },
+        { conclusion: 'success', status: 'completed', run_attempt: 3 }
+      ]
+    });
+    await expect(monitorRemoteQualityJobs({
+      cwd: '.', repo: 'campfirium/foliole', runId: 42, runner, wait, minimumAttempt: 3
+    })).resolves.toMatchObject({ failed: false, run: { run_attempt: 3 } });
+    expect(wait).toHaveBeenCalledOnce();
+  });
+
   it('uses the workflow conclusion and includes failed jobs from later pages', async () => {
     const { calls, runner } = createRunner({
       jobSnapshots: [[[job()], [job({ conclusion: 'failure', id: 108, name: 'Late page' })]]],
