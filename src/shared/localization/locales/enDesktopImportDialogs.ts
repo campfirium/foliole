@@ -9,8 +9,6 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.structureSkipped': 'Skipped',
   'desktop.superMemoDrafts.structureSource': 'Original structure',
   'desktop.superMemoDrafts.structureHelp': 'Expand a branch to see its children. Use the switch to make an empty Topic a folder, or select a title to preview the document.',
-  'desktop.superMemoDrafts.structureUpdateHelp': 'Browse the source tree here. Review proposed updates in Confirm migration.',
-  'desktop.superMemoDrafts.structureXmlOrder': 'Showing the XML export. Pair the collection in Load data to see the original titles and order.',
   'desktop.superMemoDrafts.structureSelect': 'Select a title to preview its document.',
   'desktop.superMemoDrafts.structureSwitch': 'Use {title} #{id} as a folder',
   'desktop.superMemoDrafts.structureMoved': 'Import location differs from the source',

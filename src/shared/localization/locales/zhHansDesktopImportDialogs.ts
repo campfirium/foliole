@@ -11,8 +11,6 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.structureSkipped': '跳过',
   'desktop.superMemoDrafts.structureSource': '原始结构',
   'desktop.superMemoDrafts.structureHelp': '展开分支查看子项。用开关将无正文的主题设为文件夹，点击标题预览文档。',
-  'desktop.superMemoDrafts.structureUpdateHelp': '在这里浏览原始结构。前往「确认迁移」核对将要更新的内容。',
-  'desktop.superMemoDrafts.structureXmlOrder': '当前显示 XML 导出中的顺序。可在「载入数据」配对资料库，查看原始标题和顺序。',
   'desktop.superMemoDrafts.structureSelect': '点击标题预览文档。',
   'desktop.superMemoDrafts.structureSwitch': '将 {title} #{id} 设为文件夹',
   'desktop.superMemoDrafts.structureMoved': '导入位置与原位置不同',

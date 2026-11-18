@@ -7,7 +7,6 @@ const DAY_MS = 86_400_000;
 const DELPHI_EPOCH = Date.UTC(1899, 11, 30);
 
 export interface SuperMemoCollectionFields {
-  titleId: number;
   due: string | null;
   conceptGroupId: number | null;
   articleId: number | null;
@@ -125,7 +124,7 @@ export function matchSuperMemoCollection(elements: SuperMemoXmlDraftElement[], t
     const due = relative > 0 && relative < 30_000
       ? new Date(base + relative * DAY_MS).toISOString().slice(0, 10) : null;
     const offset = (id - 1) * 118;
-    return [id, { titleId: binary.getUint32(offset + 2, true), conceptGroupId: binary.getUint32(offset + 65, true) || null,
+    return [id, { conceptGroupId: binary.getUint32(offset + 65, true) || null,
       articleId: binary.getUint32(offset + 93, true) || null,
       referenceId: binary.getUint16(offset + 44, true) || null, children: childrenOf(tree, id, children), due, state, rank: ranks.get(id) ?? null }];
   }));

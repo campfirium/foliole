@@ -13,11 +13,11 @@ import { settingsDialogBounds } from '../../../shared/ui/settingsDialogBounds';
 import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface';
 
 import { SuperMemoDraftActions } from './SuperMemoDraftActions';
+import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
 import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
-import { useSuperMemoPreviewNavigation } from './useSuperMemoPreviewNavigation';
 
 function DraftHeader({ titleId, name, disabled }: {
   titleId: string; name: string | undefined; disabled: boolean;
