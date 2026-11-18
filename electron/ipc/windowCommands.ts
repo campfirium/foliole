@@ -155,7 +155,9 @@ export async function handleWindowAndUtilityCommand(request: InvokeRequest, cont
     return openSystemSettings();
   }
   if (request.command === NATIVE_COMMANDS.desktopSupportLog) {
-    return runDesktopSupportLogAction(request.args?.action);
+    const args = request.args;
+    return runDesktopSupportLogAction(args?.action,
+      args && 'startedAt' in args ? args.startedAt : undefined, args && 'entry' in args ? args.entry : undefined);
   }
   const splitTopicPreferencesResult = handleSplitTopicPreferencesCommand(request);
   if (splitTopicPreferencesResult !== undefined) return splitTopicPreferencesResult;

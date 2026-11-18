@@ -85,11 +85,15 @@ it.each(['compute', 'receipt'] as const)('rejects a newer target review during g
   const harness = await prepare();
   const before = harness.getState();
   const currentId = before.reviewSession.currentNodeId!;
-  const pending = harness.actions.gradeReviewCard(3, now);
+  const observer = { saved: vi.fn(), stage: vi.fn() };
+  const pending = harness.actions.gradeReviewCard(4, now, observer);
+  let committedDue: string | undefined;
   await harness.computing;
   if (phase === 'receipt') {
     harness.releaseCompute();
     await harness.saving;
+    committedDue = snapshot().nodesById[currentId]!.review!.due;
+    expect(Date.parse(committedDue)).toBeGreaterThan(Date.parse(now));
   }
   const newer = { ...before.nodesById[currentId]!, review: externalGrade(currentId) };
   harness.setState({ nodesById: { ...before.nodesById, [currentId]: newer } });
@@ -99,6 +103,15 @@ it.each(['compute', 'receipt'] as const)('rejects a newer target review during g
   expect(harness.getState().nodesById[currentId]).toEqual(newer);
   expect(harness.getState().reviewSession).toEqual(before.reviewSession);
   expect(harness.getState().appActionHistory.undoStack).toHaveLength(0);
+  if (committedDue) {
+    const row = connection().sqlite.prepare('SELECT session_json FROM daily_flow_state WHERE id = 1').get() as { session_json: string };
+    const queued = (JSON.parse(row.session_json) as { currentNodeId: string | null }).currentNodeId;
+    expect(queued).not.toBe(currentId);
+    expect(observer.saved).toHaveBeenCalledExactlyOnceWith(4, currentId, committedDue, now, queued);
+    expect(observer.stage).toHaveBeenLastCalledWith('projection-rejected');
+  } else {
+    expect(observer.saved).not.toHaveBeenCalled();
+  }
   expect(facts()).toHaveLength(phase === 'compute' ? 1 : 2);
   expect(reopen().nodesById[currentId]!.review).toEqual(newer.review);
 });

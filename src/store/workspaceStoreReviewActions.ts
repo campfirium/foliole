@@ -17,6 +17,7 @@ import { isSameNodeReview } from './workspaceNodeLearningComparison';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
 import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
 import { readWorkspaceGradeLearning } from './workspaceReviewGradeLearning';
+import type { WorkspaceReviewGradeObserver } from './workspaceReviewGradeObserver';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
@@ -73,30 +74,41 @@ function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | und
   return false;
 }
 
+function isCurrentGradeContext(current: WorkspaceState, before: WorkspaceState, nodeId: string) {
+  return current.libraryScope === before.libraryScope && current.activeNodeId === nodeId &&
+    isSameWorkspaceReviewSession(current.reviewSession, before.reviewSession) &&
+    isSameNodeReview(current.nodesById[nodeId], before.nodesById[nodeId]);
+}
+
 function createGradeReviewCardAction(
   set: WorkspaceSet,
   get: WorkspaceGet,
   scheduler: ReviewSchedulerAdapter,
   persistence: WorkspaceReviewPersistenceAdapter
 ): WorkspaceReviewActions['gradeReviewCard'] {
-  const execute = async (grade: ReviewGrade, now: string, applicationEntryId?: string) => {
+  const execute = async (grade: ReviewGrade, now: string, applicationEntryId?: string,
+    observer?: WorkspaceReviewGradeObserver) => {
+    observer?.stage('prepare-day');
     if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const rendererBefore = get();
+    observer?.stage('review-context');
     const currentNodeId = rendererBefore.reviewSession.currentNodeId;
     if (!currentNodeId || !rendererBefore.reviewSession.isAnswerRevealed || rendererBefore.activeNodeId !== currentNodeId) return false;
+    observer?.stage('learning-context');
     const snapshot = await readWorkspaceGradeLearning(rendererBefore, currentNodeId, grade);
-    if (!snapshot || get().libraryScope !== rendererBefore.libraryScope || get().activeNodeId !== currentNodeId ||
-      !isSameWorkspaceReviewSession(get().reviewSession, rendererBefore.reviewSession) ||
-      !isSameNodeReview(get().nodesById[currentNodeId], rendererBefore.nodesById[currentNodeId])) return false;
+    if (!snapshot || !isCurrentGradeContext(get(), rendererBefore, currentNodeId)) return false;
+    observer?.stage('not-review-item');
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
     if (!isActionableSessionNode(currentNode, now)) {
+      observer?.stage('not-due');
       const dive = snapshot.reviewSession.dive;
       await openWorkspaceDailyFlow(set, get, dive
         ? { now, mode: dive.mode, dive: { id: dive.id, topicIds: dive.topicIds }, seed: snapshot.reviewSession }
         : { now, mode: snapshot.reviewSessionMode, seed: snapshot.reviewSession, refresh: true });
       return true;
     }
+    observer?.stage('scheduler');
     const result = await gradeSharedFsrsReviewNode({
       getSchedulerVersion: (overrides) => getReviewSchedulerVersion(getCurrentReviewSchedulerSettings(), overrides),
       grade,
@@ -113,6 +125,7 @@ function createGradeReviewCardAction(
       get,
       grade,
       now,
+      ...(observer ? { observer } : {}),
       persistence,
       rendererBefore,
       result,
@@ -125,7 +138,8 @@ function createGradeReviewCardAction(
 
     return true;
   };
-  return (grade, now = new Date().toISOString()) => reserveApplicationGrade(set, get, grade, now, execute);
+  return (grade, now = new Date().toISOString(), observer) => reserveApplicationGrade(set, get, grade, now,
+    (grade, now, entryId) => execute(grade, now, entryId, observer));
 }
 function createExitReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActions['exitReviewSession'] {
   return () => set(() => ({ reviewSession: createEmptyReviewSession() }));
