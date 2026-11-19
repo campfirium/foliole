@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { ListChecks, ListX, RotateCcw, Trash2, X } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -8,9 +9,10 @@ import {
   type CompanionBatchTarget
 } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import { AppButton } from '../shared/ui';
+import { AppIconButton } from '../shared/ui';
 
 import { CompanionDirectoryBatchConfirmation } from './CompanionDirectoryBatchConfirmation';
+import { useRegisterCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
 import type { DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';
 import { useCompanionPageActive } from './CompanionPageStack';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
@@ -58,11 +60,12 @@ export function useCompanionDirectoryBatchSelection(props: {
   const purge = useMemo(() => batchMode === 'trash' && selected?.size
     ? prepareCompanionBatchPurge(snapshot?.nodesById ?? {}, [...selected.values()]) : null, [batchMode, selected, snapshot]);
   const busy = Boolean(actions?.busy || actions?.pending);
+  const enter = useCallback(() => { setSkipped(0); setSelected(new Map()); }, []);
+  useRegisterCompanionDirectoryBatchMenuAction(enter,
+    pageActive && !busy && selected === null && Boolean(actions && candidates.size && isAvailableNativeCompanionRuntime()));
   return {
-    available: Boolean(actions && isAvailableNativeCompanionRuntime() && candidates.size),
     trash: batchMode === 'trash', skipped, canPurge: Boolean(purge),
     active: selected !== null, busy, confirm, count: selected?.size ?? 0, total: candidates.size,
-    enter: () => { setSkipped(0); setSelected(new Map()); },
     exit: () => { setSelected(null); setConfirm(null); },
     selectAll: () => setSelected(candidates),
     clear: () => setSelected(new Map()),
@@ -94,33 +97,33 @@ function toggleBatchTarget(selected: ReadonlyMap<string, CompanionBatchTarget>, 
 
 export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<typeof useCompanionDirectoryBatchSelection> }) {
   const t = useTranslation();
-  if (!batch.active) return <div className="flex flex-wrap items-center justify-end gap-2 empty:hidden">
-    {batch.skipped > 0 && <p role="status" className="mr-auto text-sm">
-      {t('companion.batch.restoreSkipped', { count: batch.skipped })}
-    </p>}
-    {batch.available && <AppButton className="min-h-11" variant="ghost" onClick={batch.enter} disabled={batch.busy}>
-      {t('companion.batch.select')}
-    </AppButton>}
-  </div>;
-  return <div className="sticky top-[calc(max(env(safe-area-inset-top),4px)+3rem)] z-10 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-companion-divider bg-companion-base pb-2">
-    <span role="status" className="mr-auto min-w-0 text-sm">
-      {t('companion.batch.count', { count: batch.count, total: batch.total })}
-    </span>
-    <AppButton className="min-h-11" variant="ghost" onClick={batch.count === batch.total ? batch.clear : batch.selectAll}
-      disabled={batch.busy || !batch.total}>
-      {t(batch.count === batch.total ? 'companion.batch.clear' : 'companion.batch.selectAll')}
-    </AppButton>
-    <AppButton className="min-h-11" variant="ghost" onClick={batch.exit} disabled={batch.busy}>
-      {t('shared.confirm.cancel')}
-    </AppButton>
-    <AppButton className="min-h-11 whitespace-normal" disabled={!batch.count || batch.busy} onClick={batch.trash ? batch.restore : batch.openConfirmation}>
-      {t(batch.trash ? 'desktop.nodeList.menu.restore' : 'companion.workspace.delete')}
-    </AppButton>
-    {batch.trash && <AppButton className="min-h-11 whitespace-normal" variant="ghost"
-      disabled={!batch.canPurge || batch.busy} onClick={batch.openConfirmation}>
-      {t('desktop.nodeList.menu.deletePermanently')}
-    </AppButton>}
-    {batch.trash && batch.count > 0 && !batch.canPurge && <p className="basis-full text-sm text-companion-text-secondary">
+  if (!batch.active) return batch.skipped > 0 && <p role="status" className="pb-2 text-sm">
+    {t('companion.batch.restoreSkipped', { count: batch.skipped })}
+  </p>;
+  const allSelected = batch.count === batch.total;
+  const selectionLabel = t(allSelected ? 'companion.batch.clear' : 'companion.batch.selectAll');
+  const trashLabel = t(batch.trash ? 'desktop.nodeList.menu.deletePermanently' : 'companion.workspace.delete');
+  const restoreLabel = t('desktop.nodeList.menu.restore');
+  const SelectionIcon = allSelected ? ListX : ListChecks;
+  return <div className="sticky top-[calc(max(env(safe-area-inset-top),4px)+3rem)] z-10 border-b border-companion-divider bg-companion-base">
+    <div className="flex min-h-11 items-center">
+      <AppIconButton className="size-11" label={t('shared.confirm.cancel')} disabled={batch.busy}
+        icon={<X size={20} aria-hidden="true" />} onClick={batch.exit} />
+      <span role="status" className="min-w-0 flex-1 px-1 text-sm tabular-nums">
+        <span className="sr-only">{t('companion.batch.count', { count: batch.count, total: batch.total })}</span>
+        <span aria-hidden="true">{batch.count}/{batch.total}</span>
+      </span>
+      <AppIconButton className="size-11" label={selectionLabel} title={selectionLabel}
+        icon={<SelectionIcon size={20} aria-hidden="true" />}
+        onClick={allSelected ? batch.clear : batch.selectAll} disabled={batch.busy || !batch.total} />
+      {batch.trash && <AppIconButton className="size-11" label={restoreLabel} title={restoreLabel}
+        icon={<RotateCcw size={19} aria-hidden="true" />} disabled={!batch.count || batch.busy}
+        onClick={batch.restore} />}
+      <AppIconButton className="size-11" label={trashLabel} title={trashLabel}
+        icon={<Trash2 size={19} aria-hidden="true" />} disabled={batch.busy || (batch.trash ? !batch.canPurge : !batch.count)}
+        onClick={batch.openConfirmation} />
+    </div>
+    {batch.trash && batch.count > 0 && !batch.canPurge && <p className="pb-2 text-sm text-companion-text-secondary">
       {t('companion.batch.purgeUnavailable')}
     </p>}
     {batch.confirm && <CompanionDirectoryBatchConfirmation

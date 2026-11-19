@@ -1,22 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type Database from 'better-sqlite3';
-import { useState } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
-import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
-import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import { getViewHideDismissedTopics, requestToggleDismissedTopicVisibility } from '../shared/platform/runtime/dismissedTopicVisibilitySetting';
 import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
-import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
+import { BatchDirectoryFixture, readBatchDirectorySnapshot as readSnapshot } from './companionDirectoryBatch.test-support';
 
 const runtime = vi.hoisted(() => ({ platform: 'android' }));
 
@@ -29,25 +25,16 @@ vi.mock('./useCompanionExternalDirectory', () => ({
   useCompanionExternalDocument: () => null
 }));
 
-const readSnapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 afterEach(() => { runtime.platform = 'android'; });
 
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
-function Directory({ initial }: { initial: WorkspaceSnapshot }) {
-  const [snapshot, setSnapshot] = useState(initial);
-  const [selection, setSelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
-  return <CompanionWorkspaceActionsProvider snapshot={snapshot} flush={async () => {}} restoreFlow={() => {}}
-    flowActive={false} applyFlow={async () => {}} refresh={async () => {
-      const next = await readSnapshot();
-      setSnapshot(next);
-      return next;
-    }}>
-    <button type="button" onClick={() => setSelection({ kind: 'root' })}>Library root</button>
-    <button type="button" onClick={requestToggleDismissedTopicVisibility}>Toggle Topic Focus</button>
-    <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
-      onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
-  </CompanionWorkspaceActionsProvider>;
+function enterSelection() {
+  expect(screen.queryByRole('button', { name: 'Select', exact: true })).toBeNull();
+  click('More');
+  const menu = screen.getByRole('dialog', { name: 'Browse menu' });
+  fireEvent.click(within(menu).getByRole('button', { name: 'Select', exact: true }));
+  expect(menu).not.toBeInTheDocument();
 }
 
 function trashed(db: Database.Database) {
@@ -64,17 +51,21 @@ it('selects within one list and moves the chosen roots and their subtrees to Tra
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     node(peers.desktop, 'Child B', 'topic', 'Folder B');
     await peers.exchange();
-    renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    click('Select');
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    enterSelection();
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Cancel');
     click('Open folder Folder A');
-    click('Select');
+    enterSelection();
     expect(screen.getByText('0 of 1 selected in this list')).toBeVisible();
+    click('Select Child A');
+    expect(screen.getByRole('checkbox', { name: 'Select Child A' })).toBeChecked();
+    click('Select Child A');
+    expect(screen.getByRole('checkbox', { name: 'Select Child A' })).not.toBeChecked();
     click('Select all in this list');
     click('Library root');
-    click('Select');
+    enterSelection();
     expect(screen.getByText('0 of 2 selected in this list')).toBeVisible();
     click('Select all in this list');
     confirmMoveToTrash();
@@ -107,14 +98,14 @@ it('restores multiple selected entries and their children while leaving the rema
     await peers.exchange();
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     await peers.exchange();
-    renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    click('Select');
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    enterSelection();
     click('Select all in this list');
     confirmMoveToTrash(3);
     await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
     await peers.exchange();
     click('Open folder Trash');
-    click('Select');
+    enterSelection();
     expect(screen.getByText('0 of 4 selected in this list')).toBeVisible();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder A' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder B' }));
@@ -151,15 +142,15 @@ it.each(['android', 'ios'])('permanently deletes within a Trash folder and keeps
     node(peers.desktop, 'Child A2', 'topic', 'Folder A');
     node(peers.desktop, 'Child B', 'topic', 'Folder B');
     await peers.exchange();
-    renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    click('Select');
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    enterSelection();
     click('Select all in this list');
     confirmMoveToTrash();
     await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
     await peers.exchange();
     click('Open folder Trash');
     click('Open folder Folder A');
-    click('Select');
+    enterSelection();
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Delete Permanently');
@@ -196,13 +187,13 @@ it('rejects a confirmed subtree that has changed before the permanent write', as
     await peers.exchange();
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     await peers.exchange();
-    renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    click('Select');
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    enterSelection();
     click('Select all in this list');
     confirmMoveToTrash();
     await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
     click('Open folder Trash');
-    click('Select');
+    enterSelection();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder A' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder B' }));
     click('Delete Permanently');
@@ -232,9 +223,9 @@ it('removes filtered-out topics from the selection and keeps them unselected whe
     node(desktop, 'Topic B', 'topic', 'Folder A');
     await exchange();
     await mutateCompanionWorkspace({ type: 'shelve', nodeId: 'Topic B' });
-    renderWithLocalization(<Directory initial={await readSnapshot()} />);
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     click('Open folder Folder A');
-    click('Select');
+    enterSelection();
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Toggle Topic Focus');
