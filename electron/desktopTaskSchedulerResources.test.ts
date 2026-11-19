@@ -1,9 +1,17 @@
 // @vitest-environment node
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
+
+const { resolveAppPaths } = vi.hoisted(() => ({ resolveAppPaths: vi.fn() }));
+vi.mock('./ipc/paths.js', () => ({ resolveAppPaths }));
 
 import { reportDesktopTaskResponsiveness, resetDesktopTaskPressureForTests } from './desktopTaskPressure.js';
 import { DesktopTaskScheduler } from './desktopTaskScheduler.js';
 import type { DesktopTaskDefinition } from './desktopTaskTypes.js';
+import { copyDiagnosticReport } from './diagnostics/diagnosticBundle.js';
 
 beforeEach(() => resetDesktopTaskPressureForTests());
 
@@ -106,4 +114,50 @@ it('releases library tasks before a library switch and resumes later submissions
   resume();
   await waitForScheduler();
   expect(order).toEqual(['active', 'next']);
+});
+
+it('records a slow foreground database wait with its actual blocker and without task identifiers', async () => {
+  const logDir = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-database-wait-'));
+  resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
+  let now = 0;
+  let releaseImport = () => {};
+  const hold = new Promise<void>(resolve => { releaseImport = resolve; });
+  const { scheduler } = createScheduler(() => now);
+  const resources = [{ resource: 'main-database-write' as const }];
+  const foreground = () => scheduler.submit({
+    ...createTask('private-document-task-id', () => 'saved', 'foreground'), resources, source: 'foreground-storage'
+  });
+  try {
+    const importing = scheduler.submit({
+      ...createTask('private-import-task-id', () => hold, 'background'), resources, source: 'readwise-api'
+    });
+    await waitForScheduler();
+    const waiting = foreground();
+    await waitForScheduler();
+    now = 12_947;
+    releaseImport();
+    await importing.promise;
+    await expect(waiting.promise).resolves.toBe('saved');
+    await expect(foreground().promise).resolves.toBe('saved');
+    await vi.waitFor(async () => {
+      const name = (await fs.readdir(logDir)).find(file => file.endsWith('.ndjson'));
+      expect(name).toBeDefined();
+      const text = await fs.readFile(path.join(logDir, name!), 'utf8');
+      expect(text).not.toContain('private-');
+      const records = text.trim().split('\n').map(line => JSON.parse(line));
+      expect(records).toEqual([expect.objectContaining({
+        event: 'desktop_database_write_wait', level: 'warn',
+        payload: { lastObservedBlocker: 'readwise-api', operation: 'foreground-storage', resource: 'main-database-write', waitMs: 12_947 }
+      })]);
+    });
+    const report = await copyDiagnosticReport({
+      app: { getPath: name => name === 'logs' ? logDir : path.join(logDir, 'crashDumps'), getVersion: () => '1.0.0' }
+    });
+    expect(report.report_text).toContain('"waitMs":12947');
+    expect(report.report_text).toContain('"lastObservedBlocker":"readwise-api"');
+    expect(report.report_text).not.toContain('private-');
+  } finally {
+    releaseImport();
+    await fs.rm(logDir, { recursive: true, force: true });
+  }
 });

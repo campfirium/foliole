@@ -1,9 +1,11 @@
 import type { DesktopTaskProgressEventState } from './desktopTaskProgressEvents.js';
-import type { DesktopTaskDefinition } from './desktopTaskTypes.js';
+import { hasDesktopTaskResourceCapacity, usesDesktopTaskResource } from './desktopTaskResources.js';
+import type { DesktopTaskDefinition, DesktopTaskResource } from './desktopTaskTypes.js';
 
 export interface QueuedDesktopTask {
   attempt: number;
   controller: AbortController;
+  databaseWriteBlocker?: string;
   definition: DesktopTaskDefinition;
   lastProgressEvent: DesktopTaskProgressEventState | null;
   promise: Promise<unknown>;
@@ -42,4 +44,18 @@ export function createQueuedDesktopTask(
 
 export function isDesktopTaskAbortError(error: unknown) {
   return error instanceof Error && (error.name === 'AbortError' || error.message === 'AbortError');
+}
+
+export function isQueuedDesktopTaskRunnable(
+  task: QueuedDesktopTask,
+  pausedResources: ReadonlySet<DesktopTaskResource>,
+  running: DesktopTaskDefinition[]
+) {
+  if (task.definition.resources?.some(claim => pausedResources.has(claim.resource))) return false;
+  if (hasDesktopTaskResourceCapacity(task.definition, running)) return true;
+  if (task.definition.priority === 'foreground' && usesDesktopTaskResource(task.definition, 'main-database-write')) {
+    const blocker = running.find(definition => usesDesktopTaskResource(definition, 'main-database-write'));
+    if (blocker) task.databaseWriteBlocker = blocker.source;
+  }
+  return false;
 }

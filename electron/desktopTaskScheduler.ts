@@ -1,11 +1,13 @@
+import { logDesktopTaskDatabaseWait } from './desktopTaskDatabaseWaitLog.js';
 import { waitForDesktopTaskPressureRelief } from './desktopTaskPressure.js';
 import { shouldWriteDesktopTaskProgressEvent } from './desktopTaskProgressEvents.js';
 import {
   createQueuedDesktopTask,
   isDesktopTaskAbortError,
+  isQueuedDesktopTaskRunnable,
   type QueuedDesktopTask
 } from './desktopTaskQueue.js';
-import { hasDesktopTaskResourceCapacity, usesDesktopTaskResource } from './desktopTaskResources.js';
+import { usesDesktopTaskResource } from './desktopTaskResources.js';
 import type {
   DesktopTaskContext,
   DesktopTaskDefinition,
@@ -127,6 +129,7 @@ export class DesktopTaskScheduler {
   private async runTask(task: QueuedDesktopTask) {
     task.state = 'running';
     const startedAt = this.now();
+    logDesktopTaskDatabaseWait(task, startedAt);
     await this.writeEvent('desktop_task_started', task.definition);
     try {
       const value = await task.definition.run(this.createContext(task));
@@ -147,10 +150,7 @@ export class DesktopTaskScheduler {
       return priority || left.sequence - right.sequence;
     });
     const runningDefinitions = [...this.running].map((task) => task.definition);
-    const index = this.pending.findIndex((task) =>
-      !task.definition.resources?.some((claim) => this.pausedResources.has(claim.resource)) &&
-      hasDesktopTaskResourceCapacity(task.definition, runningDefinitions)
-    );
+    const index = this.pending.findIndex(task => isQueuedDesktopTaskRunnable(task, this.pausedResources, runningDefinitions));
     return index < 0 ? null : this.pending.splice(index, 1)[0] ?? null;
   }
 

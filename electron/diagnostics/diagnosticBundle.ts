@@ -39,13 +39,16 @@ const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
   'action',
   'code',
+  'lastObservedBlocker',
   'message',
   'name',
   'operation',
   'reason',
+  'resource',
   'source_kind',
   'stage',
-  'status'
+  'status',
+  'waitMs'
 ] as const;
 
 function formatBytes(sizeBytes: number) {
