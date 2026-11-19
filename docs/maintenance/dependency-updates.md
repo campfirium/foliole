@@ -170,6 +170,31 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
+### November 20 Electron, SQLite, and web tooling batch
+
+Local adoption `10760453d` on `campfirium/foliole:dev` passed a clean npm install,
+Electron native rebuild, the local fast gate, dependency scan, desktop and
+companion Web builds, and 96 targeted tests. The running Electron 45.4.1
+binary reported Node.js 24.22.3 and SQLite 3.54.1. The production npm audit
+reported zero findings. The existing installer backport and its private glob
+pin remain in the resolved graph.
+
+All proposals below targeted `dev` and were reviewed from verified
+`app/renovate` heads. Full hosted QA, including dependency hardening, is
+pending. After it passes, verify integrated remote dev containment before
+closing the proposals and cleaning up their source refs.
+
+| Proposal | Reviewed head | Local target |
+| --- | --- | --- |
+| [#267](https://github.com/campfirium/foliole/pull/267) | `08411365f92e770647657f78ac2ab3f3826ce337` | Electron 45.4.1 |
+| [#280](https://github.com/campfirium/foliole/pull/280) | `60afa5a42a2a0d837d500a5dd61fb7f63ed2a4b4` | Knip 6.45.1 |
+| [#282](https://github.com/campfirium/foliole/pull/282) | `233c1df3e317352039d42cabbb6dcc6126c1d20e` | minimatch 11.0.8 |
+| [#283](https://github.com/campfirium/foliole/pull/283) | `8032480c58eba2b13362c2910294b91e38ab9676` | Vite 8.3.8 |
+| [#285](https://github.com/campfirium/foliole/pull/285) | `96af82233269cb267fcb10c332917876611a4f0a` | lucide-react 1.72.0 |
+| [#286](https://github.com/campfirium/foliole/pull/286) | `df2a30195ed3a671886f858a957eea13494dd75b` | Prettier 3.10.0 |
+| [#287](https://github.com/campfirium/foliole/pull/287) | `b0a7769226d485eca002d6f4a29a6a51883c151f` | glob 14.0.5 in the ASAR and Capacitor overrides |
+| [#288](https://github.com/campfirium/foliole/pull/288) | `7223f31d4b5effc981342711e554fd9ed0674405` | better-sqlite3 13.1.1 |
+
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -410,6 +435,12 @@ and lucide-react 1.63.0. The older implementation above does not cover that targ
 the current proposal's local validation blocker is recorded below.
 
 ## Reviewed proposals and deferred adoption
+
+On November 20 the dependency batch reviewed [#279](https://github.com/campfirium/foliole/pull/279)
+at `b62c8fbee68b484346f64ef0c157233809f22d0b` and deferred the WASM binding
+0.6.1 update. The persisted review-training schema uses the exact 0.6.0
+engine identifier. Resume when the runtime upgrade is verified with real
+Worker training and existing model hydration and sync across the upgrade.
 
 [#242](https://github.com/campfirium/foliole/pull/242) at reviewed head
 `510e56c8c0b6de4be843a18c9c8e1fda1f04ab59` remains open. On November 17
