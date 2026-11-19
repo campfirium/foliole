@@ -63,8 +63,8 @@ it('adds a folder and root Topic from Browse, updates the open workspace, syncs 
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    await addFromMenu('Shelf');
-    openRow('More: Shelf');
+    await addFromMenu('Shelf', 'folder');
+    openFolderActions('Shelf');
     openRow(addLabel);
     const picker = screen.getByRole('dialog', { name: 'Add to Dive' });
     expect(within(picker).queryByRole('button', { name: 'Probability' })).toBeNull();
@@ -97,8 +97,13 @@ it('adds a folder and root Topic from Browse, updates the open workspace, syncs 
   }
 });
 
-async function addFromMenu(title: string) {
-  openRow(new RegExp(`: ${title}$`));
+function openFolderActions(title: string) {
+  fireEvent.keyDown(screen.getByRole('button', { name: `Open folder ${title}` }), { key: 'F10', shiftKey: true });
+}
+
+async function addFromMenu(title: string, kind: 'folder' | 'topic' = 'topic') {
+  if (kind === 'folder') openFolderActions(title);
+  else openRow(new RegExp(`: ${title}$`));
   openRow(addLabel);
   const picker = screen.getByRole('dialog', { name: 'Add to Dive' });
   fireEvent.change(within(picker).getByRole('searchbox'), { target: { value: 'prob' } });
