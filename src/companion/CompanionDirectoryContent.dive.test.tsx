@@ -38,15 +38,17 @@ function node(id: string, title: string, parentNodeId: string | null = null): Wo
 type TopBarArgs = Parameters<typeof useCompanionTopBarProps>[0];
 const noop = () => undefined;
 
-function Directory({ snapshot, start, openReminders }: {
+function Directory({ snapshot, start, openReminders, initialSelection = { kind: 'root' }, directoryOpen = true }: {
   snapshot: WorkspaceSnapshot;
   start: TopBarArgs['surface']['openDiveFlow'];
   openReminders: () => void;
+  initialSelection?: CompanionDirectorySelection;
+  directoryOpen?: boolean;
 }) {
-  const [selection, setSelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
+  const [selection, setSelection] = useState(initialSelection);
   const topBarProps = useCompanionTopBarProps({
     directorySelection: selection, browseSortDirection: 'asc', browseSortKey: 'name',
-    externalDirectory: { entries: [], folders: [] }, isBrowseDirectoryOpen: true,
+    externalDirectory: { entries: [], folders: [] }, isBrowseDirectoryOpen: directoryOpen,
     resetDirectorySelection: next => setSelection(next ?? { kind: 'root' }),
     setBrowseSortDirection: noop, setBrowseSortKey: noop, setIsBrowseDirectoryOpen: noop,
     setIsCaptureSheetOpen: noop, setSettingsPage: noop, settingsPage: 'list',
@@ -87,6 +89,7 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
   let menu = within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  expect(menu.queryByRole('button', { name: /^(New…|Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
   fireEvent.click(menu.getByRole('button', { name: 'Create reminder…' }));
   expect(openReminders).toHaveBeenCalledOnce();
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -102,6 +105,48 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   } }} />);
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Open topic Statistics primer' })).toBeNull();
+});
+
+const creationSnapshot: WorkspaceSnapshot = {
+  nodesById: { folder: node('folder', 'Library folder') },
+  nodeOrder: ['folder'], trashedNodeIds: [], activeNodeId: null, untitledSequenceByParent: {}
+};
+
+function openBrowseMenu() {
+  fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
+  return within(screen.getByRole('dialog', { name: 'Browse menu' }));
+}
+
+it('offers a single New entry on the directory home and leaves one sheet open when a type is picked', () => {
+  renderWithLocalization(<Directory snapshot={creationSnapshot} start={vi.fn()} openReminders={noop} />);
+  let menu = openBrowseMenu();
+  expect(menu.queryByRole('button', { name: /^(Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
+  fireEvent.click(menu.getByRole('button', { name: 'New…' }));
+  const sheet = screen.getByRole('dialog', { name: 'New' });
+  menu = within(sheet);
+  expect(menu.getByRole('button', { name: 'Folder', exact: true })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Dive', exact: true })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Virtual', exact: true })).toBeVisible();
+  fireEvent.click(menu.getByRole('button', { name: 'Back' }));
+  expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBe(sheet);
+  fireEvent.click(screen.getByRole('button', { name: 'New…' }));
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Folder', exact: true }));
+  expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  expect(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
+  fireEvent.click(screen.getByLabelText('Done'));
+  expect(openBrowseMenu().getByRole('button', { name: 'New…' })).toBeVisible();
+});
+
+it.each([
+  ['recent', { kind: 'root' }, false],
+  ['folder', { kind: 'internal', nodeId: 'folder' }, true],
+  ['virtual', { kind: 'virtual', nodeId: 'index' }, true],
+  ['trash', { kind: 'trash' }, true],
+  ['external', { kind: 'externalFolder', folderId: 'external' }, true]
+] as const)('omits global creation in the %s menu', (_page, initialSelection, directoryOpen) => {
+  renderWithLocalization(<Directory snapshot={creationSnapshot} initialSelection={initialSelection}
+    directoryOpen={directoryOpen} start={vi.fn()} openReminders={noop} />);
+  expect(openBrowseMenu().queryByRole('button', { name: /^(New…|Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
 });
 
 it('starts a Dive directly from its directory row menu', () => {

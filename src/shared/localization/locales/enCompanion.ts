@@ -16,6 +16,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.browse.directory': 'Directory',
   'companion.browse.menu': 'Browse menu',
   'companion.browse.more': 'More',
+  'companion.browse.new.open': 'New…',
+  'companion.browse.new.title': 'New',
   'companion.browse.notConnected': 'Not connected',
   'companion.browse.orderBy': 'Order by',
   'companion.browse.sort': 'Sort',

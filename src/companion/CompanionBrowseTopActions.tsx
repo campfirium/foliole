@@ -12,6 +12,7 @@ import { CompanionBrowseMenuSheet, type CompanionBrowseDiveActions } from './Com
 import { CompanionTopActionButton } from './CompanionTopActionButton';
 
 export function CompanionBrowseTopActions(props: {
+  allowRootCreation?: boolean | undefined;
   diveActions?: CompanionBrowseDiveActions | undefined;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
@@ -49,6 +50,7 @@ export function CompanionBrowseTopActions(props: {
       />
       <CompanionTopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
+        allowRootCreation={props.allowRootCreation}
         diveActions={props.diveActions}
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}

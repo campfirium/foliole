@@ -18,7 +18,7 @@ import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -40,7 +40,7 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       setSnapshot(next);
       return next;
     }}>
-    <CompanionWorkspaceCreateAction />
+    <CompanionWorkspaceCreateChoices onSelect={() => {}} />
     <CompanionWorkspaceHistoryActions />
     <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
       onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
@@ -54,7 +54,7 @@ it('creates a manual index directly from mobile, supports undo and syncs the sam
     await peers.exchange();
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create in Virtual' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Virtual', exact: true }));
     const sheet = screen.getByRole('dialog', { name: 'Create in Virtual' });
     fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Create in Virtual' }));

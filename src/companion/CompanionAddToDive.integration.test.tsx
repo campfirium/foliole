@@ -15,7 +15,7 @@ import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { RecentArticleRow } from './CompanionRecentArticleList';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -39,7 +39,7 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       return next;
     }}>
     {selection.kind === 'root' && <>
-      <CompanionWorkspaceCreateAction />
+      <CompanionWorkspaceCreateChoices onSelect={() => {}} />
       <RecentArticleRow article={{ nodeId: 'Root Topic', title: 'Root Topic', preview: null, updatedAt: '', folderLabel: null }}
         currentArticleId={null} onSelectArticle={() => {}} />
     </>}
@@ -149,7 +149,7 @@ it('creates a Dive on mobile with a source found by its folder path and syncs it
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    openRow('Create Dive');
+    openRow('Dive');
     const sheet = screen.getByRole('dialog', { name: 'Create Dive' });
     fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Dive' } });
     fireEvent.change(within(sheet).getByRole('searchbox'), { target: { value: 'Shelf / Leaf' } });

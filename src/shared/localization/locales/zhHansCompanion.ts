@@ -18,6 +18,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.browse.directory': '目录',
   'companion.browse.menu': '浏览菜单',
   'companion.browse.more': '更多',
+  'companion.browse.new.open': '新建…',
+  'companion.browse.new.title': '新建',
   'companion.browse.notConnected': '未连接',
   'companion.browse.orderBy': '排序方向',
   'companion.browse.sort': '排序',

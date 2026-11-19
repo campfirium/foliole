@@ -14,6 +14,7 @@ import { useReminderDraftRequest } from '../features/settings/context/ReminderDr
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import {
@@ -21,7 +22,11 @@ import {
   translateCompanionSortOrderLabel
 } from './companionBrowseSortLabels';
 import { useCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
-import { CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
+import {
+  CompanionWorkspaceCreateChoices,
+  CompanionWorkspaceHistoryActions,
+  useCompanionWorkspaceActions
+} from './CompanionWorkspaceActions';
 
 function MenuRow(props: {
   active?: boolean;
@@ -50,16 +55,16 @@ function MenuRow(props: {
   );
 }
 
-type BrowseMenuView = 'menu' | 'sort';
+type BrowseMenuView = 'menu' | 'new' | 'sort';
 
 function BrowseMenuHeader(props: {
   onBack(): void;
   view: BrowseMenuView;
 }) {
   const t = useTranslation();
-  return props.view === 'sort' ? (
+  return props.view !== 'menu' ? (
         <button
-          className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle"
+          className="min-h-11 rounded-md px-2 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle"
           onClick={props.onBack}
           type="button"
         >
@@ -90,6 +95,7 @@ function BrowseMainMenu(props: {
   diveActions: CompanionBrowseDiveActions | undefined;
   onClose(): void;
   onOpenAppearance(): void;
+  onOpenNew?: () => void;
   onOpenSort(): void;
   onSync?: () => void;
   syncDisabled?: boolean;
@@ -105,7 +111,7 @@ function BrowseMainMenu(props: {
       }} />}
       {props.diveActions && <BrowseDiveMenuActions actions={props.diveActions} onClose={props.onClose} />}
       <CompanionWorkspaceHistoryActions />
-      <CompanionWorkspaceCreateAction />
+      {props.onOpenNew && <MenuRow label={t('companion.browse.new.open')} onSelect={props.onOpenNew} trailingIcon={ChevronRight} />}
       <MenuRow
         label={t('companion.settings.sync.title')}
         {...definedProps({
@@ -152,7 +158,8 @@ function BrowseSortMenu(props: {
   );
 }
 
-export function CompanionBrowseMenuSheet(props: {
+type CompanionBrowseMenuSheetProps = {
+  allowRootCreation?: boolean | undefined;
   diveActions?: CompanionBrowseDiveActions | undefined;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
@@ -164,38 +171,47 @@ export function CompanionBrowseMenuSheet(props: {
   sortKey: FolderListSortKey;
   syncDisabled?: boolean;
   syncStatus?: string;
-}) {
+};
+
+export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
   const t = useTranslation();
-  const [view, setView] = useState<BrowseMenuView>('menu');
+  const workspace = useCompanionWorkspaceActions();
+  const canCreate = Boolean(props.allowRootCreation && workspace && isAvailableNativeCompanionRuntime());
+  const [selectedView, setView] = useState<BrowseMenuView>('menu');
+  const view = selectedView === 'new' && !canCreate ? 'menu' : selectedView;
   const handleOpenChange = (open: boolean) => {
     if (!open) setView('menu');
     props.onOpenChange(open);
   };
+  const close = () => handleOpenChange(false);
 
   return (
     <CompanionBottomSheet
       leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
       onOpenChange={handleOpenChange}
       open={props.open}
-      title={view === 'sort' ? t('companion.browse.sort') : t('companion.browse.menu')}
+      title={t(view === 'new' ? 'companion.browse.new.title' : view === 'sort' ? 'companion.browse.sort' : 'companion.browse.menu')}
     >
       <div className="border-t border-companion-divider">
         {view === 'menu' ? (
           <BrowseMainMenu
             activeSortLabel={t(COMPANION_SORT_LABEL_KEYS[props.sortKey])}
             diveActions={props.diveActions}
-            onClose={() => handleOpenChange(false)}
+            onClose={close}
             onOpenAppearance={() => {
-              handleOpenChange(false);
+              close();
               props.onOpenAppearance();
             }}
             onOpenSort={() => setView('sort')}
             {...definedProps({
               onSync: props.onSync,
+              onOpenNew: canCreate ? () => setView('new') : undefined,
               syncDisabled: props.syncDisabled,
               syncStatus: props.syncStatus
             })}
           />
+        ) : view === 'new' ? (
+          <CompanionWorkspaceCreateChoices onSelect={close} />
         ) : (
           <BrowseSortMenu
             onChangeSortDirection={props.onChangeSortDirection}

@@ -117,6 +117,7 @@ function resolveBrowseTopBar(args: {
 }) {
   const rightSlot = (
     <CompanionBrowseTopActions
+      allowRootCreation={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'root'}
       diveActions={args.diveActions}
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}

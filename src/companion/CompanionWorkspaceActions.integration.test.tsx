@@ -14,7 +14,7 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions,
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions,
   useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
@@ -32,7 +32,7 @@ afterEach(async () => { cleanup(); await library.close(); });
 function Menu() {
   const actions = useCompanionWorkspaceActions()!;
   return <>
-    <CompanionWorkspaceCreateAction /><CompanionWorkspaceHistoryActions />
+    <CompanionWorkspaceCreateChoices onSelect={() => {}} /><CompanionWorkspaceHistoryActions />
     {Object.values(actions.snapshot?.nodesById ?? {}).filter(node => !node.id.startsWith('special-') && !node.deletedAt).map(node =>
       <div key={node.id}>
         <button>{node.title}</button>
@@ -62,7 +62,7 @@ function Harness({ flowNodeId }: { flowNodeId?: string } = {}) {
   </CompanionWorkspaceActionsProvider></LocalizationProvider>;
 }
 async function createFolder(title = 'Created folder') {
-  fireEvent.click(screen.getByRole('button', { name: 'Create Folder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Folder', exact: true }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: title } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
 }

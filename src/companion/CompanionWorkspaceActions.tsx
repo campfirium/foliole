@@ -17,6 +17,7 @@ import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMut
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
+import { companionWorkspaceRowClass } from './CompanionWorkspaceMenuActions';
 import { CompanionWorkspaceNodeSheet, type WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
 import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 
@@ -100,13 +101,22 @@ export function CompanionWorkspaceHistoryActions() {
   </div>;
 }
 
-export function CompanionWorkspaceCreateAction() {
+const companionWorkspaceCreateChoices = [
+  { mode: 'create', label: 'companion.directory.row.folder' },
+  { mode: 'create-dive', label: 'desktop.nodeList.dive.tree' },
+  { mode: 'create-index', label: 'companion.directory.section.virtual' }
+] as const;
+
+export function CompanionWorkspaceCreateChoices({ onSelect }: { onSelect(): void }) {
   const actions = useCompanionWorkspaceActions();
   const t = useTranslation();
   if (!actions || !isAvailableNativeCompanionRuntime()) return null;
-  return <>{Object.entries(companionWorkspaceCreateLabels).map(([mode, label]) => <button key={mode} type="button"
-    className="min-h-11 w-full border-b border-companion-divider text-left" disabled={actions.busy || actions.pending}
-    onClick={() => actions.open({ mode: mode as keyof typeof companionWorkspaceCreateLabels, nodeId: null, parentNodeId: null })}>
+  return <>{companionWorkspaceCreateChoices.map(({ mode, label }) => <button key={mode} type="button"
+    className={companionWorkspaceRowClass} disabled={actions.busy || actions.pending}
+    onClick={() => {
+      onSelect();
+      actions.open({ mode, nodeId: null, parentNodeId: null });
+    }}>
     {t(label)}
   </button>)}</>;
 }
