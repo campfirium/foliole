@@ -16,7 +16,9 @@ const cleanup: (() => Promise<void>)[] = [];
 export async function closeAutomaticBackupFixtures() { for (const close of cleanup.splice(0)) await close(); }
 export function gate() { let release!: () => void; const promise = new Promise<void>(done => { release = done; }); return { promise, release }; }
 export async function automaticFolderBackupFixture(runtime: { owner: unknown; port: unknown; inventory: ReturnType<typeof vi.fn>; resume: () => void }) {
-  const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/automatic-'));
+  const artifacts = path.resolve('.tmp/artifacts/companion-folder-backup-tests');
+  await mkdir(artifacts, { recursive: true });
+  const root = await mkdtemp(path.join(artifacts, 'automatic-'));
   const source = path.join(root, 'source');
   let target = path.join(root, 'target'); await mkdir(source); await mkdir(target);
   let library = createDisplayLibrary('android');
