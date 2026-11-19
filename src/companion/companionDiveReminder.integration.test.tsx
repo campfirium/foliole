@@ -12,7 +12,7 @@ import { LocalizationProvider } from '../shared/localization/LocalizationProvide
 import { closeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { AppConfirmationProvider } from '../shared/ui/AppConfirmationProvider';
 
-import { CompanionDiveReminderMenu } from './CompanionDiveReminderMenu';
+import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import { edit, enable, save, setDraft } from './companionReminderSettings.testUtils';
 import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
 import { useCompanionReminderNavigation } from './useCompanionReminderNavigation';
@@ -80,14 +80,16 @@ function ReminderShortcutFixture() {
       <button type="button" onClick={() => setSettings(false)}>Back</button>
       <CompanionReminderSettingsContent onBack={() => setSettings(false)} snapshot={createSnapshot('Physics')} />
     </>
-      : <CompanionDiveReminderMenu dive={{ id: 'physics', title: 'Physics', directSourceIds: ['topic'] }} />}
+      : <CompanionBrowseTopActions diveActions={{ dive: { id: 'physics', title: 'Physics', directSourceIds: ['topic'] } }}
+        onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenAppearance={() => {}} onOpenCapture={() => {}}
+        sortDirection="asc" sortKey="name" />}
   </ReminderDraftProvider>;
 }
 
 it('opens the shared form from the Dive menu and writes only on save', async () => {
   await open('android', 'foliole-dive-shortcut-');
   render(<ReminderShortcutFixture />);
-  fireEvent.click(screen.getByRole('button', { name: 'More: Physics' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Create reminder…' }));
   expect(await screen.findByLabelText('Message')).toHaveValue('Physics');
   expect(screen.getByRole('button', { name: 'Dive Physics' })).toBeVisible();
@@ -96,7 +98,7 @@ it('opens the shared form from the Dive menu and writes only on save', async () 
   expect(screen.queryByRole('switch', { name: 'Enabled: Physics' })).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-  fireEvent.click(screen.getByRole('button', { name: 'More: Physics' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Create reminder…' }));
   await screen.findByLabelText('Message');
   await save();

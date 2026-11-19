@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import { useLocalization } from '../shared/localization/LocalizationProvider';
 import {
   resolveNodeDisplayTitle,
@@ -30,6 +31,7 @@ type DirectoryRowProps = {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   item: DirectoryListItem;
   onSelectItem(item: DirectoryListItem): void;
+  onStartDive?: ((id: string) => void) | undefined;
   snapshot: WorkspaceSnapshot | null;
 };
 
@@ -46,6 +48,7 @@ function DirectoryRow(props: DirectoryRowProps) {
     snapshot: props.snapshot
   });
   if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
+  const dive = props.item.source === 'virtual' ? readDiveNode(props.snapshot?.nodesById[props.item.nodeId]) : null;
   return (
     <div className="flex items-center">
     <button
@@ -77,7 +80,8 @@ function DirectoryRow(props: DirectoryRowProps) {
       />
     </button>
     {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
-      <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title} />}
+      <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
+        onStart={dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined} />}
     {!props.selecting && props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title}
       metadata={meta ?? ''} directDiveId={props.item.directDiveId} />}
     </div>
@@ -90,6 +94,7 @@ export function CompanionDirectoryList(props: {
   emptyDescription?: string;
   emptyLabel: string;
   onSelectItem(item: DirectoryListItem): void;
+  onStartDive?: ((id: string) => void) | undefined;
   sections: DirectorySection[];
   viewKey?: string;
   snapshot: WorkspaceSnapshot | null;
@@ -124,7 +129,8 @@ export function CompanionDirectoryList(props: {
           </label>}
           <div className="min-w-0 flex-1" inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
-              onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem} snapshot={props.snapshot} />
+              onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem}
+              onStartDive={props.onStartDive} snapshot={props.snapshot} />
           </div>
         </div>;
       }

@@ -1,12 +1,27 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
+import { ReminderDraftProvider } from '../features/settings/context/ReminderDraftRequest';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
+import { resolveCompanionDiveStarter } from './companionStartDive';
+import { CompanionTopBar } from './CompanionTopBar';
+import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
+import { useCompanionTopBarProps } from './useCompanionTopBarProps';
+import { createSyncState } from './useCompanionWorkspaceSync.testSupport';
+
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async importOriginal => ({
+  ...await importOriginal<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(),
+  isAvailableNativeCompanionRuntime: () => true
+}));
+vi.mock('../shared/platform/companionBootstrap', async importOriginal => ({
+  ...await importOriginal<typeof import('../shared/platform/companionBootstrap')>(),
+  isNativeCompanionRuntime: () => true
+}));
 
 vi.mock('./useCompanionExternalDirectory', () => ({
   useCompanionExternalDirectory: () => ({ entries: [], folders: [] }),
@@ -20,14 +35,36 @@ function node(id: string, title: string, parentNodeId: string | null = null): Wo
   };
 }
 
-function Directory({ snapshot, onStartDive }: { snapshot: WorkspaceSnapshot; onStartDive: (id: string) => void }) {
+type TopBarArgs = Parameters<typeof useCompanionTopBarProps>[0];
+const noop = () => undefined;
+
+function Directory({ snapshot, start, openReminders }: {
+  snapshot: WorkspaceSnapshot;
+  start: TopBarArgs['surface']['openDiveFlow'];
+  openReminders: () => void;
+}) {
   const [selection, setSelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
-  return <CompanionDirectoryContent onStartDive={onStartDive} selection={selection} onChangeSelection={setSelection}
-    onExitArticle={setSelection} onSelectNode={() => undefined} snapshot={snapshot}
-    sortDirection="asc" sortKey="name" />;
+  const topBarProps = useCompanionTopBarProps({
+    directorySelection: selection, browseSortDirection: 'asc', browseSortKey: 'name',
+    externalDirectory: { entries: [], folders: [] }, isBrowseDirectoryOpen: true,
+    resetDirectorySelection: next => setSelection(next ?? { kind: 'root' }),
+    setBrowseSortDirection: noop, setBrowseSortKey: noop, setIsBrowseDirectoryOpen: noop,
+    setIsCaptureSheetOpen: noop, setSettingsPage: noop, settingsPage: 'list',
+    surface: { activeAction: 'recent', openDiveFlow: start } as TopBarArgs['surface'],
+    workspaceSync: { state: createSyncState(snapshot), status: 'idle' } as unknown as TopBarArgs['workspaceSync']
+  });
+  return <ReminderDraftProvider openReminders={openReminders}>
+    <CompanionWorkspaceActionsProvider snapshot={snapshot} flush={async () => {}} restoreFlow={noop}
+      flowActive={false} applyFlow={async () => {}} refresh={async () => snapshot}>
+      <CompanionTopBar {...topBarProps} visible />
+      <CompanionDirectoryContent onStartDive={resolveCompanionDiveStarter(snapshot, start)}
+        selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection} onSelectNode={noop}
+        snapshot={snapshot} sortDirection="asc" sortKey="name" />
+    </CompanionWorkspaceActionsProvider>
+  </ReminderDraftProvider>;
 }
 
-it('opens the received Dive under Dive and shows its sources and derived topics', () => {
+it('opens Dive details and starts Flow or creates a reminder from the top menu', () => {
   const nodesById = {
     dive: { ...node('dive', 'Probability'), virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['source'] },
     source: node('source', 'Reference shelf'),
@@ -37,7 +74,8 @@ it('opens the received Dive under Dive and shows its sources and derived topics'
     nodesById, nodeOrder: Object.keys(nodesById), trashedNodeIds: [], activeNodeId: null, untitledSequenceByParent: {}
   };
   const start = vi.fn();
-  const view = renderWithLocalization(<Directory snapshot={snapshot} onStartDive={start} />);
+  const openReminders = vi.fn();
+  const view = renderWithLocalization(<Directory snapshot={snapshot} start={start} openReminders={openReminders} />);
   expect(screen.getByRole('heading', { name: 'Dive' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open folder Probability' }));
   expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
@@ -45,12 +83,39 @@ it('opens the received Dive under Dive and shows its sources and derived topics'
   expect(screen.getByRole('heading', { name: 'Topics' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Open topic Statistics primer' })).toBeVisible();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Start Dive' }));
-  expect(start).toHaveBeenCalledWith('dive');
+  expect(screen.queryByRole('button', { name: 'Start Dive' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
+  fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
+  let menu = within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  fireEvent.click(menu.getByRole('button', { name: 'Create reminder…' }));
+  expect(openReminders).toHaveBeenCalledOnce();
+  expect(screen.queryByRole('dialog')).toBeNull();
 
-  view.rerender(<Directory onStartDive={start} snapshot={{ ...snapshot, nodesById: {
+  fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
+  menu = within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
+  expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: ['member'] });
+  expect(screen.queryByRole('dialog')).toBeNull();
+
+  view.rerender(<Directory start={start} openReminders={openReminders} snapshot={{ ...snapshot, nodesById: {
     ...nodesById, member: { ...nodesById.member, parentNodeId: null }
   } }} />);
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Open topic Statistics primer' })).toBeNull();
+});
+
+it('starts a Dive directly from its directory row menu', () => {
+  const dive = { ...node('dive', 'Probability'), virtualFilter: DIVE_NODE_FILTER, manualChildOrder: [] };
+  const snapshot: WorkspaceSnapshot = {
+    nodesById: { dive }, nodeOrder: ['dive'], trashedNodeIds: [], activeNodeId: null, untitledSequenceByParent: {}
+  };
+  const start = vi.fn();
+  renderWithLocalization(<Directory snapshot={snapshot} start={start} openReminders={noop} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'More: Probability' }));
+  const menu = within(screen.getByRole('dialog', { name: 'More' }));
+  fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
+  expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: [] });
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Open folder Probability' })).toBeVisible();
 });

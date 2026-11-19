@@ -8,6 +8,7 @@ import type {
 import { definedProps } from '../shared/lib/definedProps';
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
 
+import type { CompanionBrowseDiveActions } from './CompanionBrowseMenuSheet';
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -35,7 +36,8 @@ export function resolveCompanionTopBarProps(
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void,
   onBackDirectorySelection: () => void,
-  onOpenAppearance: () => void
+  onOpenAppearance: () => void,
+  diveActions?: CompanionBrowseDiveActions
 ) {
   if (surface.activeAction === 'more') {
     return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings, onExitReview);
@@ -46,6 +48,7 @@ export function resolveCompanionTopBarProps(
       browseSortKey,
       folderTitle: surface.browsedFolder?.title,
       directorySelection,
+      diveActions,
       isBrowseDirectoryOpen,
       onBackDirectorySelection,
       onChangeBrowseSortDirection,
@@ -97,6 +100,7 @@ function resolveSettingsTopBar(
 function resolveBrowseTopBar(args: {
   browseSortDirection: FolderListSortDirection;
   browseSortKey: FolderListSortKey;
+  diveActions: CompanionBrowseDiveActions | undefined;
   folderTitle: string | undefined;
   directorySelection: CompanionDirectorySelection;
   isBrowseDirectoryOpen: boolean;
@@ -113,6 +117,7 @@ function resolveBrowseTopBar(args: {
 }) {
   const rightSlot = (
     <CompanionBrowseTopActions
+      diveActions={args.diveActions}
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}

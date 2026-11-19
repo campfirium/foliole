@@ -8,10 +8,11 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
-import { CompanionBrowseMenuSheet } from './CompanionBrowseMenuSheet';
+import { CompanionBrowseMenuSheet, type CompanionBrowseDiveActions } from './CompanionBrowseMenuSheet';
 import { CompanionTopActionButton } from './CompanionTopActionButton';
 
 export function CompanionBrowseTopActions(props: {
+  diveActions?: CompanionBrowseDiveActions | undefined;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenAppearance(): void;
@@ -48,6 +49,7 @@ export function CompanionBrowseTopActions(props: {
       />
       <CompanionTopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
+        diveActions={props.diveActions}
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
         onOpenAppearance={props.onOpenAppearance}

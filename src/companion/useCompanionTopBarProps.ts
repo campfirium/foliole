@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { createElement, Fragment, type ComponentProps } from 'react';
 
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -12,6 +13,7 @@ import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { CompanionFlowCaptureButton } from './CompanionFlowCaptureButton';
 import { CompanionFlowModeMenu } from './CompanionFlowModeControl';
+import { resolveCompanionDiveStarter } from './companionStartDive';
 import { CompanionTopBar } from './CompanionTopBar';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -34,6 +36,35 @@ function resolveBrowseSyncProps(workspaceSync: WorkspaceSync, t: ReturnType<type
   };
 }
 
+function goBackInDirectory(args: {
+  externalDirectory: CompanionExternalDirectory;
+  directorySelection: CompanionDirectorySelection;
+  resetDirectorySelection(selection?: CompanionDirectorySelection): void;
+  workspaceSync: WorkspaceSync;
+}) {
+  const parentSelection = resolveDirectoryParentSelection({
+    directory: args.externalDirectory,
+    selection: args.directorySelection,
+    snapshot: args.workspaceSync.state.workspace_snapshot
+  });
+  if (parentSelection) args.resetDirectorySelection(parentSelection);
+}
+
+function resolveBrowseDiveActions(args: {
+  directorySelection: CompanionDirectorySelection;
+  isBrowseDirectoryOpen: boolean;
+  surface: Pick<ReturnType<typeof useCompanionArticleSurface>, 'openDiveFlow'>;
+  workspaceSync: WorkspaceSync;
+}) {
+  if (!args.isBrowseDirectoryOpen || args.directorySelection.kind !== 'virtual') return undefined;
+  const snapshot = args.workspaceSync.state.workspace_snapshot;
+  const node = snapshot?.nodesById[args.directorySelection.nodeId];
+  const dive = readDiveNode(node);
+  if (!dive || node?.deletedAt || snapshot?.trashedNodeIds.includes(dive.id)) return undefined;
+  const startDive = resolveCompanionDiveStarter(snapshot, args.surface.openDiveFlow);
+  return { dive, onStart: startDive ? () => startDive(dive.id) : undefined };
+}
+
 export function useCompanionTopBarProps(args: {
   directorySelection: CompanionDirectorySelection;
   browseSortDirection: FolderListSortDirection;
@@ -51,14 +82,6 @@ export function useCompanionTopBarProps(args: {
   workspaceSync: WorkspaceSync;
 }) {
   const t = useTranslation();
-  const backDirectorySelection = () => {
-    const parentSelection = resolveDirectoryParentSelection({
-      directory: args.externalDirectory,
-      selection: args.directorySelection,
-      snapshot: args.workspaceSync.state.workspace_snapshot
-    });
-    if (parentSelection) args.resetDirectorySelection(parentSelection);
-  };
   const browseSync = resolveBrowseSyncProps(args.workspaceSync, t);
 
   if (args.surface.isFlowBrowsing) return {
@@ -88,11 +111,12 @@ export function useCompanionTopBarProps(args: {
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),
     () => args.setSettingsPage('sync'),
-    backDirectorySelection,
+    () => goBackInDirectory(args),
     () => {
       args.surface.handleTabAction('more');
       args.setSettingsPage('appearance');
-    }
+    },
+    resolveBrowseDiveActions(args)
   );
   return withEmptyFlowMenu(resolved, args.surface);
 }

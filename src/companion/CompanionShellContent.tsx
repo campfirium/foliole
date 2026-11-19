@@ -1,15 +1,12 @@
 import type { ReactNode } from 'react';
 
 
-import { readDiveNode } from '../../lib/core/nodes/dive';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
-import { resolveDiveMembership } from '../shared/diveMembership';
-import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
@@ -25,6 +22,7 @@ import {
   continueCompanionAttachmentResourceSync
 } from './CompanionShellReadableArticle';
 import { renderCompanionShellSearchSurface, type CompanionShellSearchRouteProps } from './CompanionShellSearchSurface';
+import { resolveCompanionDiveStarter } from './companionStartDive';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -137,11 +135,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
           props.onChangeDirectorySelection(selection);
         }}
         onSelectNode={props.surface.handleSelectBrowseNode}
-        onStartDive={isAvailableNativeCompanionRuntime() ? id => {
-          const snapshot = props.workspaceSync.state.workspace_snapshot;
-          const dive = readDiveNode(snapshot?.nodesById[id]);
-          if (snapshot && dive) void props.surface.openDiveFlow({ id, topicIds: resolveDiveMembership(snapshot, dive).topics });
-        } : undefined}
+        onStartDive={resolveCompanionDiveStarter(props.workspaceSync.state.workspace_snapshot, props.surface.openDiveFlow)}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}
         sortDirection={props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION}

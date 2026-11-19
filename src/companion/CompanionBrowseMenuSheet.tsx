@@ -1,6 +1,7 @@
 import { Check, ChevronRight, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import type { Dive } from '../../lib/core/nodes/dive';
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -9,14 +10,17 @@ import {
   FOLDER_LIST_SORT_OPTIONS,
   getFolderListSortOrderOptions
 } from '../features/nodes/model/folderListSortOptions';
+import { useReminderDraftRequest } from '../features/settings/context/ReminderDraftRequest';
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import {
   COMPANION_SORT_LABEL_KEYS,
   translateCompanionSortOrderLabel
 } from './companionBrowseSortLabels';
+import { useCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
 import { CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 function MenuRow(props: {
@@ -64,8 +68,27 @@ function BrowseMenuHeader(props: {
       ) : null;
 }
 
+export type CompanionBrowseDiveActions = { dive: Dive; onStart?: (() => void) | undefined };
+
+function BrowseDiveMenuActions({ actions, onClose }: { actions: CompanionBrowseDiveActions; onClose(): void }) {
+  const t = useTranslation();
+  const reminder = useReminderDraftRequest();
+  return <>
+    {actions.onStart && <MenuRow label={t('desktop.nodeList.dive.startFlow')} onSelect={() => {
+      onClose();
+      actions.onStart?.();
+    }} />}
+    {reminder && isNativeCompanionRuntime() && <MenuRow label={t('settings.reminders.createForDive')} onSelect={() => {
+      onClose();
+      reminder.createForDive(actions.dive);
+    }} />}
+  </>;
+}
+
 function BrowseMainMenu(props: {
   activeSortLabel: string;
+  diveActions: CompanionBrowseDiveActions | undefined;
+  onClose(): void;
   onOpenAppearance(): void;
   onOpenSort(): void;
   onSync?: () => void;
@@ -73,8 +96,14 @@ function BrowseMainMenu(props: {
   syncStatus?: string;
 }) {
   const t = useTranslation();
+  const select = useCompanionDirectoryBatchMenuAction();
   return (
     <>
+      {select && <MenuRow label={t('companion.batch.select')} onSelect={() => {
+        props.onClose();
+        select();
+      }} />}
+      {props.diveActions && <BrowseDiveMenuActions actions={props.diveActions} onClose={props.onClose} />}
       <CompanionWorkspaceHistoryActions />
       <CompanionWorkspaceCreateAction />
       <MenuRow
@@ -124,6 +153,7 @@ function BrowseSortMenu(props: {
 }
 
 export function CompanionBrowseMenuSheet(props: {
+  diveActions?: CompanionBrowseDiveActions | undefined;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenAppearance(): void;
@@ -153,6 +183,8 @@ export function CompanionBrowseMenuSheet(props: {
         {view === 'menu' ? (
           <BrowseMainMenu
             activeSortLabel={t(COMPANION_SORT_LABEL_KEYS[props.sortKey])}
+            diveActions={props.diveActions}
+            onClose={() => handleOpenChange(false)}
             onOpenAppearance={() => {
               handleOpenChange(false);
               props.onOpenAppearance();
