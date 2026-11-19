@@ -175,7 +175,7 @@ it.each([
   expect(runImport).toHaveBeenCalledTimes(1);
   expect(showDesktopToast).toHaveBeenCalledWith('pending');
   expect(showCapturePanel).not.toHaveBeenCalled();
-  expect(log).not.toHaveBeenCalledWith('global_clip_opening_capture_panel');
+  expect(log.mock.calls.some(([event]) => event === 'global_clip_opening_capture_panel')).toBe(false);
 });
 
 it('imports copied images without opening the capture panel', async () => {

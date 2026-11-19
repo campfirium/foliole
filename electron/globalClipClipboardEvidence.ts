@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { NativeImage } from 'electron';
 
 import type { ClipboardEvidenceAccess, ClipboardReadAccess, LegacyClipboardData } from './clipboardAccess.js';
+import type { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 
 const INITIAL_SNAPSHOT_TIMEOUT_MS = 1500;
 
@@ -132,17 +133,17 @@ export function createClipboardRestoreContext(
 export async function restoreClipboardIfUnchanged(args: {
   clipboardRef: ClipboardEvidenceAccess;
   context: ClipboardRestoreContext;
-  log: (event: string, payload?: Record<string, unknown>) => void;
+  log: typeof appendMainProcessDiagnosticLog;
 }) {
   const current = await readClipboardSnapshot(args.clipboardRef);
   if (hasClipboardChanged(args.context.afterCopy, current)) {
-    args.log('global_clip_clipboard_restore_skipped_changed');
+    args.log('global_clip_clipboard_restore_skipped_changed', {}, 'info');
     return false;
   }
   try {
     await args.clipboardRef.clear();
     await args.clipboardRef.write(args.context.beforeCopy.data);
-    args.log('global_clip_clipboard_restored');
+    args.log('global_clip_clipboard_restored', {}, 'info');
     return true;
   } catch (error) {
     args.log('global_clip_clipboard_restore_failed', { error });

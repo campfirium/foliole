@@ -63,7 +63,7 @@ export function restoreMacosFileSecurityScopedBookmarks() {
     activeCount: activeHandles.size,
     durationMs: Date.now() - startedAt,
     storedCount: stored.length
-  });
+  }, 'info');
 }
 
 export function stopMacosFileSecurityScopedBookmarks() {

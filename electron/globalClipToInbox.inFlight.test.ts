@@ -77,10 +77,11 @@ it('raises the open capture panel when the global shortcut repeats during captur
 
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
   expect(raiseCapturePanel).toHaveBeenCalledTimes(1);
-  expect(log).toHaveBeenCalledWith('global_clip_capture_in_flight');
-
   resolvePanel(panelResult);
   await expect(firstRun).resolves.toBeNull();
+  expect(log).toHaveBeenCalledWith('global_clip_capture_in_flight', {}, 'info');
+  expect(log).toHaveBeenCalledWith('global_clip_opening_capture_panel', {}, 'info');
+  expect(log).toHaveBeenCalledWith('global_clip_capture_cancelled', {}, 'info');
 });
 
 it('reports a clipboard snapshot failure without leaving capture in flight', async () => {
@@ -100,7 +101,7 @@ it('reports a clipboard snapshot failure without leaving capture in flight', asy
   expect(clipboardRef.capture).toHaveBeenCalledTimes(2);
   expect(presentIssue).toHaveBeenCalledTimes(2);
   expect(log).toHaveBeenCalledWith('global_clip_copy_adapter_failed', { error: expect.any(Error) });
-  expect(log).not.toHaveBeenCalledWith('global_clip_capture_in_flight');
+  expect(log.mock.calls.some(([event]) => event === 'global_clip_capture_in_flight')).toBe(false);
 });
 
 it('times out a stuck initial clipboard read and releases capture', async () => {

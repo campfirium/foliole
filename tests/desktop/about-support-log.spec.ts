@@ -93,3 +93,45 @@ test('continues a manually started log after one desktop relaunch without openin
     await reopened.close();
   }
 });
+
+test('records normal clip cancellation only in the active support recording', async ({ desktopApp, desktopWindow }) => {
+  const paths = await desktopApp.evaluate(({ app }) => {
+    process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE = '0';
+    return { daily: app.getPath('logs'), recordings: app.getPath('userData') };
+  });
+  const about = await openAbout(desktopWindow);
+  await about.getByRole('button', { name: /^(Start recording|开始记录)$/ }).click();
+  const stop = about.getByRole('button', { name: /^(Stop recording|停止记录)$/ });
+  await expect(stop).toBeEnabled();
+
+  const cancelled = await desktopApp.evaluate(async ({ nativeImage }) => {
+    const runClip = globalThis.__folioleRunGlobalClipToInboxForTests;
+    if (!runClip) throw new Error('global clip test hook unavailable');
+    const result = await runClip({
+      clipboardRef: {
+        availableFormats: () => [], clear: () => {}, readBookmark: () => ({ title: '', url: '' }),
+        readBuffer: () => Buffer.alloc(0), readHTML: () => '', readImage: () => nativeImage.createEmpty(),
+        readRTF: () => '', readText: () => '', write: () => {}
+      },
+      sendCopyShortcut: async () => false,
+      showCapturePanel: async () => ({ type: 'cancelled' })
+    });
+    return result === null;
+  });
+  expect(cancelled).toBe(true);
+  await desktopWindow.evaluate(() => window.electronAPI!.logDiagnosticEvent!({
+    event: 'test.clip-warning', level: 'warn', source: 'desktop-test'
+  }));
+  await stop.click();
+
+  const root = path.join(paths.recordings, 'logs', 'support-recordings');
+  const [recording] = (await readdir(root)).filter(file => file.endsWith('.txt'));
+  const captured = await readFile(path.join(root, recording!), 'utf8');
+  const daily = await Promise.all((await readdir(paths.daily)).filter(file => /^runtime-.*\.ndjson$/.test(file))
+    .map(file => readFile(path.join(paths.daily, file), 'utf8')));
+  expect(daily.join('')).toContain('test.clip-warning');
+  for (const event of ['global_clip_opening_capture_panel', 'global_clip_capture_cancelled']) {
+    expect(captured).toContain(event);
+    expect(daily.join('')).not.toContain(event);
+  }
+});

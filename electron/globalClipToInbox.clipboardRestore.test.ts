@@ -198,5 +198,5 @@ it('skips restore when the clipboard changed after synthetic copy', async () => 
   expect(clipboard.source.clear).not.toHaveBeenCalled();
   expect(clipboard.source.write).not.toHaveBeenCalled();
   expect(clipboard.state.text).toBe('manual copy');
-  expect(log).toHaveBeenCalledWith('global_clip_clipboard_restore_skipped_changed');
+  expect(log).toHaveBeenCalledWith('global_clip_clipboard_restore_skipped_changed', {}, 'info');
 });

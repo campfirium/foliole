@@ -51,7 +51,7 @@ export function resolveWindowsCopyCommandForTests() {
 
 export interface GlobalClipToInboxDeps {
   clipboardRef?: ClipboardEvidenceAccess;
-  log?: (event: string, payload?: Record<string, unknown>) => void;
+  log?: typeof appendMainProcessDiagnosticLog;
   platform?: NodeJS.Platform;
   runImport?: typeof runClipboardImport;
   runMacosCopy?: typeof runMacosGlobalClipCopy;
@@ -136,7 +136,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const presentIssue = deps.presentIssue ?? presentGlobalClipIssue;
   if (globalCaptureInFlight) {
     (deps.raiseCapturePanel ?? raiseGlobalCapturePanelWindow)();
-    log('global_clip_capture_in_flight');
+    log('global_clip_capture_in_flight', {}, 'info');
     return null;
   }
   globalCaptureInFlight = true;
@@ -205,7 +205,7 @@ async function runGlobalClipToInboxOnce(args: {
       waitForReady: args.waitForReady
     });
   }
-  args.log('global_clip_opening_capture_panel');
+  args.log('global_clip_opening_capture_panel', {}, 'info');
   return handleGlobalCapturePanelResult({
     log: args.log,
     panelResult: await args.showCapturePanel(),

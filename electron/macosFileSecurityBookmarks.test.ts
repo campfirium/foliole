@@ -69,6 +69,8 @@ it('persists a new file bookmark and reuses its active handle during startup res
   restoreMacosFileSecurityScopedBookmarks();
 
   expect(mocks.adapter.createAndStart).toHaveBeenCalledOnce();
+  expect(mocks.appendMainProcessDiagnosticLog).toHaveBeenCalledWith('macos_file_bookmark_restore_complete',
+    expect.objectContaining({ activeCount: 1, storedCount: 1 }), 'info');
   expect(mocks.adapter.resolveAndStart).not.toHaveBeenCalled();
   await expect(fs.readFile(path.join(tempRoot, 'macos-file-security-bookmarks.json'), 'utf8'))
     .resolves.toBe(`${JSON.stringify([{ bookmark: 'new-bookmark', path: '/docs/read.md' }])}\n`);

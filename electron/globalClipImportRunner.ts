@@ -1,6 +1,7 @@
 import type { NativeTextImportResult } from '../lib/platform/nativeContract.js';
 
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
+import type { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import type { GlobalCapturePanelResult } from './globalCapturePanel.js';
 import type { ClipboardRestoreContext } from './globalClipClipboardEvidence.js';
 import { restoreClipboardIfUnchanged } from './globalClipClipboardEvidence.js';
@@ -26,7 +27,7 @@ async function reportGlobalClipIssue(args: {
 
 export async function importWithGlobalClipToast(args: {
   clipboardRestore?: ClipboardRestoreArgs;
-  log: (event: string, payload?: Record<string, unknown>) => void;
+  log: typeof appendMainProcessDiagnosticLog;
   run: () => Promise<NativeTextImportResult | null> | NativeTextImportResult | null;
   presentIssue: (status: GlobalClipIssueStatus) => Promise<boolean>;
   toast: GlobalClipDesktopToast;
@@ -61,7 +62,7 @@ export async function importWithGlobalClipToast(args: {
 
 export async function handleGlobalCapturePanelResult(args: {
   clipboardRestore?: ClipboardRestoreArgs;
-  log: (event: string, payload?: Record<string, unknown>) => void;
+  log: typeof appendMainProcessDiagnosticLog;
   panelResult: GlobalCapturePanelResult;
   runImport: typeof runClipboardImport;
   presentIssue: (status: GlobalClipIssueStatus) => Promise<boolean>;
@@ -72,7 +73,7 @@ export async function handleGlobalCapturePanelResult(args: {
     if (args.clipboardRestore) {
       await restoreClipboardIfUnchanged({ ...args.clipboardRestore, log: args.log });
     }
-    args.log('global_clip_capture_cancelled');
+    args.log('global_clip_capture_cancelled', {}, 'info');
     return null;
   }
   const toast = args.showDesktopToast('pending');
