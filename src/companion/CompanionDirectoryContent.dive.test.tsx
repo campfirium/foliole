@@ -124,13 +124,13 @@ it('offers a single New entry on the directory home and leaves one sheet open wh
   fireEvent.click(menu.getByRole('button', { name: 'New…' }));
   const sheet = screen.getByRole('dialog', { name: 'New' });
   menu = within(sheet);
-  expect(menu.getByRole('button', { name: 'Folder', exact: true })).toBeVisible();
-  expect(menu.getByRole('button', { name: 'Dive', exact: true })).toBeVisible();
-  expect(menu.getByRole('button', { name: 'Virtual', exact: true })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Folder' })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Dive' })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Virtual' })).toBeVisible();
   fireEvent.click(menu.getByRole('button', { name: 'Back' }));
   expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBe(sheet);
   fireEvent.click(screen.getByRole('button', { name: 'New…' }));
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Folder', exact: true }));
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Folder' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   expect(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
   fireEvent.click(screen.getByLabelText('Done'));

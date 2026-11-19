@@ -54,7 +54,7 @@ it('creates a manual index directly from mobile, supports undo and syncs the sam
     await peers.exchange();
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Virtual', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Virtual' }));
     const sheet = screen.getByRole('dialog', { name: 'Create in Virtual' });
     fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Create in Virtual' }));

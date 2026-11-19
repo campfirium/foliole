@@ -62,7 +62,7 @@ function Harness({ flowNodeId }: { flowNodeId?: string } = {}) {
   </CompanionWorkspaceActionsProvider></LocalizationProvider>;
 }
 async function createFolder(title = 'Created folder') {
-  fireEvent.click(screen.getByRole('button', { name: 'Folder', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Folder' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: title } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
 }

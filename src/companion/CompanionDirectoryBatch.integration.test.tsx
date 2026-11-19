@@ -30,13 +30,13 @@ afterEach(() => { runtime.platform = 'android'; });
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
 function enterSelection() {
-  expect(screen.queryByRole('button', { name: 'Select', exact: true })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Select' })).toBeNull();
   click('More');
   const menu = screen.getByRole('dialog', { name: 'Browse menu' });
-  fireEvent.click(within(menu).getByRole('button', { name: 'Select', exact: true }));
+  fireEvent.click(within(menu).getByRole('button', { name: 'Select' }));
   expect(menu).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Directory' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'More', exact: true })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
 }
 
 function trashed(db: Database.Database) {
@@ -59,7 +59,7 @@ it('selects within one list and moves the chosen roots and their subtrees to Tra
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Cancel');
     expect(screen.getByRole('heading', { name: 'Directory' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'More', exact: true })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'More' })).toBeVisible();
     click('Open folder Folder A');
     enterSelection();
     expect(screen.getByText('0 of 1 selected in this list')).toBeVisible();
