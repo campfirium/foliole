@@ -2,19 +2,35 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
-import { createReadingPositionTraceLogger } from './readingPositionTraceLog.js';
+import { resolveAppPaths } from './ipc/paths.js';
+import { appendReadingPositionTraceRecord, createReadingPositionTraceLogger } from './readingPositionTraceLog.js';
+
+vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: vi.fn() }));
 
 const tempRoots: string[] = [];
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   while (tempRoots.length > 0) {
     const next = tempRoots.pop();
     if (next) {
       fs.rmSync(next, { force: true, recursive: true });
     }
   }
+});
+
+it.each([undefined, '1'])('writes through the app logger only with the debug probe enabled (%s)', (probe) => {
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', probe);
+  vi.stubEnv('ELECTRON_RENDERER_URL', undefined);
+  const { root, logger } = createTestLogger();
+  vi.mocked(resolveAppPaths).mockReturnValue({ app_log_dir: root } as ReturnType<typeof resolveAppPaths>);
+
+  appendReadingPositionTraceRecord({ event: 'reading-progress.db-save', payload: null, timestamp: 1 });
+
+  expect(fs.existsSync(logger.getFilePath())).toBe(Boolean(probe));
+  if (probe) expect(readTimestamps(logger.getFilePath())).toEqual([1]);
 });
 
 it('writes reading-position traces into a single per-process log file', () => {

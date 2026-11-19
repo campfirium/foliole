@@ -23,18 +23,16 @@ import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
 
-let tempRoot = '';
-
 beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-progress-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
+  mockedAppDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-progress-'));
   initializeDatabase();
   resetSeededWorkspace();
 });
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await fs.rm(mockedAppDataDir, { recursive: true, force: true });
 });
 
 it('returns empty reading progress shape when sqlite has no rows', () => {
@@ -46,6 +44,7 @@ it('returns empty reading progress shape when sqlite has no rows', () => {
 });
 
 it.each(['writable', 'unwritable'])('persists and reloads reading progress with a %s trace path', async (tracePath) => {
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', '1');
   if (tracePath === 'unwritable') {
     await fs.mkdir(path.join(mockedAppDataDir, 'logs', 'reading-position.ndjson'), { recursive: true });
   }

@@ -145,12 +145,13 @@ export function clearDebugEditorAdapter(id: string) {
 
 export function pushDebugTrace(event: string, payload: unknown) {
   const api = ensureDebugApi();
+  if (!api) return;
+  api.pushTrace(event, payload);
   const entry = {
     event,
     payload,
     timestamp: Date.now()
   };
-  api?.pushTrace(event, payload);
   if (!shouldPersistTraceToFile(event)) {
     return;
   }

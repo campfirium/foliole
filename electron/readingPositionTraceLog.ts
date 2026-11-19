@@ -87,6 +87,7 @@ let sharedLogger: ReturnType<typeof createReadingPositionTraceLogger> | undefine
 let sharedLoggerDir: string | undefined;
 
 export function appendReadingPositionTraceRecord(record: ReadingPositionTraceRecord) {
+  if (process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE !== '1' && !process.env.ELECTRON_RENDERER_URL) return null;
   try {
     const appLogDir = resolveAppPaths().app_log_dir;
     if (!sharedLogger || sharedLoggerDir !== appLogDir) {
