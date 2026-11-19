@@ -41,7 +41,7 @@
   "desktop.editor.imageFailure.addSource": "स्रोत जोड़ें",
   "desktop.editor.imageFailure.remove": "हटाएँ",
   "desktop.editor.imageFailure.forgetLearnedSource": "इस साइट का याद रखा गया स्रोत भूलें",
-  "desktop.editor.openInBrowserHint": "ब्राउज़र में खोलने के लिए Ctrl दबाकर क्लिक करें",
+  "desktop.editor.openInBrowserHint": "ब्राउज़र में खोलने के लिए {modifier} दबाकर क्लिक करें",
   "desktop.clozeGuard.title": "कार्रवाई की पुष्टि करें",
   "desktop.clozeGuard.description": "यहाँ खाली जगह बनाने से बहुत लंबा अभ्यास प्रश्न बन जाएगा।",
   "desktop.clozeGuard.openSettings": "खाली जगह वाले प्रश्न की सुरक्षा सेटिंग खोलें",

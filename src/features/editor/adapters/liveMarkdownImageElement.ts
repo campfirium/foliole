@@ -1,6 +1,7 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
+import { openInBrowserHint } from '../model/openInBrowserHint';
 
 export type RequestEditorMeasure = (() => void) | null;
 
@@ -79,7 +80,7 @@ export function createMarkdownImageElement(args: {
   }
   if (args.linkHref) {
     image.dataset.mdLinkUrl = args.linkHref;
-    image.title = translate(locale, 'desktop.editor.openInBrowserHint');
+    image.title = openInBrowserHint(locale);
   }
   assignImageSource(image, args.source, args.deferSource ?? false, isActive);
   return image;

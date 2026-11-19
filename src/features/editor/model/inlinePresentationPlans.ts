@@ -1,9 +1,9 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
-import { translate } from '../../../shared/localization/translations';
 
 import type { AutolinkMatch, EmbedMatch, InlineCodeMatch, InlineLinkMatch, WikiLinkMatch } from './inlineMarkdownMatches';
 import type { SemanticRange } from './inlineSemanticMarks';
 import { isSafeMarkdownLinkHref } from './markdownLinkSafety';
+import { openInBrowserHint } from './openInBrowserHint';
 
 interface InlinePresentationMarkRange extends SemanticRange {
   attributes?: Record<string, string>;
@@ -18,7 +18,7 @@ export interface InlinePresentationPlan {
 export function createExternalLinkPresentationAttributes(href: string) {
   return {
     'data-md-link-url': href,
-    title: translate(getStoredAppLocale(), 'desktop.editor.openInBrowserHint')
+    title: openInBrowserHint(getStoredAppLocale())
   };
 }
 

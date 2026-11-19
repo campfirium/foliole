@@ -87,7 +87,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.imageFailure.addSource': 'Add source',
   'desktop.editor.imageFailure.remove': 'Remove',
   'desktop.editor.imageFailure.forgetLearnedSource': 'Forget learned source for this site',
-  'desktop.editor.openInBrowserHint': 'Ctrl-click to open in browser',
+  'desktop.editor.openInBrowserHint': '{modifier}-click to open in browser',
   'desktop.clozeGuard.title': 'Confirm action',
   'desktop.clozeGuard.description': 'Creating a cloze here will result in a massive card.',
   'desktop.clozeGuard.openSettings': 'Open cloze guard settings',

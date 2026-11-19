@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "Dodaj źródło",
   "desktop.editor.imageFailure.remove": "Usuń",
   "desktop.editor.imageFailure.forgetLearnedSource": "Zapomnij o poznanym źródle tej witryny",
-  "desktop.editor.openInBrowserHint": "Kliknij, przytrzymując klawisz Ctrl, aby otworzyć w przeglądarce",
+  "desktop.editor.openInBrowserHint": "Kliknij, przytrzymując klawisz {modifier}, aby otworzyć w przeglądarce",
   "desktop.clozeGuard.title": "Potwierdź działanie",
   "desktop.clozeGuard.description": "Utworzenie tutaj zamknięcia spowoduje powstanie ogromnej karty.",
   "desktop.clozeGuard.openSettings": "Otwórz ustawienia ochrony przed zamknięciem",

@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "ソースを追加",
   "desktop.editor.imageFailure.remove": "削除",
   "desktop.editor.imageFailure.forgetLearnedSource": "このサイトの学んだソースを忘れてください",
-  "desktop.editor.openInBrowserHint": "Ctrl キーを押しながらクリックしてブラウザで開きます",
+  "desktop.editor.openInBrowserHint": "{modifier} キーを押しながらクリックしてブラウザで開きます",
   "desktop.clozeGuard.title": "アクションの確認",
   "desktop.clozeGuard.description": "ここでクローゼを作成すると、巨大なカードが生成されます。",
   "desktop.clozeGuard.openSettings": "オープンクローズガード設定",

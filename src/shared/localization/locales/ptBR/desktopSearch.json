@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "Adicionar fonte",
   "desktop.editor.imageFailure.remove": "Remover",
   "desktop.editor.imageFailure.forgetLearnedSource": "Esqueça a fonte aprendida para este site",
-  "desktop.editor.openInBrowserHint": "Ctrl-clique para abrir no navegador",
+  "desktop.editor.openInBrowserHint": "{modifier}-clique para abrir no navegador",
   "desktop.clozeGuard.title": "Confirmar ação",
   "desktop.clozeGuard.description": "Criar um cloze aqui resultará em um cartão enorme.",
   "desktop.clozeGuard.openSettings": "Abra as configurações do Cloze Guard",

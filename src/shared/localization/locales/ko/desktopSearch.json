@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "소스 추가",
   "desktop.editor.imageFailure.remove": "제거",
   "desktop.editor.imageFailure.forgetLearnedSource": "이 사이트에 대해 학습된 소스를 잊어버림",
-  "desktop.editor.openInBrowserHint": "브라우저에서 열려면 Ctrl 키를 누른 채 클릭하세요.",
+  "desktop.editor.openInBrowserHint": "브라우저에서 열려면 {modifier} 키를 누른 채 클릭하세요.",
   "desktop.clozeGuard.title": "조치 확인",
   "desktop.clozeGuard.description": "여기에 클로즈를 만들면 엄청난 양의 카드가 생성됩니다.",
   "desktop.clozeGuard.openSettings": "클로즈 가드 설정 열기",

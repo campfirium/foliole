@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "添加來源",
   "desktop.editor.imageFailure.remove": "刪除",
   "desktop.editor.imageFailure.forgetLearnedSource": "忘記本網站的學習來源",
-  "desktop.editor.openInBrowserHint": "按住 Ctrl 鍵點擊以在瀏覽器中開啟",
+  "desktop.editor.openInBrowserHint": "按住 {modifier} 鍵點擊以在瀏覽器中開啟",
   "desktop.clozeGuard.title": "確認動作",
   "desktop.clozeGuard.description": "在這裡創建完形填空將產生一張巨大的卡片。",
   "desktop.clozeGuard.openSettings": "打開完形填空防護設置",

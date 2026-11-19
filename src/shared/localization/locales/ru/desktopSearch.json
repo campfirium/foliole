@@ -40,7 +40,7 @@
   "desktop.editor.imageFailure.addSource": "Добавить источник",
   "desktop.editor.imageFailure.remove": "Удалить",
   "desktop.editor.imageFailure.forgetLearnedSource": "Забудьте учебный источник для этого сайта",
-  "desktop.editor.openInBrowserHint": "Нажмите Ctrl, чтобы открыть в браузере",
+  "desktop.editor.openInBrowserHint": "Щёлкните, удерживая {modifier}, чтобы открыть в браузере",
   "desktop.clozeGuard.title": "Подтвердить действие",
   "desktop.clozeGuard.description": "Создание замыкания здесь приведет к получению массивной карты.",
   "desktop.clozeGuard.openSettings": "Открыть настройки защиты от закрытия",
