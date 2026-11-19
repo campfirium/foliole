@@ -83,13 +83,12 @@ async function editAndSplitTopic(page: Page) {
 }
 
 function expectTrace(entries: Awaited<ReturnType<typeof readRecording>>['entries']) {
-  const stage = (stage: string) => ({ event: 'split.topic.stage', attempt: 2, stage, at: expect.any(String) });
+  const stage = (stage: string) => ({ event: 'split.topic.stage', attempt: 1, stage, at: expect.any(String) });
   const preview = (delimiter: string, parts: number) => ({
-    event: 'split.topic.preview', attempt: 2, delimiter, parts, at: expect.any(String)
+    event: 'split.topic.preview', attempt: 1, delimiter, parts, at: expect.any(String)
   });
   expect(entries).toEqual([
-    { event: 'split.topic.clicked', attempt: 1, inFlow: false, enabled: false, at: expect.any(String) },
-    { event: 'split.topic.clicked', attempt: 2, inFlow: true, enabled: true, at: expect.any(String) },
+    { event: 'split.topic.clicked', attempt: 1, inFlow: true, enabled: true, at: expect.any(String) },
     stage('dialog-requested'),
     stage('dialog-opened'),
     preview('matched', 2),
@@ -100,7 +99,7 @@ function expectTrace(entries: Awaited<ReturnType<typeof readRecording>>['entries
   ]);
 }
 
-test('records blocked and saved Split Topic attempts in the local support file', async ({ desktopApp, desktopWindow: page }) => {
+test('explains unavailable Split Topic and records a successful split', async ({ desktopApp, desktopWindow: page }) => {
   const logs = path.join(await desktopApp.evaluate(({ app }) => app.getPath('userData')), 'logs', 'support-recordings');
   await seedTopics(page);
   await expect(() => resetDailyFlowGeneration(desktopApp)).toPass({ timeout: 5000 });
@@ -113,8 +112,14 @@ test('records blocked and saved Split Topic attempts in the local support file',
   await expect(settings).toBeHidden();
 
   await page.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id), blockedId);
-  await clickSplitTopic(page);
-  await expect(page.getByRole('dialog', { name: 'Split Topic', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'More editor options', exact: true }).click();
+  const unavailable = page.getByRole('menuitem', { name: 'Split Topic', exact: true });
+  await expect(unavailable).toBeDisabled();
+  await expect(unavailable).toHaveAccessibleDescription('Open a Topic to split it. This is a review item.');
+  await expect(unavailable).toContainText('This is a review item.');
+  await page.screenshot({ path: '.tmp/artifacts/T810-1/split-topic-unavailable.png' });
+  await page.keyboard.press('Escape');
+  await expect(unavailable).toBeHidden();
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
   await editAndSplitTopic(page);
@@ -132,7 +137,7 @@ test('records blocked and saved Split Topic attempts in the local support file',
   await clickSplitTopic(page);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect((await readRecording(logs)).text).toBe(text);
-  const evidence = path.resolve('.tmp/artifacts/T810');
+  const evidence = path.resolve('.tmp/artifacts/T810-1');
   await mkdir(evidence, { recursive: true });
   await writeFile(path.join(evidence, 'split-topic-events.ndjson'), entries.map(entry => JSON.stringify(entry)).join('\n') + '\n');
 });

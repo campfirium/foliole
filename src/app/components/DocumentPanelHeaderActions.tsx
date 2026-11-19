@@ -23,6 +23,7 @@ import {
 import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 import { APP_PALETTE_COMMANDS } from '../hooks/appPaletteCommandList';
 import { localizePaletteCommandTitle } from '../hooks/appPaletteCommandLocalization';
+import type { SplitTopicUnavailableReason } from '../splitTopicAvailability';
 
 import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinksMenu';
 import { MoreOptionsIcon } from './DocumentPanelHeaderIcons';
@@ -101,6 +102,7 @@ interface DocumentHeaderActionsProps {
   showSourceUpdateAction: boolean;
   showDocumentControls: boolean;
   showPublishActions: boolean;
+  splitTopicUnavailableReason?: SplitTopicUnavailableReason | null | undefined;
   toggleEditorDisplayMode: () => void;
   t: Translate;
 }
@@ -153,14 +155,22 @@ function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: Do
   const visibleItems = items.filter((item) => isMenuItemAvailable(item, args));
   return (
     <>
-      {visibleItems.map((item, index) => (
-        <Fragment key={item.id}>
-          <AppDropdownMenuItem onSelect={() => runMenuItemCommand(item, args)}>
-            {getMenuItemLabel(item, args)}
-          </AppDropdownMenuItem>
-          {shouldRenderMenuSeparatorAfter(items, visibleItems, index) ? <AppDropdownMenuSeparator /> : null}
-        </Fragment>
-      ))}
+      {visibleItems.map((item, index) => {
+        const label = getMenuItemLabel(item, args);
+        const reason = item.commandId === APP_COMMAND_IDS.splitTopic && args.splitTopicUnavailableReason
+          ? args.t(args.splitTopicUnavailableReason) : undefined;
+        return (
+          <Fragment key={item.id}>
+            <AppDropdownMenuItem aria-label={reason ? label : undefined} aria-description={reason}
+              className={reason ? 'flex-col items-start gap-0 data-[disabled]:opacity-100' : undefined}
+              disabled={Boolean(reason)} onSelect={() => runMenuItemCommand(item, args)}>
+              {reason ? <span className="opacity-50">{label}</span> : label}
+              {reason ? <span className="max-w-56 whitespace-normal text-ui-sm text-foreground/75">{reason}</span> : null}
+            </AppDropdownMenuItem>
+            {shouldRenderMenuSeparatorAfter(items, visibleItems, index) ? <AppDropdownMenuSeparator /> : null}
+          </Fragment>
+        );
+      })}
     </>
   );
 }

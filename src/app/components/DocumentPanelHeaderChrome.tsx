@@ -4,6 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
+import { getSplitTopicUnavailableReason } from '../splitTopicAvailability';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -54,6 +55,22 @@ function resolveDocumentHeaderBreadcrumb(props: DocumentPanelSectionProps) {
   };
 }
 
+function renderDocumentHeaderRightSlot(props: DocumentPanelSectionProps) {
+  if (props.isFoliolePublishedContext && props.activeNodeId) {
+    return <FoliolePublishedHeaderActions nodeId={props.activeNodeId} />;
+  }
+  if (props.isTrashViewOpen) {
+    return (
+      <TrashDocumentHeaderImportAction
+        activeNodeId={props.activeNodeId}
+        isTrashViewOpen={props.isTrashViewOpen}
+        onSelectNode={props.onSelectNode}
+        trashedNodeIds={props.trashedNodeIds}
+      />
+    );
+  }
+}
+
 export function renderDocumentPanelHeader(args: {
   backlinks: BacklinkItem[];
   canOpenComparisonView: boolean;
@@ -96,20 +113,13 @@ export function renderDocumentPanelHeader(args: {
       onSelectBreadcrumbNode={breadcrumb.onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
-      rightSlot={
-        args.props.isFoliolePublishedContext && args.props.activeNodeId ? (
-          <FoliolePublishedHeaderActions nodeId={args.props.activeNodeId} />
-        ) : args.props.isTrashViewOpen ? (
-          <TrashDocumentHeaderImportAction
-            activeNodeId={args.props.activeNodeId}
-            isTrashViewOpen={args.props.isTrashViewOpen}
-            onSelectNode={args.props.onSelectNode}
-            trashedNodeIds={args.props.trashedNodeIds}
-          />
-        ) : undefined
-      }
+      rightSlot={renderDocumentHeaderRightSlot(args.props)}
       showDocumentControls
       showPublishActions={Boolean(activeNode?.kind === 'topic' && !activeNode.anchorLink && !args.props.isTrashViewOpen && !args.props.isFoliolePublishedContext)}
+      splitTopicUnavailableReason={getSplitTopicUnavailableReason(activeNode, {
+        inTrash: Boolean(args.props.activeNodeId && args.props.trashedNodeIds.includes(args.props.activeNodeId)),
+        readOnly: args.props.isEditorReadOnly
+      })}
       textAlternativeCount={args.textAlternativeCount ?? 0}
       showSourceUpdateAction={args.showSourceUpdateAction}
     />

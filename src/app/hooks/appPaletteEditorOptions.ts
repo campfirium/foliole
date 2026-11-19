@@ -1,5 +1,6 @@
 import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 import { canOpenDocumentComparisonView } from '../components/documentComparisonView';
+import { getSplitTopicUnavailableReason } from '../splitTopicAvailability';
 
 import type { useWorkspaceSelectors } from './appControllerState';
 import { canSendCurrentTopicToEdge } from './sendToEdgeEligibility';
@@ -75,7 +76,10 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
     canPublishToFoliole: canUseCurrentTopic,
     canPublishToDiscourse: canUseCurrentTopic,
     canPublishToWordPress: canUseCurrentTopic,
-    canSplitCurrentTopic: canUseCurrentTopic && !args.isEditorReadOnly,
+    canSplitCurrentTopic: !getSplitTopicUnavailableReason(activeNode, {
+      inTrash: args.isViewingTrashNode || Boolean(args.activeNodeId && args.ws.trashedNodeIds.includes(args.activeNodeId)),
+      readOnly: args.isEditorReadOnly ?? false
+    }),
     canRepairTable: canAnnotateSelection(args),
     canCleanFormatting: canAnnotateSelection(args) && !args.isEditorReadOnly && !args.isExternalViewOpen && !args.isReviewOnly,
     canScrollCurrentDocument:

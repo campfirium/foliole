@@ -6,6 +6,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { AppToolbar } from '../../shared/ui';
+import type { SplitTopicUnavailableReason } from '../splitTopicAvailability';
 
 import {
   DefaultDocumentHeaderRightSlot,
@@ -42,6 +43,7 @@ export interface DocumentPanelHeaderProps {
   rightSlot?: ReactNode;
   showDocumentControls?: boolean;
   showPublishActions?: boolean;
+  splitTopicUnavailableReason?: SplitTopicUnavailableReason | null | undefined;
   textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
 }
@@ -73,6 +75,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
     onRunDocumentCommand: args.onRunDocumentCommand,
     showDocumentControls,
     showPublishActions: args.showPublishActions ?? false,
+    splitTopicUnavailableReason: args.splitTopicUnavailableReason,
     textAlternativeCount: args.textAlternativeCount ?? 0,
     showSourceUpdateAction: args.showSourceUpdateAction,
     t: args.t,
