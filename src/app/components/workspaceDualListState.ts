@@ -1,11 +1,12 @@
 import { useMemo, useRef } from 'react';
 
 import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
-import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { getWorkspaceListStructureSource, type WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { readWorkspaceRecordPatch } from '../../shared/workspaceRecordPatch';
 
 import {
   buildWorkspaceDualListStructureData,
-  buildWorkspaceListStructureSignature,
+  hasWorkspaceListStructureChange,
   type WorkspaceDualListStructureData
 } from './workspaceDualListStructure';
 import {
@@ -27,7 +28,7 @@ interface WorkspaceDualListStructureCache {
   data: WorkspaceDualListStructureData;
   listNodesById: WorkspaceDualListStateArgs['listNodesById'];
   nodeOrder: WorkspaceDualListStateArgs['nodeOrder'];
-  signature: string;
+  source: ReturnType<typeof getWorkspaceListStructureSource>;
   trashedNodeIds: WorkspaceDualListStateArgs['trashedNodeIds'];
 }
 
@@ -70,30 +71,35 @@ function useActiveFolderColumns(args: WorkspaceDualListStateArgs) {
   ]);
 }
 
-function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
-  const cacheRef = useRef<WorkspaceDualListStructureCache | null>(null);
-  if (
-    cacheRef.current?.nodeOrder === args.nodeOrder &&
-    cacheRef.current.listNodesById === args.listNodesById &&
-    cacheRef.current.trashedNodeIds === args.trashedNodeIds
-  ) {
-    return cacheRef.current.data;
-  }
+function sameIds(before: readonly string[], after: readonly string[]) {
+  return before === after || (before.length === after.length && before.every((id, i) => id === after[i]));
+}
 
-  const signature = buildWorkspaceListStructureSignature(
-    args.nodeOrder,
-    args.listNodesById,
-    args.trashedNodeIds
+function canReuseStructure(
+  args: WorkspaceDualListStateArgs,
+  previous: WorkspaceDualListStructureCache,
+  source: WorkspaceDualListStructureCache['source']
+) {
+  if (!sameIds(previous.nodeOrder, args.nodeOrder) || !sameIds(previous.trashedNodeIds, args.trashedNodeIds)) return false;
+  if (previous.listNodesById === args.listNodesById) return true;
+  const isUnchanged = (id: string) => !hasWorkspaceListStructureChange(
+    previous.listNodesById[id], args.listNodesById[id]
   );
+  const changedIds = readWorkspaceRecordPatch(source, previous.source);
+  return changedIds
+    ? changedIds.every(isUnchanged)
+    : args.nodeOrder.every(isUnchanged) && args.trashedNodeIds.every(isUnchanged);
+}
 
-  const data = cacheRef.current?.signature === signature
-    ? cacheRef.current.data
-    : buildWorkspaceDualListStructureData(args);
+function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
+  const cacheRef = useRef<WorkspaceDualListStructureCache | undefined>(undefined);
+  const previous = cacheRef.current;
+  const source = getWorkspaceListStructureSource(args.listNodesById);
+  const data = previous && canReuseStructure(args, previous, source)
+    ? previous.data
+    : buildWorkspaceDualListStructureData(args, previous);
   cacheRef.current = {
-    data,
-    listNodesById: args.listNodesById,
-    nodeOrder: args.nodeOrder,
-    signature,
+    data, listNodesById: args.listNodesById, nodeOrder: args.nodeOrder, source,
     trashedNodeIds: args.trashedNodeIds
   };
   return data;
@@ -118,7 +124,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
       activeFolderId,
       folderNodeOrder: structureData.folderNodeOrder,
       folderNodesById,
-      folderTopicCountById: structureData.folderTopicCountById,
+      folderTopicCountById: structureData.folderCounts.byFolderId,
       revealFolderId: activeColumns.revealFolderId,
       topicChildrenByParent: structureData.listIndex.visibleChildrenByParent,
       topicNodeOrder,

@@ -153,7 +153,7 @@ it('reflects moved topics in the selected folder without waiting for a later reb
   expect(result.current.topicNodeOrder).toEqual(['topic-b']);
 });
 
-it('counts native content under folders without counting nested folders or derived nodes', () => {
+it('counts each descendant Topic, Excerpt and Item but excludes folders', () => {
   const folderCountNodesById: WorkspaceListNodesById = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
@@ -175,8 +175,9 @@ it('counts native content under folders without counting nested folders or deriv
     })
   );
 
-  expect(result.current.folderTopicCountById.get('folder-a')).toBe(1);
-  expect(result.current.folderTopicCountById.get('folder-child')).toBe(1);
+  expect(result.current.folderTopicCountById.get('folder-a')).toBe(4);
+  expect(result.current.folderTopicCountById.get('folder-child')).toBe(3);
+  expect(result.current.topicNodeOrder).toEqual(['topic-direct']);
   expect(result.current.folderTopicCountById.get('folder-empty')).toBe(0);
 });
 

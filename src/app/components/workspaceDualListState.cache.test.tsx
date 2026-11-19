@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { projectWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { patchWorkspaceRecord } from '../../shared/workspaceRecordPatch';
 
 import { useWorkspaceDualListState, type WorkspaceDualListStateArgs } from './workspaceDualListState';
 
@@ -59,7 +60,7 @@ it('does not rescan unrelated structure after accepting a priority-only projecti
 
   parentReads = 0;
   rerender(nextProps);
-  expect(parentReads).toBeGreaterThan(0);
+  expect(parentReads).toBe(0);
   expect(result.current.topicNodesById.topic?.priority).toBe(9);
   expect(result.current.topicNodeOrder).toBe(initialOrder);
   expect(result.current.folderTopicCountById).toBe(initialCounts);
@@ -90,7 +91,9 @@ it('refreshes movement, order, trash and restoration after a nonstructural cache
   expect(result.current.folderTopicCountById.get('folder')).toBe(2);
 
   const reorderedProps = { ...movedProps, nodeOrder: ['folder', 'other', 'sentinel', 'topic'] };
+  const movedCounts = result.current.folderTopicCountById;
   rerender(reorderedProps);
+  expect(result.current.folderTopicCountById).toBe(movedCounts);
   expect(result.current.topicNodeOrder).toEqual(['sentinel', 'topic']);
   rerender({ ...reorderedProps, trashedNodeIds: ['sentinel'] });
   expect(result.current.topicNodeOrder).toEqual(['topic']);
@@ -98,4 +101,25 @@ it('refreshes movement, order, trash and restoration after a nonstructural cache
   rerender(reorderedProps);
   expect(result.current.topicNodeOrder).toEqual(['sentinel', 'topic']);
   expect(result.current.folderTopicCountById.get('folder')).toBe(2);
+});
+
+it('uses a continuous metadata patch without checking an unrelated subtree', () => {
+  const { props, source } = createProps();
+  const { result, rerender } = renderHook(useWorkspaceDualListState, { initialProps: props });
+  const counts = result.current.folderTopicCountById;
+  let parentReads = 0;
+  Object.defineProperty(props.listNodesById.sentinel, 'parentNodeId', {
+    get() {
+      parentReads += 1;
+      return 'other';
+    }
+  });
+  const edited = patchWorkspaceRecord(source, {
+    topic: { ...source.topic, title: 'Edited', content: 'New body', priority: 9 }
+  });
+  const updated = projectWorkspaceListNodesById(edited, props.listNodesById);
+  rerender({ ...props, listNodesById: updated });
+  expect(result.current.topicNodesById.topic?.title).toBe('Edited');
+  expect(result.current.folderTopicCountById).toBe(counts);
+  expect(parentReads).toBe(0);
 });

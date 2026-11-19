@@ -2,13 +2,12 @@ import {
   HOME_NODE_ID,
   TRASH_NODE_ID,
   isHomeNode,
-  isTrashNode,
-  isVirtualNode,
-  isVirtualRootNode
+  isTrashNode
 } from '../../features/nodes/model/specialNodes';
 import { selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
-import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
+import { deriveFolderContentCounts, isRegularNavigationFolder } from './workspaceFolderContentCounts';
 import {
   buildWorkspaceListChildrenIndex,
   type WorkspaceListChildrenIndex
@@ -22,18 +21,9 @@ export interface WorkspaceDualListStructureArgs {
 
 export interface WorkspaceDualListStructureData {
   folderNodeOrder: string[];
-  folderTopicCountById: Map<string, number>;
+  folderCounts: ReturnType<typeof deriveFolderContentCounts>;
   listIndex: WorkspaceListChildrenIndex;
   topicNodeOrderByFolderId: Map<string, string[]>;
-}
-
-function isVisibleFolderId(nodeId: string, nodesById: WorkspaceListNodesById) {
-  const node = nodesById[nodeId];
-  return Boolean(
-    node?.kind === 'folder' &&
-    !isVirtualRootNode(node) &&
-    !isVirtualNode(node)
-  );
 }
 
 function buildFolderNodeOrderFromIndex(
@@ -42,12 +32,12 @@ function buildFolderNodeOrderFromIndex(
 ) {
   const homeFolderIds = index.visibleNodeIds.filter((nodeId) => {
     const node = nodesById[nodeId];
-    return isVisibleFolderId(nodeId, nodesById) && (nodeId === HOME_NODE_ID || isHomeNode(node));
+    return isRegularNavigationFolder(node) && (nodeId === HOME_NODE_ID || isHomeNode(node));
   });
   const rootFolderIds = index.visibleNodeIds.filter((nodeId) => {
     const node = nodesById[nodeId];
     return (
-      isVisibleFolderId(nodeId, nodesById) &&
+      isRegularNavigationFolder(node) &&
       nodeId !== HOME_NODE_ID &&
       nodeId !== TRASH_NODE_ID &&
       !isHomeNode(node) &&
@@ -62,38 +52,9 @@ function buildFolderNodeOrderFromIndex(
   ];
 }
 
-function isNativeContentNode(nodeId: string, nodesById: WorkspaceListNodesById) {
-  const node = nodesById[nodeId];
-  return Boolean(node && node.kind !== 'folder' && !node.anchorLink);
-}
-
 function isTopicColumnNode(nodeId: string, nodesById: WorkspaceListNodesById) {
   const node = nodesById[nodeId];
   return Boolean(node && node.kind !== 'folder');
-}
-
-function buildDirectNativeContentCountByFolderId(
-  folderNodeOrder: string[],
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById
-) {
-  const countById = new Map<string, number>();
-  for (const folderId of folderNodeOrder) {
-    const count = (index.visibleChildrenByParent.get(folderId) ?? []).filter((nodeId) =>
-      isNativeContentNode(nodeId, nodesById)
-    ).length;
-    countById.set(folderId, count);
-  }
-  return countById;
-}
-
-function countHomeNativeContentNodes(
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById
-) {
-  return collectHomeTopicColumnNodeIds(index, nodesById).filter((nodeId) =>
-    isNativeContentNode(nodeId, nodesById)
-  ).length;
 }
 
 function collectHomeTopicColumnNodeIds(
@@ -137,58 +98,41 @@ function buildTopicNodeOrderByFolderId(
   return topicNodeOrderByFolderId;
 }
 
-function buildFolderTopicCountById(
-  folderNodeOrder: string[],
-  index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById,
-  nodeOrder: string[],
-  trashedNodeIds: readonly string[]
-) {
-  const countById = buildDirectNativeContentCountByFolderId(folderNodeOrder, index, nodesById);
-  if (folderNodeOrder.includes(HOME_NODE_ID)) {
-    countById.set(HOME_NODE_ID, countHomeNativeContentNodes(index, nodesById));
-  }
-  const trashCount = selectTrashRootIds(nodeOrder, nodesById, trashedNodeIds).length;
-  countById.set(TRASH_NODE_ID, trashCount);
-  return countById;
+function readLifecycle(node: WorkspaceListNode | undefined) {
+  return (node as (WorkspaceListNode & { deletedAt?: string | null }) | undefined)?.deletedAt;
 }
 
-export function buildWorkspaceListStructureSignature(
-  nodeOrder: readonly string[],
-  nodesById: WorkspaceListNodesById,
-  trashedNodeIds: readonly string[]
+export function hasWorkspaceListStructureChange(
+  before: WorkspaceListNode | undefined,
+  after: WorkspaceListNode | undefined
 ) {
-  const parts = [
-    `order:${nodeOrder.join('\u001f')}`,
-    `trash:${trashedNodeIds.join('\u001f')}`
-  ];
-
-  for (const nodeId of nodeOrder) {
-    const node = nodesById[nodeId];
-    parts.push([
-      nodeId,
-      node?.kind ?? '',
-      node?.anchorLink ? 'anchored' : '',
-      node?.parentNodeId ?? '',
-      node?.specialKind ?? ''
-    ].join('\u001e'));
-  }
-
-  return parts.join('\u001d');
+  if (before === after) return false;
+  return Boolean(before) !== Boolean(after) ||
+    before?.kind !== after?.kind ||
+    Boolean(before?.anchorLink) !== Boolean(after?.anchorLink) ||
+    before?.parentNodeId !== after?.parentNodeId ||
+    before?.specialKind !== after?.specialKind ||
+    readLifecycle(before) !== readLifecycle(after);
 }
 
 export function buildWorkspaceDualListStructureData(
-  args: WorkspaceDualListStructureArgs
+  args: WorkspaceDualListStructureArgs,
+  previous?: { data: WorkspaceDualListStructureData; listNodesById: WorkspaceListNodesById }
 ): WorkspaceDualListStructureData {
-  const listIndex = buildWorkspaceListChildrenIndex(args.nodeOrder, args.listNodesById, args.trashedNodeIds);
+  const listIndex = buildWorkspaceListChildrenIndex(
+    args.nodeOrder, args.listNodesById, args.trashedNodeIds,
+    previous && { index: previous.data.listIndex, nodesById: previous.listNodesById }
+  );
   const folderNodeOrder = buildFolderNodeOrderFromIndex(listIndex, args.listNodesById);
   return {
-    folderTopicCountById: buildFolderTopicCountById(
+    folderCounts: deriveFolderContentCounts(
+      { index: listIndex, nodesById: args.listNodesById },
       folderNodeOrder,
-      listIndex,
-      args.listNodesById,
-      args.nodeOrder,
-      args.trashedNodeIds
+      selectTrashRootIds(args.nodeOrder, args.listNodesById, args.trashedNodeIds).length,
+      previous && {
+        source: { index: previous.data.listIndex, nodesById: previous.listNodesById },
+        counts: previous.data.folderCounts
+      }
     ),
     folderNodeOrder,
     listIndex,

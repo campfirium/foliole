@@ -59,4 +59,5 @@ it('keeps restored lifecycle nodes visible despite stale trash projection', () =
   );
 
   expect(result.current.topicNodeOrder).toEqual(['topic-a']);
+  expect(result.current.folderTopicCountById.get('folder-a')).toBe(1);
 });
