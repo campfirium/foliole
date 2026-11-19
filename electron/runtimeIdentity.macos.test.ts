@@ -16,17 +16,20 @@ it('brands the daily macOS development runtime with its distinct Dock icon', () 
     getPath: (name: 'appData' | 'sessionData' | 'temp' | 'userData') =>
       name === 'appData' ? appDataRoot : path.join(appDataRoot, 'Electron'),
     isPackaged: false,
+    setAppLogsPath: vi.fn(),
     setName: vi.fn(),
     setPath: vi.fn()
   };
 
   configureRuntimeAppIdentity(app, vi.fn(), 'darwin', {
     FOLIOLE_ELECTRON_APP_ROOT: '/repo/foliole',
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/repo/foliole/test-runtime',
     FOLIOLE_MACOS_DAILY_DEBUG: '1'
   });
 
   expect(hide).not.toHaveBeenCalled();
   expect(setIcon).toHaveBeenCalledWith(path.join(path.resolve('/repo/foliole'), 'build', 'icon-dev-macos.png'));
+  expect(app.setAppLogsPath).toHaveBeenCalledWith(path.join(path.resolve('/repo/foliole/test-runtime'), 'logs'));
 });
 
 it('keeps other unpackaged macOS runtimes on the standard Dock icon', () => {

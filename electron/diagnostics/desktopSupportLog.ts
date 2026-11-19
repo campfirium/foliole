@@ -31,3 +31,11 @@ export async function recordDesktopSupportEvent(record: Parameters<typeof format
     await files.append(() => JSON.stringify({ level: record.level, ...formatRecord(record) }));
   }
 }
+
+export function recordDesktopReadingProgressSummary(
+  event: 'reading-progress.db-save' | 'reading-progress.db-load',
+  summarize: () => { hasActiveDocument: boolean; positions: number; hasActivePosition: boolean }
+) {
+  if (!files.recording) return;
+  void files.append(() => JSON.stringify({ event, at: new Date().toISOString(), ...summarize() })).catch(() => undefined);
+}

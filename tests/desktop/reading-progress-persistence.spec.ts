@@ -1,3 +1,5 @@
+import { readFile, readdir, realpath } from 'node:fs/promises';
+import path from 'node:path';
 import process from 'node:process';
 
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
@@ -8,6 +10,13 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const TARGET_ID = 'playwright-reading-progress-relaunch';
 const TARGET_TITLE = 'Playwright Reading Progress Relaunch';
+
+async function readingSupportLog(session: DesktopSession) {
+  const userData = await session.electronApp.evaluate(({ app }) => app.getPath('userData'));
+  const directory = path.join(userData, 'logs', 'support-recordings');
+  const file = (await readdir(directory)).find(name => name.endsWith('.txt'));
+  return readFile(path.join(directory, file!), 'utf8');
+}
 
 async function seedScrollableDocument(windowPage: Awaited<ReturnType<typeof launchDesktopSession>>['firstWindow']) {
   await windowPage.evaluate(async ({ id, title }) => {
@@ -77,6 +86,9 @@ test('persists normal reading scroll position across relaunch', async ({ desktop
     await expectWorkspaceShell(desktopWindow);
     const nodeId = await openScrollableDocument(desktopWindow);
     expect(nodeId).toBeTruthy();
+    const logs = await desktopSession.electronApp.evaluate(({ app }) => app.getPath('logs'));
+    expect(await realpath(logs)).toBe(await realpath(path.join(desktopSession.target.runtimeStateRoot, 'logs')));
+    await desktopWindow.evaluate(() => window.electronAPI!.invoke('desktop_support_log', { action: 'start' }));
 
     const beforeRestart = await scrollAndCollect(desktopWindow, nodeId as string);
     await testInfo.attach('reading-progress-before-relaunch', {
@@ -105,6 +117,14 @@ test('persists normal reading scroll position across relaunch', async ({ desktop
     expect(afterRelaunch.nodeViewState?.scrollTop).toBeGreaterThan(0);
     expect(afterRelaunch.nodeViewState?.readingOffset).toBe(beforeRestart.nodeViewState?.readingOffset);
     expect(afterRelaunch.scrollTop).toBeGreaterThan(0);
+    await secondSession.firstWindow.evaluate(() => window.electronAPI!.invoke('desktop_support_log', { action: 'stop' }));
+    const log = await readingSupportLog(secondSession as DesktopSession);
+    const resumeIndex = log.indexOf('recording.resumed');
+    expect(resumeIndex).toBeGreaterThan(0);
+    expect(log.slice(0, resumeIndex)).toContain('reading-progress.db-save');
+    expect(log.slice(resumeIndex)).toContain('reading-progress.db-load');
+    expect(log).not.toContain(TARGET_ID);
+    expect(log).not.toContain(TARGET_TITLE);
   } finally {
     await secondSession?.close();
   }

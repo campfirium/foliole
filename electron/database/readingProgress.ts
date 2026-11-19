@@ -6,7 +6,7 @@ import {
   type NodeViewStateWriteSource,
   type PersistedNodeViewState
 } from '../../lib/platform/persistedNodeViewState.js';
-import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
+import { traceReadingProgressLoad, traceReadingProgressSave } from '../readingPositionTraceLog.js';
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { loadDesktopHostName, loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -67,7 +67,6 @@ const BROWSE_ROOT_NODE_META_KEY = 'browse_root_node_id';
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   const source = normalizeNodeViewStateWriteSource(input.source);
-  traceReadingProgressSave(input);
   const connection = openDatabaseConnection();
   const upsertMetaStatement = connection.driver.prepare(
     `INSERT INTO workspace_meta (key, value, updated_at)
@@ -112,6 +111,7 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
     }
     saveNodeViewStates(connection, upsertNodeViewStateStatement, input, hostName, source);
   });
+  traceReadingProgressSave(input);
 }
 
 function shouldWriteWorkspaceMeta(connection: DatabaseConnection, key: string, incomingUpdatedAt: string) {
@@ -128,20 +128,6 @@ function shouldWriteWorkspaceMeta(connection: DatabaseConnection, key: string, i
   }
   const existingTime = Date.parse(existing.value);
   return !Number.isFinite(existingTime) || incomingTime >= existingTime;
-}
-
-function traceReadingProgressSave(input: SaveReadingProgressInput) {
-  appendReadingPositionTraceRecord({
-    event: 'reading-progress.db-save',
-    payload: {
-      activeNodeId: input.activeNodeId,
-      browseRootNodeId: input.browseRootNodeId ?? null,
-      nodeIds: input.nodeViewStates.map((state) => state.nodeId),
-      scrollTops: input.nodeViewStates.map((state) => state.scrollTop),
-      updatedAt: input.updatedAt
-    },
-    timestamp: Date.now()
-  });
 }
 
 function saveNodeViewStates(
@@ -222,15 +208,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     browseRootNodeId: browseRootNodeRow && browseRootNodeRow.value !== '' ? browseRootNodeRow.value : null,
     nodeViewStateById
   };
-  appendReadingPositionTraceRecord({
-    event: 'reading-progress.db-load',
-    payload: {
-      activeNodeId: snapshot.activeNodeId,
-      browseRootNodeId: snapshot.browseRootNodeId,
-      nodeViewStateCount: Object.keys(snapshot.nodeViewStateById).length
-    },
-    timestamp: Date.now()
-  });
+  traceReadingProgressLoad(snapshot, nodeRows.length);
   return snapshot;
 }
 

@@ -26,6 +26,7 @@ interface AppIdentityApi {
   getAppPath?(): string;
   getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData'): string;
   isPackaged?: boolean;
+  setAppLogsPath?(logPath: string): void;
   setAppUserModelId?(id: string): void;
   setName(name: string): void;
   setPath(name: 'sessionData' | 'userData', value: string): void;
@@ -139,6 +140,12 @@ function resetPreviewSandboxPaths(paths: string[], protectedPaths: string[], rmS
   }
 }
 
+function configureRuntimeLogs(app: AppIdentityApi, env: NodeJS.ProcessEnv, userDataPath: string, sandboxRoot: string | null) {
+  const isolatedLogRoot = resolvePathOverride(env.FOLIOLE_ELECTRON_TEST_STATE_ROOT)
+    ?? (sandboxRoot || (resolvePathOverride(env.FOLIOLE_USER_DATA_PATH) ? userDataPath : null));
+  if (isolatedLogRoot) app.setAppLogsPath?.(path.join(isolatedLogRoot, 'logs'));
+}
+
 export function configureRuntimeAppIdentity(
   app: AppIdentityApi,
   mkdirSync: MkdirSync,
@@ -148,8 +155,7 @@ export function configureRuntimeAppIdentity(
   rmSync?: RmSync
 ): ConfiguredAppIdentity {
   const sourceLibraryHome = prepareSourceBuildIdentity(app, platform, env);
-  const runtimeAppName = resolveRuntimeAppName(app.getName(), env);
-  const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
+  const internalBuild = resolveRuntimeAppName(app.getName(), env) === FOLIOLE_INTERNAL_APP_NAME;
   app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
   const appRoot = resolvePathOverride(env.FOLIOLE_ELECTRON_APP_ROOT) ?? process.cwd();
   applyMacosDockPresentation(app, resolveMacosIconPath(appRoot, env), platform, env);
@@ -185,6 +191,7 @@ export function configureRuntimeAppIdentity(
   }
   app.setPath('userData', userDataPath);
   app.setPath('sessionData', sessionDataPath);
+  configureRuntimeLogs(app, env, userDataPath, sandboxRoot);
 
   if (platform === 'win32') {
     app.setAppUserModelId?.(internalBuild
