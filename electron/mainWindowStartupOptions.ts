@@ -2,10 +2,7 @@ import { screen, type BrowserWindowConstructorOptions } from 'electron';
 
 import { appendBootEvent } from './ipc/boot.js';
 import { loadWindowState } from './ipc/windowState.js';
-import {
-  applyHiddenNativeDesktopWindowOptions,
-  logWindowStateRestoreDecision
-} from './runtimeMainSupport.js';
+import { applyHiddenNativeDesktopWindowOptions } from './runtimeMainSupport.js';
 import { loadStartupWindowState } from './startupWindowState.js';
 import { applyWindowStateToOptions } from './windowStateLifecycle.js';
 
@@ -23,7 +20,6 @@ export async function prepareMainWindowStartupOptions(
     loadWindowState
   });
   await appendBootEvent('window_state_loaded', restoredWindowState);
-  logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
   let options = applyWindowStateToOptions(
     baseOptions,
     restoredWindowState,
@@ -31,15 +27,5 @@ export async function prepareMainWindowStartupOptions(
   );
   options = applyHiddenNativeDesktopWindowOptions(options);
   if (startupAppearance?.backgroundColor) options.backgroundColor = startupAppearance.backgroundColor;
-  logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
-    options: {
-      fullscreen: options.fullscreen ?? false,
-      height: options.height,
-      hiddenNativeDesktopTest: process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1',
-      width: options.width,
-      x: options.x,
-      y: options.y
-    }
-  });
   return { options, restoredWindowState };
 }

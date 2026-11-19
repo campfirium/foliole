@@ -2,7 +2,6 @@ import type { BrowserWindow } from 'electron';
 
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { normalizeWindowBoundsToDip } from '../windowBoundsDpi.js';
-import { logWindowStateLifecycleEvent } from '../windowStateDiagnostics.js';
 
 const WINDOW_STATE_KEY = 'window_state';
 const WINDOW_STATE_COORDINATE_UNIT = 'dip';
@@ -99,14 +98,10 @@ function toWindowStateFromRuntime(window: BrowserWindow): PersistedWindowState {
 
 export function saveWindowStateNow(window: BrowserWindow): void {
   if (window.isMinimized()) {
-    logWindowStateLifecycleEvent('skip-save-window-state-minimized', window);
     return;
   }
   const nextState = toWindowStateFromRuntime(window);
   saveJsonSetting(WINDOW_STATE_KEY, nextState);
-  logWindowStateLifecycleEvent('save-window-state', window, {
-    persistedState: nextState
-  });
 }
 
 export async function saveWindowState(window: BrowserWindow): Promise<void> {

@@ -52,7 +52,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-it('persists and loads maximized window state', async () => {
+it('persists maximized window state across database reopen without writing a window trace', async () => {
   const window = {
     getBounds: () => ({
       x: 0,
@@ -72,6 +72,7 @@ it('persists and loads maximized window state', async () => {
   };
 
   await saveWindowState(window as never);
+  closeDatabaseConnection();
   await expect(loadWindowState()).resolves.toEqual({
     x: 120,
     y: 80,
@@ -81,6 +82,8 @@ it('persists and loads maximized window state', async () => {
     isFullScreen: false,
     coordinateUnit: 'dip'
   });
+  await expect(fs.stat(path.join(mockedAppDataDir, 'logs', 'windows', 'window-state-lifecycle.ndjson')))
+    .rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('persists and loads fullscreen window state using normal bounds', async () => {

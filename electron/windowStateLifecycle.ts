@@ -1,7 +1,6 @@
 import type { BrowserWindow, BrowserWindowConstructorOptions } from 'electron';
 
 import { saveWindowState, type PersistedWindowState } from './ipc/windowState.js';
-import { logWindowStateLifecycleEvent } from './windowStateDiagnostics.js';
 
 interface WorkAreaBounds {
   height: number;
@@ -102,42 +101,21 @@ export function bindWindowStatePersistence(window: BrowserWindow) {
   const saveNow = () => {
     void saveWindowState(window).catch(() => undefined);
   };
-  const scheduleSave = (delayMs = 160) => {
+  const scheduleSave = () => {
     if (writeTimer) {
       clearTimeout(writeTimer);
     }
     writeTimer = setTimeout(() => {
       saveNow();
       writeTimer = null;
-    }, delayMs);
+    }, 160);
   };
 
-  window.on('move', () => {
-    logWindowStateLifecycleEvent('window-move', window);
-    scheduleSave();
-  });
-  window.on('resize', () => {
-    logWindowStateLifecycleEvent('window-resize', window);
-    scheduleSave();
-  });
-  window.on('maximize', () => {
-    logWindowStateLifecycleEvent('window-maximize', window);
-    saveNow();
-  });
-  window.on('unmaximize', () => {
-    logWindowStateLifecycleEvent('window-unmaximize', window);
-    saveNow();
-  });
-  window.on('enter-full-screen', () => {
-    logWindowStateLifecycleEvent('window-enter-full-screen', window);
-    saveNow();
-  });
-  window.on('leave-full-screen', () => {
-    logWindowStateLifecycleEvent('window-leave-full-screen', window);
-    saveNow();
-  });
-  window.on('close', () => {
-    logWindowStateLifecycleEvent('window-close', window);
-    saveNow();
-  });
+  window.on('move', scheduleSave);
+  window.on('resize', scheduleSave);
+  window.on('maximize', saveNow);
+  window.on('unmaximize', saveNow);
+  window.on('enter-full-screen', saveNow);
+  window.on('leave-full-screen', saveNow);
+  window.on('close', saveNow);
 }

@@ -49,8 +49,7 @@ import {
   bindMainWindowNavigationGuard,
   bindMainWindowWebviewAttachGuard,
   createMainWindowOptions,
-  loadMainWindowRenderer,
-  logWindowStateLifecycleEvent
+  loadMainWindowRenderer
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { publishRuntimeSystemLanguage } from './runtimeSystemLanguage.js';
@@ -175,7 +174,6 @@ async function createMainWindow(
     bounds: window.getBounds(),
     show: window.isVisible()
   });
-  logWindowStateLifecycleEvent('window-created', window);
   setStartupWindowPresentation(window, {
     isFullScreen: restoredWindowState?.isFullScreen === true,
     isMaximized: restoredWindowState?.isMaximized === true

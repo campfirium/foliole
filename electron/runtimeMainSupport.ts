@@ -17,7 +17,6 @@ import {
   FOLIOLE_INTERNAL_PRODUCT_NAME,
   type RuntimeDiagnosticsSnapshot
 } from './runtimeIdentity.js';
-import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 
 const guardedEmbeddedLinkPanelSessions = new WeakSet<Session>();
 export function resolveMainWindowIconPath(preloadPath: string) {
@@ -247,4 +246,4 @@ export async function activateMainWindowRenderer(window: import('electron').Brow
   void window;
 }
 
-export { applyHiddenNativeDesktopWindowOptions, logWindowStateLifecycleEvent, logWindowStateRestoreDecision };
+export { applyHiddenNativeDesktopWindowOptions };
