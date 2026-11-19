@@ -21,6 +21,7 @@ import {
 
 afterEach(() => {
   resolveAppPaths.mockReset();
+  vi.unstubAllEnvs();
 });
 
 it('starts the Electron crash reporter in local minidump mode', () => {
@@ -114,7 +115,8 @@ it('writes operation failures without embedding the raw error stack', async () =
   expect(recordText).not.toContain('stack');
 });
 
-it('writes non-error main process events at their declared level', async () => {
+it('writes non-error main process events at their declared level in a debug session', async () => {
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', '1');
   const logDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-main-diagnostics-')), 'logs');
   resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
 

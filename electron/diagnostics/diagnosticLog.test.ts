@@ -16,6 +16,48 @@ import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnosticLog.
 
 afterEach(() => {
   resolveAppPaths.mockReset();
+  vi.unstubAllEnvs();
+});
+
+it('keeps routine details off the daily log while retaining faults and the Agent Control audit', async () => {
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', undefined);
+  vi.stubEnv('ELECTRON_RENDERER_URL', undefined);
+  const logDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-runtime-level-'));
+  resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
+  const now = new Date('2026-04-22T08:00:00.000Z');
+  const base = { occurred_at: now.toISOString(), payload: {}, source: 'electron.main' };
+  try {
+    await appendDiagnosticLog({ ...base, event: 'detail', level: 'debug' }, now);
+    await appendDiagnosticLog({ ...base, event: 'routine', level: 'info' }, now);
+    await appendDiagnosticLog({ ...base, event: 'fault', level: 'warn' }, now);
+    await appendDiagnosticLog({ ...base, event: 'failure', level: 'error' }, now);
+    await appendDiagnosticLog({ ...base, event: 'agent_control_api_call', level: 'info', source: 'electron.agentControl' }, now);
+    const records = fs.readFileSync(path.join(logDir, 'runtime-2026-04-22.ndjson'), 'utf8').trim().split('\n');
+    expect(records.map(line => JSON.parse(line).event)).toEqual(['fault', 'failure', 'agent_control_api_call']);
+  } finally {
+    fs.rmSync(logDir, { recursive: true, force: true });
+  }
+});
+
+it('keeps the daily file within one MiB across overlapping writes to a large existing log', async () => {
+  const logDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-runtime-limit-'));
+  resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
+  const now = new Date('2026-04-22T08:00:00.000Z');
+  const file = path.join(logDir, 'runtime-2026-04-22.ndjson');
+  const base = { occurred_at: now.toISOString(), level: 'warn' as const, source: 'electron.main' };
+  try {
+    const older = JSON.stringify({ ...base, event: 'older', payload: { detail: 'x'.repeat(12_000) } });
+    fs.writeFileSync(file, `${older}\n`.repeat(100) + '{"event":"recent"}\n{"incomplete":');
+    await Promise.all(Array.from({ length: 8 }, (_, index) => appendDiagnosticLog({
+      ...base, event: `new-${index}`, payload: { detail: '阅'.repeat(20_000) }
+    }, now)));
+    expect(fs.statSync(file).size).toBeLessThanOrEqual(1024 * 1024);
+    const events = fs.readFileSync(file, 'utf8').trim().split('\n').map(line => JSON.parse(line).event);
+    expect(events).toContain('recent');
+    expect(events.slice(-8)).toEqual(Array.from({ length: 8 }, (_, index) => `new-${index}`));
+  } finally {
+    fs.rmSync(logDir, { recursive: true, force: true });
+  }
 });
 
 it('parses renderer diagnostic payloads into normalized NDJSON records', () => {
