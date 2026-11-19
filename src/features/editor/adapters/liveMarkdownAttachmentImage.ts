@@ -85,7 +85,7 @@ async function retryMissingAttachment(context: AttachmentImageContext) {
 
 async function resolveAttachmentImage(context: AttachmentImageContext) {
   if (!context.isActive()) return;
-  const resolution = await resolveRuntimeAttachmentResource(context.imageMatch.source, { refresh: true });
+  const resolution = await resolveRuntimeAttachmentResource(context.imageMatch.source, { refresh: true, imageDisplay: true });
   if (!context.isActive()) return;
   if (resolution?.status === 'ready' && resolution.resource_url) {
     showResolvedAttachment(context, resolution.resource_url);

@@ -14,12 +14,18 @@ final class FolioleCompanionAttachmentFileResolver {
     private FolioleCompanionAttachmentFileResolver() {}
 
     static JSObject resolve(Context context, String contentHash, String mimeType, String storageKey) throws Exception {
+        return resolve(context, contentHash, mimeType, storageKey, false);
+    }
+
+    static JSObject resolve(Context context, String contentHash, String mimeType, String storageKey,
+                            boolean imageDisplay) throws Exception {
         File file = !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)
             ? null
             : new File(new File(context.getFilesDir(), "attachments"), storageKey.trim());
         if (file != null && !file.exists()) FolioleAttachmentMaintenanceFiles.move(context, storageKey, false);
         boolean ready = isRegularFileWithoutFollowingLinks(file) &&
-            contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file));
+            ((imageDisplay && mimeType.startsWith("image/")) ||
+                contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file)));
         JSObject result = new JSObject();
         result.put(responseKey(context, "status"), status(context, ready ? "readyStatusKey" : "missingFile"));
         result.put(responseKey(context, "mimeType"), mimeType);

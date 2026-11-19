@@ -48,17 +48,23 @@ function trackAttachmentResourceResolution(
   return resolution;
 }
 
-export async function resolveRuntimeAttachmentResource(resourceUrl: string, options?: { refresh?: boolean }) {
+export async function resolveRuntimeAttachmentResource(
+  resourceUrl: string, options?: { refresh?: boolean; imageDisplay?: boolean }
+) {
   const storageKey = parseAssetMarkdownUrl(resourceUrl);
   const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
   if (!storageKey || !parsed) return null;
-  const inFlight = attachmentResourceResolutionsInFlight.get(storageKey);
+  const runtime = getCompanionRuntimeCapability();
+  const imageDisplay = options?.imageDisplay === true && runtime.kind === 'android-native' &&
+    parsed.mimeType.startsWith('image/');
+  const cacheKey = imageDisplay ? `image-display:${storageKey}` : storageKey;
+  const inFlight = attachmentResourceResolutionsInFlight.get(cacheKey);
   if (inFlight) return inFlight;
-  if (options?.refresh) attachmentResourceResolutionCache.delete(storageKey);
+  if (options?.refresh) attachmentResourceResolutionCache.delete(cacheKey);
 
   // The browser preview reads attachments copied with its library; it never downloads them.
-  if (isNativeCompanionAttachmentResourceRuntime() || getCompanionRuntimeCapability().kind === 'browser-preview') {
-    return trackAttachmentResourceResolution(storageKey, resolveNativeAttachmentResource(parsed));
+  if (isNativeCompanionAttachmentResourceRuntime() || runtime.kind === 'browser-preview') {
+    return trackAttachmentResourceResolution(cacheKey, resolveNativeAttachmentResource(parsed, cacheKey, imageDisplay));
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -106,16 +112,18 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string, opti
 }
 
 async function resolveNativeAttachmentResource(
-  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>
+  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>,
+  cacheKey: string,
+  imageDisplay: boolean
 ) {
-  const cached = attachmentResourceResolutionCache.get(description.storageKey);
+  const cached = attachmentResourceResolutionCache.get(cacheKey);
   if (cached) {
     updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
     return cached;
   }
 
-  const resolutionPromise = resolveNativeAttachmentResourceUncached(description)
-    .then((result) => normalizeNativeAttachmentResolution(result, description.storageKey))
+  const resolutionPromise = resolveNativeAttachmentResourceUncached(description, imageDisplay)
+    .then((result) => normalizeNativeAttachmentResolution(result, description.storageKey, cacheKey))
     .catch((error) => {
       logRuntimeWarning('native companion attachment resource resolve failed', {
         area: 'bridge',
@@ -124,29 +132,32 @@ async function resolveNativeAttachmentResource(
         fallback: 'return_null',
         error
       });
-      attachmentResourceResolutionCache.delete(description.storageKey);
+      attachmentResourceResolutionCache.delete(cacheKey);
       return null;
     });
 
-  attachmentResourceResolutionCache.set(description.storageKey, resolutionPromise);
+  attachmentResourceResolutionCache.set(cacheKey, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
   return resolutionPromise;
 }
 
 async function resolveNativeAttachmentResourceUncached(
-  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>
+  description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>,
+  imageDisplay: boolean
 ) {
   return FolioleCompanionSync.resolveAttachmentResource({
     attachment_id: description.contentHash,
     content_hash: description.contentHash,
     mime_type: description.mimeType,
-    storage_key: description.storageKey
+    storage_key: description.storageKey,
+    ...(imageDisplay ? { image_display: true } : {})
   });
 }
 
 function normalizeNativeAttachmentResolution(
   result: unknown,
-  storageKey: string
+  storageKey: string,
+  cacheKey: string
 ): NativeAttachmentResourceResolution | null {
   if (!isAttachmentResourceResolution(result)) {
     logRuntimeWarning('native companion attachment resource payload invalid', {
@@ -155,7 +166,7 @@ function normalizeNativeAttachmentResolution(
       storage_key: storageKey,
       fallback: 'return_null'
     });
-    attachmentResourceResolutionCache.delete(storageKey);
+    attachmentResourceResolutionCache.delete(cacheKey);
     return null;
   }
   if (result.status !== 'ready') {
@@ -176,7 +187,9 @@ export function readAttachmentResourceCacheStats() {
 export function invalidateAttachmentResourceResolution(resourceIdentity: string) {
   const directStorageKey = parseAssetMarkdownUrl(resourceIdentity) ??
     parseCanonicalAttachmentStorageKey(resourceIdentity)?.storageKey;
-  if (directStorageKey) attachmentResourceResolutionCache.delete(directStorageKey);
+  if (!directStorageKey) return;
+  attachmentResourceResolutionCache.delete(directStorageKey);
+  attachmentResourceResolutionCache.delete(`image-display:${directStorageKey}`);
 }
 
 export function resetAttachmentResourceResolutionCacheForTest() {

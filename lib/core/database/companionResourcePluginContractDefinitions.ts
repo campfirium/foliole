@@ -14,6 +14,7 @@ export const COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS = {
   documentId: 'document_id',
   hash: 'hash',
   headers: 'headers',
+  imageDisplay: 'image_display',
   limit: 'limit',
   mimeType: 'mime_type',
   query: 'query',

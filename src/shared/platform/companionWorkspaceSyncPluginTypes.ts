@@ -105,6 +105,7 @@ export interface CompanionWorkspaceSyncPlugin
   resolveAttachmentResource(args: {
     attachment_id: string;
     content_hash: string;
+    image_display?: boolean;
     mime_type?: string | null;
     storage_key?: string | null;
   }): Promise<{

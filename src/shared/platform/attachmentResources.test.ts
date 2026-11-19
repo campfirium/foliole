@@ -12,9 +12,6 @@ const capacitorMock = vi.hoisted(() => ({
     resolveAttachmentResource: vi.fn()
   }
 }));
-const iosDatabaseMock = vi.hoisted(() => ({
-  query: vi.fn(async () => [{ mime_type: 'application/pdf', storage_key: 'hash-ios' }])
-}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -23,9 +20,6 @@ vi.mock('@capacitor/core', () => ({
     isNativePlatform: capacitorMock.isNativePlatform
   },
   registerPlugin: vi.fn(() => capacitorMock.plugin)
-}));
-vi.mock('./companion/runtime/iosCompanionActiveDatabase', () => ({
-  queryIosCompanionDatabase: iosDatabaseMock.query
 }));
 
 import {
@@ -70,19 +64,20 @@ it('resolves native Android attachment file URLs through Capacitor', async () =>
   });
 });
 
-it('passes through native Android missing file results', async () => {
-  const resource = createTestAttachmentResource({ attachmentId: 'att-android-2', contentHash: 'b'.repeat(64) });
+it('passes through Android missing PDF results using the strict bridge request', async () => {
+  const resource = createTestAttachmentResource({ attachmentId: 'att-android-2', mimeType: 'application/pdf' });
   capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
-    mime_type: 'image/png',
+    mime_type: 'application/pdf',
     resource_url: null,
     status: 'missing_file'
   });
 
-  await expect(resolveRuntimeAttachmentResource(resource.assetUrl)).resolves.toEqual({
-    mime_type: 'image/png',
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl, { imageDisplay: true })).resolves.toEqual({
+    mime_type: 'application/pdf',
     resource_url: null,
     status: 'missing_file'
   });
+  expect(capacitorMock.plugin.resolveAttachmentResource.mock.calls[0]?.[0]).not.toHaveProperty('image_display');
   expect(capacitorMock.convertFileSrc).not.toHaveBeenCalled();
 });
 
@@ -147,25 +142,25 @@ it('resolves native iOS attachment file URLs through Capacitor', async () => {
   const resource = createTestAttachmentResource({
     attachmentId: 'att-ios',
     contentHash: 'c'.repeat(64),
-    mimeType: 'application/pdf'
+    mimeType: 'image/png'
   });
   capacitorMock.getPlatform.mockReturnValue('ios');
   capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
-    mime_type: 'application/pdf',
+    mime_type: 'image/png',
     resource_url: 'file:///var/mobile/Containers/Data/Application/app/Library/Application Support/attachments/hash-ios',
     status: 'ready'
   });
   const invoke = vi.fn();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  await expect(resolveRuntimeAttachmentResource(resource.assetUrl)).resolves.toEqual({
-    mime_type: 'application/pdf',
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl, { imageDisplay: true })).resolves.toEqual({
+    mime_type: 'image/png',
     resource_url: 'capacitor://file:///var/mobile/Containers/Data/Application/app/Library/Application Support/attachments/hash-ios',
     status: 'ready'
   });
   expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
     attachment_id: resource.description.contentHash, content_hash: resource.description.contentHash,
-    mime_type: 'application/pdf', storage_key: resource.description.storageKey
+    mime_type: 'image/png', storage_key: resource.description.storageKey
   });
   expect(invoke).not.toHaveBeenCalled();
 });
@@ -183,8 +178,36 @@ it('checks the current file when display requests a fresh resolution', async () 
   capacitorMock.plugin.resolveAttachmentResource.mockResolvedValueOnce({
     status: 'ready', resource_url: 'file:///attachments/image.png', mime_type: 'image/png'
   }).mockResolvedValueOnce({ status: 'missing_file', resource_url: null, mime_type: 'image/png' });
-  expect((await resolveRuntimeAttachmentResource(resource.assetUrl))?.status).toBe('ready');
-  expect((await resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true }))?.status).toBe('missing_file');
+  expect((await resolveRuntimeAttachmentResource(resource.assetUrl, { imageDisplay: true }))?.status).toBe('ready');
+  expect((await resolveRuntimeAttachmentResource(resource.assetUrl, {
+    refresh: true, imageDisplay: true
+  }))?.status).toBe('missing_file');
+});
+
+it('isolates Android image display from strict resolution while pending and after completion', async () => {
+  const resource = createTestAttachmentResource();
+  const display = { imageDisplay: true };
+  const ready = { status: 'ready', resource_url: 'file:///attachments/image.png', mime_type: 'image/png' };
+  const missing = { status: 'missing_file', resource_url: null, mime_type: 'image/png' };
+  const native = capacitorMock.plugin.resolveAttachmentResource;
+  native.mockResolvedValueOnce(ready).mockResolvedValueOnce(missing);
+
+  const displayRequest = resolveRuntimeAttachmentResource(resource.assetUrl, display);
+  const strictRequest = resolveRuntimeAttachmentResource(resource.assetUrl);
+  expect(native).toHaveBeenCalledTimes(2);
+  expect(native).toHaveBeenNthCalledWith(1, expect.objectContaining({ image_display: true }));
+  expect(native.mock.calls[1]?.[0]).not.toHaveProperty('image_display');
+  await expect(displayRequest).resolves.toMatchObject({ status: 'ready' });
+  await expect(strictRequest).resolves.toEqual(missing);
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl, display)).resolves.toMatchObject({ status: 'ready' });
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl)).resolves.toEqual(missing);
+  expect(native).toHaveBeenCalledTimes(2);
+
+  invalidateAttachmentResourceResolution(resource.assetUrl);
+  native.mockResolvedValueOnce(ready).mockResolvedValueOnce(missing);
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl)).resolves.toMatchObject({ status: 'ready' });
+  await expect(resolveRuntimeAttachmentResource(resource.assetUrl, display)).resolves.toEqual(missing);
+  expect(native).toHaveBeenCalledTimes(4);
 });
 
 it('shares one in-flight desktop resolution across concurrent refresh requests', async () => {

@@ -82,6 +82,7 @@ describe('live markdown image rendering on Android companion', () => {
     expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
       attachment_id: resource.description.contentHash,
       content_hash: resource.description.contentHash,
+      image_display: true,
       mime_type: 'image/png',
       storage_key: resource.description.storageKey
     });

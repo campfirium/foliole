@@ -13,7 +13,8 @@ final class FolioleCompanionResourcePluginActions {
             context,
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceMimeTypeRequestKey(context)),
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context))
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context)),
+            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, "imageDisplay"), false)
         );
     }
 }

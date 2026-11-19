@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react';
+import { fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const attachmentMock = vi.hoisted(() => ({
@@ -52,7 +52,26 @@ it('resolves iOS attachment images through the shared native resource capability
       'capacitor://localhost/_capacitor_file_/attachments/hash-ios'
     );
   });
-  expect(attachmentMock.resolve).toHaveBeenCalledWith(source, { refresh: true });
+  expect(attachmentMock.resolve).toHaveBeenCalledWith(source, { refresh: true, imageDisplay: true });
+});
+
+it('shows an unavailable image when decoding a resolved local file fails', async () => {
+  const hash = 'f'.repeat(64);
+  const onMissing = vi.fn();
+  attachmentMock.resolve.mockResolvedValue({ status: 'ready', resource_url: 'file:///invalid.png' });
+  const widget = createMarkdownImageWidgetDom({
+    alt: 'Unreadable attachment', attachmentId: hash, display: 'block', from: 0,
+    source: `asset://${hash}.png`, to: 30
+  }, null, onMissing);
+  document.body.append(widget);
+  const image = await waitFor(() => {
+    const element = widget.querySelector('img');
+    if (!element) throw new Error('Expected a local image to load');
+    return element;
+  });
+  fireEvent.error(image);
+  expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull();
+  expect(onMissing).not.toHaveBeenCalled();
 });
 
 it('ignores an attachment resolution that arrives after the widget is disposed', async () => {
