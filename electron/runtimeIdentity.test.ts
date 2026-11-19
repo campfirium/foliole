@@ -46,7 +46,7 @@ it('pins userData and sessionData to the foliole root on win32', () => {
     }
   };
 
-  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'win32');
+  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'win32', {}, []);
 
   const expectedRoot = path.join(appDataRoot, FOLIOLE_APP_NAME);
   expect(configured.userDataPath).toBe(expectedRoot);
