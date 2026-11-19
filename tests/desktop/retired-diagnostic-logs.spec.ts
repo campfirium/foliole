@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+import { _electron } from 'playwright';
+
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
@@ -84,5 +86,30 @@ test('startup applies daily diagnostic retention to existing files without a new
   } finally {
     await session?.close();
     await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('ordinary startup writes actionable stages without renderer URLs or routine scheduler traces', async () => {
+  const session: DesktopSession = await launchDesktopSession({
+    env: { ...process.env, FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '0' },
+    electronLauncher: {
+      launch: (options: Parameters<typeof _electron.launch>[0]) => _electron.launch({
+        ...options, env: { ...options?.env, FOLIOLE_WORKDIR: '' }
+      })
+    }
+  });
+  try {
+    const logs = await session.electronApp.evaluate(({ app }) => app.getPath('logs'));
+    const bootPath = path.join(logs, 'windows', 'native-boot-events.ndjson');
+    await expect.poll(() => fs.readFile(bootPath, 'utf8')).toContain('"stage":"app_ready"');
+    const lines = (await fs.readFile(bootPath, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+    const context = lines.find(record => record.stage === 'boot_context');
+    expect(context?.payload).toMatchObject({ nativeInvokeReady: true });
+    for (const field of ['href', 'userAgent', 'resources']) expect(context.payload).not.toHaveProperty(field);
+    const renderer = lines.find(record => record.stage === 'renderer_load_complete');
+    expect(renderer?.payload).not.toHaveProperty('url');
+    expect(lines.some(record => /^desktop_task_(submitted|started|completed)$/.test(record.stage))).toBe(false);
+  } finally {
+    await session.close();
   }
 });

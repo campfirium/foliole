@@ -39,8 +39,10 @@ const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
   'action',
   'code',
+  'durationMs',
   'lastObservedBlocker',
   'message',
+  'moduleLabel',
   'name',
   'operation',
   'reason',
@@ -48,6 +50,7 @@ const SAFE_PAYLOAD_KEYS = [
   'source_kind',
   'stage',
   'status',
+  'totalMs',
   'waitMs'
 ] as const;
 

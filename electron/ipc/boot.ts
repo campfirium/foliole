@@ -1,7 +1,9 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { shouldPersistOrdinaryBootStage, summarizeBootPayload } from '../diagnostics/bootLogSummary.js';
 import { appendBoundedLogLine } from '../diagnostics/boundedLogLine.js';
+import { isDesktopDebugProbeEnabled } from '../diagnostics/desktopDebugTrace.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnosticPaths.js';
 
@@ -117,9 +119,13 @@ function shouldWaitForBootEvent(stage: string) {
 }
 
 function appendQueuedBootEvent(event: ReturnType<typeof createBootEvent>, waitForWrite: boolean) {
-  const waitForMarker = waitForWrite && shouldPersistReadyMarkers();
+  const persistMarkers = shouldPersistReadyMarkers();
+  const detailed = persistMarkers || isDesktopDebugProbeEnabled();
+  if (!detailed && !shouldPersistOrdinaryBootStage(event.stage)) return Promise.resolve();
+  const record = detailed ? event : { ...event, payload: summarizeBootPayload(event.payload) };
+  const waitForMarker = waitForWrite && persistMarkers;
   if (!waitForMarker) notifyRendererAppReady(event);
-  const write = bootEventQueue.then(() => persistBootEvent(event));
+  const write = bootEventQueue.then(() => persistBootEvent(record));
   bootEventQueue = write.catch((error) => {
     appendMainProcessDiagnosticLog('boot_log_failed', {
       error,

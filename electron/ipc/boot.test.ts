@@ -29,12 +29,38 @@ import {
 } from './boot.js';
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   process.env.FOLIOLE_WORKDIR = state.originalWorkdir;
   process.env.FOLIOLE_RUNTIME_HEAD = state.originalHead;
   process.env.FOLIOLE_BOOT_SESSION = state.originalSession;
   process.argv = [...state.originalArgv];
   state.appendMainProcessDiagnosticLog.mockReset();
   resetBootEventStateForTests();
+});
+
+it('keeps ordinary startup milestones and measurements without task traces or private details', async () => {
+  vi.stubEnv('FOLIOLE_WORKDIR', undefined);
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', undefined);
+  vi.stubEnv('ELECTRON_RENDERER_URL', undefined);
+  const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-summary-'));
+  state.resolveAppPaths.mockReturnValue({ app_log_dir: logsDir });
+  try {
+    await appendBootEvent('desktop_task_completed', { id: 'private-task', durationMs: 14 });
+    await bootReport('workspace_hydrate_refresh_end', { totalMs: 31 });
+    await bootReport('workspace_hydrate_runtime_merge_complete', { durationMs: 19, mergedActiveNodeId: 'private-document' });
+    await bootReport('app_ready', { href: 'file:///private/library/index.html', rootPresent: true });
+    await waitForRendererAppReady();
+    await flushBootEvents();
+    const text = fs.readFileSync(resolveBootArtifactPaths().eventLogPath, 'utf8');
+    expect(text).not.toContain('private');
+    const records = text.trim().split('\n').map(line => JSON.parse(line));
+    expect(records).toEqual([
+      expect.objectContaining({ stage: 'workspace_hydrate_runtime_merge_complete', payload: { durationMs: 19 } }),
+      expect.objectContaining({ stage: 'app_ready', payload: { rootPresent: true } })
+    ]);
+  } finally {
+    fs.rmSync(logsDir, { force: true, recursive: true });
+  }
 });
 
 it('writes main startup events and marks the source', async () => {
