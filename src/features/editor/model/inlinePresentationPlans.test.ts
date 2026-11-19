@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   collectAutolinkPresentationPlan,
@@ -7,6 +7,14 @@ import {
   collectInlineLinkPresentationPlan,
   collectWikiLinkPresentationPlan
 } from './inlinePresentationPlans';
+
+beforeEach(() => {
+  vi.stubGlobal('navigator', { platform: 'Win32', languages: ['en'] });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function createInlineLinkMatch() {
   return {

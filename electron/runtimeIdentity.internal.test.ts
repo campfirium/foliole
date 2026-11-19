@@ -34,7 +34,7 @@ it('uses a separate identity for internal Windows builds while sharing the produ
     }
   };
 
-  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'win32');
+  const configured = configureRuntimeAppIdentity(app, mkdirSync, 'win32', {}, []);
 
   expect(app.setName).toHaveBeenCalledWith(FOLIOLE_INTERNAL_PRODUCT_NAME);
   expect(configured.userDataPath).toBe(path.join(appDataRoot, FOLIOLE_INTERNAL_APP_NAME));
