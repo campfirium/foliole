@@ -74,6 +74,9 @@ it('creates and renames a folder from the real menu, then undoes and redoes both
   fireEvent.click(screen.getByRole('button', { name: 'More: Created folder' }));
   const menu = within(screen.getByRole('dialog', { name: 'More' }));
   expect(menu.queryByRole('button', { name: /^(Manage|Open)$/ })).toBeNull();
+  expect(menu.getAllByRole('button').slice(-1)[0]).toHaveAccessibleName('Move to Trash');
+  expect(menu.getByRole('button', { name: 'Info' }).compareDocumentPosition(menu.getByRole('button', { name: 'Rename' })))
+    .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   fireEvent.click(menu.getByRole('button', { name: 'Rename' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Renamed folder' } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
@@ -139,6 +142,9 @@ it('creates the chosen child type from the first-level article menu', async () =
   expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
   expect(menu.getByRole('button', { name: 'Move to...' })).toBeVisible();
   expect(menu.getByRole('button', { name: 'Info' })).toBeVisible();
+  expect(menu.getAllByRole('button').slice(-7).map(button => button.textContent)).toEqual([
+    'Rename', 'Move to...', 'Add to Dive…', 'Shelve', 'Create Topic', 'Create Item', 'Move to Trash'
+  ]);
   fireEvent.click(menu.getByRole('button', { name: 'Create Item' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Child question' } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));

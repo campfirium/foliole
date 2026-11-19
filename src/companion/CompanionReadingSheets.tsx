@@ -17,7 +17,7 @@ import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
-import { CompanionWorkspaceMenuActions } from './CompanionWorkspaceMenuActions';
+import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass } from './CompanionWorkspaceMenuActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
 export { ReadingBottomSheet };
@@ -30,12 +30,12 @@ function ReadingActionRow(props: {
 }) {
   return (
     <button
-      className="flex w-full items-center gap-3 border-b border-companion-divider py-4 text-left text-sm font-medium text-foreground transition-colors active:bg-companion-subtle/80"
+      className={`${companionWorkspaceRowClass} gap-3 font-medium text-foreground transition-colors active:bg-companion-subtle/80`}
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
     >
-      <span className="text-companion-text-secondary">{props.icon}</span>
+      <span className="shrink-0 text-companion-text-secondary">{props.icon}</span>
       <span>{props.label}</span>
     </button>
   );
@@ -141,7 +141,7 @@ function ReadingWorkspaceActions({ nodeId, onClose, hasRestoreAction, children }
 }) {
   const workspace = useCompanionWorkspaceActions();
   if (!workspace || !nodeId || !isAvailableNativeCompanionRuntime()) return children;
-  return <CompanionWorkspaceMenuActions nodeId={nodeId} shortcuts hasRestoreAction={hasRestoreAction}
+  return <CompanionWorkspaceMenuActions nodeId={nodeId} hasRestoreAction={hasRestoreAction}
     onSaved={onClose} onSelect={state => { onClose(); workspace.open(state); }}>
     {children}
   </CompanionWorkspaceMenuActions>;

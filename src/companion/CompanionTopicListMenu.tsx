@@ -46,7 +46,7 @@ function TopicListMenuActions({ nodeId, diveId, onClose, children }: {
   const t = useTranslation();
   const workspace = useCompanionWorkspaceActions();
   if (!nodeId || !workspace?.snapshot?.nodesById[nodeId] || !isAvailableNativeCompanionRuntime()) return children;
-  return <CompanionWorkspaceMenuActions nodeId={nodeId} shortcuts onSaved={onClose}
+  return <CompanionWorkspaceMenuActions nodeId={nodeId} onSaved={onClose}
     onSelect={state => { onClose(); workspace.open(state); }}>
     <CompanionNodePrioritySlider nodeId={nodeId} onSaved={onClose} />
     {diveId && <button type="button" className={companionWorkspaceRowClass} disabled={workspace.busy || workspace.pending}
