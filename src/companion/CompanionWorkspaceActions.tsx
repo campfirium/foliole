@@ -8,6 +8,9 @@ import { convertCompanionDiveDirectory } from '../shared/platform/companion/runt
 import { addCompanionDiveSource, removeCompanionDiveSource } from '../shared/platform/companion/runtime/companionDiveSources';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
+import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
+import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
+import { moveCompanionBatchToTrash, type CompanionBatchTarget } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
@@ -24,6 +27,9 @@ type Actions = {
   convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
   removeFromDive(diveId: string, sourceId: string, onSaved: () => void): void;
+  moveBatchToTrash(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
+  restoreBatch(targets: readonly CompanionBatchTarget[], onSaved: (skipped: number) => void): Promise<void>;
+  purgeBatch(plan: CompanionBatchPurgePlan, onSaved: () => void): Promise<void>;
   replay(mode: Mode): void;
   retryRefresh(): void;
 };
@@ -40,7 +46,7 @@ export function CompanionWorkspaceActionsProvider(props: {
   const [sheet, setSheet] = useState<WorkspaceNodeSheetState | null>(null);
   const key = companionFlowHistoryKey(props.snapshot?.libraryScope ?? '');
   const availability = useCompanionWorkspaceHistoryAvailability(key);
-  const { run, busy, pending, error } = useCompanionWorkspaceTransaction({ ...props, afterRefresh: () => setSheet(null) });
+  const { run, busy, pending, error, failure } = useCompanionWorkspaceTransaction({ ...props, afterRefresh: () => setSheet(null) });
   async function replay(mode: Mode) {
     if (props.flowActive && !pending) { await props.applyFlow(mode); return; }
     await run(async () => {
@@ -58,14 +64,23 @@ export function CompanionWorkspaceActionsProvider(props: {
     convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter)),
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId)),
     removeFromDive: (diveId, sourceId, onSaved) => void run(() => removeCompanionDiveSource(diveId, sourceId), onSaved),
+    moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error'),
+    restoreBatch: (targets, onSaved) => {
+      let skipped = 0;
+      return run(async () => {
+        const result = await restoreCompanionBatchFromTrash(targets);
+        skipped = result.skippedConflicts.length;
+      }, () => onSaved(skipped), 'companion.batch.error');
+    },
+    purgeBatch: (plan, onSaved) => run(async () => { await purgeCompanionTrashBatch(plan); }, onSaved, 'companion.batch.error'),
     retryRefresh: () => void run(async () => {}),
     execute: (command, onSaved) => run(async () => {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
     }, onSaved), replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}
-    {error && !sheet && <div role="status" className="fixed bottom-24 left-3 right-3 z-[80] rounded-lg border bg-companion-base p-3 text-sm">
-      {t(pending ? 'companion.workspace.savedRefreshError' : 'companion.reading.historyError')}
+    {failure && !sheet && <div role="status" className="fixed bottom-24 left-3 right-3 z-[80] rounded-lg border bg-companion-base p-3 text-sm">
+      {t(pending ? 'companion.workspace.savedRefreshError' : failure)}
       {pending && <button type="button" disabled={busy} className="ml-3 min-h-11 underline" onClick={() => void run(async () => {})}>
         {t('companion.selection.refresh')}</button>}
     </div>}

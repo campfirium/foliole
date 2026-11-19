@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { TranslationKey } from '../shared/localization/translations';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { subscribeCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
@@ -26,16 +27,16 @@ export function useCompanionWorkspaceHistoryAvailability(key: string) {
 export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unknown>; refresh(): Promise<unknown>; afterRefresh(): void }) {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
+  const [failure, setFailure] = useState<TranslationKey | null>(null);
   const locked = useRef(false);
   const committed = useRef(false);
 
-  async function run(task: () => Promise<void>, afterSave?: () => void) {
+  async function run(task: () => Promise<void>, afterSave?: () => void, failureKey: TranslationKey = 'companion.reading.historyError') {
     if (locked.current) return;
     const scope = getCompanionReadingScope();
     locked.current = true;
     setBusy(true);
-    setError(false);
+    setFailure(null);
     try {
       if (!committed.current) {
         await props.flush();
@@ -49,8 +50,8 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
       committed.current = false;
       setPending(false);
       props.afterRefresh();
-    } catch { setError(true); setPending(committed.current); }
+    } catch { setFailure(failureKey); setPending(committed.current); }
     finally { locked.current = false; setBusy(false); }
   }
-  return { run, busy, pending, error };
+  return { run, busy, pending, error: Boolean(failure), failure };
 }

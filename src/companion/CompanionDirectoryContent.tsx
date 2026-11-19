@@ -112,6 +112,9 @@ function CompanionDirectoryListContent(props: {
         <CompanionDiveReminderMenu dive={dive} />
       </div>}
       <CompanionDirectoryList
+        key={JSON.stringify([props.snapshot?.libraryScope, props.viewKey])}
+        batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash'
+          : props.selection.kind === 'root' || props.selection.kind === 'internal' ? 'library' : undefined}
         directory={props.directory}
         viewKey={props.viewKey}
         emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? 'companion.directory.emptyFolder')}

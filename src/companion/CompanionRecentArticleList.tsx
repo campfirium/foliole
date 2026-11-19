@@ -88,6 +88,8 @@ export function formatCompanionTopicDate(value: string, locale: string, now = ne
 export function RecentArticleRow(props: {
   directDiveId?: string | undefined;
   first?: boolean;
+  hideMenu?: boolean;
+  checked?: boolean | undefined;
   article: CompanionRecentArticle;
   currentArticleId: string | null;
   onSelectArticle(nodeId: string): void;
@@ -101,13 +103,14 @@ export function RecentArticleRow(props: {
   const status = renderBodyStatus(props.article.bodyStatus, t);
   return (
     <div className={`companion-topic-row ${props.first ? 'companion-topic-row-first' : ''}`}>
-      <button aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })} className="companion-topic-open" data-testid={props.testId} onClick={open} type="button">
+      <button aria-label={t(props.hideMenu ? 'companion.batch.selectRow' : 'desktop.nodeBrowse.openTopic', { title: props.article.title })}
+        aria-pressed={props.checked} className="companion-topic-open" data-testid={props.testId} onClick={open} type="button">
         <h2 ref={titleRef} className="companion-topic-title line-clamp-2 break-words [overflow-wrap:anywhere]">{props.article.title}</h2>
         <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
         {status ? <p className="companion-topic-preview">{status}</p> : null}
         <p className="companion-topic-meta truncate">{meta}</p>
       </button>
-      <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} title={props.article.title} directDiveId={props.directDiveId} />
+      {!props.hideMenu && <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} title={props.article.title} directDiveId={props.directDiveId} />}
     </div>
   );
 }
