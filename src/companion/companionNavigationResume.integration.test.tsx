@@ -189,9 +189,12 @@ it('persists external text and PDF positions locally without duplicating article
   first.unmount();
   await library.reopen();
   render(tree());
-  await waitFor(() => expect(screen.getByTestId('pdf')).toHaveAttribute('data-position', '{"page":5,"fraction":0.25}'));
-  expect(screen.getByTestId('external').scrollTop).toBe(720);
+  await waitFor(() => {
+    expect(screen.getByTestId('pdf')).toHaveAttribute('data-position', '{"page":5,"fraction":0.25}');
+    expect(screen.getByTestId('external').scrollTop).toBe(720);
+  });
   const saved = await loadCompanionNavigationResume(snapshot.libraryScope!);
+  expect(JSON.parse(saved!)).toMatchObject({ externalScrollTopById: { external: 720 } });
   expect(saved).not.toContain('# Article');
 });
 
