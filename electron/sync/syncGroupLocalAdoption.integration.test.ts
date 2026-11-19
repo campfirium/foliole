@@ -159,6 +159,8 @@ it('accepts repeated completion after a background round has already completed l
   const before = await applicant!.send('snapshot');
   expect(before.library.nodesById['group-source']?.content).toBe('Group data');
   expect(before.library.nodesById['local-before']).toBeUndefined();
+  await expect(applicant!.send('joinCompleteAcrossTransactionHandoff'))
+    .resolves.toMatchObject({ group_id: peers[1]!.device.group_id });
   await expect(applicant!.send('joinComplete')).resolves.toMatchObject({
     sync_group: { group_id: peers[1]!.device.group_id }
   });

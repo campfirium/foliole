@@ -33,6 +33,24 @@ export async function postJoinDuringTransaction(origin: string, input: unknown) 
   return { status: result.status, body: await result.json() as unknown };
 }
 
+export async function completeJoinAcrossTransactionHandoff(complete: () => Promise<unknown>) {
+  const entered = deferred();
+  const release = deferred();
+  const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const first = db.transaction(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  await Promise.race([entered.promise, first]);
+  const completion = complete();
+  const next = db.transaction(async () => {
+    await new Promise<void>(resolve => setImmediate(resolve));
+  });
+  release.resolve();
+  try { return await completion; }
+  finally { await Promise.all([first, next]); }
+}
+
 function deferred() {
   let resolve!: () => void;
   const promise = new Promise<void>((complete) => { resolve = complete; });
