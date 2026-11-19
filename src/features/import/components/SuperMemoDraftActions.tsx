@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { SettingsButton } from '../../../shared/ui';
+import { settingsDialogFooterInset } from '../../../shared/ui/settingsDialogBounds';
 
 import type { SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 
@@ -28,7 +29,7 @@ export function SuperMemoDraftActions({ step, busy, importing = false, updating 
   const backLabel = t('desktop.superMemoDrafts.previous');
   const nextLabel = t('desktop.superMemoDrafts.parameters');
   return (
-    <div className="app-scrollbar shrink-0 overflow-hidden px-7 pb-14 pt-4 [scrollbar-gutter:stable]">
+    <div className={`app-scrollbar shrink-0 overflow-hidden px-7 pt-4 [scrollbar-gutter:stable] ${settingsDialogFooterInset}`}>
       <div className="flex items-end justify-between gap-4 px-settings-panel-x">
         <p className="min-w-0 self-center text-xs leading-relaxed text-foreground/65">
           {t(updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}

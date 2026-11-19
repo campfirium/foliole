@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { AppButton } from './Button';
 import { AppPanel } from './Panel';
+import { settingsDialogFooterInset } from './settingsDialogBounds';
 import { settingsSidebarBadgeClassName, settingsSidebarItemClassName } from './SettingsLayout';
 
 import { cn } from '@/shared/lib/utils';
@@ -11,16 +12,20 @@ interface SettingsNavigationProps {
   alignTitleWithItems?: boolean;
   ariaLabel: string;
   children: ReactNode;
+  footer?: ReactNode;
   navigationLabel: string;
   title: ReactNode;
 }
 
-export function SettingsNavigation({ alignTitleWithItems, ariaLabel, children, navigationLabel, title }: SettingsNavigationProps) {
+export function SettingsNavigation({ alignTitleWithItems, ariaLabel, children, footer, navigationLabel, title }: SettingsNavigationProps) {
   return (
     <AppPanel
       as="aside"
       ariaLabel={ariaLabel}
-      bodyClassName="px-4 pb-5 pt-3 [--app-scrollbar-thumb-color:var(--role-list-scrollbar)] [--app-scrollbar-thumb-hover-color:var(--role-list-scrollbar-hover)] [--app-scrollbar-track-bg:transparent]"
+      bodyClassName={cn(
+        'px-4 pt-3 [--app-scrollbar-thumb-color:var(--role-list-scrollbar)] [--app-scrollbar-thumb-hover-color:var(--role-list-scrollbar-hover)] [--app-scrollbar-track-bg:transparent]',
+        footer ? settingsDialogFooterInset : 'pb-5'
+      )}
       className="border-r border-settings-divider"
       headerClassName={cn('h-settings-navigation-header min-h-0 border-b border-settings-divider/55 py-0',
         alignTitleWithItems ? 'px-4' : 'px-5')}
@@ -31,8 +36,9 @@ export function SettingsNavigation({ alignTitleWithItems, ariaLabel, children, n
         <div className="pl-[calc(var(--spacing)*9+1px)]">{title}</div>
       ) : title}
     >
-      <nav aria-label={navigationLabel} className="flex w-full flex-col items-stretch gap-4">
+      <nav aria-label={navigationLabel} className={cn('flex w-full flex-col items-stretch gap-4', footer && 'min-h-full')}>
         {children}
+        {footer ? <div className="mt-auto flex flex-col">{footer}</div> : null}
       </nav>
     </AppPanel>
   );
