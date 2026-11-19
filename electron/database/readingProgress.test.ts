@@ -45,7 +45,10 @@ it('returns empty reading progress shape when sqlite has no rows', () => {
   });
 });
 
-it('persists and loads active node and per-node view state from sqlite', () => {
+it.each(['writable', 'unwritable'])('persists and reloads reading progress with a %s trace path', async (tracePath) => {
+  if (tracePath === 'unwritable') {
+    await fs.mkdir(path.join(mockedAppDataDir, 'logs', 'reading-position.ndjson'), { recursive: true });
+  }
   const hostName = loadOrCreateDesktopHostName('2026-03-06T10:00:00.000Z');
   saveReadingProgress({
     activeNodeId: 'node-2',
@@ -67,6 +70,7 @@ it('persists and loads active node and per-node view state from sqlite', () => {
     ],
     updatedAt: '2026-03-06T10:00:00.000Z'
   });
+  closeDatabaseConnection();
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: 'node-2',

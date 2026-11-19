@@ -64,3 +64,54 @@ it('keeps appending to the same file when a new logger is created for the next a
   expect(lines[0]).toContain('runtime.reading-position.updated');
   expect(lines[1]).toContain('editor.viewport.restore-selection');
 });
+
+const maxLogBytes = 4 * 1024 * 1024;
+
+function createTestLogger() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-reading-position-log-'));
+  tempRoots.push(root);
+  return { root, logger: createReadingPositionTraceLogger({ appLogDir: root }) };
+}
+
+function readTimestamps(filePath: string) {
+  return fs.readFileSync(filePath, 'utf8').trimEnd().split('\n')
+    .map((line) => (JSON.parse(line) as { timestamp: number }).timestamp);
+}
+
+it('stays within the byte limit across successive writes and a logger restart', () => {
+  const { root, logger } = createTestLogger();
+  const filePath = logger.getFilePath();
+  const payload = '阅'.repeat(300_000);
+  for (let timestamp = 1; timestamp <= 12; timestamp++) {
+    logger.append({ event: 'scroll', payload, timestamp });
+    expect(fs.statSync(filePath).size).toBeLessThanOrEqual(maxLogBytes);
+  }
+
+  const restarted = createReadingPositionTraceLogger({ appLogDir: root });
+  restarted.append({ event: 'restart', payload: null, timestamp: 13 });
+  expect(readTimestamps(filePath).slice(-3)).toEqual([11, 12, 13]);
+  expect(readTimestamps(filePath)).not.toContain(1);
+  expect(fs.statSync(filePath).size).toBeLessThanOrEqual(maxLogBytes);
+});
+
+it('keeps complete recent records from an existing oversized file on the first write', () => {
+  const { root, logger } = createTestLogger();
+  const filePath = logger.getFilePath();
+  const oldLine = JSON.stringify({ event: 'scroll', payload: '阅'.repeat(20_000), timestamp: 1 });
+  fs.writeFileSync(filePath, `${oldLine}\n`.repeat(280));
+  fs.appendFileSync(filePath, '{"event":"old-recent","timestamp":2}\n{"interrupted":');
+
+  createReadingPositionTraceLogger({ appLogDir: root }).append({ event: 'recent', payload: null, timestamp: 3 });
+
+  expect(fs.statSync(filePath).size).toBeLessThanOrEqual(maxLogBytes);
+  expect(readTimestamps(filePath).slice(-2)).toEqual([2, 3]);
+});
+
+it('keeps existing records when a single trace exceeds the byte budget', () => {
+  const { logger } = createTestLogger();
+  logger.append({ event: 'scroll', payload: null, timestamp: 1 });
+
+  logger.append({ event: 'oversized trace', payload: '阅'.repeat(1_400_000), timestamp: 2 });
+
+  expect(readTimestamps(logger.getFilePath())).toEqual([1]);
+});
