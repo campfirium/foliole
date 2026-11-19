@@ -1,6 +1,7 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
 import { invalidateCompanionReadingScope } from './companion/reading/companionReadingScope';
+import { runWithCompanionAttachmentMaintenance } from './companion/runtime/companionAttachmentMaintenance';
 import { clearIosCompanionActiveData } from './companion/runtime/iosCompanionActiveDataClear';
 import { clearIosCompanionAppData } from './companion/runtime/iosCompanionAppDataReset';
 import {
@@ -33,8 +34,10 @@ export async function clearCompanionAppData(): Promise<NativeCompanionWorkspaceS
       workspace_snapshot: null
     });
   }
-  await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'write-state', state: 'null' });
-  const state = await clearIosCompanionActiveData();
-  if (isNativeAndroidCompanionRuntime()) await FolioleCompanionAppData.clearAppData();
-  return normalizeWorkspaceSyncState(state);
+  return runWithCompanionAttachmentMaintenance(async () => {
+    await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'write-state', state: 'null' });
+    const state = await clearIosCompanionActiveData();
+    if (isNativeAndroidCompanionRuntime()) await FolioleCompanionAppData.clearAppData();
+    return normalizeWorkspaceSyncState(state);
+  });
 }

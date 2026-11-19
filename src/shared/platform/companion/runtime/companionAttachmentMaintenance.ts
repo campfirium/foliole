@@ -1,4 +1,4 @@
-import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
+import { maintainAttachments, type AttachmentMaintenancePort } from '../../../../../lib/core/attachments/attachmentMaintenance';
 import { requeueMissingObservedAttachments } from '../../../../../lib/core/attachments/attachmentReferenceCache';
 import { attachmentDatabaseRevision } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
 import { requeueMissingAttachmentArticles } from '../../../../../lib/core/sync/attachmentDemandQueue.js';
@@ -13,7 +13,14 @@ import { readCompanionObservationReferences } from './companionAttachmentObserva
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
-const maintenanceTails = new WeakMap<object, Promise<unknown>>();
+// Native observation state is shared even when the database owner changes.
+let maintenanceTail: Promise<unknown> = Promise.resolve();
+
+export function runWithCompanionAttachmentMaintenance<T>(action: () => Promise<T>): Promise<T> {
+  const run = maintenanceTail.then(action);
+  maintenanceTail = run.catch(() => undefined);
+  return run;
+}
 
 export function runCompanionAttachmentMaintenance(request: AttachmentObservationRequest, signal?: AbortSignal): Promise<AttachmentObservationResult>;
 // eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
@@ -23,60 +30,84 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
 // eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const owner = getIosCompanionDatabaseOwner();
-  const run = (maintenanceTails.get(owner) ?? Promise.resolve()).then(() => maintain(owner, request, signal));
-  maintenanceTails.set(owner, run.catch(() => undefined));
-  return run;
+  return runWithCompanionAttachmentMaintenance(() => maintain(owner, request, signal));
 }
 
 function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
+  const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
+  const now = new Date();
+  const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const assertOwner = () => {
     signal?.throwIfAborted();
-    let activeDb: DbPort | undefined;
-    let expectedRevision: string | undefined;
-    const write = <T>(task: (db: DbPort) => Promise<T>) => activeDb ? task(activeDb) : owner.runWriter(task);
-    const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
-    const updateAvailability = companionAttachmentFileOperation(owner, files, write, signal);
-    const now = new Date();
-    const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-    const generation = async () => {
-        if (getIosCompanionDatabaseOwner() !== owner) throw new Error('attachment_scan_database_replaced');
-        const result = await files({ operation: 'generation', databasePath: owner.databasePath });
-        if (!result.generation) throw new Error('attachment_database_generation_missing');
-        return result.generation;
-    };
-    return maintainAttachments({
-      generation,
-      references: async () => {
-        const snapshot = await (request.action === 'observe'
-          ? readCompanionObservationReferences(owner, generation, signal) : readCompanionAttachmentReferences(owner, signal));
-        expectedRevision = snapshot?.revision;
-        return snapshot;
-      },
-      inventory: async (trash) => {
-        const result = await files({ operation: 'inventory', trash });
-        if (!result.files) throw new Error('attachment_inventory_missing');
-        return result.files;
-      },
-      readState: async () => {
-        const { state } = await files({ operation: 'read-state' });
-        return state ? JSON.parse(state) as AttachmentObservationState : null;
-      },
-      writeState: async (state) => {
-        signal?.throwIfAborted();
-        await files({ operation: 'write-state', state: JSON.stringify(state) });
-      },
-      withStableRevision: (revision, action) => owner.runWriterSequence(async (db, commit) => {
-        const result = await commit(async tx => {
-          if ((expectedRevision ?? revision) !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
-          signal?.throwIfAborted();
-          activeDb = tx;
-          try { return await action(); }
-          finally { activeDb = undefined; }
-        });
-        expectedRevision = await attachmentDatabaseRevision(db);
-        return result;
-      }),
-      move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
-      requestMissing: (storageKeys) => write(db => (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(db, storageKeys)),
-      removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
-    }, request, day, signal);
+    if (getIosCompanionDatabaseOwner() !== owner) throw new Error('attachment_scan_database_replaced');
+  };
+  const generation = async () => {
+    assertOwner();
+    const result = await files({ operation: 'generation', databasePath: owner.databasePath });
+    assertOwner();
+    if (!result.generation) throw new Error('attachment_database_generation_missing');
+    return result.generation;
+  };
+  const writeState = async (state: AttachmentObservationState) => {
+    assertOwner();
+    await files({ operation: 'write-state', state: JSON.stringify(state) });
+    assertOwner();
+  };
+  const revision = companionAttachmentRevisionGuard(owner, assertOwner);
+  const updateAvailability = companionAttachmentFileOperation(owner, files, revision.write, signal);
+  return maintainAttachments({
+    generation,
+    references: () => request.action === 'observe'
+      ? readCompanionObservationReferences(owner, generation, signal) : readCompanionAttachmentReferences(owner, signal),
+    inventory: async (trash) => {
+      const result = await files({ operation: 'inventory', trash });
+      if (!result.files) throw new Error('attachment_inventory_missing');
+      return result.files;
+    },
+    readState: async () => {
+      const { state } = await files({ operation: 'read-state' });
+      return state ? JSON.parse(state) as AttachmentObservationState : null;
+    },
+    writeState,
+    recordObservation: async (snapshotRevision, state, missing) => {
+      if (await generation() !== state.databaseGeneration) throw new Error('attachment_scan_database_replaced');
+      if (missing.length) {
+        const requeue = request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles;
+        await revision.commit(snapshotRevision, db => requeue(db, missing));
+      } else await owner.read(db => revision.check(db, snapshotRevision));
+      // Counts are advisory. A later move still has to revalidate the reference revision.
+      await writeState(state);
+    },
+    withStableRevision: revision.withStableRevision,
+    move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
+    removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
+  }, request, day, signal);
+}
+
+function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner, assertOwner: () => void) {
+  let activeDb: DbPort | undefined;
+  let expectedRevision: string | undefined;
+  const check = async (db: DbPort, snapshotRevision: string) => {
+    assertOwner();
+    if ((expectedRevision ?? snapshotRevision) !== await attachmentDatabaseRevision(db)) {
+      throw new Error('attachment_scan_database_changed');
+    }
+    assertOwner();
+  };
+  const commit = <T>(snapshotRevision: string, action: (db: DbPort) => Promise<T>) => owner.runWriterSequence(async (db, commitWrite) => {
+    const result = await commitWrite(async tx => {
+      await check(tx, snapshotRevision);
+      return action(tx);
+    });
+    expectedRevision = await attachmentDatabaseRevision(db);
+    return result;
+  });
+  const withStableRevision: AttachmentMaintenancePort['withStableRevision'] = (snapshotRevision, action) =>
+    commit(snapshotRevision, async tx => {
+      activeDb = tx;
+      try { return await action(); }
+      finally { activeDb = undefined; }
+    });
+  return { check, commit, withStableRevision,
+    write: <T>(action: (db: DbPort) => Promise<T>) => activeDb ? action(activeDb) : owner.runWriter(action) };
 }

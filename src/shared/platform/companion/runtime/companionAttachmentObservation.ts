@@ -12,9 +12,13 @@ export async function readCompanionObservationReferences(owner: CapacitorCompani
   const originalGeneration = await generation();
   let parser: ReturnType<typeof createCompanionAttachmentParser> | undefined;
   let after: string | null = null;
-  const assertSource = async () => {
+  const assertOwner = () => {
     signal?.throwIfAborted();
-    if (owner.databasePath !== path || await generation() !== originalGeneration) {
+    if (owner.databasePath !== path) throw new Error('attachment_scan_database_replaced');
+  };
+  const assertSource = async () => {
+    assertOwner();
+    if (await generation() !== originalGeneration) {
       throw new Error('attachment_scan_database_replaced');
     }
   };
@@ -25,16 +29,20 @@ export async function readCompanionObservationReferences(owner: CapacitorCompani
       if (!rows.length) break;
       parser ??= createCompanionAttachmentParser(signal);
       const results = await parser.parse(rows);
+      await assertSource();
       await owner.runWriter(async db => {
-        await assertSource();
+        assertOwner();
         await saveAttachmentReferenceResults(db, results);
       });
       after = rows.at(-1)!.id;
     }
-    return await owner.runWriter(db => db.transaction(async tx => {
-      await assertSource();
-      const storageKeys = await readCompleteAttachmentReferenceKeys(tx);
-      return storageKeys === null ? null : { storageKeys, revision: await attachmentDatabaseRevision(tx) };
-    }));
+    await assertSource();
+    return await owner.read(async db => {
+      assertOwner();
+      return db.transaction(async tx => {
+        const storageKeys = await readCompleteAttachmentReferenceKeys(tx);
+        return storageKeys === null ? null : { storageKeys, revision: await attachmentDatabaseRevision(tx) };
+      });
+    });
   } finally { parser?.close(); }
 }

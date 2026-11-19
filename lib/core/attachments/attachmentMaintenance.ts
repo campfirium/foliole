@@ -11,7 +11,7 @@ export interface AttachmentMaintenancePort {
   writeState(state: AttachmentObservationState): Promise<void>;
   withStableRevision<T>(revision: string, action: () => Promise<T>): Promise<T>;
   move(storageKey: string, toTrash: boolean): Promise<void>;
-  requestMissing(storageKeys: string[]): Promise<void>;
+  recordObservation(revision: string, state: AttachmentObservationState, missing: string[]): Promise<void>;
   removeTrash(storageKey: string): Promise<void>;
 }
 
@@ -88,13 +88,9 @@ async function observeAndClean(port: AttachmentMaintenancePort, state: Attachmen
     counts[file.storageKey] = references.has(file.storageKey) ? 0 : (state.counts[file.storageKey] ?? 0) + Number(increment);
   }
   signal?.throwIfAborted();
-  await port.withStableRevision(snapshot.revision, async () => {
-    if (await port.generation() !== state.databaseGeneration) throw new Error('attachment_scan_database_replaced');
-    state.counts = counts;
-    if (increment) state.lastObservationDay = day;
-    await port.writeState(state);
-    if (missing.length) await port.requestMissing(missing);
-  });
+  state.counts = counts;
+  if (increment) state.lastObservationDay = day;
+  await port.recordObservation(snapshot.revision, state, missing);
   if (action === 'clean' || (increment && state.automatic)) {
     for (const file of files.filter((entry) => counts[entry.storageKey]! >= state.observationThreshold)) {
       signal?.throwIfAborted();

@@ -4,13 +4,15 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const native = vi.hoisted(() => ({ clear: vi.fn(), files: new Map<string, string>(), connections: new Set<string>() }));
+const native = vi.hoisted(() => ({
+  clear: vi.fn(), maintain: vi.fn(), files: new Map<string, string>(), connections: new Set<string>()
+}));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: () => ({ ...createCompanionNativeSyncStub(),
       setSyncEnabled: async () => {}, stopSyncGroupProvider: async () => {}, stopDiscoverySession: async () => {},
-      clearAppData: native.clear }) };
+      clearAppData: native.clear, maintainAttachmentFiles: native.maintain }) };
 });
 vi.mock('@capacitor-community/sqlite', async importOriginal => ({
   ...await importOriginal<typeof import('@capacitor-community/sqlite')>(),
@@ -30,6 +32,7 @@ import { clearCompanionAppData } from '../../companionAppData';
 import { supportsCompanionAppDataClear } from '../../companionAppDataRuntimeRepository';
 import { joinCompanionSyncGroup, loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
+import { runCompanionAttachmentMaintenance } from './companionAttachmentMaintenance';
 import { createSearchLibrary, reopenSearchLibrary } from './companionSearchSnapshot.testSupport';
 import { resumeIosCompanionAppDataReset } from './iosCompanionAppDataReset';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
@@ -40,6 +43,8 @@ beforeEach(async () => {
   window.localStorage.clear();
   native.files.clear();
   native.connections.clear();
+  native.maintain.mockReset();
+  native.maintain.mockResolvedValue({ files: [] });
   library = await createSearchLibrary(1);
   native.files.set('foliole-companion', path.join(library.root, 'library.db'));
   attachments = path.join(library.root, 'attachments');
@@ -104,4 +109,38 @@ it('retains the owner after a close failure so retry can close it before deletin
   await clearCompanionAppData();
   expect(fs.existsSync(native.files.get('foliole-companion')!)).toBe(false);
   expect(window.localStorage.length).toBe(0);
+});
+
+it('clears observation state after an already-started native write finishes', async () => {
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const observations = path.join(library.root, 'attachment-observations.json');
+  library.database.prepare('DELETE FROM nodes').run();
+  native.maintain.mockImplementation(async ({ operation, state }) => {
+    if (operation === 'generation') return { generation: 'fixture' };
+    if (operation === 'read-state') return {};
+    if (operation === 'inventory') return { files: [] };
+    if (operation !== 'write-state') throw new Error(operation);
+    started.resolve();
+    await release.promise;
+    fs.writeFileSync(observations, state);
+    return {};
+  });
+  native.clear.mockImplementation(async () => { fs.rmSync(observations, { force: true }); });
+  const observing = runCompanionAttachmentMaintenance({ action: 'observe' });
+  const observationOutcome = observing.catch(() => undefined);
+  let reset: Promise<unknown> | undefined;
+  try {
+    expect(await Promise.race([started.promise.then(() => 'native write'), observing])).toBe('native write');
+    reset = clearCompanionAppData();
+    expect(await Promise.race([reset.then(() => 'cleared'),
+      new Promise(resolve => setTimeout(() => resolve('pending'), 100))])).toBe('pending');
+    release.resolve();
+    await reset;
+    expect(fs.existsSync(observations)).toBe(false);
+    expect(fs.existsSync(native.files.get('foliole-companion')!)).toBe(false);
+  } finally {
+    release.resolve();
+    await Promise.allSettled([observationOutcome, reset]);
+  }
 });

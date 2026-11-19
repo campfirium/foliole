@@ -35,10 +35,10 @@ function fixture(automatic = false) {
     },
     readState: async () => structuredClone(state),
     writeState: async next => { state = structuredClone(next); },
+    recordObservation: async (_, next) => port.writeState(next),
     withStableRevision: async (_, action) => action(),
     move: async (key, trash) => fs.renameSync(path.join(root, trash ? 'active' : 'trash', key),
       path.join(root, trash ? 'trash' : 'active', key)),
-    requestMissing: async () => undefined,
     removeTrash: async key => fs.unlinkSync(path.join(root, 'trash', key))
   };
   return { port, write, inventories, state: () => state };
@@ -68,14 +68,19 @@ it('lets explicit status read newly arrived files after observation', async () =
   const f = fixture();
   f.write('original');
   f.port.references = async () => ({ revision: 'r1', storageKeys: ['missing'] });
-  f.port.requestMissing = async () => { f.write('arrived-bytes'); };
+  const recordObservation = f.port.recordObservation;
+  f.port.recordObservation = async (...args) => {
+    expect(args[2]).toEqual(['missing']);
+    await recordObservation(...args);
+    f.write('arrived-bytes');
+  };
   await maintainAttachments(f.port, { action: 'observe' }, 'day-1');
   expect(f.inventories).toEqual([false]);
   expect(await maintainAttachments(f.port, { action: 'status' }, 'day-1')).toMatchObject({
     usedBytes: 21, eligibleBytes: 8, trashBytes: 0, trash: [] });
 });
 
-it.each(['inventory', 'writeState', 'requestMissing', 'move'] as const)('propagates %s failure without a completion receipt', async operation => {
+it.each(['inventory', 'writeState', 'recordObservation', 'move'] as const)('propagates %s failure without a completion receipt', async operation => {
   const f = fixture(true);
   f.write('original');
   f.port.references = async () => ({ revision: 'r1', storageKeys: ['missing'] });

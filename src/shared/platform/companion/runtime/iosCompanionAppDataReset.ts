@@ -3,6 +3,7 @@ import { FolioleIosCompanionAppDataFiles } from '../../companionAppDataRuntimeRe
 import { runCompanionSyncControlWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
+import { runWithCompanionAttachmentMaintenance } from './companionAttachmentMaintenance';
 import { deleteCompanionDatabaseFiles } from './companionDatabaseManager';
 import { closeIosCompanionDatabase, getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
@@ -32,13 +33,15 @@ export async function resumeIosCompanionAppDataReset() {
   await FolioleCompanionSync.setSyncEnabled({ sync_enabled: false });
   await FolioleCompanionSync.stopSyncGroupProvider();
   await FolioleCompanionSync.stopDiscoverySession();
-  await closeIosCompanionDatabase();
-  const names = [COMPANION_DATABASE_NAME, 'foliole-foreground-time-owners'];
-  if (journalId) names.push(`foliole-read-intents-${journalId}`);
-  for (const database of names) {
-    await deleteCompanionDatabaseFiles(database, database === COMPANION_DATABASE_NAME ? COMPANION_DATABASE_VERSION : 1);
-  }
-  await FolioleIosCompanionAppDataFiles.clearAppData();
+  await runWithCompanionAttachmentMaintenance(async () => {
+    await closeIosCompanionDatabase();
+    const names = [COMPANION_DATABASE_NAME, 'foliole-foreground-time-owners'];
+    if (journalId) names.push(`foliole-read-intents-${journalId}`);
+    for (const database of names) {
+      await deleteCompanionDatabaseFiles(database, database === COMPANION_DATABASE_NAME ? COMPANION_DATABASE_VERSION : 1);
+    }
+    await FolioleIosCompanionAppDataFiles.clearAppData();
+  });
   // Removing intent is the final step; a native failure remains resumable after restart.
   window.sessionStorage.clear();
   window.localStorage.clear();

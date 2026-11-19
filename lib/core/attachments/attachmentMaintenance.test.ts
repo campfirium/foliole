@@ -27,7 +27,10 @@ function fixture() {
       const to = trash ? values.trash : values.files;
       from.splice(from.indexOf(key), 1); to.push(key);
     },
-    requestMissing: async () => undefined,
+    recordObservation: (revision, next) => port.withStableRevision(revision, async () => {
+      if (await port.generation() !== next.databaseGeneration) throw new Error('attachment_scan_database_replaced');
+      await port.writeState(next);
+    }),
     removeTrash: async (key) => { values.trash.splice(values.trash.indexOf(key), 1); }
   };
   return { port, values, state: () => state };

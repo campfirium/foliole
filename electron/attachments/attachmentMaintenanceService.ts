@@ -27,6 +27,15 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
   const now = new Date();
   const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
   const currentDatabasePath = () => openDatabaseConnection().dbPath;
+  const withStableRevision = <T>(revision: string, action: () => Promise<T>) => runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    const db = createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-commit' });
+    return db.transaction(async (tx) => {
+      if (revision !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
+      signal?.throwIfAborted();
+      return action();
+    });
+  });
   return maintainAttachments({
     generation: () => runWithDatabaseConnectionOwner(() =>
       attachmentDatabaseGeneration(currentDatabasePath())),
@@ -42,25 +51,22 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
       signal?.throwIfAborted();
       writeAttachmentObservationState(currentDatabasePath(), state);
     }),
-    withStableRevision: (revision, action) => runWithDatabaseConnectionOwner(() => {
-      const connection = openDatabaseConnection();
-      const db = createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-commit' });
-      return db.transaction(async (tx) => {
-        if (revision !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
-        signal?.throwIfAborted();
-        return action();
-      });
-    }),
+    withStableRevision,
     move: async (key, trash) => {
       (trash ? moveAttachmentToTrash : restoreAttachmentFromTrash)(assetsDir, key);
       await updateAvailability(assetsDir, key);
     },
-    // An absent folder means unmounted or relocated storage, not files to download again.
-    requestMissing: async (keys) => {
-      if (!fs.existsSync(assetsDir)) return;
-      await runWithDatabaseConnectionOwner(() => (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(
-        createBetterSqliteDbPort(openDatabaseConnection().sqlite), keys));
-    },
+    recordObservation: (revision, state, missing) => withStableRevision(revision, async () => {
+      const path = currentDatabasePath();
+      if (attachmentDatabaseGeneration(path) !== state.databaseGeneration) throw new Error('attachment_scan_database_replaced');
+      signal?.throwIfAborted();
+      writeAttachmentObservationState(path, state);
+      // An absent folder means unmounted or relocated storage, not files to download again.
+      if (missing.length && fs.existsSync(assetsDir)) {
+        await (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(
+          createBetterSqliteDbPort(openDatabaseConnection().sqlite), missing);
+      }
+    }),
     removeTrash: async (key) => {
       removeTrashedAttachment(assetsDir, key);
       await updateAvailability(assetsDir, key);

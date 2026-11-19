@@ -98,6 +98,66 @@ it('allows its own availability updates while cleaning multiple eligible files',
   } finally { await library.close(); }
 });
 
+it.each(['new-reference', 'cancelled', 'replacement', 'file-error'] as const)(
+  'rechecks cleanup after observation state publication: %s', async mode => {
+    const library = createDisplayLibrary('android');
+    const replacement = mode === 'replacement' ? createDisplayLibrary('android') : undefined;
+    runtime.owner = library.owner;
+    const signal = new AbortController();
+    const started = deferred(), release = deferred();
+    const key = `${'e'.repeat(64)}.png`;
+    let state: AttachmentObservationState = { databaseGeneration: 'fixture', automatic: true,
+      observationThreshold: 1, lastObservationDay: null, counts: {} };
+    let hold = true;
+    let inTrash = false;
+    runtime.files.mockImplementation(async ({ operation, trash, state: saved }) => {
+      if (operation === 'generation') return { generation: runtime.owner === replacement?.owner ? 'replacement' : 'fixture' };
+      if (operation === 'read-state') return { state: JSON.stringify(state) };
+      if (operation === 'inventory') return { files: Boolean(trash) === inTrash ? [{ storageKey: key, sizeBytes: 10 }] : [] };
+      if (operation === 'move') { inTrash = true; return { available: true }; }
+      if (operation !== 'write-state') throw new Error(operation);
+      if (hold) {
+        started.resolve();
+        await release.promise;
+        if (mode === 'file-error') throw new Error('state write refused');
+      }
+      state = JSON.parse(saved);
+      return {};
+    });
+    let outcome: Promise<unknown> | undefined;
+    try {
+      await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00Z' });
+      const observing = runCompanionAttachmentMaintenance({ action: 'observe' }, signal.signal);
+      outcome = observing.catch(error => error);
+      await Promise.race([started.promise, observing]);
+      if (mode === 'new-reference') await library.owner.runWriter(db => db.run(
+        "INSERT INTO nodes(id,title,content,body_blob_hash,created_at,updated_at) VALUES ('new','New',?,?,'now','now')",
+        [`![image](asset://${key})`, hashTextBody(`![image](asset://${key})`)]));
+      if (mode === 'cancelled') signal.abort(new Error('maintenance cancelled'));
+      if (replacement) {
+        await library.owner.close();
+        await replacement.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00Z' });
+        runtime.owner = replacement.owner;
+      }
+      release.resolve();
+      const errors = { 'new-reference': 'database_changed', cancelled: 'maintenance cancelled',
+        replacement: 'database_replaced', 'file-error': 'state write refused' };
+      await expect(observing).rejects.toThrow(errors[mode]);
+      expect(inTrash).toBe(false);
+
+      hold = false;
+      if (mode === 'file-error') await expect(runCompanionAttachmentMaintenance({ action: 'observe' }))
+        .resolves.toEqual({ observationComplete: true });
+      else await runCompanionAttachmentMaintenance({ action: 'clean' });
+      expect(inTrash).toBe(mode === 'file-error' || mode === 'cancelled');
+    } finally {
+      release.resolve();
+      await outcome;
+      await replacement?.close();
+      await library.close();
+    }
+  });
+
 it('queues the live article again when a referenced file is missing from the inventory', async () => {
   const library = createDisplayLibrary('android');
   runtime.owner = library.owner;
