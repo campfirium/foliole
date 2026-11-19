@@ -37,6 +37,7 @@ function resolveMermaidThemeConfig() {
       look: 'classic' as const,
       securityLevel: 'strict' as const,
       startOnLoad: false,
+      suppressErrorRendering: true,
       theme: 'base' as const,
       themeVariables: {
         background: 'transparent',
