@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn().mockResolvedValue(undefined),
@@ -69,33 +69,42 @@ function createWindowMock() {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  vi.stubEnv('ELECTRON_RENDERER_URL', undefined);
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', undefined);
   fs.rmSync(path.join(os.tmpdir(), 'foliole-test-logs'), { force: true, recursive: true });
+});
+afterEach(() => vi.unstubAllEnvs());
+
+it('shows the initial renderer window without waiting for a startup skeleton', async () => {
+  const window = createWindowMock();
+  const { bindWindowRuntimeDiagnostics, presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
+
+  setStartupWindowPresentation(window as never, {
+    isFullScreen: false,
+    isMaximized: true
+  });
+  bindWindowRuntimeDiagnostics(window as never);
+  window.emit('ready-to-show');
+  window.webContents.emit('console-message', {}, 3, 'Private content', 1, 'renderer');
+  window.webContents.emit('dom-ready');
+  window.webContents.emit('did-fail-load', {}, -2, 'Load failed', 'file:///private', true);
+
+  expect(window.show).not.toHaveBeenCalled();
+  await presentInitialRendererWindow(window as never);
+
+  expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
+  expect(window.maximize).toHaveBeenCalledTimes(1);
+  expect(window.show).toHaveBeenCalledTimes(1);
+  expect(mocks.appendBootEvent).toHaveBeenCalledWith(
+    'window_visible',
+    expect.objectContaining({ isVisible: true })
+  );
+  expect(mocks.appendBootEvent).toHaveBeenCalledTimes(1);
+  expect(mocks.appendMainProcessDiagnosticLog).toHaveBeenCalledWith('renderer_did_fail_load', expect.anything());
+  expect(mocks.resolveWindowsDiagnosticLogPath).not.toHaveBeenCalled();
 });
 
 describe('window runtime startup visibility', () => {
-  it('shows the initial renderer window without waiting for a startup skeleton', async () => {
-    const window = createWindowMock();
-    const { bindWindowRuntimeDiagnostics, presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
-
-    setStartupWindowPresentation(window as never, {
-      isFullScreen: false,
-      isMaximized: true
-    });
-    bindWindowRuntimeDiagnostics(window as never);
-    window.emit('ready-to-show');
-
-    expect(window.show).not.toHaveBeenCalled();
-    await presentInitialRendererWindow(window as never);
-
-    expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
-    expect(window.maximize).toHaveBeenCalledTimes(1);
-    expect(window.show).toHaveBeenCalledTimes(1);
-    expect(mocks.appendBootEvent).toHaveBeenCalledWith(
-      'window_initial-renderer-window-show',
-      expect.objectContaining({ isMaximized: true })
-    );
-  });
-
   it('restores fullscreen before the initial renderer window is shown', async () => {
     const window = createWindowMock();
     const { presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
@@ -127,6 +136,7 @@ describe('window runtime startup visibility', () => {
   });
 
   it('defers a login-launched window without applying its presentation or showing it', async () => {
+    vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', '1');
     const window = createWindowMock();
     const { presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
     setStartupWindowPresentation(window as never, { isFullScreen: false, isMaximized: true });
@@ -207,6 +217,7 @@ describe('macOS daily DEV startup presentation', () => {
 
 describe('window runtime diagnostics redaction', () => {
   it('redacts renderer state snapshots before writing the diagnostic log', async () => {
+    vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', '1');
     const window = createWindowMock();
     window.webContents.executeJavaScript.mockResolvedValue({
       bodyTextSample: 'Private body',

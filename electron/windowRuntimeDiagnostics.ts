@@ -1,8 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { BrowserWindow } from 'electron';
 
+import { createDesktopDebugTraceAppender, isDesktopDebugProbeEnabled } from './diagnostics/desktopDebugTrace.js';
 import { redactDiagnosticValue } from './diagnostics/diagnosticRedactor.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
@@ -11,7 +9,7 @@ import { appendBootEvent } from './ipc/boot.js';
 import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
 import { normalizeWindowBoundsToDip } from './windowBoundsDpi.js';
 
-const LOG_FILE_NAME = 'renderer-state.ndjson';
+const appendRendererTrace = createDesktopDebugTraceAppender(() => resolveWindowsDiagnosticLogPath('renderer-state.ndjson'));
 const startupPresentationByWindow = new WeakMap<BrowserWindow, StartupWindowPresentation>();
 
 export interface StartupWindowPresentation {
@@ -20,18 +18,13 @@ export interface StartupWindowPresentation {
 }
 
 function appendRendererStateLog(label: string, snapshot: unknown) {
-  const logPath = resolveWindowsDiagnosticLogPath(LOG_FILE_NAME);
-  fs.mkdirSync(path.dirname(logPath), { recursive: true });
-  fs.appendFileSync(
-    logPath,
-    `${JSON.stringify({ label, snapshot: redactDiagnosticValue(snapshot), timestamp: new Date().toISOString() })}\n`,
-    'utf8'
-  );
+  appendRendererTrace({ label, snapshot: redactDiagnosticValue(snapshot), timestamp: new Date().toISOString() });
 }
 
 function appendRuntimeEventLog(label: string, payload: Record<string, unknown> = {}) {
+  if (!isDesktopDebugProbeEnabled()) return;
   appendRendererStateLog(`event:${label}`, payload);
-  void appendBootEvent(`window_${label}`, payload).catch((error) => {
+  void appendBootEvent(`window_${label}`, redactDiagnosticValue(payload)).catch((error) => {
     appendMainProcessDiagnosticLog('boot_log_failed', {
       error,
       stage: `window_${label}`
@@ -155,6 +148,14 @@ export async function presentInitialRendererWindow(
 }
 
 export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
+  window.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    appendRuntimeEventLog('did-fail-load', { errorCode, errorDescription, isMainFrame, validatedURL });
+    if (isMainFrame) {
+      appendMainProcessDiagnosticLog('renderer_did_fail_load', { errorCode, errorDescription, validatedURL });
+    }
+  });
+
+  if (!isDesktopDebugProbeEnabled()) return;
   window.once('ready-to-show', () => {
     if (!window.isDestroyed()) {
       appendRuntimeEventLog('ready-to-show');
@@ -188,23 +189,6 @@ export function bindWindowRuntimeDiagnostics(window: BrowserWindow) {
       line,
       message,
       sourceId
-    });
-  });
-
-  window.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    appendRuntimeEventLog('did-fail-load', {
-      errorCode,
-      errorDescription,
-      isMainFrame,
-      validatedURL
-    });
-    if (!isMainFrame) {
-      return;
-    }
-    appendMainProcessDiagnosticLog('renderer_did_fail_load', {
-      errorCode,
-      errorDescription,
-      validatedURL
     });
   });
 
