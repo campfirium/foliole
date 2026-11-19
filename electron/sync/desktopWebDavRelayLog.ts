@@ -1,8 +1,9 @@
-import { appendFile, mkdir, stat } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { shell } from 'electron';
 
+import { appendBoundedLogLine } from '../diagnostics/boundedLogLine.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
 import type { DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
@@ -15,6 +16,9 @@ type RoundResult = {
   retries: number;
   retryable: boolean;
 };
+
+const maxLogBytes = 1024 * 1024;
+let writeTail: Promise<void> = Promise.resolve();
 
 function logPath() {
   return path.join(resolveAppPaths().app_log_dir, 'webdav-sync.txt');
@@ -49,9 +53,11 @@ export async function recordDesktopWebDavRelayLog(operation: 'sync' | 'connectio
     time: new Date().toISOString(), transport: 'WebDAV', operation, status, elapsedMs,
     requests, responses, httpStatuses, uploadedBytes, downloadedBytes, published, applied, retries, retryable
   };
-  try {
-    await appendFile(await prepareLogPath(), `${JSON.stringify(record)}\n`, { mode: 0o600 });
-  } catch {
+  const write = writeTail.then(async () => {
+    await appendBoundedLogLine(await prepareLogPath(), Buffer.from(`${JSON.stringify(record)}\n`), maxLogBytes);
+  });
+  writeTail = write.catch(() => {
     console.warn('[webdav] Could not write the local sync log.');
-  }
+  });
+  await writeTail;
 }
