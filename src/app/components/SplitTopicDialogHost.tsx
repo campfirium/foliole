@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildSplitTopicPreview } from '../../../lib/core/nodes/splitTopicModel';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -6,6 +6,7 @@ import { loadSplitTopicPreferences } from '../../shared/platform/desktop/splitTo
 import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { recordSplitTopicTrace } from '../splitTopicTrace';
 
 import { confirmSplitTopic } from './SplitTopicDialogMutation';
 import { DEFAULT_SPLIT_TOPIC_FORM, SplitTopicControls, SplitTopicPreviewList, type SplitTopicFormState } from './SplitTopicDialogParts';
@@ -32,6 +33,33 @@ function readSource(request: SplitTopicDialogRequest | null) {
   const source = state.nodesById[request.sourceNodeId];
   if (!source || source.kind !== 'topic' || state.trashedNodeIds.includes(source.id)) return null;
   return { source, state };
+}
+
+function useSplitTopicDialogTrace(args: {
+  request: SplitTopicDialogRequest | null;
+  preferencesReady: boolean;
+  content: string | undefined;
+  delimiter: string;
+  parts: number;
+}) {
+  const { request, preferencesReady, content, delimiter, parts } = args;
+  const hasSource = content !== undefined;
+  const openedFor = useRef<SplitTopicDialogRequest | null>(null);
+  useEffect(() => {
+    if (!request?.trace || openedFor.current === request) return;
+    if (hasSource) openedFor.current = request;
+    recordSplitTopicTrace(request.trace, {
+      event: 'split.topic.stage', stage: hasSource ? 'dialog-opened' : 'source-unavailable'
+    });
+  }, [request, hasSource]);
+
+  useEffect(() => {
+    if (!request?.trace || !preferencesReady || content === undefined) return;
+    recordSplitTopicTrace(request.trace, {
+      event: 'split.topic.preview', parts,
+      delimiter: !delimiter ? 'empty' : content.includes(delimiter) ? 'matched' : 'unmatched'
+    });
+  }, [request, preferencesReady, content, delimiter, parts]);
 }
 
 const SplitTopicDialogSurface = forwardRef<HTMLDivElement, {
@@ -64,14 +92,11 @@ const SplitTopicDialogSurface = forwardRef<HTMLDivElement, {
   );
 });
 
-export function SplitTopicDialogHost() {
-  const t = useTranslation();
-  const { request, setRequest } = useDialogRequest();
+function useSplitTopicForm(request: SplitTopicDialogRequest | null) {
   const [form, setForm] = useState<SplitTopicFormState>(DEFAULT_SPLIT_TOPIC_FORM);
   const [busy, setBusy] = useState<Busy>('idle');
   const [error, setError] = useState<string | null>(null);
-  const sourceContext = readSource(request);
-  const preview = useMemo(() => sourceContext && form.delimiter ? buildSplitTopicPreview({ content: sourceContext.source.content, delimiter: form.delimiter, footerText: form.footerText, headerText: form.headerText, keepDelimiter: form.keepDelimiter }) : [], [form, sourceContext]);
+  const [preferencesReadyFor, setPreferencesReadyFor] = useState<SplitTopicDialogRequest | null>(null);
 
   useEffect(() => {
     if (!request) return;
@@ -81,22 +106,51 @@ export function SplitTopicDialogHost() {
     setBusy('loading');
     void loadSplitTopicPreferences()
       .then((preferences) => active && setForm({ ...DEFAULT_SPLIT_TOPIC_FORM, ...preferences }))
-      .catch(() => undefined)
-      .finally(() => active && setBusy('idle'));
+      .catch(() => {
+        if (active) recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'preferences-load-failed' });
+      })
+      .finally(() => {
+        if (!active) return;
+        if (request.trace) setPreferencesReadyFor(request);
+        setBusy('idle');
+      });
     return () => { active = false; };
   }, [request]);
 
+  return { form, setForm, busy, setBusy, error, setError, preferencesReady: request === preferencesReadyFor };
+}
+
+export function SplitTopicDialogHost() {
+  const t = useTranslation();
+  const { request, setRequest } = useDialogRequest();
+  const { form, setForm, busy, setBusy, error, setError, preferencesReady } = useSplitTopicForm(request);
+  const sourceContext = readSource(request);
+  const preview = useMemo(() => sourceContext && form.delimiter ? buildSplitTopicPreview({ content: sourceContext.source.content, delimiter: form.delimiter, footerText: form.footerText, headerText: form.headerText, keepDelimiter: form.keepDelimiter }) : [], [form, sourceContext]);
+  useSplitTopicDialogTrace({
+    request, preferencesReady, content: sourceContext?.source.content, delimiter: form.delimiter, parts: preview.length
+  });
+
   if (!request || !sourceContext) return null;
-  const close = () => busy === 'idle' && setRequest(null);
+  const close = () => {
+    if (busy !== 'idle') return;
+    recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'canceled' });
+    setRequest(null);
+  };
   const confirm = async () => {
     if (preview.length === 0) return;
+    recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'confirmed' });
     setBusy('splitting');
     setError(null);
     try {
       const preferencesSaved = await confirmSplitTopic({ form, preview, ...sourceContext });
+      recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'saved' });
+      if (!preferencesSaved) {
+        recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'preferences-save-failed' });
+      }
       setRequest(null);
       showAppRuntimeNotice(t(preferencesSaved ? 'desktop.splitTopic.complete' : 'desktop.splitTopic.preferencesFailed'), preferencesSaved ? 'success' : 'error');
     } catch (caught) {
+      recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'confirm-failed' });
       const message = caught instanceof Error ? caught.message : t('desktop.splitTopic.failed');
       setError(message);
     } finally {

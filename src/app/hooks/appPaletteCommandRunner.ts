@@ -3,6 +3,7 @@ import type { PdfReadingMode } from '../../features/settings/model/appearanceSet
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { runWorkspaceContentCommand } from '../../store/workspaceContentCommands';
+import { traceSplitTopicClick, type SplitTopicTrace } from '../splitTopicTrace';
 
 import { runAppCommand } from './appCommands';
 import { runDemoCommandPreview } from './appPaletteDemoCommand';
@@ -68,7 +69,7 @@ interface PaletteCommandRunnerArgs
   redoWorkspaceAction: () => boolean | Promise<boolean>;
   isReviewMode: boolean;
   openPerformancePanel: () => void;
-  openSplitTopicDialog: () => boolean | void | Promise<boolean | void>;
+  openSplitTopicDialog: (trace?: SplitTopicTrace) => boolean | void | Promise<boolean | void>;
   openGuidedSample: () => Promise<boolean>;
   openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
@@ -137,7 +138,7 @@ function createPaletteReviewCommandActions(
   };
 }
 
-function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void, splitTrace?: SplitTopicTrace) {
   return {
     ...createPaletteSettingsActions(args),
     ...createPaletteReviewCommandActions(args, toggleReviewMode),
@@ -172,7 +173,7 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     openPerformancePanel: args.openPerformancePanel,
     splitTopic: () => {
-      return runWorkspaceContentCommand(() => args.openSplitTopicDialog());
+      return runWorkspaceContentCommand(() => args.openSplitTopicDialog(splitTrace));
     },
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
@@ -229,6 +230,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       FRESH_STATE_COMMAND_IDS.has(id) ||
       CONTEXTUAL_COMMAND_IDS.has(id) ||
       args.paletteItems.some((item) => item.id === id && item.enabled);
+    const splitTrace = traceSplitTopicClick(id, args.isReviewMode, canRun);
     if (!canRun) {
       return;
     }
@@ -237,7 +239,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       return;
     }
     const handled = runAppCommand(id, {
-      ...createPaletteCommandActions(args, toggleReviewMode),
+      ...createPaletteCommandActions(args, toggleReviewMode, splitTrace),
       openMaterialHistory: () => args.openMaterialHistory?.()
     });
     if (!handled) {
