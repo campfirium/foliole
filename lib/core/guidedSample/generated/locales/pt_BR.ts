@@ -27,7 +27,7 @@ export const PT_BR_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Destaque: Extraia o essencial\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelecione o texto que deseja extrair. A barra de ferramentas flutuante será exibida.\n\nUse Destaque nessa barra ou pressione Alt + Z para destacar o trecho e criar um novo Tópico secundário.",
+      "content": "# Destaque: Extraia o essencial\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelecione o texto que deseja extrair. A barra de ferramentas flutuante será exibida.\n\nUse Destaque nessa barra ou pressione Alt + Z (Windows) ou Option + Z (Mac) para destacar o trecho e criar um novo Tópico secundário.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Destaque: Extraia o essencial"
@@ -36,7 +36,7 @@ export const PT_BR_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Cloze: Crie um item de teste\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelecione o texto que deseja testar.\nUse Cloze na barra de ferramentas flutuante ou pressione Alt + X.\nO Foliole cria um item que pede para você lembrar a parte oculta.",
+      "content": "# Cloze: Crie um item de teste\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelecione o texto que deseja testar.\nUse Cloze na barra de ferramentas flutuante ou pressione Alt + X (Windows) ou Option + X (Mac).\nO Foliole cria um item que pede para você lembrar a parte oculta.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Cloze: Crie um item de teste"

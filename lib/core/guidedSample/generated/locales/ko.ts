@@ -27,7 +27,7 @@ export const KO_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# 하이라이트: 핵심만 추출하기\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n추출할 텍스트를 선택하면 플로팅 도구 모음이 나타납니다.\n\n도구 모음에서 하이라이트를 선택하거나 Alt + Z를 눌러 해당 구절을 강조하고 새 하위 주제를 만드세요.",
+      "content": "# 하이라이트: 핵심만 추출하기\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n추출할 텍스트를 선택하면 플로팅 도구 모음이 나타납니다.\n\n도구 모음에서 하이라이트를 선택하거나 Alt + Z (Windows) 또는 Option + Z (Mac)를 눌러 해당 구절을 강조하고 새 하위 주제를 만드세요.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "하이라이트: 핵심만 추출하기"
@@ -36,7 +36,7 @@ export const KO_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# 클로즈: 테스트 항목 만들기\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n기억하는지 확인할 텍스트를 선택하세요.\n플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X를 누르세요.\nFoliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
+      "content": "# 클로즈: 테스트 항목 만들기\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n기억하는지 확인할 텍스트를 선택하세요.\n플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X (Windows) 또는 Option + X (Mac)를 누르세요.\nFoliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "클로즈: 테스트 항목 만들기"

@@ -27,7 +27,7 @@ export const ZH_HANS_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# 高亮：摘录精华\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z，高亮这段内容，并生成一个新的子主题。",
+      "content": "# 高亮：摘录精华\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z（Windows）或 Option + Z（Mac），高亮这段内容，并生成一个新的子主题。",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "高亮：摘录精华"
@@ -36,7 +36,7 @@ export const ZH_HANS_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# 挖空：生成检测\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X），生成一个以挖空内容为答案的检测项。",
+      "content": "# 挖空：生成检测\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X（Windows）或 Option + X（Mac）），生成一个以挖空内容为答案的检测项。",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "挖空：生成检测"

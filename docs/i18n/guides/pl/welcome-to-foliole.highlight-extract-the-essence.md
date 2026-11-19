@@ -2,4 +2,4 @@
 
 Zaznacz tekst, który chcesz wyodrębnić. Pojawi się pływający pasek narzędzi.
 
-Wybierz na nim Zaznacz albo naciśnij Alt + Z, aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.
+Wybierz na nim Zaznacz albo naciśnij Alt + Z (Windows) lub Option + Z (Mac), aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.

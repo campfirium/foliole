@@ -27,7 +27,7 @@ export const HI_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# हाइलाइट: ज़रूरी अंश निकालें\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nजिस अंश को निकालना चाहते हैं, उसे चुनें। एक फ़्लोटिंग टूलबार दिखाई देगा।\n\nउसमें Highlight चुनें या Alt + Z दबाएँ। इससे चुना हुआ अंश हाइलाइट होगा और उसका एक नया उपविषय बनेगा।",
+      "content": "# हाइलाइट: ज़रूरी अंश निकालें\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nजिस अंश को निकालना चाहते हैं, उसे चुनें। एक फ़्लोटिंग टूलबार दिखाई देगा।\n\nउसमें Highlight चुनें या Alt + Z (Windows) या Option + Z (Mac) दबाएँ। इससे चुना हुआ अंश हाइलाइट होगा और उसका एक नया उपविषय बनेगा।",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "हाइलाइट: ज़रूरी अंश निकालें"
@@ -36,7 +36,7 @@ export const HI_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# रिक्त स्थान: जाँच के लिए सवाल बनाएँ\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nजिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें।\nफ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ।\nFoliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+      "content": "# रिक्त स्थान: जाँच के लिए सवाल बनाएँ\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nजिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें।\nफ़्लोटिंग टूलबार में Cloze चुनें या Alt + X (Windows) या Option + X (Mac) दबाएँ।\nFoliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "रिक्त स्थान: जाँच के लिए सवाल बनाएँ"

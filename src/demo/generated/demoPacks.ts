@@ -138,7 +138,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Wähle dort Hervorheben oder drücke Alt + Z, um die Passage hervorzuheben und daraus ein neues untergeordnetes Thema zu erstellen.",
+            "text": "Wähle dort Hervorheben oder drücke Alt + Z (Windows) oder Option + Z (Mac), um die Passage hervorzuheben und daraus ein neues untergeordnetes Thema zu erstellen.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -152,8 +152,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Lückentext: Eine Testfrage erstellen",
-        "description": "Markiere den Text, den du abfragen möchtest. Wähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X. Foliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
-        "summary": "Markiere den Text, den du abfragen möchtest. Wähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X. Foliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
+        "description": "Markiere den Text, den du abfragen möchtest. Wähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X (Windows) oder Option + X (Mac). Foliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
+        "summary": "Markiere den Text, den du abfragen möchtest. Wähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X (Windows) oder Option + X (Mac). Foliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -175,7 +175,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Markiere den Text, den du abfragen möchtest.\nWähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X.\nFoliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
+            "text": "Markiere den Text, den du abfragen möchtest.\nWähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X (Windows) oder Option + X (Mac).\nFoliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -542,7 +542,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Use Highlight there, or press Alt + Z, to highlight the passage and create a new child Topic.",
+            "text": "Use Highlight there, or press Alt + Z (Windows) or Option + Z (Mac), to highlight the passage and create a new child Topic.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -556,8 +556,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Cloze: Create a Test Item",
-        "description": "Select the text you want to test. Use Cloze in the floating toolbar, or press Alt + X. Foliole creates an Item that asks you to remember the hidden part.",
-        "summary": "Select the text you want to test. Use Cloze in the floating toolbar, or press Alt + X. Foliole creates an Item that asks you to remember the hidden part.",
+        "description": "Select the text you want to test. Use Cloze in the floating toolbar, or press Alt + X (Windows) or Option + X (Mac). Foliole creates an Item that asks you to remember the hidden part.",
+        "summary": "Select the text you want to test. Use Cloze in the floating toolbar, or press Alt + X (Windows) or Option + X (Mac). Foliole creates an Item that asks you to remember the hidden part.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -579,7 +579,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Select the text you want to test.\nUse Cloze in the floating toolbar, or press Alt + X.\nFoliole creates an Item that asks you to remember the hidden part.",
+            "text": "Select the text you want to test.\nUse Cloze in the floating toolbar, or press Alt + X (Windows) or Option + X (Mac).\nFoliole creates an Item that asks you to remember the hidden part.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -946,7 +946,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Usa Destacado en esa barra, o pulsa Alt + Z, para resaltar el pasaje y crear un nuevo Tema secundario.",
+            "text": "Usa Destacado en esa barra, o pulsa Alt + Z (Windows) o Option + Z (Mac), para resaltar el pasaje y crear un nuevo Tema secundario.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -960,8 +960,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Cloze: Crea un elemento de prueba",
-        "description": "Selecciona el texto que quieres poner a prueba. Usa Cloze en la barra de herramientas flotante, o pulsa Alt + X. Foliole crea un elemento que te pide recordar la parte oculta.",
-        "summary": "Selecciona el texto que quieres poner a prueba. Usa Cloze en la barra de herramientas flotante, o pulsa Alt + X. Foliole crea un elemento que te pide recordar la parte oculta.",
+        "description": "Selecciona el texto que quieres poner a prueba. Usa Cloze en la barra de herramientas flotante, o pulsa Alt + X (Windows) o Option + X (Mac). Foliole crea un elemento que te pide recordar la parte oculta.",
+        "summary": "Selecciona el texto que quieres poner a prueba. Usa Cloze en la barra de herramientas flotante, o pulsa Alt + X (Windows) o Option + X (Mac). Foliole crea un elemento que te pide recordar la parte oculta.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -983,7 +983,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Selecciona el texto que quieres poner a prueba.\nUsa Cloze en la barra de herramientas flotante, o pulsa Alt + X.\nFoliole crea un elemento que te pide recordar la parte oculta.",
+            "text": "Selecciona el texto que quieres poner a prueba.\nUsa Cloze en la barra de herramientas flotante, o pulsa Alt + X (Windows) o Option + X (Mac).\nFoliole crea un elemento que te pide recordar la parte oculta.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -1350,7 +1350,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Choisissez Point culminant dans cette barre, ou appuyez sur Alt + Z, pour surligner le passage et créer un nouveau Sujet enfant.",
+            "text": "Choisissez Point culminant dans cette barre, ou appuyez sur Alt + Z (Windows) ou Option + Z (Mac), pour surligner le passage et créer un nouveau Sujet enfant.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -1364,8 +1364,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Cloze : Créer un élément de test",
-        "description": "Sélectionnez le texte que vous souhaitez tester. Choisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X. Foliole crée un élément qui vous demande de retrouver la partie masquée.",
-        "summary": "Sélectionnez le texte que vous souhaitez tester. Choisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X. Foliole crée un élément qui vous demande de retrouver la partie masquée.",
+        "description": "Sélectionnez le texte que vous souhaitez tester. Choisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X (Windows) ou Option + X (Mac). Foliole crée un élément qui vous demande de retrouver la partie masquée.",
+        "summary": "Sélectionnez le texte que vous souhaitez tester. Choisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X (Windows) ou Option + X (Mac). Foliole crée un élément qui vous demande de retrouver la partie masquée.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -1387,7 +1387,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Sélectionnez le texte que vous souhaitez tester.\nChoisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X.\nFoliole crée un élément qui vous demande de retrouver la partie masquée.",
+            "text": "Sélectionnez le texte que vous souhaitez tester.\nChoisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X (Windows) ou Option + X (Mac).\nFoliole crée un élément qui vous demande de retrouver la partie masquée.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -1754,7 +1754,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "उसमें Highlight चुनें या Alt + Z दबाएँ। इससे चुना हुआ अंश हाइलाइट होगा और उसका एक नया उपविषय बनेगा।",
+            "text": "उसमें Highlight चुनें या Alt + Z (Windows) या Option + Z (Mac) दबाएँ। इससे चुना हुआ अंश हाइलाइट होगा और उसका एक नया उपविषय बनेगा।",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -1768,8 +1768,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "रिक्त स्थान: जाँच के लिए सवाल बनाएँ",
-        "description": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
-        "summary": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+        "description": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X (Windows) या Option + X (Mac) दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+        "summary": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें। फ़्लोटिंग टूलबार में Cloze चुनें या Alt + X (Windows) या Option + X (Mac) दबाएँ। Foliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -1791,7 +1791,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें।\nफ़्लोटिंग टूलबार में Cloze चुनें या Alt + X दबाएँ।\nFoliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
+            "text": "जिस अंश को याद रखने की जाँच करना चाहते हैं, उसे चुनें।\nफ़्लोटिंग टूलबार में Cloze चुनें या Alt + X (Windows) या Option + X (Mac) दबाएँ।\nFoliole एक सवाल (Item) बनाएगा, जिसमें आपको छिपाया गया अंश याद करना होगा।",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -2158,7 +2158,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Usa Evidenzia nella barra, oppure premi Alt + Z, per evidenziare il passaggio e creare un nuovo Argomento secondario.",
+            "text": "Usa Evidenzia nella barra, oppure premi Alt + Z (Windows) o Option + Z (Mac), per evidenziare il passaggio e creare un nuovo Argomento secondario.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -2172,8 +2172,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Cloze: Crea un elemento di verifica",
-        "description": "Seleziona il testo che vuoi mettere alla prova. Usa Cloze nella barra degli strumenti mobile, oppure premi Alt + X. Foliole crea un elemento che ti chiede di ricordare la parte nascosta.",
-        "summary": "Seleziona il testo che vuoi mettere alla prova. Usa Cloze nella barra degli strumenti mobile, oppure premi Alt + X. Foliole crea un elemento che ti chiede di ricordare la parte nascosta.",
+        "description": "Seleziona il testo che vuoi mettere alla prova. Usa Cloze nella barra degli strumenti mobile, oppure premi Alt + X (Windows) o Option + X (Mac). Foliole crea un elemento che ti chiede di ricordare la parte nascosta.",
+        "summary": "Seleziona il testo che vuoi mettere alla prova. Usa Cloze nella barra degli strumenti mobile, oppure premi Alt + X (Windows) o Option + X (Mac). Foliole crea un elemento che ti chiede di ricordare la parte nascosta.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -2195,7 +2195,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Seleziona il testo che vuoi mettere alla prova.\nUsa Cloze nella barra degli strumenti mobile, oppure premi Alt + X.\nFoliole crea un elemento che ti chiede di ricordare la parte nascosta.",
+            "text": "Seleziona il testo che vuoi mettere alla prova.\nUsa Cloze nella barra degli strumenti mobile, oppure premi Alt + X (Windows) o Option + X (Mac).\nFoliole crea un elemento che ti chiede di ricordare la parte nascosta.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -2562,7 +2562,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "そこでハイライトを選ぶかAlt + Zを押すと、その箇所がハイライトされ、新しい子トピックが作成されます。",
+            "text": "そこでハイライトを選ぶかAlt + Z（Windows）または Option + Z（Mac）を押すと、その箇所がハイライトされ、新しい子トピックが作成されます。",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -2576,8 +2576,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "クローズ：テスト項目を作る",
-        "description": "覚えているか確かめたいテキストを選択します。 フローティングツールバーでクローズを選ぶか、Alt + Xを押します。 Folioleは、隠された部分を思い出すための項目を作成します。",
-        "summary": "覚えているか確かめたいテキストを選択します。 フローティングツールバーでクローズを選ぶか、Alt + Xを押します。 Folioleは、隠された部分を思い出すための項目を作成します。",
+        "description": "覚えているか確かめたいテキストを選択します。 フローティングツールバーでクローズを選ぶか、Alt + X（Windows）または Option + X（Mac）を押します。 Folioleは、隠された部分を思い出すための項目を作成します。",
+        "summary": "覚えているか確かめたいテキストを選択します。 フローティングツールバーでクローズを選ぶか、Alt + X（Windows）または Option + X（Mac）を押します。 Folioleは、隠された部分を思い出すための項目を作成します。",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -2599,7 +2599,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "覚えているか確かめたいテキストを選択します。\nフローティングツールバーでクローズを選ぶか、Alt + Xを押します。\nFolioleは、隠された部分を思い出すための項目を作成します。",
+            "text": "覚えているか確かめたいテキストを選択します。\nフローティングツールバーでクローズを選ぶか、Alt + X（Windows）または Option + X（Mac）を押します。\nFolioleは、隠された部分を思い出すための項目を作成します。",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -2966,7 +2966,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "도구 모음에서 하이라이트를 선택하거나 Alt + Z를 눌러 해당 구절을 강조하고 새 하위 주제를 만드세요.",
+            "text": "도구 모음에서 하이라이트를 선택하거나 Alt + Z (Windows) 또는 Option + Z (Mac)를 눌러 해당 구절을 강조하고 새 하위 주제를 만드세요.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -2980,8 +2980,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "클로즈: 테스트 항목 만들기",
-        "description": "기억하는지 확인할 텍스트를 선택하세요. 플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X를 누르세요. Foliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
-        "summary": "기억하는지 확인할 텍스트를 선택하세요. 플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X를 누르세요. Foliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
+        "description": "기억하는지 확인할 텍스트를 선택하세요. 플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X (Windows) 또는 Option + X (Mac)를 누르세요. Foliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
+        "summary": "기억하는지 확인할 텍스트를 선택하세요. 플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X (Windows) 또는 Option + X (Mac)를 누르세요. Foliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -3003,7 +3003,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "기억하는지 확인할 텍스트를 선택하세요.\n플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X를 누르세요.\nFoliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
+            "text": "기억하는지 확인할 텍스트를 선택하세요.\n플로팅 도구 모음에서 클로즈를 선택하거나 Alt + X (Windows) 또는 Option + X (Mac)를 누르세요.\nFoliole이 가려진 부분을 기억해 내도록 묻는 항목을 만듭니다.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -3370,7 +3370,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Wybierz na nim Zaznacz albo naciśnij Alt + Z, aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.",
+            "text": "Wybierz na nim Zaznacz albo naciśnij Alt + Z (Windows) lub Option + Z (Mac), aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -3384,8 +3384,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Zamknij: Utwórz element sprawdzający",
-        "description": "Zaznacz tekst, który chcesz sprawdzić. Wybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X. Foliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
-        "summary": "Zaznacz tekst, który chcesz sprawdzić. Wybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X. Foliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
+        "description": "Zaznacz tekst, który chcesz sprawdzić. Wybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X (Windows) lub Option + X (Mac). Foliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
+        "summary": "Zaznacz tekst, który chcesz sprawdzić. Wybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X (Windows) lub Option + X (Mac). Foliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -3407,7 +3407,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Zaznacz tekst, który chcesz sprawdzić.\nWybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X.\nFoliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
+            "text": "Zaznacz tekst, który chcesz sprawdzić.\nWybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X (Windows) lub Option + X (Mac).\nFoliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -3774,7 +3774,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Use Destaque nessa barra ou pressione Alt + Z para destacar o trecho e criar um novo Tópico secundário.",
+            "text": "Use Destaque nessa barra ou pressione Alt + Z (Windows) ou Option + Z (Mac) para destacar o trecho e criar um novo Tópico secundário.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -3788,8 +3788,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Cloze: Crie um item de teste",
-        "description": "Selecione o texto que deseja testar. Use Cloze na barra de ferramentas flutuante ou pressione Alt + X. O Foliole cria um item que pede para você lembrar a parte oculta.",
-        "summary": "Selecione o texto que deseja testar. Use Cloze na barra de ferramentas flutuante ou pressione Alt + X. O Foliole cria um item que pede para você lembrar a parte oculta.",
+        "description": "Selecione o texto que deseja testar. Use Cloze na barra de ferramentas flutuante ou pressione Alt + X (Windows) ou Option + X (Mac). O Foliole cria um item que pede para você lembrar a parte oculta.",
+        "summary": "Selecione o texto que deseja testar. Use Cloze na barra de ferramentas flutuante ou pressione Alt + X (Windows) ou Option + X (Mac). O Foliole cria um item que pede para você lembrar a parte oculta.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -3811,7 +3811,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Selecione o texto que deseja testar.\nUse Cloze na barra de ferramentas flutuante ou pressione Alt + X.\nO Foliole cria um item que pede para você lembrar a parte oculta.",
+            "text": "Selecione o texto que deseja testar.\nUse Cloze na barra de ferramentas flutuante ou pressione Alt + X (Windows) ou Option + X (Mac).\nO Foliole cria um item que pede para você lembrar a parte oculta.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -4178,7 +4178,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "Выберите на ней Выделить или нажмите Alt + Z, чтобы отметить фрагмент и создать из него новую дочернюю Тему.",
+            "text": "Выберите на ней Выделить или нажмите Alt + Z (Windows) или Option + Z (Mac), чтобы отметить фрагмент и создать из него новую дочернюю Тему.",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -4192,8 +4192,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "Клоуз: Создайте проверочный элемент",
-        "description": "Выделите текст, который хотите проверить. Выберите Клоуз на плавающей панели инструментов или нажмите Alt + X. Foliole создаст элемент, в котором нужно вспомнить скрытую часть.",
-        "summary": "Выделите текст, который хотите проверить. Выберите Клоуз на плавающей панели инструментов или нажмите Alt + X. Foliole создаст элемент, в котором нужно вспомнить скрытую часть.",
+        "description": "Выделите текст, который хотите проверить. Выберите Клоуз на плавающей панели инструментов или нажмите Alt + X (Windows) или Option + X (Mac). Foliole создаст элемент, в котором нужно вспомнить скрытую часть.",
+        "summary": "Выделите текст, который хотите проверить. Выберите Клоуз на плавающей панели инструментов или нажмите Alt + X (Windows) или Option + X (Mac). Foliole создаст элемент, в котором нужно вспомнить скрытую часть.",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -4215,7 +4215,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "Выделите текст, который хотите проверить.\nВыберите Клоуз на плавающей панели инструментов или нажмите Alt + X.\nFoliole создаст элемент, в котором нужно вспомнить скрытую часть.",
+            "text": "Выделите текст, который хотите проверить.\nВыберите Клоуз на плавающей панели инструментов или нажмите Alt + X (Windows) или Option + X (Mac).\nFoliole создаст элемент, в котором нужно вспомнить скрытую часть.",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -4554,8 +4554,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "高亮：摘录精华",
-        "description": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z，高亮这段内容，并生成一个新的子主题。",
-        "summary": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z，高亮这段内容，并生成一个新的子主题。",
+        "description": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z（Windows）或 Option + Z（Mac），高亮这段内容，并生成一个新的子主题。",
+        "summary": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z（Windows）或 Option + Z（Mac），高亮这段内容，并生成一个新的子主题。",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.highlight-extract-the-essence"
@@ -4577,7 +4577,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z，高亮这段内容，并生成一个新的子主题。",
+            "text": "选中想摘录的文本后，会出现浮动工具条。点击其中的 Highlight，或按 Alt + Z（Windows）或 Option + Z（Mac），高亮这段内容，并生成一个新的子主题。",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-1"
           }
         ],
@@ -4591,8 +4591,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "挖空：生成检测",
-        "description": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X），生成一个以挖空内容为答案的检测项。",
-        "summary": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X），生成一个以挖空内容为答案的检测项。",
+        "description": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X（Windows）或 Option + X（Mac）），生成一个以挖空内容为答案的检测项。",
+        "summary": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X（Windows）或 Option + X（Mac）），生成一个以挖空内容为答案的检测项。",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -4614,7 +4614,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X），生成一个以挖空内容为答案的检测项。",
+            "text": "选中想检测的内容后，点击浮动工具条里的 Cloze（或按 Alt + X（Windows）或 Option + X（Mac）），生成一个以挖空内容为答案的检测项。",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],
@@ -4981,7 +4981,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "點選其中的亮點，或按 Alt + Z，即可標示這段內容，並建立一個新的子主題。",
+            "text": "點選其中的亮點，或按 Alt + Z（Windows）或 Option + Z（Mac），即可標示這段內容，並建立一個新的子主題。",
             "id": "welcome-to-foliole.highlight-extract-the-essence-block-2"
           }
         ],
@@ -4995,8 +4995,8 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "parentId": "welcome-to-foliole",
         "childTopicIds": [],
         "title": "完型填空：建立檢測項目",
-        "description": "選取想檢測的內容。 點選浮動工具列中的完型填空，或按 Alt + X。 Foliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
-        "summary": "選取想檢測的內容。 點選浮動工具列中的完型填空，或按 Alt + X。 Foliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
+        "description": "選取想檢測的內容。 點選浮動工具列中的完型填空，或按 Alt + X（Windows）或 Option + X（Mac）。 Foliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
+        "summary": "選取想檢測的內容。 點選浮動工具列中的完型填空，或按 Alt + X（Windows）或 Option + X（Mac）。 Foliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
         "runtime": {
           "state": "topic",
           "topicId": "welcome-to-foliole.cloze-create-a-test-item"
@@ -5018,7 +5018,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "blocks": [
           {
             "kind": "paragraph",
-            "text": "選取想檢測的內容。\n點選浮動工具列中的完型填空，或按 Alt + X。\nFoliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
+            "text": "選取想檢測的內容。\n點選浮動工具列中的完型填空，或按 Alt + X（Windows）或 Option + X（Mac）。\nFoliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
             "id": "welcome-to-foliole.cloze-create-a-test-item-block-1"
           }
         ],

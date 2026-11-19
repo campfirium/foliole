@@ -27,7 +27,7 @@ export const PL_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Zaznacz: Wyodrębnij to, co najważniejsze\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nZaznacz tekst, który chcesz wyodrębnić. Pojawi się pływający pasek narzędzi.\n\nWybierz na nim Zaznacz albo naciśnij Alt + Z, aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.",
+      "content": "# Zaznacz: Wyodrębnij to, co najważniejsze\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nZaznacz tekst, który chcesz wyodrębnić. Pojawi się pływający pasek narzędzi.\n\nWybierz na nim Zaznacz albo naciśnij Alt + Z (Windows) lub Option + Z (Mac), aby wyróżnić fragment i utworzyć z niego nowy Temat podrzędny.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Zaznacz: Wyodrębnij to, co najważniejsze"
@@ -36,7 +36,7 @@ export const PL_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Zamknij: Utwórz element sprawdzający\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nZaznacz tekst, który chcesz sprawdzić.\nWybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X.\nFoliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
+      "content": "# Zamknij: Utwórz element sprawdzający\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nZaznacz tekst, który chcesz sprawdzić.\nWybierz Zamknij na pływającym pasku narzędzi albo naciśnij Alt + X (Windows) lub Option + X (Mac).\nFoliole utworzy element, który poprosi Cię o przypomnienie sobie ukrytej części.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Zamknij: Utwórz element sprawdzający"

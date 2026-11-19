@@ -27,7 +27,7 @@ export const ZH_HANT_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# 亮點：摘錄精華\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n選取想摘錄的文字後，會出現浮動工具列。\n\n點選其中的亮點，或按 Alt + Z，即可標示這段內容，並建立一個新的子主題。",
+      "content": "# 亮點：摘錄精華\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n選取想摘錄的文字後，會出現浮動工具列。\n\n點選其中的亮點，或按 Alt + Z（Windows）或 Option + Z（Mac），即可標示這段內容，並建立一個新的子主題。",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "亮點：摘錄精華"
@@ -36,7 +36,7 @@ export const ZH_HANT_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# 完型填空：建立檢測項目\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n選取想檢測的內容。\n點選浮動工具列中的完型填空，或按 Alt + X。\nFoliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
+      "content": "# 完型填空：建立檢測項目\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n選取想檢測的內容。\n點選浮動工具列中的完型填空，或按 Alt + X（Windows）或 Option + X（Mac）。\nFoliole 會建立一個檢測項目，讓你回想被隱藏的部分。",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "完型填空：建立檢測項目"

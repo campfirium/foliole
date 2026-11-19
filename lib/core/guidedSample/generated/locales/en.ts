@@ -27,7 +27,7 @@ export const EN_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Highlight: Extract the Essence\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelect the text you want to extract. The floating toolbar will appear.\n\nUse Highlight there, or press Alt + Z, to highlight the passage and create a new child Topic.",
+      "content": "# Highlight: Extract the Essence\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelect the text you want to extract. The floating toolbar will appear.\n\nUse Highlight there, or press Alt + Z (Windows) or Option + Z (Mac), to highlight the passage and create a new child Topic.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Highlight: Extract the Essence"
@@ -36,7 +36,7 @@ export const EN_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Cloze: Create a Test Item\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelect the text you want to test.\nUse Cloze in the floating toolbar, or press Alt + X.\nFoliole creates an Item that asks you to remember the hidden part.",
+      "content": "# Cloze: Create a Test Item\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelect the text you want to test.\nUse Cloze in the floating toolbar, or press Alt + X (Windows) or Option + X (Mac).\nFoliole creates an Item that asks you to remember the hidden part.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Cloze: Create a Test Item"

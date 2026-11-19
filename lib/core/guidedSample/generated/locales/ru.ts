@@ -27,7 +27,7 @@ export const RU_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Выделить: Извлеките главное\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nВыделите текст, который хотите извлечь. Появится плавающая панель инструментов.\n\nВыберите на ней Выделить или нажмите Alt + Z, чтобы отметить фрагмент и создать из него новую дочернюю Тему.",
+      "content": "# Выделить: Извлеките главное\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nВыделите текст, который хотите извлечь. Появится плавающая панель инструментов.\n\nВыберите на ней Выделить или нажмите Alt + Z (Windows) или Option + Z (Mac), чтобы отметить фрагмент и создать из него новую дочернюю Тему.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Выделить: Извлеките главное"
@@ -36,7 +36,7 @@ export const RU_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Клоуз: Создайте проверочный элемент\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nВыделите текст, который хотите проверить.\nВыберите Клоуз на плавающей панели инструментов или нажмите Alt + X.\nFoliole создаст элемент, в котором нужно вспомнить скрытую часть.",
+      "content": "# Клоуз: Создайте проверочный элемент\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nВыделите текст, который хотите проверить.\nВыберите Клоуз на плавающей панели инструментов или нажмите Alt + X (Windows) или Option + X (Mac).\nFoliole создаст элемент, в котором нужно вспомнить скрытую часть.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Клоуз: Создайте проверочный элемент"

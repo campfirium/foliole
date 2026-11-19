@@ -27,7 +27,7 @@ export const DE_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Hervorheben: Das Wesentliche herausarbeiten\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nMarkiere den Text, den du herauslösen möchtest. Daraufhin erscheint die schwebende Werkzeugleiste.\n\nWähle dort Hervorheben oder drücke Alt + Z, um die Passage hervorzuheben und daraus ein neues untergeordnetes Thema zu erstellen.",
+      "content": "# Hervorheben: Das Wesentliche herausarbeiten\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nMarkiere den Text, den du herauslösen möchtest. Daraufhin erscheint die schwebende Werkzeugleiste.\n\nWähle dort Hervorheben oder drücke Alt + Z (Windows) oder Option + Z (Mac), um die Passage hervorzuheben und daraus ein neues untergeordnetes Thema zu erstellen.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Hervorheben: Das Wesentliche herausarbeiten"
@@ -36,7 +36,7 @@ export const DE_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Lückentext: Eine Testfrage erstellen\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nMarkiere den Text, den du abfragen möchtest.\nWähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X.\nFoliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
+      "content": "# Lückentext: Eine Testfrage erstellen\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nMarkiere den Text, den du abfragen möchtest.\nWähle in der schwebenden Werkzeugleiste Lückentext oder drücke Alt + X (Windows) oder Option + X (Mac).\nFoliole erstellt ein Testelement, bei dem du dich an den ausgeblendeten Teil erinnern sollst.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Lückentext: Eine Testfrage erstellen"

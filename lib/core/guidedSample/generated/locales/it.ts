@@ -27,7 +27,7 @@ export const IT_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Evidenzia: Estrai l’essenziale\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSeleziona il testo che vuoi estrarre. Comparirà la barra degli strumenti mobile.\n\nUsa Evidenzia nella barra, oppure premi Alt + Z, per evidenziare il passaggio e creare un nuovo Argomento secondario.",
+      "content": "# Evidenzia: Estrai l’essenziale\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSeleziona il testo che vuoi estrarre. Comparirà la barra degli strumenti mobile.\n\nUsa Evidenzia nella barra, oppure premi Alt + Z (Windows) o Option + Z (Mac), per evidenziare il passaggio e creare un nuovo Argomento secondario.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Evidenzia: Estrai l’essenziale"
@@ -36,7 +36,7 @@ export const IT_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Cloze: Crea un elemento di verifica\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSeleziona il testo che vuoi mettere alla prova.\nUsa Cloze nella barra degli strumenti mobile, oppure premi Alt + X.\nFoliole crea un elemento che ti chiede di ricordare la parte nascosta.",
+      "content": "# Cloze: Crea un elemento di verifica\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSeleziona il testo che vuoi mettere alla prova.\nUsa Cloze nella barra degli strumenti mobile, oppure premi Alt + X (Windows) o Option + X (Mac).\nFoliole crea un elemento che ti chiede di ricordare la parte nascosta.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Cloze: Crea un elemento di verifica"

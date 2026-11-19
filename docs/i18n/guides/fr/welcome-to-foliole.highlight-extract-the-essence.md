@@ -2,4 +2,4 @@
 
 Sélectionnez le texte que vous souhaitez extraire. La barre d’outils flottante apparaît.
 
-Choisissez Point culminant dans cette barre, ou appuyez sur Alt + Z, pour surligner le passage et créer un nouveau Sujet enfant.
+Choisissez Point culminant dans cette barre, ou appuyez sur Alt + Z (Windows) ou Option + Z (Mac), pour surligner le passage et créer un nouveau Sujet enfant.

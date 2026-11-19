@@ -27,7 +27,7 @@ export const FR_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Point culminant : Extraire l’essentiel\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSélectionnez le texte que vous souhaitez extraire. La barre d’outils flottante apparaît.\n\nChoisissez Point culminant dans cette barre, ou appuyez sur Alt + Z, pour surligner le passage et créer un nouveau Sujet enfant.",
+      "content": "# Point culminant : Extraire l’essentiel\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSélectionnez le texte que vous souhaitez extraire. La barre d’outils flottante apparaît.\n\nChoisissez Point culminant dans cette barre, ou appuyez sur Alt + Z (Windows) ou Option + Z (Mac), pour surligner le passage et créer un nouveau Sujet enfant.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Point culminant : Extraire l’essentiel"
@@ -36,7 +36,7 @@ export const FR_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Cloze : Créer un élément de test\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSélectionnez le texte que vous souhaitez tester.\nChoisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X.\nFoliole crée un élément qui vous demande de retrouver la partie masquée.",
+      "content": "# Cloze : Créer un élément de test\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSélectionnez le texte que vous souhaitez tester.\nChoisissez Cloze dans la barre d’outils flottante, ou appuyez sur Alt + X (Windows) ou Option + X (Mac).\nFoliole crée un élément qui vous demande de retrouver la partie masquée.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Cloze : Créer un élément de test"

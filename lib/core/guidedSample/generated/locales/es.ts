@@ -27,7 +27,7 @@ export const ES_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# Destacado: Extrae lo esencial\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelecciona el texto que quieres extraer. Aparecerá la barra de herramientas flotante.\n\nUsa Destacado en esa barra, o pulsa Alt + Z, para resaltar el pasaje y crear un nuevo Tema secundario.",
+      "content": "# Destacado: Extrae lo esencial\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\nSelecciona el texto que quieres extraer. Aparecerá la barra de herramientas flotante.\n\nUsa Destacado en esa barra, o pulsa Alt + Z (Windows) o Option + Z (Mac), para resaltar el pasaje y crear un nuevo Tema secundario.",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "Destacado: Extrae lo esencial"
@@ -36,7 +36,7 @@ export const ES_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# Cloze: Crea un elemento de prueba\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelecciona el texto que quieres poner a prueba.\nUsa Cloze en la barra de herramientas flotante, o pulsa Alt + X.\nFoliole crea un elemento que te pide recordar la parte oculta.",
+      "content": "# Cloze: Crea un elemento de prueba\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\nSelecciona el texto que quieres poner a prueba.\nUsa Cloze en la barra de herramientas flotante, o pulsa Alt + X (Windows) o Option + X (Mac).\nFoliole crea un elemento que te pide recordar la parte oculta.",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "Cloze: Crea un elemento de prueba"

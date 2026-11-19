@@ -27,7 +27,7 @@ export const JA_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc"
       ],
-      "content": "# ハイライト：要点を取り出す\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n取り出したいテキストを選択すると、フローティングツールバーが表示されます。\n\nそこでハイライトを選ぶかAlt + Zを押すと、その箇所がハイライトされ、新しい子トピックが作成されます。",
+      "content": "# ハイライト：要点を取り出す\n\n![image](asset://4ddbd1c101f60c761cfa1ea909cc2763a53bd570070902474484bf742b5e40cc.png)\n\n取り出したいテキストを選択すると、フローティングツールバーが表示されます。\n\nそこでハイライトを選ぶかAlt + Z（Windows）または Option + Z（Mac）を押すと、その箇所がハイライトされ、新しい子トピックが作成されます。",
       "id": "welcome-to-foliole.highlight-extract-the-essence",
       "parentId": "welcome-to-foliole",
       "title": "ハイライト：要点を取り出す"
@@ -36,7 +36,7 @@ export const JA_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
       "attachmentIds": [
         "42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49"
       ],
-      "content": "# クローズ：テスト項目を作る\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n覚えているか確かめたいテキストを選択します。\nフローティングツールバーでクローズを選ぶか、Alt + Xを押します。\nFolioleは、隠された部分を思い出すための項目を作成します。",
+      "content": "# クローズ：テスト項目を作る\n\n![image](asset://42fdfebb23322a456d50d29e86839c98ac7f223cae0edd04f3bf1a2f16322c49.png)\n\n覚えているか確かめたいテキストを選択します。\nフローティングツールバーでクローズを選ぶか、Alt + X（Windows）または Option + X（Mac）を押します。\nFolioleは、隠された部分を思い出すための項目を作成します。",
       "id": "welcome-to-foliole.cloze-create-a-test-item",
       "parentId": "welcome-to-foliole",
       "title": "クローズ：テスト項目を作る"
