@@ -52,7 +52,7 @@ async function openAbout(page: Page) {
 }
 
 async function flowLog(logs: string) {
-  const [file] = await readdir(logs);
+  const file = (await readdir(logs)).find(name => name.endsWith('.txt'));
   const text = await readFile(path.join(logs, file!), 'utf8');
   const entries = text.trimEnd().split('\n').map(line => JSON.parse(line))
     .filter(entry => entry.event?.startsWith('flow.grade.'));

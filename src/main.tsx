@@ -14,6 +14,7 @@ import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
 import { isRuntimeInvokeAvailable } from './shared/platform/runtimeInvoke';
 import { logRuntimeError } from './shared/platform/runtimeLogging';
+import { runDesktopSupportLogAction } from './shared/platform/supportLog/desktopSupportLog';
 import { renderStartupErrorView } from './shared/ui/StartupSurface';
 import { watchStartupDatabaseUpgrade } from './shared/ui/StartupUpgradeSurface';
 import { bootstrapApp } from './startupBootstrap';
@@ -221,7 +222,10 @@ async function reportDesktopBridgeReady() {
 installDesktopDebugProbe();
 installRendererErrorDiagnostics();
 if (!renderStartupViewIfRequested()) {
-  if (isRuntimeInvokeAvailable()) stopStartupLoading = watchStartupDatabaseUpgrade(loadDatabaseUpgradeStatus);
+  if (isRuntimeInvokeAvailable()) {
+    stopStartupLoading = watchStartupDatabaseUpgrade(loadDatabaseUpgradeStatus);
+    void runDesktopSupportLogAction('status').catch(() => undefined);
+  }
   bootstrapApp({
     mountApp,
     renderStartupError,
