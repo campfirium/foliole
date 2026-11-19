@@ -75,9 +75,7 @@ function DirectoryRow(props: DirectoryRowProps) {
           {meta}
         </span>
       ) : null}
-      <ChevronRight
-        className="h-4 w-4 shrink-0 text-companion-text-tertiary"
-      />
+      {!props.selecting && <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary" />}
     </button>
     {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
       <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
@@ -105,14 +103,16 @@ export function CompanionDirectoryList(props: {
   const entries = useMemo(() => flattenDirectorySections(props.sections), [props.sections]);
   if (entries.length === 0) {
     return (
-      <div className="px-1 py-6">
+      <>
         {controls}
-        <AppEmptyState
-          className="min-h-0 items-start text-left text-companion-text-secondary"
-          description={props.emptyDescription ?? t('companion.directory.emptyDescription')}
-          title={props.emptyLabel}
-        />
-      </div>
+        <div className="px-1 py-6">
+          <AppEmptyState
+            className="min-h-0 items-start text-left text-companion-text-secondary"
+            description={props.emptyDescription ?? t('companion.directory.emptyDescription')}
+            title={props.emptyLabel}
+          />
+        </div>
+      </>
     );
   }
 

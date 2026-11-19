@@ -7,6 +7,7 @@ import { requestToggleDismissedTopicVisibility } from '../shared/platform/runtim
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import { CompanionDirectoryBatchMenuProvider } from './CompanionDirectoryBatchMenu';
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
+import { CompanionTopBar } from './CompanionTopBar';
 import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
 
 export const readBatchDirectorySnapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
@@ -21,8 +22,9 @@ export function BatchDirectoryFixture({ initial }: { initial: WorkspaceSnapshot 
       return next;
     }}>
     <CompanionDirectoryBatchMenuProvider>
-      <CompanionBrowseTopActions onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenAppearance={() => {}}
-        onOpenCapture={() => {}} sortDirection="asc" sortKey="name" />
+      <CompanionTopBar title="Directory" visible rightSlot={<CompanionBrowseTopActions
+        onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenAppearance={() => {}}
+        onOpenCapture={() => {}} sortDirection="asc" sortKey="name" />} />
       <button type="button" onClick={() => setSelection({ kind: 'root' })}>Library root</button>
       <button type="button" onClick={requestToggleDismissedTopicVisibility}>Toggle Topic Focus</button>
       <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}

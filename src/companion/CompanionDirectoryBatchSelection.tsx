@@ -11,8 +11,9 @@ import {
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { AppIconButton } from '../shared/ui';
 
+import { companionTopBarClassName } from './companionCssCompatibility';
 import { CompanionDirectoryBatchConfirmation } from './CompanionDirectoryBatchConfirmation';
-import { useRegisterCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
+import { useCompanionDirectoryBatchHeader, useRegisterCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
 import type { DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';
 import { useCompanionPageActive } from './CompanionPageStack';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
@@ -63,6 +64,7 @@ export function useCompanionDirectoryBatchSelection(props: {
   const enter = useCallback(() => { setSkipped(0); setSelected(new Map()); }, []);
   useRegisterCompanionDirectoryBatchMenuAction(enter,
     pageActive && !busy && selected === null && Boolean(actions && candidates.size && isAvailableNativeCompanionRuntime()));
+  useCompanionDirectoryBatchHeader(pageActive && selected !== null);
   return {
     trash: batchMode === 'trash', skipped, canPurge: Boolean(purge),
     active: selected !== null, busy, confirm, count: selected?.size ?? 0, total: candidates.size,
@@ -105,7 +107,7 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
   const trashLabel = t(batch.trash ? 'desktop.nodeList.menu.deletePermanently' : 'companion.workspace.delete');
   const restoreLabel = t('desktop.nodeList.menu.restore');
   const SelectionIcon = allSelected ? ListX : ListChecks;
-  return <div className="sticky top-[calc(max(env(safe-area-inset-top),4px)+3rem)] z-10 border-b border-companion-divider bg-companion-base">
+  return <header className={`${companionTopBarClassName} -mt-[var(--companion-page-content-gap)] border-b border-companion-divider`}>
     <div className="flex min-h-11 items-center">
       <AppIconButton className="size-11" label={t('shared.confirm.cancel')} disabled={batch.busy}
         icon={<X size={20} aria-hidden="true" />} onClick={batch.exit} />
@@ -129,5 +131,5 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
     {batch.confirm && <CompanionDirectoryBatchConfirmation
       count={batch.confirm.roots.length} total={batch.confirm.purge?.entries.length}
       onCancel={batch.cancelConfirmation} onConfirm={batch.acceptConfirmation} />}
-  </div>;
+  </header>;
 }

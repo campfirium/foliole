@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
-import { companionMobileChromeHitRailClassName, companionMobileRailBleedClassName } from './companionCssCompatibility';
+import { companionTopBarClassName } from './companionCssCompatibility';
+import { useCompanionDirectoryBatchActive } from './CompanionDirectoryBatchMenu';
 
 type TopBarAction = {
   icon: LucideIcon;
@@ -38,10 +39,11 @@ export function CompanionTopBar(props: {
   visible: boolean;
 }) {
   const t = useTranslation();
+  const selectionActive = useCompanionDirectoryBatchActive();
   const hasChrome = Boolean(props.onBack || props.leftAction || props.rightAction || props.rightSlot || props.statusSlot || props.title);
-  if (!props.visible || !hasChrome) return null;
+  if (!props.visible || !hasChrome || selectionActive) return null;
   return (
-    <header className={`${companionMobileRailBleedClassName} ${companionMobileChromeHitRailClassName} sticky top-0 z-surface bg-companion-base pb-1 pt-1 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),4px)]`}>
+    <header className={companionTopBarClassName}>
       <div className="relative flex min-h-11 items-center justify-between">
         <div className="flex min-w-11 flex-1 items-center">
           {props.onBack ? (

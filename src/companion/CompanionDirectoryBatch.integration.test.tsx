@@ -35,6 +35,8 @@ function enterSelection() {
   const menu = screen.getByRole('dialog', { name: 'Browse menu' });
   fireEvent.click(within(menu).getByRole('button', { name: 'Select', exact: true }));
   expect(menu).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Directory' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'More', exact: true })).toBeNull();
 }
 
 function trashed(db: Database.Database) {
@@ -56,6 +58,8 @@ it('selects within one list and moves the chosen roots and their subtrees to Tra
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Cancel');
+    expect(screen.getByRole('heading', { name: 'Directory' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'More', exact: true })).toBeVisible();
     click('Open folder Folder A');
     enterSelection();
     expect(screen.getByText('0 of 1 selected in this list')).toBeVisible();
