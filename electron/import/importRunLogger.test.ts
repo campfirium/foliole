@@ -11,7 +11,7 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths }));
 
-import { logDirectoryImportCompleted } from './importRunLogger.js';
+import { logDirectoryImportCompleted, logDirectoryImportFailed } from './importRunLogger.js';
 
 const tempRoots: string[] = [];
 const completedImportResult = {
@@ -59,36 +59,6 @@ const completedImportResult = {
   source_adapter: 'foliole_managed_inbox_folder' as const
 };
 
-function expectCompletedImportLogLine(line: string) {
-  expect(JSON.parse(line)).toEqual({
-    event: 'directory_import_completed',
-    payload: {
-      archive_root_path: null,
-      consume_policy: 'clear',
-      consumed_count: 1,
-      discovered_count: 2,
-      entries: [
-        {
-          failure_reason: null,
-          imported_at: '2026-03-25T08:00:00.000Z',
-          result_status: 'imported',
-          source_name: 'a.md'
-        },
-        {
-          failure_reason: 'boom',
-          imported_at: '2026-03-25T08:00:01.000Z',
-          result_status: 'failed',
-          source_name: 'b.md'
-        }
-      ],
-      failed_count: 1,
-      imported_count: 1,
-      source_adapter: 'foliole_managed_inbox_folder'
-    },
-    timestamp: '2026-03-25T09:00:00.000Z'
-  });
-}
-
 async function createTempRoot(prefix: string) {
   const parentDir = path.join(process.cwd(), '.tmp', 'tests');
   await fs.mkdir(parentDir, { recursive: true });
@@ -99,6 +69,8 @@ async function createTempRoot(prefix: string) {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.stubEnv('FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE', undefined);
+  vi.stubEnv('ELECTRON_RENDERER_URL', undefined);
   const appDataDir = await createTempRoot('import-run-logger');
   resolveAppPaths.mockReturnValue({
     app_cache_dir: path.join(appDataDir, 'cache'),
@@ -109,41 +81,41 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
 
-it('writes completed imports into a per-day import log file', async () => {
+it('adds only a safe summary of a partial import to the daily runtime log', async () => {
   await logDirectoryImportCompleted(completedImportResult, new Date('2026-03-25T09:00:00.000Z'));
 
-  const logFile = path.join(resolveAppPaths().app_log_dir, 'import', 'import-2026-03-25.log');
-  const lines = (await fs.readFile(logFile, 'utf8')).trim().split('\n');
-
-  expect(lines).toHaveLength(1);
-  expectCompletedImportLogLine(lines[0] ?? '');
+  const logs = resolveAppPaths().app_log_dir;
+  const text = await fs.readFile(path.join(logs, 'runtime-2026-03-25.ndjson'), 'utf8');
+  expect(JSON.parse(text)).toMatchObject({
+    event: 'directory_import_completed',
+    level: 'warn',
+    payload: {
+      operation: 'directory_import',
+      source_kind: 'foliole_managed_inbox_folder',
+      status: 'incomplete',
+      discovered_count: 2,
+      imported_count: 1,
+      failed_count: 1
+    }
+  });
+  for (const value of ['a.md', 'b.md', '/tmp/inbox', 'node-a', 'boom', 'source_locator']) {
+    expect(text).not.toContain(value);
+  }
+  expect(await fs.readdir(logs)).toEqual(['runtime-2026-03-25.ndjson']);
 });
 
-it('removes import log files older than the last seven days when appending', async () => {
-  const importLogDir = path.join(resolveAppPaths().app_log_dir, 'import');
-  await fs.mkdir(importLogDir, { recursive: true });
-  await fs.writeFile(path.join(importLogDir, 'import-2026-03-17.log'), 'old\n', 'utf8');
-  await fs.writeFile(path.join(importLogDir, 'import-2026-03-18.log'), 'keep\n', 'utf8');
+it('keeps routine successful imports off the daily file and safely records total failures', async () => {
+  const logs = resolveAppPaths().app_log_dir;
+  await logDirectoryImportCompleted({ ...completedImportResult, failed_count: 0 });
+  await expect(fs.stat(logs)).rejects.toMatchObject({ code: 'ENOENT' });
 
-  await logDirectoryImportCompleted(
-    {
-      archive_root_path: null,
-      consume_policy: 'keep',
-      consumed_count: 0,
-      discovered_count: 0,
-      entries: [],
-      failed_count: 0,
-      imported_count: 0,
-      root_path: '/tmp/external',
-      source_adapter: 'external_directory'
-    },
-    new Date('2026-03-24T00:00:00.000Z')
-  );
-
-  await expect(fs.stat(path.join(importLogDir, 'import-2026-03-17.log'))).rejects.toThrow();
-  await expect(fs.readFile(path.join(importLogDir, 'import-2026-03-18.log'), 'utf8')).resolves.toBe('keep\n');
-  await expect(fs.stat(path.join(importLogDir, 'import-2026-03-24.log'))).resolves.toBeTruthy();
+  await logDirectoryImportFailed('external_directory', new Error('private document content'));
+  const [fileName] = await fs.readdir(logs);
+  const text = await fs.readFile(path.join(logs, fileName!), 'utf8');
+  expect(JSON.parse(text)).toMatchObject({ event: 'directory_import_failed', level: 'error' });
+  expect(text).not.toContain('private document content');
 });

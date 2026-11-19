@@ -185,6 +185,7 @@ it('imports markdown and HTML directories through the shared normalization and p
 it('waits per source and preserves partial success when one source commit fails', async () => {
   const root = await createGenericImportRoot();
   await authorizeSelectedImportDirectoryPath(root);
+  logDirectoryImportCompleted.mockRejectedValue(new Error('log unavailable'));
   runPreparedImport.mockImplementation((prepared) => {
     if (prepared.sourceName === 'a-note.md') throw new Error('injected source failure');
     return createPersistedRecord(prepared);

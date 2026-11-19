@@ -78,6 +78,7 @@ it('records a failed directory import attempt before rethrowing the error', asyn
   recordPreparedImportFailure.mockImplementation(() => {
     throw failure;
   });
+  logDirectoryImportFailed.mockRejectedValue(new Error('log unavailable'));
 
   await expect(runDirectoryImport(undefined, { directory_path: root })).rejects.toThrow('discover failed');
 

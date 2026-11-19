@@ -139,10 +139,10 @@ export async function runDirectoryImport(
     if (latestImportId) {
       notifyManagedInboxUpdated(latestImportId, result.node_mutation_patch);
     }
-    await logDirectoryImportCompleted(result);
+    void logDirectoryImportCompleted(result).catch(() => undefined);
     return result;
   } catch (error) {
-    await logDirectoryImportFailed(sourceAdapter, error);
+    void logDirectoryImportFailed(sourceAdapter, error).catch(() => undefined);
     throw error;
   }
 }
@@ -186,10 +186,10 @@ export async function runManagedInboxImport(
       titleStrategy
     });
     const result = await runWithDatabaseConnectionOwner(() => withDirectoryImportNodeMutationPatch(imported));
-    await logDirectoryImportCompleted(result);
+    void logDirectoryImportCompleted(result).catch(() => undefined);
     return result;
   } catch (error) {
-    await logDirectoryImportFailed('foliole_managed_inbox_folder', error);
+    void logDirectoryImportFailed('foliole_managed_inbox_folder', error).catch(() => undefined);
     throw error;
   }
 }
