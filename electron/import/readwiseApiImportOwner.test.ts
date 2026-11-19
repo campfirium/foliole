@@ -29,10 +29,16 @@ vi.mock('./readwiseApiConnectionState.js', () => ({
   })
 }));
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'SECRET' }));
+vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { openDesktopDailyFlow } from '../database/dailyFlow.js';
+import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
+import { submitDesktopOperation } from '../desktopOperations.js';
 
 import { runReadwiseApiImport } from './readwiseApiImportRun.js';
 import { apiSettings, readerDocument, response } from './readwiseApiImportRun.testSupport.js';
@@ -134,4 +140,58 @@ it('waits for a database owner that starts during a candidate body request', asy
     await activeGate.owner;
   }
   await expect(importResult).resolves.toMatchObject({ committed_count: 1, status: 'completed' });
+});
+
+it('opens and persists Flow while the scheduled Readwise import waits for a body', async () => {
+  const now = new Date().toISOString();
+  upsertNodeSnapshot({
+    nodeId: 'flow-topic', parentNodeId: null, kind: 'topic', title: 'Flow topic',
+    content: 'A complete reading body', isTitleManual: true, reveal: null, anchorLink: null,
+    position: 0, createdAt: now, updatedAt: now
+  });
+  let releaseBody!: () => void;
+  const bodyResponse = new Promise<void>(resolve => { releaseBody = resolve; });
+  let notifyBodyRequested!: () => void;
+  const bodyRequested = new Promise<void>(resolve => { notifyBodyRequested = resolve; });
+  const fetchImpl = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    if (url.searchParams.get('id') === 'document') {
+      notifyBodyRequested();
+      await bodyResponse;
+      return response([readerDocument('document', 'article')]);
+    }
+    return response(url.searchParams.get('category') === 'article'
+      ? [readerDocument('document', 'article', false)] : []);
+  }) as typeof fetch;
+  const job = submitDesktopOperation('readwise-api-import', {
+    run: () => runReadwiseApiImport({
+      dependencies: { fetchImpl, minIntervalMs: 0 }, settings: apiSettings('inbox'), trigger: 'scheduled'
+    })
+  });
+  let foreground: Promise<Awaited<ReturnType<typeof openDesktopDailyFlow>>> | undefined;
+  try {
+    await Promise.race([bodyRequested, job.promise.then(() => {
+      throw new Error('Readwise finished before requesting the document body.');
+    })]);
+    let opened = false;
+    foreground = runDesktopDatabaseWrite('foreground', () => openDesktopDailyFlow({
+      now, mode: 'recommended'
+    })).then(result => { opened = true; return result; });
+    await expect.poll(() => opened, { timeout: 1500 }).toBe(true);
+    expect((await foreground).session.currentNodeId).toBe('flow-topic');
+    expect(await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.queryOne(
+      'SELECT node_id FROM daily_flow_entries WHERE node_id = ?', ['flow-topic']
+    ))).toEqual({ node_id: 'flow-topic' });
+    releaseBody();
+    await expect(job.promise).resolves.toMatchObject({ committed_count: 1, status: 'completed' });
+    expect(await runWithDatabaseConnectionOwner(() => loadReadwiseApiImportSource(
+      'connection', 'document'
+    ))).toMatchObject({ nodeId: expect.any(String) });
+    expect((await runDesktopDatabaseWrite('foreground', () => openDesktopDailyFlow({
+      now, mode: 'recommended'
+    }))).session.currentNodeId).toBe('flow-topic');
+  } finally {
+    releaseBody();
+    await Promise.allSettled([job.promise, foreground]);
+  }
 });

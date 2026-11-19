@@ -199,7 +199,8 @@ export const DESKTOP_MAINTENANCE_OPERATION_DEFINITIONS: Record<
     maxWaitMs: 900_000,
     priority: 'background',
     recovery: 'Tracked interrupted runs and candidate progress resume the same operation.',
-    resources: databaseWrite,
+    // The importer acquires the connection for its database phases and releases it before network waits.
+    resources: [total, library],
     source: 'readwise-api',
     trigger: 'Configured cadence becomes due on the active host.',
     verification: 'Due-time persistence, restart recovery, host eligibility, and bounded retry lifecycle.',
