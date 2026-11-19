@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
@@ -79,4 +79,43 @@ it('does not present a folder body status or repeat its type in the directory', 
   expect(screen.getByRole('button', { name: '打开文件夹 收件箱' })).not.toHaveTextContent('新主题默认进入这里');
   expect(screen.getByRole('button', { name: '打开文件夹 todo' })).not.toHaveTextContent('文件夹');
   expect(screen.queryByText('空主题')).not.toBeInTheDocument();
+});
+
+it('opens folder actions on a hold and keeps ordinary clicks for navigation', async () => {
+  vi.useFakeTimers();
+  try {
+    const select = vi.fn();
+    render(<CompanionDirectoryList directory={{ entries: [] } as never} emptyLabel=""
+      onSelectItem={select} sections={[{ id: 'current', items: [
+        { id: 'folder', nodeId: 'folder', kind: 'folder', source: 'internal', title: 'Projects', preview: null }
+      ] }]} snapshot={null} />);
+    const row = screen.getByRole('button', { name: 'Open folder Projects' });
+    expect(screen.queryByRole('button', { name: 'More: Projects' })).toBeNull();
+    const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
+    const press = () => fireEvent.pointerDown(row, pointer);
+    press();
+    fireEvent.pointerUp(row, pointer);
+    fireEvent.click(row, { detail: 1 });
+    expect(select).toHaveBeenCalledTimes(1);
+
+    press();
+    fireEvent.pointerMove(row, { ...pointer, clientY: 30 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(550); });
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    press();
+    fireEvent.pointerCancel(row, pointer);
+    await act(async () => { await vi.advanceTimersByTimeAsync(550); });
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    press();
+    await act(async () => { await vi.advanceTimersByTimeAsync(550); });
+    expect(screen.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
+    fireEvent.pointerUp(row, pointer);
+    fireEvent.click(row, { detail: 1 });
+    expect(select).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });

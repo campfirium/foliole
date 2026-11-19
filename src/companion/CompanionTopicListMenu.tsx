@@ -10,9 +10,11 @@ import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass } from './CompanionWorkspaceMenuActions';
 
-export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: string; title: string; metadata: string; directDiveId?: string | undefined }) {
+export function CompanionTopicListMenu(props: { rowMenu?: { open: boolean; onOpenChange(open: boolean): void }; nodeId?: string; title: string; metadata: string; directDiveId?: string | undefined }) {
   const t = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = props.rowMenu?.open ?? localOpen;
+  const setOpen = props.rowMenu?.onOpenChange ?? setLocalOpen;
   const [infoOpen, setInfoOpen] = useState(false);
   const interaction = useCompanionListInteraction();
   useEffect(() => {
@@ -22,9 +24,9 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
   }, [open, infoOpen, interaction]);
   return (
     <>
-      <button aria-label={`${t('companion.browse.more')}: ${props.title}`} className={props.inline ? 'flex h-11 w-11 shrink-0 items-center justify-center text-companion-text-tertiary' : 'companion-topic-more'} onClick={() => setOpen(true)} type="button">
+      {!props.rowMenu && <button aria-label={`${t('companion.browse.more')}: ${props.title}`} className="companion-topic-more" onClick={() => setOpen(true)} type="button">
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-      </button>
+      </button>}
       <CompanionBottomSheet showScrollIndicator onOpenChange={setOpen} open={open} title={t('companion.browse.more')}>
         <TopicListMenuActions nodeId={props.nodeId} diveId={props.directDiveId} onClose={() => setOpen(false)}>
           <button className={companionWorkspaceRowClass} onClick={() => { setOpen(false); setInfoOpen(true); }} type="button">

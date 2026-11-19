@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { readDiveNode } from '../../lib/core/nodes/dive';
@@ -24,6 +24,7 @@ import { CompanionListViewport } from './CompanionListViewport';
 import { RecentArticleRow } from './CompanionRecentArticleList';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 import type { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
+import { useCompanionFolderMenuGesture } from './useCompanionFolderMenuGesture';
 
 type DirectoryRowProps = {
   selecting: boolean;
@@ -47,41 +48,48 @@ function DirectoryRow(props: DirectoryRowProps) {
     item: props.item,
     snapshot: props.snapshot
   });
+  const folderMenuItem = !props.selecting && props.item.kind === 'folder' && props.item.source === 'internal' ? props.item : null;
+  const [folderMenuOpen, setFolderMenuOpen] = useState(false);
+  const openFolderMenu = useCallback(() => setFolderMenuOpen(true), []);
+  const folderMenuGesture = useCompanionFolderMenuGesture(folderMenuItem ? openFolderMenu : null);
   if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
   const dive = props.item.source === 'virtual' ? readDiveNode(props.snapshot?.nodesById[props.item.nodeId]) : null;
   return (
     <div className="flex items-center">
-    <button
-      aria-pressed={props.checked}
-      aria-label={t(
-        props.selecting ? 'companion.batch.selectRow' : 'companion.directory.openFolder',
-        { title }
-      )}
-      className="flex min-h-16 min-w-0 flex-1 items-center gap-2.5 border-b border-companion-divider bg-transparent py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent"
-      data-testid={`companion-directory-node-${props.item.nodeId}`}
-      onClick={() => props.onSelectItem(props.item)}
-      type="button"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">
-          {title}
+      <button
+        {...folderMenuGesture}
+        aria-keyshortcuts={folderMenuItem ? 'Shift+F10' : undefined}
+        aria-pressed={props.checked}
+        aria-label={t(
+          props.selecting ? 'companion.batch.selectRow' : 'companion.directory.openFolder',
+          { title }
+        )}
+        className="flex min-h-16 select-none [-webkit-touch-callout:none] min-w-0 flex-1 items-center gap-2.5 border-b border-companion-divider bg-transparent py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent"
+        data-testid={`companion-directory-node-${props.item.nodeId}`}
+        onClick={() => props.onSelectItem(props.item)}
+        type="button"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">
+            {title}
+          </span>
+          {subtitle ? <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
+            {subtitle}
+          </span> : null}
         </span>
-        {subtitle ? <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
-          {subtitle}
-        </span> : null}
-      </span>
-      {meta ? (
-        <span className="min-w-7 shrink-0 text-right text-[13px] font-medium leading-5 text-companion-text-tertiary">
-          {meta}
-        </span>
-      ) : null}
-      {!props.selecting && <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary" />}
-    </button>
-    {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
-      <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
-        onStart={dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined} />}
-    {!props.selecting && props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title}
-      metadata={meta ?? ''} directDiveId={props.item.directDiveId} />}
+        {meta ? (
+          <span className="min-w-7 shrink-0 text-right text-[13px] font-medium leading-5 text-companion-text-tertiary">
+            {meta}
+          </span>
+        ) : null}
+        {!props.selecting && <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary" />}
+      </button>
+      {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
+        <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
+          onStart={dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined} />}
+      {folderMenuItem && <CompanionTopicListMenu rowMenu={{ open: folderMenuOpen, onOpenChange: setFolderMenuOpen }}
+        nodeId={folderMenuItem.nodeId} title={title}
+        metadata={meta ?? ''} directDiveId={folderMenuItem.directDiveId} />}
     </div>
   );
 }
