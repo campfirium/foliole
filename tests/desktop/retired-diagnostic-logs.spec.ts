@@ -61,28 +61,21 @@ function dailyLogName(daysAgo: number) {
   return `runtime-${day.toISOString().slice(0, 10)}.ndjson`;
 }
 
-test('startup applies daily diagnostic retention to existing files without a new warning', async () => {
+test('ordinary startup preserves retained runtime log history even when it exceeds the write limit', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-runtime-retention-'));
   const logs = path.join(root, 'logs');
   const recent = path.join(logs, dailyLogName(1));
-  const expired = path.join(logs, dailyLogName(8));
-  const unrelated = path.join(logs, 'runtime-notes.ndjson');
   const line = `${JSON.stringify({ event: 'older-warning', payload: { detail: 'x'.repeat(20_000) } })}\n`;
+  const history = line.repeat(60) + '{"event":"latest-warning"}\n';
   let session: DesktopSession | undefined;
   try {
     await fs.mkdir(logs);
-    await fs.writeFile(recent, line.repeat(60) + '{"event":"latest-warning"}\n{"incomplete":');
-    await fs.writeFile(expired, line);
-    await fs.writeFile(unrelated, 'notes');
+    await fs.writeFile(recent, history);
     session = await launchDesktopSession({
       env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: root, FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '0' }
     });
     expect(session.appReady.reported).toBe(true);
-    await expect.poll(async () => (await fs.stat(recent)).size).toBeLessThanOrEqual(1024 * 1024);
-    const events = (await fs.readFile(recent, 'utf8')).trim().split('\n').map(record => JSON.parse(record).event);
-    expect(events.at(-1)).toBe('latest-warning');
-    await expect(fs.stat(expired)).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(fs.readFile(unrelated, 'utf8')).resolves.toBe('notes');
+    expect((await fs.stat(recent)).size).toBe(Buffer.byteLength(history));
   } finally {
     await session?.close();
     await fs.rm(root, { recursive: true, force: true });

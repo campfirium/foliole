@@ -36,20 +36,10 @@ export async function appendBoundedLogLine(filePath: string, line: Buffer, maxBy
 
   const budget = Math.min(retainedBytes, maxBytes - line.length);
   const recent = await readCompleteLogTail(filePath, size, budget);
-  await replaceLogFile(filePath, Buffer.concat([recent, line]));
-}
-
-export async function boundExistingLogFile(filePath: string, maxBytes: number) {
-  const size = await readLogSize(filePath);
-  if (size <= maxBytes) return;
-  await replaceLogFile(filePath, await readCompleteLogTail(filePath, size, maxBytes));
-}
-
-async function replaceLogFile(filePath: string, content: Buffer) {
   const pendingPath = `${filePath}.tmp`;
   await fs.rm(pendingPath, { force: true });
   try {
-    await fs.writeFile(pendingPath, content, { flag: 'wx', mode: 0o600 });
+    await fs.writeFile(pendingPath, Buffer.concat([recent, line]), { flag: 'wx', mode: 0o600 });
     await fs.rename(pendingPath, filePath);
   } finally {
     await fs.rm(pendingPath, { force: true });

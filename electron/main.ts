@@ -18,10 +18,10 @@ import {
   resolveDesktopDeviceIdentityAcceptance,
   runDesktopDeviceIdentityAcceptance
 } from './deviceIdentityAcceptance.js';
-import { maintainDesktopLogsOnStartup } from './diagnostics/desktopLogStartup.js';
 import { runDesktopSupportLogAction } from './diagnostics/desktopSupportLog.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
+import { removeRetiredDesktopLogs } from './diagnostics/retiredDesktopLogs.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { handleInvokeRequest } from './ipc/commands.js';
 import {
@@ -216,7 +216,7 @@ if (deviceIdentityAcceptance) {
   void app.whenReady().then(() => runDesktopDeviceIdentityAcceptance(app, deviceIdentityAcceptance));
 } else {
   void app.whenReady().then(() => desktopUpdateService.start());
-  void app.whenReady().then(maintainDesktopLogsOnStartup);
+  void app.whenReady().then(() => removeRetiredDesktopLogs(app.getPath('logs')));
   void app.whenReady().then(() => runDesktopSupportLogAction('status')).catch(error => {
     console.error('[support-log] Could not clean up logs', error);
   });
