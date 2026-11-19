@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { appendBoundedLogLine } from '../diagnostics/boundedLogLine.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnosticPaths.js';
 
@@ -37,37 +38,11 @@ function resolveBootSession() {
 
 async function appendJsonLine(filePath: string, payload: unknown) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await compactJsonLineFileIfNeeded(filePath);
-  await fs.appendFile(filePath, `${JSON.stringify(payload)}\n`, 'utf8');
-}
-
-async function compactJsonLineFileIfNeeded(filePath: string) {
-  const stat = await fs.stat(filePath).catch(() => null);
-  if (!stat || stat.size <= MAX_BOOT_EVENT_LOG_BYTES) return;
-  const length = Math.min(stat.size, COMPACTED_BOOT_EVENT_TAIL_BYTES);
-  const buffer = Buffer.alloc(length);
-  const handle = await fs.open(filePath, 'r');
-  try {
-    await handle.read(buffer, 0, length, stat.size - length);
-  } finally {
-    await handle.close();
-  }
-  const tail = buffer.toString('utf8');
-  const firstNewline = tail.indexOf('\n');
-  const compactedEvent = {
-    payload: {
-      keptTailBytes: length,
-      maxBytes: MAX_BOOT_EVENT_LOG_BYTES,
-      originalBytes: stat.size
-    },
-    source: 'main',
-    stage: 'boot_log_compacted',
-    timestamp: new Date().toISOString()
-  };
-  await fs.writeFile(
+  await appendBoundedLogLine(
     filePath,
-    `${JSON.stringify(compactedEvent)}\n${firstNewline >= 0 ? tail.slice(firstNewline + 1) : ''}`,
-    'utf8'
+    Buffer.from(`${JSON.stringify(payload)}\n`),
+    MAX_BOOT_EVENT_LOG_BYTES,
+    COMPACTED_BOOT_EVENT_TAIL_BYTES
   );
 }
 
@@ -142,17 +117,16 @@ function shouldWaitForBootEvent(stage: string) {
 }
 
 function appendQueuedBootEvent(event: ReturnType<typeof createBootEvent>, waitForWrite: boolean) {
-  const write = bootEventQueue.then(async () => {
-    await persistBootEvent(event);
-    notifyRendererAppReady(event);
-  });
+  const waitForMarker = waitForWrite && shouldPersistReadyMarkers();
+  if (!waitForMarker) notifyRendererAppReady(event);
+  const write = bootEventQueue.then(() => persistBootEvent(event));
   bootEventQueue = write.catch((error) => {
     appendMainProcessDiagnosticLog('boot_log_failed', {
       error,
       stage: event.stage
     });
   });
-  return waitForWrite ? write : Promise.resolve();
+  return waitForMarker ? write.finally(() => notifyRendererAppReady(event)) : Promise.resolve();
 }
 
 export async function appendBootEvent(stage: string, payload: unknown = null, source: BootEventSource = 'main') {

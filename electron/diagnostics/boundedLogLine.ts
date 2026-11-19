@@ -26,7 +26,7 @@ async function readCompleteLogTail(filePath: string, size: number, budget: numbe
   return tail.subarray(first + 1, tail.lastIndexOf(0x0a) + 1);
 }
 
-export async function appendBoundedLogLine(filePath: string, line: Buffer, maxBytes: number) {
+export async function appendBoundedLogLine(filePath: string, line: Buffer, maxBytes: number, retainedBytes = maxBytes / 2) {
   if (line.length > maxBytes) return;
   const size = await readLogSize(filePath);
   if (size + line.length <= maxBytes) {
@@ -34,7 +34,7 @@ export async function appendBoundedLogLine(filePath: string, line: Buffer, maxBy
     return;
   }
 
-  const budget = Math.min(maxBytes / 2, maxBytes - line.length);
+  const budget = Math.min(retainedBytes, maxBytes - line.length);
   const recent = await readCompleteLogTail(filePath, size, budget);
   const pendingPath = `${filePath}.tmp`;
   await fs.rm(pendingPath, { force: true });

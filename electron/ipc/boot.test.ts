@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   appendMainProcessDiagnosticLog: vi.fn(),
+  resolveAppPaths: vi.fn(),
   originalWorkdir: process.env.FOLIOLE_WORKDIR,
   originalHead: process.env.FOLIOLE_RUNTIME_HEAD,
   originalSession: process.env.FOLIOLE_BOOT_SESSION,
@@ -15,6 +16,7 @@ const state = vi.hoisted(() => ({
 vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: state.appendMainProcessDiagnosticLog
 }));
+vi.mock('./paths.js', () => ({ resolveAppPaths: state.resolveAppPaths }));
 
 import {
   appendBootEvent,
@@ -97,21 +99,38 @@ it('keeps high-frequency desktop task progress events out of console boot report
   }
 });
 
-it('compacts oversized boot event logs before appending new events', async () => {
+it('keeps the startup log within its byte limit on the write crossing the threshold', async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-boot-compact-'));
   process.env.FOLIOLE_WORKDIR = repoRoot;
   const paths = resolveBootArtifactPaths(repoRoot);
   fs.mkdirSync(path.dirname(paths.eventLogPath), { recursive: true });
-  fs.writeFileSync(paths.eventLogPath, `${'x'.repeat(6 * 1024 * 1024)}\n${JSON.stringify({ stage: 'tail_event' })}\n`);
+  const recent = '{"stage":"tail_event"}\n';
+  fs.writeFileSync(paths.eventLogPath, 'x'.repeat(5 * 1024 * 1024 - recent.length - 2) + '\n' + recent);
 
   await appendBootEvent('stage_after_compact');
   await flushBootEvents();
 
   const rawLog = fs.readFileSync(paths.eventLogPath, 'utf8');
-  expect(rawLog.length).toBeLessThan(1024 * 1024);
+  expect(Buffer.byteLength(rawLog)).toBeLessThanOrEqual(5 * 1024 * 1024);
   const stages = rawLog.trim().split('\n').map((line) => JSON.parse(line) as { stage: string }).map((event) => event.stage);
-  expect(stages).toContain('boot_log_compacted');
+  expect(stages).toContain('tail_event');
   expect(stages.at(-1)).toBe('stage_after_compact');
+});
+
+it('accepts renderer readiness in a normal launch even if startup diagnostics cannot be written', async () => {
+  delete process.env.FOLIOLE_WORKDIR;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-unwritable-startup-log-'));
+  state.resolveAppPaths.mockReturnValue({ app_log_dir: root });
+  try {
+    fs.mkdirSync(path.join(root, 'windows', 'native-boot-events.ndjson'), { recursive: true });
+    const ready = waitForRendererAppReady();
+    await expect(bootReport('app_ready')).resolves.toBeUndefined();
+    await expect(ready).resolves.toBeUndefined();
+    await flushBootEvents();
+    expect(state.appendMainProcessDiagnosticLog).toHaveBeenCalledWith('boot_log_failed', expect.anything());
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 
