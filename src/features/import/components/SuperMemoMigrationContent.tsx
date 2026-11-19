@@ -22,11 +22,12 @@ export function SuperMemoMigrationContent({ model, current, selected, navigation
   const { draft, busy, result, percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat } = model;
   const preview = draft?.preview;
   const selection = model.selection;
+  const fillsPane = current === 'structure' || (current === 'schedule' && preview && !preview.directoryUpdate);
   const hasMovedEntries = useMemo(() => current === 'confirm' && draft && !result && !draft.preview.directoryUpdate &&
     applySuperMemoStructure(draft.preview.rows, draft.elements, draft.folderChoices).some(row =>
       row.structure && row.outcome !== 'skipped' && row.structure.parentId !== row.parentId), [current, draft, result]);
   return (
-    <div className={`flex min-w-0 flex-col gap-4 px-settings-panel-x ${current === 'structure' ? 'h-full' : ''}`}>
+    <div className={`flex min-w-0 flex-col gap-4 px-settings-panel-x ${fillsPane ? 'h-full' : ''}`}>
       <h3 className="shrink-0 text-ui-lg font-semibold">{t(
         current === 'schedule' ? 'desktop.superMemoDrafts.scheduleTitle' :
           current === 'grades' ? 'desktop.superMemoDrafts.gradeMapping' : superMemoMigrationStepLabel(current)

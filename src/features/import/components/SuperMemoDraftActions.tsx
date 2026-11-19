@@ -16,7 +16,10 @@ export function SuperMemoDraftActions({ step, busy, canProceed, hasPreview, dire
   if (step === 'confirm' ? !hasPreview : !canProceed) return null;
   return (
     <div className="app-scrollbar shrink-0 overflow-hidden px-7 pb-14 pt-4 [scrollbar-gutter:stable]">
-      <div className="flex justify-end px-settings-panel-x">
+      <div className="flex items-center justify-end gap-4 px-settings-panel-x">
+        {step === 'schedule' ? <p className="mr-auto min-w-0 text-xs leading-relaxed text-foreground/65">
+          {t('desktop.superMemoDrafts.adjustmentNote')}
+        </p> : null}
         {step === 'confirm' ? <SettingsButton disabled={busy || directoryUpdate?.canConfirm === false} onClick={convert}>
           {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
         </SettingsButton> : <SettingsButton disabled={busy} onClick={() => navigate(directoryUpdate && step === 'load' ? 'confirm' : nextStep[step])}>

@@ -136,6 +136,7 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
     if (result || (!draft && stepNeedsDraft(current))) resetNavigation();
     close();
   }
+  const showsScheduleChart = current === 'schedule' && preview && !update;
   const selected = selection && selection.source === source && selection.signature === update?.signature ? selection.ids : [];
   return (
     <AppDialog open={open} onOpenChange={open => { if (!open) dismissDialog(); }}>
@@ -148,7 +149,9 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
           <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy || Boolean(result)} onChange={navigate} />
           <div className={settingsDialogPane}>
             <DraftHeader name={current === 'load' || result ? undefined : model.selection?.name} disabled={busy} />
-            <div key={current} className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-7 py-7 [scrollbar-gutter:stable]">
+            <div key={current} className={`min-h-0 flex-1 overflow-y-auto px-7 py-7 ${
+              showsScheduleChart ? '[scrollbar-width:none]' : 'app-scrollbar [scrollbar-gutter:stable]'
+            }`}>
               <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
                 onLoad={() => void loadSource()} onLoadNew={() => {
                   setStep({ id: 'load', source, comparing: true });

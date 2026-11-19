@@ -4,9 +4,13 @@ export function superMemoFullOffset(source: string | null, calculated: string | 
   return source && calculated ? (Date.parse(calculated) - Date.parse(source)) / DAY_MS : null;
 }
 
+export function roundSuperMemoOffset(fullOffset: number, percent: number) {
+  return Math.round(fullOffset * percent / 100);
+}
+
 export function adjustSuperMemoDue(lastApplied: string, fullOffset: number | null, oldPercent: number, newPercent: number) {
   if (fullOffset === null) return lastApplied;
-  const oldOffset = Math.round(fullOffset * oldPercent / 100);
-  const newOffset = Math.round(fullOffset * newPercent / 100);
+  const oldOffset = roundSuperMemoOffset(fullOffset, oldPercent);
+  const newOffset = roundSuperMemoOffset(fullOffset, newPercent);
   return new Date(Date.parse(lastApplied) + (newOffset - oldOffset) * DAY_MS).toISOString().slice(0, 10);
 }
