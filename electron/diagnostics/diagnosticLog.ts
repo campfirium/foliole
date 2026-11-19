@@ -4,7 +4,7 @@ import path from 'node:path';
 import { asString, asTimestamp } from '../ipc/commandParsers.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
-import { appendBoundedLogLine } from './boundedLogLine.js';
+import { appendBoundedLogLine, boundExistingLogFile } from './boundedLogLine.js';
 import { isDesktopDebugProbeEnabled } from './desktopDebugTrace.js';
 import { recordDesktopSupportEvent } from './desktopSupportLog.js';
 import { redactDiagnosticPayload } from './diagnosticRedactor.js';
@@ -13,6 +13,7 @@ const DEFAULT_RETENTION_DAYS = 7;
 const MAX_DAILY_LOG_BYTES = 1024 * 1024;
 const LOG_PREFIX = 'runtime-';
 const LOG_SUFFIX = '.ndjson';
+const RUNTIME_LOG_NAME = /^runtime-\d{4}-\d{2}-\d{2}\.ndjson$/u;
 
 type DiagnosticLogLevel = 'warn' | 'error' | 'info' | 'debug';
 
@@ -38,24 +39,35 @@ function isDiagnosticLogLevel(value: unknown): value is DiagnosticLogLevel {
   return value === 'warn' || value === 'error' || value === 'info' || value === 'debug';
 }
 
-function isExpiredLogFile(fileName: string, cutoffDateKey: string) {
-  if (!fileName.startsWith(LOG_PREFIX) || !fileName.endsWith(LOG_SUFFIX)) {
-    return false;
-  }
-  const dateKey = fileName.slice(LOG_PREFIX.length, -LOG_SUFFIX.length);
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateKey) && dateKey < cutoffDateKey;
+function dailyLogName(date: Date) {
+  return `${LOG_PREFIX}${formatDateKey(date)}${LOG_SUFFIX}`;
 }
 
 async function pruneExpiredLogs(logDir: string, retentionDays: number, now: Date) {
   const cutoff = new Date(now);
   cutoff.setUTCDate(cutoff.getUTCDate() - (retentionDays - 1));
-  const cutoffDateKey = formatDateKey(cutoff);
+  const cutoffName = dailyLogName(cutoff);
+  const today = dailyLogName(now);
   const entries = await fs.readdir(logDir, { withFileTypes: true });
-  await Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && isExpiredLogFile(entry.name, cutoffDateKey))
-      .map((entry) => fs.rm(path.join(logDir, entry.name), { force: true }))
-  );
+  const names = entries.filter(entry => entry.isFile() && RUNTIME_LOG_NAME.test(entry.name)).map(entry => entry.name);
+  const recent = names.filter(name => name >= cutoffName && name !== today).sort().reverse();
+  const keep = new Set([today, ...recent.slice(0, retentionDays - 1)]);
+  await Promise.all(names.filter(name => !keep.has(name)).map(name => fs.rm(path.join(logDir, name), { force: true })));
+  return names.filter(name => keep.has(name));
+}
+
+function queueDiagnosticWrite(task: () => Promise<void>) {
+  const write = writeTail.then(task);
+  writeTail = write.catch(() => undefined);
+  return write;
+}
+
+export async function maintainRuntimeDiagnosticLogs(logDir: string) {
+  await queueDiagnosticWrite(async () => {
+    await fs.mkdir(logDir, { recursive: true });
+    const recent = await pruneExpiredLogs(logDir, DEFAULT_RETENTION_DAYS, new Date());
+    for (const name of recent) await boundExistingLogFile(path.join(logDir, name), MAX_DAILY_LOG_BYTES);
+  });
 }
 
 function shouldPersistRuntimeLog(record: DiagnosticLogRecord) {
@@ -96,12 +108,10 @@ export async function appendDiagnosticLog(
   });
   if (!shouldPersistRuntimeLog(record)) return;
   const logDir = resolveDiagnosticLogDir();
-  const filePath = path.join(logDir, `${LOG_PREFIX}${formatDateKey(now)}${LOG_SUFFIX}`);
-  const write = writeTail.then(async () => {
+  const filePath = path.join(logDir, dailyLogName(now));
+  await queueDiagnosticWrite(async () => {
     await fs.mkdir(logDir, { recursive: true });
     await pruneExpiredLogs(logDir, retentionDays, now);
     await appendBoundedLogLine(filePath, Buffer.from(`${JSON.stringify(record)}\n`), MAX_DAILY_LOG_BYTES);
   });
-  writeTail = write.catch(() => undefined);
-  await write;
 }

@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { resolveAppPaths } from '../ipc/paths.js';
+
 import { isDesktopDebugProbeEnabled } from './desktopDebugTrace.js';
+import { maintainRuntimeDiagnosticLogs } from './diagnosticLog.js';
 
 const readingLogs = new Set(['reading-position.ndjson', 'reading-position.ndjson.tmp']);
 const windowLogs = new Set(['window-state-lifecycle.ndjson', 'renderer-state.ndjson', 'renderer-state.ndjson.tmp']);
@@ -24,7 +27,7 @@ async function removeRetiredFiles(directory: string, isRetired: (name: string) =
   }
 }
 
-export async function removeRetiredDesktopLogs(logDirectory: string) {
+async function removeRetiredDesktopLogs(logDirectory: string) {
   if (isDesktopDebugProbeEnabled()) return;
   try {
     if (!(await fs.lstat(logDirectory)).isDirectory()) return;
@@ -39,4 +42,13 @@ export async function removeRetiredDesktopLogs(logDirectory: string) {
     removeRetiredFiles(path.join(logDirectory, 'windows'), name => windowLogs.has(name)),
     removeRetiredFiles(path.join(logDirectory, 'import'), name => importLogName.test(name))
   ]);
+}
+
+export async function maintainDesktopLogsOnStartup() {
+  try {
+    const { app_log_dir: logDir } = resolveAppPaths();
+    await Promise.all([removeRetiredDesktopLogs(logDir), maintainRuntimeDiagnosticLogs(logDir)]);
+  } catch {
+    console.warn('[diagnostics] Could not apply runtime log retention');
+  }
 }
