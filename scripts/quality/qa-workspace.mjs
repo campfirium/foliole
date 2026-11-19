@@ -11,22 +11,21 @@ import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
 import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 import { integrateQaWorkspace } from './qa-workspace-integration.mjs';
 import { finishQaWorkspace } from './qa-workspace-finish.mjs';
-import { isRemoteQualityScope } from './remote-quality-args.mjs';
 import {
   assertQaPrivateDirectories, QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment,
   readQaWorkspace, verifyMountedQaVolume
 } from './qa-workspace-state.mjs';
 
-export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner, source = 'dev', scope = 'full',
+export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner, source = 'dev',
   verifyVolume = verifyMountedQaVolume }) {
   const devRoot = realpathSync(repoRoot);
   if (!['dev', 'preview'].includes(source)) throw new Error('QA source must be dev or preview');
-  if (!isRemoteQualityScope(scope)) throw new Error('QA workspace scope must be desktop, shared, android, ios, or full');
-  if (source === 'preview' && scope !== 'full') throw new Error('QA from preview requires full quality');
   if (qaGit(devRoot, 'branch', '--show-current') !== source) throw new Error(`Start QA from ${source}`);
   if (!owner?.trim()) throw new Error('QA requires its owning chat ID');
   const existing = readQaWorkspace(devRoot);
-  if (existing.phase !== 'idle') throw new Error(`QA workspace occupied by the candidate registered by ${existing.owner}; resume or finish it before starting another`);
+  if (existing.phase !== 'idle') {
+    throw new Error(`QA occupied by the candidate registered by ${existing.owner}; inspect status and resume the saved candidate`);
+  }
   const volume = verifyVolume(volumeRoot);
   const requested = path.resolve(worktreePath);
   const target = path.join(realpathSync(path.dirname(requested)), path.basename(requested));
@@ -34,7 +33,7 @@ export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner, so
     throw new Error('QA path must be a new directory on the mounted QA volume');
   }
   const record = { schemaVersion: 1, branch: QA_BRANCH, devRoot, volumeRoot: volume, worktreePath: target,
-    owner, source, scope, base: qaGit(devRoot, 'rev-parse', `refs/heads/${source}`), phase: 'preparing' };
+    owner, source, base: qaGit(devRoot, 'rev-parse', `refs/heads/${source}`), phase: 'preparing' };
   writeFileSync(qaRecordPath(devRoot), `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx' });
   return prepareQaWorkspace(record);
 }
@@ -101,8 +100,7 @@ async function main(args) {
     }
     return console.log(JSON.stringify(startQaWorkspace({ repoRoot, volumeRoot: value('--volume'),
       worktreePath: value('--path'), owner: value('--owner'),
-      source: options.includes('--source') ? value('--source') ?? '' : undefined,
-      scope: options.includes('--scope') ? value('--scope') ?? '' : undefined }), null, 2));
+      source: options.includes('--source') ? value('--source') ?? '' : undefined }), null, 2));
   }
   if (args[0] === 'run') {
     if (separator < 0) throw new Error('QA run requires -- before the command');

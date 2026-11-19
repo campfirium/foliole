@@ -4,7 +4,7 @@ One registered QA workspace holds a committed `dev` or `preview` snapshot while 
 The workspace is preparation only: it does not dispatch hosted checks or start an agent.
 
 ```sh
-npm run quality:qa:workspace -- start --volume <mounted-volume> --path <new-directory-on-volume> --owner <chat-id> [--scope <shared|desktop|android|ios|full>]
+npm run quality:qa:workspace -- start --volume <mounted-volume> --path <new-directory-on-volume> --owner <chat-id>
 npm run quality:qa:workspace -- status
 npm run quality:qa:workspace -- run -- npm ci
 npm run quality:qa:workspace -- run -- npm run electron:rebuild:native
@@ -18,11 +18,6 @@ Run these commands from the development checkout. Preparation records the commit
 snapshot and owning chat in the shared Git administrative directory, outside disposable
 build artifacts. A second start refuses to replace an occupied workspace. A missing
 external workspace remains occupied for recovery.
-
-Choose the required quality scope at start. Full is the default, including for
-workspace records created before the scope was stored. An explicitly scoped
-development batch can finish with its own passing check. Intermediate rechecks
-during a full batch leave its full requirement in effect.
 
 For a source-built hotfix, check out the committed `preview` candidate in the main
 checkout and pass `--source preview` to `start`. The same `review` lane validates
@@ -53,17 +48,19 @@ later unverified QA commit is left in QA. Conflicts are detected before modifyin
 failed validation aborts only the tool's unchanged merge, preserving outside edits.
 
 An active QA workspace is retained even when its current commit is already in `dev`.
-The recorded chat identifies who started the batch. If it stops, an authorized
-QA request can continue the existing candidate once no other worker is acting on
-it. Resume any saved run from the same checkout and keep the original record.
-Normal transient-worktree cleanup preserves the QA workspace for recovery.
+The recorded chat identifies who started the batch. Use `status` to recover its
+candidate, phase and saved run. If the original chat has stopped and no other
+worker is handling the workspace, an already authorized QA task continues that
+same candidate without changing the original registration. A live hosted run is
+resumed on the same run ID. If the record is already finishing, resume `finish`.
+Start the next candidate once the workspace is idle. Normal transient-worktree
+cleanup preserves the workspace through recovery.
 
-Release requires hosted evidence for the declared scope and integration of the
-current QA tip. The hosted run must match the candidate and be complete.
+Completion requires matching full evidence and integration of the current QA tip.
 The temporary QA branch is `review`. When its exact tip passes full QA and dev
 integration checks, finish fast-forwards the public `preview` branch to that tip
-before removing remote `review`. A scoped pass or mobile resume releases the
-workspace while leaving `preview` at its current commit. Remote cleanup comes
+before removing remote `review`. Mobile resume evidence can complete QA but
+does not advance `preview` without an exact full pass. Remote cleanup comes
 before local worktree cleanup; the owner record stays in
 `finishing` until both succeed. Retry `finish` after resolving a cleanup failure.
 Terminal wait logs and the candidate/integration record are retained under the

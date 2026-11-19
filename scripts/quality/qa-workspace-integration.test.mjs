@@ -12,7 +12,7 @@ import { finishTransientWorktree } from '../diagnostics/transient-worktree-lifec
 
 const roots = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
-function fixture(source = 'dev', scope) {
+function fixture(source = 'dev') {
   const artifacts = path.resolve('.tmp/artifacts/T682/integration-fixtures');
   mkdirSync(artifacts, { recursive: true });
   const root = realpathSync(mkdtempSync(path.join(artifacts, 'qa-')));
@@ -42,7 +42,7 @@ function fixture(source = 'dev', scope) {
     commit(dev, 'hotfix', 'preview repair');
   }
   const state = startQaWorkspace({ repoRoot: dev, volumeRoot: root, worktreePath: path.join(root, 'qa'),
-    source, scope, owner: 'test-owner', verifyVolume: value => value });
+    source, owner: 'test-owner', verifyVolume: value => value });
   return { dev, qa: state.worktreePath, root, verifyRun: vi.fn(async () => {}), verifyVolume: value => value };
 }
 function commit(cwd, file, content) {
@@ -59,43 +59,17 @@ function green(f, tip, scope = 'full') {
 }
 const integrate = (f, validate) => integrateQaWorkspace({ repoRoot: f.dev, verifyRun: f.verifyRun, validate });
 
-it('releases an integrated Android-only batch so another chat can start full QA', async () => {
-  const f = fixture('dev', 'android');
-  const tip = commit(f.qa, 'android-repair', 'verified repair');
-  const baseline = qaGit(f.dev, 'rev-parse', 'HEAD');
-  qaGit(f.dev, 'push', 'origin', 'HEAD:refs/heads/preview');
-  qaGit(f.qa, 'push', 'origin', 'HEAD:refs/heads/review');
-  f.verifyRun.mockImplementation(async (record, full) => {
-    if (full && record.run.scope !== 'full') throw new Error('Full receipt unavailable');
-  });
+it('preserves the workspace when an integrated Android recheck has no full result', async () => {
+  const f = fixture();
+  const tip = commit(f.qa, 'android-repair', 'scoped repair');
   green(f, tip, 'android');
-  await integrate(f, async cwd => expect(readFileSync(path.join(cwd, 'android-repair'), 'utf8')).toBe('verified repair'));
-  await finishQaWorkspace({ repoRoot: f.dev, verifyRun: f.verifyRun, verifyVolume: f.verifyVolume,
-    removeRemote: async record => {
-      expect(record.cleanupTip).toBe(tip);
-      qaGit(f.dev, 'push', 'origin', '--delete', QA_BRANCH);
-    } });
-  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/preview')).toBe(`${baseline}\trefs/heads/preview`);
-  expect(qaGit(f.dev, 'ls-remote', 'origin', 'refs/heads/review')).toBe('');
-  expect(existsSync(f.qa)).toBe(false);
-  expect(startQaWorkspace({ repoRoot: f.dev, volumeRoot: f.root, worktreePath: f.qa,
-    owner: 'next-owner', verifyVolume: f.verifyVolume }).base).toBe(qaGit(f.dev, 'rev-parse', 'HEAD'));
+  await integrate(f, async () => {});
+  const removeRemote = vi.fn();
+  await expect(finishQaWorkspace({ repoRoot: f.dev, verifyVolume: f.verifyVolume, removeRemote }))
+    .rejects.toThrow(/matching passed evidence/u);
+  expect(removeRemote).not.toHaveBeenCalled();
+  expect(readQaWorkspace(f.dev)).toMatchObject({ phase: 'prepared', head: tip, owner: 'test-owner' });
 });
-
-it.each([['full', 'android'], ['android', 'shared']])(
-  'retains a %s workspace after an intermediate %s pass',
-  async (required, checked) => {
-    const f = fixture('dev', required);
-    const tip = commit(f.qa, 'intermediate', 'partial evidence');
-    green(f, tip, checked);
-    await integrate(f, async () => {});
-    const removeRemote = vi.fn();
-    await expect(finishQaWorkspace({ repoRoot: f.dev, verifyRun: f.verifyRun, verifyVolume: f.verifyVolume,
-      removeRemote })).rejects.toThrow(/requires.*quality/u);
-    expect(removeRemote).not.toHaveBeenCalled();
-    expect(readQaWorkspace(f.dev)).toMatchObject({ phase: 'prepared', head: tip });
-  }
-);
 
 it('freezes the preview hotfix and publishes its exact tip after dev integration', async () => {
   const f = fixture('preview');

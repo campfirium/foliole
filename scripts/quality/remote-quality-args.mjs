@@ -3,10 +3,6 @@ import { normalizeRemoteQualitySourceRef } from './remote-quality-target.mjs';
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const PREFLIGHT_HOSTS = new Set(['mac', 'windows']);
 
-export function isRemoteQualityScope(scope) {
-  return ALLOWED_SCOPES.has(scope);
-}
-
 export function parseRemoteQualityArgs(args) {
   const result = { scope: '', sourceRef: 'refs/heads/dev' };
   for (let index = 0; index < args.length; index += 2) {
@@ -33,7 +29,7 @@ export function parseRemoteQualityArgs(args) {
     if (!/^[1-9]\d*$/u.test(result.replay)) throw new Error('--replay requires a numeric run ID');
     if (result.scope) throw new Error('--replay and --scope are mutually exclusive');
     result.scope = 'replay';
-  } else if (!isRemoteQualityScope(result.scope)) {
+  } else if (!ALLOWED_SCOPES.has(result.scope)) {
     throw new Error('--scope must be desktop, shared, android, ios, or full');
   }
   if (result.mobileDistribution !== undefined) {
