@@ -20,28 +20,42 @@ interface PickerProps {
 
 export function CompanionMoveDestinationPicker(props: PickerProps) {
   const { locale, t } = useLocalization();
-  const [query, setQuery] = useState('');
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
   const tree = useMemo(() => buildMoveDestinationTree(props.node, props.nodes,
     node => resolveNodeDisplayTitle(locale, node.id, node.title) || t('desktop.search.context.untitled')),
   [props.node, props.nodes, locale, t]);
+  return <CompanionDestinationPicker tree={tree} title={t('desktop.palette.move.dialog')}
+    searchLabel={t('desktop.palette.move.empty')} emptyLabel={t('desktop.palette.move.noResults')}
+    rootLabel={props.node.kind === 'folder' ? t('companion.workspace.root') : undefined}
+    disabled={props.disabled} value={props.value} onChange={props.onChange} />;
+}
+
+export function CompanionDestinationPicker(props: Pick<PickerProps, 'disabled' | 'value' | 'onChange'> & {
+  tree: ReturnType<typeof buildMoveDestinationTree>;
+  title: string;
+  searchLabel: string;
+  emptyLabel: string;
+  rootLabel?: string | undefined;
+}) {
+  const { t } = useLocalization();
+  const [query, setQuery] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { tree, rootLabel } = props;
   const rows = useMemo(() => visibleMoveDestinations(tree, expanded, query), [tree, expanded, query]);
   const searching = Boolean(query.trim());
-  const rootLabel = t('companion.workspace.root');
-  const showRoot = props.node.kind === 'folder' && (!searching || rootLabel.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const showRoot = rootLabel && (!searching || rootLabel.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const selected = tree.rows.get(props.value);
   const toggle = (id: string) => setExpanded(current => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  return <section className="companion-move-picker" aria-label={t('desktop.palette.move.dialog')}>
-    <input type="search" aria-label={t('desktop.palette.move.empty')} placeholder={t('desktop.palette.move.empty')}
+  return <section className="companion-move-picker" aria-label={props.title}>
+    <input type="search" aria-label={props.searchLabel} placeholder={props.searchLabel}
       disabled={props.disabled} value={query} onChange={event => setQuery(event.target.value)}
       onKeyDown={event => { if (event.key === 'Enter') event.preventDefault(); }} />
     <div className="companion-move-list app-scrollbar" ref={scrollRef} role="group"
-      aria-label={searching ? t('desktop.palette.node.results') : t('desktop.palette.move.dialog')}>
+      aria-label={searching ? t('desktop.palette.node.results') : props.title}>
       {showRoot &&
         <button type="button" className="companion-move-root" disabled={props.disabled}
           aria-pressed={props.value === ''} onClick={() => props.onChange('')}>
@@ -52,9 +66,10 @@ export function CompanionMoveDestinationPicker(props: PickerProps) {
         renderItem={row => <DestinationRow row={row} disabled={props.disabled} searching={searching}
           selected={props.value === row.id} expanded={expanded.has(row.id)} onToggle={() => toggle(row.id)}
           onSelect={() => props.onChange(row.id)} />} />
-      {rows.length === 0 && !showRoot && <p role="status">{t('desktop.palette.move.noResults')}</p>}
+      {rows.length === 0 && !showRoot && <p role="status">{props.emptyLabel}</p>}
     </div>
-    <p className="companion-move-location">{selected?.path ?? (props.value === '' && props.node.kind === 'folder' ? rootLabel : '')}</p>
+    {selected || (props.value === '' && rootLabel) ?
+      <p className="companion-move-location">{selected?.path ?? rootLabel}</p> : null}
   </section>;
 }
 

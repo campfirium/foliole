@@ -1,10 +1,15 @@
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode } from '../../lib/core/nodes/dive';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 
 import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from './workspaceNodeMetadataHistory';
 
 export type WorkspaceMetadataCommand =
   | { type: 'create'; kind: 'folder' | 'topic' | 'item'; title: string; parentNodeId: string | null; nodeId: string }
+  | { type: 'create-dive'; title: string; nodeId: string; sourceId: string | null }
+  | { type: 'create-index'; title: string; nodeId: string }
   | { type: 'set-priority'; nodeId: string; priority: number }
   | { type: 'rename'; nodeId: string; title: string }
   | { type: 'move'; nodeId: string; parentNodeId: string | null }
@@ -12,16 +17,26 @@ export type WorkspaceMetadataCommand =
 
 export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand,
   nodes: Record<string, WorkspaceNodeSnapshot>, now: string) {
-  if (command.type === 'create') {
+  if (command.type === 'create' || command.type === 'create-dive' || command.type === 'create-index') {
     if (nodes[command.nodeId] || !command.title.trim()) throw new Error('node_create_unavailable');
-    const node: WorkspaceNodeSnapshot = { id: command.nodeId, kind: command.kind, title: command.title.trim(),
-      parentNodeId: command.parentNodeId, isTitleManual: true, hideTitleHeading: false, content: '',
+    const isDive = command.type === 'create-dive';
+    const isIndex = command.type === 'create-index';
+    const node: WorkspaceNodeSnapshot = { id: command.nodeId, kind: command.type === 'create' ? command.kind : 'folder',
+      title: isDive ? normalizeDiveTitle(command.title) : command.title.trim(),
+      parentNodeId: isIndex ? VIRTUAL_ROOT_NODE_ID : command.type === 'create' ? command.parentNodeId : null,
+      isTitleManual: true, hideTitleHeading: false, content: '',
       reveal: null, anchorLink: null, reading: null, review: null, createdAt: now, updatedAt: now, deletedAt: null };
-    assertWorkspaceMetadataParent(node, node.parentNodeId, nodes);
-    return { nodes: [node], subtreeNodeIds: [node.id], title: `Create ${node.kind}` };
+    if (isDive) {
+      node.virtualFilter = DIVE_NODE_FILTER;
+      node.manualChildOrder = command.sourceId ? [command.sourceId] : [];
+    }
+    if (isIndex) node.virtualFilter = createManualVirtualNodeFilter();
+    else assertWorkspaceMetadataParent(node, node.parentNodeId, nodes);
+    return { nodes: [node], subtreeNodeIds: [node.id], title: isDive ? 'Create Dive' : isIndex ? 'Create in Virtual' : `Create ${node.kind}` };
   }
   const node = nodes[command.nodeId];
-  if (!node || node.id.startsWith('special-') || node.virtualFilter ||
+  const isDiveTrashAction = (command.type === 'delete' || command.type === 'restore') && readDiveNode(node);
+  if (!node || node.id.startsWith('special-') || (node.virtualFilter && !isDiveTrashAction) ||
     (command.type === 'restore' ? !node.deletedAt : node.deletedAt)) throw new Error('node_mutation_unavailable');
   const next = { ...node, updatedAt: now };
   if (command.type === 'rename') {

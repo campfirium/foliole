@@ -18,7 +18,7 @@ import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -40,10 +40,45 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       setSnapshot(next);
       return next;
     }}>
+    <CompanionWorkspaceCreateAction />
+    <CompanionWorkspaceHistoryActions />
     <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
       onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
   </CompanionWorkspaceActionsProvider>;
 }
+
+it('creates a manual index directly from mobile, supports undo and syncs the same index to desktop', async () => {
+  const library = await createSearchLibrary(0);
+  try {
+    const peers = await connectCompanionPeer(library);
+    await peers.exchange();
+    renderWithLocalization(<Directory initial={await readSnapshot()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create in Virtual' }));
+    const sheet = screen.getByRole('dialog', { name: 'Create in Virtual' });
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Create in Virtual' }));
+    await screen.findByRole('button', { name: 'Open folder Mobile Index' });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Mobile Index' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+    await screen.findByRole('button', { name: 'Open folder Mobile Index' });
+
+    const snapshot = await readSnapshot();
+    const index = Object.values(snapshot.nodesById).find(entry => entry.title === 'Mobile Index');
+    expect(index?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
+    expect(isManualVirtualNodeFilter(index?.virtualFilter)).toBe(true);
+    await peers.exchange();
+    const desktopIndex = peers.desktop.db.prepare('SELECT parent_id, virtual_filter FROM nodes WHERE id = ?')
+      .get(index!.id) as { parent_id: string; virtual_filter: string };
+    expect(desktopIndex.parent_id).toBe(VIRTUAL_ROOT_NODE_ID);
+    expect(isManualVirtualNodeFilter(JSON.parse(desktopIndex.virtual_filter))).toBe(true);
+  } finally {
+    cleanup();
+    await library.close();
+    await closeLibraries();
+  }
+});
 
 it('converts an existing Dive to a manual virtual directory and back from the mobile directory menu', async () => {
   const library = await createSearchLibrary(0);

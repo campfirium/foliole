@@ -6,11 +6,11 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionAddToDive } from './CompanionAddToDive';
 import { CompanionBottomSheet } from './CompanionBottomSheet';
-import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
+import { companionWorkspaceCreateLabels, useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass as rowClass } from './CompanionWorkspaceMenuActions';
 import { CompanionWorkspaceNodeForm } from './CompanionWorkspaceNodeForm';
 
-export type WorkspaceNodeSheetState = { mode: 'menu' | 'rename' | 'move' | 'create' | 'delete' | 'add-to-dive' | 'convert-to-dive' | 'convert-to-index'; nodeId: string | null; parentNodeId: string | null; kind?: NodeKind };
+export type WorkspaceNodeSheetState = { mode: 'menu' | 'rename' | 'move' | 'create' | 'create-dive' | 'create-index' | 'delete' | 'add-to-dive' | 'convert-to-dive' | 'convert-to-index'; nodeId: string | null; parentNodeId: string | null; kind?: NodeKind };
 
 export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetState; onClose(): void }) {
   const actions = useCompanionWorkspaceActions();
@@ -22,7 +22,8 @@ export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetSt
   const menuRow = (label: string, onClick: () => void) => <button key={label} type="button" disabled={disabled} className={rowClass} onClick={onClick}>{label}</button>;
   const adding = mode === 'add-to-dive';
   const conversion = mode === 'convert-to-dive' ? 'dive' : mode === 'convert-to-index' ? 'index' : null;
-  const title = adding ? t('desktop.nodeList.addToDive.title') : node?.title ?? t('companion.browse.more');
+  const title = mode === 'create-dive' || mode === 'create-index' ? t(companionWorkspaceCreateLabels[mode])
+    : adding ? t('desktop.nodeList.addToDive.title') : node?.title ?? t('companion.browse.more');
   const failureKey = actions.pending ? 'companion.workspace.savedRefreshError'
     : adding ? 'desktop.nodeList.addToDive.saveFailed'
     : conversion ? 'desktop.nodeList.dive.convertFailed' : 'companion.reading.historyError';

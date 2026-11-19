@@ -1,4 +1,7 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../../../../lib/core/database/diveSourceEligibility';
+import { VIRTUAL_ROOT_NODE_ID } from '../../../../../lib/core/database/specialNodeIds';
+import { ensureSyncSpecialRootNodes } from '../../../../../lib/core/sync/syncSpecialRootNodes';
 import type { ReviewSessionMode } from '../../../../features/review/model/reviewSessionMode';
 import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../../../../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../../../../store/workspaceSnapshotSequentialReading';
@@ -12,11 +15,16 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow?: { session: ReviewSessionState; mode: ReviewSessionMode }) {
   if (command.type === 'set-priority') return setCompanionPriority(command);
   return runCompanionHistoryMutation(async db => {
+    if (command.type === 'create-dive' && command.sourceId) {
+      const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(command.sourceId));
+      if (!source) throw new Error('A Dive source is unavailable');
+    }
+    const now = new Date().toISOString();
+    if (command.type === 'create-index') await ensureSyncSpecialRootNodes(db, [{ nodeId: VIRTUAL_ROOT_NODE_ID, referencedAt: now }]);
     const host = await iosCompanionHostName(db);
     const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
     if (!snapshot) throw new Error('workspace_unavailable');
     const nodes = snapshot.nodesById;
-    const now = new Date().toISOString();
     const mutation = buildWorkspaceMetadataMutation(command, nodes, now);
     const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node => [node.id, node])) };
     const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,

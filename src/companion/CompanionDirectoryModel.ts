@@ -36,7 +36,7 @@ export interface DirectorySection {
 }
 
 export type DirectoryListItem =
-  | (CompanionFolderListEntry & { id: string; source: 'internal' })
+  | (CompanionFolderListEntry & { id: string; source: 'internal'; directDiveId?: string })
   | TrashDirectoryListItem
   | (CompanionFolderListEntry & { id: string; source: 'virtual' })
   | { id: string; kind: 'folder'; nodeId: string; preview: null; source: 'externalFolder'; title: string }

@@ -8,6 +8,13 @@ export const DIVE_NODE_FILTER: VirtualNodeFilter = {
 };
 
 export const DIVE_SECTION_ROW_ID = 'workspace-dives';
+export const MAX_DIVE_TITLE_LENGTH = 120;
+
+export function normalizeDiveTitle(name: string) {
+  const title = name.trim();
+  if (!title || title.length > MAX_DIVE_TITLE_LENGTH) throw new Error('Invalid Dive name');
+  return title;
+}
 
 export interface Dive {
   id: string;
@@ -39,4 +46,10 @@ export function resolveDiveTopicIds(dive: Dive, tree: Parameters<typeof resolveF
 export function appendDiveSources(dive: Dive, ids: readonly string[]): Dive {
   const directSourceIds = [...new Set([...dive.directSourceIds, ...ids])];
   return directSourceIds.length === dive.directSourceIds.length ? dive : { ...dive, directSourceIds };
+}
+
+export function removeDirectDiveSource(dive: Dive, sourceId: string): Dive {
+  return dive.directSourceIds.includes(sourceId)
+    ? { ...dive, directSourceIds: dive.directSourceIds.filter(id => id !== sourceId) }
+    : dive;
 }

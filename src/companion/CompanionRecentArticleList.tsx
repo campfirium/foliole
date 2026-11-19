@@ -86,6 +86,7 @@ export function formatCompanionTopicDate(value: string, locale: string, now = ne
 }
 
 export function RecentArticleRow(props: {
+  directDiveId?: string | undefined;
   first?: boolean;
   article: CompanionRecentArticle;
   currentArticleId: string | null;
@@ -106,7 +107,7 @@ export function RecentArticleRow(props: {
         {status ? <p className="companion-topic-preview">{status}</p> : null}
         <p className="companion-topic-meta truncate">{meta}</p>
       </button>
-      <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} title={props.article.title} />
+      <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} title={props.article.title} directDiveId={props.directDiveId} />
     </div>
   );
 }

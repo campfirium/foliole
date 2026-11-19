@@ -13,7 +13,11 @@ export interface MoveDestinationRow {
 
 export function buildMoveDestinationTree(source: WorkspaceNodeSnapshot, nodes: Record<string, WorkspaceNodeSnapshot>,
   titleFor: (node: WorkspaceNodeSnapshot) => string) {
-  const targets = listWorkspaceMetadataParents(source, nodes);
+  return buildCompanionDestinationTree(listWorkspaceMetadataParents(source, nodes), nodes, titleFor);
+}
+
+export function buildCompanionDestinationTree(targets: readonly WorkspaceNodeSnapshot[], nodes: Record<string, WorkspaceNodeSnapshot>,
+  titleFor: (node: WorkspaceNodeSnapshot) => string) {
   const targetIds = new Set(targets.map(node => node.id));
   const included = new Set(targetIds);
   for (const node of targets) {

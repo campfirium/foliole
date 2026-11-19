@@ -18,6 +18,7 @@ export function resolveCompanionDiveSections(
   const toItem = (section: string, id: string): DirectoryListItem => {
     const node = snapshot.nodesById[id]!;
     return { id: `${section}:${id}`, nodeId: id, source: 'internal', kind: node.kind,
+      ...(section === 'source' ? { directDiveId: dive.id } : {}),
       title: node.title, preview: node.openingText ?? null };
   };
   const sections: DirectorySection[] = [

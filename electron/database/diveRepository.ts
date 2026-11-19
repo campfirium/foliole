@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../lib/core/database/diveSourceEligibility.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { appendDiveSources, DIVE_NODE_FILTER, readDiveNode, type Dive } from '../../lib/core/nodes/dive.js';
+import { appendDiveSources, DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode, removeDirectDiveSource, type Dive } from '../../lib/core/nodes/dive.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 
@@ -45,12 +45,6 @@ function validateSources(db: SqliteDatabase, ids: readonly string[]): string[] {
   return uniqueIds;
 }
 
-function validateTitle(name: string) {
-  const title = name.trim();
-  if (!title || title.length > 120) throw new Error('Invalid Dive name');
-  return title;
-}
-
 function saveDive(db: SqliteDatabase, dive: Dive, createdAt?: string) {
   const updatedAt = new Date().toISOString();
   const driver = createBetterSqlite3Driver(db);
@@ -66,14 +60,14 @@ function saveDive(db: SqliteDatabase, dive: Dive, createdAt?: string) {
 }
 
 export function createDive(db: SqliteDatabase, name: string, ids: readonly string[]): Dive {
-  const title = validateTitle(name);
+  const title = normalizeDiveTitle(name);
   return db.transaction(() => saveDive(db, {
     id: randomUUID(), title, directSourceIds: ids.length ? validateSources(db, ids) : []
   })).immediate();
 }
 
 export function renameDive(db: SqliteDatabase, diveId: string, name: string): Dive {
-  const title = validateTitle(name);
+  const title = normalizeDiveTitle(name);
   return updateDive(db, diveId, dive => dive.title === title ? dive : { ...dive, title });
 }
 
@@ -82,9 +76,7 @@ export function addDiveSources(db: SqliteDatabase, diveId: string, ids: readonly
 }
 
 export function removeDiveSource(db: SqliteDatabase, diveId: string, sourceId: string): Dive {
-  return updateDive(db, diveId, dive => dive.directSourceIds.includes(sourceId)
-    ? { ...dive, directSourceIds: dive.directSourceIds.filter(id => id !== sourceId) }
-    : dive);
+  return updateDive(db, diveId, dive => removeDirectDiveSource(dive, sourceId));
 }
 
 function updateDive(db: SqliteDatabase, diveId: string, update: (dive: Dive) => Dive): Dive {

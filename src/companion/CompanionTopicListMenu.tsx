@@ -10,7 +10,7 @@ import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass } from './CompanionWorkspaceMenuActions';
 
-export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: string; title: string; metadata: string }) {
+export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: string; title: string; metadata: string; directDiveId?: string | undefined }) {
   const t = useTranslation();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -26,7 +26,7 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
       <CompanionBottomSheet showScrollIndicator onOpenChange={setOpen} open={open} title={t('companion.browse.more')}>
-        <TopicListMenuActions nodeId={props.nodeId} onClose={() => setOpen(false)}>
+        <TopicListMenuActions nodeId={props.nodeId} diveId={props.directDiveId} onClose={() => setOpen(false)}>
           <button className={companionWorkspaceRowClass} onClick={() => { setOpen(false); setInfoOpen(true); }} type="button">
             {t('companion.reading.info')}
           </button>
@@ -40,14 +40,17 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
   );
 }
 
-function TopicListMenuActions({ nodeId, onClose, children }: {
-  nodeId?: string | undefined; onClose(): void; children: ReactNode;
+function TopicListMenuActions({ nodeId, diveId, onClose, children }: {
+  nodeId?: string | undefined; diveId?: string | undefined; onClose(): void; children: ReactNode;
 }) {
+  const t = useTranslation();
   const workspace = useCompanionWorkspaceActions();
   if (!nodeId || !workspace?.snapshot?.nodesById[nodeId] || !isAvailableNativeCompanionRuntime()) return children;
   return <CompanionWorkspaceMenuActions nodeId={nodeId} shortcuts onSaved={onClose}
     onSelect={state => { onClose(); workspace.open(state); }}>
     <CompanionNodePrioritySlider nodeId={nodeId} onSaved={onClose} />
+    {diveId && <button type="button" className={companionWorkspaceRowClass} disabled={workspace.busy || workspace.pending}
+      onClick={() => workspace.removeFromDive(diveId, nodeId, onClose)}>{t('desktop.nodeList.menu.removeFromDive')}</button>}
     {children}
   </CompanionWorkspaceMenuActions>;
 }

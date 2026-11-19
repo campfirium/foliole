@@ -1,19 +1,30 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../../../../lib/core/database/diveSourceEligibility';
-import { appendDiveSources, readDiveNode } from '../../../../../lib/core/nodes/dive';
+import { appendDiveSources, readDiveNode, removeDirectDiveSource, type Dive } from '../../../../../lib/core/nodes/dive';
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import { saveCompanionDiveDirectoryVersion } from './companionDiveDirectoryVersion';
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function addCompanionDiveSource(diveId: string, sourceId: string) {
+  return changeCompanionDiveSources(diveId, async (db, dive) => {
+    const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(sourceId));
+    if (!source) throw new Error('A Dive source is unavailable');
+    return appendDiveSources(dive, [sourceId]);
+  });
+}
+
+export function removeCompanionDiveSource(diveId: string, sourceId: string) {
+  return changeCompanionDiveSources(diveId, (_db, dive) => removeDirectDiveSource(dive, sourceId));
+}
+
+function changeCompanionDiveSources(diveId: string, change: (db: DbPort, dive: Dive) => Dive | Promise<Dive>) {
   return runCompanionHistoryMutation(async db => {
     const node = await loadCompanionWorkspaceNodeFromDb(db, diveId);
     const dive = node && !node.deletedAt ? readDiveNode(node) : null;
     if (!node || !dive) throw new Error('Dive is unavailable');
-    const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(sourceId));
-    if (!source) throw new Error('A Dive source is unavailable');
-    const updated = appendDiveSources(dive, [sourceId]);
+    const updated = await change(db, dive);
     if (updated === dive) return;
     await saveCompanionDiveDirectoryVersion(db, { ...node, updatedAt: new Date().toISOString() },
       await iosCompanionHostName(db), { manual_child_order: JSON.stringify(updated.directSourceIds) });

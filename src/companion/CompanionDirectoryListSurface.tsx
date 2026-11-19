@@ -74,8 +74,10 @@ function DirectoryRow(props: DirectoryRowProps) {
         className="h-4 w-4 shrink-0 text-companion-text-tertiary"
       />
     </button>
-    {props.item.source === 'virtual' && <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title} />}
-    {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title} metadata={meta ?? ''} />}
+    {(props.item.source === 'virtual' || props.item.source === 'trash') &&
+      <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title} />}
+    {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title}
+      metadata={meta ?? ''} directDiveId={props.item.directDiveId} />}
     </div>
   );
 }
@@ -145,5 +147,6 @@ function DirectoryTopicRow(props: DirectoryRowProps & { title: string }) {
     currentArticleId={null}
     onSelectArticle={() => props.onSelectItem(props.item)}
     testId={`companion-directory-node-${props.item.nodeId}`}
+    directDiveId={props.item.source === 'internal' ? props.item.directDiveId : undefined}
   />;
 }
