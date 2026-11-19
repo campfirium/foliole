@@ -1,6 +1,7 @@
 import type { SuperMemoXmlBody } from '../../../../lib/core/import/superMemoXmlDraft';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
+import { SuperMemoDeletedPage } from './SuperMemoDeletedPage';
 import type { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { SuperMemoLoadPage } from './SuperMemoLoadPage';
@@ -27,6 +28,7 @@ export function SuperMemoMigrationContent({ model, current, navigation, sourceCo
         current === 'schedule' ? 'desktop.superMemoDrafts.scheduleTitle' : superMemoMigrationStepLabel(current)
       )}</h3>
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
+      {current === 'deleted' ? <SuperMemoDeletedPage /> : null}
       {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && draft ? (
         <>

@@ -9,6 +9,7 @@ import { SuperMemoDraftDialog } from './SuperMemoDraftDialog';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
 
 const runtime = vi.hoisted(() => ({
+  activateSavedRuntimeSuperMemoSource: vi.fn().mockResolvedValue(null),
   checkRuntimeSuperMemoSource: vi.fn().mockResolvedValue(null),
   getRuntimeSuperMemoSourceSelection: vi.fn().mockResolvedValue(null),
   parseRuntimeSuperMemoBodies: vi.fn(),

@@ -5,6 +5,7 @@ export const NATIVE_IMPORT_FILE_COMMANDS = {
   pickSuperMemoSource: 'pick_supermemo_source',
   readSuperMemoSource: 'read_supermemo_source',
   getSuperMemoSourceSelection: 'get_supermemo_source_selection',
+  activateSavedSuperMemoSource: 'activate_saved_supermemo_source',
   clearSuperMemoSourceSelection: 'clear_supermemo_source_selection',
   selectSuperMemoCollection: 'select_supermemo_collection',
   listSuperMemoImports: 'list_supermemo_imports',

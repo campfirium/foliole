@@ -12,7 +12,6 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
 }) {
   const t = useTranslation();
   const { busy, loadingXml, retryAsUpdate, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
-  const update = model.draft?.preview.directoryUpdate;
   const collectionDirectory = selection?.collectionDirectory;
   return (
     <>
@@ -22,11 +21,11 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
             : t('desktop.superMemoDrafts.exportAllElements')}>
           <SettingsControlSlot className={sourceControlLayout}>
             <div className="flex flex-wrap justify-end gap-2">
-              {update ? <AppButton disabled={busy} loading={loadingXml && retryAsUpdate} onClick={onLoadNew}>
+              {selection ? <AppButton disabled={busy} loading={loadingXml && retryAsUpdate} onClick={onLoadNew}>
                 {t('desktop.superMemoDrafts.loadNewExport')}
               </AppButton> : null}
               <AppButton disabled={busy} loading={loadingXml && !retryAsUpdate} onClick={onLoad}>
-                {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
+                {t(selection ? 'desktop.superMemoDrafts.changeSource' : 'desktop.superMemoDrafts.loadSource')}
               </AppButton>
             </div>
           </SettingsControlSlot>
@@ -42,7 +41,7 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
           </SettingsControlSlot> : null}
         </SettingsRow>
       </SettingsSection>
-      <SuperMemoLoadNotice inline error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
+      <SuperMemoLoadNotice inline reload={retryAsUpdate} error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
         recover={choice => void recoverCollection(choice)} retry={() => void retrySource()} />
     </>
   );

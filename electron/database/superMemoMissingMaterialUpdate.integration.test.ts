@@ -1,13 +1,15 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 
-import { softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
+import { restoreNodes, softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
+import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { DEFAULT_SUPER_MEMO_GRADE_MAP } from '../../lib/core/import/superMemoSchedulePreview.js';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT } from '../../lib/core/import/superMemoSourceFormatting.js';
 import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
+import { readSuperMemoDeletions } from '../import/readSuperMemoDeletions.js';
 import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
 import { superMemoDueInstant } from '../import/superMemoImportSchedule.js';
 import { confirmSuperMemoDirectoryUpdate, updateSuperMemoDirectories } from '../import/updateSuperMemoDirectories.js';
@@ -108,6 +110,65 @@ it('recovers an entirely skipped batch inside the SuperMemo folder', async () =>
     expect(await confirmSuperMemoDirectoryUpdate({ ...args, preview: draft }, plan.signature)).toMatchObject({ imported: 1, skipped: 0 });
     expect(peer.sqlite.prepare(`SELECT p.title FROM nodes n JOIN nodes p ON p.id = n.parent_id
       WHERE n.title = ?`).pluck().get('Missing card')).toBe('SuperMemo');
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
+
+it('skips a previously imported Topic after trashing and permanently deleting it', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  const topic = { ...root, children: [] };
+  const args = { ...input, elements: [topic], preview: { ...revised, rows: rows.filter(row => row.id === topic.id) } };
+  const bind = () => {
+    const driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+    connection.driver = driver;
+    return driver;
+  };
+  const findTopic = () => peer.sqlite.prepare('SELECT id, deleted_at FROM nodes WHERE title = ?').get(topic.title) as
+    { id: string; deleted_at: string | null } | undefined;
+  const applySameExport = async () => {
+    const plan = updateSuperMemoDirectories(args.elements, args.preview, undefined, undefined, args)!;
+    await confirmSuperMemoDirectoryUpdate(args, plan.signature);
+  };
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    const driver = bind();
+    const imported = await runSuperMemoImport(args);
+    const { id } = findTopic()!;
+    const deleted = (driver: ReturnType<typeof bind>) => readSuperMemoDeletions(driver, imported.batchId);
+    expect(deleted(driver)).toEqual([]);
+    const deletedAt = '2026-11-17T12:00:00.000Z';
+    softDeleteNodes(driver, { nodeIds: [id], deletedAt });
+    await applySameExport();
+    expect(findTopic()).toEqual({ id, deleted_at: deletedAt });
+    expect(deleted(driver)).toEqual([{ sourceId: topic.id, title: topic.title, status: 'trash' }]);
+    restoreNodes(driver, { nodeIds: [id] });
+    await applySameExport();
+    expect(findTopic()).toEqual({ id, deleted_at: null });
+    expect(deleted(driver)).toEqual([]);
+    softDeleteNodes(driver, { nodeIds: [id], deletedAt });
+    peer.sqlite.exec("ATTACH DATABASE ':memory:' AS search");
+    deleteNodesPermanently(driver, { nodeIds: [id], deletedAt });
+    peer.reopen();
+    const reopened = bind();
+    await expect(runSuperMemoImport(args)).resolves.toMatchObject({ batchId: imported.batchId });
+    await applySameExport();
+    expect(findTopic()).toBeUndefined();
+    expect(deleted(reopened)).toEqual([{ sourceId: topic.id, title: topic.title, status: 'permanent' }]);
+
+    const added = { ...topic, id: 6, title: 'New reading', bodyOrQuestionHtml: ['A different passage.'] };
+    const newer = [topic, added];
+    const refresh = { ...args, elements: newer, targetBatchId: imported.batchId,
+      preview: { ...args.preview, rows: describeSuperMemoSource(newer, offset, scheduler, gradeMap) } };
+    const plan = updateSuperMemoDirectories(newer, refresh.preview, undefined, undefined, refresh)!;
+    await confirmSuperMemoDirectoryUpdate(refresh, plan.signature);
+    expect(peer.sqlite.prepare('SELECT title FROM nodes WHERE title = ?').pluck().get(added.title)).toBe(added.title);
+    expect(findTopic()).toBeUndefined();
+    expect(deleted(reopened)).toEqual([{ sourceId: topic.id, title: topic.title, status: 'permanent' }]);
   } finally {
     connection.driver = null;
     await fixture.close();

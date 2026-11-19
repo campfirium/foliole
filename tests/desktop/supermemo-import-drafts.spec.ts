@@ -65,10 +65,11 @@ test('previews different XML exports and retains the conversion draft after dism
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });
-  await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>');
+  const change = /^(Change XML|更换 XML)$/;
+  await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>', change);
   await dismissLoadError(desktopWindow);
   await expect(dialog.getByText(/[/\\]Learning\.xml$/)).toBeVisible();
-  await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport);
+  await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport, change);
   await expect(dialog.getByText('Other', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();

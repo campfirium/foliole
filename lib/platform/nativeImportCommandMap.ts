@@ -25,12 +25,13 @@ import type {
 export type NativeImportCommandMap = {
   [NATIVE_COMMANDS.pickSuperMemoSource]: { args: undefined; result: string | null };
   [NATIVE_COMMANDS.readSuperMemoSource]: {
-    args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore'; xmlOnly?: boolean } | { action: 'check' } |
+    args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore'; xmlOnly?: boolean } | { action: 'check' | 'reload' } |
       { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean; snapshot?: SuperMemoMigrationSnapshot; xmlHash?: string } |
       { action: 'rememberPanel'; filePath: string; collectionDirectory: string | null; panel: SuperMemoMigrationPanel; snapshot?: SuperMemoMigrationSnapshot };
     result: NativeSuperMemoSource | null;
   };
-  [NATIVE_COMMANDS.getSuperMemoSourceSelection]: { args: undefined; result: RememberedSuperMemoSource | null };
+  [NATIVE_COMMANDS.getSuperMemoSourceSelection]: { args: { refreshDeletions: true } | undefined; result: RememberedSuperMemoSource | null };
+  [NATIVE_COMMANDS.activateSavedSuperMemoSource]: { args: { filePath: string }; result: RememberedSuperMemoSource | null };
   [NATIVE_COMMANDS.clearSuperMemoSourceSelection]: { args: undefined; result: null };
   [NATIVE_COMMANDS.selectSuperMemoCollection]: {
     args: { filePath: string; title: string; candidate?: string };

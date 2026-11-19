@@ -34,7 +34,7 @@ import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { handleSuperMemoImportCommand } from './superMemoImportCommands.js';
-import { clearSuperMemoSourceSelection, getSuperMemoSourceSelection, handleSuperMemoSource } from './superMemoSourceLink.js';
+import { activateSavedSuperMemoSource, clearSuperMemoSourceSelection, getSuperMemoSourceSelection, handleSuperMemoSource } from './superMemoSourceLink.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -100,7 +100,14 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
 
   if (request.command === NATIVE_COMMANDS.pickSuperMemoSource) return pickSuperMemoSource(resolveTargetWindow(context));
   if (request.command === NATIVE_COMMANDS.readSuperMemoSource) return handleSuperMemoSource(args);
-  if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) return getSuperMemoSourceSelection();
+  if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) {
+    return args.refreshDeletions === true
+      ? runWithDatabaseConnectionOwner(() => getSuperMemoSourceSelection(true))
+      : getSuperMemoSourceSelection();
+  }
+  if (request.command === NATIVE_COMMANDS.activateSavedSuperMemoSource) {
+    return activateSavedSuperMemoSource(asString(args.filePath, 'filePath'));
+  }
   if (request.command === NATIVE_COMMANDS.clearSuperMemoSourceSelection) return clearSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
     const filePath = asString(args.filePath, 'filePath');

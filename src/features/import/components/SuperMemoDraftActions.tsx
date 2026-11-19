@@ -21,6 +21,7 @@ export function SuperMemoDraftActions({ step, busy, importing = false, updating 
   navigate(step: SuperMemoMigrationStep): void; convert(): void;
 }) {
   const t = useTranslation();
+  if (step === 'deleted') return null;
   const finalStep = step === 'grades';
   const showAction = finalStep ? hasPreview : canProceed;
   const previous = step === 'load' ? undefined : previousStep[step];

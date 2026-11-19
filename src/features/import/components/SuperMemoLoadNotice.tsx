@@ -18,6 +18,7 @@ const descriptions = {
   collectionAccess: 'desktop.superMemoDrafts.collectionAccess',
   collectionRead: 'desktop.superMemoDrafts.collectionRead',
   collectionMismatch: 'desktop.superMemoDrafts.collectionMismatch',
+  sourceMismatch: 'desktop.superMemoDrafts.exportStatus.unverified',
   preview: 'desktop.superMemoDrafts.previewFailed',
   convert: 'desktop.superMemoDrafts.convertFailed',
   save: 'desktop.superMemoDrafts.saveLinkFailed'
@@ -27,9 +28,10 @@ type NoticeProps = {
   error: SuperMemoNotice; busy: boolean; candidates?: { directory: string; name: string }[] | undefined;
   onClose(): void; recover(choice: boolean | string): void; retry(): void;
   inline?: boolean;
+  reload?: boolean;
 };
 
-function RecoveryActions({ error, busy, inline, onClose, recover, retry }: NoticeProps) {
+function RecoveryActions({ error, busy, inline, reload, onClose, recover, retry }: NoticeProps) {
   const t = useTranslation();
   const collection = typeof error === 'string' && error.startsWith('collection');
   const close = <AppButton variant="ghost" disabled={busy} onClick={inline ? onClose : undefined}>
@@ -40,7 +42,7 @@ function RecoveryActions({ error, busy, inline, onClose, recover, retry }: Notic
   return (
     <>
       {error !== 'collectionAccess' ? (inline ? close : <AppDialogClose asChild>{close}</AppDialogClose>) : null}
-      {canRetryXml ? <AppButton disabled={busy} onClick={retry}>{t('desktop.importAccess.chooseAgain')}</AppButton> : null}
+      {canRetryXml ? <AppButton disabled={busy} onClick={retry}>{t(reload ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.importAccess.chooseAgain')}</AppButton> : null}
       {collection ? <AppButton variant="ghost" disabled={busy} onClick={() => recover(false)}>{t('desktop.superMemoDrafts.continueXml')}</AppButton> : null}
       {collection ? <AppButton disabled={busy} onClick={() => recover(true)}>{t('desktop.superMemoDrafts.chooseCollection')}</AppButton> : null}
     </>

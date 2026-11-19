@@ -46,10 +46,9 @@ export function superMemoImportComplete(page: Page) {
 }
 
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
-  sourceButton = /^(Choose XML|Change XML|Load XML|Load another XML|选择 XML|更换 XML|载入 XML|重新载入)$/, collectionLocation?: string) {
+  sourceButton = /^(Choose XML|Reload XML|Update XML|Load XML|选择 XML|重新载入 XML|更新 XML|载入 XML|重新载入)$/, collectionLocation?: string) {
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, path.basename(directory) + '.xml');
-  if (xml !== undefined) await writeFile(file, xml);
   await app.evaluate(({ dialog }, { file, collectionLocation }) => {
     dialog.showOpenDialog = async (first: BrowserWindow | OpenDialogOptions, second?: OpenDialogOptions) => {
       const options = second ?? first as OpenDialogOptions;
@@ -57,8 +56,13 @@ export async function loadSource(app: ElectronApplication, dialog: Locator, dire
       return selection ? { canceled: false, filePaths: [selection] } : { canceled: true, filePaths: [] };
     };
   }, { file, collectionLocation });
-  await dialog.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
-  await dialog.getByRole('button', { name: sourceButton }).click();
+  const loadStep = dialog.getByRole('button', { name: /^(Load data|载入数据)$/ });
+  const reload = dialog.page().getByRole('dialog', { name: /^(SuperMemo source changed|SuperMemo 来源已变化)$/ })
+    .getByRole('button', { name: /^(Reload XML|重新载入 XML)$/ });
+  await loadStep.or(reload).first().waitFor();
+  if (!(await reload.isVisible())) await loadStep.click();
+  if (xml !== undefined) await writeFile(file, xml);
+  await dialog.getByRole('button', { name: sourceButton }).or(reload).first().click();
 }
 
 export async function writeCollection(directory: string, includeTopic: boolean) {

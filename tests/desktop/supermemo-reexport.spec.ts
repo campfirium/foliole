@@ -10,7 +10,6 @@ function exportXml(questions: string[]) {
 test('links a verified new export to the original batch and refuses a mismatched library', async ({ desktopWindow, desktopApp }, testInfo) => {
   const original = testInfo.outputPath('Original');
   const wrong = testInfo.outputPath('Foreign');
-  const newer = testInfo.outputPath('Newer');
   const first = await openPreview(desktopWindow);
   await loadSource(desktopApp, first, original, exportXml(['First original question', 'Second original question']));
   await first.getByRole('button', { name: parameters }).click();
@@ -30,12 +29,14 @@ test('links a verified new export to the original batch and refuses a mismatched
   const newButton = /^(Update XML|更新 XML)$/;
   const confirmUpdate = /^(Confirm Update|确认更新)$/;
   await loadSource(desktopApp, dialog, wrong, exportXml(['Foreign one', 'Foreign two']), newButton);
-  const rejected = await openSuperMemoUpdateReview(dialog);
-  await expect(rejected.getByText(/could not be verified against the saved batch|无法核实这份导出与原批次/)).toBeVisible();
-  await expect(rejected.getByRole('button', { name: confirmUpdate })).toBeDisabled();
-  await rejected.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
+  await expect(dialog.getByRole('button', { name: /^(Change XML|更换 XML)$/ })).toBeVisible();
+  await expect(dialog.getByText(/Original\.xml$/)).toBeVisible();
+  await loadSource(desktopApp, dialog, original, exportXml(['Foreign one', 'Foreign two']), newButton);
+  await expect(dialog.getByRole('alert')).toContainText(/could not be verified against the saved batch|无法核实这份导出与原批次/);
+  expect(await nodes()).toEqual(before);
   const updatedXml = exportXml(['First original question', 'Second original question', 'New question']);
-  await loadSource(desktopApp, dialog, newer, updatedXml, newButton);
+  await loadSource(desktopApp, dialog, original, updatedXml, newButton);
   const review = await openSuperMemoUpdateReview(dialog);
   await expect(review.getByText(/Matched 2 existing entries|已核实 2 条已有资料/)).toBeVisible();
   expect(await nodes()).toEqual(before);
@@ -47,7 +48,7 @@ test('links a verified new export to the original batch and refuses a mismatched
   await superMemoUpdateComplete(desktopWindow).press('Escape');
 
   const reopened = await openPreview(desktopWindow);
-  await loadSource(desktopApp, reopened, newer);
+  await loadSource(desktopApp, reopened, original);
   const reviewAgain = await openSuperMemoUpdateReview(reopened);
   await expect(reviewAgain.getByRole('button', { name: confirmUpdate })).toBeDisabled();
   expect(await nodes()).toEqual(after);

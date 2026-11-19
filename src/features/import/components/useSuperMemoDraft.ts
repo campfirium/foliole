@@ -7,8 +7,9 @@ import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrat
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import { parseRuntimeSuperMemoSource, previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, runRuntimeSuperMemoImport, saveSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
-import { automaticSourceFormat, createSourceActions, mappedSourceFormat, migrationSnapshot, previewFailure, rememberDraftSource } from './superMemoDraftSourceActions';
+import { automaticSourceFormat, createSourceActions, previewFailure } from './superMemoDraftSourceActions';
 import type { DraftTarget, Pending, Source, SuperMemoNotice } from './superMemoDraftSourceActions';
+import { mappedSourceFormat, migrationSnapshot, rememberDraftSource } from './superMemoSavedDraft';
 import { useSuperMemoSourceSelection } from './useSuperMemoSourceSelection';
 
 async function applyDraftChange(apply: () => Promise<void>, setBusy: (value: boolean) => void,
@@ -66,7 +67,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   const state = useDraftState(initialGrades);
   const { source, result, sourceFormat, target, gradeMap, percent, draft, setBusy, setError, setGradeMap, setDraft,
     remembered } = state;
-  const selectionActions = useSuperMemoSourceSelection(state);
+  const selectionActions = useSuperMemoSourceSelection(state, initialGrades);
   const [invalidReferences, setInvalidReferences] = useState<{ source: typeof source; mapping: SuperMemoReferenceMap }>();
   const referenceMap = invalidReferences?.source === source && invalidReferences
     ? invalidReferences.mapping : sourceFormat.referenceMap ?? {};
@@ -106,7 +107,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
     importSource: (ids: number[]) => importDraft(state, ids, selectionActions.savePanel),
     reviewUpdate: () => reviewDraftUpdate(state, selectionActions.savePanel),
     candidates: state.pending?.candidates, ...selectionActions,
-    ...createSourceActions(state, pickerTitle) };
+    ...createSourceActions(state, pickerTitle, initialGrades) };
 }
 
 async function prepareImport(state: DraftState) {

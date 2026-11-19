@@ -63,7 +63,7 @@ export interface SuperMemoMigrationForm {
   comparison?: { batchId: string; originalFilePath?: string | undefined } | undefined;
 }
 
-export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'source' | 'confirm';
+export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'deleted' | 'source' | 'confirm';
 
 export interface SuperMemoMigrationPanel {
   step?: SuperMemoMigrationStep | undefined;
@@ -88,9 +88,16 @@ export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
   panel?: SuperMemoMigrationPanel;
 }
 
+export type SuperMemoDeletedEntry = {
+  sourceId: number;
+  title: string;
+  status: 'trash' | 'permanent';
+};
+
 export interface RememberedSuperMemoSource extends SuperMemoSourceSelection {
   savedForm: SuperMemoMigrationForm;
   snapshot: SuperMemoMigrationSnapshot;
+  deletedEntries?: SuperMemoDeletedEntry[];
   panel?: SuperMemoMigrationPanel;
 }
 
@@ -154,6 +161,7 @@ export interface NativeSuperMemoDirectoryUpdate {
   sourceMatch?: NativeSuperMemoSourceMatch;
   citationChanges: NativeSuperMemoCitationChange[];
   textChanges: NativeSuperMemoTextChange[];
+  hasRuleCorrections?: true;
   firstReviewChanges: NativeSuperMemoFirstReviewChange[];
   withdrawals: NativeSuperMemoWithdrawal[];
   withdrawnSourceIds: number[];
@@ -161,7 +169,6 @@ export interface NativeSuperMemoDirectoryUpdate {
     sourceId: number;
     title: string;
     from: string | null;
-  hasRuleCorrections?: true;
     to: string | null;
     status: 'add' | 'add-unavailable' | 'move' | 'anchor' | 'protected' | 'unavailable' | 'anchor-unverified';
     reanchor?: true;

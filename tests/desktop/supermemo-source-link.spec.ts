@@ -24,7 +24,7 @@ test('remembers the last valid XML link and migration form across an app restart
   await dialog.getByRole('slider').press('End');
   await dialog.getByRole('button', { name: structureStep }).click();
   await dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
-  await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>');
+  await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>', /^(Change XML|更换 XML)$/);
   await desktopWindow.getByRole('region', { name: noticeTitle }).getByRole('button', { name: close }).click();
   await expect(dialog.getByText(/(?:^Remembered$|[/\\]Remembered\.xml$)/)).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
@@ -168,7 +168,8 @@ test('starts fresh when the saved data has no migration state', async ({ desktop
     const file = (await fs.readdir(dir)).find(name => /^[a-f\d]{64}\.json$/.test(name));
     if (!file) throw new Error('Missing saved selection');
     const link = path.join(dir, file);
-    const data = JSON.parse(await fs.readFile(link, 'utf8'));
+    const store = JSON.parse(await fs.readFile(link, 'utf8'));
+    const data = store.sources[store.activeFilePath];
     delete data.snapshot;
     delete data.xmlHash;
     await fs.writeFile(link, JSON.stringify(data));

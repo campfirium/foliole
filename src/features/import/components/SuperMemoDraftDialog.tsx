@@ -155,7 +155,7 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
           className={settingsDialogSurfaceClassName(settingsDialogGrid)}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
           onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
-          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy} onChange={navigate} />
+          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy} hasBatch={Boolean(model.selection?.panel?.batchId ?? update?.batchId)} onChange={navigate} />
           <div className={settingsDialogPane}>
             <DraftHeader name={current === 'load' ? undefined : model.selection?.name} />
             <div key={current} className={`min-h-0 flex-1 overflow-y-auto px-7 ${
@@ -175,8 +175,8 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
         </AppDialogContent>
       </AppDialogPortal>
       {open && review ? <SuperMemoUpdateReview update={review} busy={busy} onClose={closeReview} onApply={applyUpdate} /> : null}
-      <SuperMemoLoadNotice error={open && (current !== 'load' || error === 'xmlUpdated') && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
-        recover={choose => void model.recoverCollection(choose)} retry={() => void model.retrySource()} />
+      <SuperMemoLoadNotice reload={error === 'xmlUpdated' || model.retryAsUpdate} error={open && (current !== 'load' || error === 'xmlUpdated') && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
+        recover={choose => void model.recoverCollection(choose)} retry={() => void (error === 'xmlUpdated' ? loadSource(true) : model.retrySource())} />
     </AppDialog>
   );
 }

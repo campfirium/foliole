@@ -11,17 +11,25 @@ export function pickRuntimeSuperMemoSource() {
   return requireInvoke()(NATIVE_COMMANDS.pickSuperMemoSource);
 }
 
+export function activateSavedRuntimeSuperMemoSource(filePath: string) {
+  return requireInvoke()(NATIVE_COMMANDS.activateSavedSuperMemoSource, { filePath });
+}
+
 export function readRuntimeSuperMemoSource(filePath: string) {
   return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
 }
 
-export async function getRuntimeSuperMemoSourceSelection() {
-  return requireInvoke()(NATIVE_COMMANDS.getSuperMemoSourceSelection);
+export async function getRuntimeSuperMemoSourceSelection(refreshDeletions = false) {
+  return requireInvoke()(NATIVE_COMMANDS.getSuperMemoSourceSelection, refreshDeletions ? { refreshDeletions: true } : undefined);
 }
 
 export async function saveRuntimeSuperMemoPanel(source: SuperMemoSourceSelection, panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) {
   await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource,
     { action: 'rememberPanel', filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null, panel, ...(snapshot ? { snapshot } : {}) });
+}
+
+export function reloadRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'reload' });
 }
 
 export function checkRuntimeSuperMemoSource() {
