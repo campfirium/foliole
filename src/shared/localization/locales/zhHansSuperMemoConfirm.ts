@@ -3,6 +3,7 @@ export const ZH_HANS_SUPER_MEMO_CONFIRM_TRANSLATIONS = {
   'desktop.superMemoDrafts.confirmExisting': '更新已有批次',
   'desktop.superMemoDrafts.confirmSavedBlend': '沿用该批次保存的比例',
   'desktop.superMemoDrafts.confirmBlend': '向 Foliole 调整 {percent}%',
+  'desktop.superMemoDrafts.conversionDetails': '查看转换说明',
   'desktop.superMemoDrafts.confirmExceptions': '转换异常',
   'desktop.superMemoDrafts.confirmTotals': '将导入 {converted} 条 · 跳过 {skipped} 条',
   'desktop.superMemoDrafts.confirmIssue.empty-topic': '跳过空 Topic（{count} 条）',

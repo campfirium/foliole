@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { convertSuperMemoContent } from '../../lib/core/import/superMemoContent.js';
 import { readSuperMemoNativeMarks } from '../../lib/core/import/superMemoNativeMarks.js';
+import { addSuperMemoReferenceHeading } from '../../lib/core/import/superMemoTopicTitle.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { stageManagedAttachmentFile } from '../attachments/managedAttachmentFileStage.js';
@@ -76,7 +77,7 @@ export async function inspectSuperMemoImageSources(sources: ReadonlySet<string>,
   return images;
 }
 
-export async function prepareSuperMemoTopicContent(parts: string[], collectionDirectory?: string, expectedImages?: ReadonlyMap<string, string | null>, readMarks = false) {
+export async function prepareSuperMemoTopicContent(parts: string[], collectionDirectory?: string, expectedImages?: ReadonlyMap<string, string | null>, readMarks = false, heading?: string) {
   const draft = convertSuperMemoContent(parts);
   const root = collectionDirectory ? await assertAuthorizedImportDirectoryPath(collectionDirectory) : null;
   const destinations = new Map<string, string>();
@@ -94,8 +95,8 @@ export async function prepareSuperMemoTopicContent(parts: string[], collectionDi
       storage_key: canonical.storageKey, original_name: image.originalName, role: 'image'
     });
   }
-  const render = (html: string[]) => convertSuperMemoContent(html, destinations).content;
-  const content = destinations.size ? render(parts) : draft.content;
+  const render = (html: string[]) => addSuperMemoReferenceHeading(convertSuperMemoContent(html, destinations).content, heading);
+  const content = destinations.size ? render(parts) : addSuperMemoReferenceHeading(draft.content, heading);
   const nativeMarks = readMarks ? readSuperMemoNativeMarks(parts, content, render) : undefined;
   return {
     content, ...(nativeMarks ? { nativeMarks } : {}),

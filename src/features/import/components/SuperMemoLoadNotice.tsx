@@ -8,14 +8,17 @@ import {
 import type { SuperMemoNotice } from './superMemoDraftSourceActions';
 
 const descriptions = {
+  selectionRead: 'desktop.superMemoDrafts.selectionReadFailed',
   collectionChoice: 'desktop.superMemoDrafts.collectionChoiceHelp',
   xmlAccess: 'desktop.superMemoDrafts.xmlAccess',
   xmlRead: 'desktop.superMemoDrafts.xmlRead',
+  xmlUpdated: 'desktop.superMemoDrafts.sourceUpdated',
   xmlSize: 'desktop.superMemoDrafts.xmlSize',
   xmlFormat: 'desktop.superMemoDrafts.xmlFormat',
   collectionAccess: 'desktop.superMemoDrafts.collectionAccess',
   collectionRead: 'desktop.superMemoDrafts.collectionRead',
   collectionMismatch: 'desktop.superMemoDrafts.collectionMismatch',
+  sourceMismatch: 'desktop.superMemoDrafts.exportStatus.unverified',
   preview: 'desktop.superMemoDrafts.previewFailed',
   convert: 'desktop.superMemoDrafts.convertFailed',
   save: 'desktop.superMemoDrafts.saveLinkFailed'
@@ -25,19 +28,21 @@ type NoticeProps = {
   error: SuperMemoNotice; busy: boolean; candidates?: { directory: string; name: string }[] | undefined;
   onClose(): void; recover(choice: boolean | string): void; retry(): void;
   inline?: boolean;
+  reload?: boolean;
 };
 
-function RecoveryActions({ error, busy, inline, onClose, recover, retry }: NoticeProps) {
+function RecoveryActions({ error, busy, inline, reload, onClose, recover, retry }: NoticeProps) {
   const t = useTranslation();
   const collection = typeof error === 'string' && error.startsWith('collection');
   const close = <AppButton variant="ghost" disabled={busy} onClick={inline ? onClose : undefined}>
     {t('desktop.superMemoDrafts.close')}
   </AppButton>;
-  const canRetryXml = error === 'xmlAccess' || (inline && !collection && error !== 'convert' && error !== 'save');
+  const canRetryXml = error === 'xmlUpdated' || error === 'xmlAccess' || error === 'xmlRead' || error === 'xmlSize' || error === 'xmlFormat' ||
+    (inline && error === 'preview');
   return (
     <>
       {error !== 'collectionAccess' ? (inline ? close : <AppDialogClose asChild>{close}</AppDialogClose>) : null}
-      {canRetryXml ? <AppButton disabled={busy} onClick={retry}>{t('desktop.importAccess.chooseAgain')}</AppButton> : null}
+      {canRetryXml ? <AppButton disabled={busy} onClick={retry}>{t(reload ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.importAccess.chooseAgain')}</AppButton> : null}
       {collection ? <AppButton variant="ghost" disabled={busy} onClick={() => recover(false)}>{t('desktop.superMemoDrafts.continueXml')}</AppButton> : null}
       {collection ? <AppButton disabled={busy} onClick={() => recover(true)}>{t('desktop.superMemoDrafts.chooseCollection')}</AppButton> : null}
     </>
@@ -49,7 +54,9 @@ export function SuperMemoLoadNotice(props: NoticeProps) {
   const { error, busy, inline, candidates, onClose, recover } = props;
   if (!error) return null;
   const title = t(error === 'collectionAccess' ? 'desktop.superMemoDrafts.collectionAccessTitle'
-    : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' : 'desktop.superMemoDrafts.loadFailed');
+    : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' :
+      error === 'xmlUpdated' ? 'desktop.superMemoDrafts.sourceUpdatedTitle' :
+        error === 'convert' ? 'desktop.superMemoDrafts.importFailedTitle' : 'desktop.superMemoDrafts.loadFailed');
   const description = <>
     {t(descriptions[error])}
     {error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos'

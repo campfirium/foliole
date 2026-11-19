@@ -65,8 +65,8 @@ function EntryContent({ row, source, tab }: { row: Row; source?: SuperMemoXmlDra
   }, [row, source, tab]);
   const missing = row.unresolvedImages ?? [];
   return (
-    <div className="space-y-3 break-words">
-      <h3 className="truncate text-sm font-semibold leading-7" title={row.title}>{row.title || `#${row.id}`}</h3>
+    <article className="mx-auto max-w-[65ch] space-y-4 break-words leading-relaxed">
+      <h3 className="line-clamp-2 text-base font-semibold leading-snug" title={row.title}>{row.title || `#${row.id}`}</h3>
       {row.issue ? <Notice>{t(`desktop.superMemoDrafts.issue.${row.issue}`, { history: row.historyCount })}</Notice> : null}
       {row.historyNeedsReview ? <Notice>{t('desktop.superMemoDrafts.issue.history', { history: row.historyCount })}</Notice> : null}
       {content?.body ? <div className="whitespace-pre-wrap">{content.body}</div> : null}
@@ -80,16 +80,16 @@ function EntryContent({ row, source, tab }: { row: Row; source?: SuperMemoXmlDra
           {missing.map(({ source, count }) => <li className="py-2" key={source}>{source}{count > 1 ? ` × ${count}` : ''}</li>)}
         </ul>
       </> : null}
-    </div>
+    </article>
   );
 }
 
 export function useSuperMemoPreviewNavigation(source: object | undefined) {
-  const [state, setState] = useState<{ source: object | undefined; tab: Tab; active?: number | undefined; branches: Record<number, boolean> }>();
+  const [state, setState] = useState<{ source: object | undefined; tab: Tab | 'folders'; active?: number | undefined; branches: Record<number, boolean> }>();
   const current = state?.source === source && state ? state : { source, tab: 'converted' as const, active: undefined, branches: {} };
   return {
     ...current,
-    selectTab: (tab: Tab) => setState({ ...current, tab, active: undefined }),
+    selectTab: (tab: Tab | 'folders') => setState({ ...current, tab, active: undefined }),
     selectEntry: (active: number) => setState({ ...current, active }),
     toggleBranch: (id: number, open: boolean) => setState({ ...current, branches: { ...current.branches, [id]: open } })
   };
@@ -100,7 +100,8 @@ export function SuperMemoEntryPreview({ preview, elements, navigation }: {
   preview?: NativeSuperMemoPreview | undefined; elements?: SuperMemoXmlDraftElement[] | undefined;
 }) {
   const t = useTranslation();
-  const { tab, active, selectTab, selectEntry, branches, toggleBranch } = navigation;
+  const { active, selectTab, selectEntry, branches, toggleBranch } = navigation;
+  const tab = navigation.tab === 'folders' ? 'converted' : navigation.tab;
   const collectionRoot = elements?.find(row => row.parentId === null && row.ordinal === '0' && !row.title && row.children.length);
   const { childrenByParent, lists, missingCount, media, initial } = useMemo(() => prepareEntries(
     (preview?.rows ?? []).map(row => row.id === collectionRoot?.id
@@ -111,10 +112,10 @@ export function SuperMemoEntryPreview({ preview, elements, navigation }: {
   const rows = lists[tab];
   const current = rows.find(row => row.id === active) ?? (tab === 'converted' ? initial : rows[0]);
   return (
-    <div className="grid min-h-0 gap-2">
-      <div className="grid h-[clamp(20rem,56vh,36rem)] min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-foreground/15 text-sm">
-        <section aria-label={t('desktop.superMemoDrafts.entries')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid border-r border-foreground/10 bg-foreground/[0.025]">
-          <div className="flex min-h-11 flex-wrap items-stretch gap-4 border-b border-foreground/10 px-3">
+    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-2">
+      <div className="grid min-h-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] min-[1000px]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-[var(--role-content-line)] bg-[var(--role-content-bg)] text-sm">
+        <section aria-label={t('desktop.superMemoDrafts.entries')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid border-r border-[var(--role-content-line)] bg-[var(--role-content-tint-bg)]">
+          <div className="flex min-h-11 flex-wrap items-stretch gap-x-3 border-b border-[var(--role-content-line)] px-3">
             {tabs.map(key => (
               <button type="button" key={key} aria-pressed={tab === key} disabled={!preview}
                 className="border-b-2 border-transparent py-1 text-xs text-foreground/65 hover:text-foreground aria-pressed:border-[var(--role-accent)] aria-pressed:font-semibold aria-pressed:text-foreground disabled:opacity-50"
@@ -133,17 +134,17 @@ export function SuperMemoEntryPreview({ preview, elements, navigation }: {
           </div>
         </section>
         <section aria-label={t('desktop.superMemoDrafts.entryPreview')} className="row-span-2 grid min-h-0 min-w-0 grid-rows-subgrid">
-          <h2 className="flex min-h-11 items-center border-b border-foreground/10 px-4 text-xs font-medium text-foreground/70">
+          <h2 className="flex min-h-11 items-center border-b border-[var(--role-content-line)] px-4 text-xs font-medium text-foreground/70">
             {t('desktop.superMemoDrafts.entryPreview')}
           </h2>
-          <div className="min-h-0 overflow-auto px-4 py-2" key={current?.id}>
+          <div className="min-h-0 overflow-auto px-4 py-4 sm:px-6" key={current?.id}>
             {current ? <EntryContent row={current} tab={tab} source={sources.get(current.id)} /> : preview ? (
               <p className="text-foreground/60">{t('desktop.superMemoDrafts.noEntries')}</p>
             ) : null}
           </div>
         </section>
       </div>
-      {media.local || media.remote || media.audio ? <p className="px-1 text-xs text-foreground/65">
+      {media.local || media.remote || media.audio ? <p className="px-1 text-xs tabular-nums text-foreground/70">
         {t('desktop.superMemoDrafts.media', media)}
       </p> : null}
     </div>

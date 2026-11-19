@@ -3,6 +3,7 @@ export const EN_SUPER_MEMO_CONFIRM_TRANSLATIONS = {
   'desktop.superMemoDrafts.confirmExisting': 'Update an existing batch',
   'desktop.superMemoDrafts.confirmSavedBlend': 'Use the ratio saved for this batch',
   'desktop.superMemoDrafts.confirmBlend': '{percent}% toward Foliole',
+  'desktop.superMemoDrafts.conversionDetails': 'Conversion details',
   'desktop.superMemoDrafts.confirmExceptions': 'Conversion exceptions',
   'desktop.superMemoDrafts.confirmTotals': '{converted} to import · {skipped} to skip',
   'desktop.superMemoDrafts.confirmIssue.empty-topic': 'Empty topics to skip ({count})',

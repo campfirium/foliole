@@ -4,11 +4,14 @@ import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
+import { addSuperMemoReferenceHeading, superMemoReferenceHeading } from '../../lib/core/import/superMemoTopicTitle.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
+import { normalizeNodeTitle } from '../../lib/core/nodes/nodeTitleBudget.js';
 import type { NativeSuperMemoPreviewRow, NativeSuperMemoCitationChange, NativeSuperMemoTextChange } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
-import { addSuperMemoCitation, describeSuperMemoCitation, removeSuperMemoCitation, type SuperMemoCitation } from './superMemoCitation.js';
+import { addSuperMemoCitation, describeSuperMemoCitation, removeSuperMemoCitation, superMemoCitationOrigin, type SuperMemoCitation } from './superMemoCitation.js';
 import type { PendingParentContent } from './superMemoPendingParent.js';
 import { type ImportedText, type MaterialDocument, planSuperMemoTextFields, previewSuperMemoMarkdown } from './superMemoTextUpdate.js';
 
@@ -20,11 +23,15 @@ export interface SuperMemoContentBatchEntry {
   importedAnchorLink?: string | null;
   importedCitation?: SuperMemoCitation | null;
   importedText?: ImportedText;
+  importedTitle?: string;
   sourceArticleNodeId?: string | null;
 }
 
 type CitationNode = MaterialDocument & { parent_id: string | null; title: string; kind: string; created_at: string; updated_at: string };
-type Write = { entry: SuperMemoContentBatchEntry; nodeId: string; next: MaterialDocument; previous: MaterialDocument; citation?: SuperMemoCitation | null; hashes: ImportedText };
+type Write = {
+  entry: SuperMemoContentBatchEntry; nodeId: string; next: MaterialDocument; previous: MaterialDocument;
+  title?: { from: string; to: string }; citation?: SuperMemoCitation | null; hashes: ImportedText;
+};
 
 function renderCitationChange(previous: MaterialDocument, original: SuperMemoCitation | null, proposed: SuperMemoCitation | null) {
   const next = { ...previous };
@@ -57,6 +64,15 @@ function previousCitation(entry: SuperMemoContentBatchEntry, node: CitationNode,
     oldLink, sourceFormat ?? DEFAULT_SUPER_MEMO_SOURCE_FORMAT);
 }
 
+function planTopicTitle(row: NativeSuperMemoPreviewRow, saved: SavedRow | undefined, current: string) {
+  if (row.outcome !== 'topic' || !row.title.trim()) return undefined;
+  const to = normalizeNodeTitle(row.title);
+  if (current === to) return undefined;
+  const baseline = saved?.importedTitle ?? (saved?.title !== undefined ? normalizeNodeTitle(saved.title || `#${row.id}`) : undefined);
+  if (current !== baseline || baseline === to) return undefined;
+  return { from: current, to };
+}
+
 export function planSuperMemoCitationUpdates(driver: DatabaseDriver, batch: { entries: SuperMemoContentBatchEntry[]; sourceFormat?: SuperMemoSourceFormat },
   rows: NativeSuperMemoPreviewRow[], content: PendingParentContent, elements: SuperMemoXmlDraftElement[],
   parentChanges: ReadonlyMap<string, string | null>, additions: ReadonlyMap<number, { pendingId: string }>,
@@ -86,7 +102,7 @@ export function planSuperMemoCitationUpdates(driver: DatabaseDriver, batch: { en
     const article = rowsById.get(row.sourceArticleId ?? 0);
     const articleId = article && entries.get(article.id)?.nodeId;
     const proposed = describeSuperMemoCitation(row, parent ? sourcesByNode.get(parent) : undefined,
-      article && articleId ? { id: articleId, title: article.title } : undefined, content.sourceFormat);
+      article && articleId ? { id: articleId, title: article.title } : undefined, content.sourceFormat, superMemoCitationOrigin(row, rowsById));
     const original = previousCitation(entry, node, savedRowsById, sourcesByNode, batch.sourceFormat);
     const receiptKnown = savedRowsById.get(row.id)?.title !== undefined;
     const citationDiffers = JSON.stringify(original) !== JSON.stringify(proposed);
@@ -103,23 +119,24 @@ export function planSuperMemoCitationUpdates(driver: DatabaseDriver, batch: { en
       original, nextCitation: citationUpdate ? proposed : original, baseline: entry.importedText,
       pristine: node.created_at === node.updated_at, receiptKnown,
       hasIncomingAnchor: incomingAnchorParents.has(nodeId),
-      source: element ? { content: render(element.bodyOrQuestionHtml),
+      source: element ? { content: addSuperMemoReferenceHeading(render(element.bodyOrQuestionHtml), superMemoReferenceHeading(row)),
         ...(row.outcome === 'item' ? { reveal: render(element.answerHtml) } : {}) } : {}
     });
     textChanges.push(...fieldChanges);
-    if (citationUpdate || Object.keys(hashes).length) {
-      writes.push({ entry, nodeId, next, previous, hashes, ...(citationUpdate ? { citation: proposed } : {}) });
+    const title = element && planTopicTitle(row, savedRowsById.get(row.id), node.title);
+    if (title || citationUpdate || Object.keys(hashes).length) {
+      writes.push({ entry, nodeId, next, previous, hashes, ...(title ? { title } : {}), ...(citationUpdate ? { citation: proposed } : {}) });
     }
   }
   return { changes, textChanges, writes, signature: createHash('sha256').update(JSON.stringify(
-    writes.map(({ nodeId, previous, next, citation, hashes }) => [nodeId, previous, next, citation, hashes]))).digest('hex') };
+    writes.map(({ nodeId, previous, next, citation, hashes, title }) => [nodeId, previous, next, citation, hashes, title]))).digest('hex') };
 }
 
 export function applySuperMemoCitationUpdates(driver: DatabaseDriver, entries: SuperMemoContentBatchEntry[], writes: Write[], now: string) {
   const hostName = loadOrCreateDesktopHostName(now);
   const ownedAnchors = new Map(entries.filter(entry => entry.nodeId && entry.importedAnchorLink)
     .map(entry => [entry.nodeId!, entry]));
-  for (const { entry, nodeId, next, previous, citation, hashes } of writes) {
+  for (const { entry, nodeId, next, previous, citation, hashes, title } of writes) {
     const children = previous.content === next.content ? [] : driver.queryAll<{ id: string; anchor_link: string }>(
       'SELECT id, anchor_link FROM nodes WHERE parent_id = ? AND anchor_link IS NOT NULL AND deleted_at IS NULL', [nodeId]);
     const affected = previous.content === next.content ? [] : applyParentContentChange({
@@ -127,6 +144,11 @@ export function applySuperMemoCitationUpdates(driver: DatabaseDriver, entries: S
     }).affectedChildIds;
     driver.execute('UPDATE nodes SET reveal = ?, sync_dirty = 1, last_modified_by_host_name = ?, updated_at = ? WHERE id = ?',
       [next.reveal, hostName, now, nodeId]);
+    if (title) {
+      driver.execute('UPDATE nodes SET title = ?, opening_text = ? WHERE id = ?',
+        [title.to, resolveNodeOpeningText(next.content, title.to), nodeId]);
+      entry.importedTitle = title.to;
+    }
     enqueueWorkspaceSearchInvalidationForNodeIds(driver, [nodeId]);
     for (const childId of affected) {
       const owned = ownedAnchors.get(childId);
@@ -138,4 +160,12 @@ export function applySuperMemoCitationUpdates(driver: DatabaseDriver, entries: S
     if (citation !== undefined) entry.importedCitation = citation;
     if (Object.keys(hashes).length) entry.importedText = { ...entry.importedText, ...hashes };
   }
+}
+
+export function applySuperMemoRuleCorrections(driver: DatabaseDriver, entries: SuperMemoContentBatchEntry[], writes: Write[], now: string) {
+  const titleWrites = writes.flatMap(({ entry, nodeId, title, previous }) => title
+    ? [{ entry, nodeId, title, previous, next: previous, hashes: {} }] : []);
+  if (!titleWrites.length) return false;
+  applySuperMemoCitationUpdates(driver, entries, titleWrites, now);
+  return true;
 }

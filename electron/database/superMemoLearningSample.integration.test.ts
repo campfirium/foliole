@@ -35,6 +35,10 @@ async function verifyMediaPreview(args: unknown, sqlite: RestorePeer['sqlite']) 
   expect(preview.rows.find(row => row.id === 797)).toMatchObject({ sourceArticleId: 3302, parentId: 1148,
     sourceBibliography: { title: 'Atomic Habits' } });
   expect(preview.rows.find(row => row.id === 72)?.sourceBibliography?.url).toBe('https://zhuanlan.zhihu.com/p/434074509');
+  expect(preview.rows.find(row => row.id === 1)).toMatchObject({ sourceTitle: 'Root', sourceChildren: [56, 483] });
+  expect(preview.rows.find(row => row.id === 483)?.sourceChildren?.slice(0, 3)).toEqual([906, 59, 1975]);
+  expect(preview.rows.find(row => row.id === 906)).toMatchObject({ sourceTitle: 'motto', parentId: 483 });
+  expect(preview.rows.find(row => row.id === 2035)).toMatchObject({ sourceTitle: '技能提升指南', parentId: 56 });
   return preview.previewSignature;
 }
 

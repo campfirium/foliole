@@ -28,6 +28,8 @@ export interface SuperMemoXmlDraftElement {
   } | null;
 }
 
+export type SuperMemoXmlBody = Pick<SuperMemoXmlDraftElement, 'id' | 'bodyOrQuestionHtml' | 'answerHtml'>;
+
 function directChildren(element: Element, tag: string) {
   return Array.from(element.children).filter(child => child.tagName === tag);
 }
@@ -62,37 +64,53 @@ function parseLearning(element: Element, id: number): SuperMemoXmlDraftElement['
     sourceAFactor: childText(data, 'AFactor'), sourceUFactor: childText(data, 'UFactor'), history };
 }
 
+function parseBody(content: Element | undefined, id: number): SuperMemoXmlBody {
+  return {
+    id,
+    bodyOrQuestionHtml: content ? directChildren(content, 'Question').map(part => part.textContent ?? '') : [],
+    answerHtml: content ? directChildren(content, 'Answer').map(part => part.textContent ?? '') : []
+  };
+}
+
 function parseElement(element: Element, id: number, parentId: number | null, children: Element[]) {
   const sourceType = childText(element, 'Type');
   if (!sourceType) throw new Error('invalid_supermemo_element_type');
   const content = directChildren(element, 'Content')[0];
   return {
-    id, parentId, children: children.map(child => positiveInteger(childText(child, 'ID'))),
+    ...parseBody(content, id), parentId, children: children.map(child => positiveInteger(childText(child, 'ID'))),
     sourceType, title: childText(element, 'Title'), ordinal: childText(element, 'Ordinal'),
-    bodyOrQuestionHtml: content ? directChildren(content, 'Question').map(part => part.textContent ?? '') : [],
-    answerHtml: content ? directChildren(content, 'Answer').map(part => part.textContent ?? '') : [],
     skippedAudioComponents: content ? directChildren(content, 'Sound').length : 0,
     learning: parseLearning(element, id)
   } satisfies SuperMemoXmlDraftElement;
 }
 
-export function readSuperMemoXmlDraft(document: Document): SuperMemoXmlDraftElement[] {
+function readCollection<T>(document: Document,
+  read: (element: Element, id: number, parentId: number | null, children: Element[]) => T
+): T[] {
   const root = document.documentElement;
   if (document.doctype || root?.tagName !== 'SuperMemoCollection') throw new Error('invalid_supermemo_xml');
   const declaredCount = positiveInteger(childText(root, 'Count'));
   const pending: Array<{ element: Element; parentId: number | null }> =
     directChildren(root, 'SuperMemoElement').reverse().map(element => ({ element, parentId: null }));
   const seen = new Set<number>();
-  const result: SuperMemoXmlDraftElement[] = [];
+  const result: T[] = [];
   while (pending.length) {
     const { element, parentId } = pending.pop()!;
     const id = positiveInteger(childText(element, 'ID'));
     if (seen.has(id)) throw new Error('duplicate_supermemo_element');
     seen.add(id);
     const children = directChildren(element, 'SuperMemoElement');
-    result.push(parseElement(element, id, parentId, children));
+    result.push(read(element, id, parentId, children));
     for (const child of children.reverse()) pending.push({ element: child, parentId: id });
   }
   if (result.length !== declaredCount) throw new Error('supermemo_element_count_mismatch');
   return result;
+}
+
+export function readSuperMemoXmlDraft(document: Document): SuperMemoXmlDraftElement[] {
+  return readCollection(document, parseElement);
+}
+
+export function readSuperMemoXmlBodies(document: Document): SuperMemoXmlBody[] {
+  return readCollection(document, (element, id) => parseBody(directChildren(element, 'Content')[0], id));
 }

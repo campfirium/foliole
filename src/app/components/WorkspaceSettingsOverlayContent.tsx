@@ -1,11 +1,9 @@
-import { SuperMemoSessionProvider } from '../../features/import/components/SettingsSuperMemoImport';
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadExternalSourceSettingsFolders } from '../../shared/platform/externalSourceSettingsRepository';
 import { loadRuntimeLibraryPathSettings } from '../../shared/platform/libraryPathsRuntimeRepository';
 import { requestAppConfirmation } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
 import { loadImportSourceWorkspaceSettings } from './importSourceWorkspaceSettings';
@@ -33,16 +31,7 @@ export async function prewarmWorkspaceSettingsOverlayContent() {
   ]);
 }
 
-export function WorkspaceSettingsOverlayContent({ isSettingsOpen, ...props }: WorkspaceSettingsOverlayContentProps & { isSettingsOpen: boolean }) {
-  const libraryScope = useWorkspaceStore(state => state.libraryScope);
-  return (
-    <SuperMemoSessionProvider settingsOpen={isSettingsOpen} libraryScope={libraryScope}>
-      {isSettingsOpen ? <WorkspaceSettingsDialogs {...props} /> : null}
-    </SuperMemoSessionProvider>
-  );
-}
-
-function WorkspaceSettingsDialogs({
+export function WorkspaceSettingsOverlayContent({
   onClose,
   onRunSupportCommand,
   requestedCategory,

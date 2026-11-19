@@ -1,77 +1,19 @@
 import { useMemo } from 'react';
 
-import { blendSuperMemoDue } from '../../../../lib/core/import/superMemoSchedulePreview';
-import type { NativeSuperMemoPreview, NativeSuperMemoPreviewRow } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import { prepareSuperMemoDueDistribution } from '../../../../lib/core/import/superMemoDueDistribution';
+import { calendarDateKey } from '../../../../lib/core/review/reviewCalendarDates';
+import type { NativeSuperMemoPreview } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
-import { FirstReviewChanges } from './SuperMemoDirectoryUpdate';
-import { SuperMemoDraftTable } from './SuperMemoDraftTable';
+import { SuperMemoDueChart } from './SuperMemoDueChart';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 
-function getDateSamples(rows: NativeSuperMemoPreviewRow[]) {
-  const examples: NativeSuperMemoPreviewRow[] = [];
-  const exceptions: NativeSuperMemoPreviewRow[] = [];
-  let exceptionCount = 0;
-  for (const row of rows) {
-    if (row.outcome !== 'item' || row.issue || row.sourceState === 'pending' || row.sourceState === 'dismissed') continue;
-    if (!row.sourceDue || !row.recalculatedDue || row.historyNeedsReview) {
-      exceptionCount++;
-      if (exceptions.length < 5) exceptions.push(row);
-    } else if (examples.length < 5) examples.push(row);
-  }
-  return { examples, exceptions, exceptionCount };
-}
-
-function DateSamples({ rows, percent }: { rows: NativeSuperMemoPreviewRow[]; percent: number }) {
-  const t = useTranslation();
-  const unavailable = t('desktop.superMemoDrafts.scheduleNoDate');
-  return <div className="overflow-x-auto">
-    <table className="w-full text-left text-xs tabular-nums [&_td]:px-2 [&_td]:py-2 [&_th]:px-2 [&_th]:py-2">
-      <thead className="border-b border-settings-divider">
-        <tr>
-          <th scope="col">{t('desktop.superMemoDrafts.scheduleItem')}</th>
-          <th scope="col">{t('desktop.superMemoDrafts.scheduleSourceDate')}</th>
-          <th scope="col">{t('desktop.superMemoDrafts.scheduleRecalculatedDate')}</th>
-          <th scope="col">{t('desktop.superMemoDrafts.schedulePlannedDate')}</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-settings-divider">
-        {rows.map(row => <tr key={row.id}>
-          <th scope="row" className="break-words font-medium">
-            {row.title || `#${row.id}`}
-            {row.historyNeedsReview ? <p className="mt-1 font-normal text-foreground/70">
-              {t('desktop.superMemoDrafts.issue.history', { history: row.historyCount })}
-            </p> : null}
-          </th>
-          <td>{row.sourceDue ?? unavailable}</td>
-          <td>{row.recalculatedDue ?? unavailable}</td>
-          <td>{blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) ?? unavailable}</td>
-        </tr>)}
-      </tbody>
-    </table>
-  </div>;
-}
-
-function ScheduleResults({ preview, percent }: { preview: NativeSuperMemoPreview; percent: number }) {
-  const t = useTranslation();
-  const { examples, exceptions, exceptionCount } = useMemo(() => getDateSamples(preview.rows), [preview.rows]);
-  return <>
-    <section className="grid min-w-0 gap-3 border-t border-settings-divider pt-4">
-      <h4 className="text-sm font-semibold">{t('desktop.superMemoDrafts.scheduleDueOn', { date: preview.referenceDay })}</h4>
-      <SuperMemoDraftTable preview={preview} percent={percent} />
-    </section>
-    {examples.length ? <section className="grid min-w-0 gap-2">
-      <h4 className="text-sm font-semibold">{t('desktop.superMemoDrafts.scheduleExamples')}</h4>
-      <DateSamples rows={examples} percent={percent} />
-    </section> : null}
-    {exceptionCount ? <details className="min-w-0 space-y-2 border-t border-settings-divider pt-4 text-sm">
-      <summary className="cursor-pointer font-semibold">{t('desktop.superMemoDrafts.scheduleExceptions', { count: exceptionCount })}</summary>
-      {exceptionCount > exceptions.length ? <p className="text-xs text-foreground/70">
-        {t('desktop.superMemoDrafts.scheduleExceptionSample')}
-      </p> : null}
-      <DateSamples rows={exceptions} percent={percent} />
-    </details> : null}
-  </>;
+function ScheduleChart({ preview, percent }: { preview: NativeSuperMemoPreview; percent: number }) {
+  const referenceDay = calendarDateKey(new Date());
+  const data = useMemo(() => prepareSuperMemoDueDistribution({
+    rows: preview.rows, referenceDay
+  }), [preview.rows, referenceDay]);
+  return <SuperMemoDueChart data={data} percent={percent} />;
 }
 
 export function SuperMemoSchedulePage({ preview, percent, setPercent, busy }: {
@@ -81,20 +23,10 @@ export function SuperMemoSchedulePage({ preview, percent, setPercent, busy }: {
   busy: boolean;
 }) {
   const t = useTranslation();
-  return <div className="mx-auto grid w-full max-w-6xl gap-5">
-    <h3 className="text-base font-semibold">{t('desktop.superMemoDrafts.scheduleTitle')}</h3>
-    {preview.directoryUpdate ? <>
-      <p className="text-sm">{t('desktop.superMemoDrafts.scheduleUpdateHelp')}</p>
-      <FirstReviewChanges changes={preview.directoryUpdate.firstReviewChanges} showHeading={false} />
-    </> : <>
-      <section className="grid min-w-0 gap-2">
-        <SuperMemoPreviewOptionFields compact percent={percent} onChange={setPercent} disabled={busy} />
-        <p className="text-xs leading-relaxed text-foreground/70">
-          {t(preview.pairedCollection ? 'desktop.superMemoDrafts.pairedLimitations' : 'desktop.superMemoDrafts.xmlLimitations')}
-        </p>
-      </section>
-      <ScheduleResults preview={preview} percent={percent} />
-    </>}
-    <p className="text-xs text-foreground/70">{t('desktop.superMemoDrafts.scheduleBatchHelp')}</p>
+  return <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+    <p className="shrink-0 text-sm text-foreground/70">{t('desktop.superMemoDrafts.scheduleChartIntro')}</p>
+    <SuperMemoPreviewOptionFields compact percent={percent} onChange={setPercent}
+      disabled={busy} />
+    <ScheduleChart preview={preview} percent={percent} />
   </div>;
 }

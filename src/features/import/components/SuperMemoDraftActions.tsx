@@ -1,33 +1,54 @@
-import { ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppButton, AppDialogActions } from '../../../shared/ui';
+import { SettingsButton } from '../../../shared/ui';
+import { settingsDialogFooterInset } from '../../../shared/ui/settingsDialogBounds';
 
 import type { SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 
 const nextStep = {
-  load: 'structure', structure: 'schedule', schedule: 'grades', grades: 'source', source: 'confirm'
+  load: 'structure', structure: 'schedule', schedule: 'grades'
 } as const;
 
-export function SuperMemoDraftActions({ step, busy, canConvert, directoryUpdate, navigate, convert }: {
-  step: SuperMemoMigrationStep; busy: boolean; canConvert: boolean;
-  directoryUpdate?: { canConfirm: boolean } | undefined;
+const previousStep = {
+  structure: 'load', schedule: 'structure', grades: 'schedule'
+} as const;
+
+export function SuperMemoDraftActions({ step, busy, importing = false, updating = false, canProceed, hasPreview, referenceMapValid = true, navigate, convert }: {
+  step: SuperMemoMigrationStep; busy: boolean; canProceed: boolean; hasPreview: boolean;
+  importing?: boolean;
+  updating?: boolean;
+  referenceMapValid?: boolean;
   navigate(step: SuperMemoMigrationStep): void; convert(): void;
 }) {
   const t = useTranslation();
-  if (!canConvert) return null;
+  if (step === 'deleted') return null;
+  const finalStep = step === 'grades';
+  const showAction = finalStep ? hasPreview : canProceed;
+  const previous = step === 'load' ? undefined : previousStep[step];
+  const backLabel = t('desktop.superMemoDrafts.previous');
+  const nextLabel = t('desktop.superMemoDrafts.parameters');
   return (
-    <AppDialogActions className="shrink-0 flex-wrap border-t border-settings-divider px-4 py-3 sm:px-6">
-      {step === 'structure' && !directoryUpdate ? <p role="note" className="mr-auto min-w-0 max-w-[72ch] flex-1 text-xs leading-4 text-foreground/70">
-        {t('desktop.superMemoDrafts.structureConversionNote')}
-      </p> : null}
-      {step === 'confirm' ? <AppButton variant="emphasis" disabled={busy || directoryUpdate?.canConfirm === false} onClick={convert}>
-        {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
-      </AppButton> : <AppButton variant="emphasis" disabled={busy} onClick={() => navigate(directoryUpdate && step === 'load' ? 'confirm' : nextStep[step])}>
-        {t(directoryUpdate && step === 'load' ? 'desktop.superMemoDrafts.updateByRules' :
-          step === 'structure' ? 'desktop.superMemoDrafts.parameters' : 'desktop.superMemoDrafts.continueStep')}
-        <ArrowRight aria-hidden className="size-4" />
-      </AppButton>}
-    </AppDialogActions>
+    <div className={`app-scrollbar shrink-0 overflow-hidden px-7 pt-4 [scrollbar-gutter:stable] ${settingsDialogFooterInset}`}>
+      <div className="flex items-end justify-between gap-4 px-settings-panel-x">
+        <p className="min-w-0 self-center text-xs leading-relaxed text-foreground/65">
+          {t(updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          {previous ? <SettingsButton className="w-9 px-0" disabled={busy}
+            aria-label={backLabel} title={backLabel} onClick={() => navigate(previous)}>
+            <ChevronLeft aria-hidden="true" className="size-[18px]" />
+          </SettingsButton> : null}
+          {showAction && (finalStep ? <SettingsButton className="shrink-0" loading={importing}
+            loadingLabel={t(updating ? 'desktop.superMemoDrafts.updating' : 'desktop.superMemoDrafts.importing')}
+            disabled={busy || !referenceMapValid} onClick={convert}>
+            {t(updating ? 'desktop.superMemoDrafts.update' : 'desktop.superMemoDrafts.import')}
+          </SettingsButton> : <SettingsButton className="w-9 px-0" disabled={busy} aria-label={nextLabel} title={nextLabel}
+            onClick={() => navigate(nextStep[step])}>
+            <ChevronRight aria-hidden="true" className="size-[18px]" />
+          </SettingsButton>)}
+        </div>
+      </div>
+    </div>
   );
 }

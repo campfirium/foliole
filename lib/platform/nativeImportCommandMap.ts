@@ -15,7 +15,7 @@ import type {
 import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
-import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource, SuperMemoSourceLink } from './nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs, NativeSuperMemoSource, RememberedSuperMemoSource, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot, SuperMemoSourceLink } from './nativeSuperMemoImportContract.js';
 import type {
   NativeWatchedFolderBinding,
   NativeWatchedFolderBindingsState,
@@ -23,7 +23,16 @@ import type {
 } from './nativeWatchedFolderContract.js';
 
 export type NativeImportCommandMap = {
-  [NATIVE_COMMANDS.readSuperMemoSource]: { args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore' | 'comparison' } | { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean }; result: NativeSuperMemoSource | null };
+  [NATIVE_COMMANDS.pickSuperMemoSource]: { args: undefined; result: string | null };
+  [NATIVE_COMMANDS.readSuperMemoSource]: {
+    args: { filePath?: string; collectionDirectory?: string | null } | { action: 'restore'; xmlOnly?: boolean } | { action: 'check' | 'reload' } |
+      { action: 'remember'; link: SuperMemoSourceLink; formOnly: boolean; snapshot?: SuperMemoMigrationSnapshot; xmlHash?: string } |
+      { action: 'rememberPanel'; filePath: string; collectionDirectory: string | null; panel: SuperMemoMigrationPanel; snapshot?: SuperMemoMigrationSnapshot };
+    result: NativeSuperMemoSource | null;
+  };
+  [NATIVE_COMMANDS.getSuperMemoSourceSelection]: { args: { refreshDeletions: true } | undefined; result: RememberedSuperMemoSource | null };
+  [NATIVE_COMMANDS.activateSavedSuperMemoSource]: { args: { filePath: string }; result: RememberedSuperMemoSource | null };
+  [NATIVE_COMMANDS.clearSuperMemoSourceSelection]: { args: undefined; result: null };
   [NATIVE_COMMANDS.selectSuperMemoCollection]: {
     args: { filePath: string; title: string; candidate?: string };
     result: { directory: string; name: string }[] | null;
@@ -41,7 +50,7 @@ export type NativeImportCommandMap = {
     result: { batchId: string; percent: number; updated: number; protectedItems: number };
   };
   [NATIVE_COMMANDS.runSuperMemoImport]: {
-    args: NativeSuperMemoPreviewArgs & { percent: number; previewSignature?: string; updateSignature?: string; withdrawSourceIds?: number[] };
+    args: NativeSuperMemoPreviewArgs & { percent: number; previewSignature?: string; updateSignature?: string; ruleCorrectionsOnly?: true; withdrawSourceIds?: number[] };
     result: { batchId: string; imported: number; skipped: number; unresolvedImages: number; directoryUpdate?: NativeSuperMemoDirectoryUpdate };
   };
   [NATIVE_COMMANDS.previewSuperMemoImport]: {

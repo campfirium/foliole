@@ -46,6 +46,11 @@ export async function authorizeSelectedImportDirectoryPath(directoryPath: string
 }
 
 // Only the host's persisted picker grants may restore authorization.
+export async function restoreSelectedImportDirectory(directoryPath: string) {
+  if (await resolveRealImportPath(directoryPath) !== directoryPath) throw new Error('Import directory path changed.');
+  authorizedImportDirectoryRealPaths.add(directoryPath);
+}
+
 export async function restoreSelectedImportPaths(filePath: string, directoryPath: string | null) {
   if (await resolveRealImportPath(filePath) !== filePath) throw new Error('Import file path changed.');
   if (directoryPath && await resolveRealImportPath(directoryPath) !== directoryPath) {

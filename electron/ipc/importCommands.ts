@@ -29,12 +29,12 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
-import { selectSuperMemoCollection } from './readSuperMemoSource.js';
+import { pickSuperMemoSource, selectSuperMemoCollection } from './readSuperMemoSource.js';
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
 import { handleSuperMemoImportCommand } from './superMemoImportCommands.js';
-import { handleSuperMemoSource } from './superMemoSourceLink.js';
+import { activateSavedSuperMemoSource, clearSuperMemoSourceSelection, getSuperMemoSourceSelection, handleSuperMemoSource } from './superMemoSourceLink.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -98,12 +98,22 @@ async function selectImportDirectory(args: Record<string, unknown>, context?: In
 export async function handleImportCommand(request: InvokeRequest, context?: InvokeContext) {
   const args = (request.args ?? {}) as Record<string, unknown>;
 
-  if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
-    return handleSuperMemoSource(args, () => resolveTargetWindow(context));
+  if (request.command === NATIVE_COMMANDS.pickSuperMemoSource) return pickSuperMemoSource(resolveTargetWindow(context));
+  if (request.command === NATIVE_COMMANDS.readSuperMemoSource) return handleSuperMemoSource(args);
+  if (request.command === NATIVE_COMMANDS.getSuperMemoSourceSelection) {
+    return args.refreshDeletions === true
+      ? runWithDatabaseConnectionOwner(() => getSuperMemoSourceSelection(true))
+      : getSuperMemoSourceSelection();
   }
+  if (request.command === NATIVE_COMMANDS.activateSavedSuperMemoSource) {
+    return activateSavedSuperMemoSource(asString(args.filePath, 'filePath'));
+  }
+  if (request.command === NATIVE_COMMANDS.clearSuperMemoSourceSelection) return clearSuperMemoSourceSelection();
   if (request.command === NATIVE_COMMANDS.selectSuperMemoCollection) {
-    return selectSuperMemoCollection(resolveTargetWindow(context), asString(args.filePath, 'filePath'),
-      asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'));
+    const filePath = asString(args.filePath, 'filePath');
+    return selectSuperMemoCollection(resolveTargetWindow(context), filePath,
+      asString(args.title, 'title'), args.candidate === undefined ? undefined : asString(args.candidate, 'candidate'),
+      getSuperMemoSourceSelection()?.filePath === filePath);
   }
   const draftResult = await handleSuperMemoImportCommand(request.command, args, refreshDesktopDailyFlowAfterSuperMemoWrite);
   if (draftResult !== undefined) {

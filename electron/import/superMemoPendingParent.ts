@@ -1,8 +1,10 @@
 import { orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
 import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
+import { addSuperMemoReferenceHeading, superMemoReferenceHeading } from '../../lib/core/import/superMemoTopicTitle.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import type { NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
 
+import { superMemoCitationOrigin } from './superMemoCitation.js';
 import { formatSuperMemoMaterialSource } from './superMemoMaterialSource.js';
 import { previewSuperMemoMarkdown } from './superMemoTextUpdate.js';
 
@@ -26,9 +28,9 @@ export function createPendingParentRenderer(elements: SuperMemoXmlDraftElement[]
         !existing.has(article.id) && !additions.has(article.id)) return undefined;
     // A newly created article gets a UUID at write time. Only the link width affects a following text range.
     const articleId = article && (existing.get(article.id) ?? (additions.has(article.id) ? '00000000-0000-4000-8000-000000000000' : undefined));
-    const body = renderMarkdown(element.bodyOrQuestionHtml);
+    const body = addSuperMemoReferenceHeading(renderMarkdown(element.bodyOrQuestionHtml), superMemoReferenceHeading(row));
     return formatSuperMemoMaterialSource(row, rowsById.get(parents.get(sourceId) ?? 0),
-      article && articleId ? { id: articleId, title: article.title } : undefined, content.sourceFormat, body).content;
+      article && articleId ? { id: articleId, title: article.title } : undefined, content.sourceFormat, body, superMemoCitationOrigin(row, rowsById)).content;
   };
 }
 

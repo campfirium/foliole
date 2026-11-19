@@ -31,9 +31,8 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
-import { cn } from '@/shared/lib/utils';
 import { useAppVersion } from '@/shared/platform/appVersion';
-import { AppButton, SettingsNavigation, SettingsNavigationBrand, SettingsNavigationGroup, settingsSidebarItemClassName } from '@/shared/ui';
+import { SettingsNavigation, SettingsNavigationBrand, SettingsNavigationGroup, SettingsNavigationItem } from '@/shared/ui';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
@@ -144,20 +143,10 @@ function SettingsSidebarItem(props: {
   category: NonNullable<ReturnType<typeof getSettingsCategoryOption>>;
   onSelect: (category: SettingsCategoryId) => void;
 }) {
-  const Icon = CATEGORY_ICONS[props.category.id];
   return (
-    <AppButton
-      aria-current={props.active ? 'page' : undefined}
-      className={settingsSidebarItemClassName(props.active)}
-      onClick={() => props.onSelect(props.category.id)}
-      variant="list"
-    >
-      <Icon
-        aria-hidden
-        className={cn('size-4 shrink-0', props.active ? 'text-settings-icon-active' : 'text-settings-icon')}
-        strokeWidth={1.8}
-      />
-      <span className="min-w-0 truncate">{props.category.label}</span>
-    </AppButton>
+    <SettingsNavigationItem icon={CATEGORY_ICONS[props.category.id]} current={props.active ? 'page' : undefined}
+      onClick={() => props.onSelect(props.category.id)}>
+      {props.category.label}
+    </SettingsNavigationItem>
   );
 }

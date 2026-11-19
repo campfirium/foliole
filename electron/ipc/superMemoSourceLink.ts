@@ -1,94 +1,162 @@
-import { createHash } from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
 
-import { app, type BrowserWindow } from 'electron';
-import { z } from 'zod';
-
-import { resolveDatabasePath } from '../database/connection.js';
+import type { RememberedSuperMemoSource } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { readSuperMemoDeletions } from '../import/readSuperMemoDeletions.js';
 
 import { asString } from './commandParsers.js';
-import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportPaths } from './importPathAuthorization.js';
-import { readSuperMemoSource, selectSuperMemoSource } from './readSuperMemoSource.js';
+import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportDirectory, restoreSelectedImportPaths } from './importPathAuthorization.js';
+import { superMemoCollectionStamp } from './readSuperMemoCollection.js';
+import { readSuperMemoSource } from './readSuperMemoSource.js';
+import {
+  activeMigrationSource, linkSchema, migrationStorePath, panelSchema, readMigrationStore, savedLinkSchema,
+  saveMigrationSource, type SavedSuperMemoSource, writeMigrationStore
+} from './superMemoMigrationStore.js';
 
-const linkSchema = z.object({
-  filePath: z.string().min(1),
-  collectionDirectory: z.string().min(1).nullable(),
-  percent: z.number().min(0).max(100),
-  sourceFormat: z.object({ placement: z.enum(['metadata', 'body', 'topic-info', 'content-end']), template: z.string().max(4000) }),
-  folderChoices: z.array(z.object({ id: z.number().int().positive(), folder: z.boolean() })).optional(),
-  comparison: z.object({ batchId: z.string().regex(/^[a-f0-9]{64}$/), originalFilePath: z.string().min(1).optional() }).optional()
-});
-
-function linkPath() {
-  const scope = createHash('sha256').update(resolveDatabasePath()).digest('hex');
-  return path.join(app.getPath('userData'), 'supermemo-migration', `${scope}.json`);
+function sourceSelection(link: SavedSuperMemoSource, deletedEntries = link.deletedEntries): RememberedSuperMemoSource {
+  const { filePath, collectionDirectory, panel } = link;
+  const savedForm = { percent: link.percent, sourceFormat: link.sourceFormat, gradeMap: link.gradeMap,
+    folderChoices: link.folderChoices, comparison: link.comparison };
+  return { filePath, name: path.basename(filePath), collectionDirectory: collectionDirectory ?? undefined,
+    savedForm, snapshot: link.snapshot, ...(deletedEntries ? { deletedEntries } : {}), ...(panel ? { panel } : {}) };
 }
 
-function readLink(file = linkPath()) {
-  return fs.existsSync(file) ? linkSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8'))) : null;
+export function getSuperMemoSourceSelection(refreshDeletions = false): RememberedSuperMemoSource | null {
+  const file = migrationStorePath();
+  const store = readMigrationStore(file);
+  const link = activeMigrationSource(store);
+  if (!link) return null;
+  const batch = link.panel?.batchId ?? link.snapshot.preview.directoryUpdate?.batchId;
+  if (!refreshDeletions || !batch) return sourceSelection(link);
+  const entries = readSuperMemoDeletions(openDatabaseConnection().driver, batch);
+  if (JSON.stringify(entries) !== JSON.stringify(link.deletedEntries ?? [])) {
+    saveMigrationSource(file, store, { ...link, deletedEntries: entries });
+  }
+  return sourceSelection(link, entries);
 }
 
-async function rememberLink(value: unknown, formOnly: boolean) {
-  const file = linkPath();
+export async function activateSavedSuperMemoSource(pickerPath: string): Promise<RememberedSuperMemoSource | null> {
+  const file = migrationStorePath();
+  const filePath = await assertAuthorizedImportFilePath(pickerPath);
+  const store = readMigrationStore(file);
+  const link = store.sources[filePath];
+  if (!link) return null;
+  if (store.activeFilePath !== filePath) writeMigrationStore(file, { ...store, activeFilePath: filePath });
+  return sourceSelection(link);
+}
+
+export function clearSuperMemoSourceSelection() {
+  const file = migrationStorePath();
+  const store = readMigrationStore(file);
+  if (store.activeFilePath !== null) writeMigrationStore(file, { ...store, activeFilePath: null });
+  return null;
+}
+
+async function rememberLink(value: unknown, formOnly: boolean, snapshot: unknown, xmlHash: unknown) {
+  const file = migrationStorePath();
+  const store = readMigrationStore(file);
   const link = linkSchema.parse(value);
   if (formOnly) {
-    const previous = readLink(file);
+    const previous = activeMigrationSource(store);
     if (!previous || previous.filePath !== link.filePath || previous.collectionDirectory !== link.collectionDirectory) {
       throw new Error('supermemo_source_changed');
     }
-    writeLink(file, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat, ...(link.folderChoices ? { folderChoices: link.folderChoices } : {}) });
+    saveMigrationSource(file, store, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat,
+      ...(link.gradeMap ? { gradeMap: link.gradeMap } : {}), ...(link.folderChoices ? { folderChoices: link.folderChoices } : {}) });
   } else {
-    await assertPickerPaths(link);
-    writeLink(file, link);
+    const previousPath = store.activeFilePath;
+    await assertPickerPaths(link, previousPath ?? undefined);
+    const collectionStamp = link.collectionDirectory ? await superMemoCollectionStamp(link.collectionDirectory) : undefined;
+    const current = readMigrationStore(file);
+    if (current.activeFilePath !== previousPath) throw new Error('supermemo_source_changed');
+    const deletedEntries = current.sources[link.filePath]?.deletedEntries;
+    saveMigrationSource(file, current, savedLinkSchema.parse({ ...link, snapshot, xmlHash, collectionStamp, deletedEntries }));
   }
   return null;
 }
 
-async function assertPickerPaths(link: z.infer<typeof linkSchema>) {
+function rememberPanel(args: Record<string, unknown>) {
+  const file = migrationStorePath();
+  const store = readMigrationStore(file);
+  const link = activeMigrationSource(store);
+  if (!link || link.filePath !== args.filePath || link.collectionDirectory !== args.collectionDirectory) {
+    throw new Error('supermemo_source_changed');
+  }
+  saveMigrationSource(file, store, savedLinkSchema.parse({ ...link, panel: { ...link.panel, ...panelSchema.parse(args.panel) },
+    ...(args.snapshot ? { snapshot: args.snapshot, comparison: undefined } : {}) }));
+  return null;
+}
+
+async function assertPickerPaths(link: Pick<SavedSuperMemoSource, 'filePath' | 'comparison' | 'collectionDirectory'>, rememberedPath: string | undefined) {
   const files = [link.filePath, link.comparison?.originalFilePath].filter((item): item is string => item !== undefined);
   if (files.some(item => path.extname(item).toLowerCase() !== '.xml')) throw new Error('invalid_supermemo_xml_path');
-  const canonical = await Promise.all(files.map(assertAuthorizedImportFilePath));
-  if (files.some((item, index) => item !== canonical[index])) throw new Error('Import file path changed.');
+  if (link.filePath !== rememberedPath && await assertAuthorizedImportFilePath(link.filePath) !== link.filePath) {
+    throw new Error('Import file path changed.');
+  }
   if (link.collectionDirectory && await assertAuthorizedImportDirectoryPath(link.collectionDirectory) !== link.collectionDirectory) {
     throw new Error('Import directory path changed.');
   }
 }
 
-function writeLink(file: string, link: z.infer<typeof linkSchema>) {
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(`${file}.partial`, JSON.stringify(link), { mode: 0o600 });
-  fs.renameSync(`${file}.partial`, file);
+async function readVerifiedXml(link: SavedSuperMemoSource) {
+  await restoreSelectedImportPaths(link.filePath, null);
+  const source = await readSuperMemoSource(link.filePath, null);
+  if (source.xmlHash !== link.xmlHash) throw new Error('supermemo_xml_updated');
+  return source;
 }
 
-async function restoreLink() {
-  const link = readLink();
+async function reloadLink() {
+  const link = activeMigrationSource();
   if (!link) return null;
-  const { filePath, collectionDirectory, comparison, percent, sourceFormat, folderChoices } = link;
-  await restoreSelectedImportPaths(filePath, null);
-  const savedForm = { percent, sourceFormat, ...(folderChoices ? { folderChoices } : {}), ...(comparison ? { comparison } : {}) };
-  try {
-    if (collectionDirectory) await restoreSelectedImportPaths(filePath, collectionDirectory);
-  } catch {
-    const source = await readSuperMemoSource(filePath, null);
-    return { ...source, collectionDirectory: collectionDirectory ?? undefined, collectionDiscoveryFailure: 'read' as const, savedForm };
+  await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
+  return readSuperMemoSource(link.filePath, link.collectionDirectory ?? undefined);
+}
+
+async function restoreLink(xmlOnly: boolean) {
+  const link = activeMigrationSource();
+  if (!link) return null;
+  const source = await readVerifiedXml(link);
+  if (xmlOnly) return source;
+  if (link.collectionDirectory) {
+    try {
+      await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
+      await verifyCollection(link.collectionDirectory, link.collectionStamp);
+    } catch (error) {
+      if (String(error).includes('supermemo_collection_updated')) throw error;
+      throw new Error('supermemo_collection_unreadable', { cause: error });
+    }
   }
-  return { ...await readSuperMemoSource(filePath, collectionDirectory), savedForm };
+  return { ...source, collectionDirectory: link.collectionDirectory ?? undefined };
 }
 
-async function restoreComparison() {
-  const filePath = readLink()?.comparison?.originalFilePath;
-  if (!filePath) return null;
-  await restoreSelectedImportPaths(filePath, null);
-  return readSuperMemoSource(filePath, null);
+async function verifyCollection(directory: string, stamp: string | undefined) {
+  if (stamp && await superMemoCollectionStamp(directory) !== stamp) throw new Error('supermemo_collection_updated');
 }
 
-export function handleSuperMemoSource(args: Record<string, unknown>, window: () => BrowserWindow | null) {
-  if (args.action === 'restore') return restoreLink();
-  if (args.action === 'comparison') return restoreComparison();
-  if (args.action === 'remember') return rememberLink(args.link, args.formOnly === true);
-  return args.filePath === undefined
-    ? selectSuperMemoSource(window())
-    : readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
-      ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
+async function checkLink() {
+  const link = activeMigrationSource();
+  if (!link) return null;
+  const source = await readVerifiedXml(link).catch(error => {
+    if (String(error).includes('supermemo_xml_updated')) throw error;
+    return null;
+  });
+  if (link.collectionDirectory && link.collectionStamp) {
+    try {
+      await restoreSelectedImportDirectory(link.collectionDirectory);
+      await verifyCollection(link.collectionDirectory, link.collectionStamp);
+    } catch (error) {
+      if (String(error).includes('supermemo_collection_updated')) throw error;
+    }
+  }
+  return source;
+}
+
+export function handleSuperMemoSource(args: Record<string, unknown>) {
+  if (args.action === 'restore') return restoreLink(args.xmlOnly === true);
+  if (args.action === 'check') return checkLink();
+  if (args.action === 'reload') return reloadLink();
+  if (args.action === 'remember') return rememberLink(args.link, args.formOnly === true, args.snapshot, args.xmlHash);
+  if (args.action === 'rememberPanel') return rememberPanel(args);
+  return readSuperMemoSource(asString(args.filePath, 'filePath'), args.collectionDirectory == null
+    ? args.collectionDirectory as null | undefined : asString(args.collectionDirectory, 'collectionDirectory'));
 }

@@ -4,12 +4,12 @@ import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { loadWorkspaceNodeDocument } from '../../lib/core/database/workspaceNodeDocument.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
-import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoDirectoryUpdate, NativeSuperMemoPreview, NativeSuperMemoPreviewArgs } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { applySuperMemoBatchStructure, type AdditionWriter, type Batch, type BatchEntry } from './applySuperMemoBatchStructure.js';
 import type { SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
-import { applySuperMemoCitationUpdates, planSuperMemoCitationUpdates } from './planSuperMemoCitationUpdates.js';
+import { applySuperMemoCitationUpdates, applySuperMemoRuleCorrections, planSuperMemoCitationUpdates } from './planSuperMemoCitationUpdates.js';
 import { applySuperMemoFirstReviewUpdates, planSuperMemoFirstReviewUpdates } from './planSuperMemoFirstReviewUpdates.js';
 import { createSuperMemoMissingAnchorPlanner } from './planSuperMemoMissingAnchor.js';
 import { persistSuperMemoExportLink, resolveSuperMemoBatch, type SuperMemoUpdateTarget } from './resolveSuperMemoBatch.js';
@@ -34,7 +34,8 @@ type LiveNode = {
 type PlannedMove = SuperMemoDirectoryMove & { entry: BatchEntry };
 type UpdateStatus = NativeSuperMemoDirectoryUpdate['changes'][number]['status'];
 
-type ImportInput = Parameters<typeof runSuperMemoImport>[0] & SuperMemoUpdateTarget;
+type UpdateOptions = SuperMemoUpdateTarget & Pick<NativeSuperMemoPreviewArgs, 'updatePercent'> & { ruleCorrectionsOnly?: true };
+type ImportInput = Parameters<typeof runSuperMemoImport>[0] & UpdateOptions;
 
 function canMove(nodeId: string, parentId: string | null, read: (id: string) => LiveNode | undefined,
   projectedParents: ReadonlyMap<string, string | null>) {
@@ -94,7 +95,7 @@ function planAddition(row: NativeSuperMemoPreview['rows'][number], target: strin
 function planMoves(batch: Batch, preview: NativeSuperMemoPreview, elements: SuperMemoXmlDraftElement[], content?: PendingParentContent) {
   const { driver } = openDatabaseConnection();
   const renderNewParent = content && createPendingParentRenderer(elements, preview, content);
-  const recoverAnchor = content && createSuperMemoMissingAnchorPlanner(driver, elements, content.expectedImages);
+  const recoverAnchor = content && createSuperMemoMissingAnchorPlanner(driver, elements, content.expectedImages, preview.rows);
   const rows = orderSuperMemoSourceRows(preview.rows);
   const parents = planSuperMemoImportParents(rows);
   const entries = new Map(batch.entries.map(entry => [entry.id, entry]));
@@ -152,8 +153,24 @@ function planMoves(batch: Batch, preview: NativeSuperMemoPreview, elements: Supe
   return { changes, moves, additions, existingNodeIds, rows };
 }
 
+function persistFirstReviewWeight(batch: Batch, percent: number) {
+  // Existing dates still use their previous basis until an eligible write replaces it.
+  for (const entry of batch.entries) {
+    if (entry.outcome === 'item' && entry.lastApplied) entry.appliedPercent ??= batch.percent;
+  }
+  batch.percent = percent;
+}
+
+function persistRuleCorrections(driver: ReturnType<typeof openDatabaseConnection>['driver'], key: string,
+  batch: Batch, plan: ReturnType<typeof planSuperMemoCitationUpdates> | undefined) {
+  const now = new Date().toISOString();
+  if (plan && applySuperMemoRuleCorrections(driver, batch.entries, plan.writes, now)) {
+    driver.execute('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?', [JSON.stringify(batch), now, key]);
+  }
+}
+
 export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[], preview: NativeSuperMemoPreview,
-  confirmation?: string, writeAdditions?: AdditionWriter, content?: PendingParentContent & SuperMemoUpdateTarget, withdrawSourceIds: readonly number[] = []) {
+  confirmation?: string, writeAdditions?: AdditionWriter, content?: PendingParentContent & UpdateOptions, withdrawSourceIds: readonly number[] = []) {
   const { driver } = openDatabaseConnection();
   return driver.transaction(() => {
     const source = resolveSuperMemoBatch(driver, elements, preview, content ?? {});
@@ -174,19 +191,24 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
         ...plan.moves.flatMap(move => move.anchor && move.to ? [move.to] : []),
         ...[...plan.additions.values()].flatMap(addition => addition.target ? [addition.target] : [])
       ])) : undefined;
-    const firstReviews = plan ? planSuperMemoFirstReviewUpdates(driver, usableEntries, plan.rows, batch.percent) : undefined;
+    const savedPercent = batch.percent;
+    const proposedPercent = content?.updatePercent !== savedPercent ? content?.updatePercent : undefined;
+    const firstReviews = plan ? planSuperMemoFirstReviewUpdates(driver, usableEntries, plan.rows, savedPercent, proposedPercent) : undefined;
     const candidates = plan ? planSuperMemoWithdrawals(driver, usableEntries, plan.rows) : [];
     const withdrawals = candidates.map(candidate => candidate.change);
     const signature = createHash('sha256').update(JSON.stringify({ batchId, exportHash: source.exportHash, sourceMatch, pairedSourceRequired, changes, withdrawals,
-      sourceFormat: content?.sourceFormat, citations: citations?.signature, firstReviews: firstReviews?.changes,
+      proposedPercent, sourceFormat: content?.sourceFormat, citations: citations?.signature, firstReviews: firstReviews?.changes,
       firstReviewWrites: firstReviews?.writes.map(({ nodeId, instant, offset, percent }) => [nodeId, instant, offset, percent]),
       moves: plan?.moves.map(({ nodeId, from, to, anchor }) => [nodeId, from, to, anchor]), additions: [...plan?.additions ?? []]
     })).digest('hex');
     if (confirmation && (confirmation !== signature || !plan)) throw new Error('supermemo_update_changed');
     const selected = confirmation ? selectSuperMemoWithdrawals(candidates, withdrawSourceIds) : [];
     const linksExport = sourceMatch?.linkOnConfirm;
-    if (confirmation && plan && (linksExport || selected.length || plan.moves.length || plan.additions.size || citations?.writes.length || firstReviews?.writes.length)) {
+    if (confirmation && content?.ruleCorrectionsOnly) {
+      persistRuleCorrections(driver, key, batch, citations);
+    } else if (confirmation && plan && (proposedPercent !== undefined || linksExport || selected.length || plan.moves.length || plan.additions.size || citations?.writes.length || firstReviews?.writes.length)) {
       const now = new Date().toISOString();
+      if (proposedPercent !== undefined) persistFirstReviewWeight(batch, proposedPercent);
       applySuperMemoBatchStructure(batch, plan, now, writeAdditions);
       if (citations?.writes.length && content) {
         applySuperMemoCitationUpdates(driver, batch.entries, citations.writes, now);
@@ -199,17 +221,20 @@ export function updateSuperMemoDirectories(elements: SuperMemoXmlDraftElement[],
       driver.execute('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?', [JSON.stringify(batch), now, key]);
     }
     const sourceFormat = batch.preferredSourceFormat ?? batch.sourceFormat;
-    return { batchId, signature, pairedSourceRequired, changes, citationChanges: citations?.changes ?? [], textChanges: citations?.textChanges ?? [],
+    return { batchId, signature, pairedSourceRequired, savedPercent,
+      ...(proposedPercent !== undefined ? { proposedPercent } : {}), changes, citationChanges: citations?.changes ?? [], textChanges: citations?.textChanges ?? [],
+      ...(citations?.writes.some(write => write.title) ? { hasRuleCorrections: true as const } : {}),
       firstReviewChanges: firstReviews?.changes ?? [], withdrawals, withdrawnSourceIds: selected.map(item => item.change.sourceId),
       ...(sourceFormat ? { sourceFormat } : {}), ...(sourceMatch ? { sourceMatch } : {}),
       imported: batch.imported, skipped: batch.skipped, unresolvedImages: batch.unresolvedImages };
   });
 }
 
-export async function confirmSuperMemoDirectoryUpdate(input: ImportInput, signature: string, withdrawSourceIds: readonly number[] = []) {
+export async function confirmSuperMemoDirectoryUpdate(input: ImportInput, signature: string, withdrawSourceIds: readonly number[] = [], ruleCorrectionsOnly?: true) {
   const { elements, preview, collectionDirectory, expectedImages } = input;
   const plan = updateSuperMemoDirectories(elements, preview, undefined, undefined, input);
   if (!plan || plan.signature !== signature || plan.pairedSourceRequired) throw new Error('supermemo_update_changed');
+  if (ruleCorrectionsOnly) return updateSuperMemoDirectories(elements, preview, signature, undefined, { ...input, ruleCorrectionsOnly });
   const additions = new Set(plan.changes.filter(change => change.status === 'add').map(change => change.sourceId));
   const prepared = await prepareSuperMemoRows(preview.rows.filter(row => additions.has(row.id)),
     new Map(elements.map(element => [element.id, element])), collectionDirectory, expectedImages);

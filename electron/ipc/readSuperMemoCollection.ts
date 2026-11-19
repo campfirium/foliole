@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { readSuperMemoBibliography, type SuperMemoBibliography } from '../../lib/core/import/superMemoBibliography.js';
 import { matchSuperMemoCollection } from '../../lib/core/import/superMemoCollection.js';
+import { readSuperMemoRegistryText } from '../../lib/core/import/superMemoRegistryText.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { isSameOrNestedPath } from '../libraryPathSafety.js';
 
@@ -17,14 +18,36 @@ async function readTable(root: string, name: string, folder = 'info') {
   return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
+const coreTables = ['contents.dat', 'ElementInfo.dat', 'repetitions.dat', 'priority.sub', 'RepetitionHistory.dat'];
+const registryTables = ['Concept.ptr', 'concept.dat', 'Text.mem', 'Text.rtx', 'reference.dat'];
+
+async function tableStamp(root: string, folder: string, name: string) {
+  const target = await realpath(path.join(root, folder, name));
+  if (!isSameOrNestedPath(target, root)) throw new Error('invalid_supermemo_collection_path');
+  const metadata = await stat(target);
+  return [metadata.size, metadata.mtimeMs, metadata.ctimeMs];
+}
+
+export async function superMemoCollectionStamp(directory: string) {
+  const root = await assertAuthorizedImportDirectoryPath(directory);
+  const stamps = await Promise.all([
+    ...coreTables.map(name => tableStamp(root, 'info', name)),
+    ...registryTables.map(name => tableStamp(root, 'registry', name).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    }))
+  ]);
+  return JSON.stringify(stamps);
+}
+
 export async function readSuperMemoCollection(directory: string, elements: SuperMemoXmlDraftElement[]) {
   const root = await assertAuthorizedImportDirectoryPath(directory);
   const [tree, binary, repetitions, priorities, history] = await Promise.all(
-    ['contents.dat', 'ElementInfo.dat', 'repetitions.dat', 'priority.sub', 'RepetitionHistory.dat'].map(name => readTable(root, name))
+    coreTables.map(name => readTable(root, name))
   );
   const fields = matchSuperMemoCollection(elements, { tree: tree!, elements: binary!, repetitions: repetitions!, priorities: priorities!, history: history! });
-  const [groups, bibliography] = await Promise.all([readConceptGroups(root, elements, fields), readBibliography(root, fields)]);
-  return { root, fields, groups, bibliography };
+  const [groups, registry] = await Promise.all([readConceptGroups(root, elements, fields), readTextRegistry(root, fields)]);
+  return { root, fields, groups, ...registry };
 }
 
 async function readConceptGroups(root: string, elements: SuperMemoXmlDraftElement[],
@@ -54,17 +77,30 @@ async function readConceptGroups(root: string, elements: SuperMemoXmlDraftElemen
   return groups;
 }
 
-async function readBibliography(root: string, fields: ReturnType<typeof matchSuperMemoCollection>) {
-  const ids = new Set([...fields.values()].flatMap(field => field.referenceId ? [field.referenceId] : []));
-  if (!ids.size) return new Map<number, SuperMemoBibliography>();
+async function readOptionalRegistryTable(root: string, name: string) {
   try {
-    const [references, members, text] = await Promise.all([
-      readTable(root, 'reference.dat', 'registry'), readTable(root, 'Text.mem', 'registry'),
-      readTable(root, 'Text.rtx', 'registry')
-    ] as const);
-    return readSuperMemoBibliography(ids, references, members, text);
+    return await readTable(root, name, 'registry');
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return new Map<number, SuperMemoBibliography>();
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return null;
     throw error;
   }
+}
+
+async function readTextRegistry(root: string, fields: ReturnType<typeof matchSuperMemoCollection>) {
+  const titles = new Map<number, string>();
+  const ids = new Set([...fields.values()].flatMap(field => field.referenceId ? [field.referenceId] : []));
+  let bibliography = new Map<number, SuperMemoBibliography>();
+  if (!ids.size && ![...fields.values()].some(field => field.titleId)) return { titles, bibliography };
+  const [members, text, references] = await Promise.all([
+    readOptionalRegistryTable(root, 'Text.mem'), readOptionalRegistryTable(root, 'Text.rtx'),
+    ids.size ? readOptionalRegistryTable(root, 'reference.dat') : null
+  ]);
+  if (!members || !text) return { titles, bibliography };
+  if (members.byteLength % 30) throw new Error('invalid_supermemo_text_registry');
+  for (const [id, field] of fields) {
+    const title = readSuperMemoRegistryText(members, text, field.titleId);
+    if (title) titles.set(id, title);
+  }
+  if (references) bibliography = readSuperMemoBibliography(ids, references, members, text);
+  return { titles, bibliography };
 }

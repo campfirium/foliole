@@ -13,6 +13,7 @@ export interface NativeSuperMemoPreviewArgs {
   targetBatchId?: string;
   originalElements?: SuperMemoXmlDraftElement[];
   folderChoices?: SuperMemoFolderChoice[];
+  updatePercent?: number;
 }
 
 export interface NativeSuperMemoPreviewRow {
@@ -41,8 +42,9 @@ export interface NativeSuperMemoPreviewRow {
   sourceExample?: string;
   sourceBibliography?: SuperMemoBibliography;
   sourceReferenceId?: number | null;
+  sourceTitle?: string;
   sourceChildren?: number[];
-  structure?: { parentId: number | null; editable: boolean; folderBody: boolean };
+  structure?: { parentId: number | null; editable: boolean; folderBody: boolean; sourceHasBody?: boolean };
 }
 
 export interface NativeSuperMemoPreview {
@@ -56,20 +58,59 @@ export interface NativeSuperMemoPreview {
 export interface SuperMemoMigrationForm {
   percent: number;
   sourceFormat: SuperMemoSourceFormat;
-  folderChoices?: SuperMemoFolderChoice[];
-  comparison?: { batchId: string; originalFilePath?: string | undefined };
+  gradeMap?: SuperMemoGradeMap | undefined;
+  folderChoices?: SuperMemoFolderChoice[] | undefined;
+  comparison?: { batchId: string; originalFilePath?: string | undefined } | undefined;
+}
+
+export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'deleted' | 'source' | 'confirm';
+
+export interface SuperMemoMigrationPanel {
+  step?: SuperMemoMigrationStep | undefined;
+  elementCount?: number | undefined;
+  batchId?: string | undefined;
+  result?: { imported: number; skipped: number; unresolvedImages: number } | undefined;
+}
+
+export interface SuperMemoSourceDraft {
+  elements: SuperMemoXmlDraftElement[];
+  originalElements?: SuperMemoXmlDraftElement[] | undefined;
+}
+
+export interface SuperMemoMigrationSnapshot {
+  elements: Omit<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>[];
+  preview: NativeSuperMemoPreview;
 }
 
 export interface SuperMemoSourceLink extends SuperMemoMigrationForm {
   filePath: string;
   collectionDirectory: string | null;
+  panel?: SuperMemoMigrationPanel;
 }
 
-export interface NativeSuperMemoSource {
+export type SuperMemoDeletedEntry = {
+  sourceId: number;
+  title: string;
+  status: 'trash' | 'permanent';
+};
+
+export interface RememberedSuperMemoSource extends SuperMemoSourceSelection {
+  savedForm: SuperMemoMigrationForm;
+  snapshot: SuperMemoMigrationSnapshot;
+  deletedEntries?: SuperMemoDeletedEntry[];
+  panel?: SuperMemoMigrationPanel;
+}
+
+export interface SuperMemoSourceSelection {
   filePath: string;
   name: string;
-  xml: string;
   collectionDirectory: string | undefined;
+}
+
+export interface NativeSuperMemoSource extends SuperMemoSourceSelection {
+  xml: string;
+  xmlHash?: string;
+  draft?: SuperMemoSourceDraft;
   collectionCandidates?: { directory: string; name: string }[];
   savedForm?: SuperMemoMigrationForm;
   collectionDiscoveryFailure?: 'access' | 'read';
@@ -114,10 +155,13 @@ export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
   pairedSourceRequired: boolean;
+  savedPercent?: number;
+  proposedPercent?: number;
   sourceFormat?: SuperMemoSourceFormat;
   sourceMatch?: NativeSuperMemoSourceMatch;
   citationChanges: NativeSuperMemoCitationChange[];
   textChanges: NativeSuperMemoTextChange[];
+  hasRuleCorrections?: true;
   firstReviewChanges: NativeSuperMemoFirstReviewChange[];
   withdrawals: NativeSuperMemoWithdrawal[];
   withdrawnSourceIds: number[];

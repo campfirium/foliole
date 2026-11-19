@@ -8,6 +8,7 @@ import { expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { matchSuperMemoCollection } from '../../lib/core/import/superMemoCollection.js';
+import { convertSuperMemoContent } from '../../lib/core/import/superMemoContent.js';
 import { makeSuperMemoPreviewReport } from '../../lib/core/import/superMemoPreviewReport.js';
 import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
 import { readSuperMemoXmlDraft } from '../../lib/core/import/superMemoXmlDraft.js';
@@ -81,6 +82,19 @@ if (samplePath) it('classifies the supplied Learning sample', () => {
   const elements = parse(readFileSync(path, 'utf8'));
   const rows = describeSuperMemoSource(elements, '+08:00', DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   const report = makeSuperMemoPreviewReport({ rows, referenceDay: '2026-11-12' }, 0);
+  const samples = [
+    [2669, '渐进阅读基本概念与操作介绍', /^# 渐进阅读基本概念与操作介绍/u, true],
+    [1700, '0B1：享受语言', /^# 0B1：享受语言/u, true],
+    [351, '备忘录：AI 时代的“架构师式编程”学习与实践指南', /^# (?:\*\*)?备忘录：AI 时代/u, true],
+    [1841, 'AI 驱动的黑盒调试 SOP（标准作业程序）', /^# AI 驱动的黑盒调试 SOP/u, false]
+  ] as const;
+  for (const [id, title, heading, hasReferences] of samples) {
+    const source = elements.find(element => element.id === id)!;
+    const row = rows.find(candidate => candidate.id === id)!;
+    expect(row.title).toBe(title);
+    expect(Boolean(row.sourceBibliography)).toBe(hasReferences);
+    expect(convertSuperMemoContent(source.bodyOrQuestionHtml).content).toMatch(heading);
+  }
   expect(rows).toHaveLength(3451);
   expect(report.details.find(row => row.id === 2731)?.issue).toBe('empty-item');
   expect(report.details.find(row => row.id === 3856)?.issue).toBe('empty-topic');

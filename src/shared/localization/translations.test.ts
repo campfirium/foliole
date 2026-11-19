@@ -93,5 +93,5 @@ describe('translation catalog loading', () => {
 it('uses English for the deferred SuperMemo copy in the Hindi interface', async () => {
   expect(await preloadTranslationCatalog('hi')).toBe(true);
   expect(translate('hi', 'settings.title')).toBe('सेटिंग');
-  expect(translate('hi', 'desktop.superMemoDrafts.title')).toBe('SuperMemo import preview');
+  expect(translate('hi', 'desktop.superMemoDrafts.title')).toBe('SuperMemo import');
 });

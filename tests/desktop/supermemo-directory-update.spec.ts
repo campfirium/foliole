@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { card, confirmStep, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection } from './harness/superMemoImport';
+import { card, loadSource, openPreview, openSuperMemoUpdateReview, seedHistoricalSuperMemoBatch, superMemoUpdateComplete, writeCollection } from './harness/superMemoImport';
 
 test('updates the directory of a card imported before structure confirmation', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -29,12 +29,12 @@ test('updates the directory of a card imported before structure confirmation', a
 
   await writeCollection(directory, true);
   await loadSource(desktopApp, dialog, directory, xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByRole('heading', { name: /^(Directory changes|目录位置变化)$/ })).toBeVisible();
-  await expect(dialog.getByText(/→ Source article/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByRole('heading', { name: /^(Directory changes|目录位置变化)$/ })).toBeVisible();
+  await expect(review.getByText(/→ Source article/)).toBeVisible();
   expect((await readNodes()).card?.parentNodeId).toBe(before.card?.parentNodeId);
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/^(Updated directory locations \(1\)|已更新 1 个条目的位置。)$/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/^(Updated directory locations \(1\)|已更新 1 个条目的位置。)$/)).toBeVisible();
   const after = await readNodes();
   expect(after.card?.id).toBe(before.card?.id);
   expect(after.card?.parentNodeId).toBe(before.article?.id);
@@ -56,11 +56,11 @@ test('shows and confirms a missing parent and its existing child as one update',
   ], { 1: { outcome: 'skipped' } });
   expect(batch).toMatchObject({ imported: 1, skipped: 1 });
   await loadSource(desktopApp, dialog, testInfo.outputPath('MissingParent'), xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
-  await expect(dialog.getByText(/→ Missing parent/)).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/Missing parents imported \(1\)|已补入 1 个漏导的父项/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
+  await expect(review.getByText(/→ Missing parent/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Missing parents imported \(1\)|已补入 1 个漏导的父项/)).toBeVisible();
   const placed = await desktopWindow.evaluate(async () => {
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
     const nodes = Object.values(snapshot.nodesById);
@@ -97,47 +97,49 @@ for (const missingParent of [false, true]) {
     const before = await readLink();
     expect(before).toMatchObject({ parent: 'Previous parent', anchor: { kind: 'highlight', locator: { from: 0 } } });
     await loadSource(desktopApp, dialog, testInfo.outputPath('ExistingHighlight'), xml);
-      await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-    if (missingParent) await expect(dialog.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
-    await expect(dialog.getByText(/Update the text anchor|同时更新文字定位/)).toBeVisible();
-    await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-    await expect(dialog.getByText(/Updated directory locations|已更新 1 个条目的位置/)).toBeVisible();
+      const review = await openSuperMemoUpdateReview(dialog);
+    if (missingParent) await expect(review.getByText(/Import missing parent|补入漏导的父项/)).toBeVisible();
+    await expect(review.getByText(/Update the text anchor|同时更新文字定位/)).toBeVisible();
+    await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+    await expect(superMemoUpdateComplete(desktopWindow).getByText(/Updated directory locations|已更新 1 个条目的位置/)).toBeVisible();
     expect(await readLink()).toMatchObject({ id: before.id, parent: 'Corrected parent',
       anchor: { id: before.anchor?.id, kind: 'highlight', locator: { from: newBody.indexOf(selection), originalText: selection } } });
   });
 }
 
-test('changes source information on the existing card from the saved batch', async ({ desktopWindow, desktopApp }, testInfo) => {
+test('removes inherited source fields and keeps local differences when updating an existing card', async ({ desktopWindow, desktopApp }, testInfo) => {
   const directory = testInfo.outputPath('SourceInformation');
+  const references = (author: string) => `<SuperMemoReference>#Title: Source article<br>#Author: ${author}</SuperMemoReference>`;
+  const question = '<p>Question</p>' + references('John Doe');
+  const article = '<p>Article text</p>' + references('Jane Doe');
   const xml = `<SuperMemoCollection><Count>2</Count>
     <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Source article</Title>
-    <Content><Question>Article text</Question></Content></SuperMemoElement>${card}</SuperMemoCollection>`;
-  await writeCollection(directory, true);
-  const dialog = await openPreview(desktopWindow);
-  await loadSource(desktopApp, dialog, directory, xml);
-  await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
+      <Content><Question><![CDATA[${article}]]></Question></Content>
+      <SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
+        <Content><Question><![CDATA[${question}]]></Question><Answer>Answer</Answer></Content>
+      </SuperMemoElement>
+    </SuperMemoElement></SuperMemoCollection>`;
+  const common = { children: [], ordinal: null, skippedAudioComponents: 0, learning: null };
+  await seedHistoricalSuperMemoBatch(desktopApp, [
+    { ...common, id: 1, parentId: null, children: [2], sourceType: 'Topic', title: 'Source article', bodyOrQuestionHtml: [article], answerHtml: [] },
+    { ...common, id: 2, parentId: 1, sourceType: 'Item', title: 'Card', bodyOrQuestionHtml: [question], answerHtml: ['Answer'] }
+  ], {}, undefined, { placement: 'metadata', template: '' });
   const readCard = () => desktopWindow.evaluate(async () => {
-    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const api = window.electronAPI!;
+    const { nodesById } = await api.invoke('load_workspace_snapshot');
     const node = Object.values(nodesById).find(entry => entry.title === 'Card');
-    return node ? window.electronAPI!.invoke('load_node_document', { nodeId: node.id }) : null;
+    return node ? api.invoke('load_node_document', { nodeId: node.id }) : null;
   });
   const before = await readCard();
-  expect(before).toMatchObject({ content: 'Question', reveal: 'Answer' });
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
-  const reopened = await openPreview(desktopWindow);
-  await loadSource(desktopApp, reopened, directory);
-  await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await reopened.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
-  await expect(reopened.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
+  expect(before?.reveal).toContain('supermemoTitle: "Source article"');
+  const dialog = await openPreview(desktopWindow);
+  await loadSource(desktopApp, dialog, directory, xml);
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
   expect(await readCard()).toEqual(before);
-  await reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(reopened.getByText(/Source information updated|已更新 1 处来源信息/)).toBeVisible();
-  const after = await readCard();
-  expect(after).toMatchObject({ nodeId: before?.nodeId, reveal: 'Answer' });
-  expect(after?.content).toMatch(/^Question\n\nSource: \[\[node-id:.+\|Source article\]\]/u);
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Source information updated|已更新 2 处来源信息/)).toBeVisible();
+  expect(await readCard()).toMatchObject({ nodeId: before?.nodeId, content: 'Question\n\nAuthor: John Doe', reveal: 'Answer' });
 });
 
 test('previews a changed conversion result and updates the answer in place', async ({ desktopWindow, desktopApp }, testInfo) => {
@@ -158,12 +160,12 @@ test('previews a changed conversion result and updates the answer in place', asy
   const before = await readCard();
   expect(before).toMatchObject({ content: 'Original question', reveal: 'Old answer' });
   await loadSource(desktopApp, dialog, testInfo.outputPath('TextUpdate'), xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByRole('heading', { name: /^(Text changes|文字内容变化)$/ })).toBeVisible();
-  await expect(dialog.getByText(/^Converted card · (Answer|答案)$/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByRole('heading', { name: /^(Text changes|内容变化)$/ })).toBeVisible();
+  await expect(review.getByText(/^Converted card · (Answer|答案)$/)).toBeVisible();
   expect(await readCard()).toEqual(before);
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/Text fields updated \(1\)|已更新 1 个文字字段/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Text fields updated \(1\)|已更新 1 个文字字段/)).toBeVisible();
   expect(await readCard()).toMatchObject({ nodeId: before?.nodeId, content: 'Original question', reveal: 'New answer' });
 });
 
@@ -188,11 +190,11 @@ test('previews and recalculates an imported first review date', async ({ desktop
   const before = await readCard();
   expect(before.day).toBe(new Date('2027-08-01T00:00:00').toISOString());
   await loadSource(desktopApp, dialog, testInfo.outputPath('FirstReview'), xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByRole('heading', { name: /^(First review dates|首次到期日变化)$/ })).toBeVisible();
-  await expect(dialog.getByText('2027-08-01 → 2027-09-06')).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByRole('heading', { name: /^(First review dates|首次到期日变化)$/ })).toBeVisible();
+  await expect(review.getByText('2027-08-01 → 2027-09-06')).toBeVisible();
   expect(await readCard()).toEqual(before);
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/First review schedules updated \(1\)|已更新 1 张卡的首次排程/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/First review schedules updated \(1\)|已更新 1 张卡的首次排程/)).toBeVisible();
   expect(await readCard()).toEqual({ id: before.id, day: new Date('2027-09-06T00:00:00').toISOString() });
 });

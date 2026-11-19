@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName } from '../../../shared/ui';
-import { settingsDialogBounds } from '../../../shared/ui/settingsDialogBounds';
+import { settingsDialogGrid, settingsDialogPane, settingsDialogPaneBody, settingsDialogPaneHeader } from '../../../shared/ui/settingsDialogBounds';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
@@ -65,8 +65,8 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
         {...definedProps({ hiddenCategoryIds: props.hiddenCategoryIds })}
         setActiveCategory={props.setActiveCategory}
       />
-      <div className="flex min-h-0 flex-col bg-settings-group">
-        <div className="flex h-[64px] min-h-0 items-center justify-end border-b border-settings-divider/55 px-7">
+      <div className={settingsDialogPane}>
+        <div className={`${settingsDialogPaneHeader} justify-end`}>
           {props.headerNotice ? (
             <div className="min-w-0 flex-1 px-5">{props.headerNotice}</div>
           ) : (
@@ -86,7 +86,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
             </>
           )}
         </div>
-        <div className="app-scrollbar min-h-0 flex-1 scroll-pt-20 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
+        <div className={settingsDialogPaneBody} ref={props.scrollContainerRef}>
           {props.contentNotice ? <div className="mb-6 px-settings-panel-x">{props.contentNotice}</div> : null}
           <div className="mb-7 px-5 pb-6">
             <div className="flex items-center gap-3">
@@ -122,7 +122,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
         <AppDialogContent
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
-          className={settingsDialogSurfaceClassName(`${settingsDialogBounds} grid grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${canDrag ? '[-webkit-app-region:no-drag]' : ''} ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
+          className={settingsDialogSurfaceClassName(`${settingsDialogGrid} ${canDrag ? '[-webkit-app-region:no-drag]' : ''} ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
           inert={props.isPreviewActive}
           ref={drag.panelRef}

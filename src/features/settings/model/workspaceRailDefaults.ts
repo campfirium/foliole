@@ -1,6 +1,14 @@
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
+import { isInternalFeaturePreviewBuild } from '../../../shared/config/featurePreviews';
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
 
 import type { WorkspaceRailItemConfig } from './workspaceRailSettings';
+
+const SUPER_MEMO_RAIL_ITEM_ID = 'system.import-supermemo';
+
+export function isWorkspaceRailItemAvailable(item: WorkspaceRailItemConfig) {
+  return item.id !== SUPER_MEMO_RAIL_ITEM_ID || (isInternalFeaturePreviewBuild() && isDesktopRuntime());
+}
 
 export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
   {
@@ -67,6 +75,16 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     source: 'system',
     iconId: 'Clock',
     labelOverride: 'desktop.command.openMaterialHistory'
+  },
+  {
+    id: SUPER_MEMO_RAIL_ITEM_ID,
+    commandId: APP_COMMAND_IDS.importSuperMemo,
+    section: 'top',
+    order: 7,
+    visible: true,
+    source: 'system',
+    iconId: 'DatabaseBackup',
+    labelOverride: 'desktop.command.importSuperMemo'
   },
   {
     id: 'system.feedback',

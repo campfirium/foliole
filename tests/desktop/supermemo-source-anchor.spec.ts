@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
-import { card, confirmStep, loadSource, openPreview, parameters, writeCollection } from './harness/superMemoImport';
+import { card, gradesStep, loadSource, openPreview, parameters, writeCollection, superMemoImportComplete, openSuperMemoUpdateReview, superMemoUpdateComplete } from './harness/superMemoImport';
 
 const passage = 'A verified selection in the source article.';
 const xml = `<SuperMemoCollection><Count>4</Count>
@@ -44,10 +44,10 @@ test('previews a moved excerpt under its source article and renders its imported
   const articleBranch = articleButton.locator('xpath=ancestor::li[1]');
   await expect(articleBranch.getByRole('button', { name: /^Moved excerpt\s*#3$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+  await superMemoImportComplete(desktopWindow).press('Escape');
   await desktopWindow.keyboard.press('Escape');
   await desktopWindow.getByRole('treeitem', { name: 'SuperMemo', exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();
@@ -60,9 +60,9 @@ test('updates the same excerpt and restores its source highlight from the origin
   await writeMovedExcerptCollection(directory, 0);
   await loadSource(desktopApp, dialog, directory, xml);
   await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 4|已导入 4 条)/)).toBeVisible();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
   const readExcerpt = () => desktopWindow.evaluate(async () => {
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
     return Object.values(snapshot.nodesById).find(node => node.title === 'Moved excerpt');
@@ -70,18 +70,18 @@ test('updates the same excerpt and restores its source highlight from the origin
   const before = await readExcerpt();
   expect(before?.id).toBeTruthy();
   expect(before?.anchorLink).toBeNull();
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await superMemoImportComplete(desktopWindow).press('Escape');
 
   await writeMovedExcerptCollection(directory);
   const update = await openPreview(desktopWindow);
   await loadSource(desktopApp, update, directory);
-  await update.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(update.getByText(/^(Restore the text anchor|补回文字定位)$/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(update);
+  await expect(review.getByText(/^(Restore the text anchor|补回文字定位)$/)).toBeVisible();
   expect(await readExcerpt()).toEqual(before);
-  await update.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(update.getByText(/Restored 1 text anchors|已补回 1 处文字定位/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Restored 1 text anchors|已补回 1 处文字定位/)).toBeVisible();
   expect((await readExcerpt())?.id).toBe(before?.id);
-  await update.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await superMemoUpdateComplete(desktopWindow).press('Escape');
   await desktopWindow.keyboard.press('Escape');
   await desktopWindow.getByRole('treeitem', { name: 'SuperMemo', exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: 'Source article', exact: true }).click();

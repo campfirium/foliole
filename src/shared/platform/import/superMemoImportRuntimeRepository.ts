@@ -1,28 +1,48 @@
 import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import { readSuperMemoXmlDraft } from '../../../../lib/core/import/superMemoXmlDraft';
+import { readSuperMemoXmlBodies, readSuperMemoXmlDraft } from '../../../../lib/core/import/superMemoXmlDraft';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
-import type { NativeSuperMemoPreviewArgs, SuperMemoFolderChoice, SuperMemoSourceLink } from '../../../../lib/platform/nativeSuperMemoImportContract';
+import type { NativeSuperMemoPreviewArgs, SuperMemoFolderChoice, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot, SuperMemoSourceDraft, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
-export function selectRuntimeSuperMemoSource() {
-  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
+export function pickRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.pickSuperMemoSource);
 }
 
-export function loadRuntimeSuperMemoSourceLink() {
-  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'restore' });
+export function activateSavedRuntimeSuperMemoSource(filePath: string) {
+  return requireInvoke()(NATIVE_COMMANDS.activateSavedSuperMemoSource, { filePath });
 }
 
-export async function saveRuntimeSuperMemoSourceLink(link: SuperMemoSourceLink, formOnly: boolean) {
-  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'remember', link, formOnly });
+export function readRuntimeSuperMemoSource(filePath: string) {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
 }
 
-export async function readRuntimeSuperMemoComparison() {
-  const source = await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'comparison' });
-  if (!source) throw new Error('supermemo_source_changed');
-  return readSource(source.xml).elements;
+export async function getRuntimeSuperMemoSourceSelection(refreshDeletions = false) {
+  return requireInvoke()(NATIVE_COMMANDS.getSuperMemoSourceSelection, refreshDeletions ? { refreshDeletions: true } : undefined);
+}
+
+export async function saveRuntimeSuperMemoPanel(source: SuperMemoSourceSelection, panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) {
+  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource,
+    { action: 'rememberPanel', filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null, panel, ...(snapshot ? { snapshot } : {}) });
+}
+
+export function reloadRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'reload' });
+}
+
+export function checkRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'check' });
+}
+
+export function readRuntimeRememberedSuperMemoSource(xmlOnly = false) {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, { action: 'restore', xmlOnly });
+}
+
+export async function saveRuntimeSuperMemoSourceLink(link: SuperMemoSourceLink, formOnly: boolean, snapshot?: SuperMemoMigrationSnapshot, xmlHash?: string) {
+  await requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource,
+    { action: 'remember', link, formOnly, ...(snapshot ? { snapshot } : {}), ...(xmlHash ? { xmlHash } : {}) });
 }
 
 export function selectRuntimeSuperMemoCollection(filePath: string, title: string, candidate?: string) {
@@ -35,14 +55,21 @@ function requireInvoke() {
   return invoke;
 }
 
-function readSource(xml: string, collectionDirectory?: string) {
+function parseSuperMemoXml<T>(xml: string, read: (document: Document) => T): T {
   if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('invalid_supermemo_xml');
-  let elements;
   try {
-    elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+    return read(new DOMParser().parseFromString(xml, 'application/xml'));
   } catch (error) {
     throw new Error('invalid_supermemo_xml', { cause: error });
   }
+}
+
+export function parseRuntimeSuperMemoBodies(xml: string) {
+  return parseSuperMemoXml(xml, readSuperMemoXmlBodies);
+}
+
+export function parseRuntimeSuperMemoSource(xml: string, collectionDirectory?: string) {
+  const elements = parseSuperMemoXml(xml, readSuperMemoXmlDraft);
   return { elements, ...(collectionDirectory ? { collectionDirectory } : {}) };
 }
 
@@ -69,22 +96,16 @@ export async function saveSuperMemoGradeMap(gradeMap: SuperMemoGradeMap) {
 
 export type SuperMemoUpdateTarget = Pick<NativeSuperMemoPreviewArgs, 'targetBatchId' | 'originalElements'>;
 
-export async function previewRuntimeSuperMemoImport(xml: string, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, target?: SuperMemoUpdateTarget, folderChoices: SuperMemoFolderChoice[] = []) {
-  const source = readSource(xml, collectionDirectory);
-  const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat, ...target, folderChoices });
+export async function previewRuntimeSuperMemoImport(xml: string | SuperMemoSourceDraft['elements'], collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, target?: SuperMemoUpdateTarget, folderChoices: SuperMemoFolderChoice[] = [], updatePercent?: number) {
+  const source = typeof xml === 'string' ? parseRuntimeSuperMemoSource(xml, collectionDirectory) : { elements: xml, ...(collectionDirectory ? { collectionDirectory } : {}) };
+  const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat, ...target, folderChoices, ...(updatePercent !== undefined ? { updatePercent } : {}) });
   return { preview, elements: source.elements, folderChoices };
 }
 
-export async function runRuntimeSuperMemoImport(filePath: string, percent: number,
-  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat, updateSignature?: string, withdrawSourceIds?: number[], target?: SuperMemoUpdateTarget, collectionChoice?: string | null, folderChoices: SuperMemoFolderChoice[] = []) {
-  const invoke = requireInvoke();
-  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, {
-    filePath, ...(collectionChoice === undefined ? {} : { collectionDirectory: collectionChoice })
-  });
-  if (!source) throw new Error('supermemo_source_changed');
-  return invoke(NATIVE_COMMANDS.runSuperMemoImport,
-    { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat, folderChoices,
-      ...(updateSignature ? { updateSignature } : {}), ...(withdrawSourceIds?.length ? { withdrawSourceIds } : {}), ...target });
+export function runRuntimeSuperMemoImport(args: NativeSuperMemoPreviewArgs & {
+  percent: number; previewSignature: string; updateSignature?: string; ruleCorrectionsOnly?: true; withdrawSourceIds?: number[];
+}) {
+  return requireInvoke()(NATIVE_COMMANDS.runSuperMemoImport, args);
 }
 
 export function listRuntimeSuperMemoImports() {

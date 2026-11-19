@@ -4,12 +4,13 @@ import path from 'node:path';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 import type { BrowserWindow, OpenDialogOptions } from 'electron';
 
+import type { SuperMemoSourceFormat } from '../../../lib/core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../../../lib/core/import/superMemoXmlDraft.js';
 import type { NativeSuperMemoPreviewRow } from '../../../lib/platform/nativeSuperMemoImportContract.js';
 
 import { openSettingsDialog } from './settings';
 
-const title = /^(SuperMemo import preview|SuperMemo 导入预览)$/;
+const title = /^(SuperMemo import|SuperMemo 导入)$/;
 const open = /^(Start migration|开始迁移)$/;
 
 export const card = `<SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
@@ -26,16 +27,28 @@ export async function openPreview(page: Page) {
 }
 
 export const parameters = /^(First review dates|首次到期)$/;
-export const structureStep = /^(Confirm structure|确认结构)$/;
-export const sourceStep = /^(Source information|来源信息)$/;
-export const gradesStep = /^(Grade mapping|评分对应)$/;
+export const structureStep = /^(Import structure|Confirm structure|导入结构|确认结构)$/;
+export const gradesStep = /^(Import settings|导入设置)$/;
 export const confirmStep = /^(Confirm migration|确认迁移)$/;
 
+export async function openSuperMemoUpdateReview(dialog: Locator) {
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Update|更新)$/ }).click();
+  return dialog.page().getByRole('dialog', { name: /^(Review updates to the imported batch|预览已有批次的更新)$/ });
+}
+
+export function superMemoUpdateComplete(page: Page) {
+  return page.getByRole('dialog', { name: /^(Update complete|更新完成)$/ });
+}
+
+export function superMemoImportComplete(page: Page) {
+  return page.getByRole('dialog', { name: /^(Import complete|导入完成)$/ });
+}
+
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,
-  sourceButton = /^(Load XML|Load another XML|载入 XML|重新载入)$/, collectionLocation?: string) {
+  sourceButton = /^(Choose XML|Reload XML|Update XML|Load XML|选择 XML|重新载入 XML|更新 XML|载入 XML|重新载入)$/, collectionLocation?: string) {
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, path.basename(directory) + '.xml');
-  if (xml !== undefined) await writeFile(file, xml);
   await app.evaluate(({ dialog }, { file, collectionLocation }) => {
     dialog.showOpenDialog = async (first: BrowserWindow | OpenDialogOptions, second?: OpenDialogOptions) => {
       const options = second ?? first as OpenDialogOptions;
@@ -43,8 +56,13 @@ export async function loadSource(app: ElectronApplication, dialog: Locator, dire
       return selection ? { canceled: false, filePaths: [selection] } : { canceled: true, filePaths: [] };
     };
   }, { file, collectionLocation });
-  await dialog.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
-  await dialog.getByRole('button', { name: sourceButton }).click();
+  const loadStep = dialog.getByRole('button', { name: /^(Load data|载入数据)$/ });
+  const reload = dialog.page().getByRole('dialog', { name: /^(SuperMemo source changed|SuperMemo 来源已变化)$/ })
+    .getByRole('button', { name: /^(Reload XML|重新载入 XML)$/ });
+  await loadStep.or(reload).first().waitFor();
+  if (!(await reload.isVisible())) await loadStep.click();
+  if (xml !== undefined) await writeFile(file, xml);
+  await dialog.getByRole('button', { name: sourceButton }).or(reload).first().click();
 }
 
 export async function writeCollection(directory: string, includeTopic: boolean) {
@@ -74,8 +92,9 @@ export async function writeCollection(directory: string, includeTopic: boolean) 
 }
 
 export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements: SuperMemoXmlDraftElement[],
-  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'issue' | 'sourceDue' | 'recalculatedDue'>>>,
-  oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>) {
+  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'issue' | 'sourceDue' | 'recalculatedDue' | 'title'>>>,
+  oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>,
+  sourceFormat?: SuperMemoSourceFormat) {
   return app.evaluate(async ({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
     const { openDatabaseConnection, runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
@@ -92,7 +111,7 @@ export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements:
       const historical = canonicalElements.map(element => ({ ...element, ...input.oldText?.[element.id] }));
       const result = await runSuperMemoImport({ elements: historical, preview, percent: 0,
         offset: '+00:00', gradeMap: [1, 1, 1, 2, 3, 4], scheduler: loadReviewSchedulerSettings(), expectedImages: new Map(),
-        sourceFormat: { placement: 'topic-info', template: '' } });
+        sourceFormat: input.sourceFormat ?? { placement: 'topic-info', template: '' } });
       if (input.oldText) {
         // Model older rendering rules for the same original export.
         const { superMemoBatchKey } = require(`${app.getAppPath()}/import/superMemoBatchKey.js`);
@@ -101,5 +120,5 @@ export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements:
       }
       return result;
     });
-  }, { elements, overrides, oldText });
+  }, { elements, overrides, oldText, sourceFormat });
 }

@@ -1,6 +1,7 @@
 import { Check, Settings } from 'lucide-react';
 
 import { useCommandShortcutMap } from '../../features/settings/context/hotkeySettingsContext';
+import { isWorkspaceRailItemAvailable } from '../../features/settings/model/workspaceRailDefaults';
 import {
   getWorkspaceRailItemLabel,
   type WorkspaceRailItemConfig
@@ -105,7 +106,7 @@ export function WorkspaceRailContextMenu({
   top: number;
 }) {
   const t = useTranslation();
-  const switchableItems = items.filter((item) => item.source === 'system' && !item.locked);
+  const switchableItems = items.filter((item) => item.source === 'system' && !item.locked && isWorkspaceRailItemAvailable(item));
   return (
     <AppSelectionDropdownMenu left={left} onClose={onClose} top={top}>
       {switchableItems.map((item) => (
