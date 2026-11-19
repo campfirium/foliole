@@ -2,6 +2,7 @@ import { readSuperMemoRegistryText } from './superMemoRegistryText.js';
 
 export interface SuperMemoBibliography {
   title?: string;
+  author?: string;
   date?: string;
   url?: string;
   publisher?: string;

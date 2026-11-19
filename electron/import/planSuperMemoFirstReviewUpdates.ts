@@ -22,7 +22,7 @@ type FirstReviewWrite = {
 };
 
 export function planSuperMemoFirstReviewUpdates(driver: DatabaseDriver, entries: SuperMemoFirstReviewReceipt[],
-  rows: NativeSuperMemoPreviewRow[], batchPercent: number) {
+  rows: NativeSuperMemoPreviewRow[], batchPercent: number, requestedPercent?: number) {
   const rowsById = new Map(rows.map(row => [row.id, row]));
   const changes: NativeSuperMemoFirstReviewChange[] = [];
   const writes: FirstReviewWrite[] = [];
@@ -30,11 +30,12 @@ export function planSuperMemoFirstReviewUpdates(driver: DatabaseDriver, entries:
     const { nodeId, lastApplied, lastAppliedAt } = entry;
     const row = rowsById.get(entry.id);
     if (!nodeId || entry.outcome !== 'item' || row?.outcome !== 'item' || !lastApplied || !lastAppliedAt) continue;
-    const percent = entry.appliedPercent ?? batchPercent;
+    const previousPercent = entry.appliedPercent ?? batchPercent;
+    const percent = requestedPercent ?? previousPercent;
     const day = row.issue || row.sourceState === 'pending' || row.sourceState === 'dismissed'
       ? null : blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent);
     const offset = superMemoFullOffset(row.sourceDue, row.recalculatedDue);
-    if (day === lastApplied && offset === (entry.fullOffset ?? null)) continue;
+    if (day === lastApplied && offset === (entry.fullOffset ?? null) && percent === previousPercent) continue;
     const status = !day ? 'unavailable'
       : !canUpdateSuperMemoFirstReview(driver, nodeId, lastAppliedAt) ? 'protected'
       : day === lastApplied ? 'basis' : 'update';

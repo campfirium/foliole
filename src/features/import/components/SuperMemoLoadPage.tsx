@@ -1,7 +1,6 @@
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../shared/ui';
 
-import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
@@ -12,7 +11,7 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
   model: ReturnType<typeof useSuperMemoDraft>; onLoad(): void; onLoadNew(): void;
 }) {
   const t = useTranslation();
-  const { busy, loadingXml, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
+  const { busy, loadingXml, retryAsUpdate, selection, error, candidates, setError, recoverCollection, retrySource, pairCollection } = model;
   const update = model.draft?.preview.directoryUpdate;
   const collectionDirectory = selection?.collectionDirectory;
   return (
@@ -22,9 +21,14 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
           description={selection ? <span className="block break-all">{selection.filePath}</span>
             : t('desktop.superMemoDrafts.exportAllElements')}>
           <SettingsControlSlot className={sourceControlLayout}>
-            <AppButton disabled={busy} loading={loadingXml} onClick={onLoad}>
-              {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
-            </AppButton>
+            <div className="flex flex-wrap justify-end gap-2">
+              {update ? <AppButton disabled={busy} loading={loadingXml && retryAsUpdate} onClick={onLoadNew}>
+                {t('desktop.superMemoDrafts.loadNewExport')}
+              </AppButton> : null}
+              <AppButton disabled={busy} loading={loadingXml && !retryAsUpdate} onClick={onLoad}>
+                {t(selection ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
+              </AppButton>
+            </div>
           </SettingsControlSlot>
         </SettingsRow>
         <SettingsRow className={sourceRowLayout} title={t('desktop.superMemoDrafts.originalCollectionFolder')}
@@ -40,9 +44,6 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
       </SettingsSection>
       <SuperMemoLoadNotice inline error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
         recover={choice => void recoverCollection(choice)} retry={() => void retrySource()} />
-      {update ? <p>{t('desktop.superMemoDrafts.existingBatch')}</p> : null}
-      {update ? <AppButton className="self-start" disabled={busy} onClick={onLoadNew}>{t('desktop.superMemoDrafts.loadNewExport')}</AppButton> : null}
-      {!busy ? <SuperMemoBatchAdjustments preferredBatchId={selection?.panel?.batchId} /> : null}
     </>
   );
 }

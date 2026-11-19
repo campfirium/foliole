@@ -3,7 +3,7 @@ import { expectWorkspaceShell } from './harness/settings';
 import { card, loadSource, openPreview, parameters } from './harness/superMemoImport';
 
 const importCommand = /^(Import from SuperMemo|从 SuperMemo 导入)$/;
-const previewTitle = /^(SuperMemo import preview|SuperMemo 导入预览)$/;
+const previewTitle = /^(SuperMemo import|SuperMemo 导入)$/;
 const internalBuild = process.env.FOLIOLE_TEST_INTERNAL_RENDERER === '1';
 
 test('opens SuperMemo migration from the command palette and shares the draft with the desktop entry points', async ({ desktopWindow, desktopApp }, testInfo) => {
@@ -31,13 +31,13 @@ test('opens SuperMemo migration from the command palette and shares the draft wi
   await preview.getByRole('button', { name: parameters }).click();
   await preview.getByRole('slider').press('End');
   await expect(preview.getByRole('slider')).toHaveValue('100');
-  await preview.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await preview.press('Escape');
   await expect(preview).toBeHidden();
 
   if (internalBuild) {
     await shortcut.click();
     await expect(preview.getByRole('slider')).toHaveValue('100');
-    await preview.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+    await preview.press('Escape');
     await expect(preview).toBeHidden();
   }
 

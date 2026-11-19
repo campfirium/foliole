@@ -9,6 +9,7 @@ import { prepareSuperMemoParentText, type SuperMemoParentText } from '../../lib/
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
+import { superMemoReferenceHeading } from '../../lib/core/import/superMemoTopicTitle.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots.js';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.js';
@@ -19,7 +20,7 @@ import { replaceNodeImageResourceReferences } from '../database/nodeResources.js
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
 import { superMemoBatchKey } from './superMemoBatchKey.js';
-import { addSuperMemoCitation, type SuperMemoCitation } from './superMemoCitation.js';
+import { addSuperMemoCitation, superMemoCitationOrigin, type SuperMemoCitation } from './superMemoCitation.js';
 import { ensureSuperMemoImportRoot } from './superMemoImportRoot.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { formatSuperMemoMaterialSource } from './superMemoMaterialSource.js';
@@ -54,7 +55,7 @@ export async function prepareSuperMemoRows(rows: Row[], elements: Map<number, Su
   for (const row of rows) {
     const element = elements.get(row.id)!;
     const body = row.outcome === 'topic' || row.outcome === 'item' || row.structure?.folderBody
-      ? await prepareSuperMemoTopicContent(element.bodyOrQuestionHtml, directory, expectedImages, row.outcome === 'topic') : empty;
+      ? await prepareSuperMemoTopicContent(element.bodyOrQuestionHtml, directory, expectedImages, row.outcome === 'topic', superMemoReferenceHeading(row)) : empty;
     const answer = row.outcome === 'item' ? await prepareSuperMemoTopicContent(element.answerHtml, directory, expectedImages) : empty;
     prepared.push({ row, element, body, answer });
   }
@@ -129,10 +130,10 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
       const article = row.sourceArticleId ? sourceRows.get(row.sourceArticleId) : undefined;
       const articleNodeId = article ? nodeIds.get(article.id) : undefined;
       const parent = parents.get(row.id);
-      const placement = sourceFormat.placement;
       const { citation, content } = formatSuperMemoMaterialSource(row, sourceRows.get(parent ?? 0),
-        article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat, body.content);
+        article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat, body.content, superMemoCitationOrigin(row, sourceRows));
       if (kind === 'topic') {
+        const placement = citation?.placement;
         const shift = placement === 'metadata' || placement === 'topic-info' ? content.length - body.content.length : 0;
         parentBodies.set(row.id, { body: body.content, shift, nativeMarks: body.nativeMarks });
       }

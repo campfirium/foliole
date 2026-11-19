@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
+import { loadSource, openPreview, seedHistoricalSuperMemoBatch, openSuperMemoUpdateReview, superMemoUpdateComplete } from './harness/superMemoImport';
 
 test('withdraws a checked item and restores it from Trash', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -18,18 +18,18 @@ test('withdraws a checked item and restores it from Trash', async ({ desktopWind
   const before = await card();
   expect(before.id).toBeTruthy();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Withdrawal'), xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  const checkbox = dialog.getByRole('checkbox', { name: 'Obsolete card' });
-  const confirm = dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ });
+  const review = await openSuperMemoUpdateReview(dialog);
+  const checkbox = review.getByRole('checkbox', { name: 'Obsolete card' });
+  const confirm = review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ });
   await expect(checkbox).not.toBeChecked();
   await expect(confirm).toBeDisabled();
   await checkbox.check();
   expect(await card()).toEqual(before);
   await confirm.click();
-  await expect(dialog.getByText(/Moved to Trash \(1\)|已将 1 条资料移到回收站/)).toBeVisible();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Moved to Trash \(1\)|已将 1 条资料移到回收站/)).toBeVisible();
   expect(await card()).toEqual({ ...before, inTrash: true });
 
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await superMemoUpdateComplete(desktopWindow).press('Escape');
   await desktopWindow.keyboard.press('Escape');
   await desktopWindow.getByRole('treeitem', { name: /^(Trash|回收站)$/ }).click();
   const trashed = desktopWindow.getByRole('tree', { name: /^(Trash topics|废纸篓主题)$/ })

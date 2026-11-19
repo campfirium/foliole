@@ -1,21 +1,16 @@
 import { expect, it } from 'vitest';
 
-import { folioleMarkdownParser } from '../markdown/folioleMarkdownParser.js';
-
 import { convertSuperMemoContent } from './superMemoContent.js';
 
-it('keeps exported reference labels literal alongside real headings and links', () => {
-  const { content } = convertSuperMemoContent([
-    '<h2>Article</h2><p>Body</p><hr SuperMemo><SuperMemoReference><h5>'
-      + '<font style="color: transparent">#SuperMemo Reference:</font><br>'
-      + '<font class="reference">#Title: An example<br># Link: '
-      + '<a href="https://example.com/article#source">Original</a></font></SuperMemoReference>'
-  ]);
-  const syntax = folioleMarkdownParser.parse(content).toString();
-  expect(syntax.match(/ATXHeading\d/g)).toEqual(['ATXHeading2']);
-  expect(syntax).toContain('Link(');
-  expect(content).toContain('\\#SuperMemo Reference:\n\\#Title: An example\n'
-    + '\\# Link: [Original](https://example.com/article#source)');
+it('cleans native title and reference markup while preserving genuine headings, rules and links', () => {
+  const label = '<span class="headers">Title:</span></B><span class="RefText"> Example article</span></FONT>';
+  const reference = '<hr SuperMemo><SuperMemoReference><h5>#SuperMemo Reference:<br>#Title: Example article</SuperMemoReference>';
+  expect(convertSuperMemoContent([label + '<p>Text</p>' + reference]).content).toBe('# Example article\n\nText');
+  expect(convertSuperMemoContent([
+    '<h1><strong>' + label + '</strong></h1><hr><p><a href="https://example.com">Link</a></p>' + reference
+  ]).content).toBe('# **Example article**\n\n---\n\n[Link](https://example.com)');
+  expect(convertSuperMemoContent([`<span>${label}</span><p>Text</p>${reference}`]).content).toBe('# Example article\n\nText');
+  expect(convertSuperMemoContent(['<h1>Title: A literal heading</h1>']).content).toBe('# Title: A literal heading');
 });
 
 it('keeps inline images and unresolved source references in the Topic body and skips audio', () => {

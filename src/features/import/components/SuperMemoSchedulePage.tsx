@@ -5,7 +5,6 @@ import { calendarDateKey } from '../../../../lib/core/review/reviewCalendarDates
 import type { NativeSuperMemoPreview } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
-import { FirstReviewChanges } from './SuperMemoDirectoryUpdate';
 import { SuperMemoDueChart } from './SuperMemoDueChart';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 
@@ -24,17 +23,10 @@ export function SuperMemoSchedulePage({ preview, percent, setPercent, busy }: {
   busy: boolean;
 }) {
   const t = useTranslation();
-  return <div className={preview.directoryUpdate
-    ? 'grid min-w-0 gap-4'
-    : 'flex min-h-0 min-w-0 flex-1 flex-col gap-4'}>
-    {preview.directoryUpdate ? <>
-      <p className="text-sm">{t('desktop.superMemoDrafts.scheduleUpdateHelp')}</p>
-      <FirstReviewChanges changes={preview.directoryUpdate.firstReviewChanges} showHeading={false} />
-      <p className="text-xs text-foreground/70">{t('desktop.superMemoDrafts.scheduleBatchHelp')}</p>
-    </> : <>
-      <p className="shrink-0 text-sm text-foreground/70">{t('desktop.superMemoDrafts.scheduleChartIntro')}</p>
-      <SuperMemoPreviewOptionFields compact percent={percent} onChange={setPercent} disabled={busy} />
-      <ScheduleChart preview={preview} percent={percent} />
-    </>}
+  return <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+    <p className="shrink-0 text-sm text-foreground/70">{t('desktop.superMemoDrafts.scheduleChartIntro')}</p>
+    <SuperMemoPreviewOptionFields compact percent={percent} onChange={setPercent}
+      disabled={busy} />
+    <ScheduleChart preview={preview} percent={percent} />
   </div>;
 }

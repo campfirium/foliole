@@ -5,7 +5,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { exitFlowIfNeeded, relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { type DesktopSession, expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { confirmStep, loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { gradesStep, loadSource, openPreview, parameters, superMemoImportComplete } from './harness/superMemoImport';
 
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 const collection = process.env.FOLIOLE_SUPERMEMO_VALIDATION_COLLECTION;
@@ -41,6 +41,30 @@ function expectImportedHierarchy(nodes: Awaited<ReturnType<typeof readWorkspace>
   expect(nodes[ids[75]!]?.reading?.state).toBe('dismissed');
 }
 
+async function expectLearningTitlesAndCitations(page: Page, ids: Record<number, string>, outputPath: (name: string) => string) {
+  const docs = await page.evaluate(async sourceIds => {
+    const api = window.electronAPI!;
+    return Promise.all(sourceIds.map(nodeId => api.invoke('load_node_document', { nodeId })));
+  }, [1700, 351, 1841, 1610, 892, 2669].map(id => ids[id]!));
+  const [enjoy, memo, debug, excerpt, card, incremental] = docs;
+  expect(enjoy?.content).toMatch(/^---\nTitle: "0B1：享受语言"\n---\n\n# 0B1：享受语言/u);
+  expect(memo?.content).toMatch(/\n# (?:\*\*)?备忘录：AI 时代/u);
+  expect(incremental?.content).toMatch(/\n# 渐进阅读基本概念与操作介绍/u);
+  expect(debug?.content).toMatch(/^# AI 驱动的黑盒调试 SOP/u);
+  expect(excerpt?.content).not.toMatch(/(?:^---|Title:|Article:)/u);
+  expect(card?.content).not.toMatch(/(?:^---|Title:|Article:)/u);
+  for (const [id, name, heading] of [
+    [1700, 'enjoy-language', /0B1：享受语言/u],
+    [351, 'ai-memo', /备忘录：AI 时代/u],
+    [1841, 'black-box-sop', /AI 驱动的黑盒调试 SOP/u],
+    [2669, 'incremental-reading', /渐进阅读基本概念与操作介绍/u]
+  ] as const) {
+    await page.evaluate(nodeId => window.__folioleWorkspaceDebug!.openNode(nodeId), ids[id]!);
+    await expect(page.locator('.cm-content .cm-line').filter({ hasText: heading }).first()).toBeVisible();
+    await page.screenshot({ path: outputPath(`${name}.png`) });
+  }
+}
+
 async function clearStarterTopics(page: Page) {
   await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.evaluate(async () => {
@@ -66,17 +90,18 @@ async function importLearning(page: Page, app: ElectronApplication, outputPath: 
   await expect(tree.getByRole('button', { name: /TODO.*#56/ })).toBeVisible();
   await dialog.screenshot({ path: outputPath('learning-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
-  await expect(dialog.getByText(/Candidate dates and priority order come from the paired collection|候选日期和优先顺序来自配对资料库/)).toBeVisible();
+  await expect(dialog.getByRole('region', { name: /^(Already due|已到期)$/ })).toBeVisible();
   expect(Object.keys(await readWorkspace(page))).toEqual(before);
   expect(await readImportedIds(app)).toBeNull();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/Imported 3450 · skipped 1 · 243 unresolved image references|已导入 3450 条 · 跳过 1 条 · 未找到图片 243 处/))
-    .toBeVisible({ timeout: 120_000 });
-  await dialog.screenshot({ path: outputPath('learning-import-result.png') });
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  const completed = superMemoImportComplete(page);
+  await expect(completed).toBeVisible({ timeout: 120_000 });
+  await completed.screenshot({ path: outputPath('learning-import-result.png') });
   const ids = await readImportedIds(app);
   if (!ids) throw new Error('Missing committed Learning batch');
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  expect(Object.keys(ids)).toHaveLength(3450);
+  await completed.press('Escape');
   await page.keyboard.press('Escape');
   return ids;
 
@@ -130,6 +155,7 @@ test('imports paired Learning, studies, relaunches, and restores the saved batch
   const ids = await importLearning(page, app, name => testInfo.outputPath(name));
   const imported = await readWorkspace(page);
   expectImportedHierarchy(imported, ids);
+  await expectLearningTitlesAndCitations(page, ids, name => testInfo.outputPath(name));
   const backupPath = testInfo.outputPath('learning-before-first-score.db');
   let relaunched: DesktopSession | undefined;
   try {
@@ -161,15 +187,16 @@ test('makes an imported due card available in an already prepared empty Flow', a
     </SuperMemoElement></SuperMemoCollection>`;
   await loadSource(app, dialog, testInfo.outputPath('due-card'), source);
   await dialog.getByRole('button', { name: /Due imported card.*#1/ }).click();
-  const question = dialog.getByText(/Imported question\s+Second paragraph/);
-  await expect(question).toBeVisible();
-  expect(await question.textContent()).toBe('Imported question\n\nSecond paragraph');
+  const question = dialog.getByRole('region', { name: /^(Preview|预览)$/ });
+  await expect(question.getByText('Imported question', { exact: true })).toBeVisible();
+  await expect(question.getByText('Second paragraph', { exact: true })).toBeVisible();
   await dialog.screenshot({ path: testInfo.outputPath('wrapped-question-preview.png') });
   await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 1|已导入 1 条)/)).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  const completed = superMemoImportComplete(page);
+  await expect(completed).toBeVisible();
+  await completed.press('Escape');
   await page.keyboard.press('Escape');
   const ids = await readImportedIds(app);
   const graded = await gradeFirstImportedCard(page, new Set(Object.values(ids ?? {})));

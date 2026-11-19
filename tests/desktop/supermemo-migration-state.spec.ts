@@ -4,7 +4,7 @@ import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-h
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, loadSource, openPreview, parameters, structureStep, writeCollection } from './harness/superMemoImport';
+import { card, gradesStep, loadSource, openPreview, parameters, structureStep, writeCollection } from './harness/superMemoImport';
 
 const xml = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 const load = /^(Choose XML|选择 XML)$/;
@@ -46,10 +46,9 @@ test('restores migration pages from a single JSON without access to the original
     await expect(reopened.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
     await reopened.getByRole('button', { name: parameters }).click();
     await expect(reopened.getByRole('slider')).toHaveValue('100');
-    await reopened.getByRole('button', { name: confirmStep }).click();
-    await expect(reopened.getByText(/^(100% toward Foliole|向 Foliole 调整 100%)$/)).toBeVisible();
+    await reopened.getByRole('button', { name: gradesStep }).click();
     await expect(restarted.firstWindow.getByRole('dialog', { name: noticeTitle })).toHaveCount(0);
-    await reopened.getByRole('button', { name: /^(Convert|转换)$/ }).click();
+    await reopened.getByRole('button', { name: /^(Import|导入)$/ }).click();
     await expect(restarted.firstWindow.getByRole('dialog', { name: noticeTitle })).toBeVisible();
   } finally {
     await restarted.close();
@@ -64,7 +63,7 @@ test('detects a changed XML after opening and checks it again before conversion'
   const original = await openPreview(desktopWindow);
   await loadSource(desktopApp, original, exportDirectory, xml);
   await expect(original.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
-  await original.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await original.press('Escape');
   await writeFile(file, xml.replace('<Title>Card</Title>', '<Title>Changed</Title>'));
 
   const dialog = await openPreview(desktopWindow);
@@ -72,8 +71,8 @@ test('detects a changed XML after opening and checks it again before conversion'
   await expect(changed).toBeVisible();
   await changed.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await expect(dialog.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
   await expect(changed).toBeVisible();
 });
 
@@ -85,9 +84,9 @@ test('detects changes to the paired collection without changing the saved migrat
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, info.outputPath('PairedExport'), xml, load, collection);
   await expect(dialog.getByRole('button', { name: /^Card.*#2$/ })).toBeVisible();
-  await dialog.getByRole('button', { name: confirmStep }).click();
+  await dialog.getByRole('button', { name: gradesStep }).click();
   await appendFile(info.outputPath('ChangedCollection', 'info', 'ElementInfo.dat'), Buffer.from([1]));
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
 
   const changed = desktopWindow.getByRole('dialog', { name: /^(SuperMemo source changed|SuperMemo 来源已变化)$/ });
   await expect(changed).toBeVisible();

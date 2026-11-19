@@ -2,6 +2,8 @@ import { parseFragment, serialize, type DefaultTreeAdapterTypes } from 'parse5';
 
 import { convertHtmlToMarkdownCompatible } from './htmlToMarkdownCompatible.js';
 import { BLOCK_TAGS, CONTENT_STRIP_TAGS, EMBEDDED_TAGS } from './htmlToMarkdownCompatibleUtils.js';
+import { cleanSuperMemoExportTitle } from './superMemoExportTitle.js';
+import { isSuperMemoReference } from './superMemoParentText.js';
 
 type HtmlParent = DefaultTreeAdapterTypes.ParentNode;
 type ImageDestinations = ReadonlyMap<string, string>;
@@ -23,19 +25,17 @@ function unwrapStructuralContainers(parent: HtmlParent) {
   });
 }
 
-function prepareFragment(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations, inReference = false) {
+function prepareFragment(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations) {
   parent.childNodes = parent.childNodes.filter(node => {
-    if (inReference && node.nodeName === '#text' && 'value' in node) {
-      node.value = node.value.replace(/^(\s*)#/u, '$1\\#');
-    }
     if (!('tagName' in node)) return true;
+    if (isSuperMemoReference(node)) return false;
     if (node.tagName === 'audio' || (node.tagName === 'embed' && node.attrs.some(attr =>
       attr.name === 'src' && /\.(?:mp3|wav|ogg|m4a)(?:[?#]|$)/i.test(attr.value)))) {
       media.audio++;
       return false;
     }
     if (node.tagName === 'img') inspectImage(node, media, imageDestinations);
-    prepareFragment(node, media, imageDestinations, inReference || node.tagName === 'supermemoreference');
+    prepareFragment(node, media, imageDestinations);
     return true;
   });
 }
@@ -71,6 +71,7 @@ export function convertSuperMemoContent(parts: string[], imageDestinations?: Ima
   const content = parts.map(part => {
     const fragment = parseFragment(part);
     prepareFragment(fragment, media, imageDestinations);
+    cleanSuperMemoExportTitle(fragment);
     unwrapStructuralContainers(fragment);
     return convertHtmlToMarkdownCompatible(serialize(fragment)).content;
   }).filter(Boolean).join('\n');

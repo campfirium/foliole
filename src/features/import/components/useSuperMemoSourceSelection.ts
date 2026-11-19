@@ -1,25 +1,29 @@
 import { useEffect } from 'react';
 
 import { applySuperMemoFolderDisplay, defaultSuperMemoFolder } from '../../../../lib/core/import/superMemoImportStructure';
-import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import {
   getRuntimeSuperMemoSourceSelection, saveRuntimeSuperMemoPanel
 } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
+import { mappedSourceFormat } from './superMemoDraftSourceActions';
 import type { DraftState } from './useSuperMemoDraft';
 
-export const initialSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' };
+function previewSourceFormat(update: unknown, format: typeof mappedSourceFormat) {
+  return update || format.referenceMap ? format : mappedSourceFormat;
+}
 
 function useRestorePanel(state: DraftState) {
-  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft } = state;
+  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget } = state;
   useEffect(() => {
     let active = true;
     void getRuntimeSuperMemoSourceSelection().then(selection => {
       if (!active || !selection) return;
       setRemembered(selection);
       setPercent(selection.savedForm.percent);
-      setSourceFormat(selection.savedForm.sourceFormat);
+      // A saved update signature is tied to the format reviewed with that preview.
+      const format = selection.savedForm.sourceFormat;
+      setSourceFormat(previewSourceFormat(selection.snapshot.preview.directoryUpdate, format));
       if (selection.savedForm.gradeMap) setGradeMap(selection.savedForm.gradeMap);
       const { elements, preview } = selection.snapshot;
       const folderChoices = selection.savedForm.folderChoices ?? [];
@@ -28,6 +32,8 @@ function useRestorePanel(state: DraftState) {
       const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row =>
         applySuperMemoFolderDisplay(row, overrides.get(row.id) ??
           defaultSuperMemoFolder(row, parents.has(row.id), row.structure?.sourceHasBody)));
+      const comparison = selection.savedForm.comparison;
+      if (comparison) setTarget({ targetBatchId: comparison.batchId, originalFilePath: comparison.originalFilePath });
       setSource({ ...selection, xml: '' });
       setDraft({ preview: { ...preview, rows }, elements: elements.map(element => ({
         ...element, bodyOrQuestionHtml: [], answerHtml: []
@@ -38,7 +44,7 @@ function useRestorePanel(state: DraftState) {
       if (active) setBusy(false);
     });
     return () => { active = false; };
-  }, [setBusy, setDraft, setError, setGradeMap, setPercent, setRemembered, setSource, setSourceFormat]);
+  }, [setBusy, setDraft, setError, setGradeMap, setPercent, setRemembered, setSource, setSourceFormat, setTarget]);
 }
 
 export function useSuperMemoSourceSelection(state: DraftState) {

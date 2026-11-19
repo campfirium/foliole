@@ -9,9 +9,10 @@ import type { RememberedSuperMemoSource, SuperMemoMigrationSnapshot } from '../.
 import { resolveDatabasePath } from '../database/connection.js';
 
 import { asString } from './commandParsers.js';
-import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportPaths } from './importPathAuthorization.js';
+import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, restoreSelectedImportDirectory, restoreSelectedImportPaths } from './importPathAuthorization.js';
 import { superMemoCollectionStamp } from './readSuperMemoCollection.js';
 import { readSuperMemoSource } from './readSuperMemoSource.js';
+import { superMemoSourceFormatSchema } from './superMemoSourceFormatSchema.js';
 
 const count = z.number().int().nonnegative();
 const batchId = z.string().regex(/^[a-f0-9]{64}$/);
@@ -27,7 +28,7 @@ const linkSchema = z.object({
   collectionDirectory: z.string().min(1).nullable(),
   percent: z.number().min(0).max(100),
   gradeMap: z.array(grade).length(6).optional(),
-  sourceFormat: z.object({ placement: z.enum(['metadata', 'body', 'topic-info', 'content-end']), template: z.string().max(4000) }),
+  sourceFormat: superMemoSourceFormatSchema,
   folderChoices: z.array(z.object({ id: z.number().int().positive(), folder: z.boolean() })).optional(),
   comparison: z.object({ batchId, originalFilePath: z.string().min(1).optional() }).optional(),
   panel: panelSchema.optional(),
@@ -113,12 +114,17 @@ function writeLink(file: string, link: z.infer<typeof linkSchema>) {
   fs.renameSync(`${file}.partial`, file);
 }
 
-async function restoreLink(xmlOnly: boolean) {
-  const link = readLink();
-  if (!link?.xmlHash) return null;
+async function readVerifiedXml(link: z.infer<typeof savedLinkSchema>) {
   await restoreSelectedImportPaths(link.filePath, null);
   const source = await readSuperMemoSource(link.filePath, null);
   if (source.xmlHash !== link.xmlHash) throw new Error('supermemo_xml_updated');
+  return source;
+}
+
+async function restoreLink(xmlOnly: boolean) {
+  const link = readLink();
+  if (!link) return null;
+  const source = await readVerifiedXml(link);
   if (xmlOnly) return source;
   if (link.collectionDirectory) {
     try {
@@ -138,23 +144,20 @@ async function verifyCollection(directory: string, stamp: string | undefined) {
 
 async function checkLink() {
   const link = readLink();
-  if (!link?.xmlHash) return null;
-  try {
-    await restoreSelectedImportPaths(link.filePath, null);
-    const source = await readSuperMemoSource(link.filePath, null);
-    if (source.xmlHash !== link.xmlHash) throw new Error('supermemo_xml_updated');
-  } catch (error) {
+  if (!link) return null;
+  const source = await readVerifiedXml(link).catch(error => {
     if (String(error).includes('supermemo_xml_updated')) throw error;
-  }
+    return null;
+  });
   if (link.collectionDirectory && link.collectionStamp) {
     try {
-      await restoreSelectedImportPaths(link.filePath, link.collectionDirectory);
+      await restoreSelectedImportDirectory(link.collectionDirectory);
       await verifyCollection(link.collectionDirectory, link.collectionStamp);
     } catch (error) {
       if (String(error).includes('supermemo_collection_updated')) throw error;
     }
   }
-  return null;
+  return source;
 }
 
 export function handleSuperMemoSource(args: Record<string, unknown>) {

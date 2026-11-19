@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, structureStep } from './harness/superMemoImport';
+import { card, gradesStep, loadSource, openPreview, openSuperMemoUpdateReview, parameters, structureStep, superMemoImportComplete, superMemoUpdateComplete } from './harness/superMemoImport';
 
 const oneDate = card.replace('<ID>2</ID>', '<ID>3</ID>').replace('<Title>Card</Title>', '<Title>Source only</Title>')
   .replace(/<RepHist>.*<\/RepHist>/, '');
@@ -13,7 +13,6 @@ const monthlyTitle = /^(Upcoming reviews by month|未来各月的到期分布)$/
 const weeklyTitle = /^(Upcoming|未来到期)$/;
 const plannedSeries = /Adjusted|调整后/;
 const alreadyDue = /^(Already due|已到期)$/;
-const previousImport = /Previous import|历史导入批次/;
 
 test('compares real first review dates and restores the selected proportion', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -63,22 +62,23 @@ test('compares real first review dates and restores the selected proportion', as
   await expect(slider).toHaveValue('100');
   await expect(backlog).toContainText(/SuperMemo\s*0\s*→\s*(?:Adjusted|调整后)\s*1（\+1）/);
 
-  await restored.getByRole('button', { name: confirmStep }).click();
-  await restored.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(restored.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
-  await restored.press('Escape');
+  await restored.getByRole('button', { name: gradesStep }).click();
+  await restored.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+  await superMemoImportComplete(desktopWindow).press('Escape');
   const existing = await openPreview(desktopWindow);
-  await expect(existing.getByRole('combobox', { name: previousImport })).toBeVisible();
   await existing.getByRole('button', { name: structureStep }).click();
   await existing.getByRole('button', { name: parameters }).click();
-  await expect(existing.getByText(/batch’s saved proportion|批次已保存的比例/)).toBeVisible();
-  await expect(slider).toHaveCount(0);
-  await existing.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
-  await existing.getByRole('combobox', { name: previousImport }).selectOption({ index: 1 });
   await expect(slider).toHaveValue('100');
   await slider.press('Home');
-  await existing.getByRole('button', { name: /^(Apply first review dates|应用首次复习日期)$/ }).click();
-  await expect(existing.getByText(/^(Updated 1|已更新 1 张)/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(existing);
+  await expect(review.getByText(/100%.*0%/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/i }).click();
+  await expect(superMemoUpdateComplete(desktopWindow)).toBeVisible();
+  await superMemoUpdateComplete(desktopWindow).press('Escape');
+  const updated = await openPreview(desktopWindow);
+  await updated.getByRole('button', { name: parameters }).click();
+  await expect(updated.getByRole('slider')).toHaveValue('0');
 });
 
 async function expectScheduleFits(timeline: import('@playwright/test').Locator) {

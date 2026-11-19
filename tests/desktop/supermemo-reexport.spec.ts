@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { confirmStep, loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { gradesStep, loadSource, openPreview, parameters, superMemoImportComplete, openSuperMemoUpdateReview, superMemoUpdateComplete } from './harness/superMemoImport';
 
 function exportXml(questions: string[]) {
   return `<SuperMemoCollection><Count>${questions.length}</Count>${questions.map((question, index) => `
@@ -14,10 +14,10 @@ test('links a verified new export to the original batch and refuses a mismatched
   const first = await openPreview(desktopWindow);
   await loadSource(desktopApp, first, original, exportXml(['First original question', 'Second original question']));
   await first.getByRole('button', { name: parameters }).click();
-  await first.getByRole('button', { name: confirmStep }).click();
-  await first.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(first.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
-  await first.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await first.getByRole('button', { name: gradesStep }).click();
+  await first.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+  await superMemoImportComplete(desktopWindow).press('Escape');
   const nodes = () => desktopWindow.evaluate(async () => {
     const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
     return Object.values(nodesById).filter(node => /^Entry /u.test(node.title ?? ''))
@@ -27,25 +27,28 @@ test('links a verified new export to the original batch and refuses a mismatched
   expect(before).toHaveLength(2);
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, original);
-  const newButton = /^(Load newer export|载入重新导出的 XML)$/;
-  const confirm = dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ });
+  const newButton = /^(Update XML|更新 XML)$/;
+  const confirmUpdate = /^(Confirm Update|确认更新)$/;
   await loadSource(desktopApp, dialog, wrong, exportXml(['Foreign one', 'Foreign two']), newButton);
-  await expect(dialog.getByText(/could not be verified against the saved batch|无法核实这份导出与原批次/)).toBeVisible();
-  await expect(confirm).toBeDisabled();
+  const rejected = await openSuperMemoUpdateReview(dialog);
+  await expect(rejected.getByText(/could not be verified against the saved batch|无法核实这份导出与原批次/)).toBeVisible();
+  await expect(rejected.getByRole('button', { name: confirmUpdate })).toBeDisabled();
+  await rejected.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const updatedXml = exportXml(['First original question', 'Second original question', 'New question']);
   await loadSource(desktopApp, dialog, newer, updatedXml, newButton);
-  await expect(dialog.getByText(/Matched 2 existing entries|已核实 2 条已有资料/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByText(/Matched 2 existing entries|已核实 2 条已有资料/)).toBeVisible();
   expect(await nodes()).toEqual(before);
-  await confirm.click();
-  await expect(dialog.getByText(/Linked the newer export|已将新导出关联到原批次/)).toBeVisible();
+  await review.getByRole('button', { name: confirmUpdate }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Linked the newer export|已将新导出关联到原批次/)).toBeVisible();
   const after = await nodes();
   expect(after).toHaveLength(3);
   expect(after.slice(0, 2)).toEqual(before);
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await superMemoUpdateComplete(desktopWindow).press('Escape');
 
   const reopened = await openPreview(desktopWindow);
   await loadSource(desktopApp, reopened, newer);
-  await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ })).toBeDisabled();
+  const reviewAgain = await openSuperMemoUpdateReview(reopened);
+  await expect(reviewAgain.getByRole('button', { name: confirmUpdate })).toBeDisabled();
   expect(await nodes()).toEqual(after);
 });

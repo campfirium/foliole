@@ -53,7 +53,8 @@ export function SuperMemoLoadNotice(props: NoticeProps) {
   if (!error) return null;
   const title = t(error === 'collectionAccess' ? 'desktop.superMemoDrafts.collectionAccessTitle'
     : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' :
-      error === 'xmlUpdated' ? 'desktop.superMemoDrafts.sourceUpdatedTitle' : 'desktop.superMemoDrafts.loadFailed');
+      error === 'xmlUpdated' ? 'desktop.superMemoDrafts.sourceUpdatedTitle' :
+        error === 'convert' ? 'desktop.superMemoDrafts.importFailedTitle' : 'desktop.superMemoDrafts.loadFailed');
   const description = <>
     {t(descriptions[error])}
     {error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos'

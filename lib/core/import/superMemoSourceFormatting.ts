@@ -1,8 +1,10 @@
 import type { SuperMemoBibliography } from './superMemoBibliography.js';
+import { mappedSuperMemoReferences, type SuperMemoReferenceMap } from './superMemoReferenceFields.js';
 
 export interface SuperMemoSourceFormat {
   placement: 'metadata' | 'body' | 'topic-info' | 'content-end';
   template: string;
+  referenceMap?: SuperMemoReferenceMap | undefined;
 }
 
 export const DEFAULT_SUPER_MEMO_SOURCE_FORMAT: SuperMemoSourceFormat = {
@@ -10,8 +12,21 @@ export const DEFAULT_SUPER_MEMO_SOURCE_FORMAT: SuperMemoSourceFormat = {
   template: 'Source: {articleLink}\nTitle: {title}\nAuthor: {author}\nURL: {url}\nDate: {date}\nPublisher: {publisher}\nNotes: {comment}'
 };
 
+export function formatMappedSuperMemoSource(bibliography: SuperMemoBibliography | undefined,
+  articleId: number | null | undefined, map: SuperMemoReferenceMap, placement: 'metadata' | 'content-end') {
+  return mappedSuperMemoReferences(map, {
+    Title: bibliography?.title, Author: bibliography?.author, Link: bibliography?.url,
+    Date: bibliography?.date, Source: bibliography?.publisher, Comment: bibliography?.comment,
+    Article: articleId == null ? undefined : String(articleId)
+  }).map(([key, value]) => `${key}: ${placement === 'metadata' ? JSON.stringify(value) : value.replace(/[\r\n]+/gu, ' ')}`)
+    .join(placement === 'metadata' ? '\n' : '  \n');
+}
+
 export function formatSuperMemoSource(bibliography: SuperMemoBibliography | undefined,
   articleId: number | null | undefined, target: { id: string; title: string } | undefined, format: SuperMemoSourceFormat) {
+  if (format.referenceMap) {
+    return formatMappedSuperMemoSource(bibliography, articleId, format.referenceMap, 'metadata');
+  }
   const title = target?.title.replace(/[[\]|\r\n]/gu, ' ').trim() || (articleId ? `SuperMemo #${articleId}` : '');
   const articleLink = target ? `[[node-id:${target.id}|${title}]]` : title;
   const values: Record<string, string | undefined> = { ...bibliography, articleLink };

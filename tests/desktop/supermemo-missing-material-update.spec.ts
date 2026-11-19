@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { loadSource, openPreview, seedHistoricalSuperMemoBatch } from './harness/superMemoImport';
+import { loadSource, openPreview, seedHistoricalSuperMemoBatch, openSuperMemoUpdateReview, superMemoUpdateComplete } from './harness/superMemoImport';
 
 test('imports a previously skipped card once into its saved batch', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -16,17 +16,17 @@ test('imports a previously skipped card once into its saved batch', async ({ des
       .filter(node => node.title === 'Recovered card').map(node => node.id));
   const directory = testInfo.outputPath('MissingCard');
   await loadSource(desktopApp, dialog, directory, xml);
-  await dialog.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(dialog.getByText(/Import skipped material into|补入上次跳过的资料/)).toBeVisible();
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByText(/Import skipped material into|补入上次跳过的资料/)).toBeVisible();
   expect(await readCards()).toEqual([]);
-  await dialog.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(dialog.getByText(/Skipped materials imported \(1\)|已补入 1 条上次跳过的资料/)).toBeVisible();
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Skipped materials imported \(1\)|已补入 1 条上次跳过的资料/)).toBeVisible();
   const after = await readCards();
   expect(after).toHaveLength(1);
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await superMemoUpdateComplete(desktopWindow).press('Escape');
   const reopened = await openPreview(desktopWindow);
   await loadSource(desktopApp, reopened, directory);
-  await reopened.getByRole('button', { name: /^(Update with New Rules|按新规则更新)$/ }).click();
-  await expect(reopened.getByRole('button', { name: /^(Confirm Update|确认更新)$/ })).toBeDisabled();
+  const nextReview = await openSuperMemoUpdateReview(reopened);
+  await expect(nextReview.getByRole('button', { name: /^(Confirm Update|确认更新)$/ })).toBeDisabled();
   expect(await readCards()).toEqual(after);
 });

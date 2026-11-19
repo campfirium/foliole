@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, confirmStep, gradesStep, loadSource, openPreview, parameters, sourceStep, structureStep, writeCollection } from './harness/superMemoImport';
+import { card, gradesStep, loadSource, openPreview, parameters, structureStep, writeCollection, superMemoImportComplete } from './harness/superMemoImport';
 
 const emptyCard = '<SuperMemoElement><ID>3</ID><Type>Item</Type><Title>Empty example</Title></SuperMemoElement>';
 const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
@@ -29,9 +29,9 @@ test('previews different XML exports and retains the conversion draft after dism
   expect(settingsBounds).not.toBeNull();
   expect(await dialog.boundingBox()).toEqual(settingsBounds);
   await desktopWindow.screenshot({ path: testInfo.outputPath('supermemo-converter-empty.png') });
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await expect(dialog.getByRole('heading', { name: confirmStep })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Convert|转换)$/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await expect(dialog.getByRole('heading', { name: gradesStep })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Import|导入)$/ })).toHaveCount(0);
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4|SuperMemo #4/i })).toBeVisible();
@@ -49,7 +49,6 @@ test('previews different XML exports and retains the conversion draft after dism
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).toHaveText('0');
   await slider.press('End');
   await expect(slider).toHaveValue('100');
-  await expect(note).toBeHidden();
   await expect(dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last()).not.toHaveText('0');
   await desktopWindow.mouse.click(3, 3);
   await expect(slider).toHaveValue('100');
@@ -62,7 +61,7 @@ test('previews different XML exports and retains the conversion draft after dism
   await expect(reopened.getByRole('slider')).toHaveValue('100');
   await reopened.getByRole('button', { name: structureStep }).click();
   await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
-  await expect(note).toBeVisible();
+  await expect(note).toHaveCount(0);
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });
@@ -74,7 +73,6 @@ test('previews different XML exports and retains the conversion draft after dism
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
-
 });
 
 test('pairs the selected collection and preserves XML preview after a mismatch', async ({ desktopWindow, desktopApp }, testInfo) => {
@@ -111,7 +109,7 @@ async function checkRestoredBatchWithoutSource(page: Page) {
   const restored = await openPreview(page);
   await expect(restored.getByText(/[/\\]collection\.xml$/)).toBeVisible();
   await expect(restored.getByRole('slider')).toHaveValue('100');
-  await restored.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await restored.press('Escape');
   await page.keyboard.press('Escape');
 }
 
@@ -127,15 +125,13 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
     <Content><Question><![CDATA[Before <img alt="Map" src="map.png"> after. <img src="missing-map.png">]]></Question></Content>
     </SuperMemoElement>${card}</SuperMemoCollection>`;
   await loadSource(desktopApp, dialog, directory, xml);
-  const media = dialog.getByText(/2 local image references|本地图片引用 2 处/);
-  await expect(media).toBeVisible();
+  await expect(dialog.getByText(/2 local image references|本地图片引用 2 处/)).toHaveCount(0);
   await dialog.getByRole('button', { name: /^(Missing images 1|缺图 1)$/ }).click();
   await expect(dialog.getByText(/^(1 local image references cannot be imported|1 处本地图片引用无法导入)$/)).toBeVisible();
   await expect(dialog.getByText('missing-map.png', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
-  await expect(media).toBeHidden();
   await expect(dialog.getByRole('combobox')).toHaveCount(0);
-  await dialog.getByRole('button', { name: sourceStep }).click();
+  await dialog.getByRole('button', { name: structureStep }).click();
   const sourceOption = dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ });
   await sourceOption.click();
   await expect(sourceOption).toBeChecked();
@@ -144,10 +140,10 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   const activeDraft = await openPreview(desktopWindow);
   await expect(activeDraft.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ })).toBeChecked();
   await dialog.screenshot({ path: '.tmp/artifacts/T762/desktop/supermemo-parameters.png' });
-  await dialog.getByRole('button', { name: confirmStep }).click();
-  await dialog.getByRole('button', { name: /^(Convert|转换)$/ }).click();
-  await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+  await superMemoImportComplete(desktopWindow).press('Escape');
   await rm(directory, { recursive: true });
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByText(/[/\\]collection\.xml$/)).toBeVisible();
@@ -218,7 +214,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await desktopWindow.setViewportSize({ width: 780, height: 840 });
   await dialog.screenshot({ path: testInfo.outputPath('supermemo-parameters-narrow.png') });
   await desktopWindow.setViewportSize({ width: 1600, height: 1000 });
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await dialog.press('Escape');
 
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('button', { name: again })).toBeVisible();

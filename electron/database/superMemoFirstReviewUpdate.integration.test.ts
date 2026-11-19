@@ -78,3 +78,45 @@ it.each([0, 50])('refreshes first review calculations at the saved %s percent bl
     await fixture.close();
   }
 });
+
+it('applies a new blend to an existing batch only after its signed update is confirmed', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  const bind = () => {
+    state.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(state.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+  };
+  const due = (title: string) => peer.sqlite.prepare(
+    'SELECT due FROM node_review JOIN nodes ON nodes.id = node_review.node_id WHERE nodes.title = ?'
+  ).pluck().get(title);
+  const original = { ...input, preview: preview('2027-01-21'), percent: 0 };
+  const requested = { ...original, updatePercent: 50 };
+  const plan = (options: typeof original & { updatePercent?: number }) =>
+    updateSuperMemoDirectories(elements, options.preview, undefined, undefined, options)!;
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    bind();
+    await runSuperMemoImport(original);
+    const protectedDue = superMemoDueInstant('2027-04-02');
+    peer.sqlite.prepare("UPDATE node_review SET due = ? WHERE node_id = (SELECT id FROM nodes WHERE title = 'Card 2')")
+      .run(protectedDue);
+    const planned = plan(requested);
+    expect(planned).toMatchObject({ savedPercent: 0, proposedPercent: 50 });
+    expect(planned.firstReviewChanges.map(change => change.status)).toEqual(['update', 'protected', 'update']);
+    expect(due('Card 1')).toBe(superMemoDueInstant('2027-01-01'));
+    await expect(confirmSuperMemoDirectoryUpdate({ ...requested, updatePercent: 100 }, planned.signature))
+      .rejects.toThrow('supermemo_update_changed');
+    expect(due('Card 1')).toBe(superMemoDueInstant('2027-01-01'));
+    await confirmSuperMemoDirectoryUpdate(requested, planned.signature);
+    peer.reopen();
+    bind();
+    expect(plan(original).savedPercent).toBe(50);
+    expect(plan(requested).proposedPercent).toBeUndefined();
+    expect(due('Card 1')).toBe(superMemoDueInstant('2027-01-11'));
+    expect(due('Card 2')).toBe(protectedDue);
+  } finally {
+    state.driver = null;
+    await fixture.close();
+  }
+});

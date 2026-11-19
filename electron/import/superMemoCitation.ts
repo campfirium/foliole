@@ -1,6 +1,6 @@
 import type { SuperMemoCitation } from '../../lib/core/import/superMemoCitation.js';
 
-export { addSuperMemoCitation, describeSuperMemoCitation, type SuperMemoCitation } from '../../lib/core/import/superMemoCitation.js';
+export { addSuperMemoCitation, describeSuperMemoCitation, superMemoCitationOrigin, type SuperMemoCitation } from '../../lib/core/import/superMemoCitation.js';
 
 export function removeSuperMemoCitation(value: string, { placement, text }: SuperMemoCitation) {
   if (placement === 'body' || placement === 'content-end') {

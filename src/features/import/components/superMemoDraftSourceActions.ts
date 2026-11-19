@@ -1,5 +1,4 @@
-import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
-import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
+import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { NativeSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationSnapshot, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import { previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, saveRuntimeSuperMemoSourceLink, selectRuntimeSuperMemoCollection,
@@ -27,14 +26,9 @@ export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> 
   return 'preview';
 }
 
-export async function loadDraftWithSavedFormat(selected: NonNullable<Awaited<ReturnType<typeof readRuntimeSuperMemoSource>>>,
-  gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, useBatchFormat = true) {
-  const first = await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, sourceFormat, undefined, selected.savedForm?.folderChoices);
-  const savedFormat = useBatchFormat ? first.preview.directoryUpdate?.sourceFormat : undefined;
-  const loaded = savedFormat && (savedFormat.placement !== sourceFormat.placement || savedFormat.template !== sourceFormat.template)
-    ? await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, savedFormat) : first;
-  return { draft: loaded, sourceFormat: savedFormat ?? sourceFormat };
-}
+export const automaticSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' };
+
+export const mappedSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, referenceMap: {} };
 
 export async function rememberDraftSource(source: SuperMemoSourceSelection, form: SuperMemoMigrationForm, formOnly: boolean, panel?: SuperMemoSourceLink['panel'], snapshot?: SuperMemoMigrationSnapshot, xmlHash?: string) {
   const link = { filePath: source.filePath, collectionDirectory: source.collectionDirectory ?? null,
@@ -64,31 +58,38 @@ function comparisonForm(target: DraftTarget | undefined) {
 }
 
 function createCandidateLoader(state: DraftState) {
-  const { gradeMap, sourceFormat, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError, setRemembered } = state;
+  const { gradeMap, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError, setRemembered } = state;
   async function prepare(selected: Source, nextTarget: DraftTarget | undefined) {
-    const format = selected.savedForm?.sourceFormat ?? sourceFormat;
-    return nextTarget
-      ? { draft: await previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml, selected.collectionDirectory, gradeMap, format, nextTarget), sourceFormat: format }
-      : loadDraftWithSavedFormat(selected, gradeMap, format, !selected.savedForm);
+    const sameSource = Boolean(nextTarget || selected.filePath === state.remembered?.filePath);
+    const prior = sameSource ? state.sourceFormat : mappedSourceFormat;
+    const initial = selected.savedForm?.sourceFormat ?? (prior.referenceMap ? prior : mappedSourceFormat);
+    const preview = (format: SuperMemoSourceFormat) => previewRuntimeSuperMemoImport(selected.draft?.elements ?? selected.xml,
+      selected.collectionDirectory, gradeMap, format, nextTarget, selected.savedForm?.folderChoices);
+    const loaded = await preview(initial);
+    const sourceFormat = sameSource
+      ? state.sourceFormat : loaded.preview.directoryUpdate?.sourceFormat ?? (loaded.preview.directoryUpdate ? automaticSourceFormat : initial);
+    const draft = JSON.stringify(initial) === JSON.stringify(sourceFormat) ? loaded : await preview(sourceFormat);
+    return { ...draft, sourceFormat };
   }
 
   async function show(selected: Source, nextTarget: DraftTarget | undefined, loaded: Awaited<ReturnType<typeof prepare>>) {
-    const percent = selected.savedForm?.percent ?? 0;
     const { filePath, name, collectionDirectory } = selected;
-    const savedForm = { percent, sourceFormat: loaded.sourceFormat, gradeMap,
-      folderChoices: loaded.draft.folderChoices, ...comparisonForm(nextTarget) };
-    const update = loaded.draft.preview.directoryUpdate;
+    const { sourceFormat } = loaded;
+    const update = loaded.preview.directoryUpdate;
     const sameExport = filePath === state.remembered?.filePath;
+    const percent = nextTarget || sameExport ? state.percent : selected.savedForm?.percent ?? update?.savedPercent ?? 0;
+    const savedForm = { percent, sourceFormat, gradeMap,
+      folderChoices: loaded.folderChoices, ...comparisonForm(nextTarget) };
     const panel = { ...(sameExport ? state.remembered?.panel : undefined),
-      step: update ? 'load' as const : 'structure' as const,
-      elementCount: loaded.draft.elements.length, batchId: update?.batchId };
-    const snapshot = migrationSnapshot(loaded.draft);
+      step: 'structure' as const,
+      elementCount: loaded.elements.length, batchId: update?.batchId };
+    const snapshot = migrationSnapshot(loaded);
     await rememberDraftSource(selected, savedForm, false, panel, snapshot, selected.xmlHash);
     setRemembered({ filePath, name, collectionDirectory, savedForm, panel, snapshot });
     setTarget(nextTarget);
-    setSourceFormat(loaded.sourceFormat);
-    setDraft(loaded.draft);
-    setSource({ ...selected, xml: '', draft: { elements: loaded.draft.elements, originalElements: nextTarget?.originalElements } });
+    setSourceFormat(sourceFormat);
+    setDraft({ elements: loaded.elements, preview: loaded.preview, folderChoices: loaded.folderChoices });
+    setSource({ ...selected, xml: '', draft: { elements: loaded.elements, originalElements: nextTarget?.originalElements } });
     setPercent(percent);
     setPending(undefined);
     setError(false);
@@ -164,10 +165,10 @@ function comparisonTarget({ draft, source, target }: DraftState): DraftTarget | 
   };
 }
 
-async function pickAndReadSource(setLoadingXml: (loading: boolean) => void) {
+async function pickAndReadSource(state: DraftState) {
   const filePath = await pickRuntimeSuperMemoSource();
   if (!filePath) return null;
-  setLoadingXml(true);
+  state.setLoadingXml(true);
   return readRuntimeSuperMemoSource(filePath);
 }
 
@@ -181,7 +182,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string) {
     setPending(undefined);
     setRetryAsUpdate(asUpdate);
     try {
-      const selected = await pickAndReadSource(state.setLoadingXml);
+      const selected = await pickAndReadSource(state);
       if (!selected) return;
       const nextTarget = asUpdate ? comparisonTarget(state) : undefined;
       try {

@@ -1,31 +1,51 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { SettingsButton } from '../../../shared/ui';
 
 import type { SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 
 const nextStep = {
-  load: 'structure', structure: 'schedule', schedule: 'grades', grades: 'source', source: 'confirm'
+  load: 'structure', structure: 'schedule', schedule: 'grades'
 } as const;
 
-export function SuperMemoDraftActions({ step, busy, canProceed, hasPreview, directoryUpdate, navigate, convert }: {
+const previousStep = {
+  structure: 'load', schedule: 'structure', grades: 'schedule'
+} as const;
+
+export function SuperMemoDraftActions({ step, busy, importing = false, updating = false, canProceed, hasPreview, referenceMapValid = true, navigate, convert }: {
   step: SuperMemoMigrationStep; busy: boolean; canProceed: boolean; hasPreview: boolean;
-  directoryUpdate?: { canConfirm: boolean } | undefined;
+  importing?: boolean;
+  updating?: boolean;
+  referenceMapValid?: boolean;
   navigate(step: SuperMemoMigrationStep): void; convert(): void;
 }) {
   const t = useTranslation();
-  if (step === 'confirm' ? !hasPreview : !canProceed) return null;
+  const finalStep = step === 'grades';
+  const showAction = finalStep ? hasPreview : canProceed;
+  const previous = step === 'load' ? undefined : previousStep[step];
+  const backLabel = t('desktop.superMemoDrafts.previous');
+  const nextLabel = t('desktop.superMemoDrafts.parameters');
   return (
     <div className="app-scrollbar shrink-0 overflow-hidden px-7 pb-14 pt-4 [scrollbar-gutter:stable]">
-      <div className="flex items-center justify-end gap-4 px-settings-panel-x">
-        {step === 'schedule' ? <p className="mr-auto min-w-0 text-xs leading-relaxed text-foreground/65">
-          {t('desktop.superMemoDrafts.adjustmentNote')}
-        </p> : null}
-        {step === 'confirm' ? <SettingsButton disabled={busy || directoryUpdate?.canConfirm === false} onClick={convert}>
-          {t(directoryUpdate ? 'desktop.superMemoDrafts.confirmUpdate' : 'desktop.superMemoDrafts.import')}
-        </SettingsButton> : <SettingsButton disabled={busy} onClick={() => navigate(directoryUpdate && step === 'load' ? 'confirm' : nextStep[step])}>
-          {t(directoryUpdate && step === 'load' ? 'desktop.superMemoDrafts.updateByRules' :
-            'desktop.superMemoDrafts.parameters')}
-        </SettingsButton>}
+      <div className="flex items-end justify-between gap-4 px-settings-panel-x">
+        <p className="min-w-0 self-center text-xs leading-relaxed text-foreground/65">
+          {t(updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          {previous ? <SettingsButton className="w-9 px-0" disabled={busy}
+            aria-label={backLabel} title={backLabel} onClick={() => navigate(previous)}>
+            <ChevronLeft aria-hidden="true" className="size-[18px]" />
+          </SettingsButton> : null}
+          {showAction && (finalStep ? <SettingsButton className="shrink-0" loading={importing}
+            loadingLabel={t(updating ? 'desktop.superMemoDrafts.updating' : 'desktop.superMemoDrafts.importing')}
+            disabled={busy || !referenceMapValid} onClick={convert}>
+            {t(updating ? 'desktop.superMemoDrafts.update' : 'desktop.superMemoDrafts.import')}
+          </SettingsButton> : <SettingsButton className="w-9 px-0" disabled={busy} aria-label={nextLabel} title={nextLabel}
+            onClick={() => navigate(nextStep[step])}>
+            <ChevronRight aria-hidden="true" className="size-[18px]" />
+          </SettingsButton>)}
+        </div>
       </div>
     </div>
   );

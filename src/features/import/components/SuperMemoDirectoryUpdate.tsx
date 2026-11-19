@@ -1,20 +1,13 @@
-import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { runRuntimeSuperMemoImport } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
-import { SuperMemoSourceSettings } from './SuperMemoSourceSettings';
-
-export function SuperMemoDirectoryUpdate({ update, sourceFormat, disabled, onSourceFormatChange }: {
-  update: NativeSuperMemoDirectoryUpdate; sourceFormat: SuperMemoSourceFormat; disabled: boolean;
-  onSourceFormatChange(next: SuperMemoSourceFormat): void;
-}) {
+export function SuperMemoDirectoryUpdate({ update }: { update: NativeSuperMemoDirectoryUpdate }) {
   const t = useTranslation();
   if (update.sourceMatch && update.sourceMatch.status !== 'verified') return <SourceMatch match={update.sourceMatch} />;
   if (update.pairedSourceRequired) return <p>{t('desktop.superMemoDrafts.updateNeedsCollection')}</p>;
   return <div className="grid gap-3">
     {update.sourceMatch ? <SourceMatch match={update.sourceMatch} /> : null}
-    <SuperMemoSourceSettings value={sourceFormat} onChange={onSourceFormatChange} disabled={disabled} />
     <DirectoryChanges changes={update.changes} />
     <TextChanges changes={update.textChanges} />
     <FirstReviewChanges changes={update.firstReviewChanges} />
@@ -76,6 +69,7 @@ function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['tex
     <ul className="divide-y divide-foreground/10 text-sm">
       {changes.map(change => <li key={`${change.sourceId}-${change.field}`} className="py-2">
         <span>{change.title} · {t(`desktop.superMemoDrafts.textField.${change.field}`)}</span>
+        {change.targetTitle ? <span className="ml-2 text-foreground/65">→ {change.targetTitle}</span> : null}
         <span className="ml-2 text-foreground/65">{t(change.status === 'update'
           ? 'desktop.superMemoDrafts.textUpdate' : `desktop.superMemoDrafts.textProtected.${change.reason}`)}</span>
       </li>)}

@@ -1,12 +1,13 @@
-import { X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 
+import { isValidSuperMemoReferenceMap } from '../../../../lib/core/import/superMemoReferenceFields';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
+import type { SuperMemoXmlBody } from '../../../../lib/core/import/superMemoXmlDraft';
 import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { checkRuntimeSuperMemoSource } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
+import { checkRuntimeSuperMemoSource, parseRuntimeSuperMemoBodies } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 import {
-  AppButton, AppDialog, AppDialogClose, AppDialogContent,
+  AppDialog, AppDialogContent,
   AppDialogOverlay, AppDialogPortal, settingsDialogSurfaceClassName
 } from '../../../shared/ui';
 import { settingsDialogGrid, settingsDialogPane, settingsDialogPaneHeader } from '../../../shared/ui/settingsDialogBounds';
@@ -14,24 +15,20 @@ import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface'
 
 import { SuperMemoDraftActions } from './SuperMemoDraftActions';
 import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
+import { SuperMemoImportComplete } from './SuperMemoImportComplete';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
 import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
+import { SuperMemoUpdateReview } from './SuperMemoUpdateReview';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
 
-function DraftHeader({ name, disabled }: { name: string | undefined; disabled: boolean }) {
-  const t = useTranslation();
+function DraftHeader({ name }: { name: string | undefined }) {
   return (
     <div className={settingsDialogPaneHeader}>
       <div className="app-scrollbar flex min-w-0 flex-1 items-center gap-3 overflow-hidden px-settings-panel-x [scrollbar-gutter:stable]">
         <span className="min-w-0 flex-1 truncate text-ui-md font-semibold">
           {name ? name.replace(/\.xml$/iu, '') || name : null}
         </span>
-        <AppDialogClose asChild>
-          <AppButton className="shrink-0" size="sm" variant="ghost" disabled={disabled} aria-label={t('desktop.superMemoDrafts.close')}>
-            <X aria-hidden className="size-4" />
-          </AppButton>
-        </AppDialogClose>
       </div>
     </div>
   );
@@ -45,13 +42,8 @@ function useSuperMemoDraftNavigation(
     id: SuperMemoMigrationStep; source: ReturnType<typeof useSuperMemoDraft>['source'];
     filePath?: string | undefined; comparing?: boolean;
   }>();
-  const [selection, setSelection] = useState<{
-    source: ReturnType<typeof useSuperMemoDraft>['source']; signature: string; ids: number[];
-  }>();
-
   function resetNavigation() {
     setStep(undefined);
-    setSelection(undefined);
   }
 
   function dismissDialog() {
@@ -67,17 +59,7 @@ function useSuperMemoDraftNavigation(
     }
   });
 
-  return { step, setStep, selection, setSelection, resetNavigation, dismissDialog };
-}
-
-function canConfirmUpdate(
-  update: NativeSuperMemoDirectoryUpdate,
-  selected: number[]
-) {
-  return (!update.pairedSourceRequired && update.sourceMatch?.linkOnConfirm === true) || selected.length > 0 ||
-    update.changes.some(change => change.status === 'move' || change.status === 'anchor' || change.status === 'add') ||
-    update.citationChanges.some(change => change.status === 'update') || update.textChanges.some(change => change.status === 'update') ||
-    update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis');
+  return { step, setStep, resetNavigation, dismissDialog };
 }
 
 function requestedStep(
@@ -87,26 +69,53 @@ function requestedStep(
   hasUpdate: boolean
 ): SuperMemoMigrationStep | undefined {
   if (!step) return undefined;
-  if (step.comparing) return step.source === source ? 'load' : hasUpdate ? 'confirm' : undefined;
-  return step.source === source || (!step.source && step.filePath === filePath) || (step.id === 'confirm' && hasUpdate)
+  if (step.comparing) return step.source === source ? 'load' : hasUpdate ? 'grades' : undefined;
+  return step.source === source || (!step.source && step.filePath === filePath)
     ? step.id : undefined;
 }
 
-function stepNeedsDraft(step: SuperMemoMigrationStep | undefined) {
-  return step === 'structure' || step === 'confirm';
+function restoreMigrationStep(step: SuperMemoMigrationStep | 'source' | 'confirm' | undefined) {
+  return step === 'source' ? 'structure' : step === 'confirm' ? 'grades' : step;
 }
 
-function useSourceCheck(model: ReturnType<typeof useSuperMemoDraft>, open: boolean) {
-  const { setError } = model;
-  const selectedPath = model.selection?.filePath;
+function stepNeedsDraft(step: SuperMemoMigrationStep | undefined) {
+  return step === 'structure';
+}
+
+function useSourceContent({ source, setError }: ReturnType<typeof useSuperMemoDraft>, open: boolean) {
+  const [cache, setCache] = useState<{ source: typeof source; elements: SuperMemoXmlBody[] | null }>();
   useEffect(() => {
-    if (!open || !selectedPath) return;
+    if (!open || !source) return;
     let active = true;
-    void checkRuntimeSuperMemoSource().catch(error => {
-      if (active && /supermemo_(xml|collection)_updated/.test(String(error))) setError('xmlUpdated');
+    void checkRuntimeSuperMemoSource().then(selected => {
+      if (!active || source.draft) return;
+      const elements = selected?.filePath === source.filePath ? parseRuntimeSuperMemoBodies(selected.xml) : null;
+      setCache({ source, elements });
+    }).catch(error => {
+      if (!active) return;
+      setCache({ source, elements: null });
+      if (/supermemo_(xml|collection)_updated/.test(String(error))) setError('xmlUpdated');
     });
     return () => { active = false; };
-  }, [open, selectedPath, setError]);
+  }, [open, source, setError]);
+  return source?.draft?.elements ?? (cache?.source === source ? cache?.elements : undefined);
+}
+
+function useDraftReview(model: ReturnType<typeof useSuperMemoDraft>) {
+  const [review, setReview] = useState<NativeSuperMemoDirectoryUpdate>();
+  const closeReview = () => setReview(undefined);
+
+  function startImport() {
+    if (model.draft?.preview.directoryUpdate) void model.reviewUpdate().then(setReview);
+    else void model.importSource([]);
+  }
+
+  function applyUpdate(ids: number[]) {
+    closeReview();
+    void model.importSource(ids);
+  }
+
+  return { review, closeReview, startImport, applyUpdate };
 }
 
 type SuperMemoDraftDialogProps = {
@@ -117,15 +126,16 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
   const t = useTranslation();
   const titleId = useId();
   const model = useSuperMemoDraft(initialGrades, t('desktop.superMemoDrafts.collectionPickerTitle'));
-  const { draft, source, busy, error, setError, result, loadSource, importSource } = model;
-  useSourceCheck(model, open);
-  const { step, setStep, selection, setSelection, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy: busy, error, setError }, open, closeSession);
+  const { draft, source, busy, error, setError, result, loadSource } = model;
+  const { review, closeReview, startImport, applyUpdate } = useDraftReview(model);
+  const sourceContent = useSourceContent(model, open);
+  const { step, setStep, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy, error, setError }, open && !result && !review, closeSession);
   const previewNavigation = useSuperMemoPreviewNavigation(source);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
   const requested = requestedStep(step, source, model.selection?.filePath, Boolean(update));
-  const saved = model.selection?.panel?.step;
-  const current = result ? 'confirm' : requested ?? (!preview && stepNeedsDraft(saved) ? 'load' : saved) ?? (preview && !update ? 'structure' : 'load');
+  const saved = restoreMigrationStep(model.selection?.panel?.step);
+  const current = requested ?? (!preview && stepNeedsDraft(saved) ? 'load' : saved) ?? (preview ? 'structure' : 'load');
   function navigate(id: SuperMemoMigrationStep) {
     setStep({ id, source, filePath: model.selection?.filePath });
     setError(false);
@@ -136,8 +146,7 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
     if (result || (!draft && stepNeedsDraft(current))) resetNavigation();
     close();
   }
-  const showsScheduleChart = current === 'schedule' && preview && !update;
-  const selected = selection && selection.source === source && selection.signature === update?.signature ? selection.ids : [];
+  if (result) return <SuperMemoImportComplete open={open} result={result} onClose={closeSession} />;
   return (
     <AppDialog open={open} onOpenChange={open => { if (!open) dismissDialog(); }}>
       <AppDialogPortal>
@@ -146,26 +155,26 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
           className={settingsDialogSurfaceClassName(settingsDialogGrid)}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
           onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
-          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy || Boolean(result)} onChange={navigate} />
+          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy} onChange={navigate} />
           <div className={settingsDialogPane}>
-            <DraftHeader name={current === 'load' || result ? undefined : model.selection?.name} disabled={busy} />
-            <div key={current} className={`min-h-0 flex-1 overflow-y-auto px-7 py-7 ${
-              showsScheduleChart ? '[scrollbar-width:none]' : 'app-scrollbar [scrollbar-gutter:stable]'
-            }`}>
-              <SuperMemoMigrationContent model={model} current={current} selected={selected} navigation={previewNavigation}
+            <DraftHeader name={current === 'load' ? undefined : model.selection?.name} />
+            <div key={current} className={`min-h-0 flex-1 overflow-y-auto px-7 ${
+              current === 'grades' ? 'py-4 [@media(min-height:880px)]:py-5' : 'py-7'
+            } ${(current === 'schedule' && preview) || current === 'grades' ? '[scrollbar-width:none]' : 'app-scrollbar [scrollbar-gutter:stable]'}`}>
+              <SuperMemoMigrationContent model={model} current={current} navigation={previewNavigation} sourceContent={sourceContent}
                 onLoad={() => void loadSource()} onLoadNew={() => {
                   setStep({ id: 'load', source, comparing: true });
                   void loadSource(true);
-                }}
-                onSelect={ids => { if (update) setSelection({ source, signature: update.signature, ids }); }} />
+                }} />
             </div>
-            <SuperMemoDraftActions step={current} busy={busy} hasPreview={Boolean(preview && !result)}
+            <SuperMemoDraftActions step={current} busy={busy} importing={model.importing} updating={Boolean(update)} hasPreview={Boolean(preview)}
               canProceed={Boolean(preview || (current !== 'load' && model.selection))}
-              directoryUpdate={update ? { canConfirm: canConfirmUpdate(update, selected) } : undefined}
-              navigate={navigate} convert={() => void importSource(selected)} />
+              referenceMapValid={isValidSuperMemoReferenceMap(model.referenceMap)}
+              navigate={navigate} convert={startImport} />
           </div>
         </AppDialogContent>
       </AppDialogPortal>
+      {open && review ? <SuperMemoUpdateReview update={review} busy={busy} onClose={closeReview} onApply={applyUpdate} /> : null}
       <SuperMemoLoadNotice error={open && (current !== 'load' || error === 'xmlUpdated') && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
         recover={choose => void model.recoverCollection(choose)} retry={() => void model.retrySource()} />
     </AppDialog>

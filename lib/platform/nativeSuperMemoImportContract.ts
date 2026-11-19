@@ -13,6 +13,7 @@ export interface NativeSuperMemoPreviewArgs {
   targetBatchId?: string;
   originalElements?: SuperMemoXmlDraftElement[];
   folderChoices?: SuperMemoFolderChoice[];
+  updatePercent?: number;
 }
 
 export interface NativeSuperMemoPreviewRow {
@@ -117,7 +118,8 @@ export interface NativeSuperMemoCitationChange {
 export type NativeSuperMemoTextChange = {
   sourceId: number;
   title: string;
-  field: 'body' | 'question' | 'answer';
+  field: 'title' | 'body' | 'question' | 'answer';
+  targetTitle?: string;
 } & ({ status: 'update' } | { status: 'protected'; reason: 'edited' | 'media' | 'anchor' });
 
 export interface NativeSuperMemoFirstReviewChange {
@@ -147,6 +149,8 @@ export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
   pairedSourceRequired: boolean;
+  savedPercent?: number;
+  proposedPercent?: number;
   sourceFormat?: SuperMemoSourceFormat;
   sourceMatch?: NativeSuperMemoSourceMatch;
   citationChanges: NativeSuperMemoCitationChange[];
