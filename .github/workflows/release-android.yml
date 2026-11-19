@@ -82,8 +82,8 @@ jobs:
           path: .tmp/artifacts/android-play/candidate.json
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/setup-java@v4
-        with: { distribution: zulu, java-version: '21.0.13+1', check-latest: true }
+      - uses: actions/setup-java@v6.3.0
+        with: { distribution: zulu, java-version: '21.0.13.1+2', check-latest: true }
       - name: Activate pinned npm
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Install Linux DNS-SD build headers
@@ -162,8 +162,8 @@ jobs:
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 26.13.0 }
-      - uses: actions/setup-java@v4
-        with: { distribution: zulu, java-version: '21.0.13+1', check-latest: true }
+      - uses: actions/setup-java@v6.3.0
+        with: { distribution: zulu, java-version: '21.0.13.1+2', check-latest: true }
       - name: Prepare Android inspection tools
         if: inputs.execution_lane == 'release-t7'
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'

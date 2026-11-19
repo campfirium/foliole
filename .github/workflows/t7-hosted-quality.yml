@@ -103,10 +103,10 @@ jobs:
       - name: Activate pinned npm
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Set up Java for native dependency resolution
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: zulu
-          java-version: '21.0.13+1'
+          java-version: '21.0.13.1+2'
           check-latest: true
       - name: Install Linux DNS-SD build headers
         run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
