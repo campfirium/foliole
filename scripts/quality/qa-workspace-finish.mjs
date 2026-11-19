@@ -42,11 +42,16 @@ export async function finishQaWorkspace({ repoRoot, verifyRun = verifyQaRun,
   if (!['prepared', 'finishing'].includes(record.phase)) throw new Error('No available QA workspace to finish');
   verifyVolume(record.volumeRoot);
   if (record.phase !== 'finishing') {
-    await verifyRun(record, true);
+    const scope = record.scope ?? 'full';
+    const runScope = record.run?.scope;
+    if (runScope !== 'full' && runScope !== scope && !(scope === 'full' && runScope === 'mobile-resume')) {
+      throw new Error(`QA workspace requires passing ${scope} quality before release`);
+    }
     if (record.run.targetSha !== record.head || record.integrated?.qaTip !== record.head
         || record.integrated.devTip !== qaGit(record.devRoot, 'rev-parse', 'HEAD')) {
       throw new Error('Integrate and validate the complete current QA tip before release');
     }
+    await verifyRun(record, runScope === 'full' || runScope === 'mobile-resume');
     record.phase = 'finishing';
     record.cleanupTip = record.head;
     saveQaRecord(record);

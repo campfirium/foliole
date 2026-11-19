@@ -6,6 +6,7 @@ import process from 'node:process';
 import { qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
 import { readChainVerdict } from './chain-verdict-read.mjs';
 import { readMobileResumeEvidence } from '../ios/mobile-beta-evidence-read.mjs';
+import { parseRemoteQualityRun } from './remote-quality-run-title.mjs';
 
 export function saveQaRecord(record) {
   const saved = { ...record };
@@ -19,11 +20,17 @@ export function verifyQaRun(record, full = false) {
     { cwd: record.worktreePath, encoding: 'utf8' }).trim();
   const run = JSON.parse(execFileSync('gh', ['api', `repos/${repository}/actions/runs/${record.run.runId}`], { encoding: 'utf8' }));
   if (run.status !== 'completed' || run.conclusion !== 'success' || run.head_branch !== record.branch
-      || run.head_sha !== record.run.targetSha) throw new Error('QA evidence is no longer a matching successful run');
+      || run.head_sha !== record.run.targetSha || run.path !== '.github/workflows/remote-quality.yml') {
+    throw new Error('QA evidence is no longer a matching successful run');
+  }
   if (record.run.scope === 'mobile-resume') {
     const evidence = readMobileResumeEvidence({ repository, runId: run.id, sourceSha: record.run.targetSha, cwd: record.worktreePath });
     if (evidence.qualityRunId !== record.run.qualityRunId) throw new Error('Mobile quality source differs from the owned delivery');
     return;
+  }
+  const checked = parseRemoteQualityRun(run);
+  if (!checked || checked.scope !== record.run.scope || checked.testedSha !== record.run.targetSha) {
+    throw new Error('QA run scope or tested commit differs from the saved evidence');
   }
   if (full) {
     const receipt = readChainVerdict({ repository, runId: run.id, targetSha: record.head });
