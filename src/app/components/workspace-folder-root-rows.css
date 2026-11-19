@@ -26,9 +26,12 @@
   margin-inline-end: calc(var(--folder-column-edge) - var(--folder-column-scroll-inset) - 0.4rem);
 }
 
-.workspace-folder-column #node-treeitem-special-trash:has(+ [data-node-row-action]:not(:empty))
+.workspace-folder-column #node-treeitem-special-trash:has(+ [data-node-row-action]:not(:empty)) {
+  padding-inline-end: 0.4rem;
+
   .node-tree-row-content .node-tree-row-text[aria-hidden="true"] {
-  display: none;
+    visibility: hidden;
+  }
 }
 
 .workspace-folder-column :is(

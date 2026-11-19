@@ -22,14 +22,6 @@ function renderLabelCluster(props: { label: string; labelTooltipText?: string; r
   );
 }
 
-function renderRowCount(descendantCount: number) {
-  return descendantCount > 0 ? (
-    <span aria-hidden="true" className="node-tree-row-text ml-auto flex-none tabular-nums text-foreground/48 [font-size:var(--navigation-meta-font-size)] [line-height:var(--navigation-meta-line-height)]">
-      {descendantCount}
-    </span>
-  ) : null;
-}
-
 export function renderNodeTreeRowContent(props: {
   descendantCount: number;
   isMuted: boolean;
@@ -48,7 +40,9 @@ export function renderNodeTreeRowContent(props: {
       <span className="flex min-w-0 w-full items-center gap-[0.3125rem] overflow-hidden [font-size:var(--navigation-title-font-size)] [line-height:var(--navigation-title-line-height)]">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
         {renderLabelCluster({ label: props.label, rename: props.rename, ...definedProps({ labelTooltipText: props.labelTooltipText, trailingLabelContent: props.trailingLabelContent }) })}
-        {renderRowCount(props.descendantCount)}
+        <span aria-hidden="true" className="node-tree-row-text ml-auto w-[44px] flex-none truncate text-right tabular-nums text-foreground/48 [font-size:var(--navigation-meta-font-size)] [line-height:var(--navigation-meta-line-height)]">
+          {props.descendantCount > 0 ? props.descendantCount : null}
+        </span>
       </span>
       {props.secondaryLabel ? (
         <span className="node-tree-row-text min-w-0 truncate text-foreground/55 [font-size:var(--navigation-meta-font-size)] [line-height:var(--navigation-meta-line-height)]">{props.secondaryLabel}</span>
