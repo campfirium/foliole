@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { card, gradesStep, loadSource, openPreview, parameters, seedHistoricalSuperMemoBatch, writeCollection, superMemoImportComplete, openSuperMemoUpdateReview, superMemoUpdateComplete } from './harness/superMemoImport';
+import { card, loadSource, openPreview, openSuperMemoUpdateReview, seedHistoricalSuperMemoBatch, superMemoUpdateComplete, writeCollection } from './harness/superMemoImport';
 
 test('updates the directory of a card imported before structure confirmation', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
@@ -107,37 +107,39 @@ for (const missingParent of [false, true]) {
   });
 }
 
-test('changes source information on the existing card from the saved batch', async ({ desktopWindow, desktopApp }, testInfo) => {
+test('removes inherited source fields and keeps local differences when updating an existing card', async ({ desktopWindow, desktopApp }, testInfo) => {
   const directory = testInfo.outputPath('SourceInformation');
+  const references = (author: string) => `<SuperMemoReference>#Title: Source article<br>#Author: ${author}</SuperMemoReference>`;
+  const question = '<p>Question</p>' + references('John Doe');
+  const article = '<p>Article text</p>' + references('Jane Doe');
   const xml = `<SuperMemoCollection><Count>2</Count>
     <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Source article</Title>
-    <Content><Question>Article text</Question></Content></SuperMemoElement>${card}</SuperMemoCollection>`;
-  await writeCollection(directory, true);
-  const dialog = await openPreview(desktopWindow);
-  await loadSource(desktopApp, dialog, directory, xml);
-  await dialog.getByRole('button', { name: parameters }).click();
-  await dialog.getByRole('button', { name: gradesStep }).click();
-  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+      <Content><Question><![CDATA[${article}]]></Question></Content>
+      <SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
+        <Content><Question><![CDATA[${question}]]></Question><Answer>Answer</Answer></Content>
+      </SuperMemoElement>
+    </SuperMemoElement></SuperMemoCollection>`;
+  const common = { children: [], ordinal: null, skippedAudioComponents: 0, learning: null };
+  await seedHistoricalSuperMemoBatch(desktopApp, [
+    { ...common, id: 1, parentId: null, children: [2], sourceType: 'Topic', title: 'Source article', bodyOrQuestionHtml: [article], answerHtml: [] },
+    { ...common, id: 2, parentId: 1, sourceType: 'Item', title: 'Card', bodyOrQuestionHtml: [question], answerHtml: ['Answer'] }
+  ], {}, undefined, { placement: 'metadata', template: '' });
   const readCard = () => desktopWindow.evaluate(async () => {
-    const { nodesById } = await window.electronAPI!.invoke('load_workspace_snapshot');
+    const api = window.electronAPI!;
+    const { nodesById } = await api.invoke('load_workspace_snapshot');
     const node = Object.values(nodesById).find(entry => entry.title === 'Card');
-    return node ? window.electronAPI!.invoke('load_node_document', { nodeId: node.id }) : null;
+    return node ? api.invoke('load_node_document', { nodeId: node.id }) : null;
   });
   const before = await readCard();
-  expect(before).toMatchObject({ content: 'Question', reveal: 'Answer' });
-  await superMemoImportComplete(desktopWindow).press('Escape');
-  const reopened = await openPreview(desktopWindow);
-  await loadSource(desktopApp, reopened, directory);
-  const review = await openSuperMemoUpdateReview(reopened);
-  await review.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ }).click();
+  expect(before?.reveal).toContain('supermemoTitle: "Source article"');
+  const dialog = await openPreview(desktopWindow);
+  await loadSource(desktopApp, dialog, directory, xml);
+  const review = await openSuperMemoUpdateReview(dialog);
   await expect(review.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
   expect(await readCard()).toEqual(before);
   await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
-  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Source information updated|已更新 1 处来源信息/)).toBeVisible();
-  const after = await readCard();
-  expect(after).toMatchObject({ nodeId: before?.nodeId, reveal: 'Answer' });
-  expect(after?.content).toMatch(/^Question\n\nSource: \[\[node-id:.+\|Source article\]\]/u);
+  await expect(superMemoUpdateComplete(desktopWindow).getByText(/Source information updated|已更新 2 处来源信息/)).toBeVisible();
+  expect(await readCard()).toMatchObject({ nodeId: before?.nodeId, content: 'Question\n\nAuthor: John Doe', reveal: 'Answer' });
 });
 
 test('previews a changed conversion result and updates the answer in place', async ({ desktopWindow, desktopApp }, testInfo) => {
@@ -159,7 +161,7 @@ test('previews a changed conversion result and updates the answer in place', asy
   expect(before).toMatchObject({ content: 'Original question', reveal: 'Old answer' });
   await loadSource(desktopApp, dialog, testInfo.outputPath('TextUpdate'), xml);
   const review = await openSuperMemoUpdateReview(dialog);
-  await expect(review.getByRole('heading', { name: /^(Text changes|文字内容变化)$/ })).toBeVisible();
+  await expect(review.getByRole('heading', { name: /^(Text changes|内容变化)$/ })).toBeVisible();
   await expect(review.getByText(/^Converted card · (Answer|答案)$/)).toBeVisible();
   expect(await readCard()).toEqual(before);
   await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();

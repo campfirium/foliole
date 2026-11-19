@@ -118,8 +118,7 @@ export interface NativeSuperMemoCitationChange {
 export type NativeSuperMemoTextChange = {
   sourceId: number;
   title: string;
-  field: 'title' | 'body' | 'question' | 'answer';
-  targetTitle?: string;
+  field: 'body' | 'question' | 'answer';
 } & ({ status: 'update' } | { status: 'protected'; reason: 'edited' | 'media' | 'anchor' });
 
 export interface NativeSuperMemoFirstReviewChange {
@@ -162,6 +161,7 @@ export interface NativeSuperMemoDirectoryUpdate {
     sourceId: number;
     title: string;
     from: string | null;
+  hasRuleCorrections?: true;
     to: string | null;
     status: 'add' | 'add-unavailable' | 'move' | 'anchor' | 'protected' | 'unavailable' | 'anchor-unverified';
     reanchor?: true;

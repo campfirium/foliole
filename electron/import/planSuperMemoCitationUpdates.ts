@@ -64,17 +64,12 @@ function previousCitation(entry: SuperMemoContentBatchEntry, node: CitationNode,
     oldLink, sourceFormat ?? DEFAULT_SUPER_MEMO_SOURCE_FORMAT);
 }
 
-function planTopicTitle(row: NativeSuperMemoPreviewRow, saved: SavedRow | undefined, current: string,
-  changes: NativeSuperMemoTextChange[]) {
+function planTopicTitle(row: NativeSuperMemoPreviewRow, saved: SavedRow | undefined, current: string) {
   if (row.outcome !== 'topic' || !row.title.trim()) return undefined;
   const to = normalizeNodeTitle(row.title);
   if (current === to) return undefined;
   const baseline = saved?.importedTitle ?? (saved?.title !== undefined ? normalizeNodeTitle(saved.title || `#${row.id}`) : undefined);
-  if (current !== baseline) {
-    changes.push({ sourceId: row.id, title: current, field: 'title', status: 'protected', reason: 'edited' });
-    return undefined;
-  }
-  changes.push({ sourceId: row.id, title: current, field: 'title', targetTitle: to, status: 'update' });
+  if (current !== baseline || baseline === to) return undefined;
   return { from: current, to };
 }
 
@@ -128,7 +123,7 @@ export function planSuperMemoCitationUpdates(driver: DatabaseDriver, batch: { en
         ...(row.outcome === 'item' ? { reveal: render(element.answerHtml) } : {}) } : {}
     });
     textChanges.push(...fieldChanges);
-    const title = element && planTopicTitle(row, savedRowsById.get(row.id), node.title, textChanges);
+    const title = element && planTopicTitle(row, savedRowsById.get(row.id), node.title);
     if (title || citationUpdate || Object.keys(hashes).length) {
       writes.push({ entry, nodeId, next, previous, hashes, ...(title ? { title } : {}), ...(citationUpdate ? { citation: proposed } : {}) });
     }
@@ -165,4 +160,12 @@ export function applySuperMemoCitationUpdates(driver: DatabaseDriver, entries: S
     if (citation !== undefined) entry.importedCitation = citation;
     if (Object.keys(hashes).length) entry.importedText = { ...entry.importedText, ...hashes };
   }
+}
+
+export function applySuperMemoRuleCorrections(driver: DatabaseDriver, entries: SuperMemoContentBatchEntry[], writes: Write[], now: string) {
+  const titleWrites = writes.flatMap(({ entry, nodeId, title, previous }) => title
+    ? [{ entry, nodeId, title, previous, next: previous, hashes: {} }] : []);
+  if (!titleWrites.length) return false;
+  applySuperMemoCitationUpdates(driver, entries, titleWrites, now);
+  return true;
 }

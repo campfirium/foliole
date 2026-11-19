@@ -229,12 +229,12 @@ it('applies changed first review settings from the same four pages for an existi
   runtime.runRuntimeSuperMemoImport.mockResolvedValueOnce({ batchId: update.batchId, imported: 1, skipped: 0,
     unresolvedImages: 0, directoryUpdate: reviewed });
   fireEvent.click(screen.getByRole('button', { name: /^Update$/ }));
-  expect(await screen.findByRole('dialog', { name: 'Review updates' })).toBeVisible();
+  expect(await screen.findByRole('dialog', { name: 'Review updates to the imported batch' })).toBeVisible();
   expect(runtime.runRuntimeSuperMemoImport).not.toHaveBeenCalled();
   expect(screen.getByText('First review weight changes from 0% to 50%.')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Confirm Update' }));
   expect(await screen.findByRole('dialog', { name: 'Update complete' })).toBeVisible();
   expect(runtime.runRuntimeSuperMemoImport).toHaveBeenCalledWith(expect.objectContaining({
-    updatePercent: 50, updateSignature: 'weight-signature'
+    updatePercent: 50, updateSignature: 'weight-signature', sourceFormat: expect.objectContaining({ referenceMap: {} })
   }));
 });

@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 import type { BrowserWindow, OpenDialogOptions } from 'electron';
 
+import type { SuperMemoSourceFormat } from '../../../lib/core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../../../lib/core/import/superMemoXmlDraft.js';
 import type { NativeSuperMemoPreviewRow } from '../../../lib/platform/nativeSuperMemoImportContract.js';
 
@@ -33,7 +34,7 @@ export const confirmStep = /^(Confirm migration|确认迁移)$/;
 export async function openSuperMemoUpdateReview(dialog: Locator) {
   await dialog.getByRole('button', { name: gradesStep }).click();
   await dialog.getByRole('button', { name: /^(Update|更新)$/ }).click();
-  return dialog.page().getByRole('dialog', { name: /^(Review updates|检查更新)$/ });
+  return dialog.page().getByRole('dialog', { name: /^(Review updates to the imported batch|预览已有批次的更新)$/ });
 }
 
 export function superMemoUpdateComplete(page: Page) {
@@ -87,8 +88,9 @@ export async function writeCollection(directory: string, includeTopic: boolean) 
 }
 
 export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements: SuperMemoXmlDraftElement[],
-  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'issue' | 'sourceDue' | 'recalculatedDue'>>>,
-  oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>) {
+  overrides: Record<number, Partial<Pick<NativeSuperMemoPreviewRow, 'parentId' | 'outcome' | 'issue' | 'sourceDue' | 'recalculatedDue' | 'title'>>>,
+  oldText?: Record<number, Partial<Pick<SuperMemoXmlDraftElement, 'bodyOrQuestionHtml' | 'answerHtml'>>>,
+  sourceFormat?: SuperMemoSourceFormat) {
   return app.evaluate(async ({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
     const { openDatabaseConnection, runWithDatabaseConnectionOwner } = require(`${app.getAppPath()}/database/connection.js`);
@@ -105,7 +107,7 @@ export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements:
       const historical = canonicalElements.map(element => ({ ...element, ...input.oldText?.[element.id] }));
       const result = await runSuperMemoImport({ elements: historical, preview, percent: 0,
         offset: '+00:00', gradeMap: [1, 1, 1, 2, 3, 4], scheduler: loadReviewSchedulerSettings(), expectedImages: new Map(),
-        sourceFormat: { placement: 'topic-info', template: '' } });
+        sourceFormat: input.sourceFormat ?? { placement: 'topic-info', template: '' } });
       if (input.oldText) {
         // Model older rendering rules for the same original export.
         const { superMemoBatchKey } = require(`${app.getAppPath()}/import/superMemoBatchKey.js`);
@@ -114,5 +116,5 @@ export function seedHistoricalSuperMemoBatch(app: ElectronApplication, elements:
       }
       return result;
     });
-  }, { elements, overrides, oldText });
+  }, { elements, overrides, oldText, sourceFormat });
 }

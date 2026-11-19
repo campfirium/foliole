@@ -104,7 +104,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   return { draft, percent, setPercent: changePercent, source, selection: remembered, busy, loadingXml: state.loadingXml, retryAsUpdate: state.retryAsUpdate, importing: state.importing, error, setError,
     result, gradeMap, sourceFormat, referenceMap, changeGrades, changeReferences, changeFolder: (id: number, folder: boolean) => updateDraftFolder(state, id, folder),
     importSource: (ids: number[]) => importDraft(state, ids, selectionActions.savePanel),
-    reviewUpdate: () => reviewDraftUpdate(state),
+    reviewUpdate: () => reviewDraftUpdate(state, selectionActions.savePanel),
     candidates: state.pending?.candidates, ...selectionActions,
     ...createSourceActions(state, pickerTitle) };
 }
@@ -149,36 +149,65 @@ async function runImportAction<T>(state: DraftState, action: () => Promise<T>) {
   }
 }
 
-function reviewDraftUpdate(state: DraftState) {
+type SavePanel = (panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) => Promise<void>;
+
+function reviewDraftUpdate(state: DraftState, savePanel: SavePanel) {
   return runImportAction(state, async () => {
-    const { refreshed } = await prepareImport(state);
-    if (!refreshed.preview.directoryUpdate) throw new Error('supermemo_update_changed');
+    const prepared = await prepareImport(state);
+    const { refreshed } = prepared;
+    const update = refreshed.preview.directoryUpdate;
+    if (!update) throw new Error('supermemo_update_changed');
+    const internalOnly = update.hasRuleCorrections && !update.sourceMatch && !update.pairedSourceRequired &&
+      update.proposedPercent === undefined && !update.changes.length && !update.citationChanges.length &&
+      !update.textChanges.length && !update.firstReviewChanges.length && !update.withdrawals.length;
+    if (internalOnly) {
+      await writePreparedImport(state, prepared, [], savePanel, update.signature);
+      return undefined;
+    }
+    if (update.hasRuleCorrections) {
+      await persistPreparedImport(state, prepared, [], update.signature, true);
+      const afterCorrections = await prepareImport(state);
+      state.setDraft(afterCorrections.refreshed);
+      return afterCorrections.refreshed.preview.directoryUpdate;
+    }
     state.setDraft(refreshed);
-    return refreshed.preview.directoryUpdate;
+    return update;
   });
 }
 
-function importDraft(state: DraftState, withdrawSourceIds: number[], savePanel: (panel: SuperMemoMigrationPanel, snapshot?: SuperMemoMigrationSnapshot) => Promise<void>) {
-  const { draft, percent, gradeMap, sourceFormat, target, setResult } = state;
+function importDraft(state: DraftState, withdrawSourceIds: number[], savePanel: SavePanel) {
+  const { draft, sourceFormat } = state;
   if (!draft?.preview.previewSignature || (sourceFormat.referenceMap && !isValidSuperMemoReferenceMap(sourceFormat.referenceMap))) return;
-  return runImportAction(state, async () => {
-    const { current, elements, refreshed, updatePercent, sourceFormat: appliedFormat } = await prepareImport(state);
-    const updateSignature = draft.preview.directoryUpdate?.signature;
-    const result = await runRuntimeSuperMemoImport({ elements, percent, gradeMap, sourceFormat: appliedFormat,
-      previewSignature: refreshed.preview.previewSignature!, folderChoices: draft.folderChoices,
-      ...(current.collectionDirectory ? { collectionDirectory: current.collectionDirectory } : {}),
-      ...(updatePercent !== undefined ? { updatePercent } : {}),
-      ...(updateSignature ? { updateSignature } : {}), ...(withdrawSourceIds.length ? { withdrawSourceIds } : {}), ...target });
-    setResult(result);
-    const { batchId, imported, skipped, unresolvedImages } = result;
-    const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, appliedFormat, undefined, draft.folderChoices)
-      .catch(() => undefined);
-    await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: 'grades' },
-      completed ? migrationSnapshot(completed) : undefined);
-    if (completed) {
-      state.setDraft(completed);
-      state.setTarget(undefined);
-      state.setSource({ ...current, xml: '' });
-    }
-  });
+  return runImportAction(state, async () => writePreparedImport(state, await prepareImport(state), withdrawSourceIds,
+    savePanel, draft.preview.directoryUpdate?.signature));
+}
+
+function persistPreparedImport(state: DraftState, prepared: Awaited<ReturnType<typeof prepareImport>>,
+  withdrawSourceIds: number[], updateSignature?: string, ruleCorrectionsOnly?: true) {
+  const { percent, gradeMap, target } = state;
+  const { current, elements, refreshed, updatePercent, sourceFormat } = prepared;
+  return runRuntimeSuperMemoImport({ elements, percent, gradeMap, sourceFormat,
+    previewSignature: refreshed.preview.previewSignature!, folderChoices: refreshed.folderChoices,
+    ...(current.collectionDirectory ? { collectionDirectory: current.collectionDirectory } : {}),
+    ...(updatePercent !== undefined ? { updatePercent } : {}),
+    ...(updateSignature ? { updateSignature } : {}), ...(withdrawSourceIds.length ? { withdrawSourceIds } : {}),
+    ...(ruleCorrectionsOnly ? { ruleCorrectionsOnly } : {}), ...target });
+}
+
+async function writePreparedImport(state: DraftState, prepared: Awaited<ReturnType<typeof prepareImport>>,
+  withdrawSourceIds: number[], savePanel: SavePanel, updateSignature?: string) {
+  const { gradeMap, setResult } = state;
+  const { current, elements, refreshed, sourceFormat } = prepared;
+  const result = await persistPreparedImport(state, prepared, withdrawSourceIds, updateSignature);
+  setResult(result);
+  const { batchId, imported, skipped, unresolvedImages } = result;
+  const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, undefined, refreshed.folderChoices)
+    .catch(() => undefined);
+  await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: 'grades' },
+    completed ? migrationSnapshot(completed) : undefined);
+  if (completed) {
+    state.setDraft(completed);
+    state.setTarget(undefined);
+    state.setSource({ ...current, xml: '' });
+  }
 }

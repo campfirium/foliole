@@ -12,7 +12,7 @@ import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
 
 function canApplyUpdate(update: NativeSuperMemoDirectoryUpdate, selected: number[]) {
   return !update.pairedSourceRequired && (!update.sourceMatch || update.sourceMatch.status === 'verified') && (
-    update.proposedPercent !== undefined || update.sourceMatch?.linkOnConfirm === true || selected.length > 0 ||
+    update.hasRuleCorrections || update.proposedPercent !== undefined || update.sourceMatch?.linkOnConfirm === true || selected.length > 0 ||
     update.changes.some(change => change.status === 'move' || change.status === 'anchor' || change.status === 'add') ||
     update.citationChanges.some(change => change.status === 'update') ||
     update.textChanges.some(change => change.status === 'update') ||

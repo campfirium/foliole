@@ -1,5 +1,5 @@
 import { expect, test } from './harness/fixtures';
-import { confirmStep, gradesStep, loadSource, openPreview, parameters, superMemoImportComplete } from './harness/superMemoImport';
+import { confirmStep, gradesStep, loadSource, openPreview, parameters, superMemoImportComplete, openSuperMemoUpdateReview, seedHistoricalSuperMemoBatch, superMemoUpdateComplete } from './harness/superMemoImport';
 
 const sourceReference = '<hr SuperMemo><SuperMemoReference><font class="reference">'
   + '#Title: Original title<br>#Author: Jane Doe<br>#Link: <a href="https://example.com/article">Original page</a><br>#Source: Example'
@@ -63,4 +63,65 @@ test('combines grade and reference settings, remembers mappings, and writes the 
     + 'Link: "https://example.com/article"\n---\n\n# Original title\n\nQuestion text');
   expect(imported[1]).toMatchObject({ content: 'Question text', reveal: 'Answer' });
   expect(imported[2]).toMatchObject({ content: 'Other question\n\nbyline: John Doe', reveal: 'Answer' });
+});
+
+test('previews and updates a generated title and source information on the same imported Topic', async ({ desktopApp, desktopWindow }, testInfo) => {
+  const html = '<p>Original body.</p>' + sourceReference;
+  const exportXml = `<SuperMemoCollection><Count>1</Count><SuperMemoElement><ID>1</ID><Type>Topic</Type>
+    <Content><Question><![CDATA[${html}]]></Question></Content>
+    </SuperMemoElement></SuperMemoCollection>`;
+  await seedHistoricalSuperMemoBatch(desktopApp, [{
+    id: 1, parentId: null, children: [], title: null, sourceType: 'Topic', ordinal: null,
+    bodyOrQuestionHtml: [html], answerHtml: [], skippedAudioComponents: 0, learning: null
+  }], { 1: { title: 'Title: Original title' } }, {
+    1: { bodyOrQuestionHtml: ['<p>Title: Original title</p><p>Original body.</p>'] }
+  });
+  const readTopic = (title: string) => desktopWindow.evaluate(async title => {
+    const api = window.electronAPI!;
+    const { nodesById } = await api.invoke('load_workspace_snapshot');
+    const row = Object.values(nodesById).find(node => node.title === title);
+    return row ? { id: row.id, content: (await api.invoke('load_node_document', { nodeId: row.id })).content } : null;
+  }, title);
+  const before = await readTopic('Title: Original title');
+  expect(before?.content).toContain('supermemoTitle');
+  const dialog = await openPreview(desktopWindow);
+  await loadSource(desktopApp, dialog, testInfo.outputPath('LegacyTitle'), exportXml);
+  const review = await openSuperMemoUpdateReview(dialog);
+  await expect(review.getByRole('heading', { name: /^(Text changes|内容变化)$/ })).toBeVisible();
+  await expect(review.getByText('→ Original title', { exact: true })).toHaveCount(0);
+  await expect(review.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
+  await expect(review.getByText(/^(Directory changes|目录位置变化)$/)).toHaveCount(0);
+  expect(await readTopic('Original title')).toEqual(before);
+  await review.screenshot({ path: testInfo.outputPath('review-title-update.png') });
+  await review.getByRole('button', { name: /^(Confirm Update|确认更新)$/ }).click();
+  const complete = superMemoUpdateComplete(desktopWindow);
+  await expect(complete).toBeVisible();
+  await expect(complete.getByText(/Updated titles|已更新.*标题/)).toHaveCount(0);
+  expect(await readTopic('Original title')).toEqual({
+    id: before?.id,
+    content: '---\nTitle: "Original title"\nAuthor: "Jane Doe"\nLink: "https://example.com/article"\nSource: "Example"\n---\n\n'
+      + '# Original title\n\nOriginal body.'
+  });
+});
+
+test('applies a title-only rule correction directly from Update', async ({ desktopApp, desktopWindow }, testInfo) => {
+  const html = '<h1>Correct title</h1><p>Original body.</p>';
+  const xmlSource = `<SuperMemoCollection><Count>1</Count><SuperMemoElement><ID>1</ID><Type>Topic</Type>
+    <Content><Question><![CDATA[${html}]]></Question></Content>
+    </SuperMemoElement></SuperMemoCollection>`;
+  await seedHistoricalSuperMemoBatch(desktopApp, [{
+    id: 1, parentId: null, children: [], title: null, sourceType: 'Topic', ordinal: null,
+    bodyOrQuestionHtml: [html], answerHtml: [], skippedAudioComponents: 0, learning: null
+  }], { 1: { title: 'Title: Correct title' } });
+  const dialog = await openPreview(desktopWindow);
+  await loadSource(desktopApp, dialog, testInfo.outputPath('TitleOnly'), xmlSource);
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Update|更新)$/ }).click();
+  await expect(superMemoUpdateComplete(desktopWindow)).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /^(Confirm Update|确认更新)$/ })).toHaveCount(0);
+  const title = await desktopWindow.evaluate(async () => {
+    const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
+    return Object.values(snapshot.nodesById).find(row => row.title.endsWith('Correct title'))?.title;
+  });
+  expect(title).toBe('Correct title');
 });

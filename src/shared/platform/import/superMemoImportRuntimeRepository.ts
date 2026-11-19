@@ -95,7 +95,7 @@ export async function previewRuntimeSuperMemoImport(xml: string | SuperMemoSourc
 }
 
 export function runRuntimeSuperMemoImport(args: NativeSuperMemoPreviewArgs & {
-  percent: number; previewSignature: string; updateSignature?: string; withdrawSourceIds?: number[];
+  percent: number; previewSignature: string; updateSignature?: string; ruleCorrectionsOnly?: true; withdrawSourceIds?: number[];
 }) {
   return requireInvoke()(NATIVE_COMMANDS.runSuperMemoImport, args);
 }

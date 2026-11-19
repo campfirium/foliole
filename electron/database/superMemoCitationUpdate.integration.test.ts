@@ -136,3 +136,54 @@ it('stores shared sources once, appends only differences, and imports clean titl
     await fixture.close();
   }
 });
+
+it('updates generated titles and legacy sources in place while protecting renamed Topics', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  const source = '<SuperMemoReference>#Title: Article</SuperMemoReference>';
+  const selection = [10, 11].map(id => ({
+    ...elements[0]!, id, sourceType: 'Topic', title: null, answerHtml: [],
+    bodyOrQuestionHtml: ['<p>My document.</p>' + source]
+  }));
+  const sourceRows = describeSuperMemoSource(selection, offset, scheduler, gradeMap);
+  const legacyPreview = { ...preview, rows: sourceRows.map(row => ({ ...row, title: 'Title: Article' })) };
+  const next = { ...input, elements: selection, preview: { ...preview, rows: sourceRows }, sourceFormat: { ...metadata, referenceMap: {} } };
+  const bind = () => {
+    connection.driver = createBetterSqlite3Driver(peer.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+  };
+  try {
+    peer.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(peer.id), new Date().toISOString());
+    bind();
+    const batch = await runSuperMemoImport({ ...next, preview: legacyPreview, sourceFormat: metadata });
+    const ids = peer.sqlite.prepare(`SELECT json_extract(entry.value, '$.nodeId') FROM workspace_meta,
+      json_each(workspace_meta.value, '$.entries') AS entry WHERE workspace_meta.key = ? ORDER BY json_extract(entry.value,'$.id')`)
+      .pluck().all(`supermemo-import:${batch.batchId}`) as string[];
+    const read = (id: string) => peer.sqlite.prepare('SELECT id, title, content FROM nodes WHERE id = ?').get(id);
+    peer.sqlite.prepare('UPDATE nodes SET title = ? WHERE id = ?').run('My title', ids[1]);
+    const plan = updateSuperMemoDirectories(selection, next.preview, undefined, undefined, next)!;
+    expect(plan).toMatchObject({ hasRuleCorrections: true });
+    expect(plan.textChanges.map(change => change.field)).toEqual(['body', 'body']);
+    const before = read(ids[0]!);
+    expect(before).toMatchObject({ title: 'Title: Article' });
+    await confirmSuperMemoDirectoryUpdate(next, plan.signature, [], true);
+    expect(read(ids[0]!)).toEqual({ ...before as object, title: 'Article' });
+    expect(read(ids[1]!)).toMatchObject({ title: 'My title' });
+    const remaining = updateSuperMemoDirectories(selection, next.preview, undefined, undefined, next)!;
+    expect(remaining.hasRuleCorrections).toBeUndefined();
+    await confirmSuperMemoDirectoryUpdate(next, remaining.signature);
+    peer.reopen();
+    bind();
+    expect(read(ids[0]!)).toEqual({ id: ids[0], title: 'Article', content: '---\nTitle: "Article"\n---\n\n# Article\n\nMy document.' });
+    expect(read(ids[1]!)).toMatchObject({ id: ids[1], title: 'My title' });
+    expect(updateSuperMemoDirectories(selection, next.preview, undefined, undefined, next)?.textChanges)
+      .toEqual([]);
+    peer.sqlite.prepare('UPDATE nodes SET title = ? WHERE id = ?').run('My later title', ids[0]);
+    expect(updateSuperMemoDirectories(selection, next.preview, undefined, undefined, next)?.textChanges)
+      .toEqual([]);
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});

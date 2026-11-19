@@ -5,7 +5,9 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { loadWorkspaceNodeDocument } from '../../lib/core/database/workspaceNodeDocument.js';
 import { prepareSuperMemoAnchorSource, resolveSuperMemoTextAnchor } from '../../lib/core/import/superMemoAnchorRule.js';
 import { prepareSuperMemoParentText } from '../../lib/core/import/superMemoParentText.js';
+import { addSuperMemoReferenceHeading, superMemoReferenceHeading } from '../../lib/core/import/superMemoTopicTitle.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
+import type { NativeSuperMemoPreviewRow } from '../../lib/platform/nativeSuperMemoImportContract.js';
 
 import type { BatchEntry } from './applySuperMemoBatchStructure.js';
 import { findUniqueAnchorText, type ReparentedSuperMemoAnchor } from './superMemoAnchorReparent.js';
@@ -20,9 +22,14 @@ function matchesImportedText(entry: BatchEntry, field: 'content' | 'reveal', liv
 }
 
 export function createSuperMemoMissingAnchorPlanner(driver: DatabaseDriver, elements: SuperMemoXmlDraftElement[],
-  expectedImages: ReadonlyMap<string, string | null>) {
+  expectedImages: ReadonlyMap<string, string | null>, rows: readonly NativeSuperMemoPreviewRow[]) {
   const byId = new Map(elements.map(element => [element.id, element]));
   const render = previewSuperMemoMarkdown(expectedImages);
+  const rowsById = new Map(rows.map(row => [row.id, row]));
+  const renderBody = (element: SuperMemoXmlDraftElement, parts = element.bodyOrQuestionHtml) => {
+    const row = rowsById.get(element.id);
+    return addSuperMemoReferenceHeading(render(parts), row && superMemoReferenceHeading(row));
+  };
   const sourceTexts = new Map<number, ReturnType<typeof prepareSuperMemoParentText>>();
   return (entry: BatchEntry, sourceParent: number, parentId: string, parentEntry?: BatchEntry): ReparentedSuperMemoAnchor | null => {
     const child = byId.get(entry.id);
@@ -31,18 +38,18 @@ export function createSuperMemoMissingAnchorPlanner(driver: DatabaseDriver, elem
         (entry.outcome !== 'topic' && entry.outcome !== 'item')) return null;
     const live = loadWorkspaceNodeDocument(driver, entry.nodeId);
     const target = loadWorkspaceNodeDocument(driver, parentId);
-    if (!live || target?.kind !== 'topic' || !matchesImportedText(entry, 'content', live.content, render(child.bodyOrQuestionHtml))) return null;
+    if (!live || target?.kind !== 'topic' || !matchesImportedText(entry, 'content', live.content, renderBody(child))) return null;
     const kind = entry.outcome === 'topic' ? 'highlight' : 'cloze';
     const answer = kind === 'cloze' ? render(child.answerHtml) : '';
     if (kind === 'cloze' && !matchesImportedText(entry, 'reveal', live.reveal ?? '', answer)) return null;
     let source = sourceTexts.get(sourceParent);
     if (!source) {
-      source = prepareSuperMemoAnchorSource(parent.bodyOrQuestionHtml, render(parent.bodyOrQuestionHtml), render);
+      source = prepareSuperMemoAnchorSource(parent.bodyOrQuestionHtml, renderBody(parent), parts => renderBody(parent, parts));
       sourceTexts.set(sourceParent, source);
     }
     const suggested = resolveSuperMemoTextAnchor(source, entry.outcome, child.bodyOrQuestionHtml, answer);
     if (!suggested) return null;
-    const originalBody = render(parent.bodyOrQuestionHtml);
+    const originalBody = renderBody(parent);
     const citation = parentEntry?.importedCitation ?? null;
     const importedBody = addSuperMemoCitation(originalBody, citation, 'content');
     const shift = citation?.placement === 'metadata' || citation?.placement === 'topic-info' ? importedBody.length - originalBody.length : 0;

@@ -6,6 +6,10 @@ export function SuperMemoDirectoryUpdate({ update }: { update: NativeSuperMemoDi
   const t = useTranslation();
   if (update.sourceMatch && update.sourceMatch.status !== 'verified') return <SourceMatch match={update.sourceMatch} />;
   if (update.pairedSourceRequired) return <p>{t('desktop.superMemoDrafts.updateNeedsCollection')}</p>;
+  if (!update.sourceMatch && update.proposedPercent === undefined && !update.changes.length && !update.textChanges.length &&
+      !update.firstReviewChanges.length && !update.citationChanges.length && !update.withdrawals.length) {
+    return <p>{t('desktop.superMemoDrafts.noBatchChanges')}</p>;
+  }
   return <div className="grid gap-3">
     {update.sourceMatch ? <SourceMatch match={update.sourceMatch} /> : null}
     <DirectoryChanges changes={update.changes} />
@@ -69,7 +73,6 @@ function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['tex
     <ul className="divide-y divide-foreground/10 text-sm">
       {changes.map(change => <li key={`${change.sourceId}-${change.field}`} className="py-2">
         <span>{change.title} · {t(`desktop.superMemoDrafts.textField.${change.field}`)}</span>
-        {change.targetTitle ? <span className="ml-2 text-foreground/65">→ {change.targetTitle}</span> : null}
         <span className="ml-2 text-foreground/65">{t(change.status === 'update'
           ? 'desktop.superMemoDrafts.textUpdate' : `desktop.superMemoDrafts.textProtected.${change.reason}`)}</span>
       </li>)}
@@ -79,7 +82,7 @@ function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['tex
 
 function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['changes'] }) {
   const t = useTranslation();
-  if (!changes.length) return <p>{t('desktop.superMemoDrafts.noDirectoryChanges')}</p>;
+  if (!changes.length) return null;
   const root = t('desktop.superMemoDrafts.directoryRoot');
   return (
     <section className="grid gap-2">
@@ -116,16 +119,20 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
   const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
   const anchors = result.directoryUpdate?.changes.filter(change => change.restoreAnchor).length ?? 0;
   const withdrawn = result.directoryUpdate?.withdrawnSourceIds.length ?? 0;
-  return <p role="status">{result.directoryUpdate ? t('desktop.superMemoDrafts.directoryUpdated', {
-    count: result.directoryUpdate.changes.filter(change => change.status === 'move').length
-  }) + (addedParents ? ' · ' + t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }) : '')
-    + (addedMaterials ? ' · ' + t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }) : '')
-    + (anchors ? ' · ' + t('desktop.superMemoDrafts.directoryAnchorsRestored', { count: anchors }) : '')
-    + (citations ? ' · ' + t('desktop.superMemoDrafts.citationsUpdated', { count: citations }) : '')
-    + (text ? ' · ' + t('desktop.superMemoDrafts.textUpdated', { count: text }) : '')
-    + (dates ? ' · ' + t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }) : '')
-    + (withdrawn ? ' · ' + t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }) : '')
-    + (result.directoryUpdate.sourceMatch?.linkOnConfirm ? ' · ' + t('desktop.superMemoDrafts.exportLinked') : '') : t('desktop.superMemoDrafts.importResult', {
+  if (!result.directoryUpdate) return <p role="status">{t('desktop.superMemoDrafts.importResult', {
     imported: result.imported, skipped: result.skipped, unresolvedImages: result.unresolvedImages
   })}</p>;
+  const moved = result.directoryUpdate.changes.filter(change => change.status === 'move').length;
+  const summary = [
+    moved && t('desktop.superMemoDrafts.directoryUpdated', { count: moved }),
+    citations && t('desktop.superMemoDrafts.citationsUpdated', { count: citations }),
+    text && t('desktop.superMemoDrafts.textUpdated', { count: text }),
+    addedParents && t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }),
+    addedMaterials && t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }),
+    anchors && t('desktop.superMemoDrafts.directoryAnchorsRestored', { count: anchors }),
+    dates && t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }),
+    withdrawn && t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }),
+    result.directoryUpdate.sourceMatch?.linkOnConfirm && t('desktop.superMemoDrafts.exportLinked')
+  ].filter(Boolean).join(' · ');
+  return summary ? <p role="status">{summary}</p> : null;
 }
