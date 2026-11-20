@@ -13,7 +13,9 @@ let tempRoot;
 let descriptorPath;
 let pidPath;
 
-const FAKE_APP = `#!${process.execPath}
+// Resolve a real Node from PATH: under the Electron test runner process.execPath is Electron, which
+// starts as a GUI app once the launcher drops ELECTRON_RUN_AS_NODE.
+const FAKE_APP = `#!/usr/bin/env node
 const fs = require('node:fs');
 const http = require('node:http');
 const server = http.createServer((request, response) => {
@@ -49,7 +51,8 @@ afterEach(async () => {
 });
 
 async function writeFakeApp() {
-  const appPath = path.join(tempRoot, 'fake-foliole');
+  // The Electron test runner keeps temp files inside this ESM package, so mark the script as CommonJS.
+  const appPath = path.join(tempRoot, 'fake-foliole.cjs');
   await writeFile(appPath, FAKE_APP);
   await chmod(appPath, 0o755);
   return appPath;

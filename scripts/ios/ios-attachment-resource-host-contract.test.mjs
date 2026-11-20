@@ -24,7 +24,10 @@ describe('iOS attachment resource host contract', () => {
       expect(implementation).not.toContain(`@objc func ${retired}`);
     }
     expect(implementation).toContain('FolioleCompanionCanonicalAttachmentKey.matches');
-    expect(implementation).toContain('FolioleCompanionAttachmentResourceDownloader.digestHex');
+    // Readiness owns the regular-file and content-hash check; the plugin only delegates to it.
+    expect(implementation).toContain('FolioleAttachmentResourceReadiness.isReady(');
+    expect(read('ios/App/App/FolioleAttachmentResourceReadiness.swift'))
+      .toContain('FolioleCompanionAttachmentResourceDownloader.digestHex');
     expect(implementation).not.toContain('FolioleCompanionDatabaseLocation');
   });
 });

@@ -37,7 +37,10 @@ describe('Android Gradle distribution security', () => {
         /^distributionUrl=.*$/mu, `distributionUrl=${pathToFileURL(distribution).href}`
       ));
       const env = process.env;
-      const java = process.platform === 'darwin' ? path.join(env.JAVA_HOME, 'bin/java') : 'java';
+      // Match the Android display-lane test: fall back to the Homebrew JDK 21 used by the Mac build.
+      const home = env.JAVA_HOME ?? (process.platform === 'darwin'
+        ? '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home' : null);
+      const java = home ? path.join(home, 'bin/java') : 'java';
       const result = spawnSync(java, [
         '-Dgradle.user.home=' + path.join(root, 'gradle-home'),
         '-cp', path.join(wrapperDir, 'gradle-wrapper.jar'),

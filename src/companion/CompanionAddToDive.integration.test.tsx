@@ -15,7 +15,7 @@ import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { RecentArticleRow } from './CompanionRecentArticleList';
-import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -39,6 +39,8 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       return next;
     }}>
     {selection.kind === 'root' && <>
+      {/* The root top-right menu's "New Here…" view. */}
+      <CompanionWorkspaceCreateChoices onSelect={() => {}} />
       <RecentArticleRow article={{ nodeId: 'Root Topic', title: 'Root Topic', preview: null, updatedAt: '', folderLabel: null }}
         currentArticleId={null} onSelectArticle={() => {}} />
     </>}

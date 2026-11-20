@@ -24,19 +24,21 @@ const payload: CompanionSelectionAnnotationToolbarState['payload'] = {
   selectionText: 'Beta'
 };
 
-function expectInputFocusVisible(element: HTMLElement) {
+// Framed mobile inputs let their frame carry focus, so the field itself draws no inner ring.
+function expectFramedInputWithoutInnerRing(element: HTMLElement) {
+  expect(element.className).toContain('app-focus-silent');
   expect(element.className).toContain('focus-visible:outline-none');
-  expect(element.className).toContain('focus-visible:ring-1');
-  expect(element.className).toContain('focus-visible:ring-ring');
+  expect(element.className).toContain('focus-visible:ring-0');
+  expect(element.className).not.toContain('focus-visible:ring-1');
 }
 
-it('keeps the capture textarea keyboard focus visible', () => {
+it('keeps the framed capture textarea free of an inner focus ring', () => {
   renderWithLocalization(<CompanionCaptureSheet draftScope="focus-test" onOpenChange={vi.fn()} onSave={vi.fn()} open />);
 
-  expectInputFocusVisible(screen.getByLabelText('Capture text'));
+  expectFramedInputWithoutInnerRing(screen.getByLabelText('Capture text'));
 });
 
-it('keeps the selection note textarea keyboard focus visible', () => {
+it('keeps the framed selection note textarea free of an inner focus ring', () => {
   renderWithLocalization(
     <CompanionSelectionAnnotationToolbar
       onAddExistingHighlightNote={vi.fn()}
@@ -56,7 +58,7 @@ it('keeps the selection note textarea keyboard focus visible', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
 
   const editor = screen.getByPlaceholderText('Add annotation...');
-  expectInputFocusVisible(editor);
+  expectFramedInputWithoutInnerRing(editor);
   expect(editor).toHaveFocus();
 });
 

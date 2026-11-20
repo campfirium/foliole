@@ -259,7 +259,16 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companion/sync/syncGroupStore.test.ts',
   'src/shared/platform/companion/sync/syncGroupMemberStateStore.test.ts',
   'src/shared/platform/companion/runtime/companionArticleImageStore.test.ts',
-  'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts'
+  'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts',
+  'electron/database/automaticBackupCandidate.integration.test.ts',
+  'electron/database/nodeUpsertBodyHash.integration.test.ts',
+  'src/companion/CompanionDirectoryBatch.integration.test.tsx',
+  'src/companion/CompanionDirectoryBatchOrganize.integration.test.tsx',
+  'src/companion/companionExistingHighlightEdgeScroll.integration.test.tsx',
+  'src/companion/companionReadingPositionReopen.integration.test.tsx',
+  'src/shared/platform/companion/folderBackup/companionAutomaticFolderBackupCoalescing.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionAttachmentPdfTextPresence.integration.test.ts',
+  'src/test/companionSandbox.integration.test.ts'
 ];
 
 const ordinaryNodeSqliteTextOnlyTests = [

@@ -49,6 +49,10 @@ function createHost(platform: string, headers: Header[] = [], failure?: Error) {
     if (name === './companion/runtime/iosCompanionAppDataReset') {
       return { resumeIosCompanionAppDataReset: async () => undefined };
     }
+    // File-call timing wraps the plugin transparently and is covered by companionFlowTimingContext; keep the raw boundary here.
+    if (name === './companion/runtime/companionNativeFileTiming') {
+      return { withNativeFileTiming: <T>(plugin: T) => plugin };
+    }
     throw new Error(`Unexpected dependency: ${name}`);
   };
   return {

@@ -71,10 +71,12 @@ it('writes the converted reference text and links shown before import', async ()
     const getText = source.sqlite.prepare('SELECT content, reveal FROM nodes WHERE title = ?');
     const topicText = (getText.get(topic.title) as { content: string }).content;
     const answer = (getText.get(card.title) as { reveal: string }).reveal;
-    expect(topicText).toBe(convertSuperMemoContent(topic.bodyOrQuestionHtml).content);
-    expect(answer).toBe(convertSuperMemoContent(card.answerHtml).content);
+    // An element's own SuperMemo reference is also written as source metadata: topics in content, items in the answer.
+    const metadata = '---\nsupermemoUrl: "https://example.com/source#section"\n---\n\n';
+    expect(topicText).toBe(`${metadata}${convertSuperMemoContent(topic.bodyOrQuestionHtml).content}`);
+    expect(answer).toBe(`${metadata}${convertSuperMemoContent(card.answerHtml).content}`);
     for (const markdown of [topicText, answer]) {
-      expect(markdown).toContain('\\# Link: [Source](https://example.com/source#section)');
+      expect(markdown).not.toContain('Link: [Source]');
       expect(folioleMarkdownParser.parse(markdown).toString()).not.toContain('ATXHeading1');
     }
   } finally {

@@ -75,7 +75,7 @@ function WeekTooltip({ bucket, first, startDate, original, planned, anchor }: {
   const dates = superMemoDueWeekDates(bucket);
   return (
     <div className="pointer-events-none absolute inset-x-0 top-1" role="status">
-      <div className="relative grid w-48 max-w-full gap-1 rounded-md border border-settings-divider bg-[var(--app-tooltip-bg)] px-3 py-2 shadow-sm"
+      <div className="relative grid w-48 max-w-full gap-1 rounded-md border border-settings-divider bg-[var(--app-tooltip-bg)] px-3 py-2 [box-shadow:var(--shadow-panel)]"
         style={{ left: `clamp(0px, ${anchor - 96}px, calc(100% - 12rem))` }}>
         <span className="font-medium">{bucket === first ? startDate : dates.start} – {dates.end}</span>
         <span className="flex justify-between gap-2">SuperMemo <strong>{original.toLocaleString()}</strong></span>

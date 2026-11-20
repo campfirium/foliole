@@ -223,9 +223,13 @@ it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading sta
 it('replays consecutive scores for the same card using the recalculated intermediate state', async () => {
   library.database.exec("UPDATE nodes SET enable_short_term = 1 WHERE id='a'");
   await grade(1);
+  // Relearning `a` waits until it is due at 08:01, so the ready queue serves `b` first.
+  expect(session.currentNodeId).toBe('b');
   await grade(3, '2026-10-25T09:00:00.000Z');
-  await grade(3, '2026-10-25T09:00:00.000Z');
+  // By 09:00 `a` is due, and a due timed card is taken before the ready queue.
   expect(session.currentNodeId).toBe('a');
+  // The second score for `a` builds on the state recalculated from its first.
+  await grade(3, '2026-10-25T09:00:00.000Z');
   await grade(3, '2026-10-25T09:00:00.000Z');
   for (let i = 0; i < 4; i++) await replay('undo');
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(2);
