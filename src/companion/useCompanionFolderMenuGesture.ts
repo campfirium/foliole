@@ -37,6 +37,10 @@ export function useCompanionFolderMenuGesture(open: (() => void) | null): HTMLAt
     onPointerUp: cancel,
     onPointerCancel: cancel,
     onPointerLeave: cancel,
+    onTouchEndCapture(event) {
+      // The sheet can cover the row before release, sending the generated click to its backdrop.
+      if (consumed.current) event.preventDefault();
+    },
     onContextMenu(event) {
       event.preventDefault();
       if (event.nativeEvent instanceof PointerEvent && event.nativeEvent.pointerType === 'touch') return;

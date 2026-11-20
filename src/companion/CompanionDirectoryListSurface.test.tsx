@@ -91,10 +91,11 @@ it('opens folder actions on a hold and keeps ordinary clicks for navigation', as
       ] }]} snapshot={null} />);
     const row = screen.getByRole('button', { name: 'Open folder Projects' });
     expect(screen.queryByRole('button', { name: 'More: Projects' })).toBeNull();
-    const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
+    const pointer = { pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, clientX: 10, clientY: 10 };
     const press = () => fireEvent.pointerDown(row, pointer);
     press();
     fireEvent.pointerUp(row, pointer);
+    expect(fireEvent.touchEnd(row)).toBe(true);
     fireEvent.click(row, { detail: 1 });
     expect(select).toHaveBeenCalledTimes(1);
 
@@ -113,6 +114,7 @@ it('opens folder actions on a hold and keeps ordinary clicks for navigation', as
     expect(screen.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
     fireEvent.pointerUp(row, pointer);
+    expect(fireEvent.touchEnd(row)).toBe(false);
     fireEvent.click(row, { detail: 1 });
     expect(select).toHaveBeenCalledTimes(1);
   } finally {
