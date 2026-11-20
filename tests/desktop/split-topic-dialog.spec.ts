@@ -98,8 +98,12 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   await expect(desktopWindow.getByRole('treeitem', { name: FIRST_TITLE })).toBeVisible();
   await desktopWindow.getByRole('treeitem', { name: SECOND_TITLE }).click();
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText('Beta detail');
-  expect((await readNode(desktopWindow, FIRST_TITLE))?.content).toContain('# Split Alpha');
   expect((await readNode(desktopWindow, SECOND_TITLE))?.content).toContain('## Beta detail');
+  // The renderer boundary trims bodies of nodes that are no longer active, so reopen
+  // Split Alpha to prove its body survived navigation instead of reading the trimmed store.
+  await desktopWindow.getByRole('treeitem', { name: FIRST_TITLE }).click();
+  await expect(desktopWindow.locator('.prompt-editor-host')).toContainText('Alpha body');
+  await expect.poll(async () => (await readNode(desktopWindow, FIRST_TITLE))?.content ?? '').toContain('# Split Alpha');
 
   await desktopWindow.evaluate((nodeId) => globalThis.window?.__folioleWorkspaceDebug?.openNode?.(nodeId), KEEP_SOURCE_TOPIC_ID);
   dialog = await openSplitTopicDialog(desktopWindow);
