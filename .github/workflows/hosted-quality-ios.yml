@@ -70,6 +70,17 @@ jobs:
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Restore the content-addressed SQLCipher Apple build
+        uses: actions/cache@v4
+        with:
+          # mobile-sqlcipher.mjs keys its own output by pins, build scripts and folder-backup sources;
+          # this key hashes the same inputs plus the Xcode in use, so any change still rebuilds from pinned sources.
+          path: |
+            .cache/mobile-sqlcipher/*/*/downloads/core.tar.gz
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.c
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.h
+            .cache/mobile-sqlcipher/*/*/apple/SQLCipher.swift
+          key: mobile-sqlcipher-apple-${{ runner.os }}-${{ runner.arch }}-${{ env.DEVELOPER_DIR }}-${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}
       - name: Rebuild Electron native ABI for iOS contract tests
         run: npm run electron:rebuild:native
       - name: Run iOS boundary quality
@@ -136,6 +147,17 @@ jobs:
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Restore the content-addressed SQLCipher Apple build
+        uses: actions/cache@v4
+        with:
+          # mobile-sqlcipher.mjs keys its own output by pins, build scripts and folder-backup sources;
+          # this key hashes the same inputs plus the Xcode in use, so any change still rebuilds from pinned sources.
+          path: |
+            .cache/mobile-sqlcipher/*/*/downloads/core.tar.gz
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.c
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.h
+            .cache/mobile-sqlcipher/*/*/apple/SQLCipher.swift
+          key: mobile-sqlcipher-apple-${{ runner.os }}-${{ runner.arch }}-${{ env.DEVELOPER_DIR }}-${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}
       - name: Install Electron runtime
         run: node node_modules/electron/install.js
       - name: Prepare Electron DNS-SD host

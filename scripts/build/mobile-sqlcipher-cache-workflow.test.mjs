@@ -43,3 +43,23 @@ it('hashes every input the build script uses for its own content fingerprint', (
   expect(source).toContain("new URL('./mobile-sqlcipher-pins.json', import.meta.url)");
   expect(source).toMatch(/const key = sha256\(Buffer\.concat\(\[Buffer\.from\(JSON\.stringify\(pins\)\), \.\.\.inputs\]\)\)/u);
 });
+
+const appleName = 'Restore the content-addressed SQLCipher Apple build';
+const appleWorkflows = ['hosted-quality-ios.yml', 'hosted-quality-ios-app-compile.yml', 'release-ios.yml'];
+
+it.each(appleWorkflows)('%s restores the Apple build right after installing dependencies on every macOS job', file => {
+  const { jobs } = parse(readFileSync(`.github/workflows/${file}`, 'utf8'));
+  const macJobs = Object.values(jobs).filter(job => job.steps?.some(step => step.run?.includes('hosted-npm-ci.mjs'))
+    && String(job['runs-on']).startsWith('macos'));
+  expect(macJobs.length).toBeGreaterThan(0);
+  for (const job of macJobs) {
+    const install = job.steps.findIndex(step => step.run?.includes('hosted-npm-ci.mjs'));
+    const step = job.steps[install + 1];
+    expect(step.name).toBe(appleName);
+    expect(step.uses).toBe('actions/cache@v4');
+    expect(job.env.DEVELOPER_DIR).toMatch(/Xcode_/u);
+    expect(step.with.key).toBe('mobile-sqlcipher-apple-${{ runner.os }}-${{ runner.arch }}-${{ env.DEVELOPER_DIR }}-'
+      + "${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}");
+    expect(step.with.path).toContain('apple/SQLCipher.swift');
+  }
+});
