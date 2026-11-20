@@ -33,7 +33,7 @@ export function SuperMemoDraftActions({ step, busy, importing = false, updating 
       <div className="flex items-end justify-between gap-4 px-settings-panel-x">
         <p className="min-w-0 self-center text-xs leading-relaxed text-foreground/65">
           {t(complete ? 'desktop.superMemoDrafts.completedAdjustmentNote'
-            : updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}
+            : 'desktop.superMemoDrafts.adjustmentNote')}
         </p>
         <div className="flex shrink-0 items-center gap-2">
           {previous ? <SettingsButton className="w-9 px-0" disabled={busy}

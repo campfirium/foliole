@@ -26,7 +26,6 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.gradesStep': '导入设置',
   'desktop.superMemoDrafts.sourceMeta': 'Meta',
   'desktop.superMemoDrafts.adjustmentNote': '导入后可返回这里，预览同一批次的更新。',
-  'desktop.superMemoDrafts.updateBatchNote': '查看来源信息、正文和复习日期的变化，再确认更新已有批次。',
   'desktop.superMemoDrafts.references': '来源信息',
   'desktop.superMemoDrafts.referencesHelp': 'SuperMemo 的引用信息写入原文 Topic 的 Meta。摘录和卡片只在末尾保留与原文不同的字段。字段名留空则跳过。',
   'desktop.superMemoDrafts.referenceSourceField': 'SuperMemo 字段',

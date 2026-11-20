@@ -24,7 +24,6 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.gradesStep': 'Import settings',
   'desktop.superMemoDrafts.sourceMeta': 'Meta',
   'desktop.superMemoDrafts.adjustmentNote': 'After importing, return here to preview updates to the same batch.',
-  'desktop.superMemoDrafts.updateBatchNote': 'Preview changes to source information, text, and review dates before updating this batch.',
   'desktop.superMemoDrafts.references': 'Source information',
   'desktop.superMemoDrafts.referencesHelp': 'Map SuperMemo references to the original Topic’s Foliole Meta. Extracts and cards keep only differing fields at the end of their text. Leave a name blank to skip that field.',
   'desktop.superMemoDrafts.referenceSourceField': 'SuperMemo field',
