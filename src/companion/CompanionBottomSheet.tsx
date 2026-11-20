@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useRef, type ReactNode, type MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -51,8 +51,8 @@ export function CompanionBottomSheet(props: {
             <div className={`mb-3 flex shrink-0 items-center ${props.hideCloseButton ? 'justify-start gap-3' : 'justify-between'}`}>
               {props.leadingAction}
               <AppDialogTitle className="min-w-0 [overflow-wrap:anywhere]">{props.title}</AppDialogTitle>
-              {!props.hideCloseButton && <AppDialogClose aria-label={t('common.done')} className="flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle">
-                <Check aria-hidden="true" className="h-5 w-5" />
+              {!props.hideCloseButton && <AppDialogClose aria-label={t('shared.close')} className="flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle">
+                <X aria-hidden="true" className="h-5 w-5" />
               </AppDialogClose>}
             </div>
             <div className={`app-scrollbar min-h-0 overflow-y-auto ${props.retainReadingToolbar ? 'flex-1' : ''} ${props.showScrollIndicator ? 'companion-sheet-scroll-indicator' : ''}`} ref={props.scrollElementRef}>{props.children}</div>

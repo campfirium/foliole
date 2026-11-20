@@ -5,9 +5,9 @@ import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
-import { definedProps } from '../shared/lib/definedProps';
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
 
+import type { CompanionBrowsePage } from './CompanionBrowseContainerMenu';
 import type { CompanionBrowseDiveActions } from './CompanionBrowseMenuSheet';
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
@@ -29,9 +29,6 @@ export function resolveCompanionTopBarProps(
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void,
   onOpenBrowseDirectory: () => void,
   onOpenAddSheet: () => void,
-  onSyncBrowse: (() => void) | undefined,
-  syncDisabled: boolean,
-  syncStatus: string | undefined,
   onExitReview: () => void,
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void,
@@ -56,9 +53,6 @@ export function resolveCompanionTopBarProps(
       onChangeBrowseSortKey,
       onOpenAddSheet,
       onOpenBrowseDirectory,
-      onSyncBrowse,
-      syncDisabled,
-      syncStatus,
       t
     });
   }
@@ -97,6 +91,16 @@ function resolveSettingsTopBar(
   return { backLabel: t('companion.back'), onBack: onExitSettings, title: t('companion.settings.title') };
 }
 
+function resolveBrowsePage(open: boolean, selection: CompanionDirectorySelection,
+  diveActions: CompanionBrowseDiveActions | undefined): CompanionBrowsePage {
+  if (!open) return { kind: 'other' };
+  if (selection.kind === 'root') return { kind: 'root' };
+  if (selection.kind === 'trash' || selection.kind === 'trashFolder') return { kind: 'trash' };
+  if (diveActions) return { kind: 'dive', nodeId: diveActions.dive.id };
+  if (selection.kind === 'internal') return { kind: 'folder', nodeId: selection.nodeId };
+  return { kind: 'other' };
+}
+
 function resolveBrowseTopBar(args: {
   browseSortDirection: FolderListSortDirection;
   browseSortKey: FolderListSortKey;
@@ -110,9 +114,6 @@ function resolveBrowseTopBar(args: {
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void;
   onOpenAddSheet: () => void;
   onOpenBrowseDirectory: () => void;
-  onSyncBrowse: (() => void) | undefined;
-  syncDisabled: boolean;
-  syncStatus: string | undefined;
   t: Translate;
 }) {
   const title = args.isBrowseDirectoryOpen
@@ -120,7 +121,7 @@ function resolveBrowseTopBar(args: {
     : args.folderTitle ?? args.t('companion.browse.title');
   const rightSlot = (
     <CompanionBrowseTopActions
-      allowRootCreation={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'root'}
+      page={resolveBrowsePage(args.isBrowseDirectoryOpen, args.directorySelection, args.diveActions)}
       diveActions={args.diveActions}
       menuTitle={title}
       onChangeSortDirection={args.onChangeBrowseSortDirection}
@@ -130,11 +131,6 @@ function resolveBrowseTopBar(args: {
       sortKey={args.browseSortKey}
       topicFocusDisabled={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'virtual'
         && args.directorySelection.nodeId === VIRTUAL_SHELVED_NODE_ID}
-      {...definedProps({
-        onSync: args.onSyncBrowse,
-        syncDisabled: args.syncDisabled,
-        syncStatus: args.syncStatus
-      })}
     />
   );
   if (args.isBrowseDirectoryOpen) {

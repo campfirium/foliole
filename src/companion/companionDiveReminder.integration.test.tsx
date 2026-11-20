@@ -80,7 +80,7 @@ function ReminderShortcutFixture() {
       <button type="button" onClick={() => setSettings(false)}>Back</button>
       <CompanionReminderSettingsContent onBack={() => setSettings(false)} snapshot={createSnapshot('Physics')} />
     </>
-      : <CompanionBrowseTopActions diveActions={{ dive: { id: 'physics', title: 'Physics', directSourceIds: ['topic'] } }}
+      : <CompanionBrowseTopActions page={{ kind: 'dive', nodeId: 'physics' }} diveActions={{ dive: { id: 'physics', title: 'Physics', directSourceIds: ['topic'] } }}
         onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenCapture={() => {}}
         sortDirection="asc" sortKey="name" />}
   </ReminderDraftProvider>;

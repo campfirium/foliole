@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { TranslationKey } from '../shared/localization/translations';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
+import type { CompanionHistoryTop } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { subscribeCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 export function useCompanionWorkspaceHistoryAvailability(key: string) {
-  const [availability, setAvailability] = useState({ canUndo: false, canRedo: false });
+  const [availability, setAvailability] = useState<{ canUndo: boolean; canRedo: boolean;
+    undoTop: CompanionHistoryTop; redoTop: CompanionHistoryTop }>({ canUndo: false, canRedo: false, undoTop: null, redoTop: null });
   useEffect(() => {
     let mounted = true;
     async function update() {
@@ -15,7 +17,9 @@ export function useCompanionWorkspaceHistoryAvailability(key: string) {
       const next = await loadCompanionFlowHistoryAvailability(key);
       if (mounted) setAvailability(next);
     }
-    const refresh = () => { void update().catch(() => { if (mounted) setAvailability({ canUndo: false, canRedo: false }); }); };
+    const refresh = () => { void update().catch(() => {
+      if (mounted) setAvailability({ canUndo: false, canRedo: false, undoTop: null, redoTop: null });
+    }); };
     refresh();
     const unsubscribe = subscribeCompanionSyncMutationRevision(refresh);
     return () => { mounted = false; unsubscribe(); };

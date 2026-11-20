@@ -10,7 +10,12 @@ import {
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionDirectoryBatchConfirmation } from './CompanionDirectoryBatchConfirmation';
-import { useCompanionDirectoryBatchHeader, useRegisterCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
+import { CompanionDirectoryBatchTargetSheet, type CompanionBatchTargetAction } from './CompanionDirectoryBatchTargetSheet';
+import {
+  useCompanionDirectoryBatchHeader,
+  useRegisterCompanionDirectoryBatchMenuAction,
+  useRegisterCompanionEmptyTrashAction
+} from './CompanionDirectoryBatchMenu';
 import type { DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';
 import { CompanionListSelectionControls } from './CompanionListSelectionControls';
 import { useCompanionPageActive } from './CompanionPageStack';
@@ -50,6 +55,7 @@ export function useCompanionDirectoryBatchSelection(props: {
   snapshot: WorkspaceSnapshot | null;
   batchMode?: CompanionListBatchMode | undefined;
   diveId?: string | undefined;
+  trashRoot?: boolean | undefined;
 }) {
   const { sections, snapshot, batchMode } = props;
   const actions = useCompanionWorkspaceActions();
@@ -59,9 +65,11 @@ export function useCompanionDirectoryBatchSelection(props: {
   const [selected, setSelected] = useState<ReadonlyMap<string, CompanionBatchTarget> | null>(null);
   const [skipped, setSkipped] = useState(0);
   const [confirm, setConfirm] = useState<{ roots: readonly CompanionBatchTarget[]; purge: CompanionBatchPurgePlan | null } | null>(null);
+  const [target, setTarget] = useState<CompanionBatchTargetAction | null>(null);
   function closeSelection() {
     setSelected(null);
     setConfirm(null);
+    setTarget(null);
   }
   if (!pageActive && selected) closeSelection();
   if (previous !== candidates) {
@@ -76,6 +84,14 @@ export function useCompanionDirectoryBatchSelection(props: {
   useRegisterCompanionDirectoryBatchMenuAction(enter,
     pageActive && !busy && selected === null && Boolean(actions && candidates.size && isAvailableNativeCompanionRuntime()));
   useCompanionDirectoryBatchHeader(pageActive && selected !== null);
+  const emptyTrash = useCallback(() => {
+    setSkipped(0);
+    setSelected(candidates);
+    const plan = prepareCompanionBatchPurge(snapshot?.nodesById ?? {}, [...candidates.values()]);
+    if (plan) setConfirm({ roots: [...candidates.values()], purge: plan });
+  }, [candidates, snapshot]);
+  useRegisterCompanionEmptyTrashAction(emptyTrash, Boolean(props.trashRoot) && batchMode === 'trash' &&
+    pageActive && !busy && selected === null && Boolean(actions && candidates.size && isAvailableNativeCompanionRuntime()));
   const restoreTargets = (targets: readonly CompanionBatchTarget[], onSaved: () => void) => {
     void actions?.restoreBatch(targets, count => { setSkipped(count); onSaved(); });
   };
@@ -83,12 +99,16 @@ export function useCompanionDirectoryBatchSelection(props: {
     mode: batchMode, skipped, canPurge: Boolean(purge),
     active: selected !== null, busy, confirm, count: selected?.size ?? 0, total: candidates.size,
     exit: closeSelection,
+    finish: closeSelection,
     selectAll: () => setSelected(candidates),
     clear: () => setSelected(new Map()),
     openConfirmation: () => {
       if (selected?.size && (batchMode !== 'trash' || purge)) setConfirm({ roots: [...selected.values()], purge });
     },
     cancelConfirmation: () => setConfirm(null),
+    target, targets: [...(selected?.values() ?? [])],
+    openTarget: (action: CompanionBatchTargetAction) => { if (selected?.size) setTarget(action); },
+    closeTarget: () => setTarget(null),
     acceptConfirmation: () => {
       if (!confirm || !actions) return;
       setConfirm(null);
@@ -133,7 +153,9 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
   };
   const actions = batch.mode === 'dive'
     ? [{ label: t('desktop.nodeList.menu.removeFromDive'), onSelect: batch.removeFromDive }]
-    : trash ? [{ label: t('desktop.nodeList.menu.restore'), onSelect: batch.restore }, deleteAction] : [deleteAction];
+    : trash ? [{ label: t('desktop.nodeList.menu.restore'), onSelect: batch.restore }, deleteAction]
+      : [{ label: t('companion.batch.move'), onSelect: () => batch.openTarget('move') },
+        { label: t('companion.batch.addToDive'), onSelect: () => batch.openTarget('add-to-dive') }, deleteAction];
 
   return <>
     <CompanionListSelectionControls
@@ -146,5 +168,7 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
     {batch.confirm && <CompanionDirectoryBatchConfirmation
       count={batch.confirm.roots.length} total={batch.confirm.purge?.entries.length}
       onCancel={batch.cancelConfirmation} onConfirm={batch.acceptConfirmation} />}
+    {batch.target && <CompanionDirectoryBatchTargetSheet action={batch.target} targets={batch.targets}
+      onClose={batch.closeTarget} onSaved={batch.finish} />}
   </>;
 }

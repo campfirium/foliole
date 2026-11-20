@@ -44,12 +44,22 @@ export async function readCompanionFlowHistory(db: DbPort, key: string) {
     ...(raw as Partial<ReturnType<typeof history.parse>>) };
 }
 
+export type CompanionHistoryTop = { type: string | null; title: string | null } | null;
+
 export async function readCompanionFlowHistoryAvailability(db: DbPort, key: string) {
-  const rows = await db.query<{ can_undo: number; can_redo: number }>(`SELECT
+  const rows = await db.query<{ can_undo: number; can_redo: number; undo_type: string | null; undo_title: string | null;
+    redo_type: string | null; redo_title: string | null }>(`SELECT
     json_array_length(value, '$.undoStack') > 0 AS can_undo,
-    json_array_length(value, '$.redoStack') > 0 AS can_redo
+    json_array_length(value, '$.redoStack') > 0 AS can_redo,
+    json_extract(value, '$.undoStack[#-1].type') AS undo_type, json_extract(value, '$.undoStack[#-1].title') AS undo_title,
+    json_extract(value, '$.redoStack[#-1].type') AS redo_type, json_extract(value, '$.redoStack[#-1].title') AS redo_title
     FROM companion_meta WHERE key = ?`, [key]);
-  return { canUndo: rows[0]?.can_undo === 1, canRedo: rows[0]?.can_redo === 1 };
+  const row = rows[0];
+  const top = (type: string | null | undefined, title: string | null | undefined): CompanionHistoryTop =>
+    type || title ? { type: type ?? null, title: title ?? null } : null;
+  return { canUndo: row?.can_undo === 1, canRedo: row?.can_redo === 1,
+    undoTop: row?.can_undo === 1 ? top(row.undo_type, row.undo_title) : null,
+    redoTop: row?.can_redo === 1 ? top(row.redo_type, row.redo_title) : null };
 }
 
 export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'> & { replayReceipt?: ReplayReceipt }) {

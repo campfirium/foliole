@@ -46,7 +46,7 @@ it('closes document search and secondary sheets before explicitly exiting readin
   expect(screen.getByRole('dialog', { name: 'Topic' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.queryByText('Search results')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
   expect(screen.getByText('Search results')).toBeInTheDocument();

@@ -6,6 +6,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionAddToDive } from './CompanionAddToDive';
 import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { CompanionDiveAddSourceForm } from './CompanionDiveAddSourceForm';
 import { CompanionIndexSourceForm, companionIndexSourcePromptKeys } from './CompanionIndexSourceForm';
 import { companionWorkspaceCreateLabels, useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass as rowClass } from './CompanionWorkspaceMenuActions';
@@ -13,7 +14,7 @@ import { CompanionWorkspaceNodeForm } from './CompanionWorkspaceNodeForm';
 
 export type WorkspaceNodeSheetState = {
   mode: 'menu' | 'rename' | 'move' | 'create' | 'create-dive' | 'create-index' | 'delete' | 'add-to-dive'
-    | 'convert-to-dive' | 'convert-to-index' | 'add-index-source' | 'remove-index-source';
+    | 'convert-to-dive' | 'convert-to-index' | 'add-index-source' | 'remove-index-source' | 'add-dive-source';
   nodeId: string | null; parentNodeId: string | null; kind?: NodeKind;
 };
 
@@ -29,7 +30,8 @@ export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetSt
   const indexSourceChange = mode === 'add-index-source' ? 'add' : mode === 'remove-index-source' ? 'remove' : null;
   const conversion = mode === 'convert-to-dive' ? 'dive' : mode === 'convert-to-index' ? 'index' : null;
   const title = mode === 'create-dive' || mode === 'create-index' ? t(companionWorkspaceCreateLabels[mode])
-    : adding ? t('desktop.nodeList.addToDive.title') : indexSourceChange ? t(companionIndexSourcePromptKeys[indexSourceChange])
+    : adding ? t('desktop.nodeList.addToDive.title') : mode === 'add-dive-source' ? t('companion.dive.addSource')
+      : indexSourceChange ? t(companionIndexSourcePromptKeys[indexSourceChange])
       : node?.title ?? t('companion.browse.more');
   const failureKey = actions.pending ? 'companion.workspace.savedRefreshError' : actions.failure;
   return <CompanionBottomSheet open onOpenChange={open => { if (!open && !actions.busy) props.onClose(); }} title={title}>
@@ -37,6 +39,8 @@ export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetSt
     {actions.pending ? <button type="button" disabled={actions.busy} className={rowClass}
       onClick={actions.retryRefresh}>{t('companion.selection.refresh')}</button> : adding ? <CompanionAddToDive
       snapshot={actions.snapshot} sourceId={node?.id} disabled={disabled} onSelect={actions.addToDive} /> :
+      mode === 'add-dive-source' ? (node && actions.snapshot ? <CompanionDiveAddSourceForm dive={node} snapshot={actions.snapshot}
+        disabled={disabled} onSubmit={sourceId => actions.addToDive(node.id, sourceId)} /> : null) :
       (mode === 'add-index-source' || mode === 'remove-index-source') ? (
         indexSourceChange && node && !node.deletedAt && isManualVirtualFolderNode(node) && actions.snapshot ? <CompanionIndexSourceForm
           index={node} snapshot={actions.snapshot} disabled={disabled} change={indexSourceChange}

@@ -22,7 +22,7 @@ import {
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
-import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceCreateChoices, useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
@@ -114,6 +114,7 @@ function CompanionDirectoryListContent(props: {
         key={JSON.stringify([props.snapshot?.libraryScope, props.viewKey])}
         batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash' : dive ? 'dive' : props.selection.kind === 'internal' ? 'library' : undefined}
         diveId={dive?.id}
+        trashRoot={props.selection.kind === 'trash'}
         directory={props.directory}
         viewKey={props.viewKey}
         emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? (props.selection.kind === 'trash'
@@ -124,6 +125,9 @@ function CompanionDirectoryListContent(props: {
           onClick={() => workspace.open({ mode: 'create', kind: 'topic', nodeId: null, parentNodeId: folder.id })}>
           {t('companion.directory.addToFolder')}
         </AppButton> : undefined}
+        header={props.selection.kind === 'root' ? <CompanionWorkspaceCreateChoices onSelect={() => {}} />
+          : dive && props.onStartDive ? <AppButton className="mb-3 min-h-11 w-full" variant="emphasis"
+            onClick={() => props.onStartDive?.(dive.id)}>{t('desktop.nodeList.dive.startFlow')}</AppButton> : undefined}
         onSelectItem={props.handleSelectItem}
         onStartDive={props.onStartDive}
         sections={props.sections}

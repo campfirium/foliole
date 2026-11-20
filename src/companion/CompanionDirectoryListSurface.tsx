@@ -28,6 +28,7 @@ import { useCompanionFolderMenuGesture } from './useCompanionFolderMenuGesture';
 
 type DirectoryRowProps = {
   selecting: boolean;
+  markKind?: boolean;
   checked?: boolean | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   item: DirectoryListItem;
@@ -43,7 +44,8 @@ function DirectoryRow(props: DirectoryRowProps) {
     props.item.source === 'trashRoot'
       ? resolveNodeDisplayTitle(locale, 'special-trash', t(props.item.titleKey))
       : resolveNodeDisplayTitle(locale, props.item.nodeId, props.item.title);
-  const subtitle = resolveDirectoryRowSubtitle(props.item, t);
+  const subtitle = resolveDirectoryRowSubtitle(props.item, t)
+    ?? (props.markKind && props.item.kind === 'folder' ? t('companion.directory.row.folder') : null);
   const meta = resolveDirectoryRowMeta({
     directory: props.directory,
     item: props.item,
@@ -119,11 +121,13 @@ function CompanionDirectoryEmptyState({ action, description, title }: {
 
 export function CompanionDirectoryList(props: {
   batchMode?: CompanionListBatchMode | undefined;
+  trashRoot?: boolean | undefined;
   diveId?: string | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   emptyDescription?: string | null;
   emptyAction?: ReactNode;
   emptyLabel: string;
+  header?: ReactNode;
   onSelectItem(item: DirectoryListItem): void;
   onStartDive?: ((id: string) => void) | undefined;
   sections: DirectorySection[];
@@ -132,7 +136,7 @@ export function CompanionDirectoryList(props: {
 }) {
   const { locale, t } = useLocalization();
   const batch = useCompanionDirectoryBatchSelection(props);
-  const controls = <CompanionDirectoryBatchControls batch={batch} />;
+  const controls = <>{!batch.active && props.header}<CompanionDirectoryBatchControls batch={batch} /></>;
   const entries = useMemo(() => flattenDirectorySections(props.sections), [props.sections]);
   if (entries.length === 0) {
     return <>{controls}<CompanionDirectoryEmptyState action={props.emptyAction}
@@ -152,6 +156,7 @@ export function CompanionDirectoryList(props: {
           </label>}
           <div className="min-w-0 flex-1" inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
+              markKind={entry.sectionId === 'current'}
               onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem}
               restoreFolder={batch.restoreFolderAction(entry.item)}
               onStartDive={props.onStartDive} snapshot={props.snapshot} />
@@ -170,11 +175,11 @@ export function CompanionDirectoryList(props: {
 }
 
 type DirectoryEntry = { kind: 'header'; key: string; section: DirectorySection; first: boolean }
-  | { kind: 'item'; key: string; item: DirectoryListItem };
+  | { kind: 'item'; key: string; item: DirectoryListItem; sectionId: string };
 function flattenDirectorySections(sections: DirectorySection[]): DirectoryEntry[] {
   return sections.flatMap((section, index): DirectoryEntry[] => [
     ...(section.id !== 'current' ? [{ kind: 'header' as const, key: `section:${section.id}`, section, first: index === 0 }] : []),
-    ...section.items.map((item) => ({ kind: 'item' as const, key: item.id, item }))
+    ...section.items.map((item) => ({ kind: 'item' as const, key: item.id, item, sectionId: section.id }))
   ]);
 }
 

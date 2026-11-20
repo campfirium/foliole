@@ -9,7 +9,8 @@ import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismi
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionListViewport } from './CompanionListViewport';
-import { CompanionTopicListMenu } from './CompanionTopicListMenu';
+import { CompanionTopicListMenu, useTopicListMenuWorkspace } from './CompanionTopicListMenu';
+import { useCompanionFolderMenuGesture } from './useCompanionFolderMenuGesture';
 
 const RECENT_ARTICLE_TEXT_LINE_BUDGET = 4;
 
@@ -101,16 +102,21 @@ export function RecentArticleRow(props: {
   const meta = [props.article.folderLabel, formatCompanionTopicDate(props.article.updatedAt, locale)].filter(Boolean).join(' · ');
   const open = () => props.onSelectArticle(props.article.nodeId);
   const status = renderBodyStatus(props.article.bodyStatus, t);
+  const menuWorkspace = useTopicListMenuWorkspace(props.hideMenu ? undefined : props.article.nodeId, props.directDiveId);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const gesture = useCompanionFolderMenuGesture(menuWorkspace ? () => setMenuOpen(true) : null);
   return (
     <div className={`companion-topic-row ${props.first ? 'companion-topic-row-first' : ''}`}>
       <button aria-label={t(props.hideMenu ? 'companion.batch.selectRow' : 'desktop.nodeBrowse.openTopic', { title: props.article.title })}
-        aria-pressed={props.checked} className="companion-topic-open" data-testid={props.testId} onClick={open} type="button">
+        {...gesture} aria-keyshortcuts={menuWorkspace ? 'Shift+F10' : undefined}
+        aria-pressed={props.checked} className="companion-topic-open select-none [-webkit-touch-callout:none]" data-testid={props.testId} onClick={open} type="button">
         <h2 ref={titleRef} className="companion-topic-title line-clamp-2 break-words [overflow-wrap:anywhere]">{props.article.title}</h2>
         <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
         {status ? <p className="companion-topic-preview">{status}</p> : null}
         <p className="companion-topic-meta truncate">{meta}</p>
       </button>
-      {!props.hideMenu && <CompanionTopicListMenu nodeId={props.article.nodeId} title={props.article.title} directDiveId={props.directDiveId} />}
+      {menuWorkspace && <CompanionTopicListMenu rowMenu={{ open: menuOpen, onOpenChange: setMenuOpen }}
+        nodeId={props.article.nodeId} title={props.article.title} directDiveId={props.directDiveId} />}
     </div>
   );
 }

@@ -18,6 +18,7 @@ beforeEach(() => {
 it('opens sort choices from the browse menu sort row', () => {
   render(
     <CompanionBrowseTopActions
+      page={{ kind: 'other' }}
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
@@ -42,29 +43,26 @@ it('opens sort choices from the browse menu sort row', () => {
   expect(within(sortDialog).queryByText('Title')).not.toBeInTheDocument();
 });
 
-it('runs sync from the browse menu', () => {
-  const onSync = vi.fn();
+it('keeps Sync out of the browse menu now that the top bar owns it', () => {
   render(
     <CompanionBrowseTopActions
+      page={{ kind: 'folder', nodeId: 'folder' }}
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
-      onSync={onSync}
       sortDirection="desc"
       sortKey="dateLastOpened"
     />
   );
-
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
-
-  expect(onSync).toHaveBeenCalledTimes(1);
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /^Sync/ })).not.toBeInTheDocument();
 });
 
 it('hides capture when that interaction surface is not accepted', () => {
   runtimeState.supportsNodeWrite = false;
   render(
     <CompanionBrowseTopActions
+      page={{ kind: 'other' }}
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
@@ -79,6 +77,7 @@ it('hides capture when that interaction surface is not accepted', () => {
 
 it('keeps Appearance out of the browse menu', () => {
   render(<CompanionBrowseTopActions
+      page={{ kind: 'other' }}
     onChangeSortDirection={vi.fn()} onChangeSortKey={vi.fn()}
     onOpenCapture={vi.fn()}
     sortDirection="desc" sortKey="dateLastOpened"
@@ -86,4 +85,19 @@ it('keeps Appearance out of the browse menu', () => {
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
   const menu = screen.getByRole('dialog', { name: 'Browse' });
   expect(within(menu).queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
+});
+
+it('keeps controls without a target on this page out of the root and trash bars', () => {
+  const props = { onChangeSortDirection: vi.fn(), onChangeSortKey: vi.fn(), onOpenCapture: vi.fn(),
+    sortDirection: 'desc' as const, sortKey: 'dateLastOpened' as const };
+  const view = render(<CompanionBrowseTopActions page={{ kind: 'root' }} {...props} />);
+  expect(screen.queryByRole('button', { name: /dismissed|Shelved|Topic focus/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(within(screen.getByRole('dialog', { name: 'Browse' })).queryByRole('button', { name: /^Sort/ })).not.toBeInTheDocument();
+  view.unmount();
+
+  render(<CompanionBrowseTopActions page={{ kind: 'trash' }} {...props} />);
+  expect(screen.queryByRole('button', { name: 'Capture' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(within(screen.getByRole('dialog', { name: 'Browse' })).getByRole('button', { name: /^Sort/ })).toBeVisible();
 });

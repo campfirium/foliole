@@ -61,7 +61,7 @@ it('keeps the status bar outside Outline and restores the reading layout after c
   await applied(true);
   fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
   await applied(false);
-  fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Done' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Close' }));
   await applied(true);
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true });
 });
@@ -86,7 +86,7 @@ it('keeps both preferences independent across articles, reentry and leaving read
 it('restores normal window layout while editing and reapplies the current chrome state on foreground and rotation', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
   render(article('first', true)); await applied(true, true); more();
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   fireEvent.click(screen.getByRole('button', { name: 'Edit content' })); await applied(false);
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); await applied(true);
   host.apply.mockClear();

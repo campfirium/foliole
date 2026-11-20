@@ -55,7 +55,7 @@ function observeReadBytes() {
 it('checks workspace undo availability without transferring stored sessions', async () => {
   const bytes = observeReadBytes();
   const ui = renderHook(() => useCompanionWorkspaceHistoryAvailability(key));
-  await waitFor(() => expect(ui.result.current).toEqual({ canUndo: true, canRedo: false }));
+  await waitFor(() => expect(ui.result.current).toMatchObject({ canUndo: true, canRedo: false }));
   expect(bytes()).toBeLessThan(256);
 });
 
@@ -77,11 +77,11 @@ it('shares concurrent availability reads but reads committed changes again', asy
   const results = await Promise.all([
     loadCompanionFlowHistoryAvailability(key), loadCompanionFlowHistoryAvailability(key)
   ]);
-  expect(results).toEqual([{ canUndo: true, canRedo: false }, { canUndo: true, canRedo: false }]);
+  expect(results).toMatchObject([{ canUndo: true, canRedo: false }, { canUndo: true, canRedo: false }]);
   expect(read).toHaveBeenCalledTimes(1);
   await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack: [], redoStack: [] }));
   publishCompanionSyncMutationRevision({ kind: 'nodes', nodeIds: [] });
-  expect(await loadCompanionFlowHistoryAvailability(key)).toEqual({ canUndo: false, canRedo: false });
+  expect(await loadCompanionFlowHistoryAvailability(key)).toMatchObject({ canUndo: false, canRedo: false });
   expect(read).toHaveBeenCalledTimes(2);
 });
 
@@ -101,6 +101,6 @@ it.each(['revision', 'scope'] as const)('does not share a pending read across a 
   const second = loadCompanionFlowHistoryAvailability(key);
   expect(read).toHaveBeenCalledTimes(2);
   release();
-  expect(await first).toEqual({ canUndo: true, canRedo: false });
-  expect(await second).toEqual({ canUndo: true, canRedo: false });
+  expect(await first).toMatchObject({ canUndo: true, canRedo: false });
+  expect(await second).toMatchObject({ canUndo: true, canRedo: false });
 });

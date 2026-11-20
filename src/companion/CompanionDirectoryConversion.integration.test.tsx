@@ -18,7 +18,7 @@ import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -40,7 +40,6 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       setSnapshot(next);
       return next;
     }}>
-    <CompanionWorkspaceCreateChoices onSelect={() => {}} />
     <CompanionWorkspaceHistoryActions />
     <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
       onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
@@ -54,14 +53,14 @@ it('creates a manual index directly from mobile, supports undo and syncs the sam
     await peers.exchange();
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Virtual' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create in Virtual' }));
     const sheet = screen.getByRole('dialog', { name: 'Create in Virtual' });
     fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Create in Virtual' }));
     await screen.findByRole('button', { name: 'Open folder Mobile Index' });
-    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Undo New' }));
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Mobile Index' })).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Redo New' }));
     await screen.findByRole('button', { name: 'Open folder Mobile Index' });
 
     const snapshot = await readSnapshot();

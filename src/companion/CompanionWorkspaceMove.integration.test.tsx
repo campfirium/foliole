@@ -94,7 +94,7 @@ it('identifies rejected Undo and Redo writes as history failures', async () => {
   for (const [action, currentParent] of [['Undo', 'learning'], ['Redo', 'work']] as const) {
     library.database.exec(`CREATE TRIGGER reject_history BEFORE UPDATE ON nodes
       WHEN NEW.id = 'source' BEGIN SELECT RAISE(ABORT, 'history rejected'); END`);
-    const button = screen.getByRole('button', { name: action });
+    const button = await screen.findByRole('button', { name: `${action} Move` });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     expect(await screen.findByRole('status')).toHaveTextContent('Could not undo or redo.');
@@ -120,7 +120,7 @@ it('browses collapsed branches without searching, confirms a move, hydrates it a
   expect((await stored()).nodesById.source?.parentNodeId).toBe('retrieval');
   await reopenSearchLibrary(library.root, '2026-11-17T01:00:00Z');
   expect((await stored()).nodesById.source?.parentNodeId).toBe('retrieval');
-  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Undo Move' }));
   await waitFor(async () => expect((await stored()).nodesById.source?.parentNodeId).toBe('work'));
 });
 
@@ -142,7 +142,7 @@ it('searches collapsed branches and paths, preserves expansion on clear and neve
   expect(screen.getByRole('button', { name: 'Learning', expanded: true })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Learning / Memory' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Learning / Memory / Retrieval' })).toBeNull();
-  fireEvent.click(screen.getAllByRole('button', { name: 'Done' }).find(button => !button.closest('form'))!);
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect((await stored()).nodesById.source?.parentNodeId).toBe('work');
 });

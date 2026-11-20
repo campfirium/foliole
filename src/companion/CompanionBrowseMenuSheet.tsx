@@ -11,22 +11,22 @@ import {
   getFolderListSortOrderOptions
 } from '../features/nodes/model/folderListSortOptions';
 import { useReminderDraftRequest } from '../features/settings/context/ReminderDraftRequest';
-import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
-import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
+import {
+  CompanionBrowseContainerActions,
+  CompanionBrowseContainerSection,
+  CompanionFolderCreateChoices,
+  type CompanionBrowsePage
+} from './CompanionBrowseContainerMenu';
 import {
   COMPANION_SORT_LABEL_KEYS,
   translateCompanionSortOrderLabel
 } from './companionBrowseSortLabels';
-import { useCompanionDirectoryBatchMenuAction } from './CompanionDirectoryBatchMenu';
+import { useCompanionDirectoryBatchMenuAction, useCompanionEmptyTrashMenuAction } from './CompanionDirectoryBatchMenu';
 import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
-import {
-  CompanionWorkspaceCreateChoices,
-  CompanionWorkspaceHistoryActions,
-  useCompanionWorkspaceActions
-} from './CompanionWorkspaceActions';
+import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 type BrowseMenuView = 'menu' | 'new' | 'sort';
 
@@ -52,10 +52,6 @@ function BrowseDiveMenuActions({ actions, onClose }: { actions: CompanionBrowseD
   const t = useTranslation();
   const reminder = useReminderDraftRequest();
   return <>
-    {actions.onStart && <CompanionMenuRow label={t('desktop.nodeList.dive.startFlow')} onSelect={() => {
-      onClose();
-      actions.onStart?.();
-    }} />}
     {reminder && isNativeCompanionRuntime() && <CompanionMenuRow label={t('settings.reminders.createForDive')} onSelect={() => {
       onClose();
       reminder.createForDive(actions.dive);
@@ -66,15 +62,14 @@ function BrowseDiveMenuActions({ actions, onClose }: { actions: CompanionBrowseD
 function BrowseMainMenu(props: {
   activeSortLabel: string;
   diveActions: CompanionBrowseDiveActions | undefined;
+  page: CompanionBrowsePage;
   onClose(): void;
-  onOpenNew?: () => void;
+  onOpenNew(): void;
   onOpenSort?: () => void;
-  onSync?: () => void;
-  syncDisabled?: boolean;
-  syncStatus?: string;
 }) {
   const t = useTranslation();
   const select = useCompanionDirectoryBatchMenuAction();
+  const emptyTrash = useCompanionEmptyTrashMenuAction();
   return (
     <>
       <CompanionWorkspaceHistoryActions />
@@ -82,18 +77,15 @@ function BrowseMainMenu(props: {
         props.onClose();
         select();
       }} />}
+      <CompanionBrowseContainerActions page={props.page} onClose={props.onClose} onOpenCreate={props.onOpenNew} />
       {props.diveActions && <BrowseDiveMenuActions actions={props.diveActions} onClose={props.onClose} />}
-      {props.onOpenNew && <CompanionMenuRow label={t('companion.browse.new.open')} onSelect={props.onOpenNew} trailingIcon={ChevronRight} />}
-      <CompanionMenuRow
-        label={t('companion.settings.sync.title')}
-        {...definedProps({
-          disabled: props.syncDisabled,
-          onSelect: props.onSync,
-          status: props.syncStatus
-        })}
-      />
       {props.onOpenSort && <CompanionMenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort}
         status={props.activeSortLabel} trailingIcon={ChevronRight} />}
+      {emptyTrash && <CompanionMenuRow destructive label={t('companion.batch.emptyTrash')} onSelect={() => {
+        props.onClose();
+        emptyTrash();
+      }} />}
+      <CompanionBrowseContainerSection page={props.page} onClose={props.onClose} />
     </>
   );
 }
@@ -132,25 +124,22 @@ function BrowseSortMenu(props: {
 
 type CompanionBrowseMenuSheetProps = {
   menuTitle: string;
-  allowRootCreation?: boolean | undefined;
+  page: CompanionBrowsePage;
   diveActions?: CompanionBrowseDiveActions | undefined;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenChange(open: boolean): void;
-  onSync?: () => void;
   open: boolean;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
-  syncDisabled?: boolean;
-  syncStatus?: string;
 };
 
 export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
   const t = useTranslation();
-  const workspace = useCompanionWorkspaceActions();
-  const canCreate = Boolean(props.allowRootCreation && workspace && isAvailableNativeCompanionRuntime());
+  const page = props.page;
+  const canCreate = page.kind === 'folder';
   const [selectedView, setView] = useState<BrowseMenuView>('menu');
-  const canSort = !props.diveActions;
+  const canSort = page.kind !== 'root' && page.kind !== 'dive' && !props.diveActions;
   const view = (selectedView === 'new' && !canCreate) || (selectedView === 'sort' && !canSort) ? 'menu' : selectedView;
   const handleOpenChange = (open: boolean) => {
     if (!open) setView('menu');
@@ -163,23 +152,19 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
       leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
       onOpenChange={handleOpenChange}
       open={props.open}
-      title={view === 'menu' ? props.menuTitle : t(view === 'new' ? 'companion.browse.new.title' : 'companion.browse.sort')}
+      title={view === 'menu' ? props.menuTitle : t(view === 'new' ? 'companion.browse.createHere' : 'companion.browse.sort')}
     >
       {view === 'menu' ? (
         <BrowseMainMenu
           activeSortLabel={t(COMPANION_SORT_LABEL_KEYS[props.sortKey])}
           diveActions={props.diveActions}
+          page={page}
           onClose={close}
-          {...definedProps({
-            onSync: props.onSync,
-            onOpenNew: canCreate ? () => setView('new') : undefined,
-            onOpenSort: canSort ? () => setView('sort') : undefined,
-            syncDisabled: props.syncDisabled,
-            syncStatus: props.syncStatus
-          })}
+          onOpenNew={() => setView('new')}
+          {...(canSort ? { onOpenSort: () => setView('sort') } : {})}
         />
-      ) : view === 'new' ? (
-        <CompanionWorkspaceCreateChoices onSelect={close} />
+      ) : view === 'new' && page.kind === 'folder' ? (
+        <CompanionFolderCreateChoices nodeId={page.nodeId} onClose={close} />
       ) : (
         <BrowseSortMenu
           onChangeSortDirection={props.onChangeSortDirection}

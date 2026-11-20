@@ -15,7 +15,7 @@ import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { RecentArticleRow } from './CompanionRecentArticleList';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -39,7 +39,6 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       return next;
     }}>
     {selection.kind === 'root' && <>
-      <CompanionWorkspaceCreateChoices onSelect={() => {}} />
       <RecentArticleRow article={{ nodeId: 'Root Topic', title: 'Root Topic', preview: null, updatedAt: '', folderLabel: null }}
         currentArticleId={null} onSelectArticle={() => {}} />
     </>}
@@ -68,7 +67,7 @@ it('adds a folder and root Topic from Browse, updates the open workspace, syncs 
     openRow(addLabel);
     const picker = screen.getByRole('dialog', { name: 'Add to Dive' });
     expect(within(picker).queryByRole('button', { name: 'Probability' })).toBeNull();
-    fireEvent.click(within(picker).getByRole('button', { name: 'Done' }));
+    fireEvent.click(within(picker).getByRole('button', { name: 'Close' }));
     await expect(addCompanionDiveSource(dive.id, 'Nested Topic')).rejects.toThrow('source is unavailable');
     await addFromMenu('Root Topic');
     openRow('Open folder Probability');
@@ -103,7 +102,7 @@ function openFolderActions(title: string) {
 
 async function addFromMenu(title: string, kind: 'folder' | 'topic' = 'topic') {
   if (kind === 'folder') openFolderActions(title);
-  else openRow(new RegExp(`: ${title}$`));
+  else fireEvent.keyDown(screen.getAllByRole('button', { name: `Open topic ${title}` })[0]!, { key: 'F10', shiftKey: true });
   openRow(addLabel);
   const picker = screen.getByRole('dialog', { name: 'Add to Dive' });
   fireEvent.change(within(picker).getByRole('searchbox'), { target: { value: 'prob' } });
@@ -125,7 +124,7 @@ it('removes a directly added Topic from its Dive and preserves the library Topic
     await addFromMenu('Root Topic');
     openRow('Open folder Probability');
     expect(screen.queryByRole('heading', { name: 'Sources' })).toBeNull();
-    fireEvent.click(screen.getAllByRole('button', { name: 'More: Root Topic' })[0]!);
+    fireEvent.keyDown(screen.getAllByRole('button', { name: 'Open topic Root Topic' })[0]!, { key: 'F10', shiftKey: true });
     openRow('Remove from This Dive');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open topic Root Topic' })).toBeNull());
     const preservedTopic = (await readSnapshot()).nodesById['Root Topic'];
@@ -154,7 +153,7 @@ it('creates a Dive on mobile with a source found by its folder path and syncs it
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    openRow('Dive');
+    openRow('Create Dive');
     const sheet = screen.getByRole('dialog', { name: 'Create Dive' });
     fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Dive' } });
     fireEvent.change(within(sheet).getByRole('searchbox'), { target: { value: 'Shelf / Leaf' } });

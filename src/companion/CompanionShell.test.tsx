@@ -226,7 +226,7 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Sync' })).toBeInTheDocument();
     expect(screen.getByText('Connect to a Sync Group')).toBeInTheDocument();
     expect(screen.getByTestId('companion-sync-discover')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: 'Sync now' }).filter(button => !button.closest('header, [role="banner"]'))).toHaveLength(0);
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);

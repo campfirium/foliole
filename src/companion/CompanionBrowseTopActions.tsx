@@ -3,26 +3,23 @@ import { useState } from 'react';
 
 import { resolveTopicFocusPresentation } from '../features/nodes/components/topicFocusPresentation';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
-import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
+import type { CompanionBrowsePage } from './CompanionBrowseContainerMenu';
 import { CompanionBrowseMenuSheet, type CompanionBrowseDiveActions } from './CompanionBrowseMenuSheet';
 import { CompanionTopActionButton } from './CompanionTopActionButton';
 
 export function CompanionBrowseTopActions(props: {
-  allowRootCreation?: boolean | undefined;
+  page: CompanionBrowsePage;
   diveActions?: CompanionBrowseDiveActions | undefined;
   menuTitle?: string;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenCapture(): void;
-  onSync?: () => void;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
-  syncDisabled?: boolean;
-  syncStatus?: string;
   topicFocusDisabled?: boolean;
 }) {
   const t = useTranslation();
@@ -33,7 +30,7 @@ export function CompanionBrowseTopActions(props: {
 
   return (
     <div className="flex items-center gap-1">
-      {supportsCompanionNodeMutationSurface('quick-capture') ? (
+      {props.page.kind !== 'trash' && supportsCompanionNodeMutationSurface('quick-capture') ? (
         <CompanionTopActionButton
           icon={Plus}
           label={t('companion.capture.title')}
@@ -41,16 +38,16 @@ export function CompanionBrowseTopActions(props: {
           testId="companion-capture-open"
         />
       ) : null}
-      <CompanionTopActionButton
+      {props.page.kind !== 'root' && <CompanionTopActionButton
         disabled={Boolean(props.topicFocusDisabled)}
         icon={icon}
         label={t(labelKey)}
         onClick={toggleDismissedTopicsVisibility}
         pressed={topicFocusActive}
-      />
+      />}
       <CompanionTopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
-        allowRootCreation={props.allowRootCreation}
+        page={props.page}
         diveActions={props.diveActions}
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
@@ -59,11 +56,6 @@ export function CompanionBrowseTopActions(props: {
         menuTitle={props.menuTitle ?? props.diveActions?.dive.title ?? t('companion.browse.title')}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}
-        {...definedProps({
-          onSync: props.onSync,
-          syncDisabled: props.syncDisabled,
-          syncStatus: props.syncStatus
-        })}
       />
     </div>
   );

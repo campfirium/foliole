@@ -22,11 +22,12 @@ export function getCompanionWorkspaceMenuOptions(node: MenuNodes[string], nodes:
   return { mutable, childKinds, canAddToDive: canUseDiveSource(node, parentKind) };
 }
 
-export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRestoreAction, menuRows, children }: {
+export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRestoreAction, menuRows, hideCreate, children }: {
   nodeId: string;
   onSelect(state: WorkspaceNodeSheetState): void;
   hasRestoreAction?: boolean;
   menuRows?: boolean;
+  hideCreate?: boolean;
   onSaved?: () => void;
   children?: ReactNode;
 }) {
@@ -53,7 +54,7 @@ export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRe
     {canAddToDive && row(t('desktop.nodeList.menu.addToDive'), () => select('add-to-dive'))}
     {mutable && node.kind === 'topic' && !node.anchorLink && row(t(node.shelvedAt ? 'companion.workspace.unshelve' : 'companion.workspace.shelve'),
       () => void actions.execute({ type: node.shelvedAt ? 'unshelve' : 'shelve', nodeId }, onSaved))}
-    {childKinds.map(kind => row(t(kind === 'folder' ? 'desktop.command.createFolder' : kind === 'topic' ? 'desktop.command.createTopic' : 'desktop.command.createItem'),
+    {!hideCreate && childKinds.map(kind => row(t(kind === 'folder' ? 'desktop.command.createFolder' : kind === 'topic' ? 'desktop.command.createTopic' : 'desktop.command.createItem'),
       () => onSelect({ mode: 'create', nodeId: null, parentNodeId: nodeId, kind })))}
     {node.deletedAt && !hasRestoreAction && row(t('companion.reading.restoreFromTrash'), () => void actions.execute({ type: 'restore', nodeId }, onSaved))}
     {mutable && row(t('companion.workspace.delete'), () => select('delete'), true)}

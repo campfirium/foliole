@@ -41,18 +41,7 @@ describe('CompanionSyncInlineStatus visibility', () => {
     expect(attention).toHaveClass('h-10', 'w-10');
     expect(attention.querySelector('[aria-hidden="true"]')).toHaveClass('h-4', 'w-4');
     fireEvent.click(attention);
-    expect(onOpenSyncSettings).toHaveBeenCalledTimes(2);
-  });
-
-  it('stays hidden while idle even when a sync endpoint is remembered', async () => {
-    const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
-
-    renderWithLocalization(
-      <CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={createWorkspaceSync() as never} />
-    );
-
-    expect(screen.queryByLabelText('Sync in progress')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+    expect(onOpenSyncSettings).toHaveBeenCalledTimes(1);
   });
 
   it('shows top bar sync progress as an icon-only entry', async () => {
@@ -87,4 +76,20 @@ describe('CompanionSyncInlineStatus visibility', () => {
     expect(screen.queryByText('Desktop sync failed.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
   });
+});
+
+it('offers one-tap sync while idle once a sync endpoint exists, and nothing without one', async () => {
+  const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
+  const workspaceSync = createWorkspaceSync();
+  const view = renderWithLocalization(
+    <CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={workspaceSync as never} />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
+  expect(workspaceSync.pullFromDesktop).toHaveBeenCalledExactlyOnceWith('http://10.0.2.2:38641');
+  view.unmount();
+
+  renderWithLocalization(<CompanionSyncInlineStatus onOpenSyncSettings={vi.fn()} workspaceSync={createWorkspaceSync({
+    state: { endpoint_url: null, last_synced_at: null, remembered_targets: [], sync_events: [] }
+  }) as never} />);
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
 });

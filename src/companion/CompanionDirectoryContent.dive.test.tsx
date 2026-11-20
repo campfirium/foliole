@@ -87,7 +87,7 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   expect(screen.queryByRole('heading', { name: 'Topics' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open topic Statistics primer' })).toBeVisible();
 
-  expect(screen.queryByRole('button', { name: 'Start Dive' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Start Dive' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
   let menu = within(screen.getByRole('dialog', { name: 'Probability' }));
@@ -99,9 +99,12 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
 
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
   menu = within(screen.getByRole('dialog', { name: 'Probability' }));
-  fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
+  expect(menu.queryByRole('button', { name: 'Start Dive' })).toBeNull();
+  expect(menu.getByRole('button', { name: 'Add Source…' })).toBeVisible();
+  expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+  fireEvent.click(screen.getByRole('button', { name: 'Start Dive' }));
   expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: ['member'] });
-  expect(screen.queryByRole('dialog')).toBeNull();
 
   view.rerender(<Directory start={start} openReminders={openReminders} snapshot={{ ...snapshot, nodesById: {
     ...nodesById, member: { ...nodesById.member, parentNodeId: null }
@@ -122,24 +125,24 @@ function openBrowseMenu() {
   return within(screen.getByRole('dialog'));
 }
 
-it('offers a single New entry on the directory home and leaves one sheet open when a type is picked', () => {
+it('puts root creation on the directory page and creation inside a folder in its menu', () => {
   renderWithLocalization(<Directory snapshot={creationSnapshot} start={vi.fn()} openReminders={noop} />);
-  let menu = openBrowseMenu();
-  expect(menu.queryByRole('button', { name: /^(Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
-  fireEvent.click(menu.getByRole('button', { name: 'New…' }));
-  const sheet = screen.getByRole('dialog', { name: 'New' });
-  menu = within(sheet);
-  expect(menu.getByRole('button', { name: 'Folder' })).toBeVisible();
-  expect(menu.getByRole('button', { name: 'Dive' })).toBeVisible();
-  expect(menu.getByRole('button', { name: 'Virtual' })).toBeVisible();
-  fireEvent.click(menu.getByRole('button', { name: 'Back' }));
-  expect(screen.getByRole('dialog', { name: 'Directory' })).toBe(sheet);
-  fireEvent.click(screen.getByRole('button', { name: 'New…' }));
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Folder' }));
+  expect(openBrowseMenu().queryByRole('button', { name: /^(New…|New Here…|Create Folder)$/ })).toBeNull();
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+  expect(screen.getByRole('button', { name: 'Create Dive' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Create in Virtual' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Create Folder' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   expect(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
-  fireEvent.click(screen.getByLabelText('Done'));
-  expect(openBrowseMenu().getByRole('button', { name: 'New…' })).toBeVisible();
+  fireEvent.click(screen.getByLabelText('Close'));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open folder Library folder' }));
+  expect(screen.queryByRole('button', { name: 'Create Folder' })).toBeNull();
+  fireEvent.click(openBrowseMenu().getByRole('button', { name: 'New Here…' }));
+  const sheet = within(screen.getByRole('dialog', { name: 'New Here…' }));
+  fireEvent.click(sheet.getByRole('button', { name: 'Create Topic' }));
+  expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  expect(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
 });
 
 it.each([

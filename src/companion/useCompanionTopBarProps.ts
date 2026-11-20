@@ -18,25 +18,11 @@ import { CompanionFlowModeMenu } from './CompanionFlowModeControl';
 import { resolveCompanionDiveStarter } from './companionStartDive';
 import { CompanionTopBar } from './CompanionTopBar';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
-import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
-
-function resolveBrowseSyncProps(workspaceSync: WorkspaceSync, t: ReturnType<typeof useLocalization>['t']) {
-  const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
-  return {
-    onSync: endpointUrl
-      ? () => {
-          void workspaceSync.pullFromDesktop(endpointUrl);
-        }
-      : undefined,
-    syncDisabled: !endpointUrl || workspaceSync.status === 'syncing',
-    syncStatus: workspaceSync.status === 'syncing' ? t('companion.browse.syncing') : endpointUrl ? undefined : t('companion.browse.notConnected')
-  };
-}
 
 function goBackInDirectory(args: {
   externalDirectory: CompanionExternalDirectory;
@@ -102,7 +88,6 @@ export function useCompanionTopBarProps(args: {
 }) {
   const localization = useLocalization();
   const { t } = localization;
-  const browseSync = resolveBrowseSyncProps(args.workspaceSync, t);
 
   if (args.surface.isFlowBrowsing) return {
     title: args.surface.browsedFolder?.title ?? 'Flow',
@@ -125,9 +110,6 @@ export function useCompanionTopBarProps(args: {
       args.setIsBrowseDirectoryOpen(true);
     },
     () => args.setIsCaptureSheetOpen(true),
-    browseSync.onSync,
-    browseSync.syncDisabled,
-    browseSync.syncStatus,
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),
     () => args.setSettingsPage('sync'),

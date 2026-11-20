@@ -66,7 +66,7 @@ it('offers bulk Trash actions inside a folder, with selection after history and 
     const actionBar = within(screen.getByTestId('companion-selection-action-bar'));
     expect(actionBar.getByRole('button', { name: 'Move to Trash' })).toBeDisabled();
     click('Select all in this list');
-    expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
+    expect(screen.getByText('2 / 2 selected')).toBeVisible();
     fireEvent.click(actionBar.getByRole('button', { name: 'Move to Trash' }));
     const confirm = within(screen.getByRole('dialog', { name: 'Move to Trash' }));
     fireEvent.click(confirm.getByRole('button', { name: 'Move to Trash' }));
@@ -99,7 +99,7 @@ it('removes selected direct sources from a Dive as a batch and preserves the ori
     for (const title of ['Shelf', 'Direct']) {
       fireEvent.click(screen.getByRole('checkbox', { name: `Select ${title}` }));
     }
-    expect(screen.getByText('2 of 3 selected in this list')).toBeVisible();
+    expect(screen.getByText('2 / 3 selected')).toBeVisible();
     click('Remove from This Dive');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open topic Direct' })).toBeNull());
     expect(screen.getByRole('button', { name: 'Open topic Keep' })).toBeVisible();
@@ -136,7 +136,7 @@ it('restores multiple selected entries and their children while leaving the rema
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     click('Open folder Trash');
     enterSelection();
-    expect(screen.getByText('0 of 4 selected in this list')).toBeVisible();
+    expect(screen.getByText('0 / 4 selected')).toBeVisible();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder A' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder B' }));
     click('Restore');
@@ -179,7 +179,7 @@ it.each(['android', 'ios'])('permanently deletes within a Trash folder and keeps
     click('Open folder Folder A');
     enterSelection();
     click('Select all in this list');
-    expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
+    expect(screen.getByText('2 / 2 selected')).toBeVisible();
     click('Delete Permanently');
     let confirmation = screen.getByRole('dialog', { name: 'Delete Permanently' });
     expect(within(confirmation).getByText(/2 selected entries.*2 entries.*cannot be undone/)).toBeVisible();

@@ -236,7 +236,7 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByRole('dialog', { name: 'Appearance' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Increase Size' }));
     expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog', { name: 'Appearance' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
 

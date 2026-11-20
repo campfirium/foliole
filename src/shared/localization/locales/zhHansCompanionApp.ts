@@ -1,6 +1,19 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_APP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.history.undoAction': '撤销{action}',
+  'companion.history.redoAction': '重做{action}',
+  'companion.history.action.delete': '删除',
+  'companion.history.action.restore': '恢复',
+  'companion.history.action.rename': '改名',
+  'companion.history.action.move': '移动',
+  'companion.history.action.shelve': '搁置',
+  'companion.history.action.unshelve': '取消搁置',
+  'companion.history.action.priority': '优先级',
+  'companion.history.action.create': '新建',
+  'companion.history.action.import': '导入',
+  'companion.history.action.grade': '评分',
+  'companion.history.action.dismiss': '移除',
   'companion.share.incomplete': '分享尚未完成，请重试。',
   'companion.search.unavailable': '此结果已不可用。',
   'companion.search.refresh': '重新搜索',

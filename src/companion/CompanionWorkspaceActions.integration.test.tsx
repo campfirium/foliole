@@ -62,7 +62,7 @@ function Harness({ flowNodeId }: { flowNodeId?: string } = {}) {
   </CompanionWorkspaceActionsProvider></LocalizationProvider>;
 }
 async function createFolder(title = 'Created folder') {
-  fireEvent.click(screen.getByRole('button', { name: 'Folder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create Folder' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: title } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
 }
@@ -79,13 +79,13 @@ it('creates and renames a folder from the real menu, then undoes and redoes both
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Renamed folder' } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Renamed folder' })).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Undo Rename' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Undo New' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Created folder' })).toBeNull());
-  fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Redo New' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Redo Rename' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Renamed folder' })).toBeInTheDocument());
 });
 
@@ -217,7 +217,7 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   fireEvent.change(item, { target: { value: '7' } });
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(facts()[0]).toEqual({ id: 'item', priority: 7 });
-  const undo = screen.getByRole('button', { name: 'Undo' });
+  const undo = await screen.findByRole('button', { name: 'Undo Priority' });
   await waitFor(() => expect(undo).toBeEnabled());
   fireEvent.click(undo);
   await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));

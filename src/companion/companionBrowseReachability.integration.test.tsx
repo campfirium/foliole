@@ -217,7 +217,7 @@ function seedTopicFocusBranches() {
 function TopicFocusDirectory({ snapshot }: { snapshot: WorkspaceSnapshot | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   return <>
-    <CompanionBrowseTopActions onChangeSortDirection={() => {}} onChangeSortKey={() => {}}
+    <CompanionBrowseTopActions page={{ kind: 'folder', nodeId: 'other' }} onChangeSortDirection={() => {}} onChangeSortKey={() => {}}
       onOpenCapture={() => {}} sortDirection="asc" sortKey="name" />
     <div ref={scrollRef}>
       <CompanionListViewportProvider scrollRef={scrollRef} sortIdentity="name:asc">

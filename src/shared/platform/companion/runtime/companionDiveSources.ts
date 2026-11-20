@@ -8,10 +8,17 @@ import { saveCompanionVirtualDirectoryVersion } from './companionVirtualDirector
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function addCompanionDiveSource(diveId: string, sourceId: string) {
+  return addCompanionDiveSources(diveId, [sourceId]);
+}
+
+/** Adds several direct sources to one Dive in a single write. */
+export function addCompanionDiveSources(diveId: string, sourceIds: readonly string[]) {
   return changeCompanionDiveSources(diveId, async (db, dive) => {
-    const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(sourceId));
-    if (!source) throw new Error('A Dive source is unavailable');
-    return appendDiveSources(dive, [sourceId]);
+    for (const sourceId of sourceIds) {
+      const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(sourceId));
+      if (!source) throw new Error('A Dive source is unavailable');
+    }
+    return appendDiveSources(dive, sourceIds);
   });
 }
 

@@ -37,13 +37,14 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
   const node = nodes[command.nodeId];
   const trashAction = command.type === 'delete' || command.type === 'restore';
   const index = isManualVirtualFolderNode(node);
-  const virtualAction = (trashAction && readDiveNode(node)) || (index && (trashAction || command.type === 'rename'));
+  const dive = Boolean(readDiveNode(node));
+  const virtualAction = ((trashAction || command.type === 'rename') && dive) || (index && (trashAction || command.type === 'rename'));
   if (!node || node.id.startsWith('special-') || (node.virtualFilter && !virtualAction) ||
     (command.type === 'restore' ? !node.deletedAt : node.deletedAt)) throw new Error('node_mutation_unavailable');
   const next = { ...node, updatedAt: now };
   if (command.type === 'rename') {
     if (!command.title.trim()) throw new Error('node_title_required');
-    next.title = command.title.trim();
+    next.title = dive ? normalizeDiveTitle(command.title) : command.title.trim();
     next.isTitleManual = true;
   } else if (command.type === 'set-priority') {
     if ((node.kind !== 'topic' && node.kind !== 'item') ||

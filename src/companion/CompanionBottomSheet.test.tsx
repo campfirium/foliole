@@ -6,7 +6,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 
 describe('CompanionBottomSheet', () => {
-  it('offers Done to dismiss the sheet without implying cancellation', () => {
+  it('offers Close to dismiss the sheet without implying cancellation or a separate confirm', () => {
     const onOpenChange = vi.fn();
     renderWithLocalization(
       <CompanionBottomSheet onOpenChange={onOpenChange} open title="Actions">
@@ -15,7 +15,7 @@ describe('CompanionBottomSheet', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
