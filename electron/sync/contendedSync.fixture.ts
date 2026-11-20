@@ -24,7 +24,8 @@ export async function reopenAfterSyncStops() {
 
 let heldManualRound: { lease: SyncPeerRoundLease; peerId: string; remaining: number } | undefined;
 
-export function holdSyncRound(args: Record<string, unknown>) {
+export async function holdSyncRound(args: Record<string, unknown>) {
+  if (args.releaseAfterManualRounds) await stopFixtureSync();
   const peerId = String(args.identity);
   const lease = desktopSyncPeerRoundOwner().acquireOutbound(peerId, 'fixture-existing-round');
   if (!args.releaseAfterManualRounds) return;

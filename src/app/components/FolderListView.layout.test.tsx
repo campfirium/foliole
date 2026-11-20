@@ -1,5 +1,5 @@
-import { screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { fireEvent, screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -22,6 +22,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
 }
 
 it('keeps long titles, empty bodies, and long summaries clamped inside the row', () => {
+  const onSelectNode = vi.fn();
   renderWithLocalization(
     <FolderListView
       folderNodeId="folder-1"
@@ -41,7 +42,7 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
       }}
       onChangeSortDirection={() => undefined}
       onChangeSortKey={() => undefined}
-      onSelectNode={() => undefined}
+      onSelectNode={onSelectNode}
     />
   );
 
@@ -51,7 +52,8 @@ it('keeps long titles, empty bodies, and long summaries clamped inside the row',
   expect(screen.getByTestId('folder-list-excerpt-node-4').className).toContain('h-28');
   expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('line-clamp-4');
   expect(screen.getByTestId('folder-list-excerpt-node-5').className).toContain('h-28');
-  expect(screen.getByRole('button', { name: /Open An extremely long title/u }).closest('li')?.className).toContain('border-b');
+  fireEvent.click(screen.getByRole('button', { name: /Open An extremely long title/u }));
+  expect(onSelectNode).toHaveBeenCalledWith('node-4');
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
 

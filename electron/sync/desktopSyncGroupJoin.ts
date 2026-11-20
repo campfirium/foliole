@@ -85,28 +85,19 @@ export async function completeDesktopSyncGroupJoin(options: CompleteDesktopSyncG
   return await work;
 }
 
-async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGroupJoinOptions) {
-  const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
-  if (!pending) {
+async function loadJoinCompletionState() {
+  return runWithDatabaseConnectionOwner(async () => {
+    const pending = loadDesktopSyncGroupJoinState().pending;
+    if (pending) return { pending };
     const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
-    const group = loadDesktopSyncGroup();
-    if (!adoption) {
-      if (group) return group;
-      throw new Error('sync_group_join_not_pending');
-    }
-    if (!group || group.group_id !== adoption.groupId) {
-      throw new Error('sync_group_local_adoption_source_unavailable');
-    }
-    const route = loadDesktopSyncGroupRoutes(adoption.groupId).find((peer) => peer.peer_device_id === adoption.providerDeviceId) ?? {
-      endpoint_url: adoption.endpointUrl, group_id: adoption.groupId,
-      local_device_id: group.local_device_identity_key, peer_device_id: adoption.providerDeviceId,
-      peer_device_name: adoption.providerDeviceName, peer_platform: adoption.providerPlatform
-    };
-    saveDesktopSyncGroupRoute(route);
-    await options.onMembershipCommitted?.();
-    await requireInitialSyncComplete(route);
-    return loadDesktopSyncGroup();
-  }
+    return { pending: null, adoption, group: loadDesktopSyncGroup() };
+  });
+}
+
+async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGroupJoinOptions) {
+  const state = await loadJoinCompletionState();
+  const { pending } = state;
+  if (!pending) return resumeDesktopSyncGroupJoin(state, options);
   if (Date.now() >= new Date(pending.request.expires_at).getTime()) {
     saveDesktopSyncGroupPendingJoin(null);
     throw new Error('sync_group_join_request_expired');
@@ -132,6 +123,31 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
   notifyDesktopSyncGroupOverviewChanged();
   if (pending.mode === 'use-group') await requireInitialSyncComplete(route);
   else queueInitialSync(route);
+  return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
+}
+
+async function resumeDesktopSyncGroupJoin(
+  { adoption, group }: {
+    adoption: Awaited<ReturnType<typeof loadSyncGroupLocalAdoption>>;
+    group: ReturnType<typeof loadDesktopSyncGroup>;
+  },
+  options: CompleteDesktopSyncGroupJoinOptions
+) {
+  if (!adoption) {
+    if (group) return group;
+    throw new Error('sync_group_join_not_pending');
+  }
+  if (!group || group.group_id !== adoption.groupId) {
+    throw new Error('sync_group_local_adoption_source_unavailable');
+  }
+  const route = loadDesktopSyncGroupRoutes(adoption.groupId).find((peer) => peer.peer_device_id === adoption.providerDeviceId) ?? {
+    endpoint_url: adoption.endpointUrl, group_id: adoption.groupId,
+    local_device_id: group.local_device_identity_key, peer_device_id: adoption.providerDeviceId,
+    peer_device_name: adoption.providerDeviceName, peer_platform: adoption.providerPlatform
+  };
+  saveDesktopSyncGroupRoute(route);
+  await options.onMembershipCommitted?.();
+  await requireInitialSyncComplete(route);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
 }
 
