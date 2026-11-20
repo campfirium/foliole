@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
   removeTrashedAttachment, restoreAttachmentFromTrash } from './attachmentTrashFiles.js';
@@ -33,17 +33,35 @@ it('moves recoverable bytes to trash, restores them, and deletes only on explici
   expect(inventoryAttachmentDirectory(f.trash)).toEqual([]);
 });
 
-it('retains the source when a destination conflicts or is a symbolic link', () => {
+it('retains the source when the destination is a symbolic link', () => {
   const f = fixture();
   fs.mkdirSync(f.trash);
   const target = path.join(f.trash, f.key);
-  fs.writeFileSync(target, 'different bytes');
-  expect(() => moveAttachmentToTrash(f.assets, f.key)).toThrow('conflict');
-  expect(fs.readFileSync(path.join(f.assets, f.key))).toEqual(f.bytes);
-  fs.unlinkSync(target);
   fs.symlinkSync(path.join(f.assets, f.key), target);
   expect(() => moveAttachmentToTrash(f.assets, f.key)).toThrow('unsafe');
   expect(fs.readFileSync(path.join(f.assets, f.key))).toEqual(f.bytes);
+});
+
+it.each([true, false])('keeps the existing file by key without reading bytes (toTrash=%s)', toTrash => {
+  const f = fixture();
+  fs.mkdirSync(f.trash);
+  const active = path.join(f.assets, f.key);
+  const trash = path.join(f.trash, f.key);
+  const source = toTrash ? active : trash;
+  const target = toTrash ? trash : active;
+  const existing = Buffer.from('existing destination');
+  fs.writeFileSync(source, f.bytes);
+  fs.writeFileSync(target, existing);
+  const read = vi.spyOn(fs, 'readFileSync');
+  try {
+    const move = toTrash ? moveAttachmentToTrash : restoreAttachmentFromTrash;
+    move(f.assets, f.key);
+    expect(read).not.toHaveBeenCalled();
+  } finally {
+    read.mockRestore();
+  }
+  expect(fs.existsSync(source)).toBe(false);
+  expect(fs.readFileSync(target)).toEqual(existing);
 });
 
 it('deduplicates identical copies without losing recoverable bytes and refuses path traversal', () => {

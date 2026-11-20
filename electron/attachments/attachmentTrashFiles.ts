@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -40,12 +39,6 @@ function moveAttachment(assetsDir: string, storageKey: string, toTrash: boolean)
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   if (fs.existsSync(destination)) {
     assertRegularFile(destination);
-    const expectedHash = storageKey.slice(0, 64);
-    for (const file of [source, destination]) {
-      if (createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== expectedHash) {
-        throw new Error('attachment_trash_destination_conflict');
-      }
-    }
     fs.unlinkSync(source);
   } else fs.renameSync(source, destination);
 }
