@@ -162,8 +162,9 @@ export function HighlightRangeHandles(props: HighlightRangeHandlesProps) {
     setDraftRange
   });
 
+  // Touch readers scroll one end out of the rendered text while the other stays draggable.
   if (!positions || !props.highlight || typeof document === 'undefined' ||
-    (props.highlight.kind !== 'selection' && (!positions.from || !positions.to))) {
+    (!props.touch && props.highlight.kind !== 'selection' && (!positions.from || !positions.to))) {
     return null;
   }
 

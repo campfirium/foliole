@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 
-function ScrollSurface(props: { onScrollTopChange(scrollTop: number): void; restoreScrollTop: number }) {
-  const position = useCompanionImmersiveScrollPosition('topic-1', props.restoreScrollTop, props.onScrollTopChange);
+function ScrollSurface(props: { nodeId?: string; onScrollTopChange(scrollTop: number): void; restoreScrollTop: number }) {
+  const position = useCompanionImmersiveScrollPosition(props.nodeId ?? 'topic-1', props.restoreScrollTop, props.onScrollTopChange);
   return <section data-testid="surface" onScroll={position.handleScroll} ref={position.surfaceRef} />;
 }
 
@@ -17,7 +17,15 @@ describe('useCompanionImmersiveScrollPosition', () => {
     expect(surface.scrollTop).toBe(5400);
     fireEvent.scroll(surface, { target: { scrollTop: 5744 } });
     expect(onScrollTopChange).toHaveBeenCalledWith(5744);
-    view.rerender(<ScrollSurface onScrollTopChange={onScrollTopChange} restoreScrollTop={0} />);
+    view.rerender(<ScrollSurface nodeId="topic-2" onScrollTopChange={onScrollTopChange} restoreScrollTop={0} />);
     expect(surface.scrollTop).toBe(0);
+  });
+
+  it('keeps the current position when a refresh of the open article carries an older saved position', () => {
+    const view = render(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={0} />);
+    const surface = screen.getByTestId('surface');
+    fireEvent.scroll(surface, { target: { scrollTop: 2177 } });
+    view.rerender(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={4828} />);
+    expect(surface.scrollTop).toBe(2177);
   });
 });

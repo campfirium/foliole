@@ -6,10 +6,14 @@ export function useCompanionImmersiveScrollPosition(
   onScrollTopChange?: (scrollTop: number) => void
 ) {
   const surfaceRef = useRef<HTMLElement | null>(null);
+  const restoredNodeId = useRef<string | null>(null);
 
+  // Restore only when an article opens; later snapshot refreshes carry older saved positions.
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (surface) surface.scrollTop = Math.max(0, restoreScrollTop);
+    if (!surface || restoredNodeId.current === nodeId) return;
+    restoredNodeId.current = nodeId;
+    surface.scrollTop = Math.max(0, restoreScrollTop);
   }, [nodeId, restoreScrollTop]);
 
   const handleScroll = useCallback((event: ReactUIEvent<HTMLElement>) => {

@@ -13,6 +13,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
+import { saveCompanionSyncNodeViewState } from '../shared/platform/companionSyncObjects';
 import { loadCompanionReadableArticle, loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 
@@ -79,6 +80,7 @@ function Reader({ initial }: { initial: Awaited<ReturnType<typeof loadCompanionW
   const sync = { ...actions, state, bootstrapState: { device_id: 'test-device' } } as ReturnType<typeof useCompanionWorkspaceSync>;
   if (!article) return null;
   return <MouseGestureSettingsProvider><CompanionDraftProvider>
+    <output data-testid="restored-scroll-top">{article.persistedNodeViewState?.scrollTop ?? 0}</output>
     <ImmersiveReadableArticle onExit={() => {}} snapshot={state.workspace_snapshot} readableArticle={article}
       onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(sync)}
       onAdjustExistingHighlightRange={createCompanionExistingHighlightRangeHandler(sync)} />
@@ -91,36 +93,45 @@ function touchPointer(target: Element | Document, type: string, x: number, y: nu
   fireEvent(target, event);
 }
 
-it('scrolls the reader while an existing highlight end handle is held at the bottom edge and saves the longer range', async () => {
+it.each([0, 20])('keeps both the handles and the reading position while extending a saved highlight past the bottom edge from %ipx', async (startTop) => {
   const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind: 'highlight', payload,
     snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
-  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getPositionClientRect')
-    .mockImplementation(position => new DOMRect(position * 4, 100, 4, 20));
+  let surface: HTMLElement | null = null;
+  // jsdom has no layout. Text far above the viewport leaves the rendered range, as in CodeMirror.
+  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getPositionClientRect').mockImplementation(position =>
+    surface && position + 30 < surface.scrollTop - startTop ? null : new DOMRect(position * 4, 100, 4, 20));
+  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getDocumentPositionAtClientPoint')
+    .mockImplementation(x => Math.min(content.length, Math.round(x / 4) + (surface ? surface.scrollTop - startTop : 0)));
   const { container } = renderWithLocalization(<Reader initial={await loadCompanionWorkspaceSyncState()} />);
   const highlight = await waitFor(() => {
     const element = container.querySelector('.cm-md-highlight');
     expect(element).not.toBeNull();
     return element!;
   });
-  const surface = container.querySelector<HTMLElement>('[data-companion-reading-surface]')!;
+  surface = container.querySelector<HTMLElement>('[data-companion-reading-surface]')!;
   vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 300, 300));
-  // jsdom has no layout: positions follow x, plus the surface scroll offset.
-  vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getDocumentPositionAtClientPoint')
-    .mockImplementation(x => Math.min(content.length, Math.round(x / 4) + surface.scrollTop));
+  // The reader scrolled and its position was saved after the article opened.
+  surface.scrollTop = startTop;
+  fireEvent.scroll(surface);
+  await saveCompanionSyncNodeViewState({ nodeId: 'source', scrollTop: startTop });
 
   fireEvent.click(highlight, { clientX: 32, clientY: 110 });
   const end = await screen.findByRole('button', { name: 'Adjust anchor end' });
   await waitFor(() => expect(end).toBeEnabled());
-
   touchPointer(end, 'pointerdown', 40, 110);
   touchPointer(document, 'pointermove', 40, 290);
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 90)); });
-  expect(surface.scrollTop).toBeGreaterThan(0);
+  expect(surface.scrollTop).toBeGreaterThan(startTop + 36);
+  expect(screen.queryByRole('button', { name: 'Adjust anchor start' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Adjust anchor end' })).toBeInTheDocument();
   touchPointer(document, 'pointerup', 40, 290);
+  const draggedTop = surface.scrollTop;
 
-  const expectedTo = Math.min(content.length, 10 + surface.scrollTop);
+  const expectedTo = Math.min(content.length, 10 + draggedTop - startTop);
   await waitFor(async () => expect((await loadCompanionWorkspaceNode(saved!.nodeId))?.anchorLink?.locator)
     .toEqual({ from: 6, to: expectedTo, originalText: content.slice(6, expectedTo) }));
+  await waitFor(() => expect(screen.getByTestId('restored-scroll-top')).toHaveTextContent(String(startTop)));
+  expect(surface.scrollTop).toBe(draggedTop);
   await closeIosCompanionDatabase();
   await openLibrary();
   expect((await loadCompanionWorkspaceNode(saved!.nodeId))?.anchorLink?.locator)
