@@ -30,6 +30,7 @@ vi.mock('@capacitor-community/sqlite', async importOriginal => ({
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { clearCompanionAppData } from '../../companionAppData';
 import { supportsCompanionAppDataClear } from '../../companionAppDataRuntimeRepository';
+import { deferred } from '../companionDesktopAttachmentResources.testSupport';
 import { joinCompanionSyncGroup, loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
 import { runCompanionAttachmentMaintenance } from './companionAttachmentMaintenance';
@@ -112,8 +113,8 @@ it('retains the owner after a close failure so retry can close it before deletin
 });
 
 it('clears observation state after an already-started native write finishes', async () => {
-  const started = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
+  const started = deferred();
+  const release = deferred();
   const observations = path.join(library.root, 'attachment-observations.json');
   library.database.prepare('DELETE FROM nodes').run();
   native.maintain.mockImplementation(async ({ operation, state }) => {
