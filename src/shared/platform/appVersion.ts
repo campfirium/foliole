@@ -7,6 +7,10 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 
 const FALLBACK_APP_VERSION = packageJson.version;
 
+export function formatBuildVersion(version: string) {
+  return version + (import.meta.env.VITE_FOLIOLE_BUILD_REVISION_SUFFIX ?? '');
+}
+
 export async function loadAppVersion() {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return FALLBACK_APP_VERSION;

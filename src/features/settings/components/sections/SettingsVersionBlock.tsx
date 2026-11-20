@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { useAppVersion } from '../../../../shared/platform/appVersion';
+import { formatBuildVersion, useAppVersion } from '../../../../shared/platform/appVersion';
 import {
   installDesktopUpdate,
   readDesktopUpdateState,
@@ -85,7 +85,7 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
       <SettingsRow
         {...settingsSearchRowProps(appRow)}
         description={statusDescription(status, update.manifest, update.desktop.percent, t)}
-        title={t('settings.about.versionTitle', { version: appVersion })}
+        title={t('settings.about.versionTitle', { version: formatBuildVersion(appVersion) })}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <AppStatusBadge label={statusLabel(status, t)} tone={statusTone(status)} />

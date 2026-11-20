@@ -54,6 +54,18 @@ it('labels the demo settings brand separately from the version when supplied', (
   expect(screen.getByText(CURRENT_VERSION_LABEL)).toBeInTheDocument();
 });
 
+it('shows the development build revision in the version badge', () => {
+  vi.stubEnv('VITE_FOLIOLE_BUILD_REVISION_SUFFIX', '.6453CC07');
+  try {
+    render(<LocalizationProvider>
+      <SettingsSidebar activeCategory="about" setActiveCategory={vi.fn()} />
+    </LocalizationProvider>);
+    expect(screen.getByText(`${CURRENT_VERSION_LABEL}.6453CC07`)).toBeInTheDocument();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
 it('groups workspace and control settings in product order', () => {
   render(
     <LocalizationProvider>

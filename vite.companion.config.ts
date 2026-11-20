@@ -1,13 +1,13 @@
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import autoprefixer from 'autoprefixer';
 import postcss from 'postcss';
 import type { Plugin } from 'vite';
-import { defineConfig, mergeConfig } from 'vite';
+import { mergeConfig } from 'vite';
 
 import { createCapacitorConfig } from './capacitor.config';
+import { buildSourcePlugin } from './scripts/vite/buildSource.ts';
 import { companionPreviewServerPlugin } from './scripts/vite/companionPreviewServer';
 import { companionTextScaleCss } from './scripts/vite/companionTextScaleCss';
 import { createSharedViteConfig } from './vite.shared';
@@ -51,16 +51,6 @@ function companionLegacyWebViewCssPlugin(): Plugin {
   };
 }
 
-function resolveCompanionSourceRevision() {
-  const suppliedRevision = process.env.VITE_FOLIOLE_SOURCE_REVISION;
-  if (suppliedRevision && /^[a-f0-9]{40}$/u.test(suppliedRevision)) return suppliedRevision;
-  try {
-    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: PROJECT_ROOT, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' }).trim();
-  } catch {
-    return 'unidentified';
-  }
-}
-
 function resolveAdoptionPerformanceLabel() {
   const label = process.env.FOLIOLE_SYNC_PERFORMANCE_LABEL;
   const isAcceptance = process.env.FOLIOLE_A5_APP_IDENTITY === 'test'
@@ -70,13 +60,13 @@ function resolveAdoptionPerformanceLabel() {
 
 export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT, { pdfJsResources: true }),
-  defineConfig({
+  {
     define: {
-      'import.meta.env.VITE_FOLIOLE_SOURCE_REVISION': JSON.stringify(resolveCompanionSourceRevision()),
       'import.meta.env.VITE_FOLIOLE_ADOPTION_PERFORMANCE_LABEL': JSON.stringify(resolveAdoptionPerformanceLabel())
     },
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
     plugins: [
+      buildSourcePlugin(PROJECT_ROOT),
       companionLegacyWebViewCssPlugin(),
       companionPreviewServerPlugin(PROJECT_ROOT),
       {
@@ -94,5 +84,5 @@ export default mergeConfig(
       target: ['chrome125', 'safari18'],
       cssTarget: ['chrome125', 'safari18']
     }
-  })
+  }
 );

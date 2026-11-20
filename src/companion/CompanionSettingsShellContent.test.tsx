@@ -141,6 +141,18 @@ describe('Companion About and test tools', () => {
     expect(nativeApp.getInfo).not.toHaveBeenCalled();
   });
 
+  it('shows the source revision alongside the installed Android version and build', async () => {
+    appDataRuntime.kind = 'android-native';
+    vi.stubEnv('VITE_FOLIOLE_BUILD_REVISION_SUFFIX', '.6453CC07');
+    try {
+      render(<SettingsHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'About' }));
+      expect(await screen.findByText('9.4.2.6453CC07 (302)')).toBeInTheDocument();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('offers Test tools only in the Android acceptance app', async () => {
     appDataRuntime.kind = 'android-native';
     nativeApp.getInfo.mockResolvedValue({ id: 'com.campfirium.foliole.android.acceptance' });

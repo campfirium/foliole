@@ -79,7 +79,7 @@ export function SettingsNavigationBrand({ badge, logo, name, version }: {
   version: ReactNode;
 }) {
   return (
-    <div className="flex w-settings-navigation-brand min-w-0 items-center gap-3">
+    <div className="flex w-settings-navigation-brand min-w-0 items-center gap-2">
       {logo}
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <div className="truncate text-settings-brand font-semibold leading-5 text-foreground">{name}</div>
@@ -89,7 +89,7 @@ export function SettingsNavigationBrand({ badge, logo, name, version }: {
           </span>
         ) : null}
       </div>
-      <span className={settingsSidebarBadgeClassName('ml-auto')}>{version}</span>
+      <span className={settingsSidebarBadgeClassName('ml-auto whitespace-nowrap')}>{version}</span>
     </div>
   );
 }

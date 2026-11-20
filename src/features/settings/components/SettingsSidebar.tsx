@@ -31,7 +31,7 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
-import { useAppVersion } from '@/shared/platform/appVersion';
+import { formatBuildVersion, useAppVersion } from '@/shared/platform/appVersion';
 import { SettingsNavigation, SettingsNavigationBrand, SettingsNavigationGroup, SettingsNavigationItem } from '@/shared/ui';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
@@ -110,7 +110,7 @@ function SettingsSidebarBrand(props: { badge?: string }) {
         />
       )}
       name="Foliole"
-      version={<>v{appVersion}</>}
+      version={`v${formatBuildVersion(appVersion)}`}
     />
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import appIcon from '../../assets/brand/foliole-app-icon.png';
 import { useLocalization, useTranslation } from '../shared/localization/LocalizationProvider';
+import { formatBuildVersion } from '../shared/platform/appVersion';
 import { loadInstalledCompanionVersion } from '../shared/platform/companion/runtime/installedAppVersion';
 import { isCompanionNativeHost } from '../shared/platform/companionRuntimeCapabilities';
 import { FOLIOLE_RELEASE_LINKS } from '../shared/platform/releaseLinks';
@@ -43,7 +44,7 @@ export function CompanionAboutSettingsContent() {
       <img src={appIcon} alt="" className="h-[60px] w-[60px]" />
       <strong className="text-xl font-semibold">Foliole</strong>
       {version === undefined ? null : <p className="text-sm text-companion-text-secondary">
-        {version ? `${version.version} (${version.build})` : t('companion.settings.about.versionUnavailable')}
+        {version ? `${formatBuildVersion(version.version)} (${version.build})` : t('companion.settings.about.versionUnavailable')}
       </p>}
     </div>
     {rows.map((group, index) => <CompanionListSection key={group[0]?.url} isFirst={index === 0}>
