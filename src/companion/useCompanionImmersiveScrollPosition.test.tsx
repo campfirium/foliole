@@ -21,11 +21,21 @@ describe('useCompanionImmersiveScrollPosition', () => {
     expect(surface.scrollTop).toBe(0);
   });
 
-  it('keeps the current position when a refresh of the open article carries an older saved position', () => {
+  it('applies a saved position that reaches the open article before the reader acts', () => {
+    const view = render(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={2392} />);
+    const surface = screen.getByTestId('surface');
+    view.rerender(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={3564} />);
+    expect(surface.scrollTop).toBe(3564);
+  });
+
+  it('keeps the reader position when a later refresh carries an older saved position', () => {
     const view = render(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={0} />);
     const surface = screen.getByTestId('surface');
+    fireEvent.touchStart(surface);
     fireEvent.scroll(surface, { target: { scrollTop: 2177 } });
     view.rerender(<ScrollSurface onScrollTopChange={vi.fn()} restoreScrollTop={4828} />);
     expect(surface.scrollTop).toBe(2177);
+    view.rerender(<ScrollSurface nodeId="topic-2" onScrollTopChange={vi.fn()} restoreScrollTop={640} />);
+    expect(surface.scrollTop).toBe(640);
   });
 });

@@ -1,20 +1,29 @@
 import { useCallback, useEffect, useRef, type UIEvent as ReactUIEvent } from 'react';
 
+const READER_INPUT_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown'] as const;
+
 export function useCompanionImmersiveScrollPosition(
   nodeId: string,
   restoreScrollTop: number,
   onScrollTopChange?: (scrollTop: number) => void
 ) {
   const surfaceRef = useRef<HTMLElement | null>(null);
-  const restoredNodeId = useRef<string | null>(null);
+  const readerOwnedNodeId = useRef<string | null>(null);
 
-  // Restore only when an article opens; later snapshot refreshes carry older saved positions.
+  // A saved position can reach an open article after a snapshot refresh. Apply it until the reader
+  // acts; afterwards a refresh carries an older position and must not move the article.
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (!surface || restoredNodeId.current === nodeId) return;
-    restoredNodeId.current = nodeId;
-    surface.scrollTop = Math.max(0, restoreScrollTop);
+    if (surface && readerOwnedNodeId.current !== nodeId) surface.scrollTop = Math.max(0, restoreScrollTop);
   }, [nodeId, restoreScrollTop]);
+
+  useEffect(() => {
+    const takeOver = () => { readerOwnedNodeId.current = nodeId; };
+    for (const type of READER_INPUT_EVENTS) document.addEventListener(type, takeOver, { capture: true, passive: true });
+    return () => {
+      for (const type of READER_INPUT_EVENTS) document.removeEventListener(type, takeOver, { capture: true });
+    };
+  }, [nodeId]);
 
   const handleScroll = useCallback((event: ReactUIEvent<HTMLElement>) => {
     onScrollTopChange?.(event.currentTarget.scrollTop);
