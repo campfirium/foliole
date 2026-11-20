@@ -227,10 +227,12 @@ it('only shows available material links in history', async () => {
     />
   );
   const history = await screen.findByRole('list', { name: /local foliole aide history/i });
+  // Material links can settle after the list itself; wait for them before asserting what is absent.
+  const material = await screen.findByRole('button', { name: 'Open material: Available topic' });
   expect(history).not.toHaveTextContent('Topic not available in this workspace');
   expect(history).not.toHaveTextContent('Full library');
   expect(screen.queryByRole('button', { name: 'More linked materials' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Open material: Available topic' }));
+  fireEvent.click(material);
   expect(onSelectNode).toHaveBeenCalledWith('available-topic');
 });
 
