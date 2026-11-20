@@ -3,7 +3,7 @@ import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { commitDailyFlowRuntime, hasDailyFlowRuntime, openDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { getDemoRuntimeNowIso } from '../shared/platform/runtime/demoRuntime';
-import { logRuntimeError } from '../shared/platform/runtimeLogging';
+import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLogging';
 
 import { hasWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
@@ -74,8 +74,12 @@ export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceSt
 
 export async function recoverWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, error: unknown, now: string) {
   const message = error instanceof Error ? error.message : String(error);
-  if (!/daily_flow_(changed|learning_changed|ack_superseded)/.test(message)) return;
+  const code = /daily_flow_(changed|learning_changed|ack_superseded)/.exec(message)?.[0];
+  if (!code) return;
   const source = get().reviewSession;
+  // Flow reopens silently after a rejected commit, so keep the reason visible in diagnostic reports.
+  logRuntimeWarning('daily flow commit rejected', { action: 'commit_daily_flow', area: 'persistence', code,
+    currentNodeId: source.currentNodeId ?? null });
   if (!source.daily) return;
   if (source.dive) {
     const { id, topicIds, mode } = source.dive;
