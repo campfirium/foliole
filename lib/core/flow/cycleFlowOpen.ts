@@ -80,12 +80,10 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
       const node = snapshot.nodesById[row.node_id];
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
         || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)));
-      if (!unavailable || skipped.has(row.node_id)) return;
-      // Retire the row like reconcile would; reconcile readmits it once it is a candidate again.
-      const next = { ...row, active: 0 as const, initial_task: 0 as const };
+      if (!unavailable || !row.initial_task || skipped.has(row.node_id)) return;
+      const next = { ...row, initial_task: 0 as const };
       skipped.set(row.node_id, next);
       changes?.set(row, next);
-      if (!row.initial_task) return;
       meta.remaining = Math.max(0, meta.remaining - 1);
       meta.reviewRemaining = Math.min(meta.remaining, Math.max(0,
         meta.reviewRemaining - (isFsrsReviewItemNode(node) ? 1 : 0)));

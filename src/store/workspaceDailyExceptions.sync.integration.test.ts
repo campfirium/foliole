@@ -116,7 +116,7 @@ it.each(['grade', 'soon'] as const)('saves the displayed successor on the first 
   softDeleteNodes(peer.driver, { nodeIds: [removed], deletedAt: due });
   const displayed = { ...source, currentNodeId: next, queueNodeIds: source.queueNodeIds.filter(id => id !== removed) };
   const saved = await act(peer, displayed, action, due);
-  expect((await readCycleRows(peer.port, [removed]))[0]?.active).toBe(0);
+  expect((await readCycleRows(peer.port, [removed]))[0]?.active).toBe(1);
   expect(await readView(peer, due)).not.toContain(removed);
   expect((saved.readTopicCount ?? 0) + (saved.reviewedItemCount ?? 0)).toBe(1);
   expect(saved.currentNodeId).not.toBe(removed);
