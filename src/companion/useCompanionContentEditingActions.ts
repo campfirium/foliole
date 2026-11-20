@@ -6,6 +6,8 @@ import { useCompanionContentEditCancel } from './useCompanionContentEditCancel';
 /** Enters, finishes and cancels one editing round of the reading surface. */
 export function useCompanionContentEditingActions(args: {
   activity: CompanionReadingActivity | undefined;
+  /** Records the reading position before the editor remounts for the next mode. */
+  captureScrollAnchor?(nextEditing: boolean): void;
   editing: boolean;
   enter(): void;
   exit(): void;
@@ -14,6 +16,7 @@ export function useCompanionContentEditingActions(args: {
 }) {
   const { activity } = args;
   function finishContentEditing() {
+    args.captureScrollAnchor?.(false);
     args.exit();
     activity?.setEditing(false);
     activity?.editRound?.end();
@@ -25,6 +28,7 @@ export function useCompanionContentEditingActions(args: {
       finishContentEditing();
       return;
     }
+    args.captureScrollAnchor?.(true);
     args.prepareEnter();
     flushSync(() => {
       args.enter();
