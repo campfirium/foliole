@@ -32,6 +32,20 @@ function assertUniqueNodeIds(nodeIds: string[], field: string) {
   }
 }
 
+function parseSplitOptions(value: unknown) {
+  if (value === undefined) return undefined;
+  const options = readObject(value, 'splitOptions');
+  if (typeof options.keepDelimiter !== 'boolean') throw new Error('invalid argument: splitOptions.keepDelimiter');
+  const delimiter = asString(options.delimiter, 'splitOptions.delimiter');
+  if (!delimiter) throw new Error('invalid argument: splitOptions.delimiter');
+  return {
+    delimiter,
+    footerText: asString(options.footerText, 'splitOptions.footerText'),
+    headerText: asString(options.headerText, 'splitOptions.headerText'),
+    keepDelimiter: options.keepDelimiter
+  };
+}
+
 export function parseSplitTopicArgs(args: Record<string, unknown>): NativeSplitTopicMutationArgs {
   if (args.disposition === 'partition-body') {
     const sourceNodeId = asString(args.sourceNodeId, 'sourceNodeId');
@@ -75,7 +89,10 @@ export function parseSplitTopicArgs(args: Record<string, unknown>): NativeSplitT
     sourceNodeId,
     sourceParentNodeId
   };
-  if (disposition === 'replace') return { ...base, deletedAt: asTimestamp(args.deletedAt, 'deletedAt'), disposition };
-  if (disposition === 'keep-as-parent' && args.deletedAt === undefined) return { ...base, disposition };
+  if (disposition === 'replace') {
+    const splitOptions = parseSplitOptions(args.splitOptions);
+    return { ...base, deletedAt: asTimestamp(args.deletedAt, 'deletedAt'), disposition, ...(splitOptions ? { splitOptions } : {}) };
+  }
+  if (disposition === 'keep-as-parent' && args.deletedAt === undefined && args.splitOptions === undefined) return { ...base, disposition };
   throw new Error('invalid argument: disposition');
 }

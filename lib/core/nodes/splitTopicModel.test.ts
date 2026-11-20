@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildSplitTopicNodeOrder, buildSplitTopicPreview } from './splitTopicModel.js';
+import { buildSplitTopicNodeOrder, buildSplitTopicParts, buildSplitTopicPreview, mapSplitTopicSourceRange } from './splitTopicModel.js';
 
 describe('buildSplitTopicPreview', () => {
   it('rejects an empty delimiter', () => {
@@ -98,5 +98,31 @@ describe('buildSplitTopicNodeOrder', () => {
       nodeOrder: ['source', 'part-b', 'sibling', 'part-a'],
       sourceNodeId: 'source'
     })).toEqual(['source', 'part-a', 'part-b', 'sibling']);
+  });
+});
+
+describe('mapSplitTopicSourceRange', () => {
+  function mapText(content: string, text: string, options: { headerText?: string; keepDelimiter?: boolean } = {}) {
+    const from = content.indexOf(text);
+    const parts = buildSplitTopicParts({ content, delimiter: '---', keepDelimiter: options.keepDelimiter ?? false, headerText: options.headerText ?? '' });
+    for (const part of parts) {
+      const mapped = mapSplitTopicSourceRange(part.sourceMap, { from, to: from + text.length });
+      if (mapped) return part.body.slice(mapped.from, mapped.to);
+    }
+    return null;
+  }
+
+  it('follows text through header text, kept delimiters, and heading promotion', () => {
+    const content = 'Intro text\n---\n### Head\nbody words\n#### Sub\ntail';
+    expect(mapText(content, 'Intro', { headerText: '> shared\n' })).toBe('Intro');
+    expect(mapText(content, 'body words', { headerText: '> shared\n' })).toBe('body words');
+    expect(mapText(content, 'Sub\ntail')).toBe('Sub\ntail');
+    expect(mapText(content, 'text\n---', { keepDelimiter: true })).toBe('text\n---');
+  });
+
+  it('drops promoted heading markers from a range and rejects ranges across parts', () => {
+    const content = 'a---## Head';
+    expect(mapText(content, '## Head')).toBe('# Head');
+    expect(mapText(content, 'a---#')).toBeNull();
   });
 });

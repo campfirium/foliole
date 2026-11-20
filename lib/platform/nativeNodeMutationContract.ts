@@ -45,8 +45,16 @@ export interface NativePartitionBodyMutationArgs {
   content: string;
 }
 
+/** Options the generated parts were built with; lets the host move source highlights onto the parts. */
+export interface NativeSplitTopicOptions {
+  delimiter: string;
+  footerText: string;
+  headerText: string;
+  keepDelimiter: boolean;
+}
+
 export type NativeSplitTopicMutationArgs = NativePartitionBodyMutationArgs | NativeSplitTopicMutationBaseArgs & (
-  | { deletedAt: string; disposition: 'replace' }
+  | { deletedAt: string; disposition: 'replace'; splitOptions?: NativeSplitTopicOptions }
   | { disposition: 'keep-as-parent' }
 );
 

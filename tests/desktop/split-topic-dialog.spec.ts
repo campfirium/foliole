@@ -127,3 +127,57 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   await expect(dialog.getByRole('textbox', { name: 'After' })).toHaveValue('');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
 });
+
+const HIGHLIGHT_SOURCE_ID = 'playwright-split-topic-highlight-source';
+const HIGHLIGHT_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/split-topic-highlights.png');
+
+test('Replace split moves source highlights and their tree onto the generated Topics', async ({ desktopWindow }, testInfo) => {
+  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  const content = '## Moon Alpha\n\nAlpha marked words here\n\n---cut---\n\n### Moon Beta\n\nBeta marked words here';
+  const highlightIds = await desktopWindow.evaluate(async ({ content, sourceId }) => {
+    const api = globalThis.window?.__folioleWorkspaceDebug;
+    await api?.seedNodes?.([{ content, id: sourceId, kind: 'topic', title: 'Highlight Split Source' }]);
+    const highlight = async (anchorId: string, text: string) => {
+      const from = content.indexOf(text);
+      return api?.createTextHighlightChild({
+        anchorId, parentNodeId: sourceId, text,
+        anchorLink: { id: anchorId, kind: 'highlight', locator: { from, originalText: text, to: from + text.length } }
+      });
+    };
+    const alpha = await highlight('hl-split-alpha', 'Alpha marked words');
+    const beta = await highlight('hl-split-beta', 'Beta marked words');
+    await api?.openNode?.(sourceId);
+    return { alpha, beta };
+  }, { content, sourceId: HIGHLIGHT_SOURCE_ID });
+  expect(highlightIds.alpha).toBeTruthy();
+  expect(highlightIds.beta).toBeTruthy();
+  await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight').first()).toBeVisible();
+
+  const dialog = await openSplitTopicDialog(desktopWindow);
+  await dialog.getByRole('textbox', { name: 'Delimiter' }).fill('---cut---');
+  await dialog.getByRole('radio', { name: 'Replace' }).click();
+  await dialog.getByRole('button', { name: 'Split Topic' }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect.poll(() => desktopWindow.evaluate((nodeId) =>
+    globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null, HIGHLIGHT_SOURCE_ID)).toBe(true);
+  const alphaPart = await readNode(desktopWindow, 'Moon Alpha');
+  const betaPart = await readNode(desktopWindow, 'Moon Beta');
+  expect(alphaPart?.trashed).toBe(false);
+  expect(betaPart?.trashed).toBe(false);
+  const readHighlight = (nodeId: string) => desktopWindow.evaluate((id) => globalThis.window?.__folioleWorkspaceDebug?.getNode(id) ?? null, nodeId);
+  await expect.poll(async () => (await readHighlight(highlightIds.alpha!))?.parentNodeId).toBe(alphaPart?.id);
+  await expect.poll(async () => (await readHighlight(highlightIds.beta!))?.parentNodeId).toBe(betaPart?.id);
+  expect((await readHighlight(highlightIds.alpha!))?.trashed).toBe(false);
+  const betaLocator = (await readHighlight(highlightIds.beta!))?.anchorLink?.locator as { from: number; to: number; originalText: string };
+  expect(betaPart?.content.slice(betaLocator.from, betaLocator.to)).toBe('Beta marked words');
+
+  await desktopWindow.getByRole('treeitem', { name: 'Moon Beta' }).click();
+  await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight', { hasText: 'Beta marked words' })).toBeVisible();
+  await expect(desktopWindow.getByRole('treeitem', { name: 'Moon Beta' })).toBeVisible();
+  await mkdir(path.dirname(HIGHLIGHT_SCREENSHOT_PATH), { recursive: true });
+  await desktopWindow.screenshot({ path: HIGHLIGHT_SCREENSHOT_PATH });
+  await testInfo.attach('split-topic-highlights', { contentType: 'image/png', path: HIGHLIGHT_SCREENSHOT_PATH });
+});

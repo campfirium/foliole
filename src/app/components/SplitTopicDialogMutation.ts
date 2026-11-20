@@ -78,7 +78,17 @@ export async function confirmSplitTopic(args: {
     sourceParentNodeId: args.source.parentNodeId
   };
   const result = args.form.disposition === 'replace'
-    ? await saveSplitTopicWorkspaceMutation({ ...mutationBase, deletedAt: timestamp, disposition: 'replace' })
+    ? await saveSplitTopicWorkspaceMutation({
+      ...mutationBase,
+      deletedAt: timestamp,
+      disposition: 'replace',
+      splitOptions: {
+        delimiter: args.form.delimiter,
+        footerText: args.form.footerText,
+        headerText: args.form.headerText,
+        keepDelimiter: args.form.keepDelimiter
+      }
+    })
     : await saveSplitTopicWorkspaceMutation({ ...mutationBase, disposition: 'keep-as-parent' });
   if (!result) throw new Error('Split Topic failed.');
   applyResult(result, generatedNodes, timestamp);

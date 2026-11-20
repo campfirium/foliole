@@ -13,6 +13,21 @@ export interface SplitTopicPreviewPart {
   title: string;
 }
 
+export interface SplitTopicSourceRange {
+  from: number;
+  to: number;
+}
+
+export interface SplitTopicSourceMap extends SplitTopicSourceRange {
+  /** Length of the shared header text placed before the part. */
+  prefixLength: number;
+  removed: SplitTopicSourceRange[];
+}
+
+export interface SplitTopicPart extends SplitTopicPreviewPart {
+  sourceMap: SplitTopicSourceMap;
+}
+
 export interface SplitTopicOrderInput {
   generatedNodeIds: string[];
   nodeOrder: string[];
@@ -77,19 +92,32 @@ function deriveSplitTopicTitle(content: string) {
   return UNTITLED_NODE_TITLE;
 }
 
-function promoteMarkdownHeadings(content: string) {
+interface PromotedContent {
+  content: string;
+  /** Part-local source ranges dropped by heading promotion, in ascending order. */
+  removed: SplitTopicSourceRange[];
+}
+
+function promoteMarkdownHeadings(content: string): PromotedContent {
   let shallowest = 7;
   visitMarkdownLines(content, (_line, heading) => {
     if (heading) shallowest = Math.min(shallowest, heading[2]!.length);
   });
-  if (shallowest === 7 || shallowest === 1) return content;
+  if (shallowest === 7 || shallowest === 1) return { content, removed: [] };
   const offset = shallowest - 1;
   const promoted: string[] = [];
+  const removed: SplitTopicSourceRange[] = [];
+  let cursor = 0;
   visitMarkdownLines(content, (line, heading) => {
     if (!heading) promoted.push(line);
-    else promoted.push(`${heading[1]}${'#'.repeat(heading[2]!.length - offset)}${line.slice(heading[1]!.length + heading[2]!.length)}`);
+    else {
+      const markerStart = heading[1]!.length;
+      promoted.push(`${heading[1]}${'#'.repeat(heading[2]!.length - offset)}${line.slice(markerStart + heading[2]!.length)}`);
+      removed.push({ from: cursor + markerStart, to: cursor + markerStart + offset });
+    }
+    cursor += line.length;
   });
-  return promoted.join('');
+  return { content: promoted.join(''), removed };
 }
 
 function appendAffixes(body: string, headerText: string, footerText: string) {
@@ -104,26 +132,53 @@ function splitContent(input: SplitTopicPreviewInput) {
   if (rawParts.length < 2) {
     return [];
   }
+  let cursor = 0;
   return rawParts.flatMap((part, index) => {
+    const from = cursor;
+    cursor += part.length + input.delimiter.length;
     if (part.trim().length === 0) {
       return [];
     }
     const suffix = input.keepDelimiter && index < rawParts.length - 1 ? input.delimiter : '';
-    return [`${part}${suffix}`];
+    const text = `${part}${suffix}`;
+    return [{ from, text }];
+  });
+}
+
+/**
+ * Builds split parts together with the mapping from each part's source span to its generated body,
+ * so anchored highlights on the source can follow the text they mark.
+ */
+export function buildSplitTopicParts(input: SplitTopicPreviewInput): SplitTopicPart[] {
+  const headerText = input.headerText ?? '';
+  const footerText = input.footerText ?? '';
+  return splitContent(input).map(({ from, text }) => {
+    const promoted = promoteMarkdownHeadings(text);
+    return {
+      body: appendAffixes(promoted.content, headerText, footerText),
+      title: deriveSplitTopicTitle(promoted.content),
+      sourceMap: { from, to: from + text.length, prefixLength: headerText.length, removed: promoted.removed }
+    };
   });
 }
 
 export function buildSplitTopicPreview(input: SplitTopicPreviewInput): SplitTopicPreviewPart[] {
-  const headerText = input.headerText ?? '';
-  const footerText = input.footerText ?? '';
-  return splitContent(input).map((part) => {
-    const promotedPart = promoteMarkdownHeadings(part);
-    const body = appendAffixes(promotedPart, headerText, footerText);
-    return {
-      body,
-      title: deriveSplitTopicTitle(promotedPart)
-    };
-  });
+  return buildSplitTopicParts(input).map(({ body, title }) => ({ body, title }));
+}
+
+function mapLocalOffset(map: SplitTopicSourceMap, local: number) {
+  let dropped = 0;
+  for (const range of map.removed) {
+    if (range.from >= local) break;
+    dropped += Math.min(range.to, local) - range.from;
+  }
+  return map.prefixLength + local - dropped;
+}
+
+/** Maps a source text range into a generated part body, or null when the range is not fully inside the part. */
+export function mapSplitTopicSourceRange(map: SplitTopicSourceMap, range: SplitTopicSourceRange): SplitTopicSourceRange | null {
+  if (range.from < map.from || range.to > map.to || range.from > range.to) return null;
+  return { from: mapLocalOffset(map, range.from - map.from), to: mapLocalOffset(map, range.to - map.from) };
 }
 
 export function buildSplitTopicNodeOrder(input: SplitTopicOrderInput) {

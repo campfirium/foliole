@@ -24,7 +24,7 @@ vi.mock('../foliolePublish/foliolePublishManagement.js', () => publishGuardMocks
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { replaceNodeOrder, restoreNodes } from './nodeMutations.js';
+import { replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
 import { splitTopic } from './splitTopicMutation.js';
 
@@ -187,4 +187,74 @@ it('rolls back generated Topics, order, and source Trash when any write fails', 
   expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['source', 'sibling', 'special-inbox', 'special-virtual-root']);
   closeDatabaseConnection();
   expect(mutationState()).toEqual(before);
+});
+
+function seedTopic(nodeId: string, parentNodeId: string | null, position: number, content: string, anchorLink: NonNullable<Parameters<typeof upsertNodeSnapshot>[0]['anchorLink']> | null = null) {
+  upsertNodeSnapshot({
+    anchorLink, content, createdAt: '2026-03-06T00:00:00.000Z', isTitleManual: true, kind: 'topic', nodeId,
+    parentNodeId, position, reveal: null, title: nodeId, updatedAt: '2026-03-06T00:00:00.000Z'
+  });
+}
+
+function highlightAnchor(id: string, from: number, to: number, originalText: string) {
+  return { id, kind: 'highlight' as const, locator: { from, originalText, to } };
+}
+
+it('moves source highlights onto the generated part that now holds their text', () => {
+  const source = 'Alpha one\n---\n## Beta two\nBeta body';
+  seedTopic('source', null, 0, source);
+  const betaFrom = source.indexOf('Beta body');
+  seedTopic('hl-alpha', 'source', 0, 'Alpha', highlightAnchor('a', 0, 5, 'Alpha'));
+  seedTopic('hl-beta', 'source', 1, 'Beta body', highlightAnchor('b', betaFrom, betaFrom + 9, 'Beta body'));
+  seedTopic('hl-cross', 'source', 2, 'cross', highlightAnchor('c', 6, 20, source.slice(6, 20)));
+  seedTopic('hl-child', 'hl-beta', 0, 'nested');
+
+  const result = splitTopic({
+    activeNodeId: 'part-a',
+    deletedAt: '2026-07-28T00:01:00.000Z',
+    disposition: 'replace',
+    generatedNodes: [
+      { ...generatedTopic('part-a', null, 1), content: 'Alpha one\n' },
+      { ...generatedTopic('part-b', null, 2), content: '\n# Beta two\nBeta body' }
+    ],
+    nodeOrder: ['source', 'part-a', 'part-b', 'hl-alpha', 'hl-beta', 'hl-cross', 'hl-child'],
+    sourceNodeId: 'source',
+    sourceParentNodeId: null,
+    splitOptions: { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false }
+  });
+
+  expect(getNodeRow('hl-alpha')?.parent_id).toBe('part-a');
+  expect(JSON.parse(getNodeRow('hl-alpha')!.anchor_link!).locator).toEqual({ from: 0, originalText: 'Alpha', to: 5 });
+  expect(getNodeRow('hl-beta')?.parent_id).toBe('part-b');
+  const betaBody = '\n# Beta two\nBeta body';
+  expect(JSON.parse(getNodeRow('hl-beta')!.anchor_link!).locator).toEqual({
+    from: betaBody.indexOf('Beta body'), originalText: 'Beta body', to: betaBody.length
+  });
+  expect(getNodeRow('hl-child')?.parent_id).toBe('hl-beta');
+  expect(getNodeRow('hl-cross')?.parent_id).toBe('source');
+  expect(result.updatedNodeIds).toEqual(['hl-alpha', 'hl-beta']);
+  expect(result.nodes.map((node) => node.nodeId)).toEqual(['part-a', 'part-b', 'hl-alpha', 'hl-beta']);
+  expect(childIds('part-b')).toEqual(['hl-beta']);
+  expect(readSyncDirty('hl-beta')?.sync_dirty).toBe(0);
+});
+
+it('leaves highlights with the trashed source when the stored body no longer matches the split', () => {
+  seedTopic('source', null, 0, 'Alpha---Beta');
+  seedTopic('hl-alpha', 'source', 0, 'Alpha', highlightAnchor('a', 0, 5, 'Alpha'));
+
+  splitTopic({
+    activeNodeId: 'part-a',
+    deletedAt: '2026-07-28T00:01:00.000Z',
+    disposition: 'replace',
+    generatedNodes: [
+      { ...generatedTopic('part-a', null, 1), content: 'Edited' },
+      { ...generatedTopic('part-b', null, 2), content: 'Beta' }
+    ],
+    nodeOrder: ['source', 'part-a', 'part-b', 'hl-alpha'],
+    sourceNodeId: 'source',
+    sourceParentNodeId: null,
+    splitOptions: { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false }
+  });
+
+  expect(getNodeRow('hl-alpha')?.parent_id).toBe('source');
 });

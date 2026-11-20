@@ -1,4 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
+import type { NativeSplitTopicOptions } from '../../../lib/platform/nativeNodeMutationContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
@@ -163,7 +164,7 @@ type SaveSplitTopicWorkspaceMutationArgs = {
   nodeOrder: string[];
   sourceNodeId: string;
   sourceParentNodeId: string | null;
-} & ({ deletedAt: string; disposition: 'replace' } | { disposition: 'keep-as-parent' });
+} & ({ deletedAt: string; disposition: 'replace'; splitOptions?: NativeSplitTopicOptions } | { disposition: 'keep-as-parent' });
 
 export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorkspaceMutationArgs): Promise<WorkspaceNodeMutationPatchResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
@@ -173,7 +174,7 @@ export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorksp
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, {
       activeNodeId: args.activeNodeId,
-      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt! } : {}),
+      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt, ...(args.splitOptions ? { splitOptions: args.splitOptions } : {}) } : {}),
       disposition: args.disposition,
       generatedNodes: args.generatedNodes.map((node) =>
         createWorkspaceRuntimeNodeSnapshot(node, args.nodeOrder.indexOf(node.id))
