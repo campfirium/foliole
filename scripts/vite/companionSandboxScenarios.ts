@@ -24,26 +24,49 @@ export function createCompanionSandboxScenarioStore(): CompanionSandboxScenarioS
 
 export function attachCompanionSandboxScenarioControls(document: Document, frame: HTMLIFrameElement) {
   const chinese = document.defaultView?.navigator.language.toLowerCase().startsWith('zh');
-  const panel = document.createElement('fieldset');
-  panel.className = 'sandbox-scenarios';
-  const legend = document.createElement('legend');
-  legend.textContent = chinese ? '调试场景' : 'Debug scenarios';
-  panel.append(legend);
+  const toolbar = document.createElement('div');
+  toolbar.className = 'sandbox-toolbar';
+  const menu = document.createElement('details');
+  menu.className = 'sandbox-scenarios';
+  const trigger = document.createElement('summary');
+  trigger.textContent = chinese ? '调试场景' : 'Debug scenarios';
+  const items = document.createElement('div');
+  items.className = 'sandbox-scenario-items';
+  menu.append(trigger, items);
+  toolbar.append(menu);
+
   const apply = companionSandboxScenarios.map(scenario => {
     const label = document.createElement('label');
     const box = document.createElement('input');
     box.type = 'checkbox';
     const update = () => frame.contentWindow?.__folioleSandboxScenarios?.setEnabled(scenario.id, box.checked);
-    box.addEventListener('change', update);
-    label.append(box, chinese ? scenario.zhHansLabel : scenario.label);
-    panel.append(label);
+    box.addEventListener('change', () => {
+      update();
+      trigger.classList.toggle('is-active', Boolean(items.querySelector('input:checked')));
+      trigger.focus();
+      menu.open = false;
+    });
+    label.append(chinese ? scenario.zhHansLabel : scenario.label, box);
+    items.append(label);
     return update;
   });
   const applyAfterReload = () => apply.forEach(update => update());
+  const dismissOutside = (event: PointerEvent) => {
+    if (!event.composedPath().includes(menu)) menu.open = false;
+  };
+  const dismissOnEscape = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !menu.open) return;
+    menu.open = false;
+    trigger.focus();
+  };
   frame.addEventListener('load', applyAfterReload);
-  (document.querySelector('.sandbox-stage') ?? document.body).append(panel);
+  document.addEventListener('pointerdown', dismissOutside);
+  document.addEventListener('keydown', dismissOnEscape);
+  (document.querySelector('.sandbox-stage') ?? document.body).append(toolbar);
   return () => {
     frame.removeEventListener('load', applyAfterReload);
-    panel.remove();
+    document.removeEventListener('pointerdown', dismissOutside);
+    document.removeEventListener('keydown', dismissOnEscape);
+    toolbar.remove();
   };
 }

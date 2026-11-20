@@ -42,13 +42,11 @@ function createShellElements(document: Document) {
   content.append(frame, frozen, overlay);
   const note = document.createElement('p');
   note.className = 'preview-data-note';
-  note.textContent = document.body.dataset.previewSandbox
-    ? 'Mobile sandbox · Sample data'
-    : 'Settings preview uses demo data. Actions do not back up or delete your files.';
+  note.textContent = 'Settings preview uses demo data. Actions do not back up or delete your files.';
   if (document.body.dataset.previewSandbox) {
     const stage = document.createElement('div');
     stage.className = 'sandbox-stage';
-    stage.append(note, viewport);
+    stage.append(viewport);
     document.body.append(stage);
   } else document.body.append(note, viewport);
   viewport.append(createCompanionPreviewStatusBar(document), content);

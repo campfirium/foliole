@@ -14,12 +14,19 @@ export function fitCompanionPreviewViewport(viewport: HTMLElement) {
     const stage = viewport.closest<HTMLElement>('.sandbox-stage');
     const availableWidth = stage?.clientWidth || target.innerWidth;
     const heightLimit = stage?.clientHeight || target.innerHeight;
-    const panel = stage?.querySelector<HTMLElement>('.sandbox-scenarios');
-    const top = panel ? panel.offsetTop + panel.offsetHeight + 8 : 0;
-    const bottom = panel ? 8 : 0;
-    const availableHeight = Math.max(1, heightLimit - top - bottom);
-    if (panel) viewport.style.top = `${top + availableHeight / 2}px`;
+    const toolbar = stage?.querySelector<HTMLElement>('.sandbox-toolbar');
+    const gap = 8;
+    const toolbarHeight = toolbar?.offsetHeight ?? 0;
+    const reservedHeight = toolbar ? toolbarHeight + gap * 3 : 0;
+    const availableHeight = Math.max(1, heightLimit - reservedHeight);
     const scale = Math.min(1, availableWidth / width, availableHeight / frameHeight);
+    if (toolbar) {
+      const phoneHeight = frameHeight * scale;
+      const phoneTop = (heightLimit - phoneHeight + toolbarHeight + gap) / 2;
+      viewport.style.top = `${phoneTop + phoneHeight / 2}px`;
+      toolbar.style.top = `${phoneTop - toolbarHeight - gap}px`;
+      toolbar.style.width = `${width * scale}px`;
+    }
     viewport.style.setProperty('--preview-scale', String(scale));
   };
   target.addEventListener('resize', fit);
