@@ -170,6 +170,21 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
+### November 20 Android Gradle security patch
+
+Local `dev` updates the Android Wrapper from 9.9.1 to
+[9.9.2](https://github.com/gradle/gradle/releases/tag/v9.9.2), the patched
+version for GHSA-4mf6-7pm2-6wm8, GHSA-99wf-vhq9-wm2x, GHSA-35pj-rg5r-8rpv,
+and GHSA-7f7r-77ff-fr6f. This update was applied directly from Gradle's
+release. The official distribution checksum is pinned, and the existing
+Wrapper JAR matches the official 9.9.2 JAR checksum.
+
+The tightened version check rejected 9.9.1. All five focused integrity tests
+passed on 9.9.2, and the Mac build produced the debug and instrumentation
+test APKs with JDK 21. Centralized QA should verify candidate containment,
+Android host quality, dependency hardening, and Wrapper integrity. Existing
+coverage gaps and upstream alert states remain open for their own review.
+
 ### November 20 Electron, SQLite, and web tooling batch
 
 Local adoption `10760453d` on `campfirium/foliole:dev` passed a clean npm install,
