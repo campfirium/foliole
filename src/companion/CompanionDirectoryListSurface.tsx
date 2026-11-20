@@ -154,7 +154,8 @@ export function CompanionDirectoryList(props: {
             <input type="checkbox" className="h-5 w-5 accent-companion-accent" checked={row.checked} disabled={batch.busy} onChange={row.toggle}
               aria-label={t('companion.batch.selectRow', { title: entry.item.title })} />
           </label>}
-          <div className="min-w-0 flex-1" inert={batch.active && (!row || batch.busy)}>
+          {batch.active && !row && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
+          <div className={`min-w-0 flex-1 ${batch.active && !row ? 'opacity-50' : ''}`} inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
               markKind={entry.sectionId === 'current'}
               onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem}

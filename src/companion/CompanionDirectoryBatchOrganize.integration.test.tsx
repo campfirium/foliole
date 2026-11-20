@@ -29,7 +29,7 @@ function selectAllInFolder(folder: string) {
   click(`Open folder ${folder}`);
   click('More');
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Select' }));
-  click('Select all in this list');
+  click('Select all');
 }
 
 it('moves the selected topics to another folder as one action and syncs the new parent', async () => {

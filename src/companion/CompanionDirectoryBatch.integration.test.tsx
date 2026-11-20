@@ -65,7 +65,7 @@ it('offers bulk Trash actions inside a folder, with selection after history and 
     fireEvent.click(select);
     const actionBar = within(screen.getByTestId('companion-selection-action-bar'));
     expect(actionBar.getByRole('button', { name: 'Move to Trash' })).toBeDisabled();
-    click('Select all in this list');
+    click('Select all');
     expect(screen.getByText('2 / 2 selected')).toBeVisible();
     fireEvent.click(actionBar.getByRole('button', { name: 'Move to Trash' }));
     const confirm = within(screen.getByRole('dialog', { name: 'Move to Trash' }));
@@ -96,6 +96,7 @@ it('removes selected direct sources from a Dive as a batch and preserves the ori
     enterSelection();
 
     expect(screen.queryByRole('checkbox', { name: 'Select Derived' })).toBeNull();
+    expect(screen.getByText(/brought in by a folder have no checkbox/)).toBeVisible();
     for (const title of ['Shelf', 'Direct']) {
       fireEvent.click(screen.getByRole('checkbox', { name: `Select ${title}` }));
     }
@@ -178,7 +179,7 @@ it.each(['android', 'ios'])('permanently deletes within a Trash folder and keeps
     click('Open folder Trash');
     click('Open folder Folder A');
     enterSelection();
-    click('Select all in this list');
+    click('Select all');
     expect(screen.getByText('2 / 2 selected')).toBeVisible();
     click('Delete Permanently');
     let confirmation = screen.getByRole('dialog', { name: 'Delete Permanently' });
