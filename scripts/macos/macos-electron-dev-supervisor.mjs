@@ -186,7 +186,7 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   let requestStop = async () => undefined;
   let sessionDone = Promise.resolve(0);
   return withResourceGate({
-    className: 'preview',
+    className: 'resident-preview',
     commandLabel: 'macOS Electron daily debug',
     fn: (gateEnv) => {
       sessionDone = runSupervisorSession({

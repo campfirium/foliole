@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, onTestFailed } from 'vitest';
 
 import { assertAgentCompletionMessage } from './codex/codex-task-completion.mjs';
-import { formatGateQueueMessage } from './lib/resource-gate.mjs';
+import { formatGateQueueMessage, resourcesForClass } from './lib/resource-gate.mjs';
 import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -116,6 +116,20 @@ describe('resource gate', () => {
       const log = (await readFile(logFile, 'utf8')).trim().split('\n');
 
       expect(log.indexOf('preview:end') < log.indexOf('test:start') || log.indexOf('test:end') < log.indexOf('preview:start')).toBe(true);
+    });
+  });
+
+  it('lets the resident desktop preview run beside node-heavy work', { meta: { calibratedMs: 10000 } }, async () => {
+    await withFixture(async ({ logFile, runtimeDir, stub }) => {
+      const env = { RESOURCE_GATE_LOG: logFile };
+      const resident = runGate({ className: 'resident-preview', command: [process.execPath, stub, 'resident', '400'], env, runtimeDir });
+      await delay(100);
+      const nodeHeavy = runGate({ className: 'node-heavy', command: [process.execPath, stub, 'test', '10'], env, runtimeDir });
+      await Promise.all([resident, nodeHeavy]);
+      const log = (await readFile(logFile, 'utf8')).trim().split('\n');
+
+      expect(log.indexOf('test:end')).toBeLessThan(log.indexOf('resident:end'));
+      expect(resourcesForClass('resident-preview')).toEqual(['preview']);
     });
   });
 

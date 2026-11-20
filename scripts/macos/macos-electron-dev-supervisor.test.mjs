@@ -11,9 +11,10 @@ import { writeElectronDevClientState } from '../desktop/electron-dev-control-sta
 import { resolveMacosElectronDevPaths } from './macos-electron-dev-paths.mjs';
 import { runMacosElectronDevSupervisor } from './macos-electron-dev-supervisor.mjs';
 
-const harness = vi.hoisted(() => ({ active: null, events: [], onStop: null }));
+const harness = vi.hoisted(() => ({ active: null, events: [], gateClasses: [], onStop: null }));
 vi.mock('../lib/resource-gate.mjs', () => ({
-  withResourceGate: async ({ fn }) => {
+  withResourceGate: async ({ className, fn }) => {
+    harness.gateClasses.push(className);
     try { return await fn({}); }
     finally { harness.events.push('gate-released'); }
   }
@@ -33,6 +34,7 @@ let root;
 afterEach(async () => {
   if (root) await rm(root, { recursive: true, force: true });
   harness.events = [];
+  harness.gateClasses = [];
 });
 async function setup(closed = new Promise(() => {})) {
   root = await mkdtemp(path.join(os.tmpdir(), 'foliole-supervisor-'));
@@ -54,6 +56,8 @@ it('retains ownership until timeout cleanup closes the child, then releases the 
   await expect(run()).rejects.toThrow('timed out');
   expect(existsSync(paths.clientStateFile)).toBe(false);
   expect(harness.events).toEqual(['child-closed', 'logger-closed', 'gate-released']);
+  // The resident daily debug session must not hold node-heavy for its whole lifetime.
+  expect(harness.gateClasses).toEqual(['resident-preview']);
 });
 
 it('cancels readiness observation when the shell fails before becoming ready', async () => {

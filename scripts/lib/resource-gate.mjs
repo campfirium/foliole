@@ -14,7 +14,9 @@ const RESOURCE_ORDER = ['node-heavy', 'preview', 'exclusive'];
 const RESOURCE_CLASSES = {
   exclusive: ['node-heavy', 'preview', 'exclusive'],
   'node-heavy': ['node-heavy'],
-  preview: ['node-heavy', 'preview']
+  preview: ['node-heavy', 'preview'],
+  // A resident desktop debug session stays open for hours; it excludes other previews, not checks and tests.
+  'resident-preview': ['preview']
 };
 
 export function formatGateQueueMessage({ className, holderPid, resource, seconds }) {
