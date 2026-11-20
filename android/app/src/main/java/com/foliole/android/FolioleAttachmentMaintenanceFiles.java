@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
 import android.system.StructStat;
@@ -12,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 final class FolioleAttachmentMaintenanceFiles {
     static JSObject execute(Context context, PluginCall call) throws Exception {
@@ -58,25 +60,27 @@ final class FolioleAttachmentMaintenanceFiles {
     }
 
     static void move(Context context, String key, boolean toTrash) throws Exception {
-        FolioleAttachmentBlockFiles.withRemoval(key, () -> { moveUnlocked(context, key, toTrash); return null; });
+        FolioleAttachmentBlockFiles.withRemoval(key, () -> {
+            if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("invalid_attachment_key");
+            File source = new File(directory(context, !toTrash), key);
+            if (!hasRegularFile(source)) return null;
+            File destination = new File(directory(context, toTrash), key);
+            return FolioleAttachmentBlockFiles.withReceiverLock(context, () -> {
+                moveStoredFile(source, destination);
+                return null;
+            });
+        });
     }
 
-    private static void moveUnlocked(Context context, String key, boolean toTrash) throws Exception {
-        if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("invalid_attachment_key");
-        File source = new File(directory(context, !toTrash), key);
-        File destination = new File(directory(context, toTrash), key);
-        if (!source.exists()) return;
-        requireFile(source);
+    private static void moveStoredFile(File source, File destination) throws Exception {
         if (!destination.getParentFile().isDirectory() && !destination.getParentFile().mkdirs()) {
             throw new IllegalStateException("attachment_directory_failed");
         }
-        if (destination.exists()) {
-            requireFile(destination);
-            if (!key.substring(0, 64).equals(FolioleCompanionAttachmentResourceHash.digestHex(destination))) {
-                throw new IllegalStateException("attachment_trash_destination_conflict");
-            }
+        if (hasRegularFile(destination)) {
+            Files.delete(source.toPath());
+        } else {
+            Os.rename(source.getPath(), destination.getPath());
         }
-        FolioleAttachmentBlockFiles.publish(context, source, destination, key.substring(0, 64));
     }
 
     private static JSArray inventory(File root) throws Exception {
@@ -102,10 +106,15 @@ final class FolioleAttachmentMaintenanceFiles {
     }
 
     private static void requireFile(File file) {
+        if (!hasRegularFile(file)) throw new IllegalStateException("attachment_file_unsafe");
+    }
+
+    private static boolean hasRegularFile(File file) {
         try {
-            if (OsConstants.S_ISREG(Os.lstat(file.getPath()).st_mode)) return;
-        } catch (Exception ignored) {
-            throw new IllegalStateException("attachment_file_unsafe");
+            if (OsConstants.S_ISREG(Os.lstat(file.getPath()).st_mode)) return true;
+        } catch (ErrnoException error) {
+            if (error.errno == OsConstants.ENOENT) return false;
+            throw new IllegalStateException("attachment_file_unsafe", error);
         }
         throw new IllegalStateException("attachment_file_unsafe");
     }

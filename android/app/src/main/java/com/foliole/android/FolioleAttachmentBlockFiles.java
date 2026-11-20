@@ -164,17 +164,21 @@ public final class FolioleAttachmentBlockFiles {
         return new JSObject().put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
     }
 
-    static synchronized boolean publish(Context context, File source, File target, String hash) throws Exception {
+    static boolean publish(Context context, File source, File target, String hash) throws Exception {
+        return withReceiverLock(context, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+    }
+
+    static synchronized <T> T withReceiverLock(Context context, java.util.concurrent.Callable<T> execute) throws Exception {
         File directory = FolioleAttachmentMaintenanceFiles.directory(context, false).getCanonicalFile();
         for (FolioleAttachmentBlockFiles owner : OWNERS.values()) {
             if (owner.root.equals(directory) && owner.lock != null && owner.lock.isValid()) {
-                return FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash);
+                return execute.call();
             }
         }
         FolioleAttachmentBlockFiles temporary = new FolioleAttachmentBlockFiles(context);
         try {
             temporary.acquire();
-            return FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash);
+            return execute.call();
         } finally { if (temporary.carrier != null) temporary.carrier.close(); }
     }
 

@@ -34,6 +34,7 @@ let package = Package(
                 "FolioleCompanionAppDataFiles.swift",
                 "FolioleCompanionCanonicalAttachmentKey.swift",
                 "FolioleAttachmentBlockStorage.swift",
+                "FolioleAttachmentTrashMove.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",
                 "FolioleCompanionBonjourEndpoint.swift",
                 "FolioleCompanionContractStore.swift",

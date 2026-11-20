@@ -24,7 +24,7 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class FolioleRemoteImageFilesTest {
     @FunctionalInterface
-    private interface ImageOpens {
+    private interface FileAction {
         void run() throws Exception;
     }
 
@@ -59,10 +59,10 @@ public class FolioleRemoteImageFilesTest {
         assertEquals("created", FolioleRemoteImageFiles.write(context, input).getString("storedFile"));
         File stored = new File(root, "attachments/" + key);
         assertArrayEquals(bytes, Files.readAllBytes(stored.toPath()));
-        assertDisplayReadCount("Three strict opens", () -> {
+        assertDigestReads("Three strict opens", () -> {
             for (int open = 0; open < 3; open++) assertResolvesAndDecodes(hash, key, stored, false);
         }, 3, 3L * bytes.length);
-        assertDisplayReadCount("Three display opens", () -> {
+        assertDigestReads("Three display opens", () -> {
             for (int open = 0; open < 3; open++) assertResolvesAndDecodes(hash, key, stored, true);
         }, 0, 0);
         assertMultipleImagesDoNotHash(hash, key, stored);
@@ -80,7 +80,7 @@ public class FolioleRemoteImageFilesTest {
         String otherKey = otherHash + ".png";
         assertEquals("created", FolioleRemoteImageFiles.write(context, input(secondImage, otherKey)).getString("storedFile"));
         File other = new File(stored.getParentFile(), otherKey);
-        assertDisplayReadCount("Two different display images", () -> {
+        assertDigestReads("Two different display images", () -> {
             assertResolvesAndDecodes(hash, key, stored, true);
             assertResolvesAndDecodes(otherHash, otherKey, other, true);
         }, 0, 0);
@@ -96,10 +96,10 @@ public class FolioleRemoteImageFilesTest {
         bitmap.recycle();
     }
 
-    private void assertDisplayReadCount(String action, ImageOpens opens,
+    private void assertDigestReads(String action, FileAction execute,
                                         long digests, long bytesRead) throws Exception {
         try (AttachmentDigestReadProbe probe = AttachmentDigestReadProbe.install()) {
-            opens.run();
+            execute.run();
             String measurement = action + ": SHA-256 consumed " + probe.bytes() + " bytes across " + probe.digests() + " digests";
             Bundle evidence = new Bundle();
             evidence.putString("attachmentDigestReads", measurement);
@@ -152,14 +152,15 @@ public class FolioleRemoteImageFilesTest {
     }
 
     @Test public void movesRestoresAndExplicitlyEmptiesAttachmentTrash() throws Exception {
-        String key = hash(bytes) + ".png";
+        String contentHash = hash(bytes);
+        String key = contentHash + ".png";
         FolioleRemoteImageFiles.write(context, input(bytes, key));
         File active = new File(root, "attachments/" + key);
         File trash = new File(root, "attachments.trash/" + key);
-        FolioleAttachmentMaintenanceFiles.move(context, key, true);
+        assertDigestReads("move to trash", () -> FolioleAttachmentMaintenanceFiles.move(context, key, true), 0, 0);
         assertFalse(active.exists());
         assertArrayEquals(bytes, Files.readAllBytes(trash.toPath()));
-        assertResolvesAndDecodes(hash(bytes), key, active, true);
+        assertDigestReads("restore on open", () -> assertResolvesAndDecodes(contentHash, key, active, true), 0, 0);
         assertArrayEquals(bytes, Files.readAllBytes(active.toPath()));
         assertFalse(trash.exists());
         FolioleAttachmentMaintenanceFiles.move(context, key, true);
@@ -168,22 +169,29 @@ public class FolioleRemoteImageFilesTest {
         assertFalse(trash.exists());
     }
 
-    @Test public void preservesSourceWhenTrashDestinationConflicts() throws Exception {
+    @Test public void keepsAnExistingRegularDestinationWithoutReadingEitherCopy() throws Exception {
         String key = hash(bytes) + ".png";
         FolioleRemoteImageFiles.write(context, input(bytes, key));
-        File trash = new File(root, "attachments.trash");
-        assertTrue(trash.mkdir());
-        Files.write(new File(trash, key).toPath(), new byte[] {1, 2, 3});
-        assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, true));
         File active = new File(root, "attachments/" + key);
-        File destination = new File(trash, key);
+        File trash = new File(root, "attachments.trash/" + key);
+        assertTrue(trash.getParentFile().mkdir());
+        byte[] existingTrash = {1, 2, 3};
+        Files.write(trash.toPath(), existingTrash);
+        assertDigestReads("move to an existing trash key",
+            () -> FolioleAttachmentMaintenanceFiles.move(context, key, true), 0, 0);
+        assertFalse(active.exists());
+        assertArrayEquals(existingTrash, Files.readAllBytes(trash.toPath()));
+
+        Files.write(active.toPath(), bytes);
+        assertDigestReads("restore to an existing active key",
+            () -> FolioleAttachmentMaintenanceFiles.move(context, key, false), 0, 0);
+        assertFalse(trash.exists());
         assertArrayEquals(bytes, Files.readAllBytes(active.toPath()));
-        assertArrayEquals(new byte[] {1, 2, 3}, Files.readAllBytes(destination.toPath()));
-        Files.write(active.toPath(), new byte[] {4, 5, 6});
-        Files.write(destination.toPath(), bytes);
-        assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, false));
-        assertArrayEquals(new byte[] {4, 5, 6}, Files.readAllBytes(active.toPath()));
-        assertArrayEquals(bytes, Files.readAllBytes(destination.toPath()));
+
+        assertTrue(trash.mkdir());
+        assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, true));
+        assertArrayEquals(bytes, Files.readAllBytes(active.toPath()));
+        assertTrue(trash.isDirectory());
     }
 
     private PluginCall input(byte[] value, String key) throws Exception { return call(data(value, key)); }

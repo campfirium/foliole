@@ -1,5 +1,4 @@
 import Capacitor
-import CryptoKit
 import Foundation
 
 extension FolioleCompanionSyncPlugin {
@@ -56,7 +55,7 @@ enum FolioleAttachmentMaintenanceFiles {
         else if operation == "remove-trash" {
             try FolioleAttachmentBlockFiles.withRemoval(key) {
             let file = try directory(true).appendingPathComponent(key)
-            try requireFile(file)
+            try FolioleAttachmentTrashMove.requireRegularFile(file)
             try manager.removeItem(at: file)
             }
         } else { throw invalid() }
@@ -66,7 +65,10 @@ enum FolioleAttachmentMaintenanceFiles {
     private static func available(_ key: String) throws -> Bool {
         for trash in [false, true] {
             let file = try directory(trash).appendingPathComponent(key)
-            if manager.fileExists(atPath: file.path) { try requireFile(file); return true }
+            if manager.fileExists(atPath: file.path) {
+                try FolioleAttachmentTrashMove.requireRegularFile(file)
+                return true
+            }
         }
         return false
     }
@@ -79,17 +81,7 @@ enum FolioleAttachmentMaintenanceFiles {
         guard FolioleCompanionCanonicalAttachmentKey.valid(key) else { throw invalid() }
         let source = try directory(!toTrash).appendingPathComponent(key)
         let destination = try directory(toTrash).appendingPathComponent(key)
-        guard manager.fileExists(atPath: source.path) else { return }
-        try requireFile(source)
-        try manager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if manager.fileExists(atPath: destination.path) {
-            try requireFile(destination)
-            for file in [source, destination] {
-                let hash = SHA256.hash(data: try Data(contentsOf: file)).map { String(format: "%02x", $0) }.joined()
-                guard hash == String(key.prefix(64)) else { throw invalid() }
-            }
-            try manager.removeItem(at: source)
-        } else { try manager.moveItem(at: source, to: destination) }
+        try FolioleAttachmentTrashMove.move(source, to: destination)
     }
 
     private static func inventory(_ trash: Bool) throws -> [JSObject] {
@@ -97,7 +89,7 @@ enum FolioleAttachmentMaintenanceFiles {
         guard manager.fileExists(atPath: root.path) else { return [] }
         return try manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.fileSizeKey]).compactMap { file in
             guard FolioleCompanionCanonicalAttachmentKey.valid(file.lastPathComponent) else { return nil }
-            try requireFile(file)
+            try FolioleAttachmentTrashMove.requireRegularFile(file)
             let values = try file.resourceValues(forKeys: [.fileSizeKey])
             return ["storageKey": file.lastPathComponent, "sizeBytes": values.fileSize ?? 0]
         }
@@ -108,11 +100,6 @@ enum FolioleAttachmentMaintenanceFiles {
         guard path.hasPrefix(URL(fileURLWithPath: NSHomeDirectory()).resolvingSymlinksInPath().path + "/") else { throw invalid() }
         let values = try manager.attributesOfItem(atPath: path)
         return ["generation": "\(values[.systemNumber] ?? ""):\(values[.systemFileNumber] ?? ""):\(values[.creationDate] ?? "")"]
-    }
-
-    private static func requireFile(_ file: URL) throws {
-        let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true else { throw invalid() }
     }
 
     private static func invalid() -> NSError {
