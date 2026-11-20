@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
@@ -128,9 +128,21 @@ export function useCompanionReadableArticleLoader(
     });
     return request.promise;
   }, [onError, onSnapshotChanged, release, setReadableArticle, snapshot]);
-  const visible = displayed.current;
-  const readableArticle = visible?.scope === getCompanionReadingScope() &&
-    visible.libraryScope === snapshot?.libraryScope &&
-    hasCompanionReadingDemand(snapshot, visible.nodeId) ? visible.article : null;
+  const readableArticle = useLiveReadingPosition(resolveVisibleArticle(displayed.current, snapshot), snapshot);
   return { openReadableArticle, readableArticle };
+}
+
+function resolveVisibleArticle(visible: DisplayedArticle | null, snapshot: WorkspaceSnapshot | null): Article {
+  return visible?.scope === getCompanionReadingScope() && visible.libraryScope === snapshot?.libraryScope &&
+    hasCompanionReadingDemand(snapshot, visible.nodeId) ? visible.article : null;
+}
+
+/**
+ * Articles are reused while their text and annotations stay the same. The saved reading position
+ * changes on its own, so it always comes from the current workspace snapshot.
+ */
+function useLiveReadingPosition(article: Article, snapshot: WorkspaceSnapshot | null): Article {
+  const saved = article ? snapshot?.persistedNodeViewById?.[article.nodeId] ?? null : null;
+  return useMemo(() => !article || (article.persistedNodeViewState ?? null) === saved
+    ? article : { ...article, persistedNodeViewState: saved }, [article, saved]);
 }
