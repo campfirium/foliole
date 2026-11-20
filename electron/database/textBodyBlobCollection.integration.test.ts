@@ -119,15 +119,19 @@ it('protects cached import text until its holder is removed', () => {
   expect(collectTextBodyBlobCandidates(peer.driver, [cached]).deletedHashes).toEqual([cached]);
 });
 
-it('refuses corrupt text bytes and never collects a non-text resource', () => {
+it.each(['driver', 'port'] as const)('removes an unreferenced damaged body without reading it and never collects a non-text resource through %s', async mode => {
   const peer = createPeer('source');
   const corrupt = upsertTextBodyBlob(peer.driver, 'Expected body', NOW);
   const image = upsertTextBodyBlob(peer.driver, 'Image bytes', NOW);
   peer.db.prepare("UPDATE content_blobs SET kind = 'image' WHERE hash = ?").run(image);
-  peer.db.prepare('UPDATE content_blob_data SET data = ? WHERE hash = ?').run(Buffer.from('Damaged'), corrupt);
-  expect(() => collectTextBodyBlobCandidates(peer.driver, [image, corrupt])).toThrow('text_body_collection_invalid_bytes');
-  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash IN (?, ?)').all(image, corrupt)).toHaveLength(2);
-  expect(collectTextBodyBlobCandidates(peer.driver, [image]).deletedHashes).toEqual([]);
+  peer.db.prepare('UPDATE content_blob_data SET data = ? WHERE hash = ?').run(Buffer.from([0xff, 0xfe, 0x00]), corrupt);
+  const observed = observeReads(peer.port);
+  const result = mode === 'driver'
+    ? collectTextBodyBlobCandidates(peer.driver, [image, corrupt])
+    : await collectTextBodyBlobCandidatesWithPort(observed.port, [image, corrupt]);
+  expect(result).toEqual({ deletedHashes: [corrupt], deletedBytes: 3 });
+  expect(observed.sizes).toEqual([]);
+  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash IN (?, ?)').pluck().all(image, corrupt)).toEqual([image]);
 });
 
 it('preserves malformed holder facts and aborts collection', () => {
