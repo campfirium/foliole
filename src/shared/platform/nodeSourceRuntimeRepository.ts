@@ -60,11 +60,12 @@ export async function loadRuntimeNodeSourceUpdatePreview(nodeId: string): Promis
   }
 
   try {
-    const preview = toRuntimeNodeSourceUpdatePreview(
-      await runtimeInvoke(NATIVE_COMMANDS.loadNodeSourceUpdatePreview, {
-        node_id: nodeId
-      })
-    );
+    const payload: unknown = await runtimeInvoke(NATIVE_COMMANDS.loadNodeSourceUpdatePreview, {
+      node_id: nodeId
+    });
+    // The host returns null when the node has no pending source update; only malformed payloads are warnings.
+    if (payload === null) return null;
+    const preview = toRuntimeNodeSourceUpdatePreview(payload);
     if (!preview) {
       logRuntimeWarning('native node source update payload invalid', {
         action: 'load_runtime_node_source_update_preview',

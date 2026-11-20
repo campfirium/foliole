@@ -164,3 +164,13 @@ it('normalizes node source update previews from the runtime bridge', async () =>
   });
   expect(invoke).toHaveBeenCalledWith('load_node_source_update_preview', { node_id: 'node-1' });
 });
+
+it('treats a missing node source update as no update without a diagnostic warning', async () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const invoke = vi.fn().mockResolvedValue(null);
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await expect(loadRuntimeNodeSourceUpdatePreview('node-1')).resolves.toBeNull();
+  expect(invoke.mock.calls.map(([command]) => command)).toEqual(['load_node_source_update_preview']);
+  expect(warn).not.toHaveBeenCalled();
+});
