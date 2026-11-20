@@ -23,6 +23,7 @@ export interface SequentialReadingArgs<T extends SequentialReadingNode = Sequent
   nodeOrder: string[];
   nodesById: Record<string, T>;
   now: string;
+  trashedNodeIds?: readonly string[] | undefined;
 }
 
 export interface SequentialReadingPatch<T extends SequentialReadingNode> {

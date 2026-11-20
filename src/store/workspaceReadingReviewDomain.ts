@@ -28,7 +28,7 @@ function buildReadOrLaterPatch(args: {
   now: string;
   releaseSequentialReading?: boolean;
   snapshot: Pick<WorkspaceState, 'nodesById'>;
-  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
+  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'> & Partial<Pick<WorkspaceState, 'trashedNodeIds'>>;
 }): ReadingReviewDomainPatch {
   const settings = getCurrentReviewSchedulerSettings();
   const laterDays = args.action === 'later' ? settings.readingLaterDays : undefined;
@@ -50,7 +50,8 @@ function buildReadOrLaterPatch(args: {
         nodeOrder: args.state.nodeOrder,
         nodesById: nextNodesById,
         now: args.now,
-        readNodeId: args.currentNodeId
+        readNodeId: args.currentNodeId,
+        trashedNodeIds: args.state.trashedNodeIds
       })
     : null;
   const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
@@ -73,7 +74,7 @@ function buildDismissPatch(args: {
   currentNode: Node;
   currentNodeId: string;
   now: string;
-  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
+  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'> & Partial<Pick<WorkspaceState, 'trashedNodeIds'>>;
 }): ReadingReviewDomainPatch {
   const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
   const afterReading = buildDismissedReadingProfile({
@@ -90,7 +91,8 @@ function buildDismissPatch(args: {
     dismissedNodeId: args.currentNodeId,
     nodeOrder: args.state.nodeOrder,
     nodesById: nextNodesById,
-    now: args.now
+    now: args.now,
+    trashedNodeIds: args.state.trashedNodeIds
   });
   const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
   return {
@@ -114,7 +116,7 @@ export function buildReadingReviewDomainPatch(args: {
   now: string;
   releaseSequentialReading?: boolean;
   snapshot: Pick<WorkspaceState, 'nodesById'>;
-  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
+  state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'> & Partial<Pick<WorkspaceState, 'trashedNodeIds'>>;
 }): ReadingReviewDomainPatch | null {
   const currentNode = args.state.nodesById[args.currentNodeId];
   if (!currentNode) return null;

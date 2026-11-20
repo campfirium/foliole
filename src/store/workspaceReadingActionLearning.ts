@@ -11,7 +11,9 @@ export function readWorkspaceReadingActionLearning(state: WorkspaceState, nodeId
   const nodesById: SequentialReadingStateNodes = action === 'dismiss' && node
     ? { ...state.nodesById, [nodeId]: { ...node, reading: { state: 'dismissed' } } } : state.nodesById;
   const plan = action === 'dismiss' || (action === 'read' && releaseSequentialReading)
-    ? planSequentialReadingAdvanceStates({ handledNodeId: nodeId, nodeOrder: state.nodeOrder, nodesById }) : null;
+    ? planSequentialReadingAdvanceStates({
+      handledNodeId: nodeId, nodeOrder: state.nodeOrder, nodesById, trashedNodeIds: state.trashedNodeIds
+    }) : null;
   return readWorkspaceOperationLearning(state.nodesById, [nodeId, ...(plan?.changes ?? []).map(value => value.nodeId)],
     state.libraryScope ?? state.reviewSession.daily?.scope);
 }

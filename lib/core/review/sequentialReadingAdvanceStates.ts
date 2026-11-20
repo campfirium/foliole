@@ -6,6 +6,7 @@ import { sequentialReadingState, type SequentialReadingStateNodes } from './sequ
 
 export function planSequentialReadingAdvanceStates(args: {
   handledNodeId: string; nodeOrder: string[]; nodesById: SequentialReadingStateNodes;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   const sourceNodeId = findEnabledSequentialReadingSourceId(args.handledNodeId, args.nodesById);
   if (!sourceNodeId) return null;
@@ -13,7 +14,10 @@ export function planSequentialReadingAdvanceStates(args: {
   const changes: SequentialReadingStateChange[] = [];
   let released = false;
   let passedHandledNode = false;
+  // A trashed topic keeps its parent for restore, but it neither holds a slot nor receives a new state.
+  const trashed = new Set(args.trashedNodeIds ?? []);
   for (const nodeId of collectSequentialDerivedTopicIds({ ...args, sourceNodeId })) {
+    if (trashed.has(nodeId)) continue;
     const node = args.nodesById[nodeId];
     if (nodeId === args.handledNodeId) {
       released ||= isUnavailableSequentialTopic(node) && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });

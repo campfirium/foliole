@@ -133,7 +133,8 @@ function buildSingleDismissMutation(args: {
     dismissedNodeId: args.nodeId,
     nodeOrder: args.state.nodeOrder,
     nodesById: nextNodesById,
-    now: args.now
+    now: args.now,
+    trashedNodeIds: args.state.trashedNodeIds
   });
   const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
   return {
