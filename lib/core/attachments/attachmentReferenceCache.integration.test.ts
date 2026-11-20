@@ -97,3 +97,24 @@ it('bounds changed body batches by bytes without splitting one node', async () =
     expect(() => parseAttachmentReferenceInput({ ...first[0]!, content: 'wrong' })).toThrow('hash_mismatch');
   } finally { f.sqlite.close(); }
 });
+
+it('parses an over-budget body alone without stalling neighbours or dropping its references', async () => {
+  const f = fixture();
+  const onlyInLarge = `${'c'.repeat(64)}.png`;
+  try {
+    f.insert('a'); f.insert('b');
+    f.insert('large', `${'x'.repeat(1000)}![late](asset://${onlyInLarge})`);
+    f.insert('m'); f.insert('n');
+    const batches: string[][] = [];
+    let after: string | null = null;
+    for (;;) {
+      const rows = await f.db.transaction(tx => readAttachmentReferenceInputs(tx, after, 128, 200));
+      if (!rows.length) break;
+      await saveAttachmentReferenceResults(f.db, rows.map(parseAttachmentReferenceInput));
+      batches.push(rows.map(row => row.id));
+      after = rows.at(-1)!.id;
+    }
+    expect(batches).toEqual([['a', 'b'], ['large'], ['m', 'n']]);
+    expect(await readCompleteAttachmentReferenceKeys(f.db)).toEqual([image, onlyInLarge]);
+  } finally { f.sqlite.close(); }
+});

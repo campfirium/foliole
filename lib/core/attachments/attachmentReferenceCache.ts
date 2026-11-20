@@ -9,6 +9,23 @@ const incompleteInput = `n.content IS NULL OR (n.body_blob_hash IS NULL AND n.co
 const changedInput = `cached.node_id IS NULL OR cached.body_hash IS NOT n.body_blob_hash
   OR cached.resources_json IS NOT n.resource_references OR ${incompleteInput}`;
 
+/**
+ * A row larger than the byte budget is still parsed, but always alone: rows before it finish in their own
+ * batch and rows after it start the next one. Skipping it would leave the observation permanently
+ * incomplete, and stored bodies are already capped at TEXT_BODY_MAX_BYTES, so its size stays bounded.
+ */
+function selectBatchIds(candidates: readonly { id: string; bytes: number }[], maxBytes: number) {
+  const ids: string[] = [];
+  let bytes = 0;
+  for (const row of candidates) {
+    if (row.bytes > maxBytes) return ids.length ? ids : [row.id];
+    if (bytes + row.bytes > maxBytes) break;
+    ids.push(row.id);
+    bytes += row.bytes;
+  }
+  return ids;
+}
+
 /** Runs in a host-owned short read snapshot. Only changed bodies cross the database boundary. */
 export async function readAttachmentReferenceInputs(db: DbPort, after: string | null, maxRows = 128,
   maxBytes = 1024 * 1024): Promise<AttachmentReferenceInput[]> {
@@ -18,13 +35,7 @@ export async function readAttachmentReferenceInputs(db: DbPort, after: string | 
   const candidates = await db.query<{ id: string; bytes: number }>(`SELECT n.id,
     COALESCE(length(CAST(n.content AS BLOB)), 0) + length(CAST(n.resource_references AS BLOB)) AS bytes
     ${sourceJoin} WHERE (${changedInput}) AND (? IS NULL OR n.id > ?) ORDER BY n.id LIMIT ?`, [after, after, maxRows]);
-  const ids: string[] = [];
-  let bytes = 0;
-  for (const row of candidates) {
-    if (ids.length && bytes + row.bytes > maxBytes) break;
-    ids.push(row.id);
-    bytes += row.bytes;
-  }
+  const ids = selectBatchIds(candidates, maxBytes);
   if (!ids.length) return [];
   return db.query<AttachmentReferenceInput & DbRow>(`SELECT id, content, body_blob_hash AS body_hash,
     resource_references AS resources_json FROM nodes WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id`,
