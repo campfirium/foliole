@@ -16,6 +16,7 @@ import { mergeCompanionSyncProgressSession } from './companionSyncProgressSessio
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow';
+import { useCompanionSandboxSyncScenario } from './useCompanionSandboxSyncScenario';
 import { useCompanionSyncAppliedRefresh } from './useCompanionSyncAppliedRefresh';
 import { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
@@ -169,6 +170,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     manualSyncAction, setReadableArticle, setState, setStatus,
     setSyncConflictCount, state, status, syncConflictCount } = viewState;
   const [syncProgress, setMergedSyncProgress] = useMergedCompanionSyncProgress();
+  useCompanionSandboxSyncScenario(viewState, setMergedSyncProgress);
   const loaders = useCompanionWorkspaceLoaders({ setError, setReadableArticle, setState, state });
   const snapshotActions = createCompanionSnapshotActions(viewState, setMergedSyncProgress);
   const join = useCompanionSyncGroupJoin({

@@ -3,10 +3,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { normalizePath, type EnvironmentModuleNode, type HtmlTagDescriptor, type Plugin } from 'vite';
+import { normalizePath, type EnvironmentModuleNode, type HtmlTagDescriptor, type Plugin, type ViteDevServer } from 'vite';
 
 import { companionPreviewShellHtml } from './companionPreviewShellHtml';
 import { createCompanionPreviewSqliteHost } from './companionPreviewSqliteHost';
+import { readCompanionSandboxAuditRows, sandboxAuditEndpoint } from './companionSandboxAuditRows';
 import { assertCompanionSandboxPath, prepareCompanionSandbox } from './companionSandboxSeed';
 
 export const COMPANION_PREVIEW_DATABASE_ENV = 'FOLIOLE_COMPANION_PREVIEW_DB';
@@ -58,10 +59,10 @@ export function readCompanionPreviewHostName(databaseFile: string) {
   }
 }
 
-export function companionPreviewHostTags(projectRoot: string, hostName: string): HtmlTagDescriptor[] {
+export function companionPreviewHostTags(projectRoot: string, hostName: string, sandbox = false): HtmlTagDescriptor[] {
   return [
     { tag: 'script', injectTo: 'head-prepend',
-      children: `window.__FOLIOLE_COMPANION_PREVIEW_HOST__ = ${JSON.stringify(hostName)};` },
+      children: `window.__FOLIOLE_COMPANION_PREVIEW_HOST__ = ${JSON.stringify(hostName)};${sandbox ? 'window.__FOLIOLE_COMPANION_SANDBOX__ = true;' : ''}` },
     { tag: 'script', injectTo: 'head-prepend',
       attrs: { type: 'module', src: `/@fs/${path.resolve(projectRoot, PREVIEW_HOST_MODULE).replace(/^\/+/u, '')}` } }
   ];
@@ -105,6 +106,26 @@ function reachesBootstrap(modules: EnvironmentModuleNode[], bootstrapFile: strin
   return false;
 }
 
+function configureSandboxPreview(server: ViteDevServer, projectRoot: string, databaseFile: string, env: NodeJS.ProcessEnv) {
+  let prepared: Promise<void> | undefined;
+  server.middlewares.use((_request, _response, next) => {
+    prepared ??= Promise.resolve().then(() => {
+      assertCompanionSandboxPath(projectRoot, databaseFile);
+      return prepareCompanionSandbox(databaseFile, env.FOLIOLE_COMPANION_SANDBOX_RESET === '1');
+    }).then(() => {
+      delete env.FOLIOLE_COMPANION_SANDBOX_RESET;
+    });
+    void prepared.then(() => next(), next);
+  });
+  server.middlewares.use(sandboxAuditEndpoint, (request, response, next) => {
+    if (request.method !== 'GET') return send(response, 405, { ok: false, message: 'GET only' });
+    try {
+      response.setHeader('Cache-Control', 'no-store');
+      send(response, 200, readCompanionSandboxAuditRows(projectRoot));
+    } catch (error) { next(error); }
+  });
+}
+
 /** Serves the companion preview database only to the local Vite dev server. */
 export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.ProcessEnv = process.env): Plugin {
   const databaseFile = env[COMPANION_PREVIEW_DATABASE_ENV];
@@ -122,22 +143,11 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
     },
     transformIndexHtml() {
       if (!databaseFile) return [];
-      return companionPreviewHostTags(projectRoot, readCompanionPreviewHostName(databaseFile));
+      return companionPreviewHostTags(projectRoot, readCompanionPreviewHostName(databaseFile), sandbox);
     },
     configureServer(server) {
       if (!databaseFile) return;
-      if (sandbox) {
-        let prepared: Promise<void> | undefined;
-        server.middlewares.use((_request, _response, next) => {
-          prepared ??= Promise.resolve().then(() => {
-            assertCompanionSandboxPath(projectRoot, databaseFile);
-            return prepareCompanionSandbox(databaseFile, env.FOLIOLE_COMPANION_SANDBOX_RESET === '1');
-          }).then(() => {
-            delete env.FOLIOLE_COMPANION_SANDBOX_RESET;
-          });
-          void prepared.then(() => next(), next);
-        });
-      }
+      if (sandbox) configureSandboxPreview(server, projectRoot, databaseFile, env);
       const host = createCompanionPreviewSqliteHost(databaseFile);
       server.httpServer?.once('close', () => {
         void host.close().catch((error: unknown) => server.config.logger.error(String(error)));

@@ -1,6 +1,7 @@
 import { createCompanionPreviewDocument } from './companionPreviewDocument';
 import { createCompanionPreviewShareInboxPlugin, createCompanionPreviewSyncPlugin } from './companionPreviewHostPlugins';
 import { observeCompanionPreviewReadiness } from './companionPreviewReadiness';
+import { createCompanionSandboxScenarioStore } from './companionSandboxScenarios';
 import { createCompanionSettingsPreview } from './companionSettingsPreview';
 import type {} from './companionPreviewShell';
 
@@ -81,6 +82,9 @@ export function installCompanionPreviewHost(target: object, hostName: string) {
     CapacitorCustomPlatform: { name: COMPANION_PREVIEW_PLATFORM, plugins: {} }
   });
   if (typeof window !== 'undefined' && target === window) {
+    if (window.__FOLIOLE_COMPANION_SANDBOX__) {
+      window.__folioleSandboxScenarios = createCompanionSandboxScenarioStore();
+    }
     let exiting = false;
     window.__foliolePreviewClose = async () => {
       exiting = true;

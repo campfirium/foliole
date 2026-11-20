@@ -167,7 +167,10 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
   return targetArgs;
 }
 
-export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
+export async function tryForegroundAutoSync(
+  args: TryForegroundAutoSyncArgs,
+  resolveTargets = resolveReachableCompanionWorkspaceSyncEndpoints
+): Promise<ForegroundAutoSyncOutcome> {
   if (args.scheduledWebDav && (args.cancelled() || !await (args.foregroundWebDavReceive ? loadCompanionWebDavRelay(true, true) : loadCompanionWebDavRelay(true)) || args.cancelled())) return 'skipped';
   const triggeredAt = args.triggeredAt ?? new Date().toISOString();
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
@@ -176,7 +179,7 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
   let reusedSession = false;
   let shortenedDiscovery = false;
   try {
-    targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
+    targets = await resolveTargets(storedEndpointUrl, {
       ...(args.signal ? { signal: args.signal } : {}),
       allowWhileNotParticipating: args.triggerReason === 'manual',
       onSessionReused: () => { reusedSession = true; },

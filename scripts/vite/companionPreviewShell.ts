@@ -2,6 +2,8 @@ import { capturePreviewRestoreTarget } from './companionPreviewReadiness';
 import { captureCompanionPreview } from './companionPreviewSnapshot';
 import { createCompanionPreviewStatusBar } from './companionPreviewStatusBar';
 import { fitCompanionPreviewViewport } from './companionPreviewViewport';
+import { mountCompanionSandboxAuditPanel } from './companionSandboxAuditPanel';
+import { attachCompanionSandboxScenarioControls } from './companionSandboxScenarios';
 
 export interface CompanionPreviewShell {
   beforeReload(source: Window): Promise<void>;
@@ -43,7 +45,12 @@ function createShellElements(document: Document) {
   note.textContent = document.body.dataset.previewSandbox
     ? 'Mobile sandbox · Sample data'
     : 'Settings preview uses demo data. Actions do not back up or delete your files.';
-  document.body.append(note, viewport);
+  if (document.body.dataset.previewSandbox) {
+    const stage = document.createElement('div');
+    stage.className = 'sandbox-stage';
+    stage.append(note, viewport);
+    document.body.append(stage);
+  } else document.body.append(note, viewport);
   viewport.append(createCompanionPreviewStatusBar(document), content);
   return { frame, frozen, overlay, status, retry, viewport };
 }
@@ -55,7 +62,8 @@ class PreviewTransition implements CompanionPreviewShell {
   private isRestored: (document: Document) => boolean = () => true;
   private previousDocument: Document | null = null;
   private capture: Promise<void> | null = null;
-  constructor(private readonly elements: ShellElements, private readonly timeoutMs: number) {}
+  constructor(private readonly elements: ShellElements, private readonly timeoutMs: number,
+    private readonly onReady?: (page: Document) => void) {}
 
   private belongs(source: Window) { return source === this.elements.frame.contentWindow; }
   private hasFailed() { return this.phase === 'failed'; }
@@ -111,7 +119,7 @@ class PreviewTransition implements CompanionPreviewShell {
   ready(source: Window) {
     if (!this.belongs(source) || this.phase === 'failed') return;
     if (this.phase === 'updating' && source.document === this.previousDocument) return;
-    if (!this.isRestored(source.document)) return;
+    if (this.phase === 'updating' && !this.isRestored(source.document)) return;
     this.dispose();
     this.phase = 'ready';
     const { frame, frozen, overlay } = this.elements;
@@ -119,6 +127,7 @@ class PreviewTransition implements CompanionPreviewShell {
     frame.style.visibility = '';
     frozen.hidden = true;
     overlay.hidden = true;
+    this.onReady?.(source.document);
   }
 
   async retry() {
@@ -145,14 +154,17 @@ class PreviewTransition implements CompanionPreviewShell {
 
 export function mountCompanionPreviewShell(document: Document, timeoutMs = 30_000) {
   const elements = createShellElements(document);
+  const detachScenarios = document.body.dataset.previewSandbox
+    ? attachCompanionSandboxScenarioControls(document, elements.frame) : undefined;
+  const audit = document.body.dataset.previewSandbox ? mountCompanionSandboxAuditPanel(document) : undefined;
   const stopFitting = fitCompanionPreviewViewport(elements.viewport);
-  const shell = new PreviewTransition(elements, timeoutMs);
+  const shell = new PreviewTransition(elements, timeoutMs, audit?.show);
   elements.retry.addEventListener('click', () => void shell.retry());
   document.defaultView!.__foliolePreviewShell = shell;
   const url = new URL(document.URL);
   url.searchParams.set('__foliole_preview_frame', '1');
   elements.frame.src = url.href;
-  return { ...elements, shell, dispose: () => { shell.dispose(); stopFitting(); } };
+  return { ...elements, shell, dispose: () => { shell.dispose(); stopFitting(); detachScenarios?.(); audit?.dispose(); } };
 }
 
 if (typeof document !== 'undefined' && document.body.dataset.companionPreviewShell === 'true')

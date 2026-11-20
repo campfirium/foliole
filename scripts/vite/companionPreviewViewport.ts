@@ -11,7 +11,15 @@ export function fitCompanionPreviewViewport(viewport: HTMLElement) {
   viewport.style.setProperty('--preview-content-height', `${height}px`);
   viewport.style.setProperty('--preview-status-bar-height', `${COMPANION_PREVIEW_STATUS_BAR_HEIGHT}px`);
   const fit = () => {
-    const scale = Math.min(1, target.innerWidth / width, target.innerHeight / frameHeight);
+    const stage = viewport.closest<HTMLElement>('.sandbox-stage');
+    const availableWidth = stage?.clientWidth || target.innerWidth;
+    const heightLimit = stage?.clientHeight || target.innerHeight;
+    const panel = stage?.querySelector<HTMLElement>('.sandbox-scenarios');
+    const top = panel ? panel.offsetTop + panel.offsetHeight + 8 : 0;
+    const bottom = panel ? 8 : 0;
+    const availableHeight = Math.max(1, heightLimit - top - bottom);
+    if (panel) viewport.style.top = `${top + availableHeight / 2}px`;
+    const scale = Math.min(1, availableWidth / width, availableHeight / frameHeight);
     viewport.style.setProperty('--preview-scale', String(scale));
   };
   target.addEventListener('resize', fit);
