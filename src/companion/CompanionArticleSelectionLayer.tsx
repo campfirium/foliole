@@ -20,7 +20,7 @@ export function CompanionArticleSelectionLayer({ articleProps: props, toolbar, p
       highlight={{ kind: 'selection', locator: range, nodeId: props.readableArticle.nodeId }}
       onPreview={toolbar.managed.preview} onCommit={(_nodeId, next) => toolbar.managed.setRange(next)} /> : null}
     <SelectionAnnotationToolbarLayer key={props.readableArticle.nodeId}
-      editor={toolbar.editorRef.current} parentNodeId={props.readableArticle.nodeId}
+      editor={toolbar.editorRef.current} scrollSurface={surface} parentNodeId={props.readableArticle.nodeId}
       onActivateExistingHighlight={toolbar.activateCreatedHighlight}
       onOpenExistingHighlight={props.onOpenExistingHighlight} snapshot={props.snapshot}
       onClose={toolbar.clearSelectionAndCloseToolbar} resolveSelectionPayload={toolbar.resolveSelectionPayload}

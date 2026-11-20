@@ -17,6 +17,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 export function SelectionAnnotationToolbarLayer(props: {
   editor?: EditorAdapter | null;
   parentNodeId?: string;
+  scrollSurface?: HTMLElement | null;
   onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler;
   onActivateExistingHighlight?: (target: CompanionExistingHighlightTarget) => void;
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
@@ -40,7 +41,7 @@ export function SelectionAnnotationToolbarLayer(props: {
     existingHighlight: { ...props.state.existingHighlight, originalText: adjustable.locator.originalText } } : props.state;
   return (
     <CompanionSelectionAnnotationToolbar
-      editor={props.editor} parentNodeId={props.parentNodeId} snapshot={props.snapshot}
+      editor={props.editor} parentNodeId={props.parentNodeId} snapshot={props.snapshot} scrollSurface={props.scrollSurface}
       onAdjustExistingHighlightRange={props.onAdjustExistingHighlightRange}
       onAddExistingHighlightNote={async (nodeId, originalText, note, guard) => {
         const result = await props.onAddExistingHighlightNote?.(nodeId, originalText, note, guard);

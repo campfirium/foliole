@@ -24,10 +24,11 @@ export function CompanionHighlightRangeHandles(props: {
   parentNodeId: string | undefined;
   nodeId: string;
   snapshot: WorkspaceSnapshot | null;
+  scrollSurface: HTMLElement | null;
   disabled: boolean;
   onCommit: (nodeId: string, range: { from: number; to: number }) => Promise<boolean>;
 }) {
   const highlight = resolveCompanionAdjustableHighlight(props);
-  return <HighlightRangeHandles touch editor={props.editor} highlight={highlight}
+  return <HighlightRangeHandles touch editor={props.editor} highlight={highlight} scrollSurface={props.scrollSurface}
     disabled={props.disabled} onCommit={props.onCommit} />;
 }

@@ -32,6 +32,7 @@ export interface CompanionSelectionAnnotationToolbarState {
 interface CompanionSelectionAnnotationToolbarProps {
   editor?: EditorAdapter | null | undefined;
   parentNodeId?: string | undefined;
+  scrollSurface?: HTMLElement | null | undefined;
   snapshot?: WorkspaceSnapshot | null | undefined;
   onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler | undefined;
   onAddExistingHighlightNote: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
@@ -120,7 +121,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       style={{ left: state.left, top: state.top }}>
       {!hideDeletedControls && state.existingHighlight && props.onAdjustExistingHighlightRange ? <CompanionHighlightRangeHandles
         editor={props.editor ?? null} parentNodeId={props.parentNodeId} nodeId={state.existingHighlight.nodeId}
-        snapshot={props.snapshot ?? null} disabled={disabled || note.isOpen}
+        snapshot={props.snapshot ?? null} scrollSurface={props.scrollSurface ?? null} disabled={disabled || note.isOpen}
         onCommit={(nodeId, range) => session.save(async () => {
           if (!session.guard || !props.editor) throw new Error('companion_highlight_node_unavailable');
           const result = await props.onAdjustExistingHighlightRange!(nodeId, range, props.editor.getContent(), session.guard);
