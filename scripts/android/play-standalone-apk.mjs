@@ -44,8 +44,13 @@ async function deliver(identity, root, env) {
     if (identity.versionCode <= highest) throw new Error(`Version code ${identity.versionCode} must exceed Play's highest ${highest}`);
     const uploaded = await api('POST', `${base}/bundles?uploadType=media`, fs.readFileSync(path.join(directory, 'app-release-signed.aab')), true);
     if (Number(uploaded.versionCode) !== identity.versionCode) throw new Error('Play recorded a different version code');
-    const current = await api('GET', `${base}/tracks/internal`);
-    await api('PUT', `${base}/tracks/internal`, { track: 'internal', releases: [...(current.releases ?? []),
+    // Play keeps one draft per track: replace earlier standalone drafts and refuse to touch anyone else's.
+    const current = (await api('GET', `${base}/tracks/internal`)).releases ?? [];
+    const ownDraft = release => release.status === 'draft' && / standalone [\da-f]{9}$/u.test(release.name ?? '');
+    if (current.some(release => release.status === 'draft' && !ownDraft(release))) {
+      throw new Error('The internal track holds another draft; resolve it in Play Console first');
+    }
+    await api('PUT', `${base}/tracks/internal`, { track: 'internal', releases: [...current.filter(release => !ownDraft(release)),
       { name: `${identity.version} standalone ${identity.sourceSha.slice(0, 9)}`, versionCodes: [String(identity.versionCode)], status: 'draft' }] });
     await api('POST', `${base}:commit`, {});
     log(`version ${identity.versionCode} committed as an internal-track draft; nothing is served to users`);
