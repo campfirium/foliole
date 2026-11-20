@@ -1,13 +1,12 @@
 import { flowTimingStages, flowTimingStatuses, type FlowTiming, type FlowTimingStage, type FlowTimingStatus } from '../../../../lib/core/flow/flowTiming';
+import { attachmentTimingKinds, pendingCompanionAttachmentTimings,
+  subscribeCompanionAttachmentTimings } from '../companion/runtime/companionAttachmentTiming';
 
 const actions = ['soon', 'read', 'later', 'dismiss', 'grade'] as const;
-const attachmentKinds = ['observe', 'status', 'clean', 'empty-trash', 'restore', 'configure',
-  'file.inventory', 'file.read-state', 'file.write-state', 'file.move', 'file.remove-trash', 'file.generation',
-  'protected-write'] as const;
 
 type Action = typeof actions[number];
 type Entry = { operation: number; action: Action; stage: FlowTimingStage; status: FlowTimingStatus; atMs: number; count?: number };
-type AttachmentKind = typeof attachmentKinds[number];
+type AttachmentKind = typeof attachmentTimingKinds[number];
 type Attachment = { kind: AttachmentKind; fromMs: number; toMs: number; status: 'done' | 'failed' | 'pending' };
 type Report = { build: string; events: Entry[]; attachments: Attachment[]; omitted: number };
 
@@ -17,12 +16,15 @@ const duration = 300_000;
 const validBuild = /^(?:[a-f0-9]{7,40}|unidentified)$/u;
 let capture: (Report & { startedAt: number; nextOperation: number; generation: number }) | undefined;
 let generation = 0;
-const activeAttachments = new Set<{ kind: AttachmentKind; start: number }>();
+let unsubscribeAttachments: (() => void) | undefined;
 
 export function startAndroidFlowTiming() {
   const revision = import.meta.env.VITE_FOLIOLE_SOURCE_REVISION;
-  capture = { build: validBuild.test(revision ?? '') ? revision! : 'unidentified',
+  const session = capture = { build: validBuild.test(revision ?? '') ? revision! : 'unidentified',
     startedAt: performance.now(), generation: ++generation, nextOperation: 0, events: [], attachments: [], omitted: 0 };
+  unsubscribeAttachments?.();
+  unsubscribeAttachments = subscribeCompanionAttachmentTimings(({ kind, startedAt }, status) =>
+    recordAttachment(session, kind, startedAt, status));
 }
 
 export function beginAndroidFlowAction(action: Action): FlowTiming | undefined {
@@ -51,26 +53,15 @@ function recordAttachment(session: NonNullable<typeof capture>, kind: Attachment
     toMs: Math.min(duration, elapsed(session.startedAt)), status });
 }
 
-export async function timeAndroidAttachment<T>(kind: string, task: () => Promise<T>) {
-  if (!attachmentKinds.includes(kind as AttachmentKind)) return task();
-  const active = { kind: kind as AttachmentKind, start: performance.now() };
-  activeAttachments.add(active);
-  let status: Attachment['status'] = 'failed';
-  try {
-    const result = await task();
-    status = 'done';
-    return result;
-  } finally {
-    activeAttachments.delete(active);
-    if (capture) recordAttachment(capture, active.kind, active.start, status);
-  }
-}
-
 export function stopAndroidFlowTiming(): Report | undefined {
   const session = capture;
   capture = undefined;
+  unsubscribeAttachments?.();
+  unsubscribeAttachments = undefined;
   if (!session?.events.length) return;
-  for (const pending of activeAttachments) recordAttachment(session, pending.kind, pending.start, 'pending');
+  for (const pending of pendingCompanionAttachmentTimings()) {
+    recordAttachment(session, pending.kind, pending.startedAt, 'pending');
+  }
   const actionWindows = flowActionWindows(session.events, Math.min(duration, elapsed(session.startedAt)));
   const attachments = session.attachments.filter(attachment => actionWindows
     .some(window => attachment.fromMs <= window.end && attachment.toMs >= window.start));
@@ -99,7 +90,7 @@ export function validateAndroidFlowTiming(value: unknown): value is Report {
       && actions.includes(event.action) && flowTimingStages.includes(event.stage) && flowTimingStatuses.includes(event.status) && validTime(event.atMs)
       && validCount(event.stage, event.count))
     && Array.isArray(report.attachments) && report.attachments.length <= attachmentLimit && report.attachments.every(attachment =>
-      attachment && Object.keys(attachment).length === 4 && attachmentKinds.includes(attachment.kind)
+      attachment && Object.keys(attachment).length === 4 && attachmentTimingKinds.includes(attachment.kind)
       && ['done', 'failed', 'pending'].includes(attachment.status)
       && validTime(attachment.fromMs) && validTime(attachment.toMs) && attachment.fromMs <= attachment.toMs);
 }

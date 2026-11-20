@@ -6,12 +6,12 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { AttachmentMaintenanceResult, AttachmentMaintenanceStatus, AttachmentObservationRequest,
   AttachmentObservationResult, AttachmentStatusRequest, AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
-import { timeAndroidAttachment } from '../../supportLog/androidFlowTiming';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 import { companionAttachmentFileOperation } from './companionAttachmentFileOperation';
 import { readCompanionObservationReferences } from './companionAttachmentObservation';
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
+import { timeCompanionAttachment } from './companionAttachmentTiming';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 // Native observation state is shared even when the database owner changes.
@@ -31,12 +31,12 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
 // eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const owner = getIosCompanionDatabaseOwner();
-  return runWithCompanionAttachmentMaintenance(() => timeAndroidAttachment(request.action, () => maintain(owner, request, signal)));
+  return runWithCompanionAttachmentMaintenance(() => timeCompanionAttachment(request.action, () => maintain(owner, request, signal)));
 }
 
 function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const files: typeof FolioleCompanionSync.maintainAttachmentFiles = args =>
-    timeAndroidAttachment(`file.${args.operation}`, () => FolioleCompanionSync.maintainAttachmentFiles(args));
+    timeCompanionAttachment(`file.${args.operation}`, () => FolioleCompanionSync.maintainAttachmentFiles(args));
   const now = new Date();
   const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
   const assertOwner = () => {
@@ -105,7 +105,7 @@ function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner
     return result;
   });
   const withStableRevision: AttachmentMaintenancePort['withStableRevision'] = (snapshotRevision, action) =>
-    commit(snapshotRevision, tx => timeAndroidAttachment('protected-write', async () => {
+    commit(snapshotRevision, tx => timeCompanionAttachment('protected-write', async () => {
       activeDb = tx;
       try { return await action(); }
       finally { activeDb = undefined; }

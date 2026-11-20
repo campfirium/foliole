@@ -2,6 +2,7 @@ import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../localization/testLocalization';
+import { timeCompanionAttachment } from '../platform/companion/runtime/companionAttachmentTiming';
 import { beginAndroidFlowAction } from '../platform/supportLog/androidFlowTiming';
 import { serializeSupportLog, stopSupportLog } from '../platform/supportLog/supportLog';
 
@@ -43,7 +44,10 @@ it('exports only the current Android Flow recording through the existing share a
   current('queue-size', 'done', invalidInput as never);
   act(() => vi.advanceTimersByTime(219));
   current('body', 'done');
-  act(() => vi.advanceTimersByTime(299_781));
+  await timeCompanionAttachment('file.inventory', async () => {
+    vi.advanceTimersByTime(31);
+  });
+  act(() => vi.advanceTimersByTime(299_750));
   current('action', 'done');
   renderWithLocalization(<SupportLogPanel mobile />);
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Export log' })));
@@ -56,7 +60,7 @@ it('exports only the current Android Flow recording through the existing share a
     androidFlow: { build: 'a'.repeat(40), events: [
       { operation: 1, action: 'read', stage: 'action', status: 'start', atMs: 0 },
       { operation: 1, action: 'read', stage: 'body', status: 'done', atMs: 219 }
-    ], attachments: [], omitted: 0 }
+    ], attachments: [{ kind: 'file.inventory', fromMs: 219, toMs: 250, status: 'done' }], omitted: 0 }
   });
   expect(JSON.parse(serializeSupportLog('desktop')!)).not.toHaveProperty('androidFlow');
   expect(beginAndroidFlowAction('read')).toBeUndefined();
