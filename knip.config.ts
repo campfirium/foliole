@@ -39,6 +39,7 @@ const config = {
     'swiftc',
     'taskkill',
     'taskkill.exe',
+    'tasklist',
     'where.exe',
     'wslpath',
     'xcrun'
