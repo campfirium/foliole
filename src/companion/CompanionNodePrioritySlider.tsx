@@ -87,8 +87,8 @@ export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }:
       onCommit={priority => void actions.execute({ type: 'set-priority', nodeId: node.id, priority }, () => {
         if (mounted.current) onSaved();
       })} />
-    {actions.error && <p role="status" className="py-2 text-sm text-error">
-      {t(actions.pending ? 'companion.workspace.savedRefreshError' : 'companion.reading.historyError')}
+    {actions.failure === 'companion.workspace.failure.priority' && <p role="status" className="py-2 text-sm text-error">
+      {t(actions.pending ? 'companion.workspace.savedRefreshError' : actions.failure)}
     </p>}
     {actions.pending && <button type="button" className="min-h-11 text-sm underline" disabled={actions.busy} onClick={actions.retryRefresh}>
       {t('companion.selection.refresh')}

@@ -11,8 +11,8 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { ensureSyncSpecialRootNodes } from '../../../../../lib/core/sync/syncSpecialRootNodes';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-import { saveCompanionDiveDirectoryVersion } from './companionDiveDirectoryVersion';
 import { runCompanionHistoryMutation } from './companionFlowHistory';
+import { saveCompanionVirtualDirectoryVersion } from './companionVirtualDirectoryVersion';
 import { loadCompanionVirtualFolderResultIds } from './companionVirtualFolderResults';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -31,7 +31,7 @@ export function convertCompanionDiveDirectory(nodeId: string, target: DiveDirect
     if (parentNodeId) await ensureSyncSpecialRootNodes(db, [{ nodeId: parentNodeId, referencedAt: updatedAt }]);
     const parentId = parentOrderId(parentNodeId);
     const previous = await readCurrentParentOrderWithDbPort(db, parentId);
-    await saveCompanionDiveDirectoryVersion(db, { ...node, parentNodeId, updatedAt }, hostName, {
+    await saveCompanionVirtualDirectoryVersion(db, { ...node, parentNodeId, updatedAt }, hostName, {
       ...sourceOrder, virtual_filter: JSON.stringify(virtualFilter)
     });
     await saveLocalCurrentParentOrderWithDbPort(db, {

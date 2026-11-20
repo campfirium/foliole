@@ -1,3 +1,5 @@
+import { VIRTUAL_ROOT_NODE_ID } from '../database/specialNodeIds.js';
+
 export const VIRTUAL_NODE_FILTER_VERSION = 1;
 
 export type VirtualNodeFilterMatchMode = 'all';
@@ -80,4 +82,10 @@ export function isManualVirtualNodeFilter(value: VirtualNodeFilter | null | unde
     value.conditions[0]?.field === 'manual' &&
     value.conditions[0].operator === 'equals' &&
     value.conditions[0].value === MANUAL_CHILD_ORDER_FILTER_VALUE;
+}
+export function isManualVirtualFolderNode(node: {
+  id: string; kind: string; parentNodeId: string | null; virtualFilter?: VirtualNodeFilter | null;
+} | null | undefined): boolean {
+  return Boolean(node && node.kind === 'folder' && node.parentNodeId === VIRTUAL_ROOT_NODE_ID &&
+    !node.id.startsWith('special-') && isManualVirtualNodeFilter(node.virtualFilter));
 }

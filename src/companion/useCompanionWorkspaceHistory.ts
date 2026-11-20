@@ -53,5 +53,5 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
     } catch { setFailure(failureKey); setPending(committed.current); }
     finally { locked.current = false; setBusy(false); }
   }
-  return { run, busy, pending, error: Boolean(failure), failure };
+  return { run, busy, pending, failure, clearFailure: () => setFailure(null) };
 }

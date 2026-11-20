@@ -3,8 +3,8 @@ import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../..
 import { appendDiveSources, readDiveNode, removeDirectDiveSource, type Dive } from '../../../../../lib/core/nodes/dive';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
-import { saveCompanionDiveDirectoryVersion } from './companionDiveDirectoryVersion';
 import { runCompanionHistoryMutation } from './companionFlowHistory';
+import { saveCompanionVirtualDirectoryVersion } from './companionVirtualDirectoryVersion';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function addCompanionDiveSource(diveId: string, sourceId: string) {
@@ -26,7 +26,7 @@ function changeCompanionDiveSources(diveId: string, change: (db: DbPort, dive: D
     if (!node || !dive) throw new Error('Dive is unavailable');
     const updated = await change(db, dive);
     if (updated === dive) return;
-    await saveCompanionDiveDirectoryVersion(db, { ...node, updatedAt: new Date().toISOString() },
+    await saveCompanionVirtualDirectoryVersion(db, { ...node, updatedAt: new Date().toISOString() },
       await iosCompanionHostName(db), { manual_child_order: JSON.stringify(updated.directSourceIds) });
   }, { kind: 'nodes', nodeIds: [diveId], structure: true });
 }

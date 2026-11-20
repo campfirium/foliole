@@ -41,6 +41,11 @@ function isVirtualResultCandidate(node: VirtualNodeResultCandidate | undefined) 
   return Boolean(node && !node.specialKind && !node.anchorLink && node.kind !== 'folder');
 }
 
+export function canUseManualVirtualFolderSource(node: VirtualNodeResultCandidate | null | undefined): boolean {
+  if (!node || node.deletedAt || node.specialKind || node.id.startsWith('special-') || node.virtualFilter) return false;
+  return node.kind === 'folder' || (node.kind === 'topic' && isVirtualResultCandidate(node));
+}
+
 function matchesVirtualNodeFilter(
   node: VirtualNodeResultCandidate,
   searchableText: string,

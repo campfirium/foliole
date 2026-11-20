@@ -4,6 +4,7 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import { MAX_DIVE_TITLE_LENGTH, readDiveNode } from '../../lib/core/nodes/dive';
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
+import { isManualVirtualFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 
@@ -33,7 +34,8 @@ export function CompanionWorkspaceNodeForm(props: { mode: 'rename' | 'move' | 'c
   };
   return <form onSubmit={event => { event.preventDefault(); submit(); }} className="space-y-4">
       {mode === 'delete' ? <p className="text-sm">{t(readDiveNode(node)
-        ? 'companion.workspace.deleteDiveDescription' : 'companion.workspace.deleteDescription')}</p> : mode === 'move' && node ?
+        ? 'companion.workspace.deleteDiveDescription' : isManualVirtualFolderNode(node)
+          ? 'companion.workspace.deleteIndexDescription' : 'companion.workspace.deleteDescription')}</p> : mode === 'move' && node ?
         <CompanionMoveDestinationPicker node={node} nodes={nodes} disabled={disabled} value={parentId} onChange={setParentId} /> : <>
           {mode === 'create' && props.parentNodeId && <select aria-label={t('companion.workspace.kind')}
             className="min-h-11 w-full rounded border bg-companion-base p-2" value={kind} onChange={event => {

@@ -1,7 +1,7 @@
 import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode } from '../../lib/core/nodes/dive';
-import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
+import { createManualVirtualNodeFilter, isManualVirtualFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 
 import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from './workspaceNodeMetadataHistory';
@@ -35,8 +35,10 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
     return { nodes: [node], subtreeNodeIds: [node.id], title: isDive ? 'Create Dive' : isIndex ? 'Create in Virtual' : `Create ${node.kind}` };
   }
   const node = nodes[command.nodeId];
-  const isDiveTrashAction = (command.type === 'delete' || command.type === 'restore') && readDiveNode(node);
-  if (!node || node.id.startsWith('special-') || (node.virtualFilter && !isDiveTrashAction) ||
+  const trashAction = command.type === 'delete' || command.type === 'restore';
+  const index = isManualVirtualFolderNode(node);
+  const virtualAction = (trashAction && readDiveNode(node)) || (index && (trashAction || command.type === 'rename'));
+  if (!node || node.id.startsWith('special-') || (node.virtualFilter && !virtualAction) ||
     (command.type === 'restore' ? !node.deletedAt : node.deletedAt)) throw new Error('node_mutation_unavailable');
   const next = { ...node, updatedAt: now };
   if (command.type === 'rename') {

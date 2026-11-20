@@ -36,6 +36,12 @@ function listBatchCandidates(
   return targets;
 }
 
+function getTrashFolderTarget(item: DirectoryListItem, snapshot: WorkspaceSnapshot | null,
+  candidates: ReadonlyMap<string, CompanionBatchTarget>) {
+  if (item.kind !== 'folder' || item.source !== 'trash' || snapshot?.nodesById[item.nodeId]?.virtualFilter) return undefined;
+  return candidates.get(item.nodeId);
+}
+
 export function useCompanionDirectoryBatchSelection(props: {
   sections: DirectorySection[];
   snapshot: WorkspaceSnapshot | null;
@@ -65,6 +71,9 @@ export function useCompanionDirectoryBatchSelection(props: {
   useRegisterCompanionDirectoryBatchMenuAction(enter,
     pageActive && !busy && selected === null && Boolean(actions && candidates.size && isAvailableNativeCompanionRuntime()));
   useCompanionDirectoryBatchHeader(pageActive && selected !== null);
+  const restoreTargets = (targets: readonly CompanionBatchTarget[], onSaved: () => void) => {
+    void actions?.restoreBatch(targets, count => { setSkipped(count); onSaved(); });
+  };
   return {
     trash: batchMode === 'trash', skipped, canPurge: Boolean(purge),
     active: selected !== null, busy, confirm, count: selected?.size ?? 0, total: candidates.size,
@@ -83,8 +92,11 @@ export function useCompanionDirectoryBatchSelection(props: {
       else void actions.moveBatchToTrash(confirm.roots, closeSelection);
     },
     restore: () => {
-      if (!selected?.size || !actions) return;
-      void actions.restoreBatch([...selected.values()], count => { setSkipped(count); setSelected(null); });
+      if (selected?.size) restoreTargets([...selected.values()], () => setSelected(null));
+    },
+    restoreFolderAction: (item: DirectoryListItem) => {
+      const target = !selected && actions ? getTrashFolderTarget(item, snapshot, candidates) : undefined;
+      return target && isAvailableNativeCompanionRuntime() ? (onSaved: () => void) => restoreTargets([target], onSaved) : undefined;
     },
     rowSelection: (item: DirectoryListItem) => selected && candidates.has(item.nodeId)
       ? { checked: selected.has(item.nodeId), toggle: () => setSelected(toggleBatchTarget(selected, candidates.get(item.nodeId)!)) } : null
@@ -125,6 +137,9 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
         icon={<Trash2 size={19} aria-hidden="true" />} disabled={batch.busy || (batch.trash ? !batch.canPurge : !batch.count)}
         onClick={batch.openConfirmation} />
     </div>
+    <p className="px-1 pb-2 text-sm text-companion-text-secondary">
+      {t(batch.trash ? 'companion.batch.trashScope' : 'companion.batch.libraryScope')}
+    </p>
     {batch.trash && batch.count > 0 && !batch.canPurge && <p className="pb-2 text-sm text-companion-text-secondary">
       {t('companion.batch.purgeUnavailable')}
     </p>}

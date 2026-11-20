@@ -53,8 +53,15 @@ it('selects within one list and moves the chosen roots and their subtrees to Tra
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     node(peers.desktop, 'Child B', 'topic', 'Folder B');
     await peers.exchange();
+    await mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'sample-dive', title: 'Sample Dive', sourceId: null });
+    await mutateCompanionWorkspace({ type: 'create-index', nodeId: 'sample-index', title: 'Sample index' });
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     enterSelection();
+    expect(screen.getByText('Only entries with a checkbox count. Dives, indexes, and system entries are excluded.')).toBeVisible();
+    expect(screen.getByTestId('companion-directory-node-sample-dive')).toBeVisible();
+    expect(screen.getByTestId('companion-directory-node-sample-index')).toBeVisible();
+    expect(screen.queryByRole('checkbox', { name: 'Select Sample Dive' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Select Sample index' })).toBeNull();
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
     click('Cancel');

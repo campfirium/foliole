@@ -1,16 +1,21 @@
 import { useState } from 'react';
 
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import { isManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
+import { isManualVirtualFolderNode, isManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionAddToDive } from './CompanionAddToDive';
 import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { CompanionIndexSourceForm, companionIndexSourcePromptKeys } from './CompanionIndexSourceForm';
 import { companionWorkspaceCreateLabels, useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass as rowClass } from './CompanionWorkspaceMenuActions';
 import { CompanionWorkspaceNodeForm } from './CompanionWorkspaceNodeForm';
 
-export type WorkspaceNodeSheetState = { mode: 'menu' | 'rename' | 'move' | 'create' | 'create-dive' | 'create-index' | 'delete' | 'add-to-dive' | 'convert-to-dive' | 'convert-to-index'; nodeId: string | null; parentNodeId: string | null; kind?: NodeKind };
+export type WorkspaceNodeSheetState = {
+  mode: 'menu' | 'rename' | 'move' | 'create' | 'create-dive' | 'create-index' | 'delete' | 'add-to-dive'
+    | 'convert-to-dive' | 'convert-to-index' | 'add-index-source' | 'remove-index-source';
+  nodeId: string | null; parentNodeId: string | null; kind?: NodeKind;
+};
 
 export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetState; onClose(): void }) {
   const actions = useCompanionWorkspaceActions();
@@ -21,17 +26,22 @@ export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetSt
   const disabled = actions.busy || actions.pending;
   const menuRow = (label: string, onClick: () => void) => <button key={label} type="button" disabled={disabled} className={rowClass} onClick={onClick}>{label}</button>;
   const adding = mode === 'add-to-dive';
+  const indexSourceChange = mode === 'add-index-source' ? 'add' : mode === 'remove-index-source' ? 'remove' : null;
   const conversion = mode === 'convert-to-dive' ? 'dive' : mode === 'convert-to-index' ? 'index' : null;
   const title = mode === 'create-dive' || mode === 'create-index' ? t(companionWorkspaceCreateLabels[mode])
-    : adding ? t('desktop.nodeList.addToDive.title') : node?.title ?? t('companion.browse.more');
-  const failureKey = actions.pending ? 'companion.workspace.savedRefreshError'
-    : adding ? 'desktop.nodeList.addToDive.saveFailed'
-    : conversion ? 'desktop.nodeList.dive.convertFailed' : 'companion.reading.historyError';
+    : adding ? t('desktop.nodeList.addToDive.title') : indexSourceChange ? t(companionIndexSourcePromptKeys[indexSourceChange])
+      : node?.title ?? t('companion.browse.more');
+  const failureKey = actions.pending ? 'companion.workspace.savedRefreshError' : actions.failure;
   return <CompanionBottomSheet open onOpenChange={open => { if (!open && !actions.busy) props.onClose(); }} title={title}>
-    {actions.error && <p role="status" className="py-3 text-sm text-error">{t(failureKey)}</p>}
+    {failureKey && <p role="status" className="py-3 text-sm text-error">{t(failureKey)}</p>}
     {actions.pending ? <button type="button" disabled={actions.busy} className={rowClass}
       onClick={actions.retryRefresh}>{t('companion.selection.refresh')}</button> : adding ? <CompanionAddToDive
       snapshot={actions.snapshot} sourceId={node?.id} disabled={disabled} onSelect={actions.addToDive} /> :
+      (mode === 'add-index-source' || mode === 'remove-index-source') ? (
+        indexSourceChange && node && !node.deletedAt && isManualVirtualFolderNode(node) && actions.snapshot ? <CompanionIndexSourceForm
+          index={node} snapshot={actions.snapshot} disabled={disabled} change={indexSourceChange}
+          onSubmit={sourceId => actions.changeIndexSource(node.id, sourceId, indexSourceChange)} /> : null
+      ) :
       (mode === 'convert-to-dive' || mode === 'convert-to-index') ? (node?.virtualFilter && conversion ? <>
         {conversion === 'dive' && !isManualVirtualNodeFilter(node.virtualFilter) && <p className="py-2 text-sm text-companion-text-secondary">
           {t('companion.directory.convertMatchingToDive')}</p>}

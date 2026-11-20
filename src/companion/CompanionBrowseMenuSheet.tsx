@@ -96,7 +96,7 @@ function BrowseMainMenu(props: {
   onClose(): void;
   onOpenAppearance(): void;
   onOpenNew?: () => void;
-  onOpenSort(): void;
+  onOpenSort?: () => void;
   onSync?: () => void;
   syncDisabled?: boolean;
   syncStatus?: string;
@@ -120,7 +120,8 @@ function BrowseMainMenu(props: {
           status: props.syncStatus
         })}
       />
-      <MenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
+      {props.onOpenSort && <MenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort}
+        status={props.activeSortLabel} trailingIcon={ChevronRight} />}
       <MenuRow label={t('companion.settings.appearance.title')} onSelect={props.onOpenAppearance} trailingIcon={ChevronRight} />
     </>
   );
@@ -178,7 +179,9 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
   const workspace = useCompanionWorkspaceActions();
   const canCreate = Boolean(props.allowRootCreation && workspace && isAvailableNativeCompanionRuntime());
   const [selectedView, setView] = useState<BrowseMenuView>('menu');
-  const view = selectedView === 'new' && !canCreate ? 'menu' : selectedView;
+  const canSort = !props.diveActions;
+  const view = (selectedView === 'new' && !canCreate) || (selectedView === 'sort' && !canSort) ? 'menu' : selectedView;
+  const mainTitle = props.diveActions ? 'companion.browse.diveMenu' : 'companion.browse.menu';
   const handleOpenChange = (open: boolean) => {
     if (!open) setView('menu');
     props.onOpenChange(open);
@@ -190,7 +193,7 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
       leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
       onOpenChange={handleOpenChange}
       open={props.open}
-      title={t(view === 'new' ? 'companion.browse.new.title' : view === 'sort' ? 'companion.browse.sort' : 'companion.browse.menu')}
+      title={t(view === 'new' ? 'companion.browse.new.title' : view === 'sort' ? 'companion.browse.sort' : mainTitle)}
     >
       <div className="border-t border-companion-divider">
         {view === 'menu' ? (
@@ -202,10 +205,10 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
               close();
               props.onOpenAppearance();
             }}
-            onOpenSort={() => setView('sort')}
             {...definedProps({
               onSync: props.onSync,
               onOpenNew: canCreate ? () => setView('new') : undefined,
+              onOpenSort: canSort ? () => setView('sort') : undefined,
               syncDisabled: props.syncDisabled,
               syncStatus: props.syncStatus
             })}

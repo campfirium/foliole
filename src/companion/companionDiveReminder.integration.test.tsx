@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/order -- Load native test mocks before modules that register plugins.
 import { host, open } from '../test/companionReminderTestSupport';
 
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
@@ -99,6 +99,7 @@ it('opens the shared form from the Dive menu and writes only on save', async () 
 
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(within(await screen.findByRole('dialog', { name: 'Dive menu' })).queryByText('Sort', { exact: true })).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button', { name: 'Create reminder…' }));
   await screen.findByLabelText('Message');
   await save();

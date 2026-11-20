@@ -7,7 +7,7 @@ import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyn
 
 import { createCompanionMetadataVersion } from './companionNodeHistory';
 
-export async function saveCompanionDiveDirectoryVersion(db: DbPort, node: WorkspaceNodeSnapshot, hostName: string,
+export async function saveCompanionVirtualDirectoryVersion(db: DbPort, node: WorkspaceNodeSnapshot, hostName: string,
   changes: Partial<Pick<NativeSyncNodeRecord['snapshot'], 'manual_child_order' | 'virtual_filter'>>) {
   const version = await createCompanionMetadataVersion(db, node, hostName);
   version.snapshot = { ...version.snapshot, ...changes };

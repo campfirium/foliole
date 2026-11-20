@@ -65,6 +65,48 @@ function confirm() {
   fireEvent.click(within(input.closest('form')!).getByRole('button', { name: 'Done' }));
 }
 
+it.each([
+  { action: 'Rename', message: 'Could not rename this entry.' },
+  { action: 'Move to...', message: 'Could not move this entry.' },
+  { action: 'Move to Trash', message: 'Could not move this entry to Trash.' }
+])('identifies a rejected SQLite write for $action', async ({ action, message }) => {
+  render(<Harness />);
+  library.database.exec(`CREATE TRIGGER reject_metadata BEFORE UPDATE ON nodes
+    WHEN NEW.id = 'source' BEGIN SELECT RAISE(ABORT, 'metadata rejected'); END`);
+  fireEvent.click(screen.getByRole('button', { name: 'Manage source' }));
+  fireEvent.click(screen.getByRole('button', { name: action }));
+  if (action === 'Rename') fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Changed' } });
+  if (action === 'Move to...') fireEvent.click(screen.getByRole('button', { name: 'Learning', pressed: false }));
+  fireEvent.click(within(screen.getByRole('dialog').querySelector('form')!).getByRole('button', {
+    name: action === 'Move to Trash' ? action : 'Done'
+  }));
+  expect(await screen.findByRole('status')).toHaveTextContent(message);
+  expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+  expect((await stored()).nodesById.source).toEqual(initial.nodesById.source);
+});
+
+it('identifies rejected Undo and Redo writes as history failures', async () => {
+  render(<Harness />);
+  openMove();
+  fireEvent.click(screen.getByRole('button', { name: 'Learning', pressed: false }));
+  confirm();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  for (const [action, currentParent] of [['Undo', 'learning'], ['Redo', 'work']] as const) {
+    library.database.exec(`CREATE TRIGGER reject_history BEFORE UPDATE ON nodes
+      WHEN NEW.id = 'source' BEGIN SELECT RAISE(ABORT, 'history rejected'); END`);
+    const button = screen.getByRole('button', { name: action });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    expect(await screen.findByRole('status')).toHaveTextContent('Could not undo or redo.');
+    expect((await stored()).nodesById.source?.parentNodeId).toBe(currentParent);
+    library.database.exec('DROP TRIGGER reject_history');
+    fireEvent.click(button);
+    await waitFor(async () => expect((await stored()).nodesById.source?.parentNodeId)
+      .toBe(action === 'Undo' ? 'work' : 'learning'));
+    expect(screen.queryByRole('status')).toBeNull();
+  }
+});
+
 it('browses collapsed branches without searching, confirms a move, hydrates it and supports undo', async () => {
   render(<Harness />);
   openMove();

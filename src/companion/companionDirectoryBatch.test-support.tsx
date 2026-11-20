@@ -23,6 +23,7 @@ export function BatchDirectoryFixture({ initial }: { initial: WorkspaceSnapshot 
     }}>
     <CompanionDirectoryBatchMenuProvider>
       <CompanionTopBar title="Directory" visible rightSlot={<CompanionBrowseTopActions
+        allowRootCreation={selection.kind === 'root'}
         onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenAppearance={() => {}}
         onOpenCapture={() => {}} sortDirection="asc" sortKey="name" />} />
       <button type="button" onClick={() => setSelection({ kind: 'root' })}>Library root</button>

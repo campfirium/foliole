@@ -73,6 +73,32 @@ it('creates a manual index directly from mobile, supports undo and syncs the sam
       .get(index!.id) as { parent_id: string; virtual_filter: string };
     expect(desktopIndex.parent_id).toBe(VIRTUAL_ROOT_NODE_ID);
     expect(isManualVirtualNodeFilter(JSON.parse(desktopIndex.virtual_filter))).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More: Mobile Index' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    const rename = screen.getByRole('dialog', { name: 'Mobile Index' });
+    const name = within(rename).getByRole('textbox', { name: 'Name' });
+    fireEvent.change(name, { target: { value: 'Renamed Index' } });
+    fireEvent.click(within(name.closest('form')!).getByRole('button', { name: 'Done' }));
+    await screen.findByRole('button', { name: 'Open folder Renamed Index' });
+    fireEvent.click(screen.getByRole('button', { name: 'More: Renamed Index' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Renamed Index' })).getByRole('button', { name: 'Move to Trash' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Renamed Index' })).toBeNull());
+    await peers.exchange();
+    const indexRow = () => peers.desktop.db.prepare('SELECT title, deleted_at FROM nodes WHERE id = ?').get(index!.id);
+    expect(indexRow()).toEqual({ title: 'Renamed Index', deleted_at: expect.any(String) });
+    fireEvent.click(screen.getByRole('button', { name: 'Open folder Trash' }));
+    fireEvent.click(screen.getByRole('button', { name: 'More: Renamed Index' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Restore from Trash' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'More: Renamed Index' })).toBeNull());
+    await peers.exchange();
+    expect(indexRow()).toEqual({ title: 'Renamed Index', deleted_at: null });
+    cleanup();
+    await reopenSearchLibrary(library.root, new Date().toISOString());
+    const restored = await readSnapshot();
+    expect(restored.nodesById[index!.id]?.title).toBe('Renamed Index');
+    expect(restored.trashedNodeIds).not.toContain(index!.id);
   } finally {
     cleanup();
     await library.close();
@@ -144,6 +170,12 @@ it('converts current full-body matches into fixed eligible sources on mobile', a
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More: Matches' }));
+    const filteredMenu = within(screen.getByRole('dialog', { name: 'More' }));
+    for (const name of ['Add source…', 'Remove source…', 'Rename', 'Move to Trash']) {
+      expect(filteredMenu.queryByRole('button', { name })).toBeNull();
+    }
+    fireEvent.click(filteredMenu.getByRole('button', { name: 'Done' }));
     await convert('Matches', 'Convert to Dive', /Future matches won’t be added automatically/);
     expect(screen.getAllByRole('button', { name: 'Open folder Matches' })).toHaveLength(1);
     await peers.exchange();

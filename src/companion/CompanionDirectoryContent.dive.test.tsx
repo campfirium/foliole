@@ -88,14 +88,15 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   expect(screen.queryByRole('button', { name: 'Start Dive' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
-  let menu = within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  let menu = within(screen.getByRole('dialog', { name: 'Dive menu' }));
+  expect(menu.queryByText('Sort', { exact: true })).toBeNull();
   expect(menu.queryByRole('button', { name: /^(New…|Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
   fireEvent.click(menu.getByRole('button', { name: 'Create reminder…' }));
   expect(openReminders).toHaveBeenCalledOnce();
   expect(screen.queryByRole('dialog')).toBeNull();
 
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
-  menu = within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  menu = within(screen.getByRole('dialog', { name: 'Dive menu' }));
   fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
   expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: ['member'] });
   expect(screen.queryByRole('dialog')).toBeNull();

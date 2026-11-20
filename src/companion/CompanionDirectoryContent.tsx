@@ -10,6 +10,7 @@ import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
+import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { AppButton } from '../shared/ui';
 
 import { useCompanionArticleExit } from './CompanionArticleTransition';
@@ -21,6 +22,7 @@ import {
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
@@ -99,6 +101,10 @@ function CompanionDirectoryListContent(props: {
   snapshot: WorkspaceSnapshot | null;
 }) {
   const t = useTranslation();
+  const workspace = useCompanionWorkspaceActions();
+  const folder = props.selection.kind === 'internal' ? props.snapshot?.nodesById[props.selection.nodeId] : undefined;
+  const ordinaryFolder = folder?.kind === 'folder' && !folder.id.startsWith('special-') && !folder.virtualFilter && !folder.deletedAt;
+  const canAdd = ordinaryFolder && workspace && supportsCompanionNodeMutationSurface('workspace-structure');
   const id = props.selection.kind === 'virtual' ? props.selection.nodeId : null;
   const dive = id ? readDiveNode(props.snapshot?.nodesById[id]) : null;
   const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
@@ -110,8 +116,14 @@ function CompanionDirectoryListContent(props: {
           : props.selection.kind === 'root' || props.selection.kind === 'internal' ? 'library' : undefined}
         directory={props.directory}
         viewKey={props.viewKey}
-        emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? 'companion.directory.emptyFolder')}
-        emptyDescription={t(dive ? 'desktop.nodeList.dive.emptyDescription' : copy?.description ?? 'companion.directory.emptyDescription')}
+        emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? (props.selection.kind === 'trash'
+          ? 'desktop.nodeList.trash.empty.title' : 'companion.directory.emptyFolder'))}
+        emptyDescription={dive ? t('desktop.nodeList.dive.emptyDescription') : copy ? t(copy.description)
+          : ordinaryFolder && !canAdd ? t('companion.directory.emptyDescription') : null}
+        emptyAction={canAdd ? <AppButton className="min-h-11" disabled={workspace.busy || workspace.pending}
+          onClick={() => workspace.open({ mode: 'create', kind: 'topic', nodeId: null, parentNodeId: folder.id })}>
+          {t('companion.directory.addToFolder')}
+        </AppButton> : undefined}
         onSelectItem={props.handleSelectItem}
         onStartDive={props.onStartDive}
         sections={props.sections}

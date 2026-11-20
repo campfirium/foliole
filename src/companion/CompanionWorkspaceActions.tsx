@@ -4,10 +4,12 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { DiveDirectoryConversionTarget } from '../../lib/core/nodes/diveDirectoryConversion';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../shared/localization/translations';
 import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
 import { addCompanionDiveSource, removeCompanionDiveSource } from '../shared/platform/companion/runtime/companionDiveSources';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
+import { changeCompanionIndexSource, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
 import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
 import { moveCompanionBatchToTrash, type CompanionBatchTarget } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
@@ -23,11 +25,12 @@ import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransact
 
 type Mode = 'undo' | 'redo';
 type Actions = {
-  snapshot: WorkspaceSnapshot | null; flowActive: boolean; busy: boolean; pending: boolean; error: boolean; canUndo: boolean; canRedo: boolean;
+  snapshot: WorkspaceSnapshot | null; flowActive: boolean; busy: boolean; pending: boolean; failure: TranslationKey | null; canUndo: boolean; canRedo: boolean;
   open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand, onSaved?: () => void): Promise<void>;
   convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
   removeFromDive(diveId: string, sourceId: string, onSaved: () => void): void;
+  changeIndexSource(indexId: string, sourceId: string, change: CompanionIndexSourceChange): void;
   moveBatchToTrash(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   restoreBatch(targets: readonly CompanionBatchTarget[], onSaved: (skipped: number) => void): Promise<void>;
   purgeBatch(plan: CompanionBatchPurgePlan, onSaved: () => void): Promise<void>;
@@ -35,7 +38,26 @@ type Actions = {
   retryRefresh(): void;
 };
 const Context = createContext<Actions | null>(null);
+export { Context as CompanionWorkspaceActionsContext };
 export const useCompanionWorkspaceActions = () => useContext(Context);
+
+const metadataFailureKeys = {
+  'create-dive': 'companion.workspace.failure.createDive',
+  'create-index': 'companion.workspace.failure.createIndex',
+  'set-priority': 'companion.workspace.failure.priority',
+  rename: 'companion.workspace.failure.rename',
+  move: 'companion.workspace.failure.move',
+  delete: 'companion.workspace.failure.trash',
+  restore: 'companion.workspace.failure.restore',
+  shelve: 'companion.workspace.failure.shelve',
+  unshelve: 'companion.workspace.failure.unshelve'
+} as const satisfies Record<Exclude<WorkspaceMetadataCommand['type'], 'create'>, TranslationKey>;
+
+const createFailureKeys = {
+  folder: 'companion.workspace.failure.createFolder',
+  topic: 'companion.workspace.failure.createTopic',
+  item: 'companion.workspace.failure.createItem'
+} as const;
 
 export function CompanionWorkspaceActionsProvider(props: {
   children: ReactNode; snapshot: WorkspaceSnapshot | null; refresh(): Promise<unknown>;
@@ -47,7 +69,11 @@ export function CompanionWorkspaceActionsProvider(props: {
   const [sheet, setSheet] = useState<WorkspaceNodeSheetState | null>(null);
   const key = companionFlowHistoryKey(props.snapshot?.libraryScope ?? '');
   const availability = useCompanionWorkspaceHistoryAvailability(key);
-  const { run, busy, pending, error, failure } = useCompanionWorkspaceTransaction({ ...props, afterRefresh: () => setSheet(null) });
+  const { run, busy, pending, failure, clearFailure } = useCompanionWorkspaceTransaction({ ...props, afterRefresh: () => setSheet(null) });
+  const open = (state: WorkspaceNodeSheetState | null) => {
+    if (!pending) clearFailure();
+    setSheet(state);
+  };
   async function replay(mode: Mode) {
     if (props.flowActive && !pending) { await props.applyFlow(mode); return; }
     await run(async () => {
@@ -61,23 +87,27 @@ export function CompanionWorkspaceActionsProvider(props: {
       if (restored && (entry.type !== 'nodes.change' || entry.beforeSession)) props.restoreFlow(restored);
     });
   }
-  const actions: Actions = { snapshot: props.snapshot, flowActive: props.flowActive, busy, pending, error, ...availability, open: setSheet,
-    convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter)),
-    addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId)),
-    removeFromDive: (diveId, sourceId, onSaved) => void run(() => removeCompanionDiveSource(diveId, sourceId), onSaved),
+  const actions: Actions = { snapshot: props.snapshot, flowActive: props.flowActive, busy, pending, failure, ...availability, open,
+    convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter),
+      undefined, 'desktop.nodeList.dive.convertFailed'),
+    addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId), undefined, 'desktop.nodeList.addToDive.saveFailed'),
+    removeFromDive: (diveId, sourceId, onSaved) => void run(() => removeCompanionDiveSource(diveId, sourceId), onSaved,
+      'companion.workspace.failure.removeDiveSource'),
+    changeIndexSource: (indexId, sourceId, change) => void run(() => changeCompanionIndexSource(indexId, sourceId, change),
+      undefined, change === 'add' ? 'companion.index.addSourceFailed' : 'companion.index.removeSourceFailed'),
     moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error'),
     restoreBatch: (targets, onSaved) => {
       let skipped = 0;
       return run(async () => {
         const result = await restoreCompanionBatchFromTrash(targets);
         skipped = result.skippedConflicts.length;
-      }, () => onSaved(skipped), 'companion.batch.error');
+      }, () => onSaved(skipped), targets.length === 1 ? 'companion.workspace.failure.restore' : 'companion.batch.error');
     },
     purgeBatch: (plan, onSaved) => run(async () => { await purgeCompanionTrashBatch(plan); }, onSaved, 'companion.batch.error'),
     retryRefresh: () => void run(async () => {}),
     execute: (command, onSaved) => run(async () => {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
-    }, onSaved), replay: mode => void replay(mode) };
+    }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type]), replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}
     {failure && !sheet && <div role="status" className="fixed bottom-24 left-3 right-3 z-[80] rounded-lg border bg-companion-base p-3 text-sm">
@@ -85,7 +115,7 @@ export function CompanionWorkspaceActionsProvider(props: {
       {pending && <button type="button" disabled={busy} className="ml-3 min-h-11 underline" onClick={() => void run(async () => {})}>
         {t('companion.selection.refresh')}</button>}
     </div>}
-    {sheet && <CompanionWorkspaceNodeSheet key={JSON.stringify(sheet)} state={sheet} onClose={() => setSheet(null)} />}
+    {sheet && <CompanionWorkspaceNodeSheet key={JSON.stringify(sheet)} state={sheet} onClose={() => open(null)} />}
   </Context.Provider>;
 }
 

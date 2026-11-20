@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { readDiveNode } from '../../lib/core/nodes/dive';
@@ -32,6 +32,7 @@ type DirectoryRowProps = {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   item: DirectoryListItem;
   onSelectItem(item: DirectoryListItem): void;
+  restoreFolder?: ((onSaved: () => void) => void) | undefined;
   onStartDive?: ((id: string) => void) | undefined;
   snapshot: WorkspaceSnapshot | null;
 };
@@ -51,14 +52,15 @@ function DirectoryRow(props: DirectoryRowProps) {
   const folderMenuItem = !props.selecting && props.item.kind === 'folder' && props.item.source === 'internal' ? props.item : null;
   const [folderMenuOpen, setFolderMenuOpen] = useState(false);
   const openFolderMenu = useCallback(() => setFolderMenuOpen(true), []);
-  const folderMenuGesture = useCompanionFolderMenuGesture(folderMenuItem ? openFolderMenu : null);
+  const hasFolderMenu = folderMenuItem || props.restoreFolder;
+  const folderMenuGesture = useCompanionFolderMenuGesture(hasFolderMenu ? openFolderMenu : null);
   if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
   const dive = props.item.source === 'virtual' ? readDiveNode(props.snapshot?.nodesById[props.item.nodeId]) : null;
   return (
     <div className="flex items-center">
       <button
         {...folderMenuGesture}
-        aria-keyshortcuts={folderMenuItem ? 'Shift+F10' : undefined}
+        aria-keyshortcuts={hasFolderMenu ? 'Shift+F10' : undefined}
         aria-pressed={props.checked}
         aria-label={t(
           props.selecting ? 'companion.batch.selectRow' : 'companion.directory.openFolder',
@@ -86,6 +88,7 @@ function DirectoryRow(props: DirectoryRowProps) {
       </button>
       {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
         <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
+          folderRestoreMenu={props.restoreFolder ? { open: folderMenuOpen, setOpen: setFolderMenuOpen, restore: props.restoreFolder } : undefined}
           onStart={dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined} />}
       {folderMenuItem && <CompanionTopicListMenu rowMenu={{ open: folderMenuOpen, onOpenChange: setFolderMenuOpen }}
         nodeId={folderMenuItem.nodeId} title={title}
@@ -94,10 +97,24 @@ function DirectoryRow(props: DirectoryRowProps) {
   );
 }
 
+function CompanionDirectoryEmptyState({ action, description, title }: {
+  action?: ReactNode;
+  description?: string | null | undefined;
+  title: string;
+}) {
+  const { t } = useLocalization();
+  return <div className="px-1 py-6">
+    <AppEmptyState action={action} className="min-h-0 items-start text-left text-companion-text-secondary"
+      description={description === null ? '' : description ?? t('companion.directory.emptyDescription')}
+      title={title} />
+  </div>;
+}
+
 export function CompanionDirectoryList(props: {
   batchMode?: 'library' | 'trash' | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
-  emptyDescription?: string;
+  emptyDescription?: string | null;
+  emptyAction?: ReactNode;
   emptyLabel: string;
   onSelectItem(item: DirectoryListItem): void;
   onStartDive?: ((id: string) => void) | undefined;
@@ -110,18 +127,8 @@ export function CompanionDirectoryList(props: {
   const controls = <CompanionDirectoryBatchControls batch={batch} />;
   const entries = useMemo(() => flattenDirectorySections(props.sections), [props.sections]);
   if (entries.length === 0) {
-    return (
-      <>
-        {controls}
-        <div className="px-1 py-6">
-          <AppEmptyState
-            className="min-h-0 items-start text-left text-companion-text-secondary"
-            description={props.emptyDescription ?? t('companion.directory.emptyDescription')}
-            title={props.emptyLabel}
-          />
-        </div>
-      </>
-    );
+    return <>{controls}<CompanionDirectoryEmptyState action={props.emptyAction}
+      title={props.emptyLabel} description={props.emptyDescription} /></>;
   }
 
   return <>{controls}<CompanionListViewport
@@ -138,6 +145,7 @@ export function CompanionDirectoryList(props: {
           <div className="min-w-0 flex-1" inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
               onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem}
+              restoreFolder={batch.restoreFolderAction(entry.item)}
               onStartDive={props.onStartDive} snapshot={props.snapshot} />
           </div>
         </div>;

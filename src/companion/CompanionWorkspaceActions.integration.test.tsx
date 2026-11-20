@@ -96,11 +96,26 @@ it('retries refresh without creating a second object or recording a second actio
   failRefresh = true;
   await createFolder();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument());
+  expect(screen.getByRole('status')).toHaveTextContent('Saved. Refresh to show the change.');
   expect(library.database.prepare("SELECT COUNT(*) AS count FROM nodes WHERE title = 'Created folder'").get()).toEqual({ count: 1 });
   failRefresh = false;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
   expect((await loadCompanionFlowHistory(companionFlowHistoryKey('Search'))).undoStack).toHaveLength(1);
+});
+
+it('keeps the create form available after SQLite rejects the write', async () => {
+  render(<Harness />);
+  library.database.exec(`CREATE TRIGGER reject_insert BEFORE INSERT ON nodes
+    WHEN NEW.title = 'Created folder' BEGIN SELECT RAISE(ABORT, 'create rejected'); END`);
+  await createFolder();
+  expect(await screen.findByRole('status')).toHaveTextContent('Could not create the folder.');
+  expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+  const name = screen.getByRole('textbox', { name: 'Name' });
+  expect(name).toHaveValue('Created folder');
+  library.database.exec('DROP TRIGGER reject_insert');
+  fireEvent.click(within(name.closest('form')!).getByRole('button', { name: 'Done' }));
+  expect(await screen.findByRole('button', { name: 'Created folder' })).toBeVisible();
 });
 
 function previewPriorityChange(topic: HTMLElement) {
