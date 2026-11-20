@@ -33,9 +33,10 @@ export async function readStoredDailyFlowView(store: DailyFlowStore, args: Daily
     const current = stored.session.currentNodeId;
     const currentNodeId = current && ready[args.mode].has(current) && ids.includes(current) ? current : null;
     const meta = stored.session.cycle!;
+    const cursor = meta.timedResume?.key === meta.scanAfter ? meta.timedResume.after : meta.scanAfter;
     const ordered = args.includeEntries ? [...new Set([
       ...(currentNodeId ? [currentNodeId] : []),
-      ...rows.filter(row => row.order_key > meta.scanAfter && row.order_key <= meta.lapLimit).map(row => row.node_id),
+      ...rows.filter(row => row.order_key > cursor && row.order_key <= meta.lapLimit).map(row => row.node_id),
       ...rows.filter(row => row.order_key <= meta.tailKey).map(row => row.node_id)
     ])].filter(id => ready[args.mode].has(id)) : null;
     const target = args.continueNodeId;

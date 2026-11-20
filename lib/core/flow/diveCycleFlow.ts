@@ -100,7 +100,8 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {
     if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);
   };
-  const args = { mode, now, settings, matches, onSkipped };
+  // Dive reports members that become due later today, so it still visits waiting rows.
+  const args = { mode, now, settings, matches, onSkipped, allRows: true };
   const earlier = resumeAfter && revisit.length ? await selectEarlierMember(db, revisit, resumeAfter, args) : null;
   const cycle = { ...global.cycle!, scanAfter: resumeAfter, lapLimit: dive.limit };
   const row = earlier?.row ?? (members.size ? await scanCycleRange(db, cycle, args) : null);

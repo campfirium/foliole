@@ -113,7 +113,7 @@ it.each(['read', 'later', 'dismiss'] as const)('%s rolls back the fact, cursor a
   expect(loadWorkspaceSnapshot()!.nodesById[before.currentNodeId!]!.reading).toEqual(committed);
 });
 
-it.each(['read', 'later'] as const)('%s keeps the configured short reading interval and becomes due behind waiting Soon', async action => {
+it.each(['read', 'later'] as const)('%s keeps the configured short reading interval and is taken before waiting Soon once due', async action => {
   const settings = saveReviewSchedulerSettings({ pushQueue: { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
     readingInitialIntervalMs: 60000, readingIntervalGrowthFactorRange: { min: 4, max: 4 } } });
   hydrateCurrentReviewSchedulerSettings(settings);
@@ -133,10 +133,10 @@ it.each(['read', 'later'] as const)('%s keeps the configured short reading inter
   expect(reading.intervalDurationMs).toBe(expected);
   expect(reading.nextAt).toBe(new Date(Date.parse(now) + expected).toISOString());
   await app.actions.revisitReviewTopicSoon(now);
-  const waiting = app.getState().reviewSession.currentNodeId;
+  expect(app.getState().reviewSession.currentNodeId).not.toBe(target);
   await app.actions.revisitReviewTopicSoon(now);
-  expect(await app.actions.readReviewTopic(reading.nextAt)).toBe(true);
-  expect(app.getState().reviewSession.currentNodeId).toBe(waiting);
+  expect(app.getState().reviewSession.currentNodeId).not.toBe(target);
+  // Its same-day time has arrived, so it comes from the time queue ahead of the waiting Soon topics.
   expect(await app.actions.readReviewTopic(reading.nextAt)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(target);
 });

@@ -67,7 +67,7 @@ async function currentList() {
 }
 const later = '2026-10-25T08:02:00.000Z';
 
-it.each(['read', 'later', 'dismiss'] as const)('keeps frozen traversal after %s and restores mobile history', async action => {
+it.each(['read', 'later', 'dismiss'] as const)('takes the topic that became due first after %s and restores mobile history', async action => {
   await topics();
   const [first, second] = await currentList();
   expect(await currentList()).toHaveLength(2);
@@ -79,15 +79,17 @@ it.each(['read', 'later', 'dismiss'] as const)('keeps frozen traversal after %s 
   const result = await persistFlowMutation({ action, nodeId: session.currentNodeId!, now: later,
     snapshot: await snapshot(), history: { key, mode: 'reading-only', session } });
   session = result.session!;
-  expect(session.currentNodeId).toBe(second);
+  // 'c' became available at 08:01, so the time queue supplies it before the Soon traversal continues.
+  expect(session.currentNodeId).toBe('c');
+  expect(second).not.toBe('c');
   expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
   await reopen();
-  expect((await open(later)).currentNodeId).toBe(second);
+  expect((await open(later)).currentNodeId).toBe('c');
   session = (await replayCompanionFlowHistory(key, 'undo', session))!;
   expect(session.currentNodeId).toBe(first);
   session = (await replayCompanionFlowHistory(key, 'redo', session))!;
-  expect(session.currentNodeId).toBe(second);
+  expect(session.currentNodeId).toBe('c');
   expect((await loadCompanionFlowHistory(key)).undoStack).toHaveLength(3);
 });
 

@@ -1,9 +1,11 @@
 import type { SchedulerCard } from '../review/types.js';
 
-import type { CycleRow } from './cycleFlowTypes.js';
+import type { CycleKind, CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot, DailyFlowSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import type { FlowTiming } from './flowTiming.js';
+
+export type CycleScanFilter = { kinds: readonly CycleKind[]; nowMs: number };
 
 export type CycleStored = { day_key: string; revision: number; settings_key: string; mode: string;
   session_json: string; invalidated: number; session: DailyFlowSession };
@@ -22,8 +24,12 @@ export interface DailyFlowStore {
   readState(): Promise<CycleStored | null>;
   readDiveMembers?(id: string): Promise<string[]>;
   readRows(ids?: readonly string[]): Promise<CycleRow[]>;
-  scanRows(after: number, through: number, count: number): Promise<CycleRow[]>;
-  writeRows(rows: CycleRow[]): Promise<void>;
+  /** Rows in order; with a filter, rows known to be hidden by the mode or still waiting are left in the table. */
+  scanRows(after: number, through: number, count: number, filter?: CycleScanFilter): Promise<CycleStoredRow[]>;
+  /** Waiting rows whose time has come, earliest first. */
+  timedRows?(filter: CycleScanFilter, count: number): Promise<CycleStoredRow[]>;
+  readReadiness?(): Promise<CycleStoredRow[]>;
+  writeRows(rows: CycleStoredRow[]): Promise<void>;
   deleteRows(ids: readonly string[]): Promise<void>;
   resetCycle(): Promise<void>;
   saveState(args: CycleSaveArgs): Promise<DailyFlowSession>;

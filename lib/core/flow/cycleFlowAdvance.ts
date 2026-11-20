@@ -2,6 +2,7 @@ import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
 import { chooseCycleCurrent, isCycleCurrentReady } from './cycleFlowOpen.js';
+import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
 import { allocateCycleKey } from './cycleFlowState.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { fullDayCandidates } from './dailyFlowPlanning.js';
@@ -44,7 +45,8 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
     changes.set(before, { node_id: id, order_key: orderKey,
       active: active ? 1 : 0, handled: id === current ? 1 : before?.handled ?? 0, cohort: id === current && args.readingAction === 'soon' ? 'soon' : 'none', initial_task: 0 });
   }
-  await db.writeRows(changes.rows());
+  const written = changes.rows();
+  await db.writeRows(withCycleReadiness(written, deriveCycleReadiness(snapshot, written.map(row => row.node_id), args.now, settings)));
   const initial = rows.get(current)?.handled === 0;
   const readTopic = source.dive?.phase === 'topics' ? args.readingAction === 'read' : initial && Boolean(args.readingAction);
   const elapsed = calculateReviewStepElapsedMs(source, args.now);

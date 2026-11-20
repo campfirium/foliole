@@ -1,7 +1,7 @@
 import type { DbPort } from '../sync/dbPort.js';
 import { writeDbStatements } from '../sync/dbStatements.js';
 
-import type { CycleRow } from './cycleFlowTypes.js';
+import type { CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
 import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
 import { cycleStateToSave, type CycleSaveArgs } from './dailyFlowStore.js';
 import type { CycleStored } from './dailyFlowStore.js';
@@ -21,18 +21,26 @@ export function readCycleRows(db: DbPort, ids?: readonly string[]) {
     : 'SELECT * FROM daily_flow_entries ORDER BY order_key', ids ? [JSON.stringify(ids)] : []);
 }
 
-export async function writeCycleRows(db: DbPort, rows: CycleRow[]) {
+export async function writeCycleRows(db: DbPort, rows: CycleStoredRow[]) {
   if (!rows.length) return;
   await writeDbStatements(db, [{ sql: 'DELETE FROM daily_flow_entries WHERE node_id IN (SELECT value FROM json_each(?))',
-    params: [JSON.stringify(rows.map(row => row.node_id))] }, cycleRowsStatement(rows)]);
+    params: [JSON.stringify(rows.map(row => row.node_id))] }, cycleRowsStatement(rows), ...readinessStatements(rows)]);
 }
 
-export async function insertCycleRows(db: DbPort, rows: CycleRow[]) {
+export async function insertCycleRows(db: DbPort, rows: CycleStoredRow[]) {
   if (!rows.length) return;
-  await writeDbStatements(db, [cycleRowsStatement(rows)]);
+  await writeDbStatements(db, [cycleRowsStatement(rows), ...readinessStatements(rows)]);
 }
 
-function cycleRowsStatement(rows: CycleRow[]) {
+// Rows written without derived readiness keep none; a later scan derives it again.
+function readinessStatements(rows: CycleStoredRow[]) {
+  const derived = rows.filter(row => row.kind).map(row => ({ node_id: row.node_id, kind: row.kind, ready_at_ms: row.ready_at_ms ?? null }));
+  return derived.length ? [{ sql: `INSERT OR REPLACE INTO daily_flow_entry_readiness (node_id, kind, ready_at_ms)
+    SELECT json_extract(value, '$.node_id'), json_extract(value, '$.kind'), json_extract(value, '$.ready_at_ms') FROM json_each(?)`,
+  params: [JSON.stringify(derived)] }] : [];
+}
+
+function cycleRowsStatement(rows: CycleStoredRow[]) {
   return { sql: `INSERT INTO daily_flow_entries (node_id, order_key, active, cohort, initial_task, handled)
     SELECT json_extract(value, '$.node_id'), json_extract(value, '$.order_key'), json_extract(value, '$.active'),
     json_extract(value, '$.cohort'), json_extract(value, '$.initial_task'), json_extract(value, '$.handled') FROM json_each(?)`,

@@ -1,6 +1,7 @@
 import { reviewHistoryOpId } from '../review/reviewEventIdentity.js';
 import type { DbPort } from '../sync/dbPort.js';
 
+import type { CycleState } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowResult, DailyFlowSettings } from './dailyFlowContract.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
 import { dailyFlowSyncFactSchema } from './dailyFlowSyncFact.js';
@@ -20,7 +21,7 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
     `SELECT MAX(occurred_at) AS occurred_at FROM daily_flow_sync_facts
       WHERE kind!='create' AND day_start<? AND day_end>?`, [settings.dayWindow!.end, settings.dayWindow!.start]);
   const occurredAt = new Date(Math.max(Date.parse(now), latest?.occurred_at ? Date.parse(latest.occurred_at) + 1 : 0)).toISOString();
-  const session = { ...result.session, daily: undefined, candidateMembershipHash: undefined, rebuildSourceRevision: undefined };
+  const session = withoutLocalCursor({ ...result.session, daily: undefined, candidateMembershipHash: undefined, rebuildSourceRevision: undefined });
   const history = command?.cycleReplay;
   const after = command?.historyMode === 'undo' ? history?.before : history?.after;
   const before = command?.historyMode === 'undo' ? history?.after : history?.before;
@@ -40,4 +41,17 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
   // Keep the local before rows alongside the canonical fact, including rebuilt source baselines.
   await writeDailyFlowSync(db, fact, result,
     result.session.cycle?.change?.before ?? command?.cycleReplay?.before, Boolean(command?.historyMode));
+}
+
+// The timed-queue resume cursor is device-local and never part of a shared operation record.
+function withoutLocalCursor<T extends { cycle?: CycleState | undefined }>(session: T): T {
+  if (!session.cycle) return session;
+  const strip = <M extends { timedResume?: unknown }>(meta: M): M => {
+    const copy = { ...meta };
+    delete copy.timedResume;
+    return copy;
+  };
+  const cycle = strip(session.cycle);
+  if (cycle.change) cycle.change = { ...cycle.change, source: strip(cycle.change.source), target: strip(cycle.change.target) };
+  return { ...session, cycle };
 }

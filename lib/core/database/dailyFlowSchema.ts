@@ -1,4 +1,4 @@
-import { CYCLE_ENTRY_INDEX, CYCLE_ENTRY_SCHEMA } from '../flow/cycleFlowTypes.js';
+import { CYCLE_ENTRY_INDEX, CYCLE_ENTRY_SCHEMA, CYCLE_READINESS_SCHEMA } from '../flow/cycleFlowTypes.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -40,7 +40,8 @@ export const DAILY_FLOW_SCHEMA = [
 ] as const;
 
 export const DAILY_FLOW_CURRENT_SCHEMA = [DAILY_FLOW_SCHEMA[0], CYCLE_ENTRY_SCHEMA.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS '),
-  DAILY_FLOW_SCHEMA[2].replace('card_json TEXT', 'card_json TEXT, source_session_json TEXT'), CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS '), ...DAILY_FLOW_SCHEMA.slice(3)];
+  DAILY_FLOW_SCHEMA[2].replace('card_json TEXT', 'card_json TEXT, source_session_json TEXT'), CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS '),
+  ...DAILY_FLOW_SCHEMA.slice(3), ...CYCLE_READINESS_SCHEMA];
 
 export function migrateDailyFlow(sqlite: DatabaseMigrationTarget) {
   for (const statement of HISTORICAL_DAILY_FLOW_SCHEMA()) sqlite.exec(statement);

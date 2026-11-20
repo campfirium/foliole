@@ -4,6 +4,7 @@ import { migrateAttachmentReferenceCache } from './attachmentReferenceCacheSchem
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCycleFlow } from './cycleFlowMigration.js';
 import { migrateDailyFlowLocalApplications } from './dailyFlowLocalApplicationMigration.js';
+import { migrateDailyFlowReadiness } from './dailyFlowReadinessMigration.js';
 import { migrateDailyFlow } from './dailyFlowSchema.js';
 import { migrateDailyFlowSyncMerge } from './dailyFlowSyncMergeMigration.js';
 import { migrateDailyFlowSync } from './dailyFlowSyncSchema.js';
@@ -91,5 +92,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 194, migrate: db => {
     for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) db.exec(sql);
   } },
-  { version: 195, migrate: migrateIndependentImportHistoryInventory }
+  { version: 195, migrate: migrateIndependentImportHistoryInventory },
+  { version: 196, migrate: migrateDailyFlowReadiness }
 ];

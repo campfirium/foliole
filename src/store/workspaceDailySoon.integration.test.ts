@@ -73,7 +73,7 @@ async function currentList() {
   return view.nodeIds!;
 }
 const later = '2026-10-26T08:02:00.000Z';
-it.each(['read', 'later', 'dismiss'] as const)('keeps the frozen traversal and history after %s', async action => {
+it.each(['read', 'later', 'dismiss'] as const)('takes the topic that became due first and keeps history after %s', async action => {
   const app = setup('topic', true);
   app.setState({ reviewSessionMode: 'reading-only', reviewSessionModeExpiresAt: '2026-10-27T00:00:00.000Z' });
   await app.actions.startReviewSession(now);
@@ -87,18 +87,20 @@ it.each(['read', 'later', 'dismiss'] as const)('keeps the frozen traversal and h
   const actions = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic,
     dismiss: app.actions.dismissReviewTopic };
   expect(await actions[action](later)).toBe(true);
-  expect(app.getState().reviewSession.currentNodeId).toBe(second);
+  // 'future' became available at 08:01, so the time queue supplies it before the Soon traversal continues.
+  expect(app.getState().reviewSession.currentNodeId).toBe('future');
+  expect(second).not.toBe('future');
   expect(app.getState().reviewSession.cycle?.clearedAt).toBeTruthy();
   expect(app.getState().reviewSession.readTopicCount).toBe(2);
   const persisted = await openDesktopDailyFlow({ now: later, mode: 'reading-only' });
-  expect(persisted.session.currentNodeId).toBe(second);
+  expect(persisted.session.currentNodeId).toBe('future');
   const entry = app.getState().appActionHistory.undoStack.at(-1)!;
   app.history.undoWorkspaceAction(entry.id);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().reviewSession.currentNodeId).toBe(first);
   app.history.redoWorkspaceAction(entry.id);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
-  expect(app.getState().reviewSession.currentNodeId).toBe(second);
+  expect(app.getState().reviewSession.currentNodeId).toBe('future');
 });
 
 it('keeps Soon out of the original Queue across a refresh and database restart', async () => {

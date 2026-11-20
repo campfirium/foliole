@@ -29,7 +29,7 @@ async function measure<T>(timing: FlowTiming, stage: FlowTimingStage, task: () =
   }
 }
 
-type FlowScanStore = Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>;
+type FlowScanStore = Pick<DailyFlowStore, 'scanRows' | 'timedRows' | 'scopedLearningSnapshot'>;
 
 /** Counts the shared successor scan without changing which row it selects. */
 export function timeFlowScan<T>(timing: FlowTiming | undefined, store: FlowScanStore, select: (store: FlowScanStore) => Promise<T>) {
@@ -37,12 +37,18 @@ export function timeFlowScan<T>(timing: FlowTiming | undefined, store: FlowScanS
   let batches = 0;
   let rows = 0;
   const counted: FlowScanStore = {
-    scanRows: async (after, through, count) => {
-      const result = await store.scanRows(after, through, count);
+    scanRows: async (after, through, count, filter) => {
+      const result = await store.scanRows(after, through, count, filter);
       batches += 1;
       rows += result.length;
       return result;
     },
+    ...(store.timedRows ? { timedRows: async (filter, count) => {
+      const result = await store.timedRows!(filter, count);
+      batches += 1;
+      rows += result.length;
+      return result;
+    } } : {}),
     scopedLearningSnapshot: ids => store.scopedLearningSnapshot(ids)
   };
   return timeFlow(timing, 'choose-next', () => select(counted)).finally(() => {

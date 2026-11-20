@@ -1,11 +1,14 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import type { CycleRow } from './cycleFlowTypes.js';
+import { toCycleRow, type CycleRow, type CycleStoredRow } from './cycleFlowTypes.js';
 import { createScopedDailyLearningReader } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { insertCycleRows, readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
-import type { DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
+import type { CycleScanFilter, DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
 import { readDiveFlowMembers } from './diveFlowMembership.js';
+
+const STORED_ROWS = `SELECT e.*, r.kind, r.ready_at_ms FROM daily_flow_entries e
+  LEFT JOIN daily_flow_entry_readiness r ON r.node_id = e.node_id`;
 
 export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPersistence): DailyFlowStore {
   const rowsById = new Map<string, CycleRow | undefined>();
@@ -20,8 +23,9 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     },
     readDiveMembers: id => readDiveFlowMembers(db, id),
     readRows: cycleRowsReader(db, rowsById),
-    scanRows: (after, through, count) => db.query(`SELECT * FROM daily_flow_entries WHERE active=1
-      AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]),
+    scanRows: (after, through, count, filter) => scanCycleRows(db, after, through, count, filter),
+    timedRows: (filter, count) => readTimedCycleRows(db, filter, count),
+    readReadiness: () => db.query(`${STORED_ROWS} WHERE e.active=1`),
     async writeRows(rows) {
       const checkEmpty = initializing && rows.length > 0;
       initializing = false;
@@ -30,7 +34,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
       const write = empty ? insertCycleRows : writeCycleRows;
       cleared = false;
       await write(db, rows);
-      for (const row of rows) rowsById.set(row.node_id, row);
+      for (const row of rows) rowsById.set(row.node_id, toCycleRow(row));
     },
     async deleteRows(ids) {
       ids.forEach(id => rowsById.delete(id));
@@ -74,4 +78,21 @@ function cycleRowsReader(db: DbPort, rowsById: Map<string, CycleRow | undefined>
     if (rowsById.size > 128) rowsById.clear();
     return result;
   };
+}
+
+// Rows the mode hides or that still wait stay in SQLite instead of crossing to the caller.
+function scanCycleRows(db: DbPort, after: number, through: number, count: number, filter?: CycleScanFilter) {
+  return filter
+    ? db.query<CycleStoredRow>(`${STORED_ROWS} WHERE e.active=1 AND e.order_key > ? AND e.order_key <= ?
+      AND (r.kind IS NULL OR r.kind IN (SELECT value FROM json_each(?))) AND (r.ready_at_ms IS NULL OR r.ready_at_ms <= ?)
+      ORDER BY e.order_key LIMIT ?`, [after, through, JSON.stringify(filter.kinds), filter.nowMs, count])
+    : db.query<CycleStoredRow>(`SELECT * FROM daily_flow_entries WHERE active=1
+      AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]);
+}
+
+function readTimedCycleRows(db: DbPort, filter: CycleScanFilter, count: number) {
+  return db.query<CycleStoredRow>(`SELECT e.*, r.kind, r.ready_at_ms FROM daily_flow_entry_readiness r
+    JOIN daily_flow_entries e ON e.node_id = r.node_id WHERE r.ready_at_ms IS NOT NULL AND r.ready_at_ms <= ?
+    AND r.kind IN (SELECT value FROM json_each(?)) AND e.active=1 ORDER BY r.ready_at_ms, e.order_key LIMIT ?`,
+  [filter.nowMs, JSON.stringify(filter.kinds), count]);
 }

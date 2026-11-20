@@ -129,7 +129,7 @@ it.each(['read', 'later', 'dismiss'] as const)('%s rejects a stale target and pr
   expect((await openCompanionDailyFlow({ now, mode: 'recommended' })).session.queueNodeIds).toEqual(session.queueNodeIds);
 });
 
-it.each(['read', 'later'] as const)('%s uses the configured short interval and retains the traversal before revisiting the due topic', async action => {
+it.each(['read', 'later'] as const)('%s uses the configured short interval and takes the topic first once its time arrives', async action => {
   const target = session.currentNodeId!;
   const previous = { intervalDurationMs: 60000, intervalGrowthFactor: 4, lastHandledAt: now,
     nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 1, state: 'active' as const };
@@ -151,10 +151,9 @@ it.each(['read', 'later'] as const)('%s uses the configured short interval and r
     if (typeof saved !== 'object' || !('session' in saved)) throw new Error('missing_session');
     session = saved.session;
   }
-  for (const id of queued) {
-    expect(session.currentNodeId).toBe(id);
-    session = (await act('read', reading.nextAt)).session!;
-  }
+  expect(session.currentNodeId).toBe(queued[0]);
+  // The due same-day topic comes from the time queue before the rest of the traversal.
+  session = (await act('read', reading.nextAt)).session!;
   expect(session.currentNodeId).toBe(target);
   await reopen();
   expect((await openCompanionDailyFlow({ now: reading.nextAt, mode: 'reading-only' })).session.currentNodeId).toBe(target);

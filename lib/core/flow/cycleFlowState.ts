@@ -2,8 +2,8 @@ import type { CycleMeta } from './cycleFlowTypes.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 
 export function cycleMeta(state: CycleMeta): CycleMeta {
-  const { clearKey, clearedAt, scanAfter, lapLimit, tailKey, remaining, reviewRemaining } = state;
-  return { clearKey, clearedAt, scanAfter, lapLimit, tailKey, remaining, reviewRemaining };
+  const { clearKey, clearedAt, scanAfter, lapLimit, tailKey, remaining, reviewRemaining, timedResume } = state;
+  return { clearKey, clearedAt, scanAfter, lapLimit, tailKey, remaining, reviewRemaining, ...(timedResume ? { timedResume } : {}) };
 }
 
 function progress(session: DailyFlowSession) {
@@ -12,7 +12,7 @@ function progress(session: DailyFlowSession) {
     session.currentNodeId, session.completedAt ?? null, session.continueNodeId ?? null,
     session.currentItemStartedAt ?? null, session.readingElapsedMs ?? 0, session.readTopicCount ?? 0,
     session.reviewElapsedMs ?? 0, session.reviewedItemCount ?? 0, session.sessionStartedAt ?? null,
-    session.totalNodeCount];
+    session.totalNodeCount, meta.timedResume?.key ?? null, meta.timedResume?.after ?? null];
 }
 
 // Compare the saved cursor and counters directly; list rows are not summarized or scanned.

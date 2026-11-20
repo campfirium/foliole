@@ -45,7 +45,10 @@ it.each(['desktop', 'companion'] as const)('upgrades %s atomically without rebui
   expect(peer.db.prepare("SELECT sync_dirty,content_hash FROM sync_object_state WHERE object_type='daily_flow' AND object_id=?").get(root))
     .toEqual({ sync_dirty: 0, content_hash: 'c'.repeat(64) });
   expect(await readCycleRows(peer.port)).toEqual(rows);
-  expect(await readDailyFlow(peer.port)).toEqual(stored);
+  const upgraded = await readDailyFlow(peer.port);
+  // The desktop chain also reaches the readiness upgrade, which asks the next open to derive queue readiness.
+  expect({ ...upgraded, invalidated: stored!.invalidated }).toEqual(stored);
+  expect(upgraded!.invalidated).toBe(host === 'desktop' ? 1 : 0);
   expect(peer.db.prepare('SELECT * FROM daily_flow_sync_facts ORDER BY id').all()).toEqual(facts);
   expect(peer.db.prepare('SELECT * FROM daily_flow_fact_rows ORDER BY fact_id,slot,ordinal').all()).toEqual(relations);
   expect((await open(peer, stamp)).readTopicCount).toBe(1);

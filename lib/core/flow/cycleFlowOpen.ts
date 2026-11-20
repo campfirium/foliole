@@ -5,10 +5,11 @@ import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewI
 
 import { buildCycle } from './cycleFlowBuild.js';
 import { cycleChanges } from './cycleFlowChanges.js';
+import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
-import type { CycleRow } from './cycleFlowTypes.js';
-import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
+import type { CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
+import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import { flowDay, flowPlan, fullDayCandidates } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -22,14 +23,14 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const { session, rows, mode } = buildCycle(snapshot, args, settings);
   const cycle = session.cycle!;
   db.timing?.('queue-size', 'done', rows.length);
-  await db.writeRows(rows);
+  await db.writeRows(withCycleReadiness(rows, deriveCycleReadiness(snapshot, rows.map(row => row.node_id), args.now, settings)));
   const current = session.currentNodeId;
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
   else await chooseCycleCurrent(db, session, mode, args.now, settings);
   return { session, snapshot, rows, mode };
 }
 
-export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows'>, stored: CycleStored, now: string,
+export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows' | 'readReadiness'>, stored: CycleStored, now: string,
   settings: DailyFlowSettings, captureChanges = false) {
   const snapshot = await db.learningSnapshot();
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
@@ -41,14 +42,29 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
     else if (!row.active && eligible.has(row.node_id)) changes.set(row, { ...row, active: 1, initial_task: 0,
       cohort: 'none', order_key: allocateCycleKey(meta) });
   }
-  await db.writeRows(changes.rows());
   const final = new Map([...rows, ...changes.rows()].map(row => [row.node_id, row]));
+  await writeReconciledReadiness(db, [...final.values()].filter(row => row.active), changes.rows(), snapshot, now, settings);
   const remaining = [...final.values()].filter(row => row.active && row.initial_task);
   meta.remaining = remaining.length;
   meta.reviewRemaining = remaining.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length;
   delete meta.change;
   if (captureChanges) meta.change = changes.change();
   return { ...stored.session, cycle: meta };
+}
+
+async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
+  changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings) {
+  const derived = deriveCycleReadiness(snapshot, active.map(row => row.node_id), now, settings);
+  await db.writeRows(withCycleReadiness(changed, derived));
+  if (!db.readReadiness) return;
+  const touched = new Set(changed.map(row => row.node_id));
+  const stored = new Map((await db.readReadiness()).map(row => [row.node_id, row]));
+  const stale = active.filter(row => {
+    const before = stored.get(row.node_id);
+    const after = derived.get(row.node_id);
+    return !touched.has(row.node_id) && after && (before?.kind !== after.kind || (before?.ready_at_ms ?? null) !== after.ready_at_ms);
+  });
+  await db.writeRows(withCycleReadiness(stale, derived));
 }
 
 export async function isCycleCurrentReady(db: Pick<DailyFlowStore, 'readRows' | 'scopedLearningSnapshot'>, session: DailyFlowSession, mode: ReviewSessionMode,
@@ -71,9 +87,10 @@ async function canKeepDisplayedCurrent(db: DailyFlowStore, session: DailyFlowSes
   return Boolean(node && !snapshot.trashedNodeIds.includes(id) && !hasDeletedAncestor(node, snapshot.nodesById) && !hasShelvedAncestor(node, snapshot.nodesById));
 }
 
-export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot' | 'writeRows' | 'timing'>, session: DailyFlowSession, mode: ReviewSessionMode,
+export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'timedRows' | 'scopedLearningSnapshot' | 'writeRows' | 'timing'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings, changes?: ReturnType<typeof cycleChanges>) {
   const skipped = new Map<string, CycleRow>();
+  const healed = new Map<string, CycleStoredRow>();
   const meta = session.cycle!;
   const selected = await timeFlowScan(db.timing, db, scan => selectCycleSuccessor(scan, meta, { mode, now, settings,
     onSkipped: (row, snapshot) => {
@@ -87,8 +104,10 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
       meta.remaining = Math.max(0, meta.remaining - 1);
       meta.reviewRemaining = Math.min(meta.remaining, Math.max(0,
         meta.reviewRemaining - (isFsrsReviewItemNode(node) ? 1 : 0)));
-    } }));
-  await db.writeRows([...skipped.values()]);
+    }, onReadiness: rows => rows.forEach(row => healed.set(row.node_id, row)) }));
+  const writes = new Map<string, CycleStoredRow>(healed);
+  for (const [id, row] of skipped) writes.set(id, { ...healed.get(id), ...row });
+  await db.writeRows([...writes.values()]);
   session.currentNodeId = selected?.node_id ?? null;
   session.isAnswerRevealed = false;
   session.currentItemStartedAt = now;

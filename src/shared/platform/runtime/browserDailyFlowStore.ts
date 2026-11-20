@@ -1,3 +1,4 @@
+import { toCycleRow, type CycleStoredRow } from '../../../../lib/core/flow/cycleFlowTypes';
 import { cycleStateToSave, type DailyFlowStore } from '../../../../lib/core/flow/dailyFlowStore';
 import type { WorkspaceState } from '../../../store/workspaceStoreTypes';
 
@@ -21,11 +22,17 @@ export function createBrowserDailyFlowStore(get: () => BrowserFlowWorkspace,
         anchorLink: node.anchorLink ?? null, reading: node.reading ?? null, review: node.review ?? null }]] : [];
     })), trashedNodeIds: state.trashedNodeIds.filter(id => nodeOrder.includes(id)) };
   };
+  const stored = () => flow().rows as CycleStoredRow[];
   return {
     readState: async () => structuredClone(flow().state),
-    readRows: async ids => flow().rows.filter(row => !ids || ids.includes(row.node_id)).sort((a, b) => a.order_key - b.order_key).map(row => ({ ...row })),
-    scanRows: async (after, through, count) => flow().rows.filter(row => row.active && row.order_key > after && row.order_key <= through)
+    readRows: async ids => flow().rows.filter(row => !ids || ids.includes(row.node_id)).sort((a, b) => a.order_key - b.order_key).map(toCycleRow),
+    scanRows: async (after, through, count, filter) => stored().filter(row => row.active && row.order_key > after && row.order_key <= through &&
+      (!filter || ((!row.kind || filter.kinds.includes(row.kind)) && (row.ready_at_ms == null || row.ready_at_ms <= filter.nowMs))))
       .sort((a, b) => a.order_key - b.order_key).slice(0, count).map(row => ({ ...row })),
+    timedRows: async (filter, count) => stored().filter(row => row.active && row.kind && filter.kinds.includes(row.kind) &&
+      row.ready_at_ms != null && row.ready_at_ms <= filter.nowMs)
+      .sort((a, b) => a.ready_at_ms! - b.ready_at_ms! || a.order_key - b.order_key).slice(0, count).map(row => ({ ...row })),
+    readReadiness: async () => stored().filter(row => row.active).map(row => ({ ...row })),
     async writeRows(rows) {
       const replaced = new Set(rows.map(row => row.node_id));
       updateFlow({ rows: [...flow().rows.filter(row => !replaced.has(row.node_id)), ...rows]
