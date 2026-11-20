@@ -63,7 +63,7 @@ export interface SuperMemoMigrationForm {
   comparison?: { batchId: string; originalFilePath?: string | undefined } | undefined;
 }
 
-export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'deleted' | 'source' | 'confirm';
+export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'complete' | 'deleted' | 'source' | 'confirm';
 
 export interface SuperMemoMigrationPanel {
   step?: SuperMemoMigrationStep | undefined;

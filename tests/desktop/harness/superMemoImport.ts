@@ -42,7 +42,8 @@ export function superMemoUpdateComplete(page: Page) {
 }
 
 export function superMemoImportComplete(page: Page) {
-  return page.getByRole('dialog', { name: /^(Import complete|导入完成)$/ });
+  return page.getByRole('dialog', { name: title })
+    .filter({ has: page.getByRole('heading', { name: /^(Import complete|导入完成)$/ }) });
 }
 
 export async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string,

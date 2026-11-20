@@ -4,6 +4,7 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { SuperMemoDeletedPage } from './SuperMemoDeletedPage';
 import type { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
+import { SuperMemoImportCompletePage } from './SuperMemoImportCompletePage';
 import { SuperMemoLoadPage } from './SuperMemoLoadPage';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 import { SuperMemoReferenceSettings } from './SuperMemoReferenceSettings';
@@ -28,6 +29,7 @@ export function SuperMemoMigrationContent({ model, current, navigation, sourceCo
         current === 'schedule' ? 'desktop.superMemoDrafts.scheduleTitle' : superMemoMigrationStepLabel(current)
       )}</h3>
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
+      {current === 'complete' ? <SuperMemoImportCompletePage /> : null}
       {current === 'deleted' ? <SuperMemoDeletedPage /> : null}
       {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && draft ? (

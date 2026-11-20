@@ -15,10 +15,10 @@ import { useDismissibleSurface } from '../../../shared/ui/useDismissibleSurface'
 
 import { SuperMemoDraftActions } from './SuperMemoDraftActions';
 import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
-import { SuperMemoImportComplete } from './SuperMemoImportComplete';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
 import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
+import { SuperMemoUpdateComplete } from './SuperMemoUpdateComplete';
 import { SuperMemoUpdateReview } from './SuperMemoUpdateReview';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
 
@@ -74,8 +74,9 @@ function requestedStep(
     ? step.id : undefined;
 }
 
-function restoreMigrationStep(step: SuperMemoMigrationStep | 'source' | 'confirm' | undefined) {
-  return step === 'source' ? 'structure' : step === 'confirm' ? 'grades' : step;
+function restoreMigrationStep(step: SuperMemoMigrationStep | 'source' | 'confirm' | undefined, hasPreview: boolean) {
+  const restored = step === 'source' ? 'structure' : step === 'confirm' ? 'grades' : step;
+  return !hasPreview && stepNeedsDraft(restored) ? 'load' : restored;
 }
 
 function stepNeedsDraft(step: SuperMemoMigrationStep | undefined) {
@@ -129,14 +130,15 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
   const { draft, source, busy, error, setError, result, loadSource } = model;
   const { review, closeReview, startImport, applyUpdate } = useDraftReview(model);
   const sourceContent = useSourceContent(model, open);
-  const { step, setStep, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy, error, setError }, open && !result && !review, closeSession);
+  const { step, setStep, resetNavigation, dismissDialog } = useSuperMemoDraftNavigation({ busy, error, setError }, open && !result?.directoryUpdate && !review, closeSession);
   const previewNavigation = useSuperMemoPreviewNavigation(source);
   const preview = draft?.preview;
   const update = preview?.directoryUpdate;
-  const requested = requestedStep(step, source, model.selection?.filePath, Boolean(update));
-  const saved = restoreMigrationStep(model.selection?.panel?.step);
-  const current = requested ?? (!preview && stepNeedsDraft(saved) ? 'load' : saved) ?? (preview ? 'structure' : 'load');
+  const current = model.importing ? 'grades' : result && !result.directoryUpdate ? 'complete'
+    : requestedStep(step, source, model.selection?.filePath, Boolean(update)) ??
+      restoreMigrationStep(model.selection?.panel?.step, Boolean(preview)) ?? (preview ? 'structure' : 'load');
   function navigate(id: SuperMemoMigrationStep) {
+    if (result) model.resetCompletedDraft();
     setStep({ id, source, filePath: model.selection?.filePath });
     setError(false);
     void model.savePanel({ step: id });
@@ -146,7 +148,7 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
     if (result || (!draft && stepNeedsDraft(current))) resetNavigation();
     close();
   }
-  if (result) return <SuperMemoImportComplete open={open} result={result} onClose={closeSession} />;
+  if (result?.directoryUpdate) return <SuperMemoUpdateComplete open={open} result={result} onClose={closeSession} />;
   return (
     <AppDialog open={open} onOpenChange={open => { if (!open) dismissDialog(); }}>
       <AppDialogPortal>
@@ -155,7 +157,8 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
           className={settingsDialogSurfaceClassName(settingsDialogGrid)}
           style={translate ? { translate } : undefined} onInteractOutside={event => event.preventDefault()}
           onEscapeKeyDown={event => { if (error || busy) event.preventDefault(); }}>
-          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy} hasBatch={Boolean(model.selection?.panel?.batchId ?? update?.batchId)} onChange={navigate} />
+          <SuperMemoMigrationSteps titleId={titleId} current={current} disabled={busy}
+            hasBatch={Boolean(result?.batchId ?? model.selection?.panel?.batchId ?? update?.batchId)} onChange={navigate} />
           <div className={settingsDialogPane}>
             <DraftHeader name={current === 'load' ? undefined : model.selection?.name} />
             <div key={current} className={`min-h-0 flex-1 overflow-y-auto px-7 ${

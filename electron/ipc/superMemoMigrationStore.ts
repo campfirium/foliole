@@ -14,7 +14,7 @@ const count = z.number().int().nonnegative();
 const batchId = z.string().regex(/^[a-f0-9]{64}$/);
 const grade = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
 export const panelSchema = z.object({
-  step: z.enum(['load', 'structure', 'schedule', 'grades', 'deleted', 'source', 'confirm']).optional(),
+  step: z.enum(['load', 'structure', 'schedule', 'grades', 'complete', 'deleted', 'source', 'confirm']).optional(),
   elementCount: count.optional(),
   batchId: batchId.optional(),
   result: z.object({ imported: count, skipped: count, unresolvedImages: count }).optional()

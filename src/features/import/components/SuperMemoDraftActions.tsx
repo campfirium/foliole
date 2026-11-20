@@ -11,7 +11,7 @@ const nextStep = {
 } as const;
 
 const previousStep = {
-  structure: 'load', schedule: 'structure', grades: 'schedule'
+  structure: 'load', schedule: 'structure', grades: 'schedule', complete: 'grades'
 } as const;
 
 export function SuperMemoDraftActions({ step, busy, importing = false, updating = false, canProceed, hasPreview, referenceMapValid = true, navigate, convert }: {
@@ -24,29 +24,30 @@ export function SuperMemoDraftActions({ step, busy, importing = false, updating 
   const t = useTranslation();
   if (step === 'deleted') return null;
   const finalStep = step === 'grades';
-  const showAction = finalStep ? hasPreview : canProceed;
+  const complete = step === 'complete';
   const previous = step === 'load' ? undefined : previousStep[step];
-  const backLabel = t('desktop.superMemoDrafts.previous');
+  const backLabel = t(complete ? 'desktop.superMemoDrafts.backToImportSettings' : 'desktop.superMemoDrafts.previous');
   const nextLabel = t('desktop.superMemoDrafts.parameters');
   return (
     <div className={`app-scrollbar shrink-0 overflow-hidden px-7 pt-4 [scrollbar-gutter:stable] ${settingsDialogFooterInset}`}>
       <div className="flex items-end justify-between gap-4 px-settings-panel-x">
         <p className="min-w-0 self-center text-xs leading-relaxed text-foreground/65">
-          {t(updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}
+          {t(complete ? 'desktop.superMemoDrafts.completedAdjustmentNote'
+            : updating ? 'desktop.superMemoDrafts.updateBatchNote' : 'desktop.superMemoDrafts.adjustmentNote')}
         </p>
         <div className="flex shrink-0 items-center gap-2">
           {previous ? <SettingsButton className="w-9 px-0" disabled={busy}
             aria-label={backLabel} title={backLabel} onClick={() => navigate(previous)}>
             <ChevronLeft aria-hidden="true" className="size-[18px]" />
           </SettingsButton> : null}
-          {showAction && (finalStep ? <SettingsButton className="shrink-0" loading={importing}
+          {finalStep && hasPreview ? <SettingsButton className="shrink-0" loading={importing}
             loadingLabel={t(updating ? 'desktop.superMemoDrafts.updating' : 'desktop.superMemoDrafts.importing')}
             disabled={busy || !referenceMapValid} onClick={convert}>
             {t(updating ? 'desktop.superMemoDrafts.update' : 'desktop.superMemoDrafts.import')}
-          </SettingsButton> : <SettingsButton className="w-9 px-0" disabled={busy} aria-label={nextLabel} title={nextLabel}
+          </SettingsButton> : !finalStep && step !== 'complete' && canProceed ? <SettingsButton className="w-9 px-0" disabled={busy} aria-label={nextLabel} title={nextLabel}
             onClick={() => navigate(nextStep[step])}>
             <ChevronRight aria-hidden="true" className="size-[18px]" />
-          </SettingsButton>)}
+          </SettingsButton> : null}
         </div>
       </div>
     </div>

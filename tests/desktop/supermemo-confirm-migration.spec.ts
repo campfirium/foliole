@@ -18,7 +18,7 @@ function readImportedNodes(page: Page) {
   });
 }
 
-test('shows settings before conversion and reports exceptions in the import result', async ({ desktopWindow, desktopApp }, testInfo) => {
+test('shows the completion page after conversion and keeps the settings available for updates', async ({ desktopSession, desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('ConfirmFirst');
   const xml = `<SuperMemoCollection><Count>2</Count>${card}
@@ -33,8 +33,15 @@ test('shows settings before conversion and reports exceptions in the import resu
   await dialog.screenshot({ path: testInfo.outputPath('first-confirmation.png') });
   expect(await readImportedNodes(desktopWindow)).toEqual([]);
   await dialog.getByRole('button', { name: convert }).click();
-  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
+  const complete = superMemoImportComplete(desktopWindow);
+  await expect(complete).toBeVisible();
+  await expect(complete.getByText(/Your SuperMemo materials are now in Foliole|SuperMemo 资料已导入 Foliole/)).toBeVisible();
+  await complete.screenshot({ path: testInfo.outputPath('import-complete.png') });
   await expect(dialog.getByRole('button', { name: convert })).toHaveCount(0);
+  await complete.getByRole('button', { name: /^(Back to import settings|返回导入设置)$/ }).click();
+  await expect(dialog.getByRole('heading', { name: gradesStep })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Update|更新)$/ })).toBeEnabled();
+  await dialog.getByRole('button', { name: /^(Import complete|导入完成)$/ }).click();
   const written = await readImportedNodes(desktopWindow);
   expect(written.map(node => node.title)).toEqual(['Card']);
   const original = path.join(directory, 'ConfirmFirst.xml');
@@ -42,6 +49,7 @@ test('shows settings before conversion and reports exceptions in the import resu
   await rename(original, moved);
   await superMemoImportComplete(desktopWindow).press('Escape');
   const reopened = await openPreview(desktopWindow);
+  await expect(complete).toBeVisible();
   await reopened.getByRole('button', { name: /^(Load data|载入数据)$/ }).click();
   await expect(reopened.getByText(/[/\\]ConfirmFirst\.xml$/)).toBeVisible();
   await expect(reopened.getByRole('alert')).toHaveCount(0);
@@ -51,6 +59,16 @@ test('shows settings before conversion and reports exceptions in the import resu
   await expect(reopened.getByRole('button', { name: /^(Update|更新)$/ })).toBeVisible();
   await expect(reopened.getByRole('textbox', { name: /^(Author import field name|Author 导入字段名)$/ })).toBeVisible();
   expect(await readImportedNodes(desktopWindow)).toEqual(written);
+  await reopened.getByRole('button', { name: /^(Import complete|导入完成)$/ }).click();
+
+  const restarted = await relaunchGoldenJourney(desktopSession);
+  try {
+    await openPreview(restarted.firstWindow);
+    await expect(superMemoImportComplete(restarted.firstWindow)).toBeVisible();
+    expect(await readImportedNodes(restarted.firstWindow)).toEqual(written);
+  } finally {
+    await restarted.close();
+  }
 });
 
 test('confirms a batch update once and reads its durable result after restarting', async ({ desktopSession, desktopWindow, desktopApp }, testInfo) => {

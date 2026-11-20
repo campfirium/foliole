@@ -204,7 +204,7 @@ async function writePreparedImport(state: DraftState, prepared: Awaited<ReturnTy
   const { batchId, imported, skipped, unresolvedImages } = result;
   const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, undefined, refreshed.folderChoices)
     .catch(() => undefined);
-  await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: 'grades' },
+  await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: result.directoryUpdate ? 'grades' : 'complete' },
     completed ? migrationSnapshot(completed) : undefined);
   if (completed) {
     state.setDraft(completed);

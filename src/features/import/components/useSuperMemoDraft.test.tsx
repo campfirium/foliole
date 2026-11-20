@@ -167,23 +167,33 @@ async function openImportSettings(update?: NativeSuperMemoDirectoryUpdate) {
   return close;
 }
 
-it('shows progress from the import click and replaces the wizard with a completion notice', async () => {
+it('shows progress until the write succeeds, then opens the completion page in the same migration', async () => {
   const write = Promise.withResolvers<{ batchId: string; imported: number; skipped: number; unresolvedImages: number }>();
   runtime.runRuntimeSuperMemoImport.mockReturnValueOnce(write.promise);
   const close = await openImportSettings();
+  runtime.previewRuntimeSuperMemoImport.mockResolvedValueOnce({
+    elements: [], folderChoices: [], preview: { rows: [], referenceDay: '2026-11-19',
+      directoryUpdate: { batchId: 'batch', changes: [] } }
+  });
   fireEvent.click(screen.getByRole('button', { name: /^Import$/ }));
   const importing = screen.getByRole('button', { name: 'Importing…' });
   expect(importing).toBeDisabled();
   expect(importing).toHaveAttribute('aria-busy', 'true');
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeVisible();
-  expect(screen.queryByRole('dialog', { name: 'Import complete' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Import complete' })).toBeNull();
 
   await act(async () => write.resolve({ batchId: 'batch', imported: 1, skipped: 0, unresolvedImages: 0 }));
-  expect(screen.getByRole('dialog', { name: 'Import complete' })).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Confirm migration' })).toBeNull();
-  expect(screen.queryByRole('heading', { name: 'Import settings' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-  expect(close).toHaveBeenCalledOnce();
+  expect(screen.getByRole('dialog', { name: 'SuperMemo import' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Import complete' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Import complete' })).toHaveAttribute('aria-current', 'step');
+  expect(screen.queryByRole('button', { name: /^Import$/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Back to import settings' }));
+  expect(screen.getByRole('heading', { name: 'Import settings' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Update$/ })).toBeEnabled();
+  expect(close).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Import complete' }));
+  expect(screen.getByRole('heading', { name: 'Import complete' })).toBeVisible();
+  expect(runtime.runRuntimeSuperMemoImport).toHaveBeenCalledOnce();
 });
 
 it('shows an import error and keeps the import settings available for retry', async () => {
@@ -195,7 +205,7 @@ it('shows an import error and keeps the import settings available for retry', as
   await waitFor(() => expect(runtime.runRuntimeSuperMemoImport).toHaveBeenCalledOnce());
   await act(async () => write.reject(new Error('could_not_import')));
   expect(screen.getByRole('dialog', { name: 'Import failed' })).toBeVisible();
-  expect(screen.queryByRole('dialog', { name: 'Import complete' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Import complete' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.getByRole('button', { name: /^Import$/ })).toBeEnabled();
   expect(screen.getByRole('textbox', { name: 'Source import field name' })).toHaveValue('repository');
