@@ -1,11 +1,11 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { subscribeNativeAppForeground } from '../../appLifecycle';
+import { subscribeNativeAppBackground, subscribeNativeAppForeground } from '../../appLifecycle';
 import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { backUpCompanionDatabase, forgetCompanionFolderBackupDirectory, subscribeManualCompanionFolderBackup } from './companionFolderBackup';
 import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from './companionFolderBackupRuntimeRepository';
-import { CompanionFolderBackupWorker } from './companionFolderBackupWorker';
+import { CompanionFolderBackupWorker, defaultBackupWorkerTiming } from './companionFolderBackupWorker';
 
 const key = 'folder_backup_automatic';
 const listeners = new Set<(enabled: boolean) => void>();
@@ -43,7 +43,7 @@ export async function clearCompanionFolderBackupDirectory() {
   finally { session.clearing = false; }
 }
 
-export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompanionDatabaseOwner) {
+export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompanionDatabaseOwner, timing = defaultBackupWorkerTiming) {
   if (!supportsCompanionFolderDatabaseBackup()) return () => undefined;
   const worker = new CompanionFolderBackupWorker(await owner.read(readCompanionAutomaticFolderBackup), {
     saveEnabled: enabled => owner.runWriter(async db => {
@@ -54,15 +54,17 @@ export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompani
       const result = await backUpCompanionDatabase(false, { automatic: true, continueWork });
       return { errorMessage: result.state.errorMessage };
     }
-  });
+  }, timing);
   const session = { owner, worker, clearing: false };
   active = session;
-  const committed = owner.committedWrites.subscribe(() => worker.wake(true));
+  // Commits coalesce; leaving the foreground starts any coalesced round before the host may suspend the App.
+  const committed = owner.committedWrites.subscribe(() => worker.wake(true, true));
   const manual = subscribeManualCompanionFolderBackup(() => worker.wake(true));
   const foreground = await subscribeNativeAppForeground(() => worker.wake(true));
+  const background = await subscribeNativeAppBackground(() => worker.flush());
   worker.wake(true);
   return async () => {
-    committed(); manual(); foreground();
+    committed(); manual(); foreground(); background();
     if (active === session) active = null;
     await worker.stop();
   };

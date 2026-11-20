@@ -18,7 +18,7 @@ vi.mock('./companionFolderBackupRuntimeRepository', () => ({ supportsCompanionFo
   getCompanionFolderBackupPort: () => runtime.port }));
 vi.mock('../../appLifecycle', () => ({ subscribeNativeAppForeground: async (listener: () => void) => {
   runtime.resume = listener; return () => { runtime.resume = () => {}; };
-} }));
+}, subscribeNativeAppBackground: async () => () => {} }));
 
 
 const fixture = () => automaticFolderBackupFixture(runtime);

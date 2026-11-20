@@ -33,3 +33,43 @@ it('waits for an in-flight file before closing and refuses another claim', async
     expect(run).toHaveBeenCalledTimes(1);
   } finally { release(); await closing; }
 });
+
+function countingWorker() {
+  const run = vi.fn(async () => ({ errorMessage: null }));
+  return { run, worker: new CompanionFolderBackupWorker(true, { run, saveEnabled: async () => {} }) };
+}
+
+it('coalesces a burst of commits into one round after they pause', async () => {
+  vi.useFakeTimers();
+  const { run, worker } = countingWorker();
+  for (let i = 0; i < 20; i++) { worker.wake(true, true); await vi.advanceTimersByTimeAsync(1_000); }
+  expect(run).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(5_000);
+  expect(run).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(run).toHaveBeenCalledTimes(1);
+});
+
+it('still backs up periodically while commits never pause', async () => {
+  vi.useFakeTimers();
+  const { run, worker } = countingWorker();
+  for (let i = 0; i < 150; i++) { worker.wake(true, true); await vi.advanceTimersByTimeAsync(1_000); }
+  expect(run.mock.calls.length).toBeGreaterThanOrEqual(2);
+  expect(run.mock.calls.length).toBeLessThanOrEqual(3);
+});
+
+it('starts a coalesced round at once on flush and never postpones a prompt request', async () => {
+  vi.useFakeTimers();
+  const { run, worker } = countingWorker();
+  worker.flush();
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(run).not.toHaveBeenCalled();
+  worker.wake(true, true);
+  worker.flush();
+  await vi.advanceTimersByTimeAsync(150);
+  expect(run).toHaveBeenCalledTimes(1);
+  worker.wake(true);
+  worker.wake(true, true);
+  await vi.advanceTimersByTimeAsync(150);
+  expect(run).toHaveBeenCalledTimes(2);
+});

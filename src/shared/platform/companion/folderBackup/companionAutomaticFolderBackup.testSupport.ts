@@ -11,11 +11,15 @@ import type { CompanionFolderBackupPort } from '../../../../../lib/platform/comp
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import { bindCompanionAutomaticFolderBackup } from './companionAutomaticFolderBackup';
+import type { BackupWorkerTiming } from './companionFolderBackupWorker';
 
 const cleanup: (() => Promise<void>)[] = [];
 export async function closeAutomaticBackupFixtures() { for (const close of cleanup.splice(0)) await close(); }
 export function gate() { let release!: () => void; const promise = new Promise<void>(done => { release = done; }); return { promise, release }; }
-export async function automaticFolderBackupFixture(runtime: { owner: unknown; port: unknown; inventory: ReturnType<typeof vi.fn>; resume: () => void }) {
+// Short windows keep event-driven contracts fast; production windows are covered by the worker contract.
+const fastTiming: BackupWorkerTiming = { startMs: 150, quietMs: 50, maxWaitMs: 1_000 };
+export async function automaticFolderBackupFixture(runtime: { owner: unknown; port: unknown; inventory: ReturnType<typeof vi.fn>; resume: () => void },
+  timing = fastTiming) {
   const artifacts = path.resolve('.tmp/artifacts/companion-folder-backup-tests');
   await mkdir(artifacts, { recursive: true });
   const root = await mkdtemp(path.join(artifacts, 'automatic-'));
@@ -51,7 +55,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
     cancelDatabase: async () => {} } as unknown as CompanionFolderBackupPort;
   runtime.inventory.mockImplementation(async ({ trash }: { trash: boolean }) => ({ files: trash ? [] :
     (await readdir(source)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));
-  async function bind() { runtime.owner = library.owner; stop = await bindCompanionAutomaticFolderBackup(library.owner); }
+  async function bind() { runtime.owner = library.owner; stop = await bindCompanionAutomaticFolderBackup(library.owner, timing); }
   await bind();
   cleanup.push(async () => { await stop(); await library.close(); await rm(root, { recursive: true, force: true }); });
   const publish = async (text: string) => {
