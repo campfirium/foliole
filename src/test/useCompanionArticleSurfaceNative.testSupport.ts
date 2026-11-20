@@ -23,6 +23,15 @@ import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWrit
 export const ARTICLE_NOW = '2026-04-25T09:00:00.000Z';
 export type ArticleNode = WorkspaceSnapshot['nodesById'][string];
 
+function waitForArticleFlowReady(readSurface: () => ReturnType<typeof useDailyFlowSurface>['surface']) {
+  return waitFor(() => {
+    const { flowReady, flowError, readableArticle } = readSurface();
+    expect(flowError).toBeNull();
+    expect(flowReady).toBe(true);
+    expect(readableArticle?.content).toBeTruthy();
+  }, { timeout: 5_000 });
+}
+
 export function nativeArticleFixture() {
   let library: Awaited<ReturnType<typeof createSearchLibrary>>;
   beforeEach(async () => {
@@ -58,8 +67,7 @@ export function nativeArticleFixture() {
     await prepare?.();
     const initial = (await refreshCompanionWorkspaceAfterMutation())!;
     const ui = renderHook(() => useDailyFlowSurface(initial));
-    await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
-    await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toBeTruthy());
+    await waitForArticleFlowReady(() => ui.result.current.surface);
     await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
     return ui;
   }
