@@ -82,11 +82,13 @@ function fixtureSource() {
 
 const capacitorStubs = {
   'Log.java': 'package android.util; public final class Log { public static int d(String tag, String text) { return 0; } }',
-  'JSObject.java': 'package com.getcapacitor; public class JSObject {}',
+  'SystemClock.java': 'package android.os; public final class SystemClock { public static long elapsedRealtime() { return System.nanoTime() / 1000000L; } }',
+  'JSObject.java': 'package com.getcapacitor; public class JSObject { public JSObject put(String key, Object value) { return this; } }',
   'PluginCall.java': `package com.getcapacitor;
     public class PluginCall {
       public final java.util.concurrent.CountDownLatch settled = new java.util.concurrent.CountDownLatch(1);
       public volatile String rejection;
+      public String getMethodName() { return "fixture"; }
       public void resolve(JSObject value) { settled.countDown(); }
       public void reject(String message, Exception cause) { rejection = message; settled.countDown(); }
     }`
