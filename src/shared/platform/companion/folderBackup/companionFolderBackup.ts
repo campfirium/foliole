@@ -1,5 +1,6 @@
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { timeCompanionActivity } from '../runtime/companionActivityTiming';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { captureFolderAttachmentDeletions, validateFolderAttachmentDeletions } from './companionFolderAttachmentDeletion';
@@ -32,7 +33,7 @@ export function forgetCompanionFolderBackupDirectory() {
 }
 
 export function backUpCompanionDatabase(chooseDirectory = false, options: BackupOptions = {}) {
-  return enqueueBackup(() => runBackup(chooseDirectory, options)).then(value => {
+  return enqueueBackup(() => timeCompanionActivity('folder-backup', () => runBackup(chooseDirectory, options))).then(value => {
     if (!options.automatic && !value.cancelled && value.databaseCommitted) {
       for (const listener of manualListeners) { try { listener(); } catch { /* Backup observers do not own the result. */ } }
     }

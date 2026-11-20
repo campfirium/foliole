@@ -9,6 +9,7 @@ import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore'
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
+import { timeCompanionActivity } from './companionActivityTiming';
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
 import { applyCompanionFlowReceipt } from './companionDailyFlowDisplay';
 import { prepareAdmittedRead } from './companionReadAdmissionCommand';
@@ -157,7 +158,7 @@ export class CompanionReadIntents {
 
   private start() {
     if (this.running || this.failure || !this.pending) return;
-    this.running = this.process().finally(() => {
+    this.running = timeCompanionActivity('read-intent', () => this.process()).finally(() => {
       this.running = null;
       if (!this.failure && this.pending) this.start();
     });

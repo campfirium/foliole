@@ -7,6 +7,7 @@ import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
 import { mergeCompanionNodeViews } from './companionNodeViewProjection.js';
 import { companionWorkspaceSnapshots, prepareCompanionWorkspaceIndex, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
+import { timeCompanionActivity } from './runtime/companionActivityTiming.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
@@ -15,7 +16,11 @@ import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCom
 
 type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
 
-async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
+function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
+  return timeCompanionActivity('workspace-refresh', () => readWorkspaceSnapshot(input));
+}
+
+async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
   const owner = getIosCompanionDatabaseOwner();
   const revision = owner.nodePriorityRevision;
   let orderedNodeIds: readonly string[] | undefined;

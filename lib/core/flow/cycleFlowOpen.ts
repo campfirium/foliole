@@ -15,7 +15,7 @@ import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
 import type { CycleStored } from './dailyFlowStore.js';
-import { timeFlow, type FlowTiming } from './flowTiming.js';
+import { timeFlow, timeFlowScan, type FlowTiming } from './flowTiming.js';
 
 export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
   const snapshot = await db.learningSnapshot();
@@ -75,7 +75,7 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
   now: string, settings: DailyFlowSettings, changes?: ReturnType<typeof cycleChanges>) {
   const skipped = new Map<string, CycleRow>();
   const meta = session.cycle!;
-  const selected = await timeFlow(db.timing, 'choose-next', () => selectCycleSuccessor(db, meta, { mode, now, settings,
+  const selected = await timeFlowScan(db.timing, db, scan => selectCycleSuccessor(scan, meta, { mode, now, settings,
     onSkipped: (row, snapshot) => {
       const node = snapshot.nodesById[row.node_id];
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)

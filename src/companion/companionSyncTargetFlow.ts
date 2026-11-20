@@ -6,6 +6,7 @@ import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import { captureCompanionDesktopRound, ensureCompanionDesktopSession, invalidateCompanionDesktopSession, waitForCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
+import { timeCompanionActivity } from '../shared/platform/companion/runtime/companionActivityTiming';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { beginNativeCompanionSyncRun } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import {
@@ -170,9 +171,9 @@ export async function tryForegroundAutoSyncTarget(
   const runId = syncArgs.runId ?? createCompanionSyncRunId();
   if (syncArgs.cancelled()) return 'skipped';
   const afterRelease: Array<() => void> = [];
-  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, intent => runOwnedTarget({
+  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, intent => timeCompanionActivity('sync', () => runOwnedTarget({
     runId, target, runStreamSync, syncArgs, deferAfterRelease: work => afterRelease.push(work), isManualRequested: () => intent.manualRequested
-  }), syncArgs.triggerReason === 'manual');
+  })), syncArgs.triggerReason === 'manual');
   syncArgs.onRunIdentified?.(run.runId, run.mode);
   const outcome = await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
   for (const work of afterRelease) work();

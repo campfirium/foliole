@@ -47,3 +47,12 @@ it('releases the native request when the database owner closes after its databas
   expect(f.cancel).toHaveBeenCalledWith({ requestId: f.backup.mock.calls[0]![0].requestId });
   expect(f.consume).not.toHaveBeenCalled();
 });
+
+it('publishes the whole backup as one folder-backup activity for overlapping Flow diagnostics', async () => {
+  const { subscribeCompanionActivityTimings } = await import('./companion/runtime/companionActivityTiming');
+  const seen: string[] = [];
+  const stop = subscribeCompanionActivityTimings(({ kind }, { status }) => seen.push(`${kind}:${status}`));
+  f.backup.mockImplementation(async input => ({ requestId: input.requestId, cancelled: true, databaseCommitted: false }));
+  try { await backUpCompanionDatabase(); } finally { stop(); }
+  expect(seen).toEqual(['folder-backup:done']);
+});

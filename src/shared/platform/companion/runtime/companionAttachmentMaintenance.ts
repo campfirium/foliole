@@ -23,6 +23,11 @@ export function runWithCompanionAttachmentMaintenance<T>(action: () => Promise<T
   return run;
 }
 
+/** The local calendar day that gates the once-per-day attachment observation. */
+export function companionAttachmentDay(now: Date) {
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+}
+
 export function runCompanionAttachmentMaintenance(request: AttachmentObservationRequest, signal?: AbortSignal): Promise<AttachmentObservationResult>;
 // eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runCompanionAttachmentMaintenance(request: AttachmentStatusRequest, signal?: AbortSignal): Promise<AttachmentMaintenanceStatus>;
@@ -37,8 +42,7 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
 function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const files: typeof FolioleCompanionSync.maintainAttachmentFiles = args =>
     timeCompanionAttachment(`file.${args.operation}`, () => FolioleCompanionSync.maintainAttachmentFiles(args));
-  const now = new Date();
-  const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const day = companionAttachmentDay(new Date());
   const assertOwner = () => {
     signal?.throwIfAborted();
     if (getIosCompanionDatabaseOwner() !== owner) throw new Error('attachment_scan_database_replaced');

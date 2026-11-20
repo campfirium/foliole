@@ -8,7 +8,7 @@ import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
-import { timeFlow, type FlowTiming } from './flowTiming.js';
+import { timeFlowScan, type FlowTiming } from './flowTiming.js';
 
 // A display cursor uses the shared selector and committed eligibility, never writes queue rows.
 export async function advanceDailyFlowDisplay(db: DbPort, args: {
@@ -26,13 +26,13 @@ export async function advanceDailyFlowDisplay(db: DbPort, args: {
   const excluded = [...args.excluded, ...(args.applied ?? [])
     .filter(value => stored.revision < value.revision).map(value => value.nodeId)];
   const store = createSqliteDailyFlowStore(db, persistence);
-  const select = () => selectCycleSuccessor(store, cycle, { mode: args.mode, now: args.now, settings, excluded });
-  let next = await timeFlow(timing, 'choose-next', select);
+  const select = () => timeFlowScan(timing, store, scan => selectCycleSuccessor(scan, cycle, { mode: args.mode, now: args.now, settings, excluded }));
+  let next = await select();
   // A borrowed snapshot must not resurrect learning/deletion already known by the catalog.
   while (next && args.knownSnapshot && !cycleReadyNodeIds({ ...args.knownSnapshot, nodeOrder: [next.node_id] },
     args.mode, args.now, settings).includes(next.node_id)) {
     excluded.push(next.node_id);
-    next = await timeFlow(timing, 'choose-next', select);
+    next = await select();
   }
   const snapshot = args.knownSnapshot?.nodesById[source.currentNodeId ?? ''] ? args.knownSnapshot
     : await store.scopedLearningSnapshot([source.currentNodeId, next?.node_id]);
