@@ -17,6 +17,7 @@ export const COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS = {
   imageDisplay: 'image_display',
   limit: 'limit',
   mimeType: 'mime_type',
+  presenceOnly: 'presence_only',
   query: 'query',
   resources: 'resources',
   storageKey: 'storage_key',

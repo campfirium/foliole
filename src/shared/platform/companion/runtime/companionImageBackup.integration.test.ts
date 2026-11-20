@@ -171,6 +171,19 @@ it('records a recovered missing article image even when the same hash needs no a
   expect(await readFile(path.join(target, key))).toEqual(bytes);
 });
 
+it('recovers a stored article image by presence without downloading or asking for its digest', async () => {
+  await importCompanionImageResource(url);
+  native.read.mockClear();
+  // The host reports a digest mismatch for strict requests, as for a stored file with damaged bytes.
+  native.resolve.mockImplementation(async ({ presence_only }) => ({ status: presence_only ? 'ready' : 'missing_file' }));
+  const content = `![image](asset://${key})`;
+  library.database.prepare('INSERT INTO nodes(id,title,content,image_sources,created_at,updated_at) VALUES (?,?,?,?,?,?)')
+    .run('article', 'Article', content, JSON.stringify({ [key]: url }), 'now', 'now');
+  expect(await recoverCompanionArticleImage('article', key, content)).toEqual({ storageKey: key, content });
+  expect(native.resolve).toHaveBeenCalledWith(expect.objectContaining({ presence_only: true, storage_key: key }));
+  expect(native.read).not.toHaveBeenCalled();
+});
+
 it('reuses an already published image on retry without losing its failed backup obligation', async () => {
   await runBackup();
   await importCompanionImageResource(url);

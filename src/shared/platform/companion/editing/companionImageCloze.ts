@@ -57,7 +57,10 @@ export async function saveCompanionImageCloze(request: CompanionImageClozeReques
   };
   assertScope();
   const identity = parseCanonicalAttachmentStorageKey(key)!;
-  const resource = await FolioleCompanionSync.resolveAttachmentResource({ attachment_id: hash, content_hash: hash, mime_type: identity.mimeType, storage_key: key });
+  // The cloze stores the image identity, not its bytes; repairing a damaged file belongs to attachment sync.
+  const resource = await FolioleCompanionSync.resolveAttachmentResource({
+    attachment_id: hash, content_hash: hash, mime_type: identity.mimeType, presence_only: true, storage_key: key
+  });
   if (resource?.status !== 'ready') throw new Error('image_cloze_image_missing');
   const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   const now = new Date().toISOString();

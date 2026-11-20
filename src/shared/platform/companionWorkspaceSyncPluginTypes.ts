@@ -107,6 +107,8 @@ export interface CompanionWorkspaceSyncPlugin
     content_hash: string;
     image_display?: boolean;
     mime_type?: string | null;
+    /** Ready means a regular, unlinked file is stored under the key; its bytes are not read or hashed. */
+    presence_only?: boolean;
     storage_key?: string | null;
   }): Promise<{
     mime_type?: string | null;

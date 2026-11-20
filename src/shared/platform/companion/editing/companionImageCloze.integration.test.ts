@@ -46,6 +46,7 @@ async function prepare(kind: 'topic' | 'item' = 'topic') {
 it('creates an anchored, reviewable Item with the original resource, retries once, and retains it after reopening', async () => {
   const request = await prepare();
   expect(await createCompanionImageCloze(request)).toBe('new-item');
+  expect(native.resolve).toHaveBeenCalledWith(expect.objectContaining({ presence_only: true, storage_key: key }));
   const saved = await loadCompanionWorkspaceNode('new-item');
   expect(saved).toMatchObject({ kind: 'item', parentNodeId: 'topic', content,
     reveal: `![local](asset://${key})`, resourceReferences: [{ storage_key: key, original_name: 'Diagram.png', role: 'image' }],

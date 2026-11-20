@@ -14,7 +14,8 @@ final class FolioleCompanionResourcePluginActions {
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceMimeTypeRequestKey(context)),
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context)),
-            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, "imageDisplay"), false)
+            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, "imageDisplay"), false),
+            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceRequestKey(context, "presenceOnly"), false)
         );
     }
 }

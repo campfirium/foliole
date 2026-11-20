@@ -17,12 +17,14 @@ export async function recoverCompanionArticleImage(nodeId: string, storageKey: s
         const article = await readCompanionImageArticle(nodeId);
         return article?.content === expectedContent ? article : null;
       },
+      // Recovery only re-links a reference whose file is gone. A stored file with bad bytes cannot be
+      // fixed here (the image writer refuses to replace it), so hashing it would only cost a full read.
       exists: async (key) => {
         const identity = parseCanonicalAttachmentStorageKey(key);
         if (!identity) return false;
         return (await FolioleCompanionSync.resolveAttachmentResource({
           attachment_id: identity.contentHash, content_hash: identity.contentHash,
-          mime_type: identity.mimeType, storage_key: key
+          mime_type: identity.mimeType, presence_only: true, storage_key: key
         })).status === 'ready';
       },
       importImage: async (url) => {

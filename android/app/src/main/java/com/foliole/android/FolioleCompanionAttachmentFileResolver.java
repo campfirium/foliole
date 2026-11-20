@@ -19,6 +19,12 @@ final class FolioleCompanionAttachmentFileResolver {
 
     static JSObject resolve(Context context, String contentHash, String mimeType, String storageKey,
                             boolean imageDisplay) throws Exception {
+        return resolve(context, contentHash, mimeType, storageKey, imageDisplay, false);
+    }
+
+    /** Presence-only and image-display requests accept a stored regular file without reading its bytes. */
+    static JSObject resolve(Context context, String contentHash, String mimeType, String storageKey,
+                            boolean imageDisplay, boolean presenceOnly) throws Exception {
         File file = !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)
             ? null
             : new File(new File(context.getFilesDir(), "attachments"), storageKey.trim());
@@ -28,7 +34,7 @@ final class FolioleCompanionAttachmentFileResolver {
             FolioleAttachmentMaintenanceFiles.move(context, storageKey, false);
         }
         boolean ready = isRegularFileWithoutFollowingLinks(file) &&
-            ((imageDisplay && mimeType.startsWith("image/")) ||
+            (presenceOnly || (imageDisplay && mimeType.startsWith("image/")) ||
                 contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file)));
         JSObject result = new JSObject();
         result.put(responseKey(context, "status"), status(context, ready ? "readyStatusKey" : "missingFile"));

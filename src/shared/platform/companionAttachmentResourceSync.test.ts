@@ -44,6 +44,9 @@ it('loads iOS attachment manifests through the shared native contract', async ()
   });
   expect(mocks.load).toHaveBeenNthCalledWith(1, 4);
   expect(mocks.load).toHaveBeenNthCalledWith(2, 1, 'att-ios');
+  // A stored file whose bytes fail the strict check stays queued for a pull.
+  expect(mocks.plugin.resolveAttachmentResource).toHaveBeenCalledWith(
+    expect.not.objectContaining({ presence_only: true }));
 });
 
 it('does not request an attachment already held as an actual local file', async () => {

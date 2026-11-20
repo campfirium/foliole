@@ -141,6 +141,8 @@ async function resolveNativeAttachmentResource(
   return resolutionPromise;
 }
 
+// Requests without image display stay strict: a PDF or an iOS image whose stored bytes do not match
+// must resolve as missing so the viewer asks attachment sync to fetch a good copy.
 async function resolveNativeAttachmentResourceUncached(
   description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>,
   imageDisplay: boolean
