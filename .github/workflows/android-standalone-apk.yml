@@ -1,0 +1,62 @@
+name: Android standalone APK
+# Builds a Play-signed APK for the QA-accepted preview tip and keeps it as a downloadable artifact.
+# Play only receives an internal-track draft, so no tester or user is offered an update.
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact preview tip commit SHA
+        required: true
+        type: string
+      version_code:
+        description: Unused Play version code above every uploaded bundle
+        required: true
+        type: string
+permissions: { contents: read }
+concurrency: { group: android-standalone-apk, cancel-in-progress: false }
+jobs:
+  apk:
+    name: Build Play-signed standalone APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      VERSION_CODE: ${{ inputs.version_code }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - name: Use trusted default-branch tooling
+        uses: actions/checkout@v4
+        with: { ref: dev, path: .tmp/standalone-tools, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.13.0, cache: npm }
+      - uses: actions/setup-java@v6.3.0
+        with: { distribution: zulu, java-version: '21.0.13.1+2', check-latest: true }
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Install Linux DNS-SD build headers
+        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install pinned SQLCipher toolchain and APK inspection tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653" "build-tools;35.0.0"'
+      - name: Build the production AAB without credentials
+        run: node .tmp/standalone-tools/scripts/android/play-standalone-apk.mjs build
+      - name: Sign with the existing Play upload certificate
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: node .tmp/standalone-tools/scripts/android/play-standalone-apk.mjs sign
+      - name: Let Play sign the universal APK from an internal-track draft
+        env:
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node .tmp/standalone-tools/scripts/android/play-standalone-apk.mjs deliver
+      - uses: actions/upload-artifact@v4
+        with:
+          name: foliole-android-standalone-${{ inputs.version_code }}-${{ inputs.target_sha }}
+          path: |
+            .tmp/artifacts/android-standalone-apk/*.apk
+            .tmp/artifacts/android-standalone-apk/*.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
