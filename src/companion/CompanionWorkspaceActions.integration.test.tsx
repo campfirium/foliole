@@ -36,7 +36,7 @@ function Menu() {
     {Object.values(actions.snapshot?.nodesById ?? {}).filter(node => !node.id.startsWith('special-') && !node.deletedAt).map(node =>
       <div key={node.id}>
         <button>{node.title}</button>
-        <CompanionTopicListMenu nodeId={node.id} title={node.title} metadata="" />
+        <CompanionTopicListMenu nodeId={node.id} title={node.title} />
       </div>)}
   </>;
 }
@@ -72,11 +72,9 @@ it('creates and renames a folder from the real menu, then undoes and redoes both
   await createFolder();
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'More: Created folder' }));
-  const menu = within(screen.getByRole('dialog', { name: 'More' }));
+  const menu = within(screen.getByRole('dialog', { name: 'Created folder' }));
   expect(menu.queryByRole('button', { name: /^(Manage|Open)$/ })).toBeNull();
-  expect(menu.getAllByRole('button').slice(-1)[0]).toHaveAccessibleName('Move to Trash');
-  expect(menu.getByRole('button', { name: 'Info' }).compareDocumentPosition(menu.getByRole('button', { name: 'Rename' })))
-    .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(menu.queryByRole('button', { name: 'Info' })).toBeNull();
   fireEvent.click(menu.getByRole('button', { name: 'Rename' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Renamed folder' } });
   fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
@@ -152,12 +150,12 @@ it('creates the chosen child type from the first-level article menu', async () =
   await seedPriorityHierarchy();
   render(<Harness flowNodeId="topic" />);
   fireEvent.click(screen.getByRole('button', { name: 'Open reading menu' }));
-  const menu = within(screen.getByRole('dialog', { name: 'Actions' }));
+  const menu = within(screen.getByRole('dialog'));
   expect(menu.queryByRole('button', { name: /^(Manage|Open)$/ })).toBeNull();
   expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
   expect(menu.getByRole('button', { name: 'Move to...' })).toBeVisible();
-  expect(menu.getByRole('button', { name: 'Info' })).toBeVisible();
-  expect(menu.getAllByRole('button').slice(-7).map(button => button.textContent)).toEqual([
+  expect(menu.queryByRole('button', { name: 'Info' })).toBeNull();
+  expect(menu.getAllByRole('button').filter(button => button.textContent !== 'Close').slice(-7).map(button => button.textContent)).toEqual([
     'Rename', 'Move to...', 'Add to Dive…', 'Shelve', 'Create Topic', 'Create Item', 'Move to Trash'
   ]);
   fireEvent.click(menu.getByRole('button', { name: 'Create Item' }));

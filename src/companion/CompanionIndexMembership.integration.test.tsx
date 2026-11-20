@@ -17,8 +17,12 @@ vi.mock('@capacitor/core', async () => {
 
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name, exact: true }));
 
+function openIndexMenu() {
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Mobile Index' }), { key: 'F10', shiftKey: true });
+}
+
 async function editSource(operation: 'Add' | 'Remove', title: string) {
-  click('More: Mobile Index');
+  openIndexMenu();
   click(`${operation} source…`);
   const sheet = within(screen.getByRole('dialog', { name: `${operation} source…` }));
   fireEvent.change(sheet.getByRole('searchbox'), { target: { value: title.split(' / ').at(-1) } });
@@ -64,7 +68,7 @@ it('edits a new manual index at its real mobile entry, preserving sources across
     expect(screen.getByRole('button', { name: 'Open topic Primer' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Open topic Reference' })).toBeNull();
     click('Library root');
-    click('More: Mobile Index');
+    openIndexMenu();
     click('Move to Trash');
     click('Move to Trash');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Mobile Index' })).toBeNull());
@@ -73,9 +77,9 @@ it('edits a new manual index at its real mobile entry, preserving sources across
     expect(indexRow()).toEqual({ manual_child_order: '["Shelf"]', deleted_at: expect.any(String) });
     expect(sourceFacts()).toEqual(originals);
     click('Open folder Trash');
-    click('More: Mobile Index');
+    openIndexMenu();
     click('Restore from Trash');
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'More: Mobile Index' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Mobile Index' })).toBeNull());
     await peers.exchange();
     expect(indexRow()).toEqual({ manual_child_order: '["Shelf"]', deleted_at: null });
     expect(sourceFacts()).toEqual(originals);

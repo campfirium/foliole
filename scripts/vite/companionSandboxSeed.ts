@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdtempSync, realpathSync, renameSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
@@ -58,6 +59,27 @@ async function seedSandbox(database: Database.Database) {
   });
 }
 
+function seedSandboxReferences(database: Database.Database) {
+  const sourceId = 'sandbox-references';
+  const title = 'Field Guide';
+  const opening = 'A sample external document for browsing in the sandbox.';
+  const content = `# ${title}\n\n${opening}`;
+  const contentHash = createHash('sha256').update(content).digest('hex');
+
+  database.transaction(() => {
+    database.prepare(`INSERT INTO external_search_folders
+      (id, folder_path, attachment_mode, document_count, indexed_at, created_at, updated_at, source_ref)
+      VALUES (?, ?, 'document_relative', 1, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
+      .run(sourceId, '/sandbox/Sample References', seedTime, seedTime, seedTime, sourceId);
+    database.prepare(`INSERT INTO external_documents
+      (document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at,
+       source_modified_ms, content_hash, title, opening_text, content, indexed_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'md', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(document_id) DO NOTHING`)
+      .run('sandbox-reference-guide', sourceId, 'Guides/Field Guide.md', 'Field Guide.md', Buffer.byteLength(content),
+        seedTime, Date.parse(seedTime), contentHash, title, opening, content, seedTime, seedTime, seedTime);
+  })();
+}
+
 export function assertCompanionSandboxPath(projectRoot: string, databaseFile: string) {
   const previewRoot = path.resolve(projectRoot, '.cache/companion-preview');
   const sandboxRoot = path.join(previewRoot, 'sandbox');
@@ -74,13 +96,22 @@ export function assertCompanionSandboxPath(projectRoot: string, databaseFile: st
 
 /** Called after the sandbox server has acquired its dedicated port, before it serves any database request. */
 export async function prepareCompanionSandbox(databaseFile: string, reset: boolean) {
-  if (!reset && existsSync(databaseFile)) return;
+  if (!reset && existsSync(databaseFile)) {
+    const database = new Database(databaseFile, { fileMustExist: true });
+    try {
+      seedSandboxReferences(database);
+    } finally {
+      database.close();
+    }
+    return;
+  }
   const temporary = mkdtempSync(path.join(path.dirname(databaseFile), '.sandbox-seed-'));
   const source = path.join(temporary, 'seed.db');
   try {
     const seed = new Database(source);
     try {
       await seedSandbox(seed);
+      seedSandboxReferences(seed);
       if (existsSync(databaseFile)) await seed.backup(databaseFile);
     } finally {
       seed.close();

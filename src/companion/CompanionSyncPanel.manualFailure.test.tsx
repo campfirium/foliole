@@ -26,7 +26,6 @@ function renderConnectedSettings(runtimeKind: 'android-capacitor' | 'ios-capacit
   return renderWithLocalization(
     <>
       <CompanionSettingsList
-        onOpenAppearance={vi.fn()}
         onOpenAttachments={vi.fn()}
         onOpenBackup={vi.fn()}
         onOpenDebug={vi.fn()}

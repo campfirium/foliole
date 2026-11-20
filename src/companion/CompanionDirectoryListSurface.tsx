@@ -10,8 +10,8 @@ import {
 } from '../shared/localization/systemEntryNames';
 import { AppEmptyState } from '../shared/ui';
 
-import { CompanionDirectoryBatchControls, useCompanionDirectoryBatchSelection } from './CompanionDirectoryBatchSelection';
-import { CompanionDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
+import { CompanionDirectoryBatchControls, useCompanionDirectoryBatchSelection, type CompanionListBatchMode } from './CompanionDirectoryBatchSelection';
+import { CompanionDirectoryConversionMenu, useDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
 import {
   type DirectorySection,
   type DirectoryListItem
@@ -22,7 +22,7 @@ import {
 } from './CompanionDirectoryVisualModel';
 import { CompanionListViewport } from './CompanionListViewport';
 import { RecentArticleRow } from './CompanionRecentArticleList';
-import { CompanionTopicListMenu } from './CompanionTopicListMenu';
+import { CompanionTopicListMenu, useTopicListMenuWorkspace } from './CompanionTopicListMenu';
 import type { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionFolderMenuGesture } from './useCompanionFolderMenuGesture';
 
@@ -49,13 +49,21 @@ function DirectoryRow(props: DirectoryRowProps) {
     item: props.item,
     snapshot: props.snapshot
   });
-  const folderMenuItem = !props.selecting && props.item.kind === 'folder' && props.item.source === 'internal' ? props.item : null;
+  const internalFolder = !props.selecting && props.item.kind === 'folder' && props.item.source === 'internal' ? props.item : null;
+  const folderWorkspace = useTopicListMenuWorkspace(internalFolder?.nodeId, internalFolder?.directDiveId);
+  const folderMenuItem = folderWorkspace ? internalFolder : null;
   const [folderMenuOpen, setFolderMenuOpen] = useState(false);
   const openFolderMenu = useCallback(() => setFolderMenuOpen(true), []);
-  const hasFolderMenu = folderMenuItem || props.restoreFolder;
+  const dive = props.item.source === 'virtual' ? readDiveNode(props.snapshot?.nodesById[props.item.nodeId]) : null;
+  const conversionMenu = useDirectoryConversionMenu({
+    nodeId: props.item.nodeId,
+    enabled: !props.selecting && props.item.kind === 'folder' && (props.item.source === 'virtual' || props.item.source === 'trash'),
+    onStart: dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined,
+    restore: props.restoreFolder,
+  });
+  const hasFolderMenu = folderMenuItem || conversionMenu;
   const folderMenuGesture = useCompanionFolderMenuGesture(hasFolderMenu ? openFolderMenu : null);
   if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
-  const dive = props.item.source === 'virtual' ? readDiveNode(props.snapshot?.nodesById[props.item.nodeId]) : null;
   return (
     <div className="flex items-center">
       <button
@@ -71,14 +79,7 @@ function DirectoryRow(props: DirectoryRowProps) {
         onClick={() => props.onSelectItem(props.item)}
         type="button"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">
-            {title}
-          </span>
-          {subtitle ? <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
-            {subtitle}
-          </span> : null}
-        </span>
+        <DirectoryRowText title={title} subtitle={subtitle} />
         {meta ? (
           <span className="min-w-7 shrink-0 text-right text-[13px] font-medium leading-5 text-companion-text-tertiary">
             {meta}
@@ -86,15 +87,21 @@ function DirectoryRow(props: DirectoryRowProps) {
         ) : null}
         {!props.selecting && <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary" />}
       </button>
-      {!props.selecting && (props.item.source === 'virtual' || props.item.source === 'trash') &&
-        <CompanionDirectoryConversionMenu nodeId={props.item.nodeId} title={title}
-          folderRestoreMenu={props.restoreFolder ? { open: folderMenuOpen, setOpen: setFolderMenuOpen, restore: props.restoreFolder } : undefined}
-          onStart={dive && props.onStartDive ? () => props.onStartDive?.(dive.id) : undefined} />}
+      {conversionMenu && <CompanionDirectoryConversionMenu menu={conversionMenu}
+        open={folderMenuOpen} setOpen={setFolderMenuOpen} title={title} />}
       {folderMenuItem && <CompanionTopicListMenu rowMenu={{ open: folderMenuOpen, onOpenChange: setFolderMenuOpen }}
-        nodeId={folderMenuItem.nodeId} title={title}
-        metadata={meta ?? ''} directDiveId={folderMenuItem.directDiveId} />}
+        nodeId={folderMenuItem.nodeId} title={title} directDiveId={folderMenuItem.directDiveId} />}
     </div>
   );
+}
+
+function DirectoryRowText({ title, subtitle }: { title: string; subtitle: string | null }) {
+  return <span className="min-w-0 flex-1">
+    <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">{title}</span>
+    {subtitle && <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
+      {subtitle}
+    </span>}
+  </span>;
 }
 
 function CompanionDirectoryEmptyState({ action, description, title }: {
@@ -111,7 +118,8 @@ function CompanionDirectoryEmptyState({ action, description, title }: {
 }
 
 export function CompanionDirectoryList(props: {
-  batchMode?: 'library' | 'trash' | undefined;
+  batchMode?: CompanionListBatchMode | undefined;
+  diveId?: string | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   emptyDescription?: string | null;
   emptyAction?: ReactNode;
@@ -153,7 +161,6 @@ export function CompanionDirectoryList(props: {
       const section = entry.section;
       const title = section.id === 'home' ? resolveSystemEntryDisplayName(locale, 'home')
         : section.id === 'virtual' ? resolveSystemEntryDisplayName(locale, 'virtual-root')
-        : section.id === 'trash' ? resolveSystemEntryDisplayName(locale, 'trash')
         : section.titleKey ? t(section.titleKey) : null;
       return <div className={entry.first ? 'pb-2' : 'pb-2 pt-6'}>
         {title ? <h2 className="px-1 text-[12px] font-medium text-companion-text-tertiary">{title}</h2> : null}

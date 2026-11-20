@@ -112,8 +112,8 @@ function CompanionDirectoryListContent(props: {
     <section className="companion-page-start">
       <CompanionDirectoryList
         key={JSON.stringify([props.snapshot?.libraryScope, props.viewKey])}
-        batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash'
-          : props.selection.kind === 'root' || props.selection.kind === 'internal' ? 'library' : undefined}
+        batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash' : dive ? 'dive' : props.selection.kind === 'internal' ? 'library' : undefined}
+        diveId={dive?.id}
         directory={props.directory}
         viewKey={props.viewKey}
         emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? (props.selection.kind === 'trash'

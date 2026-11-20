@@ -3,12 +3,12 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import type Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { createDive, listDives } from '../../electron/database/diveRepository';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
-import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
-import { getViewHideDismissedTopics, requestToggleDismissedTopicVisibility } from '../shared/platform/runtime/dismissedTopicVisibilitySetting';
+import { moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
@@ -32,7 +32,7 @@ const click = (name: string) => fireEvent.click(screen.getByRole('button', { nam
 function enterSelection() {
   expect(screen.queryByRole('button', { name: 'Select' })).toBeNull();
   click('More');
-  const menu = screen.getByRole('dialog', { name: 'Browse menu' });
+  const menu = screen.getByRole('dialog');
   fireEvent.click(within(menu).getByRole('button', { name: 'Select' }));
   expect(menu).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Directory' })).toBeNull();
@@ -43,50 +43,36 @@ function trashed(db: Database.Database) {
   return db.prepare("SELECT id FROM nodes WHERE deleted_at IS NOT NULL ORDER BY id").pluck().all();
 }
 
-it('selects within one list and moves the chosen roots and their subtrees to Trash on both libraries', async () => {
+it('offers bulk Trash actions inside a folder, with selection after history and none at the directory home', async () => {
   const library = await createSearchLibrary(0);
   try {
     const peers = await connectCompanionPeer(library);
     node(peers.desktop, 'Folder A', 'folder');
-    node(peers.desktop, 'Folder B', 'folder');
     await peers.exchange();
-    node(peers.desktop, 'Child A', 'topic', 'Folder A');
-    node(peers.desktop, 'Child B', 'topic', 'Folder B');
+    for (const title of ['Child A', 'Child B']) node(peers.desktop, title, 'topic', 'Folder A');
     await peers.exchange();
-    await mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'sample-dive', title: 'Sample Dive', sourceId: null });
-    await mutateCompanionWorkspace({ type: 'create-index', nodeId: 'sample-index', title: 'Sample index' });
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
-    enterSelection();
-    expect(screen.getByText('Only entries with a checkbox count. Dives, indexes, and system entries are excluded.')).toBeVisible();
-    expect(screen.getByTestId('companion-directory-node-sample-dive')).toBeVisible();
-    expect(screen.getByTestId('companion-directory-node-sample-index')).toBeVisible();
-    expect(screen.queryByRole('checkbox', { name: 'Select Sample Dive' })).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: 'Select Sample index' })).toBeNull();
+    click('More');
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Select' })).toBeNull();
+    click('Close');
+
+    click('Open folder Folder A');
+    click('More');
+    const menu = within(screen.getByRole('dialog'));
+    const select = menu.getByRole('button', { name: 'Select' });
+    expect(menu.getByRole('button', { name: 'Redo' }).compareDocumentPosition(select))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    fireEvent.click(select);
+    const actionBar = within(screen.getByTestId('companion-selection-action-bar'));
+    expect(actionBar.getByRole('button', { name: 'Move to Trash' })).toBeDisabled();
     click('Select all in this list');
     expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
-    click('Cancel');
-    expect(screen.getByRole('heading', { name: 'Directory' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'More' })).toBeVisible();
-    click('Open folder Folder A');
-    enterSelection();
-    expect(screen.getByText('0 of 1 selected in this list')).toBeVisible();
-    click('Select Child A');
-    expect(screen.getByRole('checkbox', { name: 'Select Child A' })).toBeChecked();
-    click('Select Child A');
-    expect(screen.getByRole('checkbox', { name: 'Select Child A' })).not.toBeChecked();
-    click('Select all in this list');
-    click('Library root');
-    enterSelection();
-    expect(screen.getByText('0 of 2 selected in this list')).toBeVisible();
-    click('Select all in this list');
-    confirmMoveToTrash();
-    await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
+    fireEvent.click(actionBar.getByRole('button', { name: 'Move to Trash' }));
+    const confirm = within(screen.getByRole('dialog', { name: 'Move to Trash' }));
+    fireEvent.click(confirm.getByRole('button', { name: 'Move to Trash' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open topic Child A' })).toBeNull());
     await peers.exchange();
-    const expected = ['Child A', 'Child B', 'Folder A', 'Folder B'];
-    expect(trashed(peers.desktop.db)).toEqual(expected);
-    cleanup();
-    const reopened = await reopenSearchLibrary(library.root, new Date().toISOString());
-    expect(trashed(reopened.db)).toEqual(expected);
+    expect(trashed(peers.desktop.db)).toEqual(['Child A', 'Child B']);
   } finally {
     cleanup();
     await library.close();
@@ -94,11 +80,47 @@ it('selects within one list and moves the chosen roots and their subtrees to Tra
   }
 });
 
-function confirmMoveToTrash(count = 2) {
-  click('Move to Trash');
-  const confirmation = screen.getByRole('dialog', { name: 'Move to Trash' });
-  expect(within(confirmation).getByText(`Move ${count} selected entries and their contents to Trash?`)).toBeVisible();
-  fireEvent.click(within(confirmation).getByRole('button', { name: 'Move to Trash' }));
+it('removes selected direct sources from a Dive as a batch and preserves the original materials across sync', async () => {
+  const library = await createSearchLibrary(0);
+  try {
+    const peers = await connectCompanionPeer(library);
+    node(peers.desktop, 'Shelf', 'folder');
+    node(peers.desktop, 'Direct', 'topic');
+    node(peers.desktop, 'Keep', 'topic');
+    await peers.exchange();
+    node(peers.desktop, 'Derived', 'topic', 'Shelf');
+    const dive = createDive(peers.desktop.db, 'Probability', ['Shelf', 'Direct', 'Keep']);
+    await peers.exchange();
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    click('Open folder Probability');
+    enterSelection();
+
+    expect(screen.queryByRole('checkbox', { name: 'Select Derived' })).toBeNull();
+    for (const title of ['Shelf', 'Direct']) {
+      fireEvent.click(screen.getByRole('checkbox', { name: `Select ${title}` }));
+    }
+    expect(screen.getByText('2 of 3 selected in this list')).toBeVisible();
+    click('Remove from This Dive');
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open topic Direct' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Open topic Keep' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Open topic Derived' })).toBeNull();
+
+    await peers.exchange();
+    expect(listDives(peers.desktop.db).find(entry => entry.id === dive.id)?.directSourceIds).toEqual(['Keep']);
+    const snapshot = await readSnapshot();
+    expect(snapshot.nodesById[dive.id]?.manualChildOrder).toEqual(['Keep']);
+    expect(snapshot.nodesById.Derived?.parentNodeId).toBe('Shelf');
+    expect(trashed(peers.desktop.db)).toEqual([]);
+  } finally {
+    cleanup();
+    await library.close();
+    await closeLibraries();
+  }
+});
+
+async function prepareTrash(ids: string[]) {
+  const snapshot = await readSnapshot();
+  await moveCompanionBatchToTrash(ids.map(id => ({ id, version: snapshot.nodesById[id]!.currentVersionId! })));
 }
 
 it('restores multiple selected entries and their children while leaving the remaining Trash alone', async () => {
@@ -109,12 +131,9 @@ it('restores multiple selected entries and their children while leaving the rema
     await peers.exchange();
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     await peers.exchange();
-    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
-    enterSelection();
-    click('Select all in this list');
-    confirmMoveToTrash(3);
-    await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
+    await prepareTrash(['Folder A', 'Folder B', 'Folder C']);
     await peers.exchange();
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     click('Open folder Trash');
     enterSelection();
     expect(screen.getByText('0 of 4 selected in this list')).toBeVisible();
@@ -153,12 +172,9 @@ it.each(['android', 'ios'])('permanently deletes within a Trash folder and keeps
     node(peers.desktop, 'Child A2', 'topic', 'Folder A');
     node(peers.desktop, 'Child B', 'topic', 'Folder B');
     await peers.exchange();
-    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
-    enterSelection();
-    click('Select all in this list');
-    confirmMoveToTrash();
-    await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
+    await prepareTrash(['Folder A', 'Folder B']);
     await peers.exchange();
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     click('Open folder Trash');
     click('Open folder Folder A');
     enterSelection();
@@ -198,11 +214,8 @@ it('rejects a confirmed subtree that has changed before the permanent write', as
     await peers.exchange();
     node(peers.desktop, 'Child A', 'topic', 'Folder A');
     await peers.exchange();
+    await prepareTrash(['Folder A', 'Folder B']);
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
-    enterSelection();
-    click('Select all in this list');
-    confirmMoveToTrash();
-    await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Folder A')).toBeNull());
     click('Open folder Trash');
     enterSelection();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder A' }));
@@ -219,40 +232,6 @@ it('rejects a confirmed subtree that has changed before the permanent write', as
     expect(library.database.prepare('SELECT count(*) FROM node_sync_tombstones').pluck().get()).toBe(0);
   } finally {
     cleanup();
-    await library.close();
-    await closeLibraries();
-  }
-});
-
-it('removes filtered-out topics from the selection and keeps them unselected when the filter is cleared', async () => {
-  const library = await createSearchLibrary(0);
-  try {
-    const { desktop, exchange } = await connectCompanionPeer(library);
-    node(desktop, 'Folder A', 'folder');
-    await exchange();
-    node(desktop, 'Topic A', 'topic', 'Folder A');
-    node(desktop, 'Topic B', 'topic', 'Folder A');
-    await exchange();
-    await mutateCompanionWorkspace({ type: 'shelve', nodeId: 'Topic B' });
-    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
-    click('Open folder Folder A');
-    enterSelection();
-    click('Select all in this list');
-    expect(screen.getByText('2 of 2 selected in this list')).toBeVisible();
-    click('Toggle Topic Focus');
-    expect(screen.queryByRole('checkbox', { name: 'Select Topic B' })).toBeNull();
-    expect(screen.getByText('1 of 1 selected in this list')).toBeVisible();
-    click('Toggle Topic Focus');
-    expect(screen.getByRole('checkbox', { name: 'Select Topic B' })).not.toBeChecked();
-    expect(screen.getByText('1 of 2 selected in this list')).toBeVisible();
-    confirmMoveToTrash(1);
-    await waitFor(() => expect(screen.queryByTestId('companion-directory-node-Topic A')).toBeNull());
-    expect(screen.getByRole('button', { name: 'Open topic Topic B' })).toBeVisible();
-    await exchange();
-    expect(trashed(desktop.db)).toEqual(['Topic A']);
-  } finally {
-    cleanup();
-    if (getViewHideDismissedTopics()) requestToggleDismissedTopicVisibility();
     await library.close();
     await closeLibraries();
   }

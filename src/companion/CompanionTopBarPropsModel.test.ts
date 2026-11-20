@@ -27,7 +27,6 @@ function buildTopBarProps(settingsPage = 'list', surface: unknown = { activeActi
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    vi.fn(),
     vi.fn()
   );
 }
@@ -77,7 +76,6 @@ describe('CompanionTopBarPropsModel', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
-      vi.fn(),
       vi.fn()
     );
 
@@ -90,7 +88,7 @@ describe('CompanionTopBarPropsModel', () => {
       (key: string, params?: never) => translate('en', key as never, params), surface,
       'list', false, { kind: 'root' }, 'dateLastOpened', 'desc',
       vi.fn(), vi.fn(), vi.fn(), vi.fn(), undefined,
-      false, undefined, vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()
+      false, undefined, vi.fn(), vi.fn(), vi.fn(), vi.fn()
     ] as Parameters<typeof resolveCompanionTopBarProps>;
 
     expect(resolveCompanionTopBarProps(...args)).toMatchObject({ title: 'Inbox' });

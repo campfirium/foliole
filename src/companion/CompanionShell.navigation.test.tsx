@@ -168,9 +168,9 @@ async function expectReadingDocumentSearch(surface: ReturnType<typeof createRead
   expect(surface.handleTabAction).not.toHaveBeenCalledWith('search');
 }
 
-function openReadingAction(name: 'Find in document' | 'Appearance' | 'Highlight' | 'Info') {
+function openReadingAction(name: 'Find in document' | 'Appearance' | 'Highlight') {
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
-  expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Readable article' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name }));
 }
 
@@ -239,10 +239,6 @@ describe('CompanionShell navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('dialog', { name: 'Appearance' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
-    openReadingAction('Info');
-    expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
-    expect(screen.getByText('PDF and text')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
     await expectReadingDocumentSearch(surface);
   });

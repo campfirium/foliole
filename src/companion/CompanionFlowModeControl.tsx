@@ -6,7 +6,7 @@ import type { ReviewToolbarProgressCounts } from '../features/review/model/revie
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { reviewSessionModeOptions } from '../shared/ui/reviewSessionModeOptions';
 
-import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { CompanionMenuSheet } from './CompanionMenuSheet';
 
 export type CompanionFlowModeControls = {
   mode: ReviewSessionMode;
@@ -53,8 +53,8 @@ export function CompanionFlowModeMenu({ controls }: { controls: CompanionFlowMod
       className="inline-flex h-11 w-10 items-center justify-center text-companion-text-secondary">
       <EllipsisVertical aria-hidden="true" className="h-5 w-5" />
     </button>
-    <CompanionBottomSheet open={open} onOpenChange={setOpen} title={t('companion.reading.actions')}>
+    <CompanionMenuSheet open={open} onOpenChange={setOpen} title="Flow">
       <CompanionFlowModeControl onSelect={() => setOpen(false)} />
-    </CompanionBottomSheet>
+    </CompanionMenuSheet>
   </CompanionFlowModeContext.Provider>;
 }

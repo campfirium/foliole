@@ -8,8 +8,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import { ReadingChrome } from './CompanionReadingChrome';
 import {
   OutlineSheet,
-  ReadingFontSheet,
-  ReadingInfoSheet
+  ReadingFontSheet
 } from './CompanionReadingSheets';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -46,7 +45,7 @@ interface ImmersiveChromeLayerProps {
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
   onOpenOutline(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'info' | null): void;
+  onOpenReadingSheet(sheet: 'font' | null): void;
   onOpenSearchSheet(open: boolean): void;
   onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
   onOpenClozeRemoval?: () => void;
@@ -54,7 +53,7 @@ interface ImmersiveChromeLayerProps {
   onSelectOutlineItem(item: { from: number; to: number }): void;
   onCancelContentEditing(): void;
   onToggleContentEditing(): void;
-  openReadingSheet: 'font' | 'info' | null;
+  openReadingSheet: 'font' | null;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
@@ -126,12 +125,6 @@ function ReadingSheetsLayer(props: ReadingSheetsLayerProps) {
         settings={props.readingTypographySettings}
         saveError={props.readingTypographySaveError}
         fontLoadError={props.readingTypographyFontLoadError}
-      />
-      <ReadingInfoSheet
-        hasPdf={Boolean(props.readableArticle.pdfAttachmentId)}
-        onOpenChange={(open) => props.onOpenReadingSheet(open ? 'info' : null)}
-        open={props.openReadingSheet === 'info'}
-        title={props.readableArticle.title}
       />
       <CompanionDocumentSearchSheet
         content={props.readableArticle.content}

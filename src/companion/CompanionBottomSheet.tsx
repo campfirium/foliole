@@ -17,6 +17,7 @@ import './companionBottomSheet.css';
 
 export function CompanionBottomSheet(props: {
   children: ReactNode;
+  hideCloseButton?: boolean;
   scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   leadingAction?: ReactNode;
   retainReadingToolbar?: boolean;
@@ -47,14 +48,15 @@ export function CompanionBottomSheet(props: {
           className={`companion-sheet ${props.retainReadingToolbar ? 'companion-reading-sheet' : ''} bottom-0 left-0 top-auto flex max-h-[calc(100vh-2rem)] w-full translate-x-0 translate-y-0 flex-col overflow-hidden [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[max-height:calc(100dvh-2rem)]:max-h-[calc(100dvh-2rem)] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-companion-divider-strong" />
           <div className={`mx-auto flex min-h-0 w-full max-w-[760px] flex-col ${props.retainReadingToolbar ? 'flex-1' : ''}`}>
-            <div className="mb-3 flex shrink-0 items-center justify-between">
+            <div className={`mb-3 flex shrink-0 items-center ${props.hideCloseButton ? 'justify-start gap-3' : 'justify-between'}`}>
               {props.leadingAction}
-              <AppDialogTitle>{props.title}</AppDialogTitle>
-              <AppDialogClose aria-label={t('common.done')} className="flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle">
+              <AppDialogTitle className="min-w-0 [overflow-wrap:anywhere]">{props.title}</AppDialogTitle>
+              {!props.hideCloseButton && <AppDialogClose aria-label={t('common.done')} className="flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle">
                 <Check aria-hidden="true" className="h-5 w-5" />
-              </AppDialogClose>
+              </AppDialogClose>}
             </div>
             <div className={`app-scrollbar min-h-0 overflow-y-auto ${props.retainReadingToolbar ? 'flex-1' : ''} ${props.showScrollIndicator ? 'companion-sheet-scroll-indicator' : ''}`} ref={props.scrollElementRef}>{props.children}</div>
+            {props.hideCloseButton && <AppDialogClose className="sr-only" tabIndex={-1}>{t('shared.close')}</AppDialogClose>}
           </div>
         </AppDialogContent>
       </AppDialogPortal>

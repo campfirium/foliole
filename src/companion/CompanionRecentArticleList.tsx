@@ -110,7 +110,7 @@ export function RecentArticleRow(props: {
         {status ? <p className="companion-topic-preview">{status}</p> : null}
         <p className="companion-topic-meta truncate">{meta}</p>
       </button>
-      {!props.hideMenu && <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} title={props.article.title} directDiveId={props.directDiveId} />}
+      {!props.hideMenu && <CompanionTopicListMenu nodeId={props.article.nodeId} title={props.article.title} directDiveId={props.directDiveId} />}
     </div>
   );
 }

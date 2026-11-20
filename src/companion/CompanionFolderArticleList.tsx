@@ -14,6 +14,8 @@ export function CompanionFolderArticleList(props: {
   const t = useTranslation();
   const directory = useCompanionExternalDirectory();
   return <CompanionDirectoryList
+    key={props.nodeId}
+    batchMode="library"
     directory={directory}
     viewKey={`folder:${props.nodeId ?? ''}`}
     emptyLabel={t('companion.directory.emptyShell')}

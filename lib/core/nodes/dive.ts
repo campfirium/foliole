@@ -49,7 +49,11 @@ export function appendDiveSources(dive: Dive, ids: readonly string[]): Dive {
 }
 
 export function removeDirectDiveSource(dive: Dive, sourceId: string): Dive {
-  return dive.directSourceIds.includes(sourceId)
-    ? { ...dive, directSourceIds: dive.directSourceIds.filter(id => id !== sourceId) }
-    : dive;
+  return removeDirectDiveSources(dive, [sourceId]);
+}
+
+export function removeDirectDiveSources(dive: Dive, sourceIds: readonly string[]): Dive {
+  const removed = new Set(sourceIds);
+  const directSourceIds = dive.directSourceIds.filter(id => !removed.has(id));
+  return directSourceIds.length === dive.directSourceIds.length ? dive : { ...dive, directSourceIds };
 }

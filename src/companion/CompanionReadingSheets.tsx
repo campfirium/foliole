@@ -1,4 +1,4 @@
-import { ListTree, Info, RotateCcw, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
+import { ListTree, RotateCcw, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -80,21 +80,22 @@ export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenOutline?: () => void;
   onOpenChange(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'info'): void;
+  onOpenReadingSheet(sheet: 'font'): void;
   onOpenClozeRemoval?: () => void;
   articleHandoff?: { run(): void; error: string | null };
+  title?: string;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
 }) {
   const t = useTranslation();
   const restore = useCompanionTrashRestoreAction(props);
   const search = useDocumentSearchFocusHandoff(props.onFindInDocument);
-  const openReadingSheet = (sheet: 'font' | 'info') => {
+  const openReadingSheet = (sheet: 'font') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
   };
   return (
-    <ReadingBottomSheet showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}
+    <ReadingBottomSheet hideCloseButton showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={props.title || t('companion.reading.actions')}
       onCloseAutoFocus={search.onCloseAutoFocus}>
       <ReadingWorkspaceActions nodeId={props.nodeId} onClose={() => props.onOpenChange(false)} hasRestoreAction={Boolean(props.onRestoreFromTrash)}>
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
@@ -116,11 +117,6 @@ export function ReadingActionsSheet(props: {
           label={t('companion.reading.outline')}
           onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
         /> : null}
-        <ReadingActionRow
-          icon={<Info aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.reading.info')}
-          onClick={() => openReadingSheet('info')}
-        />
         {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
         {props.onOpenClozeRemoval ? <ReadingActionRow
           icon={<X aria-hidden="true" className="h-5 w-5" />}
@@ -194,29 +190,6 @@ export function ReadingFontSheet(props: {
         <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p>
       ) : null}
       <CompanionReadingTypographyControls onChange={props.onChange} settings={props.settings} />
-    </ReadingBottomSheet>
-  );
-}
-
-export function ReadingInfoSheet(props: {
-  hasPdf: boolean;
-  onOpenChange(open: boolean): void;
-  open: boolean;
-  title: string;
-}) {
-  const t = useTranslation();
-  return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.info')}>
-      <dl className="border-t border-companion-divider text-sm">
-        <div className="flex items-center justify-between border-b border-companion-divider py-3">
-          <dt className="text-companion-text-secondary">{t('companion.reading.info.topic')}</dt>
-          <dd className="min-w-0 max-w-[70%] truncate text-right text-foreground">{props.title}</dd>
-        </div>
-        <div className="flex items-center justify-between border-b border-companion-divider py-3">
-          <dt className="text-companion-text-secondary">{t('companion.reading.info.source')}</dt>
-          <dd className="text-foreground">{props.hasPdf ? t('companion.reading.info.pdfAndText') : t('companion.reading.info.text')}</dd>
-        </div>
-      </dl>
     </ReadingBottomSheet>
   );
 }

@@ -72,10 +72,10 @@ it('adds a folder and root Topic from Browse, updates the open workspace, syncs 
     await expect(addCompanionDiveSource(dive.id, 'Nested Topic')).rejects.toThrow('source is unavailable');
     await addFromMenu('Root Topic');
     openRow('Open folder Probability');
-    expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Sources' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open folder Shelf' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Open topic Folder Topic' })).toBeVisible();
-    expect(screen.getAllByRole('button', { name: 'Open topic Root Topic' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Open topic Root Topic' })).toBeVisible();
 
     addDiveSources(peers.desktop.db, dive.id, ['Desktop Topic']);
     await peers.exchange();
@@ -124,10 +124,10 @@ it('removes a directly added Topic from its Dive and preserves the library Topic
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
     await addFromMenu('Root Topic');
     openRow('Open folder Probability');
-    expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Sources' })).toBeNull();
     fireEvent.click(screen.getAllByRole('button', { name: 'More: Root Topic' })[0]!);
     openRow('Remove from This Dive');
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Sources' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Open topic Root Topic' })).toBeNull());
     const preservedTopic = (await readSnapshot()).nodesById['Root Topic'];
     expect(preservedTopic?.title).toBe('Root Topic');
     expect(preservedTopic?.deletedAt).toBeFalsy();
@@ -181,7 +181,7 @@ it('moves a Dive to Trash and restores it across sync with its source intact', a
     await peers.exchange();
 
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
-    openRow('More: Probability');
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Probability' }), { key: 'F10', shiftKey: true });
     openRow('Move to Trash');
     openRow('Move to Trash');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Probability' })).toBeNull());
@@ -190,7 +190,7 @@ it('moves a Dive to Trash and restores it across sync with its source intact', a
     expect(peers.desktop.db.prepare('SELECT deleted_at FROM nodes WHERE id = ?').get('Root Topic')).toEqual({ deleted_at: null });
 
     openRow('Open folder Trash');
-    openRow('More: Probability');
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Probability' }), { key: 'F10', shiftKey: true });
     openRow('Restore from Trash');
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Open folder Probability' })).toBeNull());
     await peers.exchange();

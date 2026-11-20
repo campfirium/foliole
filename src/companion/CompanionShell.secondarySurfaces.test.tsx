@@ -152,9 +152,9 @@ function expectCaptureSheet() {
 }
 
 function expectBrowseMenuSheet() {
-  expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByText('Sort')).toBeInTheDocument();
-  expect(screen.getByText('Appearance')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
 }
 
 describe('CompanionShell secondary surfaces', () => {

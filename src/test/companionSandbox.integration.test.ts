@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS as externalQueries } from '../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions';
 import { assertCompanionSandboxPath, prepareCompanionSandbox } from '../../scripts/vite/companionSandboxSeed';
 
 let root: string | undefined;
@@ -27,11 +28,20 @@ it('creates a seeded workspace, preserves edits on a normal start, and resets on
 
   const live = new Database(sandbox);
   expect(live.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('sandbox-topic')).toBe('ver_sandbox-topic');
+  expect(live.prepare(externalQueries.externalSearchFolders.sql).all()).toContainEqual({
+    id: 'sandbox-references', folder_path: '/sandbox/Sample References', document_count: 1
+  });
+  expect(live.prepare(externalQueries.externalDocumentById.sql).get('sandbox-reference-guide'))
+    .toMatchObject({ relative_path: 'Guides/Field Guide.md', content: expect.stringContaining('# Field Guide') });
+  live.prepare("DELETE FROM external_documents WHERE document_id = 'sandbox-reference-guide'").run();
+  live.prepare("DELETE FROM external_search_folders WHERE id = 'sandbox-references'").run();
   live.prepare('UPDATE nodes SET title = ? WHERE id = ?').run('Edited sample', 'sandbox-topic');
   live.close();
 
   await prepareCompanionSandbox(sandbox, false);
   expect(readValue(sandbox, "SELECT title FROM nodes WHERE id = 'sandbox-topic'")).toBe('Edited sample');
+  expect(readValue(sandbox, "SELECT title FROM external_documents WHERE document_id = 'sandbox-reference-guide'"))
+    .toBe('Field Guide');
   await prepareCompanionSandbox(sandbox, true);
   expect(readValue(sandbox, "SELECT title FROM nodes WHERE id = 'sandbox-topic'")).toBe('Sample Field Notes');
   expect(readValue(device, 'SELECT title FROM sentinel')).toBe('Device copy');

@@ -9,8 +9,7 @@ vi.mock('./CompanionReadingChrome', () => ({ ReadingChrome: () => null }));
 vi.mock('./CompanionReadingSheets', () => ({
   OutlineSheet: () => null,
   ReadingActionsSheet: (props: Record<string, unknown>) => readingActionsSheetMock(props),
-  ReadingFontSheet: () => null,
-  ReadingInfoSheet: () => null
+  ReadingFontSheet: () => null
 }));
 
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';

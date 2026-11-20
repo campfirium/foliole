@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { CompanionArticleTransition } from './CompanionArticleTransition';
-import { CompanionDirectoryBatchMenuProvider } from './CompanionDirectoryBatchMenu';
 import { CompanionListViewportProvider } from './CompanionListViewport';
 import type { CompanionShellModel } from './CompanionShell';
 
@@ -38,7 +37,7 @@ function ScrollPage(props: {
   >
     <PageActive.Provider value={active}><CompanionListViewportProvider scrollRef={scrollRef}
       sortIdentity={props.sortIdentity}>
-      <CompanionDirectoryBatchMenuProvider>{props.children}</CompanionDirectoryBatchMenuProvider>
+      {props.children}
     </CompanionListViewportProvider></PageActive.Provider>
   </div>;
 }

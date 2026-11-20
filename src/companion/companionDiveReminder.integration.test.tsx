@@ -81,7 +81,7 @@ function ReminderShortcutFixture() {
       <CompanionReminderSettingsContent onBack={() => setSettings(false)} snapshot={createSnapshot('Physics')} />
     </>
       : <CompanionBrowseTopActions diveActions={{ dive: { id: 'physics', title: 'Physics', directSourceIds: ['topic'] } }}
-        onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenAppearance={() => {}} onOpenCapture={() => {}}
+        onChangeSortDirection={() => {}} onChangeSortKey={() => {}} onOpenCapture={() => {}}
         sortDirection="asc" sortKey="name" />}
   </ReminderDraftProvider>;
 }
@@ -99,7 +99,7 @@ it('opens the shared form from the Dive menu and writes only on save', async () 
 
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  expect(within(await screen.findByRole('dialog', { name: 'Dive menu' })).queryByText('Sort', { exact: true })).not.toBeInTheDocument();
+  expect(within(await screen.findByRole('dialog', { name: 'Physics' })).queryByText('Sort', { exact: true })).not.toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button', { name: 'Create reminder…' }));
   await screen.findByLabelText('Message');
   await save();

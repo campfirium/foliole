@@ -2,9 +2,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { useRef } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import * as runtime from '../shared/platform/companionWorkspaceRuntimeRepository';
+
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
 import { CompanionListViewport, CompanionListViewportProvider } from './CompanionListViewport';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
+import * as workspaceActions from './CompanionWorkspaceActions';
 
 const items = Array.from({ length: 1000 }, (_, index) => `topic-${index}`);
 function Harness(props: { visible?: boolean; entries?: string[]; menus?: boolean }) {
@@ -14,7 +17,7 @@ function Harness(props: { visible?: boolean; entries?: string[]; menus?: boolean
     <CompanionListViewportProvider scrollRef={scrollRef} sortIdentity="title">
       {props.visible !== false ? <CompanionListViewport viewKey="test" items={props.entries ?? items}
         getItemKey={(item) => item} estimateSize={() => 50}
-        renderItem={(item) => <><button>{item}</button>{props.menus ? <CompanionTopicListMenu title={item} metadata="" /> : null}</>} /> : <div>Reader</div>}
+        renderItem={(item) => <><button>{item}</button>{props.menus ? <CompanionTopicListMenu title={item} nodeId={item} /> : null}</>} /> : <div>Reader</div>}
     </CompanionListViewportProvider>
   </div>;
 }
@@ -116,6 +119,10 @@ it('retains only the focused row outside the window and releases it after blur',
 
 it('keeps an open menu attached when scrolling mounts other closed menus', async () => {
   mockLayout();
+  vi.spyOn(runtime, 'isAvailableNativeCompanionRuntime').mockReturnValue(true);
+  vi.spyOn(workspaceActions, 'useCompanionWorkspaceActions').mockReturnValue({
+    snapshot: { nodesById: Object.fromEntries(items.map(id => [id, { id, kind: 'topic', parentNodeId: null }])) }
+  } as never);
   render(<Harness menus />);
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 70)); });
   const target = screen.getByRole('button', { name: 'topic-2' });
@@ -127,7 +134,7 @@ it('keeps an open menu attached when scrolling mounts other closed menus', async
   await waitFor(() => expect(screen.getByRole('button', { name: 'topic-100', hidden: true })).toBeInTheDocument());
   expect(target).toBeInTheDocument();
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });
 

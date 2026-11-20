@@ -40,11 +40,9 @@ describe('RecentArticleList', () => {
     render(<RecentArticleRow article={article} currentArticleId={null} onSelectArticle={vi.fn()} testId="topic-target" />);
     expect(screen.getByTestId('topic-target')).toHaveRole('button');
   });
-  it('opens the overflow menu independently without navigating', () => {
-    const select = setup();
-    fireEvent.click(screen.getByRole('button', { name: 'More: Article 1' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(select).not.toHaveBeenCalled();
+  it('omits overflow when there are no available item actions', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: 'More: Article 1' })).toBeNull();
   });
   it('omits unavailable metadata without inventing a folder or timestamp', () => {
     setup({ folderLabel: null, updatedAt: '' });

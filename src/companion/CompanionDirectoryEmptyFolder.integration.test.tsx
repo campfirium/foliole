@@ -31,7 +31,7 @@ it('restores one ordinary folder and its contents from its Trash row without sel
     fireEvent.click(screen.getByRole('button', { name: 'Open folder Trash' }));
     expect(screen.queryByRole('button', { name: 'More: Archive' })).toBeNull();
     fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Archive' }), { key: 'F10', shiftKey: true });
-    const menu = within(screen.getByRole('dialog', { name: 'More' }));
+    const menu = within(screen.getByRole('dialog', { name: 'Archive' }));
     fireEvent.click(menu.getByRole('button', { name: 'Restore from Trash' }));
     expect(await screen.findByRole('button', { name: 'Open folder Unrelated' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Library root' }));

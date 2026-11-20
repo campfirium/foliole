@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { expect, it, vi } from 'vitest';
 
@@ -23,6 +23,7 @@ function BrowseAppearanceHarness({ directory }: { directory: boolean }) {
   });
   return <CompanionColorModeProvider>
     <CompanionTopBar {...topBar} visible />
+    {activeAction === 'recent' && <button onClick={() => setActiveAction('more')}>Settings</button>}
     {activeAction === 'more' ? renderCompanionSettingsContent({
       settingsPage, onBackToSettingsList: () => setSettingsPage('list'),
       onOpenSyncSettings: () => setSettingsPage('sync'),
@@ -31,10 +32,14 @@ function BrowseAppearanceHarness({ directory }: { directory: boolean }) {
   </CompanionColorModeProvider>;
 }
 
-it.each([false, true])('opens the existing Appearance page from browse/directory (directory=%s)', async (directory) => {
+it.each([false, true])('offers Appearance only after entering Settings (directory=%s)', async (directory) => {
   render(<BrowseAppearanceHarness directory={directory} />);
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  const menu = within(screen.getByRole('dialog', { name: directory ? 'Directory' : 'Browse' }));
+  expect(menu.queryByRole('button', { name: 'Appearance' })).toBeNull();
+  fireEvent.click(menu.getByRole('button', { name: 'Close' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+  fireEvent.click(screen.getByTestId('companion-settings-appearance'));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument());
   expect(screen.getByRole('button', { name: 'Light' })).toBeInTheDocument();

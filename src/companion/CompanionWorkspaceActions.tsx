@@ -6,7 +6,7 @@ import type { ReviewSessionMode } from '../features/review/model/reviewSessionMo
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../shared/localization/translations';
 import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
-import { addCompanionDiveSource, removeCompanionDiveSource } from '../shared/platform/companion/runtime/companionDiveSources';
+import { addCompanionDiveSource, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { changeCompanionIndexSource, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
@@ -29,7 +29,7 @@ type Actions = {
   open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand, onSaved?: () => void): Promise<void>;
   convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
-  removeFromDive(diveId: string, sourceId: string, onSaved: () => void): void;
+  removeFromDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): void;
   changeIndexSource(indexId: string, sourceId: string, change: CompanionIndexSourceChange): void;
   moveBatchToTrash(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   restoreBatch(targets: readonly CompanionBatchTarget[], onSaved: (skipped: number) => void): Promise<void>;
@@ -91,7 +91,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     convertDirectory: (nodeId, target, expectedFilter) => void run(() => convertCompanionDiveDirectory(nodeId, target, expectedFilter),
       undefined, 'desktop.nodeList.dive.convertFailed'),
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId), undefined, 'desktop.nodeList.addToDive.saveFailed'),
-    removeFromDive: (diveId, sourceId, onSaved) => void run(() => removeCompanionDiveSource(diveId, sourceId), onSaved,
+    removeFromDive: (diveId, sourceIds, onSaved) => void run(() => removeCompanionDiveSources(diveId, sourceIds), onSaved,
       'companion.workspace.failure.removeDiveSource'),
     changeIndexSource: (indexId, sourceId, change) => void run(() => changeCompanionIndexSource(indexId, sourceId, change),
       undefined, change === 'add' ? 'companion.index.addSourceFailed' : 'companion.index.removeSourceFailed'),

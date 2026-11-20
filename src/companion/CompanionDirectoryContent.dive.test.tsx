@@ -80,15 +80,17 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   const view = renderWithLocalization(<Directory snapshot={snapshot} start={start} openReminders={openReminders} />);
   expect(screen.getByRole('heading', { name: 'Dive' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open folder Probability' }));
-  expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Probability' })).toBeVisible();
+  expect(screen.queryByRole('heading', { name: 'Directory' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Sources' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();
-  expect(screen.getByRole('heading', { name: 'Topics' })).toBeVisible();
+  expect(screen.queryByRole('heading', { name: 'Topics' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Open topic Statistics primer' })).toBeVisible();
 
   expect(screen.queryByRole('button', { name: 'Start Dive' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
-  let menu = within(screen.getByRole('dialog', { name: 'Dive menu' }));
+  let menu = within(screen.getByRole('dialog', { name: 'Probability' }));
   expect(menu.queryByText('Sort', { exact: true })).toBeNull();
   expect(menu.queryByRole('button', { name: /^(New…|Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
   fireEvent.click(menu.getByRole('button', { name: 'Create reminder…' }));
@@ -96,7 +98,7 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   expect(screen.queryByRole('dialog')).toBeNull();
 
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
-  menu = within(screen.getByRole('dialog', { name: 'Dive menu' }));
+  menu = within(screen.getByRole('dialog', { name: 'Probability' }));
   fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
   expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: ['member'] });
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -106,6 +108,8 @@ it('opens Dive details and starts Flow or creates a reminder from the top menu',
   } }} />);
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Open topic Statistics primer' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Open folder Reference shelf' }));
+  expect(screen.getByRole('heading', { name: 'Reference shelf' })).toBeVisible();
 });
 
 const creationSnapshot: WorkspaceSnapshot = {
@@ -115,7 +119,7 @@ const creationSnapshot: WorkspaceSnapshot = {
 
 function openBrowseMenu() {
   fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
-  return within(screen.getByRole('dialog', { name: 'Browse menu' }));
+  return within(screen.getByRole('dialog'));
 }
 
 it('offers a single New entry on the directory home and leaves one sheet open when a type is picked', () => {
@@ -129,7 +133,7 @@ it('offers a single New entry on the directory home and leaves one sheet open wh
   expect(menu.getByRole('button', { name: 'Dive' })).toBeVisible();
   expect(menu.getByRole('button', { name: 'Virtual' })).toBeVisible();
   fireEvent.click(menu.getByRole('button', { name: 'Back' }));
-  expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBe(sheet);
+  expect(screen.getByRole('dialog', { name: 'Directory' })).toBe(sheet);
   fireEvent.click(screen.getByRole('button', { name: 'New…' }));
   fireEvent.click(within(sheet).getByRole('button', { name: 'Folder' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
@@ -158,8 +162,9 @@ it('starts a Dive directly from its directory row menu', () => {
   const start = vi.fn();
   renderWithLocalization(<Directory snapshot={snapshot} start={start} openReminders={noop} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'More: Probability' }));
-  const menu = within(screen.getByRole('dialog', { name: 'More' }));
+  expect(screen.queryByRole('button', { name: 'More: Probability' })).toBeNull();
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Probability' }), { key: 'F10', shiftKey: true });
+  const menu = within(screen.getByRole('dialog', { name: 'Probability' }));
   fireEvent.click(menu.getByRole('button', { name: 'Start Dive' }));
   expect(start).toHaveBeenCalledExactlyOnceWith({ id: 'dive', topicIds: [] });
   expect(screen.queryByRole('dialog')).toBeNull();

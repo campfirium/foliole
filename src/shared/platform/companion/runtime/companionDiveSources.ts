@@ -1,6 +1,6 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../../../../lib/core/database/diveSourceEligibility';
-import { appendDiveSources, readDiveNode, removeDirectDiveSource, type Dive } from '../../../../../lib/core/nodes/dive';
+import { appendDiveSources, readDiveNode, removeDirectDiveSources, type Dive } from '../../../../../lib/core/nodes/dive';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
@@ -15,8 +15,8 @@ export function addCompanionDiveSource(diveId: string, sourceId: string) {
   });
 }
 
-export function removeCompanionDiveSource(diveId: string, sourceId: string) {
-  return changeCompanionDiveSources(diveId, (_db, dive) => removeDirectDiveSource(dive, sourceId));
+export function removeCompanionDiveSources(diveId: string, sourceIds: readonly string[]) {
+  return changeCompanionDiveSources(diveId, (_db, dive) => removeDirectDiveSources(dive, sourceIds));
 }
 
 function changeCompanionDiveSources(diveId: string, change: (db: DbPort, dive: Dive) => Dive | Promise<Dive>) {

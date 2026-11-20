@@ -9,6 +9,7 @@ import {
   companionReviewBottomInsetClassName,
   companionViewportHeightClassName
 } from './companionCssCompatibility';
+import { CompanionDirectoryBatchMenuProvider } from './CompanionDirectoryBatchMenu';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
 import { CompanionFlowCaptureContext } from './CompanionFlowCaptureButton';
@@ -139,37 +140,39 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           ready={model.workspaceSync.isWorkspaceSyncStateReady
             && (model.surface.activeAction !== 'review' || model.surface.flowReady)} />
       ) : null}
-      <main data-companion-reading-page={page.reading || undefined}
-        className={`relative ${companionViewportHeightClassName} bg-companion-base text-foreground`}>
-        <CompanionPageStack key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
-          model={model} pageKey={page.key} reading={page.reading} content={page.content} />
-      </main>
-      {model.surface.isFlowBrowsing && !model.surface.readingActivity.editing ? (
-        <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow} />
-      ) : null}
-      <CompanionShellOverlays
-        captureDraftScope={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
-        activeSecondaryDestinationId={model.activeSecondaryDestinationId}
-        activeAction={model.surface.activeAction}
-        companionTabConfig={model.companionTabs.config}
-        currentReviewCard={model.surface.effectiveReviewSession.currentCard}
-        isBottomBarDisabled={model.isBottomBarDisabled}
-        isCaptureSheetOpen={model.isCaptureSheetOpen}
-        isNavigationVisible={model.isNavigationVisible}
-        isReadableArticleImmersive={isReadableArticleImmersive(model)}
-        isReviewAnswerRevealed={model.surface.isAnswerRevealed}
-        onCaptureSave={model.handleSaveCaptureText}
-        onCaptureImportFile={model.handleImportFile}
-        onCaptureClipboardCreated={model.handleOpenCapturedNode}
-        onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
-        onDismissReviewTopic={model.surface.handleDismissReviewTopic}
-        onGradeReview={model.surface.handleGradeReview}
-        onNavigationAction={model.handleNavigationAction}
-        onPostponeReviewTopic={model.surface.handlePostponeReviewTopic}
-        onReadReviewTopic={model.surface.handleReadReviewTopic}
-        onRevealAnswer={model.surface.handleRevealAnswer}
-        onSecondaryDestination={model.handleSecondaryDestination}
-      />
+      <CompanionDirectoryBatchMenuProvider>
+        <main data-companion-reading-page={page.reading || undefined}
+          className={`relative ${companionViewportHeightClassName} bg-companion-base text-foreground`}>
+          <CompanionPageStack key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
+            model={model} pageKey={page.key} reading={page.reading} content={page.content} />
+        </main>
+        {model.surface.isFlowBrowsing && !model.surface.readingActivity.editing ? (
+          <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow} />
+        ) : null}
+        <CompanionShellOverlays
+          captureDraftScope={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
+          activeSecondaryDestinationId={model.activeSecondaryDestinationId}
+          activeAction={model.surface.activeAction}
+          companionTabConfig={model.companionTabs.config}
+          currentReviewCard={model.surface.effectiveReviewSession.currentCard}
+          isBottomBarDisabled={model.isBottomBarDisabled}
+          isCaptureSheetOpen={model.isCaptureSheetOpen}
+          isNavigationVisible={model.isNavigationVisible}
+          isReadableArticleImmersive={isReadableArticleImmersive(model)}
+          isReviewAnswerRevealed={model.surface.isAnswerRevealed}
+          onCaptureSave={model.handleSaveCaptureText}
+          onCaptureImportFile={model.handleImportFile}
+          onCaptureClipboardCreated={model.handleOpenCapturedNode}
+          onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
+          onDismissReviewTopic={model.surface.handleDismissReviewTopic}
+          onGradeReview={model.surface.handleGradeReview}
+          onNavigationAction={model.handleNavigationAction}
+          onPostponeReviewTopic={model.surface.handlePostponeReviewTopic}
+          onReadReviewTopic={model.surface.handleReadReviewTopic}
+          onRevealAnswer={model.surface.handleRevealAnswer}
+          onSecondaryDestination={model.handleSecondaryDestination}
+        />
+      </CompanionDirectoryBatchMenuProvider>
     </FlowHistorySurface>
     </CompanionFlowCaptureContext.Provider>
     </ReminderDraftProvider>

@@ -3,11 +3,14 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { setSystemEntryDisplayNames } from '../shared/localization/systemEntryDisplayNamesStore';
+import * as runtime from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
+import * as workspaceActions from './CompanionWorkspaceActions';
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
 });
 
@@ -57,9 +60,7 @@ it('uses article actions and preserves availability feedback inside folders', ()
   const row = screen.getByRole('button', { name: 'Open topic A topic' });
   expect(row).toHaveTextContent('Opening text');
   expect(row).toHaveTextContent('Topic body unavailable');
-  fireEvent.click(screen.getByRole('button', { name: 'More: A topic' }));
-  expect(select).not.toHaveBeenCalled();
-  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'More: A topic' })).toBeNull();
 });
 
 it('does not present a folder body status or repeat its type in the directory', () => {
@@ -82,6 +83,10 @@ it('does not present a folder body status or repeat its type in the directory', 
 });
 
 it('opens folder actions on a hold and keeps ordinary clicks for navigation', async () => {
+  vi.spyOn(runtime, 'isAvailableNativeCompanionRuntime').mockReturnValue(true);
+  vi.spyOn(workspaceActions, 'useCompanionWorkspaceActions').mockReturnValue({
+    snapshot: { nodesById: { folder: { id: 'folder', kind: 'folder', parentNodeId: null } } }
+  } as never);
   vi.useFakeTimers();
   try {
     const select = vi.fn();
@@ -111,8 +116,8 @@ it('opens folder actions on a hold and keeps ordinary clicks for navigation', as
 
     press();
     await act(async () => { await vi.advanceTimersByTimeAsync(550); });
-    expect(screen.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Projects' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
     fireEvent.pointerUp(row, pointer);
     expect(fireEvent.touchEnd(row)).toBe(false);
     fireEvent.click(row, { detail: 1 });

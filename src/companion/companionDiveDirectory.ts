@@ -15,15 +15,13 @@ export function resolveCompanionDiveSections(
 
   if (!isCanonicalVisibleNodeId(snapshot, dive.id)) return null;
   const { sources, topics } = resolveDiveMembership(snapshot, dive);
-  const toItem = (section: string, id: string): DirectoryListItem => {
+  const directIds = new Set(sources);
+  const rowIds = [...sources, ...topics.filter(id => !directIds.has(id))];
+  const items = rowIds.map((id): DirectoryListItem => {
     const node = snapshot.nodesById[id]!;
-    return { id: `${section}:${id}`, nodeId: id, source: 'internal', kind: node.kind,
-      ...(section === 'source' ? { directDiveId: dive.id } : {}),
+    return { id, nodeId: id, source: 'internal', kind: node.kind,
+      ...(directIds.has(id) ? { directDiveId: dive.id } : {}),
       title: node.title, preview: node.openingText ?? null };
-  };
-  const sections: DirectorySection[] = [
-    { id: 'diveSources', titleKey: 'desktop.nodeList.dive.sources', items: sources.map(id => toItem('source', id)) },
-    { id: 'diveTopics', titleKey: 'desktop.nodeList.dive.members', items: topics.map(id => toItem('member', id)) }
-  ];
-  return sections.filter(section => section.items.length > 0);
+  });
+  return [{ id: 'current', items }];
 }

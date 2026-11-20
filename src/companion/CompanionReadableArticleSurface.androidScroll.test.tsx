@@ -36,7 +36,6 @@ vi.mock('./CompanionReadingSheets', () => ({
   ReadingActionsSheet: () => null,
   ReadingFontSheet: () => null,
   ReadingHighlightSheet: () => null,
-  ReadingInfoSheet: () => null
 }));
 
 vi.mock('./CompanionDocumentSearchSheet', () => ({

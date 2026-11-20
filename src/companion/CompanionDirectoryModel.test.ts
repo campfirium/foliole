@@ -78,10 +78,9 @@ describe('CompanionDirectoryModel', () => {
     const sections = resolveSections({ kind: 'root' });
 
     expect(sectionTitles(sections)).toEqual([
-      { id: 'home', titleKey: undefined, titles: ['Inbox', '1Untitled Folder'] },
+      { id: 'home', titleKey: undefined, titles: ['Inbox', '1Untitled Folder', ''] },
       { id: 'virtual', titleKey: 'companion.directory.section.virtual', titles: ['Published', 'Shelved', 'Removed'] },
-      { id: 'external', titleKey: 'companion.directory.section.external', titles: ['2think', '1act'] },
-      { id: 'trash', titleKey: 'companion.directory.section.trash', titles: [''] }
+      { id: 'external', titleKey: 'companion.directory.section.external', titles: ['2think', '1act'] }
     ]);
   });
 

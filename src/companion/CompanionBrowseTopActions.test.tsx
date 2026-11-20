@@ -21,14 +21,13 @@ it('opens sort choices from the browse menu sort row', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
-      onOpenAppearance={vi.fn()}
       sortDirection="desc"
       sortKey="dateLastOpened"
     />
   );
 
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Browse' })).toBeInTheDocument();
   expect(screen.queryByText('Recent -> Older')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: /^Sort\s*Last opened$/ }));
@@ -50,7 +49,6 @@ it('runs sync from the browse menu', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
-      onOpenAppearance={vi.fn()}
       onSync={onSync}
       sortDirection="desc"
       sortKey="dateLastOpened"
@@ -70,7 +68,6 @@ it('hides capture when that interaction surface is not accepted', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
-      onOpenAppearance={vi.fn()}
       sortDirection="desc"
       sortKey="dateLastOpened"
     />
@@ -80,15 +77,13 @@ it('hides capture when that interaction surface is not accepted', () => {
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 });
 
-it('opens Appearance and closes the browse menu', () => {
-  const onOpenAppearance = vi.fn();
+it('keeps Appearance out of the browse menu', () => {
   render(<CompanionBrowseTopActions
     onChangeSortDirection={vi.fn()} onChangeSortKey={vi.fn()}
-    onOpenCapture={vi.fn()} onOpenAppearance={onOpenAppearance}
+    onOpenCapture={vi.fn()}
     sortDirection="desc" sortKey="dateLastOpened"
   />);
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-  expect(onOpenAppearance).toHaveBeenCalledTimes(1);
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  const menu = screen.getByRole('dialog', { name: 'Browse' });
+  expect(within(menu).queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
 });

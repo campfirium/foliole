@@ -30,7 +30,7 @@ export type CompanionDirectorySelection =
   | { documentId: string; kind: 'externalDocument' };
 
 export interface DirectorySection {
-  id: 'home' | 'virtual' | 'external' | 'current' | 'trash' | 'dives' | 'diveSources' | 'diveTopics';
+  id: 'home' | 'virtual' | 'external' | 'current' | 'dives';
   items: DirectoryListItem[];
   titleKey?: TranslationKey;
 }
@@ -205,11 +205,10 @@ export function resolveDirectorySections(args: {
   const externalFolders = [...args.directory.folders]
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
-    { id: 'home', items: [...inboxItems, ...internalItems] },
+    { id: 'home', items: [...inboxItems, ...internalItems, toTrashRootItem()] },
     { id: 'dives', items: rootItems.filter(isDiveItem).map(toVirtualItem), titleKey: 'desktop.nodeList.dive.tree' },
     { id: 'virtual', items: virtualItems, titleKey: 'companion.directory.section.virtual' },
-    { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
-    { id: 'trash', items: [toTrashRootItem()], titleKey: 'companion.directory.section.trash' }
+    { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' }
   ];
   return sections.filter((section) => section.items.length > 0);
 }

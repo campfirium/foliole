@@ -1,5 +1,4 @@
-import { MoreHorizontal } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { readDiveNode } from '../../lib/core/nodes/dive';
 import { resolveDiveDirectoryConversionTarget } from '../../lib/core/nodes/diveDirectoryConversion';
@@ -7,9 +6,9 @@ import { isManualVirtualFolderNode } from '../../lib/core/nodes/virtualNodeFilte
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-import { CompanionBottomSheet } from './CompanionBottomSheet';
 import { companionIndexSourcePromptKeys } from './CompanionIndexSourceForm';
 import { useCompanionListInteraction } from './CompanionListViewport';
+import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import type { WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
 
@@ -19,71 +18,67 @@ function IndexMembershipMenuActions({ disabled, hasSources, openSheet }: {
   openSheet(mode: 'add-index-source' | 'remove-index-source'): void;
 }) {
   const t = useTranslation();
-  const rowClass = 'min-h-11 w-full py-3 text-left text-sm';
   return <>
-    <button type="button" className={rowClass} disabled={disabled} onClick={() => openSheet('add-index-source')}>
-      {t(companionIndexSourcePromptKeys.add)}</button>
-    {hasSources && <button type="button" className={rowClass} disabled={disabled} onClick={() => openSheet('remove-index-source')}>
-      {t(companionIndexSourcePromptKeys.remove)}</button>}
+    <CompanionMenuRow disabled={disabled} label={t(companionIndexSourcePromptKeys.add)}
+      onSelect={() => openSheet('add-index-source')} />
+    {hasSources && <CompanionMenuRow disabled={disabled} label={t(companionIndexSourcePromptKeys.remove)}
+      onSelect={() => openSheet('remove-index-source')} />}
   </>;
 }
 
-export function CompanionDirectoryConversionMenu({ nodeId, title, onStart, folderRestoreMenu }: {
+export function useDirectoryConversionMenu({ nodeId, enabled, onStart, restore }: {
   nodeId: string;
-  title: string;
+  enabled: boolean;
   onStart?: (() => void) | undefined;
-  folderRestoreMenu?: { open: boolean; setOpen(open: boolean): void; restore(onSaved: () => void): void } | undefined;
+  restore?: ((onSaved: () => void) => void) | undefined;
 }) {
-  const t = useTranslation();
   const workspace = useCompanionWorkspaceActions();
-  const [buttonMenuOpen, setButtonMenuOpen] = useState(false);
-  const open = folderRestoreMenu?.open ?? buttonMenuOpen;
-  const setOpen = folderRestoreMenu?.setOpen ?? setButtonMenuOpen;
-  const interaction = useCompanionListInteraction();
-  const nodes = workspace?.snapshot?.nodesById;
-  const node = nodes?.[nodeId];
+  if (!enabled) return null;
+  const node = workspace?.snapshot?.nodesById[nodeId];
   const target = resolveDiveDirectoryConversionTarget(node);
   const manualIndex = isManualVirtualFolderNode(node);
   const canRename = manualIndex && !node?.deletedAt;
   const canTrash = target === 'index' || canRename;
-  const canRestore = Boolean(folderRestoreMenu || (node?.deletedAt && (readDiveNode(node) || manualIndex)));
-  const available = Boolean(onStart || (workspace && (target || canRestore) && isAvailableNativeCompanionRuntime()));
+  const canRestore = Boolean(restore || (node?.deletedAt && (readDiveNode(node) || manualIndex)));
+  if (!onStart && !(workspace && (target || canRestore) && isAvailableNativeCompanionRuntime())) return null;
+  return { nodeId, workspace, node, target, canRename, canTrash, canRestore, onStart, restore };
+}
+
+export function CompanionDirectoryConversionMenu({ menu, open, setOpen, title }: {
+  menu: NonNullable<ReturnType<typeof useDirectoryConversionMenu>>;
+  open: boolean;
+  title: string;
+  setOpen(open: boolean): void;
+}) {
+  const { nodeId, workspace, node, target, canRename, canTrash, canRestore, onStart, restore } = menu;
+  const t = useTranslation();
+  const interaction = useCompanionListInteraction();
   useEffect(() => {
-    if (!open || !available) return;
+    if (!open) return;
     interaction(true);
     return () => interaction(false);
-  }, [open, available, interaction]);
-  if (!available) return null;
+  }, [open, interaction]);
   const close = () => setOpen(false);
   const openSheet = (mode: WorkspaceNodeSheetState['mode']) => {
     close();
     workspace?.open({ mode, nodeId, parentNodeId: null });
   };
-  return <>
-    {!folderRestoreMenu && <button type="button" aria-haspopup="dialog" aria-label={`${t('companion.browse.more')}: ${title}`}
-      className="flex h-11 w-11 shrink-0 items-center justify-center text-companion-text-tertiary"
-      onClick={() => setOpen(true)}>
-      <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-    </button>}
-    <CompanionBottomSheet onOpenChange={setOpen} open={open} title={t('companion.browse.more')}>
-      {onStart && <button type="button" className="min-h-11 w-full py-3 text-left text-sm"
-        onClick={() => { close(); onStart(); }}>
-        {t('desktop.nodeList.dive.startFlow')}
-      </button>}
+  return (
+    <CompanionMenuSheet onOpenChange={setOpen} open={open} title={title}>
+      {onStart && <CompanionMenuRow label={t('desktop.nodeList.dive.startFlow')}
+        onSelect={() => { close(); onStart(); }} />}
       {workspace && canRename && <IndexMembershipMenuActions disabled={workspace.busy || workspace.pending}
         hasSources={Boolean(node?.manualChildOrder?.length)} openSheet={openSheet} />}
-      {workspace && target && <button type="button" className="min-h-11 w-full py-3 text-left text-sm" disabled={workspace.busy || workspace.pending}
-        onClick={() => openSheet(target === 'dive' ? 'convert-to-dive' : 'convert-to-index')}>
-        {t(target === 'dive' ? 'desktop.nodeList.dive.convertToDive' : 'desktop.nodeList.dive.convertToIndex')}
-      </button>}
-      {workspace && canRename && <button type="button" className="min-h-11 w-full py-3 text-left text-sm"
-        disabled={workspace.busy || workspace.pending} onClick={() => openSheet('rename')}>{t('desktop.command.rename')}</button>}
-      {workspace && canTrash && <button type="button" className="min-h-11 w-full py-3 text-left text-sm text-error"
-        disabled={workspace.busy || workspace.pending} onClick={() => openSheet('delete')}>{t('companion.workspace.delete')}</button>}
-      {workspace && canRestore && <button type="button" className="min-h-11 w-full py-3 text-left text-sm"
-        disabled={workspace.busy || workspace.pending} onClick={() => folderRestoreMenu
-          ? folderRestoreMenu.restore(close) : void workspace.execute({ type: 'restore', nodeId }, close)}>
-        {t('companion.reading.restoreFromTrash')}</button>}
-    </CompanionBottomSheet>
-  </>;
+      {workspace && target && <CompanionMenuRow disabled={workspace.busy || workspace.pending}
+        label={t(target === 'dive' ? 'desktop.nodeList.dive.convertToDive' : 'desktop.nodeList.dive.convertToIndex')}
+        onSelect={() => openSheet(target === 'dive' ? 'convert-to-dive' : 'convert-to-index')} />}
+      {workspace && canRename && <CompanionMenuRow disabled={workspace.busy || workspace.pending}
+        label={t('desktop.command.rename')} onSelect={() => openSheet('rename')} />}
+      {workspace && canTrash && <CompanionMenuRow destructive disabled={workspace.busy || workspace.pending}
+        label={t('companion.workspace.delete')} onSelect={() => openSheet('delete')} />}
+      {workspace && canRestore && <CompanionMenuRow disabled={workspace.busy || workspace.pending}
+        label={t('companion.reading.restoreFromTrash')}
+        onSelect={() => restore ? restore(close) : void workspace.execute({ type: 'restore', nodeId }, close)} />}
+    </CompanionMenuSheet>
+  );
 }

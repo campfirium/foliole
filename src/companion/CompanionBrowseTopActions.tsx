@@ -14,9 +14,9 @@ import { CompanionTopActionButton } from './CompanionTopActionButton';
 export function CompanionBrowseTopActions(props: {
   allowRootCreation?: boolean | undefined;
   diveActions?: CompanionBrowseDiveActions | undefined;
+  menuTitle?: string;
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
-  onOpenAppearance(): void;
   onOpenCapture(): void;
   onSync?: () => void;
   sortDirection: FolderListSortDirection;
@@ -54,9 +54,9 @@ export function CompanionBrowseTopActions(props: {
         diveActions={props.diveActions}
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
-        onOpenAppearance={props.onOpenAppearance}
         onOpenChange={setIsMenuOpen}
         open={isMenuOpen}
+        menuTitle={props.menuTitle ?? props.diveActions?.dive.title ?? t('companion.browse.title')}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}
         {...definedProps({

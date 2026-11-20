@@ -52,8 +52,7 @@ it('creates, joins and opens the same Dive after sync and receiver reopen', asyn
     const mobile = await loadIosCompanionWorkspaceSnapshot(target.db);
     const sections = resolveCompanionDiveSections(mobile, { kind: 'virtual', nodeId: dive.id });
     expect(sections?.map(section => [section.id, section.items.map(item => item.nodeId)])).toEqual([
-      ['diveSources', ['source-folder', 'member', 'direct']],
-      ['diveTopics', ['member', 'direct']]
+      ['current', ['source-folder', 'member', 'direct']]
     ]);
     expect(target.sqlite.prepare("SELECT parent_id FROM nodes WHERE id = 'child-topic'").pluck().get()).toBe('member');
 

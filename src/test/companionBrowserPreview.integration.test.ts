@@ -91,6 +91,7 @@ it('opens local database features while sync and network stay with the native ho
   expect(capabilities.COMPANION_BROWSER_PREVIEW_PLATFORM).toBe(COMPANION_PREVIEW_PLATFORM);
   expect(runtime.isAvailableNativeCompanionRuntime()).toBe(true);
   expect(runtime.isNativeCompanionReviewWriteRuntime()).toBe(true);
+  expect(runtime.isNativeCompanionExternalDirectoryRuntime()).toBe(true);
   expect(capabilities.isCompanionNativeHost()).toBe(false);
   expect(runtime.isNativeCompanionNetworkRuntime()).toBe(false);
   await expect(runtime.beginNativeCompanionSyncRun('manual', 'run-1')).rejects.toThrow('not implemented');

@@ -54,7 +54,6 @@ describe('companion mobile text wrapping', () => {
   it('allows settings detail text to use two lines', () => {
     renderWithLocalization(
       <CompanionSettingsList
-        onOpenAppearance={vi.fn()}
         onOpenDebug={vi.fn()}
         onOpenBackup={vi.fn()} onOpenAttachments={vi.fn()}
         onOpenSync={vi.fn()}

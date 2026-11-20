@@ -58,7 +58,7 @@ export function isNativeCompanionExternalDocumentReadRuntime() {
 
 export function isNativeCompanionExternalDirectoryRuntime() {
   const runtime = requireAvailableCompanionRuntime('external-document-directory');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionSyncObjectReadRuntime() {

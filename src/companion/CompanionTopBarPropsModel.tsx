@@ -36,8 +36,8 @@ export function resolveCompanionTopBarProps(
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void,
   onBackDirectorySelection: () => void,
-  onOpenAppearance: () => void,
-  diveActions?: CompanionBrowseDiveActions
+  diveActions?: CompanionBrowseDiveActions,
+  directoryTitle?: string
 ) {
   if (surface.activeAction === 'more') {
     return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings, onExitReview);
@@ -48,13 +48,13 @@ export function resolveCompanionTopBarProps(
       browseSortKey,
       folderTitle: surface.browsedFolder?.title,
       directorySelection,
+      directoryTitle,
       diveActions,
       isBrowseDirectoryOpen,
       onBackDirectorySelection,
       onChangeBrowseSortDirection,
       onChangeBrowseSortKey,
       onOpenAddSheet,
-      onOpenAppearance,
       onOpenBrowseDirectory,
       onSyncBrowse,
       syncDisabled,
@@ -103,26 +103,29 @@ function resolveBrowseTopBar(args: {
   diveActions: CompanionBrowseDiveActions | undefined;
   folderTitle: string | undefined;
   directorySelection: CompanionDirectorySelection;
+  directoryTitle: string | undefined;
   isBrowseDirectoryOpen: boolean;
   onBackDirectorySelection: () => void;
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void;
   onOpenAddSheet: () => void;
-  onOpenAppearance: () => void;
   onOpenBrowseDirectory: () => void;
   onSyncBrowse: (() => void) | undefined;
   syncDisabled: boolean;
   syncStatus: string | undefined;
   t: Translate;
 }) {
+  const title = args.isBrowseDirectoryOpen
+    ? args.directoryTitle ?? args.diveActions?.dive.title ?? args.t('companion.directory.title')
+    : args.folderTitle ?? args.t('companion.browse.title');
   const rightSlot = (
     <CompanionBrowseTopActions
       allowRootCreation={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'root'}
       diveActions={args.diveActions}
+      menuTitle={title}
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}
-      onOpenAppearance={args.onOpenAppearance}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
       topicFocusDisabled={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'virtual'
@@ -136,11 +139,11 @@ function resolveBrowseTopBar(args: {
   );
   if (args.isBrowseDirectoryOpen) {
     return args.directorySelection.kind === 'root'
-      ? { rightSlot, title: args.t('companion.directory.title') }
-      : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot, title: args.t('companion.directory.title') };
+      ? { rightSlot, title }
+      : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot, title };
   }
   return {
-    title: args.folderTitle ?? args.t('companion.browse.title'),
+    title,
     leftAction: { icon: Library, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };

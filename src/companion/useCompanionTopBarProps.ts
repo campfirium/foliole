@@ -6,8 +6,10 @@ import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
-import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { useLocalization } from '../shared/localization/LocalizationProvider';
+import { resolveNodeDisplayTitle, resolveSystemEntryDisplayName } from '../shared/localization/systemEntryNames';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
+import { resolveExternalFolderLabel } from '../shared/platform/externalLibraryBrowseModel';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
@@ -23,7 +25,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 
-function resolveBrowseSyncProps(workspaceSync: WorkspaceSync, t: ReturnType<typeof useTranslation>) {
+function resolveBrowseSyncProps(workspaceSync: WorkspaceSync, t: ReturnType<typeof useLocalization>['t']) {
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state);
   return {
     onSync: endpointUrl
@@ -65,6 +67,23 @@ function resolveBrowseDiveActions(args: {
   return { dive, onStart: startDive ? () => startDive(dive.id) : undefined };
 }
 
+function resolveDirectoryTitle(
+  selection: CompanionDirectorySelection,
+  snapshot: WorkspaceSync['state']['workspace_snapshot'],
+  directory: CompanionExternalDirectory,
+  { locale, t }: ReturnType<typeof useLocalization>
+) {
+  if ('nodeId' in selection) return resolveNodeDisplayTitle(locale, selection.nodeId,
+    snapshot?.nodesById[selection.nodeId]?.title ?? '') || t('companion.directory.title');
+  if (selection.kind === 'trash') return resolveSystemEntryDisplayName(locale, 'trash');
+  if (selection.kind === 'externalDirectory') return selection.directoryPath.split('/').at(-1) || t('companion.directory.section.external');
+  if (selection.kind === 'externalFolder') {
+    const folder = directory.folders.find(entry => entry.id === selection.folderId);
+    return folder ? resolveExternalFolderLabel(folder.folderPath) : t('companion.directory.section.external');
+  }
+  return t('companion.directory.title');
+}
+
 export function useCompanionTopBarProps(args: {
   directorySelection: CompanionDirectorySelection;
   browseSortDirection: FolderListSortDirection;
@@ -81,7 +100,8 @@ export function useCompanionTopBarProps(args: {
   surface: ReturnType<typeof useCompanionArticleSurface>;
   workspaceSync: WorkspaceSync;
 }) {
-  const t = useTranslation();
+  const localization = useLocalization();
+  const { t } = localization;
   const browseSync = resolveBrowseSyncProps(args.workspaceSync, t);
 
   if (args.surface.isFlowBrowsing) return {
@@ -112,11 +132,10 @@ export function useCompanionTopBarProps(args: {
     () => args.setSettingsPage('list'),
     () => args.setSettingsPage('sync'),
     () => goBackInDirectory(args),
-    () => {
-      args.surface.handleTabAction('more');
-      args.setSettingsPage('appearance');
-    },
-    resolveBrowseDiveActions(args)
+    resolveBrowseDiveActions(args),
+    args.isBrowseDirectoryOpen ? resolveDirectoryTitle(
+      args.directorySelection, args.workspaceSync.state.workspace_snapshot, args.externalDirectory, localization
+    ) : undefined
   );
   return withEmptyFlowMenu(resolved, args.surface);
 }

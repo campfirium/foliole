@@ -15,7 +15,7 @@ export function ReadingActionsLayer(props: {
   onOpenOutline?: () => void;
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'info' | null): void;
+  onOpenReadingSheet(sheet: 'font' | null): void;
   onOpenClozeRemoval?: () => void;
   handoffContext: {
     activity?: CompanionReadingActivity | undefined;
@@ -44,6 +44,7 @@ export function ReadingActionsLayer(props: {
       onOpenChange={props.onOpenActions}
       onOpenReadingSheet={props.onOpenReadingSheet}
       open={props.actionsOpen}
+      title={readableArticle.title}
       {...definedProps({
         editHistory: props.editHistory,
         priorityNodeId: props.readableArticle.isTrashed ? undefined : props.readableArticle.nodeId,

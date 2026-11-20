@@ -63,7 +63,5 @@ export function resolveDirectoryRowSubtitle(item: DirectoryListItem, t: Translat
   if (item.source === 'externalFolder' || item.source === 'externalDirectory')
     return t('companion.directory.row.externalFolder');
   if (item.source === 'externalDocument') return t('companion.directory.row.externalDocument');
-  if (item.source === 'trashRoot' || item.source === 'trash')
-    return t('companion.directory.row.trash');
   return item.kind === 'topic' ? t('companion.directory.row.topic') : null;
 }

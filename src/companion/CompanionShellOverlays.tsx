@@ -1,6 +1,7 @@
 import { memo, type ComponentProps } from 'react';
 
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
+import { useCompanionDirectoryBatchActive } from './CompanionDirectoryBatchMenu';
 import { CompanionBottomTabBar, type CompanionTabAction } from './CompanionFloatingBars';
 import type { CompanionSecondaryDestinationId, CompanionTabConfig } from './CompanionTabsConfig';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -30,7 +31,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
   onRevealAnswer: Surface['handleRevealAnswer'];
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
 }) {
-
+  const selectionActive = useCompanionDirectoryBatchActive();
   return (
     <>
       <CompanionBottomTabBar
@@ -39,7 +40,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
         config={props.companionTabConfig}
         onAction={props.onNavigationAction}
         onSecondaryDestination={props.onSecondaryDestination}
-        visible={props.isNavigationVisible && !props.isReadableArticleImmersive}
+        visible={props.isNavigationVisible && !props.isReadableArticleImmersive && !selectionActive}
       />
       <CompanionCaptureSheet
         draftScope={props.captureDraftScope}

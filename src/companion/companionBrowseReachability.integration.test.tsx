@@ -218,7 +218,7 @@ function TopicFocusDirectory({ snapshot }: { snapshot: WorkspaceSnapshot | null 
   const scrollRef = useRef<HTMLDivElement>(null);
   return <>
     <CompanionBrowseTopActions onChangeSortDirection={() => {}} onChangeSortKey={() => {}}
-      onOpenCapture={() => {}} onOpenAppearance={() => {}} sortDirection="asc" sortKey="name" />
+      onOpenCapture={() => {}} sortDirection="asc" sortKey="name" />
     <div ref={scrollRef}>
       <CompanionListViewportProvider scrollRef={scrollRef} sortIdentity="name:asc">
         <CompanionDirectoryContent selection={{ kind: 'internal', nodeId: 'other' }}
