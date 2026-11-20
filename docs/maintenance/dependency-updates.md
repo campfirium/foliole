@@ -170,6 +170,23 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
+### November 20 deferrals from the afternoon QA candidate
+
+The pre-freeze inventory for the QA candidate based on `219fafe6c` listed the
+proposals below, but none was reviewed or adopted before the freeze. This was
+not a blocked group. The next dependency batch should review each proposal from
+its current head and adopt the eligible ones on `dev`. Capacitor should be handled
+as its own native group so a blocked migration does not hold the others.
+
+| Proposal | Head at inventory | Next action |
+| --- | --- | --- |
+| [#293](https://github.com/campfirium/foliole/pull/293) | `d611ddeeaa888ada1bc4ee2d4bb7f6955ffadae1` | Review @electron/asar 4.3.2 |
+| [#292](https://github.com/campfirium/foliole/pull/292) | `2129c3ee177e7bc95e38d8ce44b30ede8d5c70ed` | Review Capacitor 8.6.2 with companion build and native sync |
+| [#287](https://github.com/campfirium/foliole/pull/287) | `c86992db3abbc75bb4f713448c815b54cabb64e6` | Head moved past the reviewed 14.0.5; review glob 14.0.6 |
+| [#286](https://github.com/campfirium/foliole/pull/286) | `890678fbf6ce7f04cc38ecf237aab236a7613d8c` | Head moved past the reviewed 3.10.0; review Prettier 3.10.1 |
+| [#279](https://github.com/campfirium/foliole/pull/279) | `dd6655ad829bc5631f9662493fec97015079bb5e` | Review the FSRS WASM binding 0.6.1 against the paired overrides |
+| [#242](https://github.com/campfirium/foliole/pull/242) | `d714d5a84eb012598b35e8b1d461c6eac14e62fc` | Review the jsdom 31 major update |
+
 ### November 20 Android Gradle security patch
 
 Local `dev` updates the Android Wrapper from 9.9.1 to
