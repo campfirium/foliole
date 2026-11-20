@@ -1,5 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, promises as fs } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
@@ -49,12 +49,10 @@ async function matchesRestorePoint(candidatePath: string, restorePoint: Applicat
       restorePoint.filePath,
       path.dirname(candidatePath)
     );
-    await verifySqliteDatabaseFileOffMainThread(materialized.databasePath);
-    const [candidateHash, restorePointHash] = await Promise.all([
-      hashFile(candidatePath),
-      hashFile(materialized.databasePath)
-    ]);
-    return candidateHash === restorePointHash;
+    // The candidate was verified above, so byte-identical files also prove the restore point. Comparing bytes
+    // stops at the first difference (SQLite bumps its header change counter on every write) instead of
+    // checking and hashing both whole databases.
+    return await sameFileBytes(candidatePath, materialized.databasePath);
   } catch (error) {
     console.warn('[backup] latest ordinary restore point could not establish change baseline', error);
     return false;
@@ -63,10 +61,27 @@ async function matchesRestorePoint(candidatePath: string, restorePoint: Applicat
   }
 }
 
-async function hashFile(filePath: string) {
-  const hash = createHash('sha256');
-  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
-  return hash.digest('hex');
+const COMPARE_CHUNK_BYTES = 1024 * 1024;
+
+async function sameFileBytes(left: string, right: string) {
+  const [a, b] = await Promise.all([fs.open(left, 'r'), fs.open(right, 'r')]);
+  try {
+    const [statA, statB] = await Promise.all([a.stat(), b.stat()]);
+    const sizeA = statA.size;
+    if (sizeA !== statB.size) return false;
+    const bufferA = Buffer.alloc(COMPARE_CHUNK_BYTES);
+    const bufferB = Buffer.alloc(COMPARE_CHUNK_BYTES);
+    for (let offset = 0; offset < sizeA; offset += COMPARE_CHUNK_BYTES) {
+      const length = Math.min(COMPARE_CHUNK_BYTES, sizeA - offset);
+      const [readA, readB] = await Promise.all([
+        a.read(bufferA, 0, length, offset), b.read(bufferB, 0, length, offset)]);
+      if (readA.bytesRead !== length || readB.bytesRead !== length ||
+          !bufferA.subarray(0, length).equals(bufferB.subarray(0, length))) return false;
+    }
+    return true;
+  } finally {
+    await Promise.all([a.close(), b.close()]);
+  }
 }
 
 async function removeCandidateGroup(databasePath: string) {

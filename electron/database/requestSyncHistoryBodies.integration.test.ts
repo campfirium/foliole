@@ -104,7 +104,7 @@ it.each(['ordered', 'child-first', 'corrupt-final', 'missing-final', 'short-fina
       } });
       if (fault) {
         await expect(apply()).rejects.toThrow(order === 'corrupt-final'
-          ? 'request_sync_body_digest_mismatch' : 'request_sync_body_chunk_missing');
+          ? 'node_version_projection_body_blob_invalid' : 'request_sync_body_chunk_missing');
         expect(readBytes).toBeGreaterThan(0);
         expect(versions(host.sqlite)).toEqual([]);
         expect(host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(originalNodes);

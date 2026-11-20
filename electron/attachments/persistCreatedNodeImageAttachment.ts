@@ -4,16 +4,11 @@ import { promises as fs } from 'node:fs';
 import { openDatabaseConnection } from '../database/connection.js';
 import { persistNodeResourceReference } from '../database/nodeResources.js';
 
-import { publishImmutableAttachment } from './publishImmutableAttachment.js';
+import { publishImmutableAttachmentBytes } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { validateSupportedImageBytes } from './supportedImageFormats.js';
 
 const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
-
-async function writeCanonicalFile(filePath: string, bytes: Uint8Array) {
-  return publishImmutableAttachment(filePath, createHash('sha256').update(bytes).digest('hex'),
-    temporary => fs.writeFile(temporary, bytes, { flag: 'wx' }));
-}
 
 export async function persistCreatedNodeImageAttachment(args: {
   bytes: Uint8Array;
@@ -31,7 +26,7 @@ export async function persistCreatedNodeImageAttachment(args: {
   if (hash !== args.expectedHash) throw new Error('invalid argument: image hash');
   const originalName = args.originalName.trim() || 'pdf-image-excerpt.png';
   const storagePath = resolveAttachmentStoragePath(hash, undefined, args.mimeType);
-  const createdFile = await writeCanonicalFile(storagePath, args.bytes);
+  const createdFile = await publishImmutableAttachmentBytes(storagePath, hash, args.bytes);
   try {
     openDatabaseConnection().driver.transaction(() => {
       args.persistNode();

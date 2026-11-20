@@ -9,7 +9,7 @@ import { runWithDatabaseConnectionOwner, openDatabaseConnection } from '../datab
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { runWithImageAttachmentHashOwner } from './imageAttachmentHashOwner.js';
-import { publishImmutableAttachment } from './publishImmutableAttachment.js';
+import { publishImmutableAttachmentBytes } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
@@ -95,9 +95,8 @@ function toImportedResult(input: {
   return result;
 }
 
-async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
-  const created = await publishImmutableAttachment(storagePath, createContentHash(bytes),
-    temporary => fs.writeFile(temporary, bytes, { flag: 'wx' }));
+async function persistAttachmentFile(storagePath: string, bytesHash: string, bytes: Uint8Array) {
+  const created = await publishImmutableAttachmentBytes(storagePath, bytesHash, bytes);
   return created ? 'created' as const : 'reused' as const;
 }
 
@@ -139,7 +138,7 @@ async function importPreparedImageAttachmentBytes(
 
   let storedFile: 'created' | 'reused';
   try {
-    storedFile = await persistAttachmentFile(storagePath, input.bytes);
+    storedFile = await persistAttachmentFile(storagePath, prepared.hash, input.bytes);
     await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.execute(
       FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [prepared.hash, 1]));
   } catch {

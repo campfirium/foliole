@@ -194,7 +194,6 @@ export const controlledSyncSqliteTests = [
   'lib/core/database/storedSourceSearchQueueMigration.integration.test.ts',
   'lib/core/database/workspaceSearchStableNodeIndex.integration.test.ts',
   'lib/core/database/workspaceSearchPathScope.integration.test.ts',
-  'lib/core/database/bodyHolderScalarHash.integration.test.ts',
   'electron/database/verifiedBodyInventory.integration.test.ts',
   'electron/database/nodeVersionChainMetadata.integration.test.ts',
   'electron/database/nodeVersionBoundedCollection.integration.test.ts',

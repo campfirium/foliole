@@ -168,6 +168,10 @@ public final class FolioleAttachmentBlockFiles {
         return withReceiverLock(context, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
     }
 
+    static boolean publishHashed(Context context, File source, File target, String hash) throws Exception {
+        return withReceiverLock(context, () -> FolioleCompanionAttachmentFileStage.publishHashed(source, target, hash));
+    }
+
     static synchronized <T> T withReceiverLock(Context context, java.util.concurrent.Callable<T> execute) throws Exception {
         File directory = FolioleAttachmentMaintenanceFiles.directory(context, false).getCanonicalFile();
         for (FolioleAttachmentBlockFiles owner : OWNERS.values()) {

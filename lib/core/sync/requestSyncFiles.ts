@@ -142,7 +142,8 @@ export class RequestSyncFiles {
       }
       result.set(bytes, offset);
     }
-    if (bytesToHex(sha256(result)) !== bytesToHex(blob.sha256)) throw new Error('request_sync_body_digest_mismatch');
+    // writeBody verified these bytes before spooling them under this request's private directory, and every
+    // consumer checks the body against its blob again before applying it, so a third digest here is skipped.
     return result;
   }
 

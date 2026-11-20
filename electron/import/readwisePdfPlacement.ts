@@ -1,5 +1,3 @@
-import { promises as fs } from 'node:fs';
-
 import { parseHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
@@ -63,7 +61,7 @@ export async function placeReadwisePdfHighlightsFromAttachment(input: {
 }) {
   const file = await resolveAttachmentFile(`${input.attachmentId}.pdf`);
   if (file.status !== 'ready') return;
-  const pages = await readReadwisePdfPages(await fs.readFile(file.filePath));
+  const pages = await readReadwisePdfPages(file.bytes);
   await runWithDatabaseConnectionOwner(() => placeReadwisePdfHighlights({ connectionRef: input.connectionRef,
     documentId: input.documentId,
     nodeId: input.nodeId,

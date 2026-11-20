@@ -162,3 +162,19 @@ it('retains the validated received fact independently of input buffers and retur
     expect(reread[0]?.fact).toEqual(fact);
   } finally { await request.close(); }
 });
+
+it('returns spooled body bytes without hashing them again; consumers verify before applying', async () => {
+  const { disk, port } = storage();
+  const request = new RequestSyncFiles(port, 'requests/test');
+  for (let index = 0; index < REQUEST_SYNC_MEMORY_BYTES / (512 * 1024); index++) {
+    const filler = new Uint8Array(512 * 1024).fill(index + 1);
+    await request.writeBody({ byteLength: BigInt(filler.length), role: 1, required: true, sha256: sha256(filler) }, filler);
+  }
+  const bytes = new Uint8Array(1024).fill(7);
+  const blob = { byteLength: BigInt(bytes.length), role: 1, required: true, sha256: sha256(bytes) };
+  await request.writeBody(blob, bytes);
+  const [key] = [...disk.keys()].filter(entry => entry.includes(Buffer.from(blob.sha256).toString('hex')));
+  disk.set(key!, new Uint8Array(1024).fill(8));
+  expect((await request.loadBody(blob))[0]).toBe(8);
+  await request.close();
+});

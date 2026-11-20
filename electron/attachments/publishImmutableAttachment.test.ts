@@ -9,8 +9,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { withAttachmentFileLease } from './attachmentFileLease.js';
 import { setAttachmentPublishedListener } from './attachmentPublishedEvents.js';
 import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
-import { publishImmutableAttachment } from './publishImmutableAttachment.js';
+import { publishImmutableAttachment, publishImmutableAttachmentBytes } from './publishImmutableAttachment.js';
 
+const streams = vi.hoisted(() => ({ opened: [] as string[] }));
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, createReadStream: (file: string) => { streams.opened.push(path.basename(file)); return actual.createReadStream(file); } };
+});
 vi.mock('node:fs/promises', async importOriginal => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
   return { ...actual, link: vi.fn(actual.link), rename: vi.fn(actual.rename) };
@@ -99,4 +104,24 @@ it('announces a storage key only when its verified bytes become newly visible', 
     setAttachmentPublishedListener(null);
     await rm(root, { recursive: true, force: true });
   }
+});
+
+it('publishes hashed in-memory bytes without reading the written copy back', async () => {
+  await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/immutable-bytes-'));
+  const bytes = Buffer.from('pasted image bytes');
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  const destination = path.join(root, `${hash}.png`);
+  streams.opened.length = 0;
+  try {
+    expect(await publishImmutableAttachmentBytes(destination, hash, bytes)).toBe(true);
+    expect(await readFile(destination)).toEqual(bytes);
+    expect(streams.opened.filter(name => name.startsWith('.attachment-'))).toEqual([]);
+
+    streams.opened.length = 0;
+    expect(await publishImmutableAttachmentBytes(destination, hash, bytes)).toBe(false);
+    expect(streams.opened).toEqual([`${hash}.png`]);
+    await writeFile(destination, 'damaged');
+    await expect(publishImmutableAttachmentBytes(destination, hash, bytes)).rejects.toThrow('canonical_attachment_hash_mismatch');
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

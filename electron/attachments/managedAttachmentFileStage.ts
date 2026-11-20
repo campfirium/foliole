@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { publishImmutableAttachment } from './publishImmutableAttachment.js';
+import { publishImmutableAttachmentBytes } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 
 export interface StagedManagedAttachment {
@@ -27,8 +27,7 @@ export async function stageManagedAttachmentFile(input: {
 }): Promise<StagedManagedAttachment> {
   const contentHash = hashBytes(input.bytes);
   const storagePath = resolveAttachmentStoragePath(contentHash, undefined, input.mimeType);
-  const createdFile = await publishImmutableAttachment(storagePath, contentHash,
-    temporary => fs.writeFile(temporary, input.bytes, { flag: 'wx' }));
+  const createdFile = await publishImmutableAttachmentBytes(storagePath, contentHash, input.bytes);
   return {
     contentHash,
     createdAt: input.now ?? new Date().toISOString(),

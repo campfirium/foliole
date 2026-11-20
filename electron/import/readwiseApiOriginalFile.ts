@@ -127,7 +127,8 @@ export function attachReadwiseApiOriginalFile(
 async function persistValidatedFile(storagePath: string, bytes: Uint8Array) {
   try {
     const existing = await fs.readFile(storagePath);
-    if (createHash('sha256').update(existing).digest('hex') !== createHash('sha256').update(bytes).digest('hex')) {
+    // Same bytes means the same content hash, so a byte compare answers it without hashing either copy.
+    if (!existing.equals(bytes)) {
       throw new Error('original_file_hash_mismatch');
     }
     return;

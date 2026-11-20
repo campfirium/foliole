@@ -162,9 +162,12 @@ export function upsertNodeSnapshot(
       && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
-    const previousBody = driver.queryOne<{ body_blob_hash: string | null }>(
-      'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
-    const bodyBlobHash = hashTextBody(input.content);
+    // Every writer stores content and body_blob_hash together, so an unchanged body (a title or metadata
+    // save) keeps its hash instead of hashing the whole text again.
+    const previousBody = driver.queryOne<{ body_blob_hash: string | null; same_body: number }>(
+      'SELECT body_blob_hash, content IS ? AS same_body FROM nodes WHERE id = ?', [input.content, input.nodeId]);
+    const bodyBlobHash = previousBody?.body_blob_hash && previousBody.same_body === 1
+      ? previousBody.body_blob_hash : hashTextBody(input.content);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     if (!previousNode && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
     if (!previousNode || previousNode.parent_id !== input.parentNodeId) {

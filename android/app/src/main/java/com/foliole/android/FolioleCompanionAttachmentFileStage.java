@@ -13,6 +13,11 @@ final class FolioleCompanionAttachmentFileStage {
         return publish(source, target, hash, () -> {});
     }
 
+    // The caller hashed the bytes in memory and wrote and synced exactly those bytes to source.
+    static boolean publishHashed(File source, File target, String hash) throws Exception {
+        return publish(source, target, hash, () -> {});
+    }
+
     static boolean publishReceived(File source, File target, String hash, long length, Runnable check) throws Exception {
         FolioleAttachmentBlockFiles.checkedSourceFile(source);
         if (java.nio.file.Files.size(source.toPath()) != length) {
