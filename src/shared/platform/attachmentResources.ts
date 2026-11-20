@@ -55,7 +55,8 @@ export async function resolveRuntimeAttachmentResource(
   const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
   if (!storageKey || !parsed) return null;
   const runtime = getCompanionRuntimeCapability();
-  const imageDisplay = options?.imageDisplay === true && runtime.kind === 'android-native' &&
+  const imageDisplay = options?.imageDisplay === true &&
+    (runtime.kind === 'android-native' || runtime.kind === 'ios-native') &&
     parsed.mimeType.startsWith('image/');
   const cacheKey = imageDisplay ? `image-display:${storageKey}` : storageKey;
   const inFlight = attachmentResourceResolutionsInFlight.get(cacheKey);
@@ -141,8 +142,9 @@ async function resolveNativeAttachmentResource(
   return resolutionPromise;
 }
 
-// Requests without image display stay strict: a PDF or an iOS image whose stored bytes do not match
-// must resolve as missing so the viewer asks attachment sync to fetch a good copy.
+// Requests without image display stay strict: a PDF whose stored bytes do not match must resolve as
+// missing so the viewer asks attachment sync to fetch a good copy. Native image display skips the digest
+// on both mobile hosts, so a damaged stored image shows as unavailable instead of being re-fetched.
 async function resolveNativeAttachmentResourceUncached(
   description: Pick<AttachmentResourceDescription, 'contentHash' | 'mimeType' | 'storageKey'>,
   imageDisplay: boolean

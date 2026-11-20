@@ -20,7 +20,8 @@ extension FolioleCompanionSyncPlugin {
                 try FolioleAttachmentMaintenanceFiles.move(storageKey, toTrash: false)
             }
             let exists = FolioleAttachmentResourceReadiness.isReady(
-                fileURL, contentHash: contentHash, presenceOnly: call.getBool("presence_only") ?? false
+                fileURL, contentHash: contentHash, presenceOnly: call.getBool("presence_only") ?? false,
+                imageDisplay: call.getBool("image_display") ?? false, mimeType: mimeType
             )
             call.resolve([
                 "status": exists ? "ready" : "missing_file",

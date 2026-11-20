@@ -39,7 +39,6 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   owner: ReturnType<typeof companionFramedFileOwner>, recorder?: CompanionFolderAttachmentRecorder): Promise<RequestSyncAttachmentHost> {
   const files = createCompanionFramedSyncFiles(FolioleCompanionSync, owner);
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
-  const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
   const receiver = createAttachmentBlockReceiver(createCompanionAttachmentFiles(owner,
     (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available)), recorder?.prepare));
   const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
@@ -50,7 +49,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     attempted: key => db.write(port => recordAttachmentDemandAttempt(port, key)),
     async importPdfText(pdf, artifact) {
       await importCompanionPdfTextArtifact(db, host, pdf, artifact);
-      if ((await stat(pdf)).present) await db.write(port => completeAttachmentDemand(port, pdf));
+      // Only presence decides the demand; a digest from `stat` would be computed and then ignored.
+      if ((await inspect([pdf]))[0]) await db.write(port => completeAttachmentDemand(port, pdf));
     },
     async needsSlice(shouldYield, excluded) {
       return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true, excluded);

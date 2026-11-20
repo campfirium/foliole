@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 
 import { resolveDatabasePath } from './connection.js';
 
@@ -18,8 +18,10 @@ export async function loadAttachmentResourceDescription(storageKey: string): Pro
   const identity = loadAttachmentResourceStorageIdentity(storageKey);
   if (!identity) return null;
   const libraryScope = currentLibraryScope();
+  // Availability only reports whether the stored file is there; opening it goes through the resolve command,
+  // which checks the bytes against the hash and asks attachment sync for a good copy when they differ.
   return { ...identity,
-    availability: (await resolveAttachmentFile(identity.storageKey)).status === 'ready' ? 'local' : 'missing',
+    availability: resolveAttachmentFileForSync(identity.storageKey).status === 'ready' ? 'local' : 'missing',
     libraryScope };
 }
 

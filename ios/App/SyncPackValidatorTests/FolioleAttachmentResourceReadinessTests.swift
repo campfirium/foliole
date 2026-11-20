@@ -49,6 +49,30 @@ final class FolioleAttachmentResourceReadinessTests: XCTestCase {
             root, contentHash: "", presenceOnly: true, digestHex: neverDigest))
     }
 
+    func testImageDisplayAcceptsStoredImageWithoutDigestButNotOtherTypes() throws {
+        let root = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("attachment")
+        try Data([9, 9, 9]).write(to: file)
+        var digests = 0
+        let counted: (URL) throws -> String = { url in
+            digests += 1
+            return try FolioleCompanionAttachmentResourceDownloader.digestHex(url)
+        }
+
+        XCTAssertTrue(FolioleAttachmentResourceReadiness.isReady(
+            file, contentHash: "expected", presenceOnly: false, imageDisplay: true, mimeType: "image/png",
+            digestHex: counted))
+        XCTAssertEqual(digests, 0, "Image display must not read the stored image")
+        XCTAssertFalse(FolioleAttachmentResourceReadiness.isReady(
+            file, contentHash: "expected", presenceOnly: false, imageDisplay: true, mimeType: "application/pdf",
+            digestHex: counted))
+        XCTAssertEqual(digests, 1, "Image display of a PDF still checks its bytes")
+        XCTAssertFalse(FolioleAttachmentResourceReadiness.isReady(
+            root.appendingPathComponent("missing"), contentHash: "", presenceOnly: false, imageDisplay: true,
+            mimeType: "image/png", digestHex: counted))
+    }
+
     private func temporaryRoot() throws -> URL {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-attachment-readiness-\(UUID().uuidString)", isDirectory: true)

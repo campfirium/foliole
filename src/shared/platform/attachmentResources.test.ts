@@ -138,7 +138,7 @@ it('bounds desktop attachment resource resolution cache entries', async () => {
   });
 });
 
-it('resolves native iOS attachment file URLs through Capacitor', async () => {
+it('resolves native iOS image display through Capacitor without the strict digest', async () => {
   const resource = createTestAttachmentResource({
     attachmentId: 'att-ios',
     contentHash: 'c'.repeat(64),
@@ -160,7 +160,7 @@ it('resolves native iOS attachment file URLs through Capacitor', async () => {
   });
   expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({
     attachment_id: resource.description.contentHash, content_hash: resource.description.contentHash,
-    mime_type: 'image/png', storage_key: resource.description.storageKey
+    image_display: true, mime_type: 'image/png', storage_key: resource.description.storageKey
   });
   expect(invoke).not.toHaveBeenCalled();
 });
