@@ -49,8 +49,9 @@ function createShellElements(document: Document) {
     stage.append(viewport);
     document.body.append(stage);
   } else document.body.append(note, viewport);
-  viewport.append(createCompanionPreviewStatusBar(document), content);
-  return { frame, frozen, overlay, status, retry, viewport };
+  const statusBar = createCompanionPreviewStatusBar(document);
+  viewport.append(statusBar, content);
+  return { frame, frozen, overlay, status, retry, viewport, statusBar };
 }
 
 type ShellElements = ReturnType<typeof createShellElements>;
@@ -153,7 +154,7 @@ class PreviewTransition implements CompanionPreviewShell {
 export function mountCompanionPreviewShell(document: Document, timeoutMs = 30_000) {
   const elements = createShellElements(document);
   const detachScenarios = document.body.dataset.previewSandbox
-    ? attachCompanionSandboxScenarioControls(document, elements.frame) : undefined;
+    ? attachCompanionSandboxScenarioControls(document, elements.frame, elements.statusBar) : undefined;
   const audit = document.body.dataset.previewSandbox ? mountCompanionSandboxAuditPanel(document) : undefined;
   const stopFitting = fitCompanionPreviewViewport(elements.viewport);
   const shell = new PreviewTransition(elements, timeoutMs, audit?.show);

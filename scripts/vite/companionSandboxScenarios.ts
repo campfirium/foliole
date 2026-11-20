@@ -22,18 +22,23 @@ export function createCompanionSandboxScenarioStore(): CompanionSandboxScenarioS
   };
 }
 
-export function attachCompanionSandboxScenarioControls(document: Document, frame: HTMLIFrameElement) {
+export function attachCompanionSandboxScenarioControls(document: Document, frame: HTMLIFrameElement, statusBar: HTMLElement) {
   const chinese = document.defaultView?.navigator.language.toLowerCase().startsWith('zh');
-  const toolbar = document.createElement('div');
-  toolbar.className = 'sandbox-toolbar';
+  const title = chinese ? '调试场景' : 'Debug scenarios';
   const menu = document.createElement('details');
   menu.className = 'sandbox-scenarios';
   const trigger = document.createElement('summary');
-  trigger.textContent = chinese ? '调试场景' : 'Debug scenarios';
+  trigger.setAttribute('aria-label', title);
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '⋯';
+  trigger.append(icon);
   const items = document.createElement('div');
   items.className = 'sandbox-scenario-items';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  items.append(heading);
   menu.append(trigger, items);
-  toolbar.append(menu);
 
   const apply = companionSandboxScenarios.map(scenario => {
     const label = document.createElement('label');
@@ -62,11 +67,13 @@ export function attachCompanionSandboxScenarioControls(document: Document, frame
   frame.addEventListener('load', applyAfterReload);
   document.addEventListener('pointerdown', dismissOutside);
   document.addEventListener('keydown', dismissOnEscape);
-  (document.querySelector('.sandbox-stage') ?? document.body).append(toolbar);
+  for (const decoration of statusBar.children) decoration.setAttribute('aria-hidden', 'true');
+  statusBar.removeAttribute('aria-hidden');
+  statusBar.append(menu);
   return () => {
     frame.removeEventListener('load', applyAfterReload);
     document.removeEventListener('pointerdown', dismissOutside);
     document.removeEventListener('keydown', dismissOnEscape);
-    toolbar.remove();
+    menu.remove();
   };
 }
