@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 // `device` is a library copied by `macos-a5-dev.mjs preview-pull`; `empty` is created on first open.
-export const COMPANION_PREVIEW_DATA_SOURCES = ['device', 'empty'];
+export const COMPANION_PREVIEW_DATA_SOURCES = ['device', 'empty', 'sandbox'];
 
 // Each data source keeps its own preview library under the rebuildable root cache.
 export function companionPreviewDatabaseFile(root, data) {
@@ -22,14 +22,17 @@ export function parseWebDevArgs(argv) {
   if (!COMPANION_PREVIEW_DATA_SOURCES.includes(data)) {
     throw new Error(`--data must be one of: ${COMPANION_PREVIEW_DATA_SOURCES.join(', ')}`);
   }
-  return { data };
+  const reset = argv.includes('--reset');
+  if (reset && data !== 'sandbox') throw new Error('--reset only applies to --data sandbox.');
+  return reset ? { data, reset } : { data };
 }
 
 export function createWebDevLaunch({
   data = 'device',
   host = '127.0.0.1',
   nodePath = process.execPath,
-  port = 24604,
+  port = data === 'sandbox' ? 24606 : 24604,
+  reset = false,
   root = repoRoot
 } = {}) {
   return {
@@ -40,6 +43,8 @@ export function createWebDevLaunch({
       env: {
         ...process.env,
         FOLIOLE_COMPANION_PREVIEW_DB: companionPreviewDatabaseFile(root, data),
+        FOLIOLE_COMPANION_SANDBOX: data === 'sandbox' ? '1' : '',
+        FOLIOLE_COMPANION_SANDBOX_RESET: data === 'sandbox' && reset ? '1' : '',
         FOLIOLE_VITE_HMR: '1',
         FOLIOLE_VITE_PORT: String(port)
       },
@@ -52,7 +57,7 @@ export function createWebDevLaunch({
 export function runAndroidWebDev(options = {}) {
   const launch = createWebDevLaunch(options);
   const database = launch.options.env.FOLIOLE_COMPANION_PREVIEW_DB;
-  if (options.data !== 'empty' && !existsSync(database)) {
+  if ((options.data === 'device' || options.data === undefined) && !existsSync(database)) {
     throw new Error('No device preview library. Prepare the preview library first, '
       + 'or start with `--data empty`.');
   }

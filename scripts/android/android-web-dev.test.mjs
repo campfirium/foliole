@@ -45,4 +45,17 @@ describe('android Web dev entry', () => {
     expect(parseWebDevArgs(['--data', 'empty'])).toEqual({ data: 'empty' });
     expect(() => parseWebDevArgs(['--data', 'sample'])).toThrow('--data must be one of');
   });
+  it('uses a dedicated database and port for the sandbox and scopes reset to that mode', () => {
+    const options = parseWebDevArgs(['--data', 'sandbox', '--reset']);
+    const launch = createWebDevLaunch({ ...options, root: '/repo' });
+
+    expect(launch.options.env).toMatchObject({
+      FOLIOLE_COMPANION_PREVIEW_DB: '/repo/.cache/companion-preview/sandbox/foliole-companionSQLite.db',
+      FOLIOLE_COMPANION_SANDBOX: '1',
+      FOLIOLE_COMPANION_SANDBOX_RESET: '1',
+      FOLIOLE_VITE_PORT: '24606'
+    });
+    expect(createWebDevLaunch({ data: 'sandbox' }).options.env.FOLIOLE_COMPANION_SANDBOX_RESET).toBe('');
+    expect(() => parseWebDevArgs(['--reset'])).toThrow('only applies to --data sandbox');
+  });
 });

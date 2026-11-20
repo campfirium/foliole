@@ -1,10 +1,10 @@
 import path from 'node:path';
 
-export function companionPreviewShellHtml(projectRoot: string) {
+export function companionPreviewShellHtml(projectRoot: string, sandbox = false) {
   const module = `/@fs/${path.resolve(projectRoot, 'scripts/vite/companionPreviewShell.ts').replace(/^\/+/u, '')}`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Foliole preview</title><style>
+<title>${sandbox ? 'Foliole mobile sandbox' : 'Foliole preview'}</title><style>
 html,body{margin:0;width:100%;height:100%;font:14px system-ui;color-scheme:light dark}
 body{overflow:hidden}
 .preview-data-note{position:absolute;top:12px;left:16px;max-width:260px;margin:0;color:GrayText;font:12px/1.6 system-ui}
@@ -21,6 +21,6 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 button{cursor:pointer;min-height:40px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.is-updating [role=status]::before{animation:none}}
-</style></head><body data-companion-preview-shell="true">
+</style></head><body data-companion-preview-shell="true"${sandbox ? ' data-preview-sandbox="true"' : ''}>
 <script type="module" src="${module}"></script></body></html>`;
 }

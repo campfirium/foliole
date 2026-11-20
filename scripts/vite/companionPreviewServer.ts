@@ -7,6 +7,7 @@ import { normalizePath, type EnvironmentModuleNode, type HtmlTagDescriptor, type
 
 import { companionPreviewShellHtml } from './companionPreviewShellHtml';
 import { createCompanionPreviewSqliteHost } from './companionPreviewSqliteHost';
+import { assertCompanionSandboxPath, prepareCompanionSandbox } from './companionSandboxSeed';
 
 export const COMPANION_PREVIEW_DATABASE_ENV = 'FOLIOLE_COMPANION_PREVIEW_DB';
 export const COMPANION_PREVIEW_SQLITE_PATH = '/__foliole_preview/sqlite';
@@ -107,6 +108,7 @@ function reachesBootstrap(modules: EnvironmentModuleNode[], bootstrapFile: strin
 /** Serves the companion preview database only to the local Vite dev server. */
 export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.ProcessEnv = process.env): Plugin {
   const databaseFile = env[COMPANION_PREVIEW_DATABASE_ENV];
+  const sandbox = env.FOLIOLE_COMPANION_SANDBOX === '1';
   return {
     name: 'foliole-companion-preview-server',
     apply: 'serve',
@@ -124,6 +126,18 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
     },
     configureServer(server) {
       if (!databaseFile) return;
+      if (sandbox) {
+        let prepared: Promise<void> | undefined;
+        server.middlewares.use((_request, _response, next) => {
+          prepared ??= Promise.resolve().then(() => {
+            assertCompanionSandboxPath(projectRoot, databaseFile);
+            return prepareCompanionSandbox(databaseFile, env.FOLIOLE_COMPANION_SANDBOX_RESET === '1');
+          }).then(() => {
+            delete env.FOLIOLE_COMPANION_SANDBOX_RESET;
+          });
+          void prepared.then(() => next(), next);
+        });
+      }
       const host = createCompanionPreviewSqliteHost(databaseFile);
       server.httpServer?.once('close', () => {
         void host.close().catch((error: unknown) => server.config.logger.error(String(error)));
@@ -142,7 +156,7 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
         if (!['/', '/index.html'].includes(url.pathname) || url.searchParams.has('__foliole_preview_frame')
           || url.searchParams.has('html-proxy')) return next();
         response.setHeader('Content-Type', 'text/html; charset=utf-8');
-        response.end(companionPreviewShellHtml(projectRoot));
+        response.end(companionPreviewShellHtml(projectRoot, sandbox));
       });
     }
   };

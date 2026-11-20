@@ -40,7 +40,9 @@ function createShellElements(document: Document) {
   content.append(frame, frozen, overlay);
   const note = document.createElement('p');
   note.className = 'preview-data-note';
-  note.textContent = 'Settings preview uses demo data. Actions do not back up or delete your files.';
+  note.textContent = document.body.dataset.previewSandbox
+    ? 'Mobile sandbox · Sample data'
+    : 'Settings preview uses demo data. Actions do not back up or delete your files.';
   document.body.append(note, viewport);
   viewport.append(createCompanionPreviewStatusBar(document), content);
   return { frame, frozen, overlay, status, retry, viewport };
