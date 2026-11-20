@@ -8,6 +8,7 @@ import { hydrateCompanionReviewSession } from './companionReviewSession';
 import { useCompanionActionState } from './useCompanionActionState';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
+import { useCompanionFlowBodyTiming } from './useCompanionFlowBodyTiming';
 import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 import { useExitUnavailableDive } from './useCompanionUnavailableDive';
@@ -149,7 +150,7 @@ export function useCompanionArticleSurface(
   const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
     flowNodeId: flow.view.currentCard?.nodeId ?? null });
   const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
-    workspaceSync, browseState, activeAction, flow.view.currentCard?.nodeId ?? null);
+    workspaceSync, browseState, activeAction, flow);
   const effectiveReviewSession = useMemo(
     () => hydrateCompanionReviewSession(flow.view, currentArticle),
     [flow.view, currentArticle]
@@ -203,7 +204,8 @@ export function useCompanionArticleSurface(
 
 function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
   browse: ReturnType<typeof useCompanionBrowseState>, tabAction: CompanionTabAction,
-  reviewNodeId: string | null) {
+  flow: ReturnType<typeof useCompanionFlowSession>) {
+  const reviewNodeId = flow.view.currentCard?.nodeId ?? null;
   const isFlowBrowsing = tabAction === 'review' && browse.selectedBrowseNodeId !== null
     && browse.selectedBrowseNodeId !== reviewNodeId;
   const activeAction = isFlowBrowsing ? 'recent' : tabAction;
@@ -215,7 +217,9 @@ function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
     void Promise.resolve(workspaceSync.openReadableArticle(readyDemandNodeId)).catch(() => undefined);
   }, [readyDemandNodeId, workspaceSync.openReadableArticle]);
   const candidate = activeAction === 'review' ? workspaceSync.readableArticle : browse.readableArticle;
-  return { currentArticle: candidate?.nodeId === readyDemandNodeId ? candidate : null,
+  const currentArticle = candidate?.nodeId === readyDemandNodeId ? candidate : null;
+  useCompanionFlowBodyTiming(flow.displayTiming, flow.bodyTargetNodeId, currentArticle, readingActivity, activeAction === 'review');
+  return { currentArticle,
     readingActivity, articleAction: activeAction, isFlowBrowsing };
 }
 

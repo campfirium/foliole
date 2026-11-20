@@ -18,6 +18,7 @@ import type { DailyFlowSession } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
 import { assertDiveCurrent, displayDiveSession, selectDiveCurrent } from './diveCycleFlow.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
+import { timeFlow } from './flowTiming.js';
 
 export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitArgs, settings: DailyFlowSettings) {
   dailyFlowCommitSchema.parse(args);
@@ -40,7 +41,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   const mode = stored.mode as ReviewSessionMode;
   const invalidated = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
   const base = invalidated
-    ? await reconcileCycle(db, stored, args.now, settings) : stored.session;
+    ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored, args.now, settings)) : stored.session;
   if (dive && (args.historyMode || args.navigation || args.nextReadingNodeId || (!args.grade && !args.readingAction))) {
     throw new Error('daily_flow_learning_changed');
   }
@@ -57,7 +58,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   }
   const historySession = args.historyMode ? args.historySourceSession?.flowFormat === 'legacy-queue-v1'
     ? await replayLegacyCycle(db, base, args, settings) : await replayCycleHistory(db, base, args) : null;
-  const { learningChanged, ...result } = await persistCycleLearning(db, args);
+  const { learningChanged, ...result } = await timeFlow(db.timing, 'write-cycle', () => persistCycleLearning(db, args));
   const updated = learningChanged ? await db.scopedLearningSnapshot(ids) : snapshot;
   let session: DailyFlowSession = historySession ?? await advanceCycleFlow(db, sourceSession, args, updated, settings, dive?.mode ?? mode, dive ? base : undefined);
   if (args.reviewHistory?.mode === 'redo') session = { ...session,
@@ -68,7 +69,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
     now: args.now, revision: stored.revision + 1, session });
   await db.saveOperation(args.opId, { input_hash: hash, revision: saved.daily!.revision,
     card_json: result.card === undefined ? null : JSON.stringify(result.card), source_session_json: JSON.stringify(sourceSession) });
-  const displayed = dive ? await selectDiveCurrent(db, saved, dive, args.now, settings) : saved;
+  const displayed = dive ? await timeFlow(db.timing, 'dive-choose-next', () => selectDiveCurrent(db, saved, dive, args.now, settings)) : saved;
   return { mode: dive?.mode ?? mode, sourceSession,
     mutationTimestamp: args.now, session: displayed, ...result,
     learning: !dive && db.preparedNavigation?.valid() && db.preparedNavigation.snapshot &&

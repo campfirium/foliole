@@ -3,6 +3,7 @@ import type { SchedulerCard } from '../review/types.js';
 import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot, DailyFlowSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
+import type { FlowTiming } from './flowTiming.js';
 
 export type CycleStored = { day_key: string; revision: number; settings_key: string; mode: string;
   session_json: string; invalidated: number; session: DailyFlowSession };
@@ -15,6 +16,7 @@ export type DailyFlowOperation = { input_hash: string; revision: number; card_js
 export type PreparedFlowNavigation = { source: DailyFlowSession; next: DailyFlowSession; snapshot?: DailyFlowLearningSnapshot; valid(): boolean };
 
 export interface DailyFlowStore {
+  timing?: FlowTiming;
   readingPreservesPosition?: boolean;
   preparedNavigation?: PreparedFlowNavigation | undefined;
   readState(): Promise<CycleStored | null>;

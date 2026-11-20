@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { timeFlow, type FlowTiming } from '../../lib/core/flow/flowTiming';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -35,16 +36,18 @@ export async function persistFlowMutation(args: {
   nodeId: string; now: string; grade?: ReviewGrade;
   history?: CompanionFlowHistoryContext;
   releaseSequentialReading?: boolean;
-}): Promise<FlowMutation> {
+}, timing?: FlowTiming): Promise<FlowMutation> {
   if (args.action === 'grade') {
     const result = await gradeCompanionReviewCard({ ...args, grade: args.grade! });
     if (!result) throw new Error('The current item is no longer available.');
     const saved = args.history ? await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot, history: args.history }),
-      reviewLog: result.reviewLog }) : await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
+      reviewLog: result.reviewLog }, timing) : await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
         nodeId: args.nodeId, reviewLog: result.reviewLog, snapshot: result.snapshot });
     if (!saved) throw new Error('Could not save the review grade.');
-    if (typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, args.snapshot);
+    if (typeof saved === 'object' && 'session' in saved) {
+      await timeFlow(timing, 'receipt', () => applyCompanionFlowReceipt(saved, args.snapshot));
+    }
     const snapshot = typeof saved === 'object' && 'card' in saved ? { ...result.snapshot,
       nodesById: { ...result.snapshot.nodesById, [args.nodeId]: { ...result.snapshot.nodesById[args.nodeId]!,
         review: saved.card ? toNodeReviewProfile(saved.card) : null } } } : result.snapshot;
@@ -60,8 +63,10 @@ export async function persistFlowMutation(args: {
     const saved = await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot,
         relatedNodeIds: result.syncNodeIds, history: args.history }),
-      ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });
-    if (typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, args.snapshot);
+      ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) }, timing);
+    if (typeof saved === 'object' && 'session' in saved) {
+      await timeFlow(timing, 'receipt', () => applyCompanionFlowReceipt(saved, args.snapshot));
+    }
     const changes = Object.fromEntries(result.syncNodeIds.map(id => [id, result.snapshot.nodesById[id]!]));
     if (typeof saved === 'object' && 'readings' in saved) for (const value of saved.readings ?? []) {
       if (changes[value.nodeId]) changes[value.nodeId] = { ...changes[value.nodeId]!, reading: value.reading };

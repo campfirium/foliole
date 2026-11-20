@@ -16,6 +16,7 @@ import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 import { commitTargetedFlowHistory } from './dailyFlowTargetHistory.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 import { openDiveCurrent } from './diveCycleFlow.js';
+import { timeFlow, type FlowTiming } from './flowTiming.js';
 
 export interface DailyFlowPersistence {
   readingPreservesPosition?: boolean;
@@ -27,7 +28,7 @@ export interface DailyFlowPersistence {
 }
 
 export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
+  persistence: DailyFlowPersistence, timing?: FlowTiming): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
     const previous = await readDailyFlow(tx);
     await applyLocalDailyFlowOperations(tx, args.now);
@@ -36,18 +37,18 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
       const stored = await readDailyFlow(tx);
       const global = stored?.day_key === flowDay(args.now, config) ? stored.session
         : (await openGlobalDailyFlow(tx, { now: args.now, mode: 'recommended', prepareOnly: true },
-          config, persistence, previous)).session;
+          config, persistence, previous, timing)).session;
       const store = createSqliteDailyFlowStore(tx, persistence);
-      const session = await openDiveCurrent(store, global, args, config);
+      const session = await timeFlow(timing, 'dive-choose-next', () => openDiveCurrent(store, global, args, config));
       return { mode: args.mode, session, learning: await readCurrentFlowLearning(store, session.currentNodeId) };
     }
-    return openGlobalDailyFlow(tx, args, config, persistence, previous);
+    return openGlobalDailyFlow(tx, args, config, persistence, previous, timing);
   });
 }
 
 async function openGlobalDailyFlow(tx: DbPort, args: DailyFlowOpenArgs, config: DailyFlowSettings,
-  persistence: DailyFlowPersistence, previous: CycleStored | null) {
-  let result = await openCycleFlow(tx, args, config, persistence);
+  persistence: DailyFlowPersistence, previous: CycleStored | null, timing?: FlowTiming) {
+  let result = await openCycleFlow(tx, args, config, persistence, false, undefined, timing);
   await recordDailyFlowSync(tx, result, config, args.now);
   if (await applyLocalDailyFlowOperations(tx, args.now)) {
     if (previous?.day_key !== result.session.daily!.dayKey) {
@@ -56,13 +57,13 @@ async function openGlobalDailyFlow(tx: DbPort, args: DailyFlowOpenArgs, config: 
         now: args.now, revision: stored.revision, session: { ...stored.session, currentNodeId: null,
           cycle: { ...stored.session.cycle!, scanAfter: 0 } } });
     }
-    result = await openCycleFlow(tx, args, config, persistence);
+    result = await openCycleFlow(tx, args, config, persistence, false, undefined, timing);
   }
   return result;
 }
 
 export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence, preparedNavigation?: PreparedFlowNavigation, current?: CycleStored): Promise<DailyFlowResult> {
+  persistence: DailyFlowPersistence, preparedNavigation?: PreparedFlowNavigation, current?: CycleStored, timing?: FlowTiming): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
     const stored = current ?? await readDailyFlow(tx);
     const config = await dailyFlowSettingsForInstant(tx, settings, args.now, Boolean(args.historyMode), stored);
@@ -70,6 +71,7 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     const targeted = await commitTargetedFlowHistory(tx, args, config, persistence);
     if (targeted) return targeted;
     const store = createSqliteDailyFlowStore(tx, transactionDailyFlowPersistence(persistence));
+    if (timing) store.timing = timing;
     store.preparedNavigation = !changed && stored && !stored.invalidated && stored.settings_key === JSON.stringify(config)
       ? preparedNavigation : undefined;
     if (!changed) store.readState = async () => stored;

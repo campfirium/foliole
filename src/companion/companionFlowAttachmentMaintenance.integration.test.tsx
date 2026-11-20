@@ -7,6 +7,7 @@ import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/compa
 import { runCompanionAttachmentMaintenance } from '../shared/platform/companion/runtime/companionAttachmentMaintenance';
 import { installCompanionAttachmentTestWorker } from '../shared/platform/companion/runtime/companionAttachmentWorker.testSupport';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { serializeSupportLog, startSupportLog, stopSupportLog } from '../shared/platform/supportLog/supportLog';
 
 import { useDailyFlowSurface } from './companionFlowDay.testSupport';
 
@@ -49,6 +50,7 @@ it('advances a text card and saves Soon exactly once while attachment observatio
     const observing = runCompanionAttachmentMaintenance({ action: 'observe' });
     maintenance = observing.catch(() => undefined);
     expect(await Promise.race([writingState.promise.then(() => 'file pending'), observing])).toBe('file pending');
+    startSupportLog(false, true);
     act(() => { action = ui.result.current.surface.handleSoonReviewTopic(); });
     await waitFor(() => {
       expect(ui.result.current.surface.isSubmittingReadingAction).toBe(false);
@@ -57,14 +59,33 @@ it('advances a text card and saves Soon exactly once while attachment observatio
       expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');
       expect(operations.get()).toEqual({ n: 1 });
     });
+    stopSupportLog();
+    expectAttachmentFlowRecording(first);
     releaseFile.resolve();
     await expect(observing).resolves.toEqual({ observationComplete: true });
     expect(operations.get()).toEqual({ n: 1 });
   } finally {
     await act(async () => { releaseFile.resolve(); await Promise.all([maintenance, action]); });
+    stopSupportLog();
     cleanup();
     await library.close();
     await worker.close();
     vi.useRealTimers();
   }
 });
+
+function expectAttachmentFlowRecording(first: string) {
+  const exported = serializeSupportLog('android')!;
+  expect(exported).not.toContain('prefix alpha');
+  expect(exported).not.toContain(first);
+  const { androidFlow } = JSON.parse(exported);
+  expect(androidFlow.attachments).toEqual(expect.arrayContaining([
+    expect.objectContaining({ kind: 'observe', fromMs: 0, status: 'pending' }),
+    expect.objectContaining({ kind: 'file.write-state', fromMs: 0, status: 'pending' })
+  ]));
+  expect(androidFlow.events).toEqual(expect.arrayContaining([
+    ...['action', 'open-queue', 'open-writer', 'mutation-queue', 'mutation-writer', 'write', 'choose-next', 'display', 'body']
+      .map(stage => expect.objectContaining({ operation: 1, action: 'soon', stage, status: 'done' }))
+  ]));
+  expect(androidFlow.events).not.toEqual(expect.arrayContaining([expect.objectContaining({ stage: 'queue-build' })]));
+}

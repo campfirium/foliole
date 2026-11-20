@@ -19,13 +19,14 @@ import { companionDiveModeControls, createCompanionDiveFlowControls } from './co
 import { createCompanionFlowControls, trackCompanionFlowRefresh } from './companionFlowControls';
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
+import type { FlowDisplayTiming } from './useCompanionFlowBodyTiming';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 import { useFlowHydration } from './useCompanionFlowHydration';
 import { useCompanionFlowReadView } from './useCompanionFlowReadView';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
-  diveOpening?: boolean; refresh?: Promise<void>; readIntents?: CompanionReadIntents; readEpoch?: number;
+  diveOpening?: boolean; refresh?: Promise<void>; displayTiming?: FlowDisplayTiming; readIntents?: CompanionReadIntents; readEpoch?: number;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
@@ -81,7 +82,8 @@ export function useCompanionFlowSession(args: {
   return { view, ...companionDiveModeControls(openDive, dive, mode, setMode), dive, openDive,
     exitUnavailableDive: () => exitUnavailableDive(current, owner, render),
     ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading: !dive && canContinueReading, hasTopics,
-    readIntents: current.readIntents,
+    readIntents: current.readIntents, bodyTargetNodeId: session.currentNodeId,
+    displayTiming: current.displayTiming?.generation === current.generation ? current.displayTiming : undefined,
     summary: { ...(progressCounts ? { progressCounts } : {}), ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },

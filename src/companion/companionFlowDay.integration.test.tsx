@@ -11,6 +11,7 @@ import * as display from '../shared/platform/companion/runtime/companionDailyFlo
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { serializeSupportLog, startSupportLog, stopSupportLog } from '../shared/platform/supportLog/supportLog';
 
 import { useDailyFlowSurface } from './companionFlowDay.testSupport';
 
@@ -27,7 +28,7 @@ beforeEach(async () => {
   library = await createSearchLibrary(2, 32);
   library.database.prepare('UPDATE nodes SET created_at = ?, updated_at = ?').run('2026-10-26T00:00:00.000Z', '2026-10-26T00:00:00.000Z');
 });
-afterEach(async () => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });
+afterEach(async () => { stopSupportLog(); cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });
 
 it.each([false, true].flatMap(pendingRefresh => (['soon', 'read', 'later', 'dismiss', 1, 2, 3, 4] as const).map(action => ({ action, pendingRefresh }))))(
   'rebuilds before the first $action once (pending refresh=$pendingRefresh)', async ({ action, pendingRefresh }) => {
@@ -50,6 +51,7 @@ it.each([false, true].flatMap(pendingRefresh => (['soon', 'read', 'later', 'dism
     if (typeof action === 'number') act(() => ui.result.current.surface.handleRevealAnswer());
     const before = library.database.prepare('SELECT day_key FROM daily_flow_state').get();
     vi.setSystemTime(new Date('2026-10-27T08:00:00.000Z'));
+    if (action === 'soon' && !pendingRefresh) startSupportLog(false, true);
     await act(async () => {
       const surface = ui.result.current.surface;
       if (typeof action === 'number') await surface.handleGradeReview(action);
@@ -69,6 +71,16 @@ it.each([false, true].flatMap(pendingRefresh => (['soon', 'read', 'later', 'dism
     } else if (action !== 'soon') expect(library.database.prepare('SELECT * FROM node_reading WHERE node_id=?').get(target)).toBeTruthy();
     await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(target));
     expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');
+    if (action === 'soon' && !pendingRefresh) {
+      stopSupportLog();
+      const { androidFlow } = JSON.parse(serializeSupportLog('android')!);
+      const stages = androidFlow.events.map(({ stage, status }: { stage: string; status: string }) => `${stage}:${status}`);
+      for (const stage of ['day-check', 'day-reset', 'queue-build', 'mutation-writer', 'choose-next', 'body']) {
+        expect(stages).toContain(`${stage}:done`);
+      }
+      expect(stages.indexOf('queue-build:done')).toBeLessThan(stages.indexOf('mutation-writer:start'));
+      expect(androidFlow.events.every(({ operation }: { operation: number }) => operation === 1)).toBe(true);
+    }
     ui.unmount();
   });
 

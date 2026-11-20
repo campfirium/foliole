@@ -8,6 +8,7 @@ import {
 } from '../../../../../lib/core/database/companionDatabaseLifecycle';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import { timeFlow, timeFlowQueue, type FlowTiming, type FlowTimingStage } from '../../../../../lib/core/flow/flowTiming';
 import type { PriorityIndexNode } from '../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { RegularPushQueuePriority } from '../../../../../lib/core/review/unifiedPushQueueRules';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
@@ -146,15 +147,18 @@ export class CapacitorCompanionDatabaseOwner {
     }
   }
 
-  runWriter<T>(task: (db: DbPort) => Promise<T>, businessWrite = true): Promise<T> {
+  runWriter<T>(task: (db: DbPort) => Promise<T>, businessWrite = true,
+    timing?: FlowTiming, queue: FlowTimingStage = 'mutation-writer'): Promise<T> {
     if (businessWrite) for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return this.enqueue(() => this.committedWrites.write(this.requireDb(), task, businessWrite));
+    return timeFlowQueue(timing, queue, execute => this.enqueue(execute),
+      () => timeFlow(timing, 'write', () => this.committedWrites.write(this.requireDb(), task, businessWrite)));
   }
 
-  runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>): Promise<T> {
+  runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>, timing?: FlowTiming): Promise<T> {
     for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return this.enqueue(() => task(this.requireDb(), execute =>
-      this.committedWrites.write(this.requireDb(), execute, true)));
+    return timeFlowQueue(timing, 'mutation-writer', execute => this.enqueue(execute),
+      () => task(this.requireDb(), execute => timeFlow(timing, 'write',
+        () => this.committedWrites.write(this.requireDb(), execute, true))));
   }
 
   readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {

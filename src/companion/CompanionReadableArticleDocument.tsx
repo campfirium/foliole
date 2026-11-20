@@ -18,6 +18,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionEditorDraftFlush } from './useCompanionEditorDraftFlush';
+import { markFlowEditorReady } from './useCompanionFlowBodyTiming';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
@@ -87,6 +88,7 @@ function useReadableArticleEditorState(props: {
 }
 
 function ReadableArticleTextDocument(props: {
+  activity?: CompanionReadingActivity;
   canEdit: boolean;
   isReviewItem?: boolean;
   layout?: 'article' | 'review';
@@ -102,6 +104,10 @@ function ReadableArticleTextDocument(props: {
 }) {
   const t = useTranslation();
   const offset = props.readableArticle.pdfResumeTextOffset;
+  const onEditorReady = useCallback((adapter: EditorAdapter | null) => {
+    if (adapter) markFlowEditorReady(props.activity, props.readableArticle.nodeId);
+    props.onEditorReady?.(adapter);
+  }, [props.activity, props.onEditorReady, props.readableArticle.nodeId]);
   const usePdfResume = !props.canEdit && props.readingSelection == null && offset !== undefined;
   return (
     <div
@@ -126,7 +132,7 @@ function ReadableArticleTextDocument(props: {
         {...definedProps({
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: props.canEdit ? props.editorState.handleChange : undefined,
-          onEditorReady: props.onEditorReady,
+          onEditorReady,
           onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: usePdfResume ? `pdf-resume:${props.readableArticle.nodeId}` : props.readingRestoreCommandId,
           readingSelection: usePdfResume ? { from: offset, to: offset } : props.readingSelection,
@@ -200,6 +206,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
         readingTypographySettings={props.readingTypographySettings}
         syncMissingAttachmentResource={syncMissingAttachmentResource}
         {...definedProps({
+          activity: props.activity,
           onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,

@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { timeFlow, type FlowTiming } from '../../lib/core/flow/flowTiming';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
@@ -9,6 +10,7 @@ import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 import { companionFlowOpenArgs } from './companionDiveFlowControls';
 import type { FlowAction } from './companionFlowHistoryEntry';
 import type { CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
+import { finishFlowBody } from './useCompanionFlowBodyTiming';
 import type { FlowOwner } from './useCompanionFlowSession';
 
 export function trackCompanionFlowRefresh(current: FlowOwner, refresh: Promise<void>) {
@@ -42,9 +44,10 @@ export function createCompanionFlowControls(args: {
     return getCompanionReadingScope() === token.scope && owner.current === token.owner && current.generation === token.generation &&
       current.session.currentNodeId === token.nodeId;
   }
-  function advance(token: ReturnType<typeof capture>, _action: FlowAction, _snapshot: WorkspaceSnapshot, _now: string, persistedSession?: FlowOwner['session']) {
-    if (!matches(token)) return;
+  function advance(token: ReturnType<typeof capture>, _action: FlowAction, _snapshot: WorkspaceSnapshot, _now: string, persistedSession?: FlowOwner['session'], timing?: FlowTiming) {
+    if (!matches(token)) { timing?.('display', 'cancelled'); return; }
     if (!persistedSession) throw new Error('daily_flow_receipt_missing');
+    if (timing) recordFlowDisplay(current, token.nodeId, persistedSession.currentNodeId, timing);
     current.session = persistedSession;
     current.generation += 1;
     render();
@@ -58,26 +61,54 @@ export function createCompanionFlowControls(args: {
     current.generation += 1;
     render();
   }
-  async function prepareAction(token: ReturnType<typeof capture>, now: string, active: () => boolean) {
-    if (!matches(token) || !active()) return null;
-    if (current.refresh) {
-      await current.refresh;
-      if (!hasCurrentFlowTarget(current, owner, token) || !active()) return null;
-      token = capture();
-    }
-    if (!hasFlowDayChanged(current.session, now) && !isAvailableNativeCompanionRuntime()) return token;
-    const saved = await openCompanionDailyFlow(companionFlowOpenArgs(token.session, mode, now));
-    if (!matches(token) || !active()) return null;
-    current.session = { ...saved.session, isAnswerRevealed:
-      saved.session.currentNodeId === token.nodeId && token.session.isAnswerRevealed };
-    current.generation += 1;
-    render();
-    return saved.session.currentNodeId === token.nodeId ? capture() : null;
-  }
+  const prepareAction = (token: ReturnType<typeof capture>, now: string, active: () => boolean, timing?: FlowTiming) =>
+    prepareFlowAction({ current, owner, mode, capture, render, matches }, token, now, active, timing);
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
   const workspaceHistoryControls = {
     captureFlowHistoryContext: () => ({ session: capture().session, mode }),
     restoreFlowHistorySession: (session: FlowOwner['session']) => restore(capture(), session)
   };
   return { capture, prepareAction, historyContext, restore, matches, advance, resume, reveal, workspaceHistoryControls };
+}
+
+type FlowTarget = {
+  scope: object; owner: FlowOwner; epoch: number; nodeId: string | null; generation: number; session: FlowOwner['session'];
+};
+
+async function prepareFlowAction(args: { current: FlowOwner; owner: { current: FlowOwner }; mode: ReviewSessionMode;
+  capture(): FlowTarget; render(): void; matches(token: FlowTarget): boolean }, token: FlowTarget, now: string,
+  active: () => boolean, timing?: FlowTiming) {
+  const { current, owner, mode, capture, render, matches } = args;
+  if (!matches(token) || !active()) return null;
+  if (current.refresh) {
+    const refresh = current.refresh;
+    await timeFlow(timing, 'refresh-wait', () => refresh);
+    if (!hasCurrentFlowTarget(current, owner, token) || !active()) return null;
+    token = capture();
+  }
+  const changedDay = hasFlowDayChanged(current.session, now);
+  timing?.('day-check', changedDay ? 'done' : 'skipped');
+  if (!changedDay && !isAvailableNativeCompanionRuntime()) return token;
+  const saved = await timeFlow(timing, 'open',
+    () => openCompanionDailyFlow(companionFlowOpenArgs(token.session, mode, now), timing));
+  if (!matches(token) || !active()) return null;
+  current.session = { ...saved.session, isAnswerRevealed:
+    saved.session.currentNodeId === token.nodeId && token.session.isAnswerRevealed };
+  current.generation += 1;
+  render();
+  return saved.session.currentNodeId === token.nodeId ? capture() : null;
+}
+
+function recordFlowDisplay(current: FlowOwner, sourceId: string | null, nodeId: string | null, timing: FlowTiming) {
+  finishFlowBody(current.displayTiming, 'cancelled');
+  delete current.displayTiming;
+  timing('display', !nodeId ? 'empty' : nodeId === sourceId ? 'skipped' : 'done');
+  if (nodeId && nodeId !== sourceId) {
+    current.displayTiming = { timing, nodeId, generation: current.generation + 1 };
+    timing('body', 'start');
+    timing('editor-ready', 'start');
+  } else {
+    timing('body', 'skipped');
+    timing('editor-ready', 'skipped');
+  }
 }

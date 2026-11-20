@@ -53,7 +53,7 @@ export function SupportLogPanel({ mobile = false, androidSelection = false }: { 
         disabled={exporting} onClick={() => {
           setExportFailed(false);
           if (recording) stopSupportLog();
-          else startSupportLog(androidSelection);
+          else startSupportLog(androidSelection, mobile);
         }}>
         {t(action)}
       </AppButton>

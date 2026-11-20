@@ -6,6 +6,7 @@ import { readLegacyCycleProjection } from '../../../../../lib/core/flow/cycleFlo
 import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { retainLegacyHistoryEncoding } from '../../../../../lib/core/flow/flowHistoryEntry';
 import { restoreFlowHistoryEntryAsync } from '../../../../../lib/core/flow/flowHistoryEntryAsync';
+import type { FlowTiming } from '../../../../../lib/core/flow/flowTiming';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -39,11 +40,11 @@ export { loadCompanionFlowHistoryAvailability } from './companionHistoryAvailabi
 
 export function commitCompanionFlowHistory(args: {
   key: string; mode: ReviewSessionMode; entry: FlowHistoryEntry; reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string;
-}) {
+}, timing?: FlowTiming) {
   return runCompanionHistoryMutation(async db => {
-    if (args.entry.beforeContext.reviewSession.daily) return commitCompanionDailyHistory(db, args);
+    if (args.entry.beforeContext.reviewSession.daily) return commitCompanionDailyHistory(db, args, timing);
     throw new Error('daily_flow_not_open');
-  }, flowHistoryRefreshScope(args.entry)).then(result => {
+  }, flowHistoryRefreshScope(args.entry), undefined, timing).then(result => {
     if (args.entry.beforeContext.reviewSession.daily) settleDailyFlowRetry(args.entry.id);
     return result;
   });
@@ -103,17 +104,17 @@ function flowHistoryRefreshScope(entry: CompanionWorkspaceHistoryEntry): Workspa
 
 export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
   refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope) = { kind: 'full' },
-  onCommitted?: (result: T) => void) {
+  onCommitted?: (result: T) => void, timing?: FlowTiming) {
   const owner = getIosCompanionDatabaseOwner();
   const scope = getCompanionReadingScope();
   return runCompanionHighValueMutationTask(async () => {
     if (scope !== getCompanionReadingScope() || owner !== getIosCompanionDatabaseOwner()) {
       throw new Error('flow_history_context_changed');
     }
-    const result = await owner.runWriter(db => db.transaction(task));
+    const result = await owner.runWriter(db => db.transaction(task), true, timing);
     onCommitted?.(result);
     return result;
-  }, refreshScope);
+  }, refreshScope, timing);
 }
 
 async function writeEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode,

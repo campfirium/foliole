@@ -1,5 +1,7 @@
 import packageJson from '../../../../package.json';
+import { getCompanionRuntimeCapability } from '../companionRuntimeCapabilities';
 
+import { startAndroidFlowTiming, stopAndroidFlowTiming, validateAndroidFlowTiming } from './androidFlowTiming';
 import { startAndroidSelectionTrace, stopAndroidSelectionTrace, validateAndroidSelectionTrace } from './androidSelectionTrace';
 
 const eventNames = [
@@ -26,9 +28,10 @@ let completed: ReturnType<typeof makeReport> | undefined;
 const subscribers = new Set<() => void>();
 
 function makeReport(elapsedMs: number, events: Entry[], dropped: number,
-  androidSelection?: ReturnType<typeof stopAndroidSelectionTrace>, appVersion: string = packageJson.version) {
+  androidSelection?: ReturnType<typeof stopAndroidSelectionTrace>, appVersion: string = packageJson.version,
+  androidFlow?: ReturnType<typeof stopAndroidFlowTiming>) {
   return { schemaVersion: 1, appVersion, elapsedMs, events, omittedEventCount: dropped,
-    ...(androidSelection ? { androidSelection } : {}) };
+    ...(androidSelection ? { androidSelection } : {}), ...(androidFlow ? { androidFlow } : {}) };
 }
 
 function validEntry(value: unknown): value is Entry {
@@ -54,7 +57,8 @@ function loadCompleted() {
     completed = makeReport(report.elapsedMs, report.events, report.omittedEventCount,
       validateAndroidSelectionTrace(report.androidSelection) ? report.androidSelection : undefined,
       typeof report.appVersion === 'string' && /^\d+\.\d+\.\d+(?:[-+][a-z0-9.-]+)?$/iu.test(report.appVersion)
-        ? report.appVersion : undefined);
+        ? report.appVersion : undefined,
+      validateAndroidFlowTiming(report.androidFlow) ? report.androidFlow : undefined);
     state = { phase: 'ready', startedAt: 0 };
   } catch {
     // An unavailable or unreadable browser store has no previous export.
@@ -96,12 +100,13 @@ export function subscribeSupportLog(notify: () => void) {
   return () => { subscribers.delete(notify); };
 }
 
-export function startSupportLog(androidSelection = false) {
+export function startSupportLog(androidSelection = false, mobile = false) {
   if (state.phase === 'recording') return;
   entries = [];
   omitted = 0;
   publish({ phase: 'recording', startedAt: Date.now() });
   if (androidSelection) startAndroidSelectionTrace();
+  else if (mobile && getCompanionRuntimeCapability().kind === 'android-native') startAndroidFlowTiming();
   timer = setTimeout(stopSupportLog, duration);
 }
 
@@ -109,7 +114,7 @@ export function stopSupportLog() {
   if (state.phase !== 'recording') return;
   clearTimeout(timer);
   const elapsed = Math.min(duration, Math.max(0, Date.now() - state.startedAt));
-  completed = makeReport(elapsed, entries, omitted, stopAndroidSelectionTrace());
+  completed = makeReport(elapsed, entries, omitted, stopAndroidSelectionTrace(), undefined, stopAndroidFlowTiming());
   expiresAt = Date.now() + retention;
   try {
     localStorage.setItem(storageKey, JSON.stringify({ report: completed, expiresAt }));
@@ -146,8 +151,8 @@ export function hasAndroidSelectionSupportReport() {
 export function serializeSupportLog(platform: 'desktop' | 'android' | 'ios', androidSelection?: boolean) {
   expireSupportLog();
   if (state.phase !== 'ready' || !completed || !completed.events.every(validEntry)) return null;
-  const { androidSelection: trace, ...report } = completed;
+  const { androidSelection: trace, androidFlow, ...report } = completed;
   if (androidSelection && !trace) return null;
-  return JSON.stringify({ ...report, ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
+  return JSON.stringify({ ...report, ...(platform === 'android' && !androidSelection && androidFlow ? { androidFlow } : {}), ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
     null, trace && androidSelection !== false ? undefined : 2);
 }

@@ -2,6 +2,7 @@ import type { DailyFlowResult } from '../../../../../lib/core/flow/dailyFlowCont
 import { commitDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { CycleStored, PreparedFlowNavigation } from '../../../../../lib/core/flow/dailyFlowStore';
+import type { FlowTiming } from '../../../../../lib/core/flow/flowTiming';
 import type { ReadIntentJournal, ReadIntentRow } from '../../../../../lib/core/flow/readIntentJournal';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
@@ -13,7 +14,7 @@ import { companionReadPersistence } from './companionReadPersistence';
 type Outcome = { state: 'applied' | 'superseded'; result: DailyFlowResult | null };
 
 export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, input: string | ReadIntentRow, navigation?: PreparedFlowNavigation,
-  transaction: DbPort['transaction'] = execute => db.transaction(execute)): Promise<Outcome> {
+  transaction: DbPort['transaction'] = execute => db.transaction(execute), timing?: FlowTiming): Promise<Outcome> {
   const saved = typeof input === 'string' ? (await journal.rows()).find(value => value.intent.id === input) : input;
   if (!saved) throw new Error('read_intent_missing');
   if (saved.intent.admittedCommand && saved.command) return transaction(async tx => {
@@ -23,7 +24,7 @@ export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, in
     if (!stored || stored.day_key !== saved.intent.dayKey || stored.mode !== saved.intent.mode ||
       stored.session.currentNodeId !== saved.intent.nodeId) return currentOutcome(tx, 'superseded');
     const command = { ...saved.command!, token: stored.session.daily!, sourceSession: stored.session };
-    return commitRead(tx, saved.intent, command, saved.entry!, navigation, stored);
+    return commitRead(tx, saved.intent, command, saved.entry!, navigation, stored, timing);
   });
   const prepared = await transaction(async tx => {
     await assertReadIntentLibrary(tx, saved.intent.libraryId);
@@ -40,7 +41,7 @@ export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, in
   // Preparation may reconcile peer facts. Its cursor must commit before the immutable command
   // reaches the independent journal, so a crash cannot retain a token for rolled-back state.
   if (!saved.command) await journal.prepare(saved.intent.id, prepared.command, prepared.entry);
-  return transaction(tx => commitRead(tx, saved.intent, prepared.command, prepared.entry));
+  return transaction(tx => commitRead(tx, saved.intent, prepared.command, prepared.entry, undefined, undefined, timing));
 }
 
 async function currentOutcome(db: DbPort, state: Outcome['state']): Promise<Outcome> {
@@ -50,8 +51,8 @@ async function currentOutcome(db: DbPort, state: Outcome['state']): Promise<Outc
 }
 
 async function commitRead(tx: DbPort, intent: import('../../../../../lib/core/flow/readIntentJournal').ReadIntent,
-  command: import('../../../../../lib/core/flow/dailyFlowContract').DailyFlowCommitArgs, entry: string, navigation?: PreparedFlowNavigation, stored?: CycleStored): Promise<Outcome> {
-  const result = await commitDailyFlow(tx, command, intent.settings, intent.admittedCommand ? companionReadPersistence() : companionDailyFlowPersistence, navigation, stored);
+  command: import('../../../../../lib/core/flow/dailyFlowContract').DailyFlowCommitArgs, entry: string, navigation?: PreparedFlowNavigation, stored?: CycleStored, timing?: FlowTiming): Promise<Outcome> {
+  const result = await commitDailyFlow(tx, command, intent.settings, intent.admittedCommand ? companionReadPersistence() : companionDailyFlowPersistence, navigation, stored, timing);
   const original = JSON.parse(entry);
   await appendCompanionFlowHistory(tx, intent.historyKey, { ...original,
     beforeContext: { ...original.beforeContext, reviewSession: result.sourceSession ?? command.sourceSession },

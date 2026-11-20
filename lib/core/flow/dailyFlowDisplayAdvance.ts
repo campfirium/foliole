@@ -8,13 +8,14 @@ import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
+import { timeFlow, type FlowTiming } from './flowTiming.js';
 
 // A display cursor uses the shared selector and committed eligibility, never writes queue rows.
 export async function advanceDailyFlowDisplay(db: DbPort, args: {
   session: DailyFlowSession; excluded: readonly string[]; now: string; mode: ReviewSessionMode;
   applied?: readonly { nodeId: string; revision: number }[];
   knownSnapshot?: DailyFlowLearningSnapshot | null;
-}, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
+}, settings: DailyFlowSettings, persistence: DailyFlowPersistence, timing?: FlowTiming) {
   const source = args.session;
   if (!source.cycle || !source.daily || source.daily.scope !== settings.scope ||
     source.daily.dayKey !== flowDay(args.now, settings)) throw new Error('daily_flow_display_changed');
@@ -25,12 +26,13 @@ export async function advanceDailyFlowDisplay(db: DbPort, args: {
   const excluded = [...args.excluded, ...(args.applied ?? [])
     .filter(value => stored.revision < value.revision).map(value => value.nodeId)];
   const store = createSqliteDailyFlowStore(db, persistence);
-  let next = await selectCycleSuccessor(store, cycle, { mode: args.mode, now: args.now, settings, excluded });
+  const select = () => selectCycleSuccessor(store, cycle, { mode: args.mode, now: args.now, settings, excluded });
+  let next = await timeFlow(timing, 'choose-next', select);
   // A borrowed snapshot must not resurrect learning/deletion already known by the catalog.
   while (next && args.knownSnapshot && !cycleReadyNodeIds({ ...args.knownSnapshot, nodeOrder: [next.node_id] },
     args.mode, args.now, settings).includes(next.node_id)) {
     excluded.push(next.node_id);
-    next = await selectCycleSuccessor(store, cycle, { mode: args.mode, now: args.now, settings, excluded });
+    next = await timeFlow(timing, 'choose-next', select);
   }
   const snapshot = args.knownSnapshot?.nodesById[source.currentNodeId ?? ''] ? args.knownSnapshot
     : await store.scopedLearningSnapshot([source.currentNodeId, next?.node_id]);

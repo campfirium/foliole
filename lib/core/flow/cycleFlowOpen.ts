@@ -15,11 +15,13 @@ import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
 import type { CycleStored } from './dailyFlowStore.js';
+import { timeFlow, type FlowTiming } from './flowTiming.js';
 
 export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
   const snapshot = await db.learningSnapshot();
   const { session, rows, mode } = buildCycle(snapshot, args, settings);
   const cycle = session.cycle!;
+  db.timing?.('queue-size', 'done', rows.length);
   await db.writeRows(rows);
   const current = session.currentNodeId;
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
@@ -69,11 +71,11 @@ async function canKeepDisplayedCurrent(db: DailyFlowStore, session: DailyFlowSes
   return Boolean(node && !snapshot.trashedNodeIds.includes(id) && !hasDeletedAncestor(node, snapshot.nodesById) && !hasShelvedAncestor(node, snapshot.nodesById));
 }
 
-export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot' | 'writeRows'>, session: DailyFlowSession, mode: ReviewSessionMode,
+export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot' | 'writeRows' | 'timing'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings, changes?: ReturnType<typeof cycleChanges>) {
   const skipped = new Map<string, CycleRow>();
   const meta = session.cycle!;
-  const selected = await selectCycleSuccessor(db, meta, { mode, now, settings,
+  const selected = await timeFlow(db.timing, 'choose-next', () => selectCycleSuccessor(db, meta, { mode, now, settings,
     onSkipped: (row, snapshot) => {
       const node = snapshot.nodesById[row.node_id];
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
@@ -85,7 +87,7 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
       meta.remaining = Math.max(0, meta.remaining - 1);
       meta.reviewRemaining = Math.min(meta.remaining, Math.max(0,
         meta.reviewRemaining - (isFsrsReviewItemNode(node) ? 1 : 0)));
-    } });
+    } }));
   await db.writeRows([...skipped.values()]);
   session.currentNodeId = selected?.node_id ?? null;
   session.isAnswerRevealed = false;
@@ -121,7 +123,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
   if (stored && stored.day_key !== dayKey) {
-    await db.resetCycle();
+    await timeFlow(db.timing, 'day-reset', () => db.resetCycle());
     stored = null;
     args = { ...args, seed: undefined, preferredNodeId: undefined };
   }
@@ -133,7 +135,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   }
   let session: DailyFlowSession;
   if (!stored) {
-    const initial = await initializeCycle(db, args, settings);
+    const initial = await timeFlow(db.timing, 'queue-build', () => initializeCycle(db, args, settings));
     session = initial.session;
     args = { ...args, mode: initial.mode };
     createdRows?.(initial.rows);
@@ -142,7 +144,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     const reconcile = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
     const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
     session = reconcile
-      ? await reconcileCycle(db, stored, args.now, settings, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
     session = await resumeStoredCycle(db, session, args, settings, Boolean(stored.invalidated), changes);
     if (changes) session.cycle!.change = changes.change();
   }
@@ -165,6 +167,8 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
 }
 
 export function openCycleFlow(db: import('../sync/dbPort.js').DbPort, args: DailyFlowOpenArgs,
-  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
-  return openStoredDailyFlow(createSqliteDailyFlowStore(db, persistence), args, settings, captureChanges, createdRows);
+  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false, createdRows?: (rows: CycleRow[]) => void, timing?: FlowTiming) {
+  const store = createSqliteDailyFlowStore(db, persistence);
+  if (timing) store.timing = timing;
+  return openStoredDailyFlow(store, args, settings, captureChanges, createdRows);
 }

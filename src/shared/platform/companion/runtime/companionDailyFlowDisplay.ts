@@ -1,5 +1,6 @@
 import type { DailyFlowOpenArgs, DailyFlowResult } from '../../../../../lib/core/flow/dailyFlowContract';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
+import { timeFlow, type FlowTiming } from '../../../../../lib/core/flow/flowTiming';
 import { mergeDailyFlowReceiptNodes } from '../../../../store/workspaceDailyFlowReceipt';
 import { refreshCompanionWorkspaceAfterMutation } from '../companionWorkspaceRepository';
 import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore';
@@ -21,10 +22,10 @@ export async function ensureCompanionFlowDisplay(session: DailyFlowSession) {
   }
 }
 
-export async function openCompanionDailyFlowForDisplay(args: DailyFlowOpenArgs) {
+export async function openCompanionDailyFlowForDisplay(args: DailyFlowOpenArgs, timing?: FlowTiming) {
   const before = companionWorkspaceSnapshots.getSnapshot();
-  const result = await openCompanionDailyFlow(args);
-  await applyCompanionFlowReceipt(result, before);
+  const result = await openCompanionDailyFlow(args, timing);
+  await timeFlow(timing, 'receipt', () => applyCompanionFlowReceipt(result, before));
   return result;
 }
 

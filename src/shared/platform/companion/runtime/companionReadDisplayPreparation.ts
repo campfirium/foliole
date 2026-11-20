@@ -1,6 +1,7 @@
 import type { DailyFlowSettings, DailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowContract';
 import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
+import type { FlowTiming } from '../../../../../lib/core/flow/flowTiming';
 import type { ReadIntent } from '../../../../../lib/core/flow/readIntentJournal';
 import { subscribeCommittedCompanionWorkspace } from '../companionWorkspaceSnapshotStore';
 import { subscribeCompanionReadingScope } from '../reading/companionReadingScope';
@@ -14,7 +15,7 @@ export class CompanionReadDisplayPreparation {
   private readonly unsubscribe: (() => void)[];
 
   constructor(private readonly settings: () => DailyFlowSettings,
-    private readonly project: (input: Input, settings: DailyFlowSettings, signal: AbortSignal) => Promise<Projection>,
+    private readonly project: (input: Input, settings: DailyFlowSettings, signal: AbortSignal, timing?: FlowTiming) => Promise<Projection>,
     ownsReading: (id: string) => boolean) {
     this.unsubscribe = [subscribeCompanionReadingScope(() => this.invalidate()),
       subscribeCommittedCompanionWorkspace(async (scope, db) => {
@@ -32,16 +33,20 @@ export class CompanionReadDisplayPreparation {
       input.session.cycle?.scanAfter, input.session.cycle?.lapLimit]);
   }
 
-  prepare(input: Input, signal?: AbortSignal) {
+  prepare(input: Input, signal?: AbortSignal, timing?: FlowTiming) {
     const settings = this.settings();
     const key = this.key(input, settings);
-    if (this.prepared?.key === key && !this.prepared.controller.signal.aborted) return this.prepared.value;
+    if (this.prepared?.key === key && !this.prepared.controller.signal.aborted) {
+      timing?.(this.prepared.lifetime.settled ? 'read-next-hit' : 'read-next-pending', 'done');
+      return this.prepared.value;
+    }
+    timing?.('read-next-miss', 'done');
     const controller = new AbortController();
     const lifetime = { settled: false, demanded: false };
     const cancel = () => { if (!lifetime.settled && !lifetime.demanded) controller.abort(signal?.reason); };
     if (signal?.aborted) cancel();
     else signal?.addEventListener('abort', cancel, { once: true });
-    const value = this.project(input, settings, controller.signal).then(result => {
+    const value = this.project(input, settings, controller.signal, timing).then(result => {
       if (this.prepared?.value === value && result.snapshot) this.prepared.snapshot = result.snapshot;
       return result;
     }).finally(() => {
@@ -58,20 +63,20 @@ export class CompanionReadDisplayPreparation {
     return this.prepared?.key === this.key(input, this.settings()) ? this.prepared.snapshot : undefined;
   }
 
-  claim(input: Input) {
+  claim(input: Input, timing?: FlowTiming) {
     let generation = this.generation;
-    const value = this.consume(input).then(result => { generation = this.generation; return result; });
+    const value = this.consume(input, timing).then(result => { generation = this.generation; return result; });
     void value.catch(() => undefined);
     return { value, valid: () => generation === this.generation };
   }
 
-  async consume(input: Input): Promise<Projection> {
+  async consume(input: Input, timing?: FlowTiming): Promise<Projection> {
     const generation = this.generation;
-    const value = this.prepare(input);
+    const value = this.prepare(input, undefined, timing);
     if (this.prepared?.value === value) this.prepared.lifetime.demanded = true;
     const result = await value;
     // A real change during preparation/admission must not install an obsolete successor.
-    if (generation !== this.generation) return this.consume(input);
+    if (generation !== this.generation) return this.consume(input, timing);
     this.prepared = null;
     const next = result.session;
     if (!input.session.cycle || !next.cycle) throw new Error('daily_flow_display_changed');

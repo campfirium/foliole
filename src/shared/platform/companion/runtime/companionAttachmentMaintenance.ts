@@ -6,6 +6,7 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { AttachmentMaintenanceResult, AttachmentMaintenanceStatus, AttachmentObservationRequest,
   AttachmentObservationResult, AttachmentStatusRequest, AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { timeAndroidAttachment } from '../../supportLog/androidFlowTiming';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 import { companionAttachmentFileOperation } from './companionAttachmentFileOperation';
@@ -30,11 +31,12 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
 // eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const owner = getIosCompanionDatabaseOwner();
-  return runWithCompanionAttachmentMaintenance(() => maintain(owner, request, signal));
+  return runWithCompanionAttachmentMaintenance(() => timeAndroidAttachment(request.action, () => maintain(owner, request, signal)));
 }
 
 function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
-  const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
+  const files: typeof FolioleCompanionSync.maintainAttachmentFiles = args =>
+    timeAndroidAttachment(`file.${args.operation}`, () => FolioleCompanionSync.maintainAttachmentFiles(args));
   const now = new Date();
   const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
   const assertOwner = () => {
@@ -103,11 +105,11 @@ function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner
     return result;
   });
   const withStableRevision: AttachmentMaintenancePort['withStableRevision'] = (snapshotRevision, action) =>
-    commit(snapshotRevision, async tx => {
+    commit(snapshotRevision, tx => timeAndroidAttachment('protected-write', async () => {
       activeDb = tx;
       try { return await action(); }
       finally { activeDb = undefined; }
-    });
+    }));
   return { check, commit, withStableRevision,
     write: <T>(action: (db: DbPort) => Promise<T>) => activeDb ? action(activeDb) : owner.runWriter(action) };
 }

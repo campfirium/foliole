@@ -1,4 +1,5 @@
 import type { WorkspaceRefreshScope } from '../../../../../../lib/core/database/workspaceSnapshotRefresh.js';
+import { timeFlow, timeFlowQueue, type FlowTiming } from '../../../../../../lib/core/flow/flowTiming.js';
 import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
 import { registerCompanionWorkspaceRefresh, updateCommittedCompanionWorkspace } from '../../companionWorkspaceSnapshotStore.js';
@@ -72,17 +73,18 @@ export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promis
 }
 
 export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>,
-  scope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope)) {
+  scope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope), timing?: FlowTiming) {
   const session = getCompanionReadingScope();
   const queuedAt = performance.now();
   let startedAt = queuedAt;
   let committedScope: WorkspaceRefreshScope | undefined;
-  const result = await runCompanionSyncWriterTask(async () => {
+  const result = await timeFlowQueue(timing, 'mutation-queue', runCompanionSyncWriterTask, async () => {
     startedAt = performance.now();
     const saved = await task();
     if (session === getCompanionReadingScope()) {
       committedScope = typeof scope === 'function' ? scope(saved) : scope;
-      await updateCommittedCompanionWorkspace(committedScope);
+      const refreshScope = committedScope;
+      await timeFlow(timing, 'mutation-publication', () => updateCommittedCompanionWorkspace(refreshScope));
     }
     return saved;
   });

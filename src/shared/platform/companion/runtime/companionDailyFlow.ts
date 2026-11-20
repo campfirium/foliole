@@ -10,6 +10,7 @@ import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/cor
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import { readDailyFlowView } from '../../../../../lib/core/flow/dailyFlowView';
 import type { DailyFlowViewArgs } from '../../../../../lib/core/flow/dailyFlowViewContract';
+import { timeFlowQueue, type FlowTiming } from '../../../../../lib/core/flow/flowTiming';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort.js';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
@@ -20,7 +21,7 @@ import { buildIosWorkspaceNodes } from '../sync/workspace-state/iosCompanionWork
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
-import { readIosCompanionDatabase, writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { readIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { saveIosReadingWithDb, saveIosReviewWithDb } from './iosCompanionActiveDatabaseWrites';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from './iosCompanionMutationState';
@@ -75,11 +76,12 @@ export function ownedCompanionDailyFlowPersistence(settings: DailyFlowSettings):
     } };
 }
 
-export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
-  return runCompanionSyncWriterTask(() => writeIosCompanionDatabase(async db => {
+export function openCompanionDailyFlow(args: DailyFlowOpenArgs, timing?: FlowTiming) {
+  return timeFlowQueue(timing, 'open-queue', runCompanionSyncWriterTask,
+    () => getIosCompanionDatabaseOwner().runWriter(async db => {
     const settings = companionDailyFlowSettings();
-    return openDailyFlow(db, args, settings, ownedCompanionDailyFlowPersistence(settings));
-  }));
+    return openDailyFlow(db, args, settings, ownedCompanionDailyFlowPersistence(settings), timing);
+  }, true, timing, 'open-writer'));
 }
 
 export function loadCompanionDailySession() {
