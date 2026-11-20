@@ -105,10 +105,6 @@ export function useCompanionTopBarProps(args: {
     args.browseSortDirection,
     args.setBrowseSortKey,
     args.setBrowseSortDirection,
-    () => {
-      args.resetDirectorySelection();
-      args.setIsBrowseDirectoryOpen(true);
-    },
     () => args.setIsCaptureSheetOpen(true),
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),

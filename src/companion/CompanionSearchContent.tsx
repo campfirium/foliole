@@ -37,15 +37,13 @@ export function CompanionSearchContent(props: {
           value={query}
         />
       </label>
-      {query.trim() ? <AppButton disabled={searchState.status === 'loading'} onClick={() => { topicOpen.cancel(); searchState.refresh(); }} variant="ghost">
-        {t('companion.search.refresh')}
-      </AppButton> : null}
       <div className="mt-4">
         {topicOpen.failed ? <p role="alert">{t('companion.search.unavailable')}</p> : null}
         <CompanionSearchResults
           onOpenExternalDocument={props.onOpenExternalDocument ? (result) => { topicOpen.cancel(); props.onOpenExternalDocument?.(result, query.trim()); } : undefined}
           onOpenPdf={props.onOpenPdf ? (result) => { topicOpen.cancel(); props.onOpenPdf?.(result); } : undefined}
           onOpenTopic={props.onOpenTopic ? (result) => { void topicOpen.open(result); } : undefined}
+          onRetry={() => { topicOpen.cancel(); searchState.refresh(); }}
           state={searchState}
         />
         {searchState.hasMore ? (

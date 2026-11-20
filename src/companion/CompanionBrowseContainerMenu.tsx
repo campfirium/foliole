@@ -17,6 +17,7 @@ export type CompanionBrowsePage =
   | { kind: 'folder'; nodeId: string }
   | { kind: 'dive'; nodeId: string }
   | { kind: 'trash' }
+  | { kind: 'recent' }
   | { kind: 'other' };
 
 const sectionClass = 'px-1 pt-4 pb-1 text-xs font-medium text-companion-text-tertiary [overflow-wrap:anywhere]';
@@ -89,7 +90,7 @@ export function CompanionBrowseContainerActions({ page, onClose, onOpenCreate }:
   const workspace = useCompanionWorkspaceActions();
   const { t } = useLocalization();
   const createKinds = useCompanionFolderCreateKinds(page);
-  if (page.kind === 'folder' && createKinds.length) {
+  if ((page.kind === 'folder' && createKinds.length) || (page.kind === 'root' && workspace && isAvailableNativeCompanionRuntime())) {
     return <CompanionMenuRow label={t('companion.browse.createHere')} onSelect={onOpenCreate} trailingIcon={ChevronRight} />;
   }
   if (page.kind === 'dive' && workspace && isAvailableNativeCompanionRuntime()) {

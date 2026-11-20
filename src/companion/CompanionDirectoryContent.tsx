@@ -22,7 +22,7 @@ import {
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
-import { CompanionWorkspaceCreateChoices, useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
+import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
@@ -76,20 +76,21 @@ function isDirectoryContainer(
   return false;
 }
 
-const virtualEmptyCopy = {
-  [VIRTUAL_PUBLISHED_NODE_ID]: {
-    title: 'desktop.virtualSearch.published.empty.title',
-    description: 'desktop.virtualSearch.published.empty.description'
-  },
-  [VIRTUAL_SHELVED_NODE_ID]: {
-    title: 'desktop.virtualSearch.shelved.empty.title',
-    description: 'desktop.virtualSearch.shelved.empty.description'
-  },
-  [VIRTUAL_REMOVED_NODE_ID]: {
-    title: 'desktop.virtualSearch.removed.empty.title',
-    description: 'desktop.virtualSearch.removed.empty.description'
-  }
+const virtualEmptyTitle = {
+  [VIRTUAL_PUBLISHED_NODE_ID]: 'companion.directory.empty.published',
+  [VIRTUAL_SHELVED_NODE_ID]: 'companion.directory.empty.shelved',
+  [VIRTUAL_REMOVED_NODE_ID]: 'companion.directory.empty.removed'
 } as const;
+
+/** One short noun phrase per container, iOS Files style; no filler descriptions. */
+function resolveEmptyTitle(selection: CompanionDirectorySelection, isDive: boolean, virtualId: string | null) {
+  if (isDive) return 'companion.directory.empty.dive';
+  if (virtualId === VIRTUAL_PUBLISHED_NODE_ID || virtualId === VIRTUAL_SHELVED_NODE_ID || virtualId === VIRTUAL_REMOVED_NODE_ID) {
+    return virtualEmptyTitle[virtualId];
+  }
+  if (selection.kind === 'trash' || selection.kind === 'trashFolder') return 'companion.directory.empty.trash';
+  return 'companion.directory.empty.folder';
+}
 
 function CompanionDirectoryListContent(props: {
   onStartDive?: ((id: string) => void) | undefined;
@@ -107,26 +108,22 @@ function CompanionDirectoryListContent(props: {
   const canAdd = ordinaryFolder && workspace && supportsCompanionNodeMutationSurface('workspace-structure');
   const id = props.selection.kind === 'virtual' ? props.selection.nodeId : null;
   const dive = id ? readDiveNode(props.snapshot?.nodesById[id]) : null;
-  const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
   return (
     <section className="companion-page-start">
       <CompanionDirectoryList
         key={JSON.stringify([props.snapshot?.libraryScope, props.viewKey])}
+        containerNodeId={props.selection.kind === 'internal' ? props.selection.nodeId : undefined}
         batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash' : dive ? 'dive' : props.selection.kind === 'internal' ? 'library' : undefined}
         diveId={dive?.id}
         trashRoot={props.selection.kind === 'trash'}
         directory={props.directory}
         viewKey={props.viewKey}
-        emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? (props.selection.kind === 'trash'
-          ? 'desktop.nodeList.trash.empty.title' : 'companion.directory.emptyFolder'))}
-        emptyDescription={dive ? t('desktop.nodeList.dive.emptyDescription') : copy ? t(copy.description)
-          : ordinaryFolder && !canAdd ? t('companion.directory.emptyDescription') : null}
+        emptyLabel={t(resolveEmptyTitle(props.selection, Boolean(dive), id))}
         emptyAction={canAdd ? <AppButton className="min-h-11" disabled={workspace.busy || workspace.pending}
           onClick={() => workspace.open({ mode: 'create', kind: 'topic', nodeId: null, parentNodeId: folder.id })}>
           {t('companion.directory.addToFolder')}
         </AppButton> : undefined}
-        header={props.selection.kind === 'root' ? <CompanionWorkspaceCreateChoices onSelect={() => {}} />
-          : dive && props.onStartDive ? <AppButton className="mb-3 min-h-11 w-full" variant="emphasis"
+        header={dive && props.onStartDive ? <AppButton className="mb-3 min-h-11 w-full" variant="emphasis"
             onClick={() => props.onStartDive?.(dive.id)}>{t('desktop.nodeList.dive.startFlow')}</AppButton> : undefined}
         onSelectItem={props.handleSelectItem}
         onStartDive={props.onStartDive}

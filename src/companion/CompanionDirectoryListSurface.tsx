@@ -27,6 +27,8 @@ import type { useCompanionExternalDirectory } from './useCompanionExternalDirect
 import { useCompanionFolderMenuGesture } from './useCompanionFolderMenuGesture';
 
 type DirectoryRowProps = {
+  /** The folder this list shows; its own name is not repeated on its rows. */
+  containerNodeId?: string | undefined;
   selecting: boolean;
   markKind?: boolean;
   checked?: boolean | undefined;
@@ -106,25 +108,18 @@ function DirectoryRowText({ title, subtitle }: { title: string; subtitle: string
   </span>;
 }
 
-function CompanionDirectoryEmptyState({ action, description, title }: {
-  action?: ReactNode;
-  description?: string | null | undefined;
-  title: string;
-}) {
-  const { t } = useLocalization();
-  return <div className="px-1 py-6">
-    <AppEmptyState action={action} className="min-h-0 items-start text-left text-companion-text-secondary"
-      description={description === null ? '' : description ?? t('companion.directory.emptyDescription')}
-      title={title} />
-  </div>;
+/** Centered in the page like system list apps; the optional action is the page's main next step. */
+function CompanionDirectoryEmptyState({ action, title }: { action?: ReactNode; title: string }) {
+  return <AppEmptyState action={action} className="min-h-[50vh] px-4 text-companion-text-secondary"
+    description="" surface="floating" title={title} />;
 }
 
 export function CompanionDirectoryList(props: {
   batchMode?: CompanionListBatchMode | undefined;
+  containerNodeId?: string | undefined;
   trashRoot?: boolean | undefined;
   diveId?: string | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
-  emptyDescription?: string | null;
   emptyAction?: ReactNode;
   emptyLabel: string;
   header?: ReactNode;
@@ -140,7 +135,7 @@ export function CompanionDirectoryList(props: {
   const entries = useMemo(() => flattenDirectorySections(props.sections), [props.sections]);
   if (entries.length === 0) {
     return <>{controls}<CompanionDirectoryEmptyState action={props.emptyAction}
-      title={props.emptyLabel} description={props.emptyDescription} /></>;
+      title={props.emptyLabel} /></>;
   }
 
   return <>{controls}<CompanionListViewport
@@ -157,7 +152,7 @@ export function CompanionDirectoryList(props: {
           {batch.active && !row && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
           <div className={`min-w-0 flex-1 ${batch.active && !row ? 'opacity-50' : ''}`} inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
-              markKind={entry.sectionId === 'current'}
+              markKind={entry.sectionId === 'current'} containerNodeId={props.containerNodeId}
               onSelectItem={batch.active ? () => row?.toggle() : props.onSelectItem}
               restoreFolder={batch.restoreFolderAction(entry.item)}
               onStartDive={props.onStartDive} snapshot={props.snapshot} />
@@ -169,7 +164,7 @@ export function CompanionDirectoryList(props: {
         : section.id === 'virtual' ? resolveSystemEntryDisplayName(locale, 'virtual-root')
         : section.titleKey ? t(section.titleKey) : null;
       return <div className={entry.first ? 'pb-2' : 'pb-2 pt-6'}>
-        {title ? <h2 className="px-1 text-[12px] font-medium text-companion-text-tertiary">{title}</h2> : null}
+        {title ? <h2 className="text-[15px] font-semibold leading-5 text-companion-text-secondary">{title}</h2> : null}
       </div>;
     }}
   /></>;
@@ -193,7 +188,7 @@ function DirectoryTopicRow(props: DirectoryRowProps & { title: string }) {
       title: props.title,
       preview: props.item.preview,
       updatedAt: node?.updatedAt ?? '',
-      folderLabel: parent?.kind === 'folder' ? parent.title : null,
+      folderLabel: parent?.kind === 'folder' && parent.id !== props.containerNodeId ? parent.title : null,
       ...('bodyStatus' in props.item && props.item.bodyStatus ? { bodyStatus: props.item.bodyStatus } : {})
     }}
     currentArticleId={null}

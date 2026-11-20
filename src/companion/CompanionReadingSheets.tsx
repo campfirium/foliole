@@ -1,4 +1,4 @@
-import { ListTree, RotateCcw, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
+import { ArchiveRestore, ListTree, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -137,7 +137,7 @@ function ReadingWorkspaceActions({ nodeId, onClose, hasRestoreAction, children }
 }) {
   const workspace = useCompanionWorkspaceActions();
   if (!workspace || !nodeId || !isAvailableNativeCompanionRuntime()) return children;
-  return <CompanionWorkspaceMenuActions nodeId={nodeId} hasRestoreAction={hasRestoreAction}
+  return <CompanionWorkspaceMenuActions nodeId={nodeId} hasRestoreAction={hasRestoreAction} withIcons
     onSaved={onClose} onSelect={state => { onClose(); workspace.open(state); }}>
     {children}
   </CompanionWorkspaceMenuActions>;
@@ -160,7 +160,7 @@ function ReadingTrashRestoreAction({ restore }: { restore: ReturnType<typeof use
           <>
             {restore.error ? <ReadingRestoreErrorMessage saved={restore.error === 'refresh'} /> : null}
             <ReadingActionRow
-              icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
+              icon={<ArchiveRestore aria-hidden="true" className="h-5 w-5" />}
               label={t(restore.error === 'refresh' ? 'companion.selection.refresh' : 'companion.reading.restoreFromTrash')}
               disabled={restore.pending}
               onClick={restore.restore}

@@ -8,6 +8,7 @@ import {
   type CompanionTopicSearchResult
 } from '../shared/platform/companionFullTextSearch';
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
+import { AppButton } from '../shared/ui';
 
 type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 type ResourceStatus = CompanionTopicSearchResult['bodyStatus'] | CompanionExternalDocumentSearchResult['bodyStatus'];
@@ -16,6 +17,7 @@ export function CompanionSearchResults(props: {
   onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult) => void) | undefined;
   onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
   onOpenTopic?: ((result: CompanionTopicSearchResult) => void) | undefined;
+  onRetry?: (() => void) | undefined;
   state: { results: CompanionFullTextSearchResults | null; status: SearchStatus };
 }) {
   const t = useTranslation();
@@ -24,7 +26,14 @@ export function CompanionSearchResults(props: {
     results && (results.topics.length > 0 || results.pdf.length > 0 || results.external.length > 0)
   );
   if (status === 'loading') return <SearchMessage title={t('companion.search.loading')} />;
-  if (status === 'error') return <SearchMessage title={t('companion.search.error')} />;
+  if (status === 'error') {
+    return <div className="flex items-center justify-between gap-3">
+      <SearchMessage title={t('companion.search.error')} />
+      {props.onRetry ? <AppButton className="min-h-11 shrink-0" onClick={props.onRetry} variant="ghost">
+        {t('companion.search.refresh')}
+      </AppButton> : null}
+    </div>;
+  }
   if (status === 'ready' && !hasResults) return <SearchMessage title={t('companion.search.empty')} />;
   if (!results || !hasResults) return <SearchIntro />;
   return (
@@ -118,7 +127,7 @@ function ExternalResults(props: {
 function ResultSection(props: { children: ReactNode; title: string }) {
   return (
     <section className="space-y-2">
-      <h2 className="text-xs font-semibold uppercase text-companion-text-secondary">{props.title}</h2>
+      <h2 className="text-[15px] font-semibold leading-5 text-companion-text-secondary">{props.title}</h2>
       <div className="space-y-2">{props.children}</div>
     </section>
   );

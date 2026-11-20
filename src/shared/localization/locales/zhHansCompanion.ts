@@ -2,6 +2,7 @@ import type { TranslationKey } from '../translations';
 
 import { ZH_HANS_COMPANION_APP_TRANSLATIONS } from './zhHansCompanionApp';
 import { ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS } from './zhHansCompanionCapture';
+import { ZH_HANS_COMPANION_DIRECTORY_TRANSLATIONS } from './zhHansCompanionDirectory';
 import { ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS } from './zhHansCompanionImageCloze';
 import { ZH_HANS_COMPANION_READING_TRANSLATIONS } from './zhHansCompanionReading';
 import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
@@ -10,12 +11,12 @@ import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettin
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_COMPANION_APP_TRANSLATIONS,
   ...ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS,
+  ...ZH_HANS_COMPANION_DIRECTORY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.back': '返回',
-  'companion.browse.directory': '目录',
   'companion.browse.menu': '浏览菜单',
   'companion.browse.diveMenu': '专题菜单',
   'companion.browse.more': '更多',
@@ -56,27 +57,6 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.batch.error': '无法完成批量操作。请刷新列表后重试。',
   'companion.batch.restoreSkipped': '{count} 项未还原，因为资料库已有相同条目。',
   'companion.batch.trashDescription': '将选中的 {count} 项及其子条目移入废纸篓？',
-  'companion.directory.emptyFolder': '这个文件夹是空的',
-  'companion.directory.addToFolder': '添加到此文件夹',
-  'companion.directory.emptyDescription': '从桌面端添加主题或文件夹后，会显示在这里。',
-  'companion.directory.emptyShell': '这个文件夹还没有同步主题或文件夹。',
-  'companion.directory.header.count': '显示 {count} 个',
-  'companion.directory.header.subtitle': '这台设备上的同步文件夹、主题、外部来源和废纸篓。',
-  'companion.directory.openFolder': '打开文件夹 {title}',
-  'companion.directory.openTopic': '打开主题 {title}',
-  'companion.directory.row.externalDocument': '外部文档',
-  'companion.directory.row.externalFolder': '外部文件夹',
-  'companion.directory.row.folder': '文件夹',
-  'companion.directory.row.inbox': '新主题默认进入这里',
-  'companion.directory.row.syncing': '主题正文同步中',
-  'companion.directory.row.topic': '主题',
-  'companion.directory.row.trash': '已移除的主题和文件夹',
-  'companion.directory.row.virtual': '智能视图',
-  'companion.directory.section.external': '参考',
-  'companion.directory.convertMatchingToDive': '专题将保留当前匹配且可加入专题的主题，之后符合条件的新主题不会自动加入。',
-  'companion.directory.section.virtual': '索引',
-  'companion.directory.section.trash': '回收站',
-  'companion.directory.title': '目录',
   'companion.browse.header.count': '{count} 个可读',
   'companion.browse.header.subtitle': '这台设备上最近同步、可阅读的主题。',
   'companion.browse.title': '浏览',

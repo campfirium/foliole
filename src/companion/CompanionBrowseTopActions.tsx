@@ -20,11 +20,12 @@ export function CompanionBrowseTopActions(props: {
   onOpenCapture(): void;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
-  topicFocusDisabled?: boolean;
 }) {
   const t = useTranslation();
   const { toggleDismissedTopicsVisibility, viewHideDismissedTopics } = useDismissedTopicVisibility();
-  const topicFocusActive = !props.topicFocusDisabled && viewHideDismissedTopics;
+  // Topic focus only filters ordinary folders and the Browse list; indexes, Dives and Trash have nothing it hides.
+  const showTopicFocus = props.page.kind === 'folder' || props.page.kind === 'recent';
+  const topicFocusActive = showTopicFocus && viewHideDismissedTopics;
   const { icon, labelKey } = resolveTopicFocusPresentation(topicFocusActive);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -38,8 +39,7 @@ export function CompanionBrowseTopActions(props: {
           testId="companion-capture-open"
         />
       ) : null}
-      {props.page.kind !== 'root' && <CompanionTopActionButton
-        disabled={Boolean(props.topicFocusDisabled)}
+      {showTopicFocus && <CompanionTopActionButton
         icon={icon}
         label={t(labelKey)}
         onClick={toggleDismissedTopicsVisibility}

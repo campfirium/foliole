@@ -26,7 +26,7 @@ import {
 } from './companionBrowseSortLabels';
 import { useCompanionDirectoryBatchMenuAction, useCompanionEmptyTrashMenuAction } from './CompanionDirectoryBatchMenu';
 import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
-import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 type BrowseMenuView = 'menu' | 'new' | 'sort';
 
@@ -137,7 +137,7 @@ type CompanionBrowseMenuSheetProps = {
 export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
   const t = useTranslation();
   const page = props.page;
-  const canCreate = page.kind === 'folder';
+  const canCreate = page.kind === 'folder' || page.kind === 'root';
   const [selectedView, setView] = useState<BrowseMenuView>('menu');
   const canSort = page.kind !== 'root' && page.kind !== 'dive' && !props.diveActions;
   const view = (selectedView === 'new' && !canCreate) || (selectedView === 'sort' && !canSort) ? 'menu' : selectedView;
@@ -165,6 +165,8 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
         />
       ) : view === 'new' && page.kind === 'folder' ? (
         <CompanionFolderCreateChoices nodeId={page.nodeId} onClose={close} />
+      ) : view === 'new' && page.kind === 'root' ? (
+        <CompanionWorkspaceCreateChoices onSelect={close} />
       ) : (
         <BrowseSortMenu
           onChangeSortDirection={props.onChangeSortDirection}

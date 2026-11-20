@@ -151,6 +151,6 @@ it('shows synced Web metadata in Published and removes a withdrawn topic in the 
   expect(await screen.findByRole('button', { name: 'Open topic Article' })).toBeVisible();
   saveBody.run(removeFolioleWebBinding(published), '2026-11-09');
   await publishCommittedFacts(['article']);
-  expect(await screen.findByText('Nothing is published')).toBeVisible();
+  expect(await screen.findByText('No published topics')).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Open topic Article' })).toBeNull();
 });

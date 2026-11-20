@@ -1,5 +1,6 @@
 import { EN_COMPANION_APP_TRANSLATIONS } from './enCompanionApp';
 import { EN_COMPANION_CAPTURE_TRANSLATIONS } from './enCompanionCapture';
+import { EN_COMPANION_DIRECTORY_TRANSLATIONS } from './enCompanionDirectory';
 import { EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS } from './enCompanionImageCloze';
 import { EN_COMPANION_READING_TRANSLATIONS } from './enCompanionReading';
 import { EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './enCompanionReadingTypography';
@@ -8,12 +9,12 @@ import { EN_COMPANION_SETTINGS_TRANSLATIONS } from './enCompanionSettings';
 export const EN_COMPANION_TRANSLATIONS = {
   ...EN_COMPANION_APP_TRANSLATIONS,
   ...EN_COMPANION_CAPTURE_TRANSLATIONS,
+  ...EN_COMPANION_DIRECTORY_TRANSLATIONS,
   ...EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS,
   ...EN_COMPANION_READING_TRANSLATIONS,
   ...EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...EN_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.back': 'Back',
-  'companion.browse.directory': 'Directory',
   'companion.browse.menu': 'Browse menu',
   'companion.browse.diveMenu': 'Dive menu',
   'companion.browse.more': 'More',
@@ -54,27 +55,6 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.batch.error': 'Could not apply the batch. Refresh the list and try again.',
   'companion.batch.restoreSkipped': '{count} could not be restored because a matching entry is already in the library.',
   'companion.batch.trashDescription': 'Move {count} selected entries and their contents to Trash?',
-  'companion.directory.emptyFolder': 'This folder is empty',
-  'companion.directory.addToFolder': 'Add to this folder',
-  'companion.directory.emptyDescription': 'Add a topic or folder from desktop to see it here.',
-  'companion.directory.emptyShell': 'This folder does not have any synced topics or folders yet.',
-  'companion.directory.header.count': '{count} shown',
-  'companion.directory.header.subtitle': 'Synced folders, topics, external sources, and Trash on this device.',
-  'companion.directory.openFolder': 'Open folder {title}',
-  'companion.directory.openTopic': 'Open topic {title}',
-  'companion.directory.row.externalDocument': 'External document',
-  'companion.directory.row.externalFolder': 'External folder',
-  'companion.directory.row.folder': 'Folder',
-  'companion.directory.row.inbox': 'Default place for new topics',
-  'companion.directory.row.syncing': 'Topic body syncing',
-  'companion.directory.row.topic': 'Topic',
-  'companion.directory.row.trash': 'Removed topics and folders',
-  'companion.directory.row.virtual': 'Smart view',
-  'companion.directory.section.external': 'External',
-  'companion.directory.convertMatchingToDive': 'The Dive will keep the topics that match now. Future matches won’t be added automatically.',
-  'companion.directory.section.virtual': 'Virtual',
-  'companion.directory.section.trash': 'Trash',
-  'companion.directory.title': 'Directory',
   'companion.browse.header.count': '{count} ready',
   'companion.browse.header.subtitle': 'Recent synced topics with readable body text on this device.',
   'companion.browse.title': 'Browse',

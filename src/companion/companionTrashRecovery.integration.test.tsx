@@ -208,7 +208,7 @@ it('keeps an empty trash navigable after its selected topic is restored', async 
     workspaceSync: { state, isWorkspaceSyncStateReady: true, status: 'idle' }
   } as never} />);
   expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
-  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
+  expect(screen.getByText('No deleted items')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
   expect(onBack).toHaveBeenCalledOnce();
 });

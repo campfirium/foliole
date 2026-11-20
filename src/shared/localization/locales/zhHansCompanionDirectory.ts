@@ -1,0 +1,28 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_COMPANION_DIRECTORY_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.directory.empty.folder': '没有主题或文件夹',
+  'companion.directory.empty.dive': '没有主题',
+  'companion.directory.empty.trash': '没有已删除内容',
+  'companion.directory.empty.published': '没有已发布主题',
+  'companion.directory.empty.shelved': '没有搁置主题',
+  'companion.directory.empty.removed': '没有已移除主题',
+  'companion.directory.addToFolder': '添加到此文件夹',
+  'companion.directory.header.count': '显示 {count} 个',
+  'companion.directory.header.subtitle': '这台设备上的同步文件夹、主题、外部来源和废纸篓。',
+  'companion.directory.openFolder': '打开文件夹 {title}',
+  'companion.directory.openTopic': '打开主题 {title}',
+  'companion.directory.row.externalDocument': '外部文档',
+  'companion.directory.row.externalFolder': '外部文件夹',
+  'companion.directory.row.folder': '文件夹',
+  'companion.directory.row.inbox': '新主题默认进入这里',
+  'companion.directory.row.syncing': '主题正文同步中',
+  'companion.directory.row.topic': '主题',
+  'companion.directory.row.trash': '已移除的主题和文件夹',
+  'companion.directory.row.virtual': '智能视图',
+  'companion.directory.section.external': '参考',
+  'companion.directory.convertMatchingToDive': '专题将保留当前匹配且可加入专题的主题，之后符合条件的新主题不会自动加入。',
+  'companion.directory.section.virtual': '索引',
+  'companion.directory.section.trash': '回收站',
+  'companion.directory.title': '目录',
+};

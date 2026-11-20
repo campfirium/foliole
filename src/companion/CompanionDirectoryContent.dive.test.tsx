@@ -125,13 +125,14 @@ function openBrowseMenu() {
   return within(screen.getByRole('dialog'));
 }
 
-it('puts root creation on the directory page and creation inside a folder in its menu', () => {
+it('keeps creation in the top-right menu on the directory root and inside folders', () => {
   renderWithLocalization(<Directory snapshot={creationSnapshot} start={vi.fn()} openReminders={noop} />);
-  expect(openBrowseMenu().queryByRole('button', { name: /^(New…|New Here…|Create Folder)$/ })).toBeNull();
-  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
-  expect(screen.getByRole('button', { name: 'Create Dive' })).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Create in Virtual' })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Create Folder' }));
+  expect(screen.queryByRole('button', { name: /^(Create Folder|Create Dive|Create in Virtual)$/ })).toBeNull();
+  fireEvent.click(openBrowseMenu().getByRole('button', { name: 'New Here…' }));
+  const rootSheet = within(screen.getByRole('dialog', { name: 'New Here…' }));
+  expect(rootSheet.getByRole('button', { name: 'Create Dive' })).toBeVisible();
+  expect(rootSheet.getByRole('button', { name: 'Create in Virtual' })).toBeVisible();
+  fireEvent.click(rootSheet.getByRole('button', { name: 'Create Folder' }));
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   expect(screen.getByRole('textbox', { name: 'Name' })).toBeVisible();
   fireEvent.click(screen.getByLabelText('Close'));

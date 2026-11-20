@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, Plus, RefreshCw, Redo2, Undo2, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, MoreHorizontal, ListTree, Pen, Plus, RefreshCw, Redo2, Undo2, type LucideIcon } from 'lucide-react';
 import { useContext, type ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -76,7 +76,7 @@ function EditingChrome(props: {
           {t('companion.reading.editContent')}
         </span>
         <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} testId="companion-reading-edit-done" />
-        <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+        <ReadingChromeButton icon={MoreHorizontal} label={t('companion.reading.more')} onClick={props.onOpenActions} />
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ function ReadingActionsControls(props: { actionsAtTop?: boolean; canEditContent?
       onClick={openCapture} /> : null}
     {props.canEditContent ? <ReadingChromeButton icon={Pen} label={t('companion.reading.editContent')}
       onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
-    <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+    <ReadingChromeButton icon={MoreHorizontal} label={t('companion.reading.more')} onClick={props.onOpenActions} />
   </>;
 }
 

@@ -15,7 +15,7 @@ import {
   AppDialogPortal,
   AppDialogTitle,
   AppSpinner,
-  appInputFocusVisibleClassName
+  appFocusSilentClassName
 } from '../shared/ui';
 
 import { COMPANION_ANDROID_CAPTURE_BACK_EVENT } from './companionAndroidBackEvent';
@@ -119,7 +119,7 @@ function CaptureTextBox(props: {
         aria-label={t('companion.capture.text')}
         className={cn(
           'min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground placeholder:text-companion-text-tertiary',
-          appInputFocusVisibleClassName
+          appFocusSilentClassName
         )}
         data-testid="companion-capture-text"
         onChange={(event) => props.onChange(event.currentTarget.value)}

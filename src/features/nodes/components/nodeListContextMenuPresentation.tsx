@@ -1,9 +1,11 @@
 import {
   FilePlus2,
   FolderPlus,
+  Layers,
   ListRestart,
   ListPlus,
   SmilePlus,
+  TextCursorInput,
   type LucideIcon
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -67,3 +69,7 @@ export function iconForCreateCommand(command: FolderTopicItemCommandDefinition) 
 
 export const RelearnMenuIcon = ListRestart;
 export const DismissMenuIcon = SmilePlus;
+/** Distinct from the edit pen so rename and edit never share an icon. */
+export const RenameMenuIcon = TextCursorInput;
+/** Distinct from creating a review item (ListPlus), which can sit in the same menu. */
+export const AddToDiveMenuIcon = Layers;

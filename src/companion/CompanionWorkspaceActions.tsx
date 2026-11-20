@@ -21,6 +21,7 @@ import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import { resolveCompanionHistoryLabel } from './companionHistoryActionLabel';
+import { CompanionMenuRow } from './CompanionMenuSheet';
 import { CompanionWorkspaceNodeSheet, type WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
 import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 
@@ -148,20 +149,18 @@ export function CompanionWorkspaceHistoryActions() {
 
 const companionWorkspaceCreateModes = ['create', 'create-dive', 'create-index'] as const;
 
-/** Root-level creation, shown directly on the library root page. */
+/** Root-level creation rows, shown under the library root's "New Here…" menu view. */
 export function CompanionWorkspaceCreateChoices({ onSelect }: { onSelect(): void }) {
   const actions = useCompanionWorkspaceActions();
   const t = useTranslation();
   if (!actions || !isAvailableNativeCompanionRuntime()) return null;
-  return <div className="flex flex-wrap gap-2 pb-3 pt-1">{companionWorkspaceCreateModes.map(mode => <button key={mode} type="button"
-    className="min-h-11 rounded-full border border-companion-divider px-4 text-sm font-medium text-foreground transition-colors active:bg-companion-subtle disabled:opacity-40"
+  return <>{companionWorkspaceCreateModes.map(mode => <CompanionMenuRow key={mode}
     disabled={actions.busy || actions.pending}
-    onClick={() => {
+    label={t(companionWorkspaceCreateLabels[mode])}
+    onSelect={() => {
       onSelect();
       actions.open({ mode, nodeId: null, parentNodeId: null });
-    }}>
-    {t(companionWorkspaceCreateLabels[mode])}
-  </button>)}</div>;
+    }} />)}</>;
 }
 
 export const companionWorkspaceCreateLabels = {

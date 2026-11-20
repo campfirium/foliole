@@ -19,6 +19,7 @@ import { useTranslation, type Translate } from '../../../shared/localization/Loc
 import { NODE_LIST_CONTEXT_ACTION_HELP, resolveNodeListActionHelp } from './nodeListContextActionHelp';
 import type { NodeListContextMenuProps } from './NodeListContextMenu';
 import {
+  AddToDiveMenuIcon,
   DismissMenuIcon,
   iconForCreateCommand,
   NodeContextMenuItem,
@@ -111,7 +112,7 @@ function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: b
       {!props.showRootCreateOnly && props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.onAddToDive ? (
-        <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToDive}>{t('desktop.nodeList.menu.addToDive')}</NodeContextMenuItem>
+        <NodeContextMenuItem icon={AddToDiveMenuIcon} onSelect={props.onAddToDive}>{t('desktop.nodeList.menu.addToDive')}</NodeContextMenuItem>
       ) : null}
       {!props.showRootCreateOnly && props.showAddToVirtualFolderAction && props.onAddToVirtualFolder ? <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToVirtualFolder}>{t('desktop.nodeList.menu.addToVirtualFolder')}</NodeContextMenuItem> : null}
     </>

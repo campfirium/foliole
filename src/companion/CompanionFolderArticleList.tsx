@@ -16,9 +16,10 @@ export function CompanionFolderArticleList(props: {
   return <CompanionDirectoryList
     key={props.nodeId}
     batchMode="library"
+    containerNodeId={props.nodeId}
     directory={directory}
     viewKey={`folder:${props.nodeId ?? ''}`}
-    emptyLabel={t('companion.directory.emptyShell')}
+    emptyLabel={t('companion.directory.empty.folder')}
     onSelectItem={(item) => props.onSelectNode(item.nodeId)}
     sections={props.items.length ? [{ id: 'current', items: props.items.map((item) => ({ ...item, id: item.nodeId, source: 'internal' })) }] : []}
     snapshot={props.snapshot}

@@ -14,7 +14,7 @@ export const EN_COMPANION_APP_TRANSLATIONS = {
   'companion.history.action.dismiss': 'Dismiss',
   'companion.share.incomplete': 'Sharing could not be completed. Try again.',
   'companion.search.unavailable': 'This result is no longer available.',
-  'companion.search.refresh': 'Search again',
+  'companion.search.refresh': 'Try Again',
   'companion.link.unavailable': 'This link cannot be opened in this library.',
   'companion.link.dismiss': 'Close',
   'companion.app.retry': 'Retry',

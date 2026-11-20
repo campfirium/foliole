@@ -1,6 +1,5 @@
-import { ChevronLeft, Library } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
-import { VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -27,7 +26,6 @@ export function resolveCompanionTopBarProps(
   browseSortDirection: FolderListSortDirection,
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void,
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void,
-  onOpenBrowseDirectory: () => void,
   onOpenAddSheet: () => void,
   onExitReview: () => void,
   onBackToSettingsList: () => void,
@@ -37,7 +35,7 @@ export function resolveCompanionTopBarProps(
   directoryTitle?: string
 ) {
   if (surface.activeAction === 'more') {
-    return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings, onExitReview);
+    return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings);
   }
   if (surface.activeAction === 'recent') {
     return resolveBrowseTopBar({
@@ -52,7 +50,6 @@ export function resolveCompanionTopBarProps(
       onChangeBrowseSortDirection,
       onChangeBrowseSortKey,
       onOpenAddSheet,
-      onOpenBrowseDirectory,
       t
     });
   }
@@ -67,8 +64,7 @@ function resolveSettingsTopBar(
   t: Translate,
   settingsPage: CompanionSettingsPage,
   onBackToSettingsList: () => void,
-  onBackToSyncSettings: () => void,
-  onExitSettings: () => void
+  onBackToSyncSettings: () => void
 ) {
   if (settingsPage === 'foregroundTime') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
   if (settingsPage === 'reviewStatistics') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
@@ -88,12 +84,12 @@ function resolveSettingsTopBar(
   if (settingsPage === 'syncGroup') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.group') };
   if (settingsPage === 'syncActivity') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.activity.title') };
   if (settingsPage === 'syncConnection') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.connection.title') };
-  return { backLabel: t('companion.back'), onBack: onExitSettings, title: t('companion.settings.title') };
+  return { title: t('companion.settings.title') };
 }
 
 function resolveBrowsePage(open: boolean, selection: CompanionDirectorySelection,
   diveActions: CompanionBrowseDiveActions | undefined): CompanionBrowsePage {
-  if (!open) return { kind: 'other' };
+  if (!open) return { kind: 'recent' };
   if (selection.kind === 'root') return { kind: 'root' };
   if (selection.kind === 'trash' || selection.kind === 'trashFolder') return { kind: 'trash' };
   if (diveActions) return { kind: 'dive', nodeId: diveActions.dive.id };
@@ -113,7 +109,6 @@ function resolveBrowseTopBar(args: {
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void;
   onOpenAddSheet: () => void;
-  onOpenBrowseDirectory: () => void;
   t: Translate;
 }) {
   const title = args.isBrowseDirectoryOpen
@@ -129,8 +124,6 @@ function resolveBrowseTopBar(args: {
       onOpenCapture={args.onOpenAddSheet}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
-      topicFocusDisabled={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'virtual'
-        && args.directorySelection.nodeId === VIRTUAL_SHELVED_NODE_ID}
     />
   );
   if (args.isBrowseDirectoryOpen) {
@@ -138,11 +131,7 @@ function resolveBrowseTopBar(args: {
       ? { rightSlot, title }
       : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot, title };
   }
-  return {
-    title,
-    leftAction: { icon: Library, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
-    rightSlot
-  };
+  return { title, rightSlot };
 }
 
 function resolveReviewTopBar(t: Translate, onExitReview: () => void) {

@@ -23,7 +23,6 @@ function buildTopBarProps(settingsPage = 'list', surface: unknown = { activeActi
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    vi.fn(),
     vi.fn()
   );
 }
@@ -33,8 +32,10 @@ describe('CompanionTopBarPropsModel', () => {
     expect(buildTopBarProps()).toMatchObject({ title: 'Settings' });
   });
 
-  it('lets the settings home return to browsing', () => {
-    expect(buildTopBarProps()).toMatchObject({ backLabel: 'Back', onBack: expect.any(Function) });
+  it('keeps the Settings tab root free of a back arrow that would jump to another tab', () => {
+    const props = buildTopBarProps();
+    expect(props).not.toHaveProperty('onBack');
+    expect(props).not.toHaveProperty('backLabel');
   });
 
   it('lets every settings detail return to its parent', () => {
@@ -69,7 +70,6 @@ describe('CompanionTopBarPropsModel', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
-      vi.fn(),
       vi.fn()
     );
 
@@ -82,10 +82,12 @@ describe('CompanionTopBarPropsModel', () => {
       (key: string, params?: never) => translate('en', key as never, params), surface,
       'list', false, { kind: 'root' }, 'dateLastOpened', 'desc',
       vi.fn(), vi.fn(), vi.fn(), vi.fn(),
-      vi.fn(), vi.fn(), vi.fn(), vi.fn()
+      vi.fn(), vi.fn(), vi.fn()
     ] as Parameters<typeof resolveCompanionTopBarProps>;
 
-    expect(resolveCompanionTopBarProps(...args)).toMatchObject({ title: 'Inbox' });
+    const props = resolveCompanionTopBarProps(...args);
+    expect(props).toMatchObject({ title: 'Inbox' });
+    expect(props).not.toHaveProperty('leftAction');
   });
 });
 

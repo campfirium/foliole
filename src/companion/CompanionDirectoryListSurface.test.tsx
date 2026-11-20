@@ -14,18 +14,18 @@ afterEach(() => {
   setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
 });
 
-it('shows an empty folder as a text-only status', () => {
+it('shows an empty folder as one short centered line without filler copy', () => {
   render(<CompanionDirectoryList
     directory={{} as never}
-    emptyLabel="This folder is empty"
+    emptyLabel="No topics or folders"
     onSelectItem={vi.fn()}
     sections={[{ id: 'current', items: [] }]}
     snapshot={null}
   />);
 
   const status = screen.getByRole('status');
-  expect(status).toHaveTextContent('This folder is empty');
-  expect(status).toHaveTextContent('Add a topic or folder from desktop to see it here.');
+  expect(status).toHaveTextContent(/^No topics or folders$/);
+  expect(status).not.toHaveClass('items-start');
   expect(status.querySelector('svg, img, [role="img"]')).toBeNull();
 });
 
@@ -125,4 +125,31 @@ it('opens folder actions on a hold and keeps ordinary clicks for navigation', as
   } finally {
     vi.useRealTimers();
   }
+});
+
+it('names a topic\'s folder only when the list is not that folder itself', () => {
+  const node = (id: string, title: string, kind: 'folder' | 'topic', parentNodeId: string | null) => ({
+    id, title, parentNodeId, kind, content: '', isTitleManual: true, hideTitleHeading: false,
+    reveal: null, anchorLink: null, reading: null, review: null, createdAt: '2026-11-09', updatedAt: '2026-11-09'
+  });
+  const snapshot = {
+    nodesById: {
+      projects: node('projects', 'Sample Projects', 'folder', null),
+      topic: node('topic', 'Field notes', 'topic', 'projects')
+    },
+    nodeOrder: ['projects'], trashedNodeIds: [], activeNodeId: null, untitledSequenceByParent: {}
+  } as never;
+  const list = (containerNodeId?: string) => <CompanionDirectoryList
+    containerNodeId={containerNodeId}
+    directory={{} as never}
+    emptyLabel=""
+    onSelectItem={vi.fn()}
+    sections={[{ id: 'current', items: [{ id: 'topic', nodeId: 'topic', kind: 'topic', source: 'internal', title: 'Field notes', preview: null }] }]}
+    snapshot={snapshot}
+  />;
+
+  const view = render(list('projects'));
+  expect(screen.getByRole('button', { name: 'Open topic Field notes' })).not.toHaveTextContent('Sample Projects');
+  view.rerender(list());
+  expect(screen.getByRole('button', { name: 'Open topic Field notes' })).toHaveTextContent('Sample Projects');
 });

@@ -30,7 +30,7 @@ function begin() {
 }
 
 it('reveals all three fixed result sets without querying the changed library again', async () => {
-  search.mockResolvedValueOnce(page(0, 42)).mockResolvedValueOnce(page(90, 1));
+  search.mockResolvedValueOnce(page(0, 42)).mockResolvedValue(page(90, 1));
   begin();
   fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
   expect(await screen.findByText('Topic 21')).toBeInTheDocument();
@@ -41,10 +41,11 @@ it('reveals all three fixed result sets without querying the changed library aga
   expect(await screen.findByText('Topic 41')).toBeInTheDocument();
   expect(search).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Search again' }));
+  expect(screen.queryByRole('button', { name: 'Try Again' })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'alph' } });
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'alpha' } });
   expect(await screen.findByText('Topic 90')).toBeInTheDocument();
   expect(screen.queryByText('Topic 0')).not.toBeInTheDocument();
-  expect(screen.getByRole('searchbox')).toHaveValue('alpha');
 });
 
 it('retries failed snapshot creation without publishing a partial list', async () => {
@@ -52,7 +53,7 @@ it('retries failed snapshot creation without publishing a partial list', async (
   begin();
   await screen.findByText(/Search failed/u);
   expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Search again' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
   expect(await screen.findByText('Topic 20')).toBeInTheDocument();
   expect(search.mock.calls[0]).toEqual(search.mock.calls[1]);
 });

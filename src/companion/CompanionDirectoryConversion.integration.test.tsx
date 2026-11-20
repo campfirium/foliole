@@ -18,7 +18,7 @@ import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { node } from '../test/dailyFlowExceptions.testSupport';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
-import { CompanionWorkspaceActionsProvider, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
+import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -41,6 +41,8 @@ function Directory({ initial }: { initial: WorkspaceSnapshot }) {
       return next;
     }}>
     <CompanionWorkspaceHistoryActions />
+    {/* The root top-right menu's "New Here…" view. */}
+    <CompanionWorkspaceCreateChoices onSelect={() => {}} />
     <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
       onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
   </CompanionWorkspaceActionsProvider>;

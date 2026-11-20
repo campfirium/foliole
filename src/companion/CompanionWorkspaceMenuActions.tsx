@@ -1,8 +1,10 @@
+import { ArchiveRestore, BookMarked, FilePlus2, FolderPlus, ListPlus, MoveRight, Trash2, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { canUseDiveSource } from '../../lib/core/database/diveSourceEligibility';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
+import { AddToDiveMenuIcon, RenameMenuIcon } from '../features/nodes/components/nodeListContextMenuPresentation';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -22,11 +24,25 @@ export function getCompanionWorkspaceMenuOptions(node: MenuNodes[string], nodes:
   return { mutable, childKinds, canAddToDive: canUseDiveSource(node, parentKind) };
 }
 
-export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRestoreAction, menuRows, hideCreate, children }: {
+/** Same icons as the desktop node context menu for the same commands. */
+const createIcons = { folder: FolderPlus, topic: FilePlus2, item: ListPlus } as const;
+
+/** Icon rows matching the reading sheet's own rows, so one sheet never mixes icon and text-only rows. */
+function IconRow(props: { icon: LucideIcon; label: string; destructive: boolean; disabled: boolean; onClick(): void }) {
+  const Icon = props.icon;
+  return <button type="button" disabled={props.disabled} onClick={props.onClick}
+    className={`${companionWorkspaceRowClass} gap-3 font-medium transition-colors active:bg-companion-subtle/80 ${props.destructive ? 'last:border-b-0 text-error' : 'text-foreground'}`}>
+    <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${props.destructive ? '' : 'text-companion-text-secondary'}`} />
+    <span>{props.label}</span>
+  </button>;
+}
+
+export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRestoreAction, menuRows, withIcons, hideCreate, children }: {
   nodeId: string;
   onSelect(state: WorkspaceNodeSheetState): void;
   hasRestoreAction?: boolean;
   menuRows?: boolean;
+  withIcons?: boolean;
   hideCreate?: boolean;
   onSaved?: () => void;
   children?: ReactNode;
@@ -40,8 +56,10 @@ export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRe
   const { mutable, childKinds, canAddToDive } = getCompanionWorkspaceMenuOptions(node, nodes);
   const canMove = mutable && canNodeBeMoved(node);
   const select = (mode: WorkspaceNodeSheetState['mode']) => onSelect({ mode, nodeId, parentNodeId: null });
-  const row = (label: string, onClick: () => void, destructive = false) => menuRows ? (
+  const row = (label: string, onClick: () => void, destructive = false, icon?: LucideIcon) => menuRows ? (
     <CompanionMenuRow key={label} label={label} destructive={destructive} disabled={disabled} onSelect={onClick} />
+  ) : withIcons && icon ? (
+    <IconRow key={label} icon={icon} label={label} destructive={destructive} disabled={disabled} onClick={onClick} />
   ) : (
     <button key={label} type="button" className={destructive ? `${companionWorkspaceRowClass} last:border-b-0 text-error` : companionWorkspaceRowClass}
       disabled={disabled} onClick={onClick}>{label}</button>
@@ -49,14 +67,14 @@ export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRe
 
   return <>
     {children}
-    {mutable && row(t('desktop.command.rename'), () => select('rename'))}
-    {canMove && row(t('desktop.command.moveToNode'), () => select('move'))}
-    {canAddToDive && row(t('desktop.nodeList.menu.addToDive'), () => select('add-to-dive'))}
+    {mutable && row(t('desktop.command.rename'), () => select('rename'), false, RenameMenuIcon)}
+    {canMove && row(t('desktop.command.moveToNode'), () => select('move'), false, MoveRight)}
+    {canAddToDive && row(t('desktop.nodeList.menu.addToDive'), () => select('add-to-dive'), false, AddToDiveMenuIcon)}
     {mutable && node.kind === 'topic' && !node.anchorLink && row(t(node.shelvedAt ? 'companion.workspace.unshelve' : 'companion.workspace.shelve'),
-      () => void actions.execute({ type: node.shelvedAt ? 'unshelve' : 'shelve', nodeId }, onSaved))}
+      () => void actions.execute({ type: node.shelvedAt ? 'unshelve' : 'shelve', nodeId }, onSaved), false, BookMarked)}
     {!hideCreate && childKinds.map(kind => row(t(kind === 'folder' ? 'desktop.command.createFolder' : kind === 'topic' ? 'desktop.command.createTopic' : 'desktop.command.createItem'),
-      () => onSelect({ mode: 'create', nodeId: null, parentNodeId: nodeId, kind })))}
-    {node.deletedAt && !hasRestoreAction && row(t('companion.reading.restoreFromTrash'), () => void actions.execute({ type: 'restore', nodeId }, onSaved))}
-    {mutable && row(t('companion.workspace.delete'), () => select('delete'), true)}
+      () => onSelect({ mode: 'create', nodeId: null, parentNodeId: nodeId, kind }), false, createIcons[kind]))}
+    {node.deletedAt && !hasRestoreAction && row(t('companion.reading.restoreFromTrash'), () => void actions.execute({ type: 'restore', nodeId }, onSaved), false, ArchiveRestore)}
+    {mutable && row(t('companion.workspace.delete'), () => select('delete'), true, Trash2)}
   </>;
 }

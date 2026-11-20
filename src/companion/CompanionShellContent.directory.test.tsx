@@ -1,7 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
+import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
@@ -36,7 +36,6 @@ function createTopBarProps(args: {
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    vi.fn(),
     args.onBackDirectorySelection ?? vi.fn()
   );
 }
@@ -49,12 +48,22 @@ describe('CompanionShellContent directory navigation', () => {
     expect('rightSlot' in root ? root.rightSlot : null).toBeTruthy();
   });
 
-  it('disables the toolbar focus action while browsing Shelved', () => {
-    const topBar = createTopBarProps({ directorySelection: { kind: 'virtual', nodeId: VIRTUAL_SHELVED_NODE_ID } });
+  it.each([
+    ['Shelved', { kind: 'virtual', nodeId: VIRTUAL_SHELVED_NODE_ID }],
+    ['Published', { kind: 'virtual', nodeId: VIRTUAL_PUBLISHED_NODE_ID }],
+    ['Trash', { kind: 'trash' }]
+  ] as const)('leaves the topic focus action out of %s, where it has nothing to hide', (_name, directorySelection) => {
+    const topBar = createTopBarProps({ directorySelection });
     renderWithLocalization(<>{'rightSlot' in topBar ? topBar.rightSlot : null}</>);
-    expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Hide dismissed and shelved topics' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^More$/ }));
     expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Hide dismissed and shelved topics' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the topic focus action in an ordinary folder', () => {
+    const topBar = createTopBarProps({ directorySelection: { kind: 'internal', nodeId: 'folder' } });
+    renderWithLocalization(<>{'rightSlot' in topBar ? topBar.rightSlot : null}</>);
+    expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeEnabled();
   });
 
   it('returns nested directory pages to their parent', () => {

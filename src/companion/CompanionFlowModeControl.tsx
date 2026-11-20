@@ -1,4 +1,4 @@
-import { EllipsisVertical, Route } from 'lucide-react';
+import { MoreHorizontal, Route } from 'lucide-react';
 import { createContext, useContext, useState } from 'react';
 
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
@@ -34,8 +34,8 @@ export function CompanionFlowModeControl(props: { onSelect(): void }) {
       ))}
     </div>
     {controls.progressCounts ? (
-      <div className="flex min-h-12 items-center gap-2 border-b border-companion-divider py-3 pl-1 text-sm">
-        <Route aria-hidden="true" className="h-4 w-4 shrink-0 text-companion-text-secondary" strokeWidth={1.75} />
+      <div className="flex min-h-11 items-center gap-3 border-b border-companion-divider py-2.5 text-sm">
+        <Route aria-hidden="true" className="h-5 w-5 shrink-0 text-companion-text-secondary" />
         <span className="font-medium">{t('companion.reading.queue')}</span>
         <span className="ml-auto text-right tabular-nums text-companion-text-secondary">{t('settings.icons.node.item')} {controls.progressCounts.completedItemCount}/{controls.progressCounts.completedItemCount + controls.progressCounts.queuedItemCount}
           {' · '}
@@ -51,7 +51,7 @@ export function CompanionFlowModeMenu({ controls }: { controls: CompanionFlowMod
   return <CompanionFlowModeContext.Provider value={controls}>
     <button type="button" aria-label={t('companion.reading.actions')} onClick={() => setOpen(true)}
       className="inline-flex h-11 w-10 items-center justify-center text-companion-text-secondary">
-      <EllipsisVertical aria-hidden="true" className="h-5 w-5" />
+      <MoreHorizontal aria-hidden="true" className="h-5 w-5" />
     </button>
     <CompanionMenuSheet open={open} onOpenChange={setOpen} title="Flow">
       <CompanionFlowModeControl onSelect={() => setOpen(false)} />

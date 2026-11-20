@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName } from '../shared/ui';
+import { appFloatingSurfaceClassName, AppButton, appFocusSilentClassName } from '../shared/ui';
 
 import { suppressCompanionPressClick } from './companionPressClickSuppression';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
@@ -115,7 +115,7 @@ export function CompanionSelectionNotePanel(props: {
         autoFocus
         className={cn(
           'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-ui-input leading-5 text-foreground placeholder:text-foreground/45',
-          appInputFocusVisibleClassName
+          appFocusSilentClassName
         )}
         data-testid="companion-selection-note-text"
         onChange={(event) => props.onChange(event.target.value)}
