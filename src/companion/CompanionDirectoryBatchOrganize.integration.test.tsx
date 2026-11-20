@@ -57,6 +57,38 @@ it('moves the selected topics to another folder as one action and syncs the new 
   }
 });
 
+it('offers only destinations valid for every selected folder when moving several at once', async () => {
+  const library = await createSearchLibrary(0);
+  try {
+    const peers = await connectCompanionPeer(library);
+    node(peers.desktop, 'Parent', 'folder');
+    await peers.exchange();
+    for (const id of ['Box A', 'Box B', 'Target']) node(peers.desktop, id, 'folder', 'Parent');
+    await peers.exchange();
+    node(peers.desktop, 'Inner', 'folder', 'Box A');
+    await peers.exchange();
+    renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
+    click('Open folder Parent');
+    click('More');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Select' }));
+    for (const title of ['Box B', 'Box A']) fireEvent.click(screen.getByRole('checkbox', { name: `Select ${title}` }));
+    fireEvent.click(within(screen.getByTestId('companion-selection-action-bar')).getByRole('button', { name: 'Move' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Move 2 entries' }));
+    fireEvent.change(sheet.getByRole('searchbox'), { target: { value: 'Inner' } });
+    expect(sheet.queryByRole('button', { name: /Inner/ })).toBeNull();
+    fireEvent.change(sheet.getByRole('searchbox'), { target: { value: 'Target' } });
+    fireEvent.click(sheet.getByRole('button', { name: 'Parent / Target' }));
+    fireEvent.click(sheet.getByRole('button', { name: 'Move to...' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await peers.exchange();
+    expect([parentOf(peers.desktop.db, 'Box A'), parentOf(peers.desktop.db, 'Box B')]).toEqual(['Target', 'Target']);
+  } finally {
+    cleanup();
+    await library.close();
+    await closeLibraries();
+  }
+});
+
 it('adds the selected topics to a Dive in one write and keeps them in their folder', async () => {
   const library = await createSearchLibrary(0);
   try {

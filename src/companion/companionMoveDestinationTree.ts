@@ -16,6 +16,17 @@ export function buildMoveDestinationTree(source: WorkspaceNodeSnapshot, nodes: R
   return buildCompanionDestinationTree(listWorkspaceMetadataParents(source, nodes), nodes, titleFor);
 }
 
+/** Destinations that are valid for every selected node, so a batch move cannot fail on one of them. */
+export function buildBatchMoveDestinationTree(sources: readonly WorkspaceNodeSnapshot[], nodes: Record<string, WorkspaceNodeSnapshot>,
+  titleFor: (node: WorkspaceNodeSnapshot) => string) {
+  const [first, ...rest] = sources;
+  const shared = first ? rest.reduce((targets, source) => {
+    const allowed = new Set(listWorkspaceMetadataParents(source, nodes).map(node => node.id));
+    return targets.filter(node => allowed.has(node.id));
+  }, listWorkspaceMetadataParents(first, nodes)) : [];
+  return buildCompanionDestinationTree(shared, nodes, titleFor);
+}
+
 export function buildCompanionDestinationTree(targets: readonly WorkspaceNodeSnapshot[], nodes: Record<string, WorkspaceNodeSnapshot>,
   titleFor: (node: WorkspaceNodeSnapshot) => string) {
   const targetIds = new Set(targets.map(node => node.id));

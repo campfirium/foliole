@@ -6,12 +6,14 @@ import { useLocalization } from '../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle } from '../shared/localization/systemEntryNames';
 import { VirtualListSurface } from '../shared/ui/VirtualListSurface';
 
-import { buildMoveDestinationTree, visibleMoveDestinations, type MoveDestinationRow } from './companionMoveDestinationTree';
+import { buildBatchMoveDestinationTree, buildMoveDestinationTree, visibleMoveDestinations, type MoveDestinationRow } from './companionMoveDestinationTree';
 
 import './companionMoveDestinationPicker.css';
 
 interface PickerProps {
   node: WorkspaceNodeSnapshot;
+  /** All nodes being moved together; destinations must suit every one of them. */
+  batch?: readonly WorkspaceNodeSnapshot[] | undefined;
   nodes: Record<string, WorkspaceNodeSnapshot>;
   disabled: boolean;
   value: string;
@@ -20,12 +22,15 @@ interface PickerProps {
 
 export function CompanionMoveDestinationPicker(props: PickerProps) {
   const { locale, t } = useLocalization();
-  const tree = useMemo(() => buildMoveDestinationTree(props.node, props.nodes,
-    node => resolveNodeDisplayTitle(locale, node.id, node.title) || t('desktop.search.context.untitled')),
-  [props.node, props.nodes, locale, t]);
+  const tree = useMemo(() => {
+    const titleFor = (node: WorkspaceNodeSnapshot) => resolveNodeDisplayTitle(locale, node.id, node.title) || t('desktop.search.context.untitled');
+    return props.batch ? buildBatchMoveDestinationTree(props.batch, props.nodes, titleFor)
+      : buildMoveDestinationTree(props.node, props.nodes, titleFor);
+  }, [props.batch, props.node, props.nodes, locale, t]);
+  const sources = props.batch ?? [props.node];
   return <CompanionDestinationPicker tree={tree} title={t('desktop.palette.move.dialog')}
     searchLabel={t('desktop.palette.move.empty')} emptyLabel={t('desktop.palette.move.noResults')}
-    rootLabel={props.node.kind === 'folder' ? t('companion.workspace.root') : undefined}
+    rootLabel={sources.every(node => node.kind === 'folder') ? t('companion.workspace.root') : undefined}
     disabled={props.disabled} value={props.value} onChange={props.onChange} />;
 }
 

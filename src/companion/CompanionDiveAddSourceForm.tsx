@@ -30,6 +30,9 @@ export function CompanionDiveAddSourceForm({ dive, snapshot, disabled, onSubmit 
       node => resolveNodeDisplayTitle(locale, node.id, node.title) || t('desktop.search.context.untitled'));
   }, [dive.manualChildOrder, locale, snapshot, t]);
   const canSubmit = !disabled && tree.rows.get(sourceId)?.selectable;
+  if (![...tree.rows.values()].some(row => row.selectable)) {
+    return <p role="status" className="py-3 text-sm text-companion-text-secondary">{t('companion.dive.noSourceToAdd')}</p>;
+  }
   return <form className="space-y-4" onSubmit={event => {
     event.preventDefault();
     if (canSubmit) onSubmit(sourceId);

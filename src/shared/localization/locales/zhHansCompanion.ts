@@ -22,6 +22,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.browse.createHere': '在这里新建…',
   'companion.browse.addDiveSource': '添加来源…',
   'companion.dive.addSource': '添加来源',
+  'companion.dive.noSourceToAdd': '可加入的文件夹和主题都已在这个专题里。',
   'companion.browse.orderBy': '排序方向',
   'companion.browse.sort': '排序',
   'companion.browse.sortBy': '排序依据',

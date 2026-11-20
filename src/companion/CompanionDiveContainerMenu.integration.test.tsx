@@ -80,3 +80,23 @@ it('adds a source and renames the Dive from its own menu, then syncs both to des
     await closeLibraries();
   }
 });
+
+it('says there is nothing to add when every eligible source is already in the Dive', async () => {
+  const library = await createSearchLibrary(0);
+  try {
+    const peers = await connectCompanionPeer(library);
+    node(peers.desktop, 'Only', 'topic');
+    const dive = createDive(peers.desktop.db, 'Probability', ['Only']);
+    await peers.exchange();
+    renderWithLocalization(<DivePage initial={await readSnapshot()} diveId={dive.id} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Source…' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Add Source' }));
+    expect(sheet.getByRole('status')).toHaveTextContent('Every eligible folder and topic is already in this Dive.');
+    expect(sheet.queryByRole('button', { name: 'Add Source' })).toBeNull();
+  } finally {
+    cleanup();
+    await library.close();
+    await closeLibraries();
+  }
+});
