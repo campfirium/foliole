@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { buildAgentCliBody } from './foliole-agent-arguments.mjs';
 import { normalizeAgentCliCommand, resolveAgentCliHelp } from './foliole-agent-help.mjs';
+import { runOpenCommand } from './foliole-agent-open.mjs';
 import { AGENT_CLI_ROUTES as ROUTES } from './foliole-agent-routes.mjs';
 import { resolveAgentControlDescriptorPath } from './foliole-agent-runtime-paths.mjs';
 import { readAgentCliVersion } from './foliole-agent-version.mjs';
@@ -17,6 +18,7 @@ export async function runAgentCli(argv, options = {}) {
   if (argv.length === 1 && argv[0] === '--version') return runVersion(options);
   const help = resolveAgentCliHelp(argv);
   if (help) return help;
+  if (argv[0] === 'open') return runOpenCommand(argv.slice(1), options);
   const parsed = parseArgv(normalizeAgentCliCommand(argv));
   if (!parsed.ok) return failure(parsed.error, parsed.statusCode);
   const route = ROUTES[parsed.command];

@@ -48,7 +48,7 @@ describe('foliole agent cli discovery', () => {
       expect(result.output).toContain('Foliole CLI');
       expect(result.output).toContain('foliole <command> [options]');
       expect(result.output).toContain('materials/update');
-      expect(result.output).toContain('Keep the Foliole desktop app running');
+      expect(result.output).toContain('Run `foliole open` first to start the desktop app');
       expect(result.output).toContain('Exit codes:');
     }
   });

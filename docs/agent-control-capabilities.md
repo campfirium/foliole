@@ -4,7 +4,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 
 | Object or relationship | Read | Create or initialize | Change or link | Follow-up |
 | --- | --- | --- | --- | --- |
-| Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
+| Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. `foliole open` starts the desktop app the CLI was installed with when it is not running, then waits for Agent Control. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
 | Mobile About | Settings shows the installed app version and build on iPhone and Android. | — | — | Mobile installation metadata and public site links stay in the app UI. |
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
 | Immersive reading | Desktop paragraph keys move within the open material in Browse and Flow. | — | Paragraph movement stays in the desktop reader. | Agent Control reads material content by ID. |
@@ -56,6 +56,10 @@ On a Foliole version that supports create retries, supply `request_id` in the HT
 If the response is lost, retry with the same ID and creation parameters against the same local library. HTTP and CLI share the same IDs. Foliole returns HTTP 200 with the original `material.id`, including after restart. The returned material reflects current state, or contains only the original ID if the material has been permanently removed. Reusing an ID with different valid parameters returns HTTP 409 with `request_id_conflict`. Failed creates leave the ID available. Each request still requires the usual authorization and any applicable learning import permission.
 
 Receipts are stored in the local library database and do not sync to other library replicas. Omitting the ID requests a new creation each time.
+
+### Starting the desktop app from the CLI
+
+Agent Control runs inside the desktop app. Run `foliole open` before other commands when the app may be closed. It returns `{"status":"running"}` when Agent Control already answers, or starts the app installed with this CLI and returns `{"status":"started"}` once Agent Control is ready. It fails with `launch_timeout` after 60 seconds, for example when the app waits for first-run library setup. On Windows, run it from the signed-in desktop session: a process in a non-interactive session such as SSH cannot show a window and would block a later desktop launch, so the command returns `interactive_session_required`. A CLI run from source returns `launch_unavailable`. The Microsoft Store edition will need its own launch target and CLI alias; this command does not cover it yet.
 
 ### Importing a Topic reading schedule
 

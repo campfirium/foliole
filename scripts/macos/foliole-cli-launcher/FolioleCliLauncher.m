@@ -19,6 +19,18 @@ static NSString *resolveCliContentsDirectory(void) {
   return [bundleUrl URLByAppendingPathComponent:@"Contents"].path;
 }
 
+// The CLI ships at Foliole.app/Contents/Helpers/Foliole CLI.app; `foliole open` starts that containing app.
+static NSString *resolveContainingAppPath(NSString *cliContentsDirectory) {
+  NSString *cliBundle = cliContentsDirectory.stringByDeletingLastPathComponent;
+  NSString *helpers = cliBundle.stringByDeletingLastPathComponent;
+  NSString *appContents = helpers.stringByDeletingLastPathComponent;
+  NSString *app = appContents.stringByDeletingLastPathComponent;
+  BOOL nested = [helpers.lastPathComponent isEqualToString:@"Helpers"] &&
+    [appContents.lastPathComponent isEqualToString:@"Contents"] &&
+    [app.pathExtension isEqualToString:@"app"];
+  return nested ? app : nil;
+}
+
 static BOOL configureRuntimeEnvironment(NSString *cliContentsDirectory) {
   NSFileManager *files = NSFileManager.defaultManager;
 #ifdef FOLIOLE_SOURCE_BUILD
@@ -42,6 +54,8 @@ static BOOL configureRuntimeEnvironment(NSString *cliContentsDirectory) {
   setenv("FOLIOLE_AGENT_DESCRIPTOR", descriptor.fileSystemRepresentation, 1);
   setenv("FOLIOLE_AGENT_SCRIPT", agentScript.fileSystemRepresentation, 1);
   setenv("FOLIOLE_PRODUCT_METADATA_PATH", metadata.fileSystemRepresentation, 1);
+  NSString *appPath = resolveContainingAppPath(cliContentsDirectory);
+  if (appPath != nil) setenv("FOLIOLE_APP_LAUNCH_PATH", appPath.fileSystemRepresentation, 1);
   return YES;
 }
 

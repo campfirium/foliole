@@ -3,6 +3,7 @@ import {
   AGENT_CLI_ROUTES,
   createAgentCliHelp
 } from './foliole-agent-routes.mjs';
+import { createOpenCommandHelp } from './foliole-agent-open-help.mjs';
 
 const GROUP_LABELS = {
   materials: 'Topics, Folders, and Items',
@@ -118,6 +119,7 @@ export function normalizeAgentCliCommand(argv) {
 }
 
 function helpResult(topic, json) {
+  if (topic === 'open') return { output: json ? createOpenCommandHelp() : formatCommandHelp(createOpenCommandHelp()), status: 0 };
   if (topic && !AGENT_CLI_ROUTES[topic] && !GROUP_LABELS[topic]) {
     return { output: { error: 'unknown_help_topic', topic }, status: 2 };
   }
@@ -136,10 +138,12 @@ function createHelpDocument(topic) {
     commands,
     exit_codes: EXIT_CODES,
     requirements: [
-      'Keep the Foliole desktop app running for commands other than help and --version.',
+      'Commands other than help, open, and --version need the Foliole desktop app running.',
+      'Run `foliole open` first to start the desktop app when it is not running.',
       'Command results and errors are written as one JSON line.'
     ],
     usage: [
+      'foliole open',
       'foliole <command> [options]',
       'foliole <group> <command> [options]',
       'foliole help [group] [command] [--json]',
