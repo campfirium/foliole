@@ -5,7 +5,7 @@ import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-h
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
 
-test('daily DEV resolves the same native Mac device location as the installed channel', async ({ desktopApp }) => {
+test('daily DEV keeps its device location out of the installed channel App Group', async ({ desktopApp }) => {
   // SKIP: macOS App Group contract | 2026-10-19 | revive: running on macOS
   test.skip(process.platform !== 'darwin', 'macOS App Group contract');
   const locations = await desktopApp.evaluate(() => {
@@ -21,8 +21,8 @@ test('daily DEV resolves the same native Mac device location as the installed ch
       })
     };
   });
-  expect(locations.daily).toBe(locations.installed);
-  expect(locations.isolated).not.toBe(locations.installed);
+  expect(locations.daily).toBe(locations.isolated);
+  expect(locations.daily).not.toBe(locations.installed);
 });
 
 test('opens a library carried over from another device under a new member identity', async ({ desktopSession }, info) => {

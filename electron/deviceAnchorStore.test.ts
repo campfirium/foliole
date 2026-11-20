@@ -85,17 +85,22 @@ it('gives every test worker an isolated device identity root', () => {
     .toBe(path.join(stateRoot!, 'device-identity', 'anchor-v1'));
 });
 
-it('keeps daily macOS DEV on the shared device identity despite its isolated runtime state', () => {
+it('keeps daily macOS DEV anchors in its own runtime state without opening the App Group', () => {
   const appGroupContainerPath = vi.fn(() => ({ ok: true as const, path: '/Users/me/Library/Group Containers/foliole' }));
+  const loadAdapter = () => ({ adapter: { appGroupContainerPath }, status: 'ready' as const });
   expect(resolveDesktopDeviceAnchorFilePath({
     env: {
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/repo/.tmp/macos-desktop-daily-debug',
       FOLIOLE_MACOS_DAILY_DEBUG: '1',
       FOLIOLE_USER_DATA_PATH: '/repo/.tmp/macos-desktop-daily-debug/user-data'
     },
-    loadAdapter: () => ({ adapter: { appGroupContainerPath }, status: 'ready' }),
+    loadAdapter,
     platform: 'darwin'
-  })).toBe('/Users/me/Library/Group Containers/foliole/device-identity/anchor-v1');
+  })).toBe('/repo/.tmp/macos-desktop-daily-debug/device-identity/anchor-v1');
+  expect(() => resolveDesktopDeviceAnchorFilePath({
+    env: { FOLIOLE_MACOS_DAILY_DEBUG: '1' }, loadAdapter, platform: 'darwin'
+  })).toThrow('device_anchor_test_state_root_required');
+  expect(appGroupContainerPath).not.toHaveBeenCalled();
 });
 
 it('creates one lowercase UUIDv4 and hydrates it after restart', async () => {

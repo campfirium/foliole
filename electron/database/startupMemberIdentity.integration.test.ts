@@ -6,10 +6,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let root = '';
 let dataRoot = '';
+const appGroupContainerPath = vi.hoisted(() => vi.fn());
 vi.mock('../macosSecurityScopedBookmarksNative.js', () => ({
-  loadMacosSecurityScopedBookmarkAdapter: () => ({ status: 'ready', adapter: {
-    appGroupContainerPath: () => ({ ok: true, path: path.join(root, 'device-one') })
-  } })
+  loadMacosSecurityScopedBookmarkAdapter: () => ({ status: 'ready', adapter: { appGroupContainerPath } })
 }));
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({ app_data_dir: dataRoot, app_config_dir: path.join(dataRoot, 'config'),
@@ -24,6 +23,8 @@ import { initializeDatabase } from './migrate.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from './syncGroupStore.js';
 
 beforeEach(async () => {
+  appGroupContainerPath.mockReset();
+  appGroupContainerPath.mockImplementation(() => ({ ok: true, path: path.join(root, 'device-one') }));
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-startup-member-'));
   dataRoot = path.join(root, 'original');
   vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', path.join(root, 'device-one'));
@@ -46,14 +47,25 @@ it('reopens the same library on the original device with the same member identit
   expect(loadDesktopSyncGroup()?.local_device_identity_key).toBe(original);
 });
 
-it.runIf(process.platform === 'darwin')('reopens the existing member in daily DEV without changing its identity', () => {
-  const original = loadDesktopSyncGroup();
+it.runIf(process.platform === 'darwin')('rebinds a DEV library to the DEV runtime anchor without opening the App Group', async () => {
+  const original = loadDesktopSyncGroup()!;
+  const originalMember = original.devices[0]!;
   closeDatabaseConnection();
-  vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', path.join(root, 'daily-runtime'));
+  const dailyRuntime = path.join(root, 'daily-runtime');
+  vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', dailyRuntime);
   vi.stubEnv('FOLIOLE_MACOS_DAILY_DEBUG', '1');
   expect(() => initializeDatabase(undefined, { rebindMemberIdentity: true })).not.toThrow();
-  expect(loadDesktopSyncGroup()?.local_device_identity_key).toBe(original?.local_device_identity_key);
-  expect(loadDesktopSyncGroup()?.devices).toEqual(original?.devices);
+  const after = loadDesktopSyncGroup()!;
+  const { anchor_file: anchorFile, identity } = await loadDesktopDeviceIdentity({ groupId: original.group_id,
+    libraryPath: openDatabaseConnection().dbPath });
+  expect(anchorFile).toBe(path.join(dailyRuntime, 'device-identity', 'anchor-v1'));
+  expect(after.local_device_identity_key).toBe(identity.identity_key);
+  expect(after.local_device_identity_key).not.toBe(original.local_device_identity_key);
+  expect(after.devices.find(device => device.device_identity_key === originalMember.device_identity_key)).toEqual(originalMember);
+  expect(appGroupContainerPath).not.toHaveBeenCalled();
+  closeDatabaseConnection();
+  initializeDatabase(undefined, { rebindMemberIdentity: true });
+  expect(loadDesktopSyncGroup()).toEqual(after);
 });
 
 async function reopenChanged(changed: string) {

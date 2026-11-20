@@ -31,8 +31,9 @@ export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorO
   const platform = options.platform ?? process.platform;
   const env = options.env ?? process.env;
   const testStateRoot = env.FOLIOLE_ELECTRON_TEST_STATE_ROOT?.trim();
-  const dailyMacosDev = platform === 'darwin' && env.FOLIOLE_MACOS_DAILY_DEBUG === '1';
-  if (testStateRoot && !dailyMacosDev) {
+  // Daily macOS DEV keeps its own library, so its anchor stays in its own runtime state;
+  // only installed channels read the App Group, whose consent prompt blocks startup.
+  if (testStateRoot) {
     const pathApi = platform === 'win32' ? path.win32 : path.posix;
     if (!pathApi.isAbsolute(testStateRoot)) throw new Error('device_anchor_test_state_root_invalid');
     return pathApi.join(testStateRoot, 'device-identity', ANCHOR_FILE);
@@ -45,7 +46,7 @@ export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorO
     }
     // Unsigned automated processes must not open the installed app's group container:
     // macOS asks the user for consent there and blocks the synchronous read until answered.
-    if (!dailyMacosDev && (env.VITEST || env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1')) {
+    if (env.VITEST || env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1' || env.FOLIOLE_MACOS_DAILY_DEBUG === '1') {
       throw new Error('device_anchor_test_state_root_required');
     }
     const loaded = (options.loadAdapter ?? loadMacosSecurityScopedBookmarkAdapter)(platform);
