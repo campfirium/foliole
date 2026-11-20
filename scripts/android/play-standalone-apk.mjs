@@ -34,6 +34,9 @@ async function deliver(identity, root, env) {
   if (bundleInfo.identity?.versionCode !== identity.versionCode || bundleInfo.source?.revision !== identity.sourceSha) {
     throw new Error('Signed bundle identity differs');
   }
+  // A resumed run receives the AAB from an earlier run's artifact, so bind it to its signing receipt.
+  const signedBundle = fs.readFileSync(path.join(directory, 'app-release-signed.aab'));
+  if (createHash('sha256').update(signedBundle).digest('hex') !== bundleInfo.uploadBundle?.digest) throw new Error('Signed bundle digest differs');
   const token = await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON);
   const api = createPlayApi(token);
   const edit = await api('POST', 'edits', {});
@@ -42,7 +45,7 @@ async function deliver(identity, root, env) {
     const bundles = (await api('GET', `${base}/bundles`)).bundles ?? [];
     const highest = Math.max(0, ...bundles.map(entry => Number(entry.versionCode)));
     if (identity.versionCode <= highest) throw new Error(`Version code ${identity.versionCode} must exceed Play's highest ${highest}`);
-    const uploaded = await api('POST', `${base}/bundles?uploadType=media`, fs.readFileSync(path.join(directory, 'app-release-signed.aab')), true);
+    const uploaded = await api('POST', `${base}/bundles?uploadType=media`, signedBundle, true);
     if (Number(uploaded.versionCode) !== identity.versionCode) throw new Error('Play recorded a different version code');
     // Play keeps one draft per track: replace earlier standalone drafts and refuse to touch anyone else's.
     const current = (await api('GET', `${base}/tracks/internal`)).releases ?? [];
