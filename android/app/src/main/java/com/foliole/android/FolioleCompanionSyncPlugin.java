@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService displayExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService signingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService attachmentReceiveExecutor = Executors.newSingleThreadExecutor();
@@ -218,7 +219,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void resolveAttachmentResource(PluginCall call) {
         if (BuildConfig.DEBUG) android.util.Log.d("FolioleImage", "resolveAttachmentResource");
-        async(call, "Failed to resolve companion attachment resource.", () ->
+        // Display must not queue behind maintenance or image writes; any trash restore still takes withRemoval.
+        FolioleCompanionSyncAsync.run(displayExecutor, call, "Failed to resolve companion attachment resource.", () ->
             FolioleCompanionResourcePluginActions.resolveAttachmentResource(getContext(), call));
     }
 
@@ -264,6 +266,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         });
         super.handleOnDestroy();
         fileExecutor.shutdown();
+        displayExecutor.shutdown();
         signingExecutor.shutdown();
         framedSendExecutor.shutdown();
         attachmentReceiveExecutor.shutdown();
