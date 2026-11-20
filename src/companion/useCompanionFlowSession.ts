@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { reviewProgressCountsFromSummary } from '../features/review/model/reviewToolbarProgressLabel';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { isCompanionReadReceiptSnapshot, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
+import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import type { CompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
@@ -23,9 +22,12 @@ import type { FlowDisplayTiming } from './useCompanionFlowBodyTiming';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 import { useFlowHydration } from './useCompanionFlowHydration';
 import { useCompanionFlowReadView } from './useCompanionFlowReadView';
+import { useFlowSnapshotRefresh } from './useCompanionFlowSnapshotRefresh';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
+  /** The workspace the session was last committed against; another snapshot or a landed sync needs a reopen. */
+  settled?: { nodes: object; syncEpoch: number }; acting?: { done: Promise<void>; release(): void };
   diveOpening?: boolean; refresh?: Promise<void>; displayTiming?: FlowDisplayTiming; readIntents?: CompanionReadIntents; readEpoch?: number;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
@@ -51,19 +53,7 @@ export function useCompanionFlowSession(args: {
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
   useFlowReentry(args, current, owner, latest, mode, render);
   useGlobalFlowResume(current, owner, args.libraryScope, identity, render);
-  useEffect(() => {
-    if (!args.active || current.diveOpening || current.session.dive || !current.hydrated || !current.session.daily || current.readIntents?.pending ||
-      isCompanionReadReceiptSnapshot(args.snapshot?.nodesById)) return;
-    const source = current.session;
-    const generation = current.generation;
-    trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode, preserveCurrent: true }).then(saved => {
-      if (owner.current !== current || !latest.current.active || current.readIntents?.pending || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
-      current.session = { ...saved.session, isAnswerRevealed:
-        saved.session.currentNodeId === source.currentNodeId && current.session.isAnswerRevealed };
-      if (!sameCycleProgress(saved.session, source)) current.generation += 1;
-      render();
-    }).catch(error => { current.error = String(error); render(); }));
-  }, [args.snapshot?.nodesById]);
+  useFlowSnapshotRefresh(args, current, owner, latest, mode, render);
   useReadIntentReceipts(current, owner, mode, render);
   const session = current.session;
   const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot, Boolean(session.currentNodeId));

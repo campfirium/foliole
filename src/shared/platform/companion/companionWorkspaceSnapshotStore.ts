@@ -6,6 +6,7 @@ import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 import { subscribeCompanionReadingScope } from './reading/companionReadingScope.js';
 
 let syncRunHolds = 0;
+let syncAppliedEpoch = 0;
 let heldSyncScopes: WorkspaceRefreshScope[] = [];
 
 export const companionWorkspaceSnapshots = new WorkspaceSnapshotRefresh<WorkspaceSnapshot | null>(null);
@@ -24,8 +25,14 @@ export function registerCompanionWorkspaceRefresh(scope: WorkspaceRefreshScope) 
  * such as one after an edit, keeps rereading the workspace for each note the run applies.
  */
 export function registerCompanionSyncAppliedRefresh(scope: WorkspaceRefreshScope) {
+  syncAppliedEpoch += 1;
   if (syncRunHolds > 0) heldSyncScopes.push(scope);
   else registerCompanionWorkspaceRefresh(scope);
+}
+
+/** Counts applied sync objects at once, including those whose snapshot refresh a running sync still holds. */
+export function companionSyncAppliedEpoch() {
+  return syncAppliedEpoch;
 }
 
 export function holdCompanionSyncAppliedRefresh() {

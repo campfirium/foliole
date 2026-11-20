@@ -73,6 +73,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
       (action === 'grade' ? setReviewError : setReadingError)(message);
     } finally {
       timing?.('action', status);
+      args.flow.releaseAction();
       locked.current = false;
       setBusy(false);
     }
@@ -124,7 +125,7 @@ async function prepareSurfaceAction(args: CompanionSurfaceActionArgs, token: Tok
   if (!snapshot || !active() || !args.flow.matches(token) || !token.nodeId) return null;
   const now = new Date().toISOString();
   const beforePreparation = snapshot;
-  const prepared = await args.flow.prepareAction(token, now, () => active(), timing);
+  const prepared = await args.flow.prepareAction(token, now, snapshot.nodesById, () => active(), timing);
   if (!prepared) return null;
   if (prepared !== token) {
     snapshot = await timeFlow(timing, 'refresh', () => args.workspaceSync.refreshAfterMutation());
