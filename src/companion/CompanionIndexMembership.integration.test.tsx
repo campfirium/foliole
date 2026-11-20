@@ -15,7 +15,7 @@ vi.mock('@capacitor/core', async () => {
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 
-const click = (name: string) => fireEvent.click(screen.getByRole('button', { name, exact: true }));
+const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
 function openIndexMenu() {
   fireEvent.keyDown(screen.getByRole('button', { name: 'Open folder Mobile Index' }), { key: 'F10', shiftKey: true });
@@ -26,15 +26,13 @@ async function editSource(operation: 'Add' | 'Remove', title: string) {
   click(`${operation} source…`);
   const sheet = within(screen.getByRole('dialog', { name: `${operation} source…` }));
   fireEvent.change(sheet.getByRole('searchbox'), { target: { value: title.split(' / ').at(-1) } });
-  fireEvent.click(sheet.getByRole('button', { name: title, exact: true }));
-  fireEvent.click(sheet.getByRole('button', { name: `${operation} source`, exact: true }));
+  fireEvent.click(sheet.getByRole('button', { name: title }));
+  fireEvent.click(sheet.getByRole('button', { name: `${operation} source` }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 }
 
 function createIndex() {
-  click('More');
-  click('New…');
-  click('Virtual');
+  click('Create in Virtual');
   const sheet = within(screen.getByRole('dialog', { name: 'Create in Virtual' }));
   fireEvent.change(sheet.getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
   fireEvent.click(sheet.getByRole('button', { name: 'Create in Virtual' }));
