@@ -60,7 +60,18 @@ Completion requires matching full evidence and integration of the current QA tip
 The temporary QA branch is `review`. When its exact tip passes full QA and dev
 integration checks, finish fast-forwards the public `preview` branch to that tip
 before removing remote `review`. Mobile resume evidence can complete QA but
-does not advance `preview` without an exact full pass. Remote cleanup comes
+does not advance `preview` without an exact full pass.
+
+A test-only repair does not need another full hosted run. When a completed full
+run failed only in test files, and the commits after it change only test files
+(`*.test.*`, test-support files or `src/test/`) including every failed one, run
+`npm run quality:qa:workspace -- local-repair --base-run <run-id>` from dev.
+It refuses cancelled or incomplete jobs and failures it cannot attribute to a
+test file, then lints the changed files, type-checks the desktop and runs the
+changed tests three times under the Electron runner in QA. The recorded
+`local-repair` evidence completes QA and advances `preview`, because the product
+code matches what the base run tested. Any product, dependency, configuration or
+workflow change still needs hosted evidence. Remote cleanup comes
 before local worktree cleanup; the owner record stays in
 `finishing` until both succeed. Retry `finish` after resolving a cleanup failure.
 Terminal wait logs and the candidate/integration record are retained under the

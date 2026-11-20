@@ -11,6 +11,7 @@ import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
 import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 import { integrateQaWorkspace } from './qa-workspace-integration.mjs';
 import { finishQaWorkspace } from './qa-workspace-finish.mjs';
+import { recordLocalRepair } from './qa-local-repair.mjs';
 import {
   assertQaPrivateDirectories, QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment,
   readQaWorkspace, verifyMountedQaVolume
@@ -112,8 +113,13 @@ async function main(args) {
     return console.log(JSON.stringify(await integrateQaWorkspace({ repoRoot,
       validate: cwd => validateIntegration(cwd, args.slice(separator + 1)) }), null, 2));
   }
+  if (args[0] === 'local-repair') {
+    if (!options.includes('--base-run') || !/^\d+$/u.test(value('--base-run') ?? '')) throw new Error('--base-run <run ID> is required');
+    return console.log(JSON.stringify(await recordLocalRepair({ repoRoot, baseRunId: value('--base-run'),
+      runLocal: command => runQaWorkspaceCommand({ repoRoot, command }) }), null, 2));
+  }
   if (args[0] === 'finish') return console.log(JSON.stringify(await finishQaWorkspace({ repoRoot }), null, 2));
-  throw new Error('Usage: qa-workspace.mjs start|status|run|integrate|finish');
+  throw new Error('Usage: qa-workspace.mjs start|status|run|local-repair|integrate|finish');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

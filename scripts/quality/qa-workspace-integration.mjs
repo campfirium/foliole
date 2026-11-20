@@ -6,6 +6,7 @@ import process from 'node:process';
 import { qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
 import { readChainVerdict } from './chain-verdict-read.mjs';
 import { readMobileResumeEvidence } from '../ios/mobile-beta-evidence-read.mjs';
+import { verifyLocalRepairRun } from './qa-local-repair.mjs';
 
 export function saveQaRecord(record) {
   const saved = { ...record };
@@ -14,7 +15,9 @@ export function saveQaRecord(record) {
 }
 
 export function verifyQaRun(record, full = false) {
-  if (!record.run?.passed || (full && !['full', 'mobile-resume'].includes(record.run.scope))) throw new Error('QA needs matching passed evidence');
+  if (!record.run?.passed || (full && !['full', 'mobile-resume', 'local-repair'].includes(record.run.scope))) throw new Error('QA needs matching passed evidence');
+  // A test-only repair reuses its base full run, whose own conclusion records the repaired failures.
+  if (record.run.scope === 'local-repair') return verifyLocalRepairRun(record);
   const repository = execFileSync('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'],
     { cwd: record.worktreePath, encoding: 'utf8' }).trim();
   const run = JSON.parse(execFileSync('gh', ['api', `repos/${repository}/actions/runs/${record.run.runId}`], { encoding: 'utf8' }));

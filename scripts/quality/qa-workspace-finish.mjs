@@ -17,7 +17,8 @@ export function removeQaRemote(record) {
 }
 
 function publishQaPreview(record) {
-  if (record.run.scope !== 'full') return;
+  // Local repair changed only tests, so the published product matches its base full run.
+  if (!['full', 'local-repair'].includes(record.run.scope)) return;
   qaGit(record.devRoot, 'push', 'origin', `${record.cleanupTip}:refs/heads/preview`);
 }
 
