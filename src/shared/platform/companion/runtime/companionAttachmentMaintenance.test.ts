@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -206,6 +206,8 @@ it('reuses unchanged current bodies without parsing them on the UI thread', asyn
 it.each(['unreferenced', 'mounted', 'failed'])('records only a successful genuine deletion: %s', async mode => {
   const library = createDisplayLibrary('android');
   runtime.owner = library.owner;
+  // mkdtemp does not create parents, and a fresh checkout has no task artifact directory yet.
+  await mkdir(path.resolve('.tmp/artifacts/T692'), { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/maintenance-delete-'));
   const key = `${'d'.repeat(64)}.png`, file = path.join(root, key);
   await writeFile(file, 'original');
