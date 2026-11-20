@@ -32,7 +32,10 @@ async function editSource(operation: 'Add' | 'Remove', title: string) {
 }
 
 function createIndex() {
-  click('Create in Virtual');
+  // Root creation lives in the top-right menu's "New Here…" view.
+  fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'More' }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'New Here…' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'New Here…' })).getByRole('button', { name: 'Create in Virtual' }));
   const sheet = within(screen.getByRole('dialog', { name: 'Create in Virtual' }));
   fireEvent.change(sheet.getByRole('textbox', { name: 'Name' }), { target: { value: 'Mobile Index' } });
   fireEvent.click(sheet.getByRole('button', { name: 'Create in Virtual' }));
