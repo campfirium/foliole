@@ -65,20 +65,38 @@ function assertOfficialStableRelease(version, runGh) {
   return releaseIdentity(release);
 }
 
+function isMissingRelease(error) {
+  return /\bHTTP 404\b/u.test(error instanceof Error ? error.message : String(error));
+}
+
+// Electron occasionally pushes a stable tag without publishing its release (v45.4.0), so walk down to
+// the nearest tag that has an official release and drop release-less tags from the stable list.
+function provePreviousOfficialRelease(candidates, stableVersions, runGh) {
+  for (const candidate of [...candidates].sort((left, right) => compareVersions(right, left))) {
+    try {
+      assertOfficialStableRelease(candidate, runGh);
+      return candidate;
+    } catch (error) {
+      if (!isMissingRelease(error)) throw error;
+      stableVersions.splice(stableVersions.indexOf(candidate), 1);
+    }
+  }
+  return undefined;
+}
+
 export function readElectronStableContext(version, runGh) {
   if (!STABLE_VERSION.test(version ?? '')) throw new Error('Electron stable context requires a stable version');
   const targetMajor = Number(version.split('.')[0]);
   const stableVersions = stableRefsForMajor(targetMajor, runGh);
   if (!stableVersions.includes(version)) throw new Error(`Electron v${version} is missing from official stable tags`);
-  let previous = stableVersions.filter((candidate) => compareVersions(candidate, version) < 0)
-    .sort((left, right) => compareVersions(right, left))[0];
+  let previous = provePreviousOfficialRelease(
+    stableVersions.filter((candidate) => compareVersions(candidate, version) < 0), stableVersions, runGh);
   for (let major = targetMajor - 1; !previous && major >= 0; major -= 1) {
     const candidates = stableRefsForMajor(major, runGh);
     stableVersions.push(...candidates);
-    previous = candidates.sort((left, right) => compareVersions(right, left))[0];
+    previous = provePreviousOfficialRelease(candidates, stableVersions, runGh);
   }
   if (!previous) throw new Error(`Electron v${version} has no provable previous official stable release`);
-  assertOfficialStableRelease(previous, runGh);
   return { officialStableVersions: stableVersions, previousVersion: previous, stableVersionsComplete: true };
 }
 

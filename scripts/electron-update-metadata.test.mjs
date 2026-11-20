@@ -71,6 +71,38 @@ describe('Electron official metadata adapters', () => {
     });
   });
 
+  it('skips a stable tag that has no published release when proving the previous version', () => {
+    const runGh = vi.fn((args) => {
+      const endpoint = args.at(-1);
+      if (endpoint.includes('/git/matching-refs/tags/v45.')) return [[ref('45.3.4'), ref('45.4.0'), ref('45.4.1')]];
+      if (endpoint === 'repos/electron/electron/releases/tags/v45.4.1') return release('45.4.1');
+      if (endpoint === 'repos/electron/electron/releases/tags/v45.4.0') throw new Error('gh: Not Found (HTTP 404)');
+      if (endpoint === 'repos/electron/electron/releases/tags/v45.3.4') return release('45.3.4');
+      throw new Error(`unexpected gh call: ${args.join(' ')}`);
+    });
+    expect(readElectronVersionEligibilityInput({
+      now: '2026-11-20T00:00:00.000Z',
+      runGh,
+      runNpm: () => ({ 'dist-tags': { latest: '45.4.1' }, time: { '45.4.1': '2026-11-19T00:00:00.000Z' } }),
+      version: '45.4.1'
+    })).toMatchObject({ officialStableVersions: ['45.3.4', '45.4.1'], previousVersion: '45.3.4' });
+  });
+
+  it('still fails when proving the previous release hits an error other than a missing release', () => {
+    const runGh = vi.fn((args) => {
+      const endpoint = args.at(-1);
+      if (endpoint.includes('/git/matching-refs/tags/v45.')) return [[ref('45.4.0'), ref('45.4.1')]];
+      if (endpoint === 'repos/electron/electron/releases/tags/v45.4.1') return release('45.4.1');
+      throw new Error('gh: Server Error (HTTP 502)');
+    });
+    expect(() => readElectronVersionEligibilityInput({
+      now: '2026-11-20T00:00:00.000Z',
+      runGh,
+      runNpm: () => ({ 'dist-tags': { latest: '45.4.1' }, time: {} }),
+      version: '45.4.1'
+    })).toThrow('HTTP 502');
+  });
+
   it('fails closed when the official stable tag collection is incomplete', () => {
     expect(() => readLatestElectronEligibilityInput({
       now: '2026-09-01T00:00:00.000Z',
