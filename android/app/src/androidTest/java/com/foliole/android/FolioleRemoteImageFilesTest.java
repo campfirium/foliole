@@ -167,6 +167,31 @@ public class FolioleRemoteImageFilesTest {
         FolioleAttachmentMaintenanceFiles.execute(context, call(new JSObject()
             .put("operation", "remove-trash").put("storageKey", key)));
         assertFalse(trash.exists());
+        assertAbsentImageResolvesWhileFileLockIsHeld(contentHash, key);
+        assertFalse(active.exists());
+        assertFalse(trash.exists());
+    }
+
+    private void assertAbsentImageResolvesWhileFileLockIsHeld(String hash, String key) throws Exception {
+        java.util.concurrent.CountDownLatch held = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        Thread holder = new Thread(() -> {
+            synchronized (FolioleAttachmentBlockFiles.class) {
+                held.countDown();
+                try { release.await(); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            }
+        });
+        holder.start();
+        java.util.concurrent.ExecutorService resolver = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            assertTrue(held.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            JSObject result = resolver.submit(() -> resolveImage(hash, key, true)).get(5, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals("missing_file", result.getString("status"));
+        } finally {
+            release.countDown();
+            holder.join();
+            resolver.shutdownNow();
+        }
     }
 
     @Test public void keepsAnExistingRegularDestinationWithoutReadingEitherCopy() throws Exception {

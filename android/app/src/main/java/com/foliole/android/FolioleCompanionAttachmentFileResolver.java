@@ -22,7 +22,11 @@ final class FolioleCompanionAttachmentFileResolver {
         File file = !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)
             ? null
             : new File(new File(context.getFilesDir(), "attachments"), storageKey.trim());
-        if (file != null && !file.exists()) FolioleAttachmentMaintenanceFiles.move(context, storageKey, false);
+        // Restore-on-read only writes when the trash holds the file; an absent image stays a lock-free read.
+        if (file != null && !file.exists() && isRegularFileWithoutFollowingLinks(
+            new File(FolioleAttachmentMaintenanceFiles.directory(context, true), storageKey.trim()))) {
+            FolioleAttachmentMaintenanceFiles.move(context, storageKey, false);
+        }
         boolean ready = isRegularFileWithoutFollowingLinks(file) &&
             ((imageDisplay && mimeType.startsWith("image/")) ||
                 contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, file)));
