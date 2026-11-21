@@ -1,5 +1,8 @@
-import { canMergeWorkspaceContentProjection, mergeWorkspaceContentProjection } from '../../../../lib/core/database/workspaceContentProjection.js';
+import {
+  canMergeWorkspaceContentProjection, canMergeWorkspaceTrashProjection, mergeWorkspaceContentProjection
+} from '../../../../lib/core/database/workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
+import { normalizeWorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshotContract.js';
 import type { WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { WorkspaceNodeAnchorKinds } from '../../../../lib/core/nodes/workspaceNodePriorityState.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
@@ -26,8 +29,9 @@ async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null;
   let orderedNodeIds: readonly string[] | undefined;
   let anchorKinds: WorkspaceNodeAnchorKinds | undefined;
   const snapshot = await owner.readSnapshot(async db => {
-    const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
-      ? await readScoped(db, input.current, input.scope) : null;
+    const scoped = input.current && input.scope.kind === 'nodes'
+      ? await (!input.scope.structure ? readScoped : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
+      : null;
     const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });
@@ -46,18 +50,37 @@ async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeSco
   const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
   let next = current;
   if (roots.size) {
-    const projection = await loadCompanionContentProjection(db, [...roots]);
-    const nodes = Object.fromEntries(Object.entries(projection).map(([id, node]) => {
-      const lifecycle = current.nodesById[id]?.readwiseRemoteLifecycle;
-      return [id, lifecycle !== undefined ? { ...node, readwiseRemoteLifecycle: lifecycle } : node];
-    }));
-    const expected = Object.values(current.nodesById)
-      .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
-      .map(node => node.id);
+    const { nodes, expected } = await loadScopedNodes(db, current, roots);
     if (!canMergeWorkspaceContentProjection(current, nodes, expected, reviewed, reading)) return null;
     next = await mergeCompanionNodeViews(db, mergeWorkspaceContentProjection(current, nodes), Object.keys(nodes));
   }
   return mergeCompanionLocalState(db, next, scope);
+}
+
+async function noScopedRead() { return null; }
+
+/** A move to Trash only sets `deletedAt` on a named subtree, so it is merged instead of rereading the library. */
+async function readScopedTrash(db: DbPort, current: WorkspaceSnapshot, scope: NodeScope) {
+  if (!scope.nodeIds.length) return null;
+  const reviewed = scope.reviewNodeIds ?? [];
+  const reading = scope.readingNodeIds ?? [];
+  const { nodes, expected } = await loadScopedNodes(db, current, new Set([...scope.nodeIds, ...reviewed, ...reading]));
+  if (!canMergeWorkspaceTrashProjection(current, nodes, expected, reviewed, reading)) return null;
+  // Trash membership, visible order and the active node derive from the merged nodes.
+  const merged = normalizeWorkspaceSnapshot(mergeWorkspaceContentProjection(current, nodes));
+  return mergeCompanionLocalState(db, await mergeCompanionNodeViews(db, merged, Object.keys(nodes)), scope);
+}
+
+async function loadScopedNodes(db: DbPort, current: WorkspaceSnapshot, roots: ReadonlySet<string>) {
+  const projection = await loadCompanionContentProjection(db, [...roots]);
+  const nodes = Object.fromEntries(Object.entries(projection).map(([id, node]) => {
+    const lifecycle = current.nodesById[id]?.readwiseRemoteLifecycle;
+    return [id, lifecycle !== undefined ? { ...node, readwiseRemoteLifecycle: lifecycle } : node];
+  }));
+  const expected = Object.values(current.nodesById)
+    .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
+    .map(node => node.id);
+  return { nodes, expected };
 }
 
 export async function refreshCompanionWorkspaceSnapshot(scope?: WorkspaceRefreshScope) {

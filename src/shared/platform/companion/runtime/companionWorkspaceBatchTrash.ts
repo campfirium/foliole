@@ -55,5 +55,5 @@ export function moveCompanionBatchToTrash(targets: readonly CompanionBatchTarget
     }, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash');
     return changes.map(node => node.id);
-  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true }));
+  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, trash: true }));
 }

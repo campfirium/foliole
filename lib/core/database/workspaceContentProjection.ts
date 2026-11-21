@@ -33,6 +33,38 @@ export function canMergeWorkspaceContentProjection(
   });
 }
 
+/**
+ * Accepts a structural change only when nodes move into Trash: each changed node keeps every
+ * structural fact except gaining `deletedAt`, and every baseline child of a newly trashed node
+ * was read too. Anything else, including restores and moves, needs a complete snapshot.
+ */
+export function canMergeWorkspaceTrashProjection(
+  current: WorkspaceSnapshot,
+  nodes: WorkspaceSnapshot['nodesById'],
+  expectedNodeIds: readonly string[],
+  reviewedNodeIds: readonly string[] = [],
+  readingNodeIds: readonly string[] = []
+) {
+  if (expectedNodeIds.some(id => !nodes[id])) return false;
+  const reviewed = new Set(reviewedNodeIds);
+  const reading = new Set(readingNodeIds);
+  const trashed = new Set<string>();
+  for (const [id, node] of Object.entries(nodes)) {
+    const previous = current.nodesById[id];
+    if (!previous) return false;
+    const before = structuralProjection(previous, reviewed.has(id), reading.has(id));
+    const after = structuralProjection(node, reviewed.has(id), reading.has(id));
+    if (!previous.deletedAt && node.deletedAt) {
+      trashed.add(id);
+      delete before.deletedAt;
+      delete after.deletedAt;
+    }
+    if (!workspaceSnapshotValueEqual(before, after)) return false;
+  }
+  return trashed.size > 0 && Object.values(current.nodesById)
+    .every(node => node.parentNodeId === null || !trashed.has(node.parentNodeId) || nodes[node.id] !== undefined);
+}
+
 /** The caller has checked structural equivalence against this exact baseline. */
 export function mergeWorkspaceContentProjection(
   current: WorkspaceSnapshot, nodes: WorkspaceSnapshot['nodesById']

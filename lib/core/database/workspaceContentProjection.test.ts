@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { canMergeWorkspaceContentProjection, mergeWorkspaceContentProjection } from './workspaceContentProjection.js';
+import { canMergeWorkspaceContentProjection, canMergeWorkspaceTrashProjection, mergeWorkspaceContentProjection } from './workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from './workspaceSnapshot.js';
 
 function snapshot(): WorkspaceSnapshot {
@@ -51,4 +51,33 @@ it('preserves cached consumers when the selected nodes have not changed', () => 
   const reordered = { ...fields, id };
   expect(canMergeWorkspaceContentProjection(current, { topic: reordered }, ['topic'])).toBe(true);
   expect(mergeWorkspaceContentProjection(current, { topic: reordered })).toBe(current);
+});
+
+function withChild() {
+  const current = snapshot();
+  current.nodesById.child = { ...current.nodesById.topic!, id: 'child', kind: 'item', parentNodeId: 'topic' };
+  current.nodeOrder = ['topic', 'child'];
+  return current;
+}
+
+it('accepts a subtree that only moved into Trash', () => {
+  const current = withChild();
+  const nodes = { topic: { ...current.nodesById.topic!, deletedAt: 'later', updatedAt: 'later' },
+    child: { ...current.nodesById.child!, deletedAt: 'later', updatedAt: 'later' } };
+  expect(canMergeWorkspaceTrashProjection(current, nodes, ['topic', 'child'])).toBe(true);
+});
+
+it.each([
+  ['a child of a trashed node was not read', (current: WorkspaceSnapshot) => ({ topic: { ...current.nodesById.topic!, deletedAt: 'later' } })],
+  ['nothing moved into Trash', (current: WorkspaceSnapshot) => ({ topic: current.nodesById.topic!, child: current.nodesById.child! })],
+  ['another structural fact changed', (current: WorkspaceSnapshot) => ({ topic: { ...current.nodesById.topic!, deletedAt: 'later', title: 'Other' },
+    child: { ...current.nodesById.child!, deletedAt: 'later' } })],
+  ['a node was restored', (current: WorkspaceSnapshot) => {
+    current.nodesById.child = { ...current.nodesById.child!, deletedAt: 'earlier' };
+    return { topic: { ...current.nodesById.topic!, deletedAt: 'later' }, child: { ...current.nodesById.child, deletedAt: null } };
+  }]
+] as const)('needs a complete snapshot when %s', (_label, change) => {
+  const current = withChild();
+  const nodes = change(current);
+  expect(canMergeWorkspaceTrashProjection(current, nodes as WorkspaceSnapshot['nodesById'], Object.keys(nodes))).toBe(false);
 });

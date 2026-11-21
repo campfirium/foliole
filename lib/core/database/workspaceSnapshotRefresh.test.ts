@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from './workspaceSnapshotRefresh.js';
+import { mergeWorkspaceRefreshScopes, WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from './workspaceSnapshotRefresh.js';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -138,4 +138,10 @@ it('drains a commit registered between the last publication and refresh completi
   store.register({ kind: 'full' });
   await store.refresh();
   expect(store.getSnapshot()).toBe(2);
+});
+
+it('keeps a merged scope marked as Trash only while every structural change is a move to Trash', () => {
+  const trash: WorkspaceRefreshScope = { kind: 'nodes', nodeIds: ['a'], structure: true, trash: true };
+  expect(mergeWorkspaceRefreshScopes([trash, { kind: 'nodes', nodeIds: ['b'] }])).toMatchObject({ structure: true, trash: true });
+  expect(mergeWorkspaceRefreshScopes([trash, { kind: 'nodes', nodeIds: ['b'], structure: true }])).not.toHaveProperty('trash');
 });
