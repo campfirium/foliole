@@ -22,8 +22,8 @@ import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import { resolveCompanionHistoryLabel } from './companionHistoryActionLabel';
 import { CompanionMenuRow } from './CompanionMenuSheet';
-import { previewCompanionTrash } from './companionTrashPreview';
 import { CompanionWorkspaceNodeSheet, type WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
+import { previewCompanionCreate, previewCompanionTrash } from './companionWorkspacePreview';
 import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 
 type Mode = 'undo' | 'redo';
@@ -66,6 +66,13 @@ const createFailureKeys = {
 } as const;
 
 type TransactionRun = ReturnType<typeof useCompanionWorkspaceTransaction>['run'];
+
+/** A creation or a move to Trash shows at once and closes the sheet; a failure withdraws it and reports below. */
+function previewMetadataCommand(command: WorkspaceMetadataCommand, closeSheet: () => void) {
+  const preview = command.type === 'delete' ? () => previewCompanionTrash([command.nodeId])
+    : command.type === 'create' ? () => previewCompanionCreate(command) : null;
+  return preview ? () => { const withdraw = preview(); closeSheet(); return withdraw; } : undefined;
+}
 
 function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'purgeBatch'> {
   return {
@@ -126,7 +133,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     execute: (command, onSaved) => run(async () => {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
     }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type],
-    command.type === 'delete' ? () => { const withdraw = previewCompanionTrash([command.nodeId]); setSheet(null); return withdraw; } : undefined),
+    previewMetadataCommand(command, () => setSheet(null))),
     replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}

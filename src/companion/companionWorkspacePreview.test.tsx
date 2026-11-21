@@ -7,7 +7,7 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 
-import { previewCompanionTrash } from './companionTrashPreview';
+import { previewCompanionCreate, previewCompanionTrash } from './companionWorkspacePreview';
 import { useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
@@ -71,5 +71,42 @@ it('puts the moved subtree back when the write fails', async () => {
   act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionTrash(['a'])); });
   expect(workspace.shown().trashedNodeIds).toEqual(['a', 'a1']);
   await act(async () => { write.reject(new Error('write_failed')); await running; });
+  expect(workspace.shown()).toBe(base);
+});
+
+const createTopic = { type: 'create', kind: 'topic', title: ' New topic ', parentNodeId: 'folder', nodeId: 'node-new' } as const;
+
+it('shows a new topic in its parent before the write finishes and keeps it after the write commits', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createTopic, 'now')); });
+  expect(workspace.shown().nodesById['node-new']).toMatchObject({ kind: 'topic', parentNodeId: 'folder', title: 'New topic', createdAt: 'now' });
+  expect(workspace.shown().nodeOrder).toEqual(['folder', 'a', 'a1', 'b', 'node-new']);
+  expect(workspace.shown().activeNodeId).toBe('a');
+  const committed = { ...base, nodeOrder: [...base.nodeOrder, 'node-new'] };
+  await act(async () => { write.resolve(); companionWorkspaceSnapshots.reset(committed); await running; });
+  expect(workspace.shown()).toBe(committed);
+});
+
+it('removes the new topic again when the write fails', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createTopic)); });
+  expect(workspace.shown().nodesById['node-new']).toBeDefined();
+  await act(async () => { write.reject(new Error('write_failed')); await running; });
+  expect(workspace.shown()).toBe(base);
+});
+
+it('shows nothing early when the creation cannot be built', () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  act(() => { previewCompanionCreate({ ...createTopic, nodeId: 'a' }); });
   expect(workspace.shown()).toBe(base);
 });

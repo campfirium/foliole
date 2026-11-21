@@ -2,34 +2,37 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import { collectWorkspaceMetadataSubtree } from '../store/workspaceNodeMetadataHistory';
+import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 
-type TrashPreview = { base: WorkspaceSnapshot; snapshot: WorkspaceSnapshot };
+type WorkspacePreview = { base: WorkspaceSnapshot; snapshot: WorkspaceSnapshot };
 
-let current: TrashPreview | null = null;
+let current: WorkspacePreview | null = null;
 const listeners = new Set<() => void>();
 
-export function subscribeCompanionTrashPreview(listener: () => void) {
+export function subscribeCompanionWorkspacePreview(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }
 
-export function getCompanionTrashPreview() {
+export function getCompanionWorkspacePreview() {
   return current;
 }
 
 /** Shows the preview only over the snapshot it was built from; any later publication replaces it. */
-export function applyCompanionTrashPreview(snapshot: WorkspaceSnapshot | null, preview: TrashPreview | null) {
+export function applyCompanionWorkspacePreview(snapshot: WorkspaceSnapshot | null, preview: WorkspacePreview | null) {
   return preview && snapshot === preview.base ? preview.snapshot : snapshot;
 }
 
 /**
- * Shows the moved nodes in Trash at once while the write runs. The returned function withdraws the
+ * Shows the expected library at once while the write runs. The returned function withdraws the
  * preview, which restores the unchanged library when the write did not commit.
  */
-export function previewCompanionTrash(rootIds: readonly string[], now = new Date().toISOString()) {
+function previewCompanionWorkspace(build: (base: WorkspaceSnapshot) => WorkspaceSnapshot) {
   const base = companionWorkspaceSnapshots.getSnapshot();
   if (!base) return () => {};
-  const preview = { base, snapshot: buildCompanionTrashPreview(base, rootIds, now) };
+  const snapshot = build(base);
+  if (snapshot === base) return () => {};
+  const preview = { base, snapshot };
   current = preview;
   notify();
   return () => {
@@ -37,6 +40,26 @@ export function previewCompanionTrash(rootIds: readonly string[], now = new Date
     current = null;
     notify();
   };
+}
+
+/** Shows the moved nodes in Trash at once while the write runs. */
+export function previewCompanionTrash(rootIds: readonly string[], now = new Date().toISOString()) {
+  return previewCompanionWorkspace(base => buildCompanionTrashPreview(base, rootIds, now));
+}
+
+/** Shows a new folder, topic or item in its parent at once while the write runs. */
+export function previewCompanionCreate(command: Extract<WorkspaceMetadataCommand, { type: 'create' }>, now = new Date().toISOString()) {
+  return previewCompanionWorkspace(base => buildCompanionCreatePreview(base, command, now));
+}
+
+export function buildCompanionCreatePreview(snapshot: WorkspaceSnapshot,
+  command: Extract<WorkspaceMetadataCommand, { type: 'create' }>, now: string): WorkspaceSnapshot {
+  let nodes;
+  // The write validates the same command against the stored library; a preview that cannot be built shows nothing early.
+  try { nodes = buildWorkspaceMetadataMutation(command, snapshot.nodesById, now).nodes; } catch { return snapshot; }
+  return normalizeWorkspaceSnapshot({ ...snapshot,
+    nodesById: { ...snapshot.nodesById, ...Object.fromEntries(nodes.map(node => [node.id, node])) },
+    nodeOrder: [...snapshot.nodeOrder, ...nodes.map(node => node.id)] });
 }
 
 export function buildCompanionTrashPreview(snapshot: WorkspaceSnapshot, rootIds: readonly string[], now: string): WorkspaceSnapshot {

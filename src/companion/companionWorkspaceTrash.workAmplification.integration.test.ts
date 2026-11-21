@@ -14,7 +14,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/
 import { buildWorkspaceMetadataMutation } from '../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../store/workspaceSnapshotSequentialReading';
 
-import { buildCompanionTrashPreview } from './companionTrashPreview';
+import { buildCompanionCreatePreview, buildCompanionTrashPreview } from './companionWorkspacePreview';
 
 // Work-amplification check WA-046: counts only, never durations.
 const reads = vi.hoisted(() => ({ fullSnapshots: 0, orderDerivations: 0 }));
@@ -140,6 +140,21 @@ it('previews exactly the visible result the committed move to Trash publishes', 
     const after = (await refreshCompanionWorkspaceAfterMutation())!;
     const visible = (value: WorkspaceSnapshot) => ({ nodeOrder: value.nodeOrder, activeNodeId: value.activeNodeId,
       trashedNodeIds: [...value.trashedNodeIds].sort() });
+    expect(visible(preview)).toEqual(visible(after));
+  }
+});
+
+it('previews exactly the visible result the committed creation publishes', async () => {
+  for (const command of [{ type: 'create', nodeId: 'new-topic', kind: 'topic', parentNodeId: 'sub', title: 'New topic' },
+    { type: 'create', nodeId: 'new-folder', kind: 'folder', parentNodeId: null, title: 'New folder' }] as const) {
+    const before = (await refreshCompanionWorkspaceAfterMutation())!;
+    const preview = buildCompanionCreatePreview(before, command, '2026-11-21T00:00:00.000Z');
+    await mutateCompanionWorkspace(command);
+    const after = (await refreshCompanionWorkspaceAfterMutation())!;
+    const visible = (value: WorkspaceSnapshot) => {
+      const { kind, title, parentNodeId, deletedAt } = value.nodesById[command.nodeId]!;
+      return { nodeOrder: value.nodeOrder, activeNodeId: value.activeNodeId, node: { kind, title, parentNodeId, deletedAt: deletedAt ?? null } };
+    };
     expect(visible(preview)).toEqual(visible(after));
   }
 });
