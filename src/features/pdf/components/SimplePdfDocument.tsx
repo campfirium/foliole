@@ -30,6 +30,9 @@ function useAttachmentPdfSource(
 ) {
   const [source, setSource] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'missing' | 'ready'>('loading');
+  // Callers recreate this handler on every render; only a new attachment reloads the document.
+  const missingResourceHandler = useRef(onMissingResource);
+  missingResourceHandler.current = onMissingResource;
 
   useEffect(() => {
     let cancelled = false;
@@ -51,10 +54,11 @@ function useAttachmentPdfSource(
         setState('ready');
         return;
       }
-      if (!retriedAfterSync && onMissingResource) {
+      const syncMissingResource = missingResourceHandler.current;
+      if (!retriedAfterSync && syncMissingResource) {
         retriedAfterSync = true;
         try {
-          await onMissingResource(attachmentId);
+          await syncMissingResource(attachmentId);
         } catch {
           if (!cancelled) setState('missing');
           return;
@@ -70,7 +74,7 @@ function useAttachmentPdfSource(
     return () => {
       cancelled = true;
     };
-  }, [attachmentId, onMissingResource]);
+  }, [attachmentId]);
 
   return { source, state };
 }

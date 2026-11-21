@@ -179,3 +179,16 @@ it('ignores a late PDF resolution after switching to another attachment', async 
   expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
   expect(document.querySelector('[data-file]')).toHaveAttribute('data-file', 'capacitor://current.pdf');
 });
+
+it('keeps the open PDF when the parent passes a new missing-resource callback', async () => {
+  resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://pdf-file' });
+  const view = renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} onMissingResource={vi.fn()} title="Paper" />);
+  await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
+  const document = screen.getByText('PDF page 1').closest('[data-file]');
+  for (let render = 0; render < 3; render++) {
+    view.rerender(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} onMissingResource={vi.fn()} title="Paper" />);
+  }
+  await act(async () => { await Promise.resolve(); });
+  expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('PDF page 1').closest('[data-file]')).toBe(document);
+});
