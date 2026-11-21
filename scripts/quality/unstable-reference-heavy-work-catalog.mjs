@@ -62,6 +62,10 @@ export const COMPUTE_CALL_RULES = [
       /^(sort|toSorted|localeCompare|flatMap|reduce|filter)$/u.test(name) ||
       /^sort[A-Z]\w*$/u.test(name) ||
       /^(build|group|index|collect)\w*(ById|ByParent|Index|Tree|Rows)$/u.test(name) ||
+      // Subtree and library collectors (collectPdfHighlightLocators, collectShelvedTopicIds,
+      // getOrderedVirtualNodeResultNodes) walk node order, so they count as whole-collection work.
+      /^collect[A-Z]\w*$/u.test(name) ||
+      /^(get|resolve)Ordered[A-Z]\w*$/u.test(name) ||
       /^Object\.(values|entries)$/u.test(text)
   }
 ];

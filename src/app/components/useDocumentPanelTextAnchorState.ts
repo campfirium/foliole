@@ -32,5 +32,6 @@ export function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps
     }
     previousDecorationsRef.current = nextDecorations;
     return nextDecorations;
+  // unstable-reference-ok: useDocumentPanelMarkerChildren returns its ref-cached children unless this document's markers changed.
   }, [props.activeNodeId, props.editorContent, markerChildren, props.trashedNodeIds]);
 }
