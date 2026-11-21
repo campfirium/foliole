@@ -4,7 +4,7 @@ import { projectNodeLearningSummary, sameNodeReadingSummary, sameNodeReviewSumma
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { readPendingNodeOrder, readPendingRelearnNodes } from '../shared/platform/workspacePendingDurableMutations';
 
-import { mergeHydratedNode, mergeNodeOpenStateById } from './workspaceHydrateObjectMerge';
+import { mergeHydratedNode, mergeNodeOpenStateById, mergeUntitledSequenceByParent } from './workspaceHydrateObjectMerge';
 import { hasUnconfirmedNodeContent } from './workspaceNodeContentVersionGuard';
 import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
@@ -81,7 +81,7 @@ export function mergeWorkspaceSyncProjection(
   const normalized = resolveSyncProjectionSnapshot(current, projection, nodesById, nodeOrder, [...changedIds]);
   const next = { ...current, ...normalized,
     nodeOpenStateById: mergeNodeOpenStateById(current.nodeOpenStateById, projection.nodeOpenStateById),
-    untitledSequenceByParent: { ...current.untitledSequenceByParent, ...projection.untitledSequenceByParent } };
+    untitledSequenceByParent: mergeUntitledSequenceByParent(current.untitledSequenceByParent, projection.untitledSequenceByParent) };
   next.activeNodeId = resolveWorkspaceSnapshotActiveNodeId(next);
   return { ...next, reviewSession: reconcileReviewSession(next) };
 }

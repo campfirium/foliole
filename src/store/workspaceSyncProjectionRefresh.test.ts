@@ -59,6 +59,25 @@ it('loads the affected active body without a list hydrate and keeps current navi
   expect(invoke.mock.calls.map(([command]) => command)).toEqual(['load_workspace_list_projection', 'load_node_document']);
 });
 
+it('keeps the store open-state and untitled-counter references when a sync read brings no newer values', async () => {
+  const openedAt = '2026-11-01T00:00:00Z';
+  useWorkspaceStore.setState({ nodeOpenStateById: { topic: { nodeId: 'topic', lastOpenedAt: openedAt } },
+    untitledSequenceByParent: { root: 2 } });
+  const before = useWorkspaceStore.getState();
+  const invoke = vi.fn().mockImplementation(async (command: string) => {
+    if (command === 'load_workspace_list_projection') return { ...projection('2026-10-01T00:00:00Z'),
+      nodeOpenStateById: { topic: { nodeId: 'topic', lastOpenedAt: openedAt } }, untitledSequenceByParent: { root: 2 } };
+    if (command === 'load_node_document') return { ...node(), content: 'Before', hideTitleHeading: false };
+    if (command === 'save_editor_operation_history') return null;
+    throw new Error(`unexpected command:${command}`);
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  await refreshWorkspaceSyncProjection({ kind: 'nodes', nodeIds: ['topic'] }, 'library');
+  expect(invoke).toHaveBeenCalledWith('load_workspace_list_projection', expect.anything());
+  expect(useWorkspaceStore.getState().nodeOpenStateById).toBe(before.nodeOpenStateById);
+  expect(useWorkspaceStore.getState().untitledSequenceByParent).toBe(before.untitledSequenceByParent);
+});
+
 it('publishes the accepted committed version even when its author clock is older', async () => {
   useWorkspaceStore.setState(state => ({ nodesById: { ...state.nodesById,
     topic: { ...node(), currentVersionId: 'old-version', content: 'Before' } } }));

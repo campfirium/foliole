@@ -4,17 +4,26 @@ import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/no
 import { hasUnconfirmedNodeContent, hasUnconfirmedNodeReveal } from './workspaceNodeContentVersionGuard';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
+/** Keeps the newer open time per node; returns `current` itself when no entry is added or replaced. */
 export function mergeNodeOpenStateById(
   current: WorkspaceState['nodeOpenStateById'],
   next: WorkspacePersistedState['nodeOpenStateById']
 ) {
-  const merged = { ...current };
+  let merged: WorkspaceState['nodeOpenStateById'] | null = null;
   for (const [nodeId, openState] of Object.entries(next ?? {})) {
-    if (openState && (!merged[nodeId] || timestampValue(openState.lastOpenedAt) > timestampValue(merged[nodeId]?.lastOpenedAt))) {
+    const existing = (merged ?? current)[nodeId];
+    if (openState && (!existing || timestampValue(openState.lastOpenedAt) > timestampValue(existing.lastOpenedAt))) {
+      merged ??= { ...current };
       merged[nodeId] = openState;
     }
   }
-  return merged;
+  return merged ?? current;
+}
+
+/** Overlays the next per-parent untitled counters; returns `current` itself when every counter already matches. */
+export function mergeUntitledSequenceByParent(current: Record<string, number>, next: Record<string, number> | undefined) {
+  const changed = Object.entries(next ?? {}).some(([parentKey, sequence]) => current[parentKey] !== sequence);
+  return changed ? { ...current, ...next } : current;
 }
 
 function timestampValue(value: string | null | undefined) {
