@@ -18,6 +18,9 @@ export interface CompanionBackupRestorePort {
   stage(input: { source: CompanionBackupRestoreSource }): Promise<CompanionBackupRestoreStageResult>;
   cancel(): Promise<void>;
   discard(): Promise<void>;
+  /** Replace the library with the staged candidate, keeping the replaced one as the previous library. */
+  commit(): Promise<void>;
+  previous(): Promise<{ exists: boolean; savedAt: string | null }>;
   addListener(event: 'restoreProgress', listener: (event: { bytes: number; files: number }) => void):
     Promise<{ remove(): Promise<void> }>;
 }

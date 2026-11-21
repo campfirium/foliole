@@ -5,9 +5,11 @@ import { CompanionDatabaseBlockedError } from '../../lib/core/database/companion
 
 const fixture = vi.hoisted(() => ({
   stage: vi.fn(),
+  commit: vi.fn(),
   discard: vi.fn(async () => undefined),
   port: {
     cancel: vi.fn(async () => undefined),
+    previous: vi.fn(async () => ({ exists: true, savedAt: '2026-11-01T00:00:00Z' })),
     addListener: vi.fn(async () => ({ remove: async () => undefined }))
   }
 }));
@@ -16,10 +18,14 @@ vi.mock('../shared/platform/companion/backupRestore/companionBackupRestoreRuntim
   supportsCompanionBackupRestore: () => true, getCompanionBackupRestorePort: () => fixture.port
 }));
 vi.mock('../shared/platform/companion/backupRestore/companionBackupRestore', () => ({
-  stageCompanionBackupRestore: fixture.stage, discardCompanionBackupRestore: fixture.discard
+  stageCompanionBackupRestore: fixture.stage, discardCompanionBackupRestore: fixture.discard,
+  commitCompanionBackupRestore: fixture.commit
 }));
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: () => ({}), runIosCompanionSideDatabase: vi.fn()
+  getIosCompanionDatabaseOwner: () => ({}), runIosCompanionSideDatabase: vi.fn(), closeIosCompanionDatabase: vi.fn()
+}));
+vi.mock('../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({
+  getCompanionFolderBackupPort: () => ({ clearDirectory: vi.fn() })
 }));
 
 import { CompanionBackupRestoreSection } from './CompanionBackupRestoreSection';
@@ -73,4 +79,35 @@ it('cancels a backup that is still being read instead of closing over it', async
   fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
   expect(fixture.port.cancel).toHaveBeenCalledOnce();
   expect(screen.getByRole('status')).toHaveTextContent('Reading backup…');
+});
+
+async function openSummary() {
+  fixture.stage.mockResolvedValueOnce({ cancelled: false, summary });
+  render(<CompanionBackupRestoreSection />);
+  fireEvent.click(screen.getByTestId('companion-restore-open'));
+  fireEvent.click(await screen.findByTestId('companion-restore-zip'));
+  fireEvent.click(await screen.findByTestId('companion-restore-replace'));
+}
+
+it('asks before replacing, says the current library is set aside, then replaces it', async () => {
+  fixture.commit.mockReturnValueOnce(new Promise(() => undefined));
+  await openSummary();
+  expect(await screen.findByText(/set aside, not deleted/)).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('The library set aside by your last restore will be replaced');
+  expect(fixture.commit).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(await screen.findByTestId('companion-restore-replace'));
+  fireEvent.click(await screen.findByTestId('companion-restore-confirm'));
+  expect(await screen.findByText('Replacing library…')).toBeInTheDocument();
+  expect(fixture.commit).toHaveBeenCalledOnce();
+  expect(fixture.discard).not.toHaveBeenCalled();
+});
+
+it('shows why the library could not be replaced and offers to reopen Foliole', async () => {
+  fixture.commit.mockRejectedValueOnce(new Error('restore_nothing_staged'));
+  await openSummary();
+  fireEvent.click(await screen.findByTestId('companion-restore-confirm'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('The backup is no longer ready. Choose it again.');
+  expect(screen.getByRole('button', { name: 'Reopen Foliole' })).toBeInTheDocument();
 });

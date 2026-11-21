@@ -51,6 +51,29 @@ export async function stageCompanionBackupRestore(
   }
 }
 
+export interface CompanionBackupRestoreCommitContext extends Pick<CompanionBackupRestoreContext, 'owner' | 'port'> {
+  /** Serializes the swap with attachment file maintenance. */
+  exclusive<T>(task: () => Promise<T>): Promise<T>;
+  closeDatabase(): Promise<void>;
+  /** Drops the backup state the native backup host still holds for the replaced library. */
+  forgetBackupFolder(): Promise<unknown>;
+  reload(): void;
+}
+
+/**
+ * Close every writer of the current library, then swap in the staged candidate. A failure
+ * leaves the database closed, so the caller reopens the app either way.
+ */
+export async function commitCompanionBackupRestore(context: CompanionBackupRestoreCommitContext) {
+  await context.owner.read(readThisDevice);
+  await context.exclusive(async () => {
+    await context.closeDatabase();
+    await context.port.commit();
+  });
+  await context.forgetBackupFolder().catch(() => undefined);
+  context.reload();
+}
+
 export function discardCompanionBackupRestore(context: Pick<CompanionBackupRestoreContext, 'port'>) {
   return context.port.discard();
 }

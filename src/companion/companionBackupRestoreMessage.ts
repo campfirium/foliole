@@ -8,7 +8,8 @@ const NATIVE_REASONS: Record<string, Parameters<Translate>[0]> = {
   restore_not_database: 'companion.settings.storage.restoreErrorNotBackup',
   restore_unsafe_archive: 'companion.settings.storage.restoreErrorNotBackup',
   restore_multiple_backups: 'companion.settings.storage.restoreErrorMultiple',
-  restore_backup_incomplete: 'companion.settings.storage.restoreErrorIncomplete'
+  restore_backup_incomplete: 'companion.settings.storage.restoreErrorIncomplete',
+  restore_nothing_staged: 'companion.settings.storage.restoreErrorNotStaged'
 };
 
 function megabytes(bytes: string) {

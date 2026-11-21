@@ -159,5 +159,13 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.restoreErrorNewer': '这份备份来自更新版本的 Foliole。请先更新这台手机上的 Foliole。',
   'companion.settings.storage.restoreErrorDamaged': '备份中的资料库已损坏。请在另一台手机上重新备份。',
   'companion.settings.storage.restoreErrorSpace': '这台手机的可用空间不足，大约需要 {size}。',
-  'companion.settings.storage.restoreErrorGeneric': '无法读取备份：{reason}'
+  'companion.settings.storage.restoreErrorGeneric': '无法读取备份：{reason}',
+  'companion.settings.storage.restoreReplace': '替换这台手机上的资料库',
+  'companion.settings.storage.restoreConfirmTitle': '要替换这台手机上的资料库吗？',
+  'companion.settings.storage.restoreConfirmDescription': '这台手机上现有的资料库会被移到一旁保存，不会删除，之后可以还原。这台手机保持自己的设备身份，在加入同步组之前不会同步。完成后 Foliole 会重新打开。',
+  'companion.settings.storage.restoreConfirmPrevious': '上次恢复时移到一旁的资料库会被现在这份替代。',
+  'companion.settings.storage.restoreReplaceConfirm': '替换',
+  'companion.settings.storage.restoreReplacing': '正在替换资料库…',
+  'companion.settings.storage.restoreReopen': '重新打开 Foliole',
+  'companion.settings.storage.restoreErrorNotStaged': '这份备份已不在准备状态，请重新选择。'
 };

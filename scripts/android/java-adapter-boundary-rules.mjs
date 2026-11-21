@@ -109,6 +109,7 @@ export const CLASSIFICATIONS = {
       'FolioleBackupRestoreArchiveLayout.java',
       'FolioleBackupRestoreSources.java',
       'FolioleBackupRestoreStaging.java',
+      'FolioleBackupRestoreSwap.java',
       'FolioleFolderBackupAttachmentCopy.java',
       'FolioleFolderBackupAttachmentTarget.java',
       'FolioleFolderBackupDocumentNames.java',

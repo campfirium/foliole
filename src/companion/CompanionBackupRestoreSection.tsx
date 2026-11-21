@@ -33,18 +33,51 @@ function RestoreSummary({ summary }: { summary: CompanionBackupRestoreSummary })
   </div>;
 }
 
-function RestoreSheetBody({ view, choose }: { view: CompanionBackupRestoreView; choose: ReturnType<typeof useCompanionBackupRestore>['choose'] }) {
+type Restore = ReturnType<typeof useCompanionBackupRestore>;
+
+function ReplaceSteps({ view, restore }: { view: CompanionBackupRestoreView; restore: Restore }) {
   const { t } = useLocalization();
+  if (view.step === 'ready') {
+    return <>
+      <RestoreSummary summary={view.summary} />
+      <button type="button" data-settings-sheet-primary data-testid="companion-restore-replace"
+        onClick={() => void restore.requestReplace(view.summary)}>{t('companion.settings.storage.restoreReplace')}</button>
+    </>;
+  }
+  if (view.step === 'confirm') {
+    return <>
+      <p data-settings-sheet-location>{t('companion.settings.storage.restoreConfirmDescription')}</p>
+      {view.replacesPrevious ? <p className="mt-3" data-settings-sheet-caption role="alert">
+        {t('companion.settings.storage.restoreConfirmPrevious')}</p> : null}
+      <button type="button" data-settings-sheet-primary data-testid="companion-restore-confirm"
+        onClick={() => void restore.replace()}>{t('companion.settings.storage.restoreReplaceConfirm')}</button>
+    </>;
+  }
+  if (view.step === 'replacing') {
+    return <p data-settings-sheet-location role="status" className="flex items-center gap-3">
+      <AppSpinner decorative size="sm" /><span>{t('companion.settings.storage.restoreReplacing')}</span>
+    </p>;
+  }
+  if (view.step !== 'failed') return null;
+  return <>
+    <p data-settings-sheet-location role="alert">{view.error}</p>
+    <button type="button" data-settings-sheet-primary onClick={restore.close}>{t('companion.settings.storage.restoreReopen')}</button>
+  </>;
+}
+
+function RestoreSheetBody({ view, restore }: { view: CompanionBackupRestoreView; restore: Restore }) {
+  const { t } = useLocalization();
+  const { choose } = restore;
   if (view.step === 'reading') {
     return <p data-settings-sheet-location role="status" className="flex items-center gap-3">
       <AppSpinner decorative size="sm" />
       <span>{view.files ? t('companion.settings.storage.restoreReadingFiles', { count: view.files }) : t('companion.settings.storage.restoreReading')}</span>
     </p>;
   }
-  if (view.step === 'ready') return <RestoreSummary summary={view.summary} />;
+  if (view.step !== 'choose') return <ReplaceSteps view={view} restore={restore} />;
   return <>
     <p data-settings-sheet-caption>{t('companion.settings.storage.restoreChooseHint')}</p>
-    {view.step === 'choose' && view.error ? <p data-settings-sheet-location role="alert">{view.error}</p> : null}
+    {view.error ? <p data-settings-sheet-location role="alert">{view.error}</p> : null}
     <button type="button" data-settings-sheet-primary data-testid="companion-restore-zip" onClick={() => void choose('zip')}>
       {t('companion.settings.storage.restoreChooseZip')}
     </button>
@@ -53,6 +86,11 @@ function RestoreSheetBody({ view, choose }: { view: CompanionBackupRestoreView; 
     </button>
   </>;
 }
+
+const SHEET_TITLES: Partial<Record<CompanionBackupRestoreView['step'], Parameters<ReturnType<typeof useLocalization>['t']>[0]>> = {
+  ready: 'companion.settings.storage.restoreReady',
+  confirm: 'companion.settings.storage.restoreConfirmTitle'
+};
 
 export function CompanionBackupRestoreSection() {
   const { t } = useLocalization();
@@ -70,10 +108,11 @@ export function CompanionBackupRestoreSection() {
     <AppDialog open={view.step !== 'closed'} onOpenChange={open => { if (!open) restore.close(); }}>
       <AppDialogPortal><SettingsTouchSheetOverlay /><SettingsTouchSheet>
         <div data-settings-sheet-header>
-          <AppDialogTitle>{t(view.step === 'ready' ? 'companion.settings.storage.restoreReady' : 'companion.settings.storage.restore')}</AppDialogTitle>
-          <button type="button" onClick={restore.close}>{t(view.step === 'reading' ? 'common.cancel' : 'common.done')}</button>
+          <AppDialogTitle>{t(SHEET_TITLES[view.step] ?? 'companion.settings.storage.restore')}</AppDialogTitle>
+          {view.step === 'replacing' || view.step === 'failed' ? null : <button type="button" onClick={restore.close}>
+            {t(view.step === 'reading' || view.step === 'confirm' ? 'common.cancel' : 'common.done')}</button>}
         </div>
-        <RestoreSheetBody view={view} choose={restore.choose} />
+        <RestoreSheetBody view={view} restore={restore} />
       </SettingsTouchSheet></AppDialogPortal>
     </AppDialog>
   </>;

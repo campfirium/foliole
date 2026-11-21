@@ -2,9 +2,19 @@ import { useCallback, useState } from 'react';
 
 import type { CompanionBackupRestoreSource, CompanionBackupRestoreSummary } from '../../lib/platform/companionBackupRestoreContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { discardCompanionBackupRestore, stageCompanionBackupRestore } from '../shared/platform/companion/backupRestore/companionBackupRestore';
+import {
+  commitCompanionBackupRestore,
+  discardCompanionBackupRestore,
+  stageCompanionBackupRestore
+} from '../shared/platform/companion/backupRestore/companionBackupRestore';
 import { getCompanionBackupRestorePort } from '../shared/platform/companion/backupRestore/companionBackupRestoreRuntimeRepository';
-import { getIosCompanionDatabaseOwner, runIosCompanionSideDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { getCompanionFolderBackupPort } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
+import { runWithCompanionAttachmentMaintenance } from '../shared/platform/companion/runtime/companionAttachmentMaintenance';
+import {
+  closeIosCompanionDatabase,
+  getIosCompanionDatabaseOwner,
+  runIosCompanionSideDatabase
+} from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 
 import { companionBackupRestoreMessage } from './companionBackupRestoreMessage';
 
@@ -12,7 +22,12 @@ export type CompanionBackupRestoreView =
   | { step: 'closed' }
   | { step: 'choose'; error: string | null }
   | { step: 'reading'; files: number }
-  | { step: 'ready'; summary: CompanionBackupRestoreSummary };
+  | { step: 'ready'; summary: CompanionBackupRestoreSummary }
+  | { step: 'confirm'; summary: CompanionBackupRestoreSummary; replacesPrevious: boolean }
+  | { step: 'replacing' }
+  | { step: 'failed'; error: string };
+
+export function reloadCompanionApp() { window.location.reload(); }
 
 export function useCompanionBackupRestore() {
   const t = useTranslation();
@@ -34,15 +49,36 @@ export function useCompanionBackupRestore() {
     }
   }, [t]);
 
+  const requestReplace = useCallback(async (summary: CompanionBackupRestoreSummary) => {
+    const previous = await getCompanionBackupRestorePort().previous().catch(() => ({ exists: false }));
+    setView({ step: 'confirm', summary, replacesPrevious: previous.exists });
+  }, []);
+
+  const replace = useCallback(async () => {
+    setView({ step: 'replacing' });
+    try {
+      await commitCompanionBackupRestore({
+        owner: getIosCompanionDatabaseOwner(), port: getCompanionBackupRestorePort(),
+        exclusive: runWithCompanionAttachmentMaintenance, closeDatabase: closeIosCompanionDatabase,
+        forgetBackupFolder: () => getCompanionFolderBackupPort().clearDirectory(), reload: reloadCompanionApp
+      });
+    } catch (error) {
+      setView({ step: 'failed', error: companionBackupRestoreMessage(error, t) });
+    }
+  }, [t]);
+
   /** Reading stops through cancellation; a staged candidate is discarded when the sheet closes. */
   const close = useCallback(() => {
+    if (view.step === 'replacing') return;
     if (view.step === 'reading') {
       void getCompanionBackupRestorePort().cancel();
       return;
     }
+    if (view.step === 'confirm') { setView({ step: 'ready', summary: view.summary }); return; }
+    if (view.step === 'failed') { reloadCompanionApp(); return; }
     if (view.step === 'ready') void discardCompanionBackupRestore({ port: getCompanionBackupRestorePort() }).catch(() => undefined);
     setView({ step: 'closed' });
-  }, [view.step]);
+  }, [view]);
 
-  return { view, open: () => setView({ step: 'choose', error: null }), choose, close };
+  return { view, open: () => setView({ step: 'choose', error: null }), choose, requestReplace, replace, close };
 }

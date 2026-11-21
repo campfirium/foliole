@@ -21,6 +21,32 @@ public final class FolioleCompanionBackupRestorePlugin extends Plugin {
     private boolean running;
     private long lastProgress;
 
+    /** Finish an interrupted library swap before the web layer opens any database. */
+    @Override public void load() {
+        try {
+            FolioleBackupRestoreSwap swap = swap();
+            if (swap.interrupted()) swap.commit(java.time.Instant.now().toString());
+        } catch (Exception error) { android.util.Log.e("FolioleBackupRestore", "Cannot finish interrupted restore", error); }
+    }
+
+    @PluginMethod public synchronized void commit(PluginCall call) {
+        if (running) { call.reject("restore_already_running"); return; }
+        running = true;
+        new Thread(() -> {
+            try { swap().commit(java.time.Instant.now().toString()); call.resolve(); }
+            catch (Exception error) { call.reject(error.getMessage(), error); }
+            finally { finished(); }
+        }, "FolioleBackupRestoreCommit").start();
+    }
+
+    @PluginMethod public void previous(PluginCall call) {
+        try {
+            FolioleBackupRestoreSwap swap = swap();
+            String savedAt = swap.previousSavedAt();
+            call.resolve(new JSObject().put("exists", savedAt != null).put("savedAt", savedAt == null ? org.json.JSONObject.NULL : savedAt));
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+
     @PluginMethod public synchronized void stage(PluginCall call) {
         if (running) { call.reject("restore_already_running"); return; }
         boolean zip = "zip".equals(call.getString("source"));
@@ -103,6 +129,11 @@ public final class FolioleCompanionBackupRestorePlugin extends Plugin {
     }
 
     private synchronized void finished() { running = false; }
+    private FolioleBackupRestoreSwap swap() throws Exception {
+        String name = FolioleCompanionBridgeContractDefinitions.hostApiString(getContext(), "folderBackup", "databaseName");
+        return new FolioleBackupRestoreSwap(getContext().getDatabasePath(name + "SQLite.db"), stagingDatabase(),
+            getContext().getFilesDir(), stagingAttachments());
+    }
     private File stagingDatabase() { return getContext().getDatabasePath(STAGING_DATABASE + "SQLite.db"); }
     private File stagingAttachments() { return new File(new File(getContext().getFilesDir(), "restore-staging"), "attachments"); }
 }

@@ -159,5 +159,13 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.restoreErrorNewer': 'This backup is from a newer version of Foliole. Update Foliole on this phone first.',
   'companion.settings.storage.restoreErrorDamaged': 'The backup library is damaged. Back up again on the other phone.',
   'companion.settings.storage.restoreErrorSpace': 'Not enough free space on this phone. About {size} is needed.',
-  'companion.settings.storage.restoreErrorGeneric': 'Couldn’t read the backup: {reason}'
+  'companion.settings.storage.restoreErrorGeneric': 'Couldn’t read the backup: {reason}',
+  'companion.settings.storage.restoreReplace': 'Replace library on this phone',
+  'companion.settings.storage.restoreConfirmTitle': 'Replace the library on this phone?',
+  'companion.settings.storage.restoreConfirmDescription': 'The library now on this phone is set aside, not deleted, so you can put it back later. This phone keeps its own device identity and won’t sync until you join a sync group. Foliole reopens when it’s done.',
+  'companion.settings.storage.restoreConfirmPrevious': 'The library set aside by your last restore will be replaced by the current one.',
+  'companion.settings.storage.restoreReplaceConfirm': 'Replace',
+  'companion.settings.storage.restoreReplacing': 'Replacing library…',
+  'companion.settings.storage.restoreReopen': 'Reopen Foliole',
+  'companion.settings.storage.restoreErrorNotStaged': 'The backup is no longer ready. Choose it again.'
 } as const;
