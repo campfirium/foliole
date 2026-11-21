@@ -6,7 +6,7 @@ export type SequentialReadingProfile = NonNullable<WorkspaceNodeSnapshot['readin
 export type SequentialReadingNode = Pick<WorkspaceNodeSnapshot,
   'id' | 'parentNodeId' | 'kind' | 'title' | 'content' | 'createdAt' | 'updatedAt'> &
   Partial<Pick<WorkspaceNodeSnapshot, 'reading' | 'review' | 'priority' | 'shelvedAt' | 'manualChildOrder' |
-    'sequentialReadingEnabled' | 'hasContent' | 'hasReveal' | 'reveal'>> & {
+    'sequentialReadingEnabled' | 'hasContent' | 'hasReveal' | 'reveal' | 'deletedAt'>> & {
       specialKind?: string;
       anchorLink?: { kind: 'highlight' | 'cloze' | 'image-excerpt' } | null;
     };

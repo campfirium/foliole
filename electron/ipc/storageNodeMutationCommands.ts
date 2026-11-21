@@ -34,6 +34,7 @@ import { parseSplitTopicArgs } from './splitTopicCommandArgs.js';
 import { readObjectArg } from './storageCommandSupport.js';
 import { handleLocalContentEditCommand } from './storageLocalContentEditCommand.js';
 import { buildNodeMutationPatchResult, completeCreatedNodeCreation, completeWorkspaceMutation, type OriginWindow } from './storageNodeMutationResult.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function readNowMs() {
   return performance.now();
@@ -75,10 +76,21 @@ function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' |
 
 function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseSoftDeleteNodesArgs(args);
-  const annotationHistory = softDeleteNodesWithParents(parsed);
+  const { annotationHistory, readingNodeIds } = softDeleteNodesWithParents(parsed);
   scheduleMirrorSync([...parsed.nodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
+  notifyTrashReadingChanged(readingNodeIds);
   return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds, ...(annotationHistory ? { annotationHistory } : {}) }, originWindow, { kind: 'nodes',
     nodeIds: [...parsed.nodeIds, ...parsed.parentUpdates?.map(parent => parent.nodeId) ?? []], structure: true });
+}
+
+/**
+ * A move to or from Trash can free or retake a Sequential Reading slot. Every window, including the one that
+ * made the change and merges the structural result itself, rereads just the changed reading states.
+ */
+function notifyTrashReadingChanged(readingNodeIds: readonly string[] | undefined) {
+  if (!readingNodeIds?.length) return;
+  notifyWorkspaceContentChanged(null, { requestSync: false,
+    workspaceScope: { kind: 'nodes', nodeIds: [], readingNodeIds: [...readingNodeIds] } });
 }
 
 function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
@@ -205,8 +217,9 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.restoreNodes) {
     const parsed = parseRestoreNodesArgs(args);
-    const result = restoreNodesWithParents(parsed);
+    const { readingNodeIds, ...result } = restoreNodesWithParents(parsed);
     scheduleMirrorSync([...result.restoredNodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
+    notifyTrashReadingChanged(readingNodeIds);
     return completeWorkspaceMutation(result, originWindow, { kind: 'nodes',
       nodeIds: [...parsed.nodeIds, ...parsed.parentUpdates?.map(parent => parent.nodeId) ?? []], structure: true });
   }

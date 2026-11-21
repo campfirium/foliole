@@ -1,10 +1,9 @@
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { prepareWorkspaceNodeChildrenIndex } from '../../../../features/nodes/model/workspaceNodeChildrenIndex';
-import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
-import { loadCompanionWriteNodes } from './companionWriteNodes';
+import { loadCompanionBatchTrashNodes, maintainCompanionBatchTrashReading } from './companionTrashSequentialReading';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export type CompanionBatchTarget = { id: string; version: string };
@@ -42,20 +41,22 @@ export function canMoveCompanionBatchNodeToTrash(node: WorkspaceNodeSnapshot | u
 }
 
 export function moveCompanionBatchToTrash(targets: readonly CompanionBatchTarget[]) {
+  let readingNodeIds: string[] = [];
   return runCompanionHistoryMutation(async db => {
-    // Batch moves to Trash skip Sequential Reading maintenance, so the moved subtrees and their ancestors suffice.
-    const nodes = await loadCompanionWriteNodes(db, targets.map(target => target.id), { sequentialReading: false })
-      ?? (await loadIosCompanionWorkspaceSnapshot(db))?.nodesById ?? {};
+    const context = await loadCompanionBatchTrashNodes(db, targets.map(target => target.id));
+    const nodes = context.nodes;
     if (targets.some(({ id, version }) => !canMoveCompanionBatchNodeToTrash(nodes[id]) ||
       nodes[id]?.currentVersionId !== version)) throw new Error('workspace_batch_selection_changed');
     const now = new Date().toISOString();
     const host = await iosCompanionHostName(db);
     const changes = collectCompanionBatchSubtree(nodes, targets.map(target => target.id)).filter(node => !node.deletedAt);
     if (changes.some(node => node.webPublishedAt)) throw new Error('workspace_batch_published_topic');
-    const records = await Promise.all(changes.map(node => createCompanionMetadataVersion(db, {
-      ...node, deletedAt: now, updatedAt: now
-    }, host)));
-    await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash');
+    const trashed = changes.map(node => ({ ...node, deletedAt: now, updatedAt: now }));
+    const readings = maintainCompanionBatchTrashReading(context, { ...nodes, ...Object.fromEntries(trashed.map(node => [node.id, node])) },
+      targets.map(target => target.id), now);
+    const records = await Promise.all(trashed.map(node => createCompanionMetadataVersion(db, node, host)));
+    await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash', 'local_mutation', null, readings);
+    readingNodeIds = readings.map(change => change.nodeId);
     return changes.map(node => node.id);
-  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, trash: true }));
+  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, trash: true, ...(readingNodeIds.length ? { readingNodeIds } : {}) }));
 }

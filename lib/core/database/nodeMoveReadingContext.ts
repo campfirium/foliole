@@ -42,7 +42,10 @@ function loadReadingNodes(driver: DatabaseDriver, nodeIds: string[]): Sequential
   }]));
 }
 
-export function captureMoveReadingScope(driver: DatabaseDriver, input: NativeMoveNodesArgs) {
+/** The changed nodes and the parents they end under; a move to or from Trash keeps each node's parent. */
+export type ReadingScopeInput = { nodes: ReadonlyArray<Pick<NativeMoveNodesArgs['nodes'][number], 'nodeId' | 'parentNodeId'>> };
+
+export function captureMoveReadingScope(driver: DatabaseDriver, input: ReadingScopeInput) {
   const ancestorIds = driver.queryAll<{ id: string }>(`WITH RECURSIVE ancestors(id, parent_id) AS (
     SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
     UNION SELECT n.id, n.parent_id FROM nodes n JOIN ancestors a ON n.id = a.parent_id)

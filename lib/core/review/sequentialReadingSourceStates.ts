@@ -1,4 +1,4 @@
-import { isUnavailableSequentialTopic, unavailableFolderTopicOccupiesSlot } from './sequentialReadingSlotOccupancy.js';
+import { isTrashedSequentialNode, isUnavailableSequentialTopic, unavailableFolderTopicOccupiesSlot } from './sequentialReadingSlotOccupancy.js';
 import { collectSequentialDerivedTopicIds } from './sequentialReadingSourceOrder.js';
 import { isSequentialReadingSourceNode } from './sequentialReadingSources.js';
 import { sequentialReadingState, type SequentialReadingStateNodes } from './sequentialReadingState.js';
@@ -12,13 +12,17 @@ export interface SequentialReadingStateChange {
 /** Source preferences change reading state; intervals and progress remain database facts. */
 export function planSequentialReadingSourceStates(args: {
   enabled: boolean; sourceNodeId: string; nodeOrder: string[]; nodesById: SequentialReadingStateNodes;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   const sourceNode = args.nodesById[args.sourceNodeId];
   if (!sourceNode || !isSequentialReadingSourceNode(sourceNode, args.nodesById)) return null;
   const changes: SequentialReadingStateChange[] = [];
   let released = false;
+  // A trashed topic keeps its parent for restore, but it neither holds a slot nor receives a new state.
+  const trashed = new Set(args.trashedNodeIds ?? []);
   for (const nodeId of collectSequentialDerivedTopicIds(args)) {
     const node = args.nodesById[nodeId];
+    if (isTrashedSequentialNode(node, trashed)) continue;
     if (isUnavailableSequentialTopic(node)) {
       released ||= args.enabled && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
       continue;

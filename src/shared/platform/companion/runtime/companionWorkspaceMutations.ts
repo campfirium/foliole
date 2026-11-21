@@ -11,6 +11,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { withStoredTrashReadings } from './companionTrashSequentialReading';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -31,9 +32,12 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const narrowNodes = await loadNarrowWriteNodes(db, command);
     const snapshot = narrowNodes ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrowNodes && !snapshot) throw new Error('workspace_unavailable');
-    const nodes = narrowNodes ?? snapshot!.nodesById;
-    const mutation = buildWorkspaceMetadataMutation(command, nodes, now);
-    const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node => [node.id, node])) };
+    const loaded = narrowNodes ?? snapshot!.nodesById;
+    const mutation = buildWorkspaceMetadataMutation(command, loaded, now);
+    // A restored topic retakes its Sequential Reading slot from its stored reading profile.
+    const nodes = command.type === 'restore' ? await withStoredTrashReadings(db, loaded, mutation.nodes.map(node => node.id)) : loaded;
+    const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node =>
+      [node.id, nodes === loaded ? node : { ...node, reading: nodes[node.id]?.reading ?? node.reading }])) };
     // The narrow read holds every Sequential Reading source in reach and what maintaining it consumes.
     const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
       changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot?.nodeOrder ?? companionWriteNodeOrder(nodes), command.nodeId])], now });

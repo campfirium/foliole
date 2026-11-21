@@ -10,6 +10,7 @@ import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js
 
 import { handleInvokeRequest } from './commands.js';
 import { registerMoveCommandCoverage } from './storageNodeMove.test-support.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
@@ -30,6 +31,10 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
+vi.mock('./workspaceContentChangedEvents.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./workspaceContentChangedEvents.js')>();
+  return { ...actual, notifyWorkspaceContentChanged: vi.fn(actual.notifyWorkspaceContentChanged) };
+});
 vi.mock('./boot.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('./boot.js')>(),
   appendBootEvent: vi.fn(async () => undefined)
@@ -84,6 +89,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(moveNodes).mockReturnValue({ movedNodeIds: ['node-2'], parentOrders: [], nodes: [], readings: [] });
   vi.mocked(restoreNodes).mockReturnValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
+  vi.mocked(softDeleteNodes).mockReturnValue({ annotationHistory: undefined, readingNodeIds: [] });
 });
 
 it('handles node mutation commands', async () => {
@@ -220,6 +226,19 @@ it('handles soft delete node command', async () => {
     nodeIds: ['node-1', 'node-2'],
     deletedAt: '2026-03-06T00:00:00.000Z'
   });
+});
+
+it('has every window, including the one that moved a topic to or from Trash, reread the reading states it changed', async () => {
+  const readingScope = { requestSync: false, workspaceScope: { kind: 'nodes', nodeIds: [], readingNodeIds: ['next'] } };
+  vi.mocked(softDeleteNodes).mockReturnValue({ annotationHistory: undefined, readingNodeIds: ['next'] });
+  await expect(handleInvokeRequest({ command: 'soft_delete_nodes', args: { nodeIds: ['active'], deletedAt: '2026-11-21T00:00:00.000Z' } }))
+    .resolves.toEqual({ deletedNodeIds: ['active'] });
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledWith(null, readingScope);
+  vi.mocked(notifyWorkspaceContentChanged).mockClear();
+  vi.mocked(restoreNodes).mockReturnValue({ restoredNodeIds: ['active'], skippedConflicts: [], readingNodeIds: ['next'] });
+  await expect(handleInvokeRequest({ command: 'restore_nodes', args: { nodeIds: ['active'] } }))
+    .resolves.toEqual({ restoredNodeIds: ['active'], skippedConflicts: [] });
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledWith(null, readingScope);
 });
 
 it('handles restore and permanent delete node commands', async () => {
