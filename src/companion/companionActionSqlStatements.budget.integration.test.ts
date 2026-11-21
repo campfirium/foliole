@@ -8,6 +8,10 @@ import { saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/curre
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { readCompanionContentSource, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
 import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { addCompanionDiveSource, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
+import { replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
+import { changeCompanionIndexSource } from '../shared/platform/companion/runtime/companionIndexSources';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
@@ -16,6 +20,7 @@ import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/c
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveCompanionSyncNodeReadingRecord, saveCompanionSyncNodeViewState } from '../shared/platform/companionSyncStateWriters';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { seedCompanionReviewHistory } from './companionFlowHistory.testSupport';
 import { persistFlowMutation } from './companionFlowMutation';
@@ -61,6 +66,9 @@ async function openWorkspace() {
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'ax', kind: 'item', parentNodeId: 'a', title: 'ax' });
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'gone' });
   await mutateCompanionWorkspace({ type: 'shelve', nodeId: 'shelved' });
+  await mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive', title: 'dive', sourceId: 'b' });
+  await mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index', title: 'index' });
+  await changeCompanionIndexSource('index', 'c', 'add');
   await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder',
     childIds: ['c', 'a', 'gone', 'b', 'shelved'], now: '2026-11-21T00:00:00.000Z', hostName: 'Search' }), { kind: 'business' });
   await refreshCompanionWorkspaceAfterMutation(null);
@@ -77,6 +85,14 @@ async function openReviewFlow(mode: 'review-first' | 'reading-only') {
   return { ...session, isAnswerRevealed: true };
 }
 const workspaceSnapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+
+const replayMove = (mode: 'undo' | 'redo') => async () => {
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' });
+  const history = companionFlowHistoryKey('Search');
+  if (mode === 'redo') await replayCompanionFlowHistory(history, 'undo', createEmptyReviewSession());
+  await refreshCompanionWorkspaceAfterMutation();
+  return () => replayCompanionFlowHistory(history, mode, createEmptyReviewSession());
+};
 
 async function currentVersions(ids: string[]) {
   const snapshot = (await refreshCompanionWorkspaceAfterMutation())!;
@@ -122,6 +138,14 @@ const ACTIONS: Record<string, Action> = {
   shelve: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 51, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'shelve', nodeId: 'b' })) },
   unshelve: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 50, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'unshelve', nodeId: 'shelved' })) },
   priority: { budget: { write: 15, refresh: 6 }, overBudget: { wa: 'WA-057', write: 48, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 })) },
+  'undo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 52, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('undo')) },
+  'redo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 52, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('redo')) },
+  'Dive creation': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 38, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' })) },
+  'Virtual folder creation': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 39, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' })) },
+  'Dive source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 35, refresh: 6 }, run: workspace(() => addCompanionDiveSource('dive', 'c')) },
+  'Dive source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => removeCompanionDiveSources('dive', ['b'])) },
+  'Virtual folder source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 35, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'a', 'add')) },
+  'Virtual folder source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'c', 'remove')) },
   'reading progress': { budget: { write: 10, refresh: 3 }, run: workspace(() => saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading: {
     intervalDurationMs: 1, intervalGrowthFactor: 2, lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z',
     priority: 5, readingPosition: 3, repetitionCount: 1, state: 'active' } })) },
