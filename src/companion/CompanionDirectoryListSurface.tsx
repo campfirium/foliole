@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -114,6 +114,15 @@ function CompanionDirectoryEmptyState({ action, title }: { action?: ReactNode; t
     description="" surface="floating" title={title} />;
 }
 
+/** Flush with the page rail so entering selection shifts rows by only the box and its gap. */
+const companionBatchCheckClassName = 'flex h-5 w-5 items-center justify-center rounded-[6px] border-[1.5px] '
+  + 'border-[rgb(var(--role-ink-muted-rgb)/0.45)] text-companion-base transition-colors '
+  + '[&>svg]:scale-75 [&>svg]:opacity-0 [&>svg]:transition '
+  + 'peer-checked:border-companion-accent peer-checked:bg-companion-accent '
+  + 'peer-checked:[&>svg]:scale-100 peer-checked:[&>svg]:opacity-100 peer-disabled:opacity-40 '
+  + 'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 '
+  + 'peer-focus-visible:outline-companion-accent';
+
 export function CompanionDirectoryList(props: {
   batchMode?: CompanionListBatchMode | undefined;
   containerNodeId?: string | undefined;
@@ -145,11 +154,14 @@ export function CompanionDirectoryList(props: {
       if (entry.kind === 'item') {
         const row = batch.rowSelection(entry.item);
         return <div className="flex min-w-0 items-center">
-          {row && <label className="flex h-11 w-11 shrink-0 items-center justify-center">
-            <input type="checkbox" className="h-5 w-5 accent-companion-accent" checked={row.checked} disabled={batch.busy} onChange={row.toggle}
+          {row && <label className="flex h-11 w-8 shrink-0 cursor-pointer items-center">
+            <input type="checkbox" className="peer sr-only" checked={row.checked} disabled={batch.busy} onChange={row.toggle}
               aria-label={t('companion.batch.selectRow', { title: entry.item.title })} />
+            <span aria-hidden="true" className={companionBatchCheckClassName}>
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </span>
           </label>}
-          {batch.active && !row && <span aria-hidden="true" className="h-11 w-11 shrink-0" />}
+          {batch.active && !row && <span aria-hidden="true" className="h-11 w-8 shrink-0" />}
           <div className={`min-w-0 flex-1 ${batch.active && !row ? 'opacity-50' : ''}`} inert={batch.active && (!row || batch.busy)}>
             <DirectoryRow directory={props.directory} item={entry.item} selecting={batch.active} checked={row?.checked}
               markKind={entry.sectionId === 'current'} containerNodeId={props.containerNodeId}
