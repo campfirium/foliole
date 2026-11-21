@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 
 import { measurePdfTextLayerCropBox, type PdfCropBox } from '../model/pdfAutoCrop';
 
@@ -15,16 +15,20 @@ export function useSimplePdfCropMeasurement(props: {
     lifetime.active = true;
     return () => { lifetime.active = false; lifetime.cancel(); };
   }, [lifetime]);
-  return () => {
+  // react-pdf redraws the whole text layer whenever this callback changes, so it changes only with the page or width.
+  const latest = useRef(props);
+  latest.current = props;
+  return useCallback(() => {
     if (!lifetime.active) return;
     lifetime.cancel();
-    if (props.cropBox) { props.onLayoutReady?.(); return; }
-    lifetime.cancel = measureAfterTextLayout(props.pageRef.current, (cropBox) => {
+    const current = latest.current;
+    if (current.cropBox) { current.onLayoutReady?.(); return; }
+    lifetime.cancel = measureAfterTextLayout(current.pageRef.current, (cropBox) => {
       if (!lifetime.active) return;
-      props.onCropBoxChange(cropBox);
-      props.onLayoutReady?.();
+      latest.current.onCropBoxChange(cropBox);
+      latest.current.onLayoutReady?.();
     });
-  };
+  }, [lifetime]);
 }
 
 function measureAfterTextLayout(element: HTMLElement | null, onChange: (cropBox: PdfCropBox | null) => void) {

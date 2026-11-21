@@ -72,3 +72,16 @@ it('cancels the retry when the page unmounts', () => {
   expect(measurePdfTextLayerCropBox).toHaveBeenCalledTimes(1);
   expect(props.onCropBoxChange).not.toHaveBeenCalled();
 });
+
+it('keeps the text layer callback stable while the parent re-renders', () => {
+  const { result, rerender, props } = setup();
+  const first = result.current;
+  const onLayoutReady = vi.fn();
+  rerender({ ...props, onCropBoxChange: vi.fn(), onLayoutReady });
+  expect(result.current).toBe(first);
+  rerender({ ...props, cropBox: crop as never, onLayoutReady });
+  expect(result.current).toBe(first);
+  act(() => { result.current(); });
+  expect(onLayoutReady).toHaveBeenCalledTimes(1);
+  expect(measurePdfTextLayerCropBox).not.toHaveBeenCalled();
+});
