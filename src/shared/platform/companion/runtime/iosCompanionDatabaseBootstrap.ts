@@ -1,10 +1,13 @@
 import { CapacitorSQLite } from '@capacitor-community/sqlite';
 
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { bindParentOrderWriterWithDbPort } from '../../../../../lib/core/sync/parentOrderWriter';
-import type {
-  NativeCompanionBootstrapPayload,
-  NativeCompanionBootstrapState
+import {
+  COMPANION_DATABASE_VERSION,
+  type NativeCompanionBootstrapPayload,
+  type NativeCompanionBootstrapState
 } from '../../../../../lib/platform/nativeCompanionContract';
+import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { bindCompanionAutomaticFolderBackup } from '../folderBackup/companionAutomaticFolderBackup';
 import { invalidateCompanionReadingScope } from '../reading/companionReadingScope';
@@ -17,6 +20,7 @@ import { CompanionDatabaseManager } from './companionDatabaseManager';
 import { stopCompanionForegroundTime } from './companionForegroundTime';
 import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
 import { bindCompanionNodePriorities } from './companionNodePriorityBinding';
+import { createOwnedCompanionConnection } from './companionOwnedConnection';
 import { closeCompanionReadIntents } from './companionReadIntents';
 
 export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
@@ -26,6 +30,7 @@ export interface IosCompanionDatabaseBootstrapOptions {
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
+let activeManager: IosCompanionDatabaseManager | null = null;
 let stopFolderBackup: (() => void | Promise<void>) | null = null;
 let unsubscribeNodePriorities: (() => void) | null = null;
 let lifecycleTail: Promise<void> = Promise.resolve();
@@ -33,6 +38,23 @@ let lifecycleTail: Promise<void> = Promise.resolve();
 export function getIosCompanionDatabaseOwner() {
   if (!activeOwner) throw new Error('iOS companion database owner is not ready.');
   return activeOwner;
+}
+
+/** Run a task on a closed side database next to the library, such as a restore candidate. */
+export async function runCompanionSideDatabase<T>(manager: IosCompanionDatabaseManager, platform: 'android' | 'ios',
+  database: string, task: (db: DbPort) => Promise<T>) {
+  const connection = await createOwnedCompanionConnection(manager, false, database, COMPANION_DATABASE_VERSION);
+  try {
+    await connection.open();
+    return await task(createCapacitorSqliteDbPort(connection, platform));
+  } finally {
+    await manager.closeConnection(database, false);
+  }
+}
+
+export function runIosCompanionSideDatabase<T>(database: string, task: (db: DbPort) => Promise<T>) {
+  if (!activeOwner || !activeManager) throw new Error('iOS companion database owner is not ready.');
+  return runCompanionSideDatabase(activeManager, activeOwner.platform, database, task);
 }
 
 export function closeIosCompanionDatabase() {
@@ -50,7 +72,7 @@ async function closeActiveDatabase() {
   await stopCompanionForegroundTime();
   invalidateCompanionReadingScope();
   await owner?.close();
-  if (activeOwner === owner) activeOwner = null;
+  if (activeOwner === owner) { activeOwner = null; activeManager = null; }
 }
 
 export function initializeIosCompanionDatabase(
@@ -95,6 +117,7 @@ async function initializeDatabase(
     throw error;
   }
   activeOwner = owner;
+  activeManager = manager;
   invalidateCompanionReadingScope();
   unsubscribeNodePriorities = bindCompanionNodePriorities(owner);
   stopFolderBackup = await bindCompanionAutomaticFolderBackup(owner);

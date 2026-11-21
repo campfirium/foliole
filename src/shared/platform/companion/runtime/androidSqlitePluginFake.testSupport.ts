@@ -11,7 +11,8 @@ interface NativeConnection { db: Database.Database | null; readonly: boolean }
  * Mirrors the Android native SQLite plugin dictionary: native connections outlive the
  * JavaScript document, while each plugin wrapper only knows its own entries.
  */
-export function createAndroidSqlitePluginFake(file: string) {
+export function createAndroidSqlitePluginFake(file: string, sideDatabaseFile?: (database: string) => string) {
+  const fileOf = (database: string) => sideDatabaseFile?.(database) ?? file;
   const connections = new Map<string, NativeConnection>();
   const abandoned: Database.Database[] = [];
   const key = ({ database, readonly }: Target) => `${readonly ? 'RO' : 'RW'}_${database}`;
@@ -42,11 +43,11 @@ export function createAndroidSqlitePluginFake(file: string) {
     },
     async open(target: Target) {
       const connection = find(target);
-      connection.db ??= new Database(file, { readonly: target.readonly });
+      connection.db ??= new Database(fileOf(target.database), { readonly: target.readonly });
     },
     async isDBOpen(target: Target) { return { result: Boolean(find(target).db) }; },
     async isTransactionActive(target: Target) { return { result: Boolean(find(target).db?.inTransaction) }; },
-    async getUrl(target: Target) { find(target); return { url: `file://${file}` }; },
+    async getUrl(target: Target) { find(target); return { url: `file://${fileOf(target.database)}` }; },
     async query(options: Target & { statement: string; values: unknown[] }) {
       return opened(options).query(options.statement, options.values.map(fromAndroidValue));
     },

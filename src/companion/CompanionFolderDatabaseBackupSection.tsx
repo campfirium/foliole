@@ -10,6 +10,7 @@ import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection
 import { SettingsValueRow } from '../shared/ui/SettingsValueRow';
 
 import { CompanionBackupLocationDialog } from './CompanionBackupLocationDialog';
+import { CompanionBackupRestoreSection } from './CompanionBackupRestoreSection';
 import { companionBackupSummary } from './companionBackupSummary';
 import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
 
@@ -68,6 +69,7 @@ export function CompanionFolderDatabaseBackupSection() {
           </AppButton></SettingsControlSlot>
         </SettingsRow>
       </SettingsSection>
+      <CompanionBackupRestoreSection />
       <CompanionBackupLocationDialog open={locationOpen} onOpenChange={setLocationOpen} working={working}
         label={state?.directoryLabel ?? ''}
         onChange={() => { setLocationOpen(false); void run(true); }} />

@@ -49,6 +49,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CapacitorSQLitePlugin.class);
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
         registerPlugin(FolioleCompanionFolderBackupPlugin.class);
+        registerPlugin(FolioleCompanionBackupRestorePlugin.class);
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         registerPlugin(FolioleCompanionShareInboxPlugin.class);
