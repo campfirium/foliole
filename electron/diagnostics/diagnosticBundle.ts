@@ -7,6 +7,7 @@ import type { App } from 'electron';
 import type { NativeCopyDiagnosticReportResult } from '../../lib/platform/nativeUtilityContract.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 
+import { summarizeRuntimeErrors } from './diagnosticErrorSummary.js';
 import { redactDiagnosticValue } from './diagnosticRedactor.js';
 
 interface FileSummary {
@@ -33,7 +34,6 @@ interface FormattedRecord {
 }
 
 const MAX_TAIL_BYTES = 128 * 1024;
-const MAX_RECENT_ERRORS = 8;
 const MAX_BOOT_EVENTS = 8;
 const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
@@ -122,9 +122,9 @@ async function collectRecentRuntimeErrors(logsDir: string) {
     const text = await readTail(path.join(logsDir, file.name));
     return parseNdjsonTail(text)
       .filter((record) => record.level === 'error' || record.level === 'warn')
-      .map((record) => ({ ...formatRecord(record), file: file.name }));
+      .map((record) => ({ ...formatRecord(record), file: file.name, level: record.level ?? 'warn', payload: record.payload }));
   }))).flat();
-  return records.slice(-MAX_RECENT_ERRORS);
+  return summarizeRuntimeErrors(records);
 }
 
 async function collectRecentBootEvents(logsDir: string) {
@@ -202,7 +202,7 @@ export async function copyDiagnosticReport(args: {
     '',
     'Recent errors and warnings:',
     recentErrors.length > 0
-      ? recentErrors.map(formatRecordLine).join('\n')
+      ? recentErrors.join('\n')
       : '- None found in recent runtime log tails.',
     '',
     'Startup summary:',

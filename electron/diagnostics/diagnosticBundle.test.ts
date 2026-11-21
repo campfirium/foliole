@@ -153,10 +153,10 @@ it('keeps errors from the newest runtime file when older files exceed the report
   const crashDir = path.join(root, 'crashDumps');
   await fs.mkdir(logsDir, { recursive: true });
   await fs.mkdir(crashDir, { recursive: true });
-  const olderRecords = Array.from({ length: 8 }, (_, index) => JSON.stringify({
+  const olderRecords = Array.from({ length: 12 }, (_, index) => JSON.stringify({
     event: `older_error_${index}`,
     level: 'error',
-    occurred_at: `2026-06-05T10:00:0${index}.000Z`
+    occurred_at: `2026-06-05T10:00:${String(index).padStart(2, '0')}.000Z`
   }));
   await fs.writeFile(
     path.join(logsDir, 'runtime-2026-06-05.ndjson'),
@@ -182,4 +182,48 @@ it('keeps errors from the newest runtime file when older files exceed the report
 
   expect(result.report_text).toContain('newest_error');
   expect(result.report_text).not.toContain('older_error_0');
+});
+
+it('shows each recent failure once with its redacted error text and repeat count', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-summary-'));
+  roots.push(root);
+  const logsDir = path.join(root, 'logs');
+  const crashDir = path.join(root, 'crashDumps');
+  await fs.mkdir(logsDir, { recursive: true });
+  await fs.mkdir(crashDir, { recursive: true });
+  const noisy = Array.from({ length: 6 }, (_, index) => JSON.stringify({
+    event: 'native_node_source_update_payload_invalid',
+    level: 'warn',
+    occurred_at: `2026-11-21T05:37:${String(index).padStart(2, '0')}.000Z`,
+    payload: { action: 'load_runtime_node_source_update_preview' },
+    source: 'renderer.bridge'
+  }));
+  const importFailure = JSON.stringify({
+    event: 'native_import_file_selection_failed',
+    level: 'warn',
+    occurred_at: '2026-11-21T05:38:32.595Z',
+    payload: {
+      action: 'select_runtime_import_text_file',
+      error: {
+        message: "Error invoking remote method 'foliole:invoke': Error: EPERM: operation not permitted, open '/Volumes/Books/某本书.epub'",
+        name: 'Error'
+      }
+    },
+    source: 'renderer.bridge'
+  });
+  await fs.writeFile(path.join(logsDir, 'runtime-2026-11-21.ndjson'), `${[...noisy, importFailure].join('\n')}\n`, 'utf8');
+
+  const result = await copyDiagnosticReport({
+    app: {
+      getPath: (name: string) => ({ crashDumps: crashDir, logs: logsDir })[name] as string,
+      getVersion: () => '0.1.0'
+    }
+  });
+
+  const lines = result.report_text.split('\n');
+  expect(lines.filter((line) => line.includes('native_node_source_update_payload_invalid'))).toHaveLength(1);
+  expect(result.report_text).toContain('×6');
+  expect(result.report_text).toContain('EPERM: operation not permitted');
+  expect(result.report_text).not.toContain('某本书');
+  expect(result.report_text).not.toContain('/Volumes/Books');
 });
