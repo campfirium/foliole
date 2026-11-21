@@ -54,7 +54,7 @@ async function openLibrary(size: number) {
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'gone' });
   // A hand-ordered folder: its order comes from order sources, not from creation time.
   await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder',
-    childIds: ['c', 'a', 'gone', 'b'], now: '2026-11-21T00:00:00.000Z', hostName: 'Search' }));
+    childIds: ['c', 'a', 'gone', 'b'], now: '2026-11-21T00:00:00.000Z', hostName: 'Search' }), { kind: 'business' });
   await refreshCompanionWorkspaceAfterMutation(null);
   reads.fullSnapshots = 0;
   reads.orderDerivations = 0;
