@@ -9,7 +9,8 @@ import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 
-import { buildCompanionCreatePreview, previewCompanionCreate, previewCompanionTrash } from './companionWorkspacePreview';
+import { buildCompanionCreatePreview, getCompanionWorkspacePreview, previewCompanionCreate, previewCompanionTrash,
+  whenCompanionWorkspaceNodePublished } from './companionWorkspacePreview';
 import { useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
@@ -161,4 +162,60 @@ it('removes a new Dive again when the write fails', async () => {
   expect(workspace.shown().nodesById['dive-new']).toBeDefined();
   await act(async () => { write.reject(new Error('write_failed')); await running; });
   expect(workspace.shown()).toBe(base);
+});
+
+it('keeps a new topic shown over a publication that arrives before the write, and ends once the write publishes it', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createTopic, 'now')); });
+  // Opening another node publishes its open record while the creation is still writing.
+  const opened = { ...base, nodeOpenStateById: { b: { nodeId: 'b', lastOpenedAt: 'now' } } };
+  act(() => { companionWorkspaceSnapshots.reset(opened); });
+  expect(workspace.shown().nodesById['node-new']).toMatchObject({ title: 'New topic' });
+  expect(workspace.shown().nodeOpenStateById).toBe(opened.nodeOpenStateById);
+  const committed = buildCompanionCreatePreview(opened, createTopic, 'later');
+  act(() => { companionWorkspaceSnapshots.reset(committed); });
+  expect(getCompanionWorkspacePreview()).toBeNull();
+  expect(workspace.shown()).toBe(committed);
+  await act(async () => { write.resolve(); await running; });
+  expect(workspace.shown()).toBe(committed);
+});
+
+it('keeps a moved subtree in Trash over a publication that arrives before the write', () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  let withdraw!: () => void;
+  act(() => { withdraw = previewCompanionTrash(['a'], 'now'); });
+  const opened = { ...base, nodeOpenStateById: { b: { nodeId: 'b', lastOpenedAt: 'now' } } };
+  act(() => { companionWorkspaceSnapshots.reset(opened); });
+  expect(workspace.shown().trashedNodeIds).toEqual(['a', 'a1']);
+  expect(workspace.shown().nodeOpenStateById).toBe(opened.nodeOpenStateById);
+  act(() => { withdraw(); });
+  expect(workspace.shown()).toBe(opened);
+});
+
+it('waits for the write to publish a previewed node before recording it, and gives up when the write fails', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  await expect(whenCompanionWorkspaceNodePublished('a')).resolves.toBe(true);
+  const withdraw = previewCompanionCreate(createTopic, 'now');
+  const published = whenCompanionWorkspaceNodePublished('node-new');
+  let settled = false;
+  void published.then(() => { settled = true; });
+  companionWorkspaceSnapshots.reset({ ...base, activeNodeId: 'b' });
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  companionWorkspaceSnapshots.reset(buildCompanionCreatePreview(base, createTopic, 'later'));
+  await expect(published).resolves.toBe(true);
+  withdraw();
+
+  companionWorkspaceSnapshots.reset(base);
+  const failed = previewCompanionCreate(createTopic, 'now');
+  const abandoned = whenCompanionWorkspaceNodePublished('node-new');
+  failed();
+  await expect(abandoned).resolves.toBe(false);
 });

@@ -7,7 +7,10 @@ import { companionWorkspaceSnapshots } from '../shared/platform/companion/compan
 import { collectWorkspaceMetadataSubtree } from '../store/workspaceNodeMetadataHistory';
 import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 
-type WorkspacePreview = { base: WorkspaceSnapshot; snapshot: WorkspaceSnapshot };
+type WorkspacePreview = {
+  base: WorkspaceSnapshot; snapshot: WorkspaceSnapshot; build: (snapshot: WorkspaceSnapshot) => WorkspaceSnapshot;
+  rebased?: { source: WorkspaceSnapshot; result: WorkspaceSnapshot };
+};
 type CompanionCreateCommand = Extract<WorkspaceMetadataCommand, { type: 'create' | 'create-dive' | 'create-index' }>;
 
 let current: WorkspacePreview | null = null;
@@ -22,28 +25,61 @@ export function getCompanionWorkspacePreview() {
   return current;
 }
 
-/** Shows the preview only over the snapshot it was built from; any later publication replaces it. */
+/**
+ * Lays the expected change over the published library. A publication that arrives before the write's own
+ * (an open record, a sync, a derived Virtual folder result) gets the same change laid over it again.
+ */
 export function applyCompanionWorkspacePreview(snapshot: WorkspaceSnapshot | null, preview: WorkspacePreview | null) {
-  return preview && snapshot === preview.base ? preview.snapshot : snapshot;
+  if (!preview || !snapshot) return snapshot;
+  if (snapshot === preview.base) return preview.snapshot;
+  if (preview.rebased?.source !== snapshot) preview.rebased = { source: snapshot, result: preview.build(snapshot) };
+  return preview.rebased.result;
 }
 
 /**
- * Shows the expected library at once while the write runs. The returned function withdraws the
- * preview, which restores the unchanged library when the write did not commit.
+ * Shows the expected library at once while the write runs. The preview ends by itself once a publication
+ * already holds the change; the returned function withdraws it, which restores the library when the write did not commit.
  */
 function previewCompanionWorkspace(build: (base: WorkspaceSnapshot) => WorkspaceSnapshot) {
   const base = companionWorkspaceSnapshots.getSnapshot();
   if (!base) return () => {};
   const snapshot = build(base);
   if (snapshot === base) return () => {};
-  const preview = { base, snapshot };
-  current = preview;
-  notify();
-  return () => {
+  const preview: WorkspacePreview = { base, snapshot, build };
+  const stop = companionWorkspaceSnapshots.subscribe(() => {
+    const published = companionWorkspaceSnapshots.getSnapshot();
+    // The write's result has arrived, or the library it was built for is gone: nothing is left to lay over.
+    if (applyCompanionWorkspacePreview(published, preview) === published) withdraw();
+  });
+  const withdraw = () => {
+    stop();
     if (current !== preview) return;
     current = null;
     notify();
   };
+  current = preview;
+  notify();
+  return withdraw;
+}
+
+/**
+ * For a node shown only ahead of its write, resolves true once a publication holds it and false when its
+ * preview leaves without one; any other node resolves true at once.
+ */
+export function whenCompanionWorkspaceNodePublished(nodeId: string) {
+  const published = () => Boolean(companionWorkspaceSnapshots.getSnapshot()?.nodesById[nodeId]);
+  const previewed = () => Boolean(applyCompanionWorkspacePreview(companionWorkspaceSnapshots.getSnapshot(), current)?.nodesById[nodeId]);
+  if (published() || !previewed()) return Promise.resolve(true);
+  return new Promise<boolean>(resolve => {
+    const check = () => {
+      if (!published() && previewed()) return;
+      stopSnapshots();
+      stopPreview();
+      resolve(published());
+    };
+    const stopSnapshots = companionWorkspaceSnapshots.subscribe(check);
+    const stopPreview = subscribeCompanionWorkspacePreview(check);
+  });
 }
 
 /** Shows the moved nodes in Trash at once while the write runs. */
