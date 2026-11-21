@@ -19,6 +19,7 @@ import { companionDailyFlowPersistence, companionDailyFlowSettings } from './com
 import { appendCompanionFlowHistory, companionFlowHistoryKey } from './companionFlowHistoryStore';
 import { writeCompanionHistoryReadings } from './companionHistoryLearning';
 import { applyCompanionHistoryOrders, captureCompanionHistoryOrders, completeCompanionHistoryOrders, validateCompanionHistoryOrders } from './companionHistoryOrder';
+import { loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: NativeSyncNodeRecord[],
@@ -62,10 +63,10 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
 }
 
 export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry, mode: 'undo' | 'redo') {
-  const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
-  if (!snapshot) throw new Error('workspace_history_unavailable');
+  const base = await loadCompanionHistoryReplayNodes(db, entry) ?? (await loadIosCompanionWorkspaceSnapshot(db))?.nodesById;
+  if (!base) throw new Error('workspace_history_unavailable');
   const loaded = await Promise.all(entry.changes.map(change => loadCompanionWorkspaceNodeFromDb(db, change.nodeId)));
-  const nodes = { ...snapshot.nodesById, ...Object.fromEntries(loaded.filter(node => node !== null).map(node => [node.id, node])) };
+  const nodes = { ...base, ...Object.fromEntries(loaded.filter(node => node !== null).map(node => [node.id, node])) };
   const host = await iosCompanionHostName(db);
   const targets = resolveWorkspaceMetadataHistory(entry, mode, nodes, new Date().toISOString());
   await validateCompanionHistoryOrders(db, entry.orders, mode);
@@ -79,6 +80,17 @@ export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: Worksp
   }
   await applyCompanionHistoryOrders(db, entry.orders, mode, host);
   for (const node of targets) await collectNodeVersionPayloads(db, node.id, Number.MAX_SAFE_INTEGER);
+}
+
+/**
+ * Reads the nodes a replay checks: the changed subtrees, their ancestors and both parents of every change.
+ * A replay writes the saved related readings and parent orders instead of maintaining Sequential Reading,
+ * so it never needs the whole library for them. Returns null when a changed node is gone.
+ */
+export function loadCompanionHistoryReplayNodes(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry) {
+  return loadCompanionWriteNodes(db, [...new Set([entry.rootNodeId, ...entry.changes.map(change => change.nodeId)])], {
+    sequentialReading: false, pathIds: entry.changes.flatMap(change => [change.before?.parentNodeId ?? null, change.after.parentNodeId])
+  });
 }
 
 export async function createCompanionMetadataVersion(db: DbPort, node: WorkspaceNodeSnapshot, host: string, versionId?: string) {

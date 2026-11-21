@@ -1,4 +1,5 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import { parentOrderId } from '../../../../../lib/core/database/parentChildOrder';
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
@@ -94,12 +95,25 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
 }
 
 function flowHistoryRefreshScope(entry: CompanionWorkspaceHistoryEntry): WorkspaceRefreshScope {
-  if (entry.type === 'nodes.change') return { kind: 'nodes', nodeIds: entry.changes.map(change => change.nodeId), structure: true };
+  if (entry.type === 'nodes.change') return nodeHistoryRefreshScope(entry);
   if (entry.type === 'review.grade') return { kind: 'nodes', nodeIds: [], reviewNodeIds: [entry.nodeId] };
   const readings = [{ nodeId: entry.nodeId, beforeReading: entry.beforeReading, afterReading: entry.afterReading },
     ...(entry.relatedReadings ?? [])];
   return { kind: 'nodes', nodeIds: [], readingNodeIds: readings
     .filter(reading => !isSameReadingProfile(reading.beforeReading, reading.afterReading)).map(reading => reading.nodeId) };
+}
+
+/**
+ * A node history replay changes only the named nodes, their saved related readings and the orders of the parents
+ * they leave or enter, so the refresh merges them. An order saved for any other parent needs a complete read.
+ */
+function nodeHistoryRefreshScope(entry: Extract<CompanionWorkspaceHistoryEntry, { type: 'nodes.change' }>): WorkspaceRefreshScope {
+  const reordered = new Set(entry.changes.flatMap(({ before, after }) => before && before.parentNodeId !== after.parentNodeId
+    ? [parentOrderId(before.parentNodeId), parentOrderId(after.parentNodeId)] : []));
+  const readingNodeIds = entry.relatedReadings.map(reading => reading.nodeId);
+  return { kind: 'nodes', nodeIds: entry.changes.map(change => change.nodeId), structure: true,
+    ...(entry.orders.every(order => reordered.has(order.parentId)) ? { metadata: true } : {}),
+    ...(readingNodeIds.length ? { readingNodeIds } : {}) };
 }
 
 export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
