@@ -6,9 +6,37 @@ import { deferNodeContentRefreshUntilPersisted, hasUnconfirmedNodeContent } from
 import { requestWorkspaceSyncRefresh } from './workspaceRefreshScheduler';
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { useWorkspaceStore } from './workspaceStore';
+import type { WorkspaceState } from './workspaceStoreTypes';
 import { mergeWorkspaceSyncProjection, projectionChangesStructure } from './workspaceSyncProjectionMerge';
 
 type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
+
+/**
+ * What the renderer still lists around a structural change: the nodes' current parents and their listed
+ * descendants. The projection rereads their child sequences and confirms which of them still exist, so the
+ * list order and membership are rebuilt without reading the whole library.
+ */
+export function listKnownStructureNodeIds(baseline: Pick<WorkspaceState, 'nodesById'>, roots: Iterable<string>) {
+  const children = new Map<string, string[]>();
+  for (const [id, node] of Object.entries(baseline.nodesById)) {
+    if (!node.parentNodeId) continue;
+    const siblings = children.get(node.parentNodeId);
+    if (siblings) siblings.push(id);
+    else children.set(node.parentNodeId, [id]);
+  }
+  const ids = new Set<string>();
+  const visit = (id: string) => {
+    if (ids.has(id)) return;
+    ids.add(id);
+    children.get(id)?.forEach(visit);
+  };
+  for (const root of roots) {
+    const parent = baseline.nodesById[root]?.parentNodeId;
+    if (parent) ids.add(parent);
+    visit(root);
+  }
+  return [...ids];
+}
 
 export async function refreshWorkspaceSyncProjection(scope: NodeScope, libraryScope: string) {
   const baseline = useWorkspaceStore.getState();
@@ -25,16 +53,18 @@ export async function refreshWorkspaceSyncProjection(scope: NodeScope, librarySc
     }
   }
   const ancestorNodeIds = [...ancestors];
-  let projection = await loadWorkspaceListProjectionFromRuntime(
-    { nodeIds: [...roots], structure: scope.structure === true, libraryScope, ancestorNodeIds });
+  const structureNodeIds = (ids: Iterable<string>) => listKnownStructureNodeIds(baseline, ids);
+  let projection = await loadWorkspaceListProjectionFromRuntime({ nodeIds: [...roots], structure: scope.structure === true,
+    libraryScope, ancestorNodeIds, ...(scope.structure ? { structureNodeIds: structureNodeIds(roots) } : {}) });
   if (!projection.structure && projectionChangesStructure(baseline, projection)) {
     projection = await loadWorkspaceListProjectionFromRuntime(
-      { nodeIds: [...roots], structure: true, libraryScope, ancestorNodeIds });
+      { nodeIds: [...roots], structure: true, libraryScope, ancestorNodeIds, structureNodeIds: structureNodeIds(roots) });
   }
   const missing = projection.structure?.memberIds.filter(id => !baseline.nodesById[id] && !projection.nodesById[id]) ?? [];
   if (missing.length) {
+    const nodeIds = [...roots, ...missing];
     projection = await loadWorkspaceListProjectionFromRuntime(
-      { nodeIds: [...roots, ...missing], structure: true, libraryScope, ancestorNodeIds });
+      { nodeIds, structure: true, libraryScope, ancestorNodeIds, structureNodeIds: structureNodeIds(nodeIds) });
   }
   const activeId = useWorkspaceStore.getState().activeNodeId;
   const activeNode = activeId ? baseline.nodesById[activeId] : null;

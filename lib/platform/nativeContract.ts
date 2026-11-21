@@ -105,7 +105,7 @@ export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommand
     result: import('../core/database/workspaceNodeLearning.js').WorkspaceNodeLearning[];
   };
   [NATIVE_COMMANDS.loadWorkspaceListProjection]: {
-    args: { nodeIds: string[]; ancestorNodeIds?: string[]; structure: boolean; libraryScope: string };
+    args: { nodeIds: string[]; ancestorNodeIds?: string[]; structure: boolean; structureNodeIds?: string[]; libraryScope: string };
     result: WorkspaceListProjection;
   };
   [NATIVE_COMMANDS.loadWorkspaceListSnapshot]: {

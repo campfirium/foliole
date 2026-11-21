@@ -100,6 +100,34 @@ export function deriveScopedVisibleNodeOrder(members: WorkspaceOrderMember[], pr
     : children.filter(child => position.has(child.id)).sort((left, right) => position.get(left.id)! - position.get(right.id)!), true);
 }
 
+/**
+ * Every child, hidden ones included, of each given parent (`null` is the root) in the order the whole
+ * workspace traversal gives them; reads only those parents' members and order sources.
+ */
+export function loadScopedChildOrders(driver: DatabaseDriver, parentNodeIds: Iterable<string | null>) {
+  const parents = [...new Set(parentNodeIds)];
+  const ids = parents.filter((id): id is string => id !== null);
+  const root = parents.includes(null);
+  return driver.transaction(tx => {
+    const members = tx.queryAll<WorkspaceOrderMember>(`${WORKSPACE_ORDER_MEMBERS_SQL}
+      WHERE parent_id IN (SELECT value FROM json_each(?))${root ? ' OR parent_id IS NULL' : ''}`, [JSON.stringify(ids)]);
+    const sources = groupParentOrderSources(tx.queryAll<WorkspaceOrderSourceRow>(`SELECT parent_id, author_id AS authorId,
+      counter, child_ids_json FROM parent_order_sources WHERE parent_id IN (SELECT value FROM json_each(?))
+      ORDER BY parent_id, author_id`, [JSON.stringify(parents.map(parentOrderId))]));
+    const children = new Map<string, WorkspaceOrderMember[]>();
+    for (const member of members) {
+      const parentId = parentOrderId(member.parent_id);
+      const siblings = children.get(parentId);
+      if (siblings) siblings.push(member);
+      else children.set(parentId, [member]);
+    }
+    return parents.map(parentNodeId => {
+      const key = parentOrderId(parentNodeId);
+      return { parentNodeId, childIds: orderWorkspaceChildren(sources.get(key), children.get(key) ?? []).map(member => member.id) };
+    });
+  });
+}
+
 function compareMembers(left: NodeOrderMember, right: NodeOrderMember) {
   return compareUtf8Text(left.created_at, right.created_at) || compareUtf8Text(left.id, right.id);
 }

@@ -122,7 +122,8 @@ it('keeps a local creation committed while an older structure snapshot was being
   useWorkspaceStore.setState(current => ({ nodesById: { ...current.nodesById, 'new-local': node('new-local') },
     nodeOrder: [...current.nodeOrder, 'new-local'] }));
   resolve({ ...projection(), nodesById: {}, requestedNodeIds: [], structure: {
-    memberIds: Object.keys(baseline.nodesById), nodeOrder: baseline.nodeOrder
+    memberIds: Object.keys(baseline.nodesById), checkedNodeIds: [],
+    childOrders: [{ parentNodeId: null, childIds: baseline.nodeOrder.filter(id => !baseline.nodesById[id]?.parentNodeId) }]
   } });
   await running;
   expect(useWorkspaceStore.getState().nodesById['new-local']).toBeDefined();

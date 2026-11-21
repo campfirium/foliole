@@ -91,7 +91,8 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
     }
     const projection = loadWorkspaceListProjection(openDatabaseConnection().driver, {
       nodeIds: asStringArray(args.nodeIds, 'nodeIds'), structure: args.structure === true,
-      ...(args.ancestorNodeIds === undefined ? {} : { ancestorNodeIds: asStringArray(args.ancestorNodeIds, 'ancestorNodeIds') })
+      ...(args.ancestorNodeIds === undefined ? {} : { ancestorNodeIds: asStringArray(args.ancestorNodeIds, 'ancestorNodeIds') }),
+      ...(args.structureNodeIds === undefined ? {} : { structureNodeIds: asStringArray(args.structureNodeIds, 'structureNodeIds') })
     });
     const libraryScope = currentLibraryScope();
     for (const [id, node] of Object.entries(projection.nodesById)) {

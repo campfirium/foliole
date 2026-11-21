@@ -10,6 +10,7 @@ import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStoreTypes';
+import { restoreStructureParentOrders } from './workspaceStructureParentOrders';
 import { resolveSyncProjectionSnapshot } from './workspaceSyncProjectionSnapshot';
 
 export function projectionChangesStructure(current: WorkspaceState, projection: WorkspaceListProjection) {
@@ -25,6 +26,16 @@ function commitChanged(current: Node | undefined, baseline: Node | undefined) {
   return current?.currentVersionId !== baseline?.currentVersionId || current?.updatedAt !== baseline?.updatedAt
     || current?.createdAt !== baseline?.createdAt || current?.parentNodeId !== baseline?.parentNodeId
     || current?.deletedAt !== baseline?.deletedAt;
+}
+
+/** Nodes the projection speaks for: the requested and checked ids, and every listed child of a reread parent. */
+function structureRemovalCandidates(current: WorkspaceState, projection: WorkspaceListProjection) {
+  const candidates = new Set([...projection.requestedNodeIds, ...projection.structure?.checkedNodeIds ?? []]);
+  if (projection.structure) {
+    const parents = new Set(projection.structure.childOrders.map(order => order.parentNodeId));
+    for (const [id, node] of Object.entries(current.nodesById)) if (parents.has(node.parentNodeId ?? null)) candidates.add(id);
+  }
+  return candidates;
 }
 
 export function mergeWorkspaceSyncProjection(
@@ -55,15 +66,16 @@ export function mergeWorkspaceSyncProjection(
     const node = nodesById[payload.nodeId];
     if (node) nodesById[payload.nodeId] = { ...node, review: null };
   }
-  const members = projection.structure ? new Set(projection.structure.memberIds) : null;
-  for (const id of members ? Object.keys(nodesById) : projection.requestedNodeIds) {
-    if ((members ? !members.has(id) : !projection.nodesById[id]) && !hasUnconfirmedNodeContent(id) && !pending.has(id)
+  const structure = projection.structure;
+  const members = new Set([...structure?.memberIds ?? [], ...Object.keys(projection.nodesById)]);
+  for (const id of structureRemovalCandidates(current, projection)) {
+    if (!members.has(id) && !hasUnconfirmedNodeContent(id) && !pending.has(id)
         && !commitChanged(current.nodesById[id], baseline.nodesById[id])) delete nodesById[id];
   }
   const orderChanged = current.nodeOrder.length !== baseline.nodeOrder.length
     || current.nodeOrder.some((id, index) => id !== baseline.nodeOrder[index]);
-  const nodeOrder = readPendingNodeOrder() || orderChanged
-    ? current.nodeOrder : projection.structure?.nodeOrder ?? current.nodeOrder;
+  const nodeOrder = readPendingNodeOrder() || orderChanged || !structure
+    ? current.nodeOrder : restoreStructureParentOrders({ nodeOrder: current.nodeOrder, nodesById }, structure.childOrders);
   const changedIds = new Set([...Object.keys(incoming), ...projection.requestedNodeIds,
     ...readPendingRelearnNodes().map(({ payload }) => payload.nodeId)]);
   const normalized = resolveSyncProjectionSnapshot(current, projection, nodesById, nodeOrder, [...changedIds]);
