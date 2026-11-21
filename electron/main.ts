@@ -19,7 +19,7 @@ import {
   runDesktopDeviceIdentityAcceptance
 } from './deviceIdentityAcceptance.js';
 import { runDesktopSupportLogAction } from './diagnostics/desktopSupportLog.js';
-import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
+import { appendDiagnosticLog, parseDiagnosticLogPayload, setDiagnosticLogAppVersion } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
 import { removeRetiredDesktopLogs } from './diagnostics/retiredDesktopLogs.js';
 import { appendBootEvent } from './ipc/boot.js';
@@ -211,6 +211,7 @@ function installInvokeHandler() {
   );
 }
 
+setDiagnosticLogAppVersion(app.getVersion());
 const deviceIdentityAcceptance = resolveDesktopDeviceIdentityAcceptance();
 if (deviceIdentityAcceptance) {
   void app.whenReady().then(() => runDesktopDeviceIdentityAcceptance(app, deviceIdentityAcceptance));

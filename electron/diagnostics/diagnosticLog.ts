@@ -25,6 +25,12 @@ interface DiagnosticLogRecord {
 }
 
 let writeTail: Promise<void> = Promise.resolve();
+let appVersion: string | null = null;
+
+// Stamps every persisted line so a shared log file alone shows which build wrote it.
+export function setDiagnosticLogAppVersion(version: string | null) {
+  appVersion = version;
+}
 
 function formatDateKey(value: Date) {
   return value.toISOString().slice(0, 10);
@@ -100,7 +106,8 @@ export async function appendDiagnosticLog(
   const write = writeTail.then(async () => {
     await fs.mkdir(logDir, { recursive: true });
     await pruneExpiredLogs(logDir, retentionDays, now);
-    await appendBoundedLogLine(filePath, Buffer.from(`${JSON.stringify(record)}\n`), MAX_DAILY_LOG_BYTES);
+    const line = appVersion ? { ...record, app_version: appVersion } : record;
+    await appendBoundedLogLine(filePath, Buffer.from(`${JSON.stringify(line)}\n`), MAX_DAILY_LOG_BYTES);
   });
   writeTail = write.catch(() => undefined);
   await write;

@@ -10,13 +10,17 @@ const URL_KEY_PATTERN = /(url$|Url$|URL$|href|endpoint_url|resource_url)/u;
 const BODY_SAMPLE_KEY_PATTERN = /(bodyTextSample|body_text_sample|sample|contentPreview|content_preview)/u;
 
 const URL_VALUE_PATTERN = /\b(?:https?|file):\/\/[^\s"'<>]+/giu;
-const UNIX_PATH_VALUE_PATTERN = /(^|[\s([{])\/(?:Users|home|mnt|tmp|var|etc|proc|sys|dev)\/[^\s"'<>)]*/gu;
+const UNIX_PATH_ROOTS = '(?:Users|home|mnt|media|tmp|var|etc|proc|sys|dev|Volumes|private|opt|Applications)';
+// Quoted paths (Node fs errors) may contain spaces in book names, so they are redacted up to the closing quote.
+const QUOTED_UNIX_PATH_VALUE_PATTERN = new RegExp(`(['"])\\/${UNIX_PATH_ROOTS}\\/[^'"]*\\1`, 'gu');
+const UNIX_PATH_VALUE_PATTERN = new RegExp(`(^|[\\s([{=])\\/${UNIX_PATH_ROOTS}\\/[^\\s"'<>)]*`, 'gu');
 const WINDOWS_PATH_VALUE_PATTERN = /\b[A-Z]:\\[^\s"'<>)]*/giu;
 const INLINE_SECRET_VALUE_PATTERN = /\b(authorization|cookie|password|secret|signature|token)\b\s*[:=]\s*(?:Bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/giu;
 
 function redactStringValue(value: string) {
   return value
     .replace(URL_VALUE_PATTERN, REDACTED_URL)
+    .replace(QUOTED_UNIX_PATH_VALUE_PATTERN, (_match, quote: string) => `${quote}${REDACTED_PATH}${quote}`)
     .replace(WINDOWS_PATH_VALUE_PATTERN, REDACTED_PATH)
     .replace(UNIX_PATH_VALUE_PATTERN, (match, prefix: string) => `${prefix}${REDACTED_PATH}`)
     .replace(INLINE_SECRET_VALUE_PATTERN, (_match, key: string) => `${key}=${REDACTED_SECRET}`);

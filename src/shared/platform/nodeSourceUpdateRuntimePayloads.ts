@@ -17,6 +17,21 @@ function isNodeSourceUpdateKind(value: unknown): value is RuntimeNodeSourceUpdat
   return value === 'incoming_update' || value === 'source_update' || value === 'sync_alternative';
 }
 
+// Names only the fields that failed validation so a warning can be located without logging any body text.
+export function describeInvalidNodeSourceUpdatePreview(value: unknown): string[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return [Array.isArray(value) ? 'payload:array' : `payload:${value === null ? 'null' : typeof value}`];
+  }
+  const payload = value as Record<string, unknown>;
+  const invalid: string[] = (['checked_at', 'current_content', 'source_node_id', 'updated_content'] as const)
+    .filter(field => typeof payload[field] !== 'string');
+  invalid.push(...(['current_highlight_count', 'updated_highlight_count'] as const).filter(field => typeof payload[field] !== 'number'));
+  if (payload.incoming_update_id !== undefined && typeof payload.incoming_update_id !== 'string') invalid.push('incoming_update_id');
+  if (payload.kind !== undefined && !isNodeSourceUpdateKind(payload.kind)) invalid.push('kind');
+  if (!textAlternativesSchema.safeParse(payload.alternatives ?? []).success) invalid.push('alternatives');
+  return invalid;
+}
+
 export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSourceUpdatePreview | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;

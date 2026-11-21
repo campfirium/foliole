@@ -27,3 +27,13 @@ it('redacts sensitive diagnostic fields while preserving support context', () =>
     url: '[redacted-url]'
   });
 });
+
+it('redacts external-volume and quoted paths including spaces in file names', () => {
+  expect(redactDiagnosticPayload({
+    message: "EPERM: operation not permitted, open '/Volumes/Books/某本 书.epub'",
+    stderr_tail: 'at readFile (/private/var/folders/x/foliole-epub-1/source.epub)'
+  })).toEqual({
+    message: "EPERM: operation not permitted, open '[redacted-path]'",
+    stderr_tail: 'at readFile ([redacted-path])'
+  });
+});

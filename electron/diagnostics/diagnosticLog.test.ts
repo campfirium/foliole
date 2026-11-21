@@ -12,7 +12,7 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths }));
 
-import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnosticLog.js';
+import { appendDiagnosticLog, parseDiagnosticLogPayload, setDiagnosticLogAppVersion } from './diagnosticLog.js';
 
 afterEach(() => {
   resolveAppPaths.mockReset();
@@ -134,4 +134,19 @@ it('writes runtime diagnostics into the standard app log directory and prunes ol
     },
     source: 'renderer.bridge'
   });
+});
+
+it('stamps persisted runtime lines with the app version once it is known', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-runtime-log-version-'));
+  const logDir = path.join(tempRoot, 'logs');
+  resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
+  setDiagnosticLogAppVersion('0.8.3');
+  try {
+    await appendDiagnosticLog({ event: 'versioned_warning', level: 'warn', occurred_at: '2026-04-23T08:00:00.000Z',
+      payload: {}, source: 'electron.main' }, new Date('2026-04-23T08:00:00.000Z'));
+  } finally {
+    setDiagnosticLogAppVersion(null);
+  }
+  const [line] = fs.readFileSync(path.join(logDir, 'runtime-2026-04-23.ndjson'), 'utf8').trim().split('\n');
+  expect(JSON.parse(line ?? '{}')).toMatchObject({ app_version: '0.8.3', event: 'versioned_warning' });
 });

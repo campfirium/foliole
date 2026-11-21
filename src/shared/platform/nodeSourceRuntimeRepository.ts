@@ -5,6 +5,7 @@ import {
   type RuntimeNodeSourceDetails
 } from './nodeSourceRuntimePayloads';
 import {
+  describeInvalidNodeSourceUpdatePreview,
   toRuntimeNodeSourceUpdatePreview,
   type RuntimeNodeSourceUpdatePreview
 } from './nodeSourceUpdateRuntimePayloads';
@@ -37,7 +38,8 @@ export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<Runt
         action: 'load_runtime_node_source_details',
         area: 'bridge',
         command: NATIVE_COMMANDS.loadNodeSourceDetails,
-        fallback: 'return_null'
+        fallback: 'return_null',
+        node_id: nodeId
       });
     }
     return details;
@@ -71,7 +73,9 @@ export async function loadRuntimeNodeSourceUpdatePreview(nodeId: string): Promis
         action: 'load_runtime_node_source_update_preview',
         area: 'bridge',
         command: NATIVE_COMMANDS.loadNodeSourceUpdatePreview,
-        fallback: 'return_null'
+        fallback: 'return_null',
+        invalid_fields: describeInvalidNodeSourceUpdatePreview(payload),
+        node_id: nodeId
       });
     }
     return preview;
