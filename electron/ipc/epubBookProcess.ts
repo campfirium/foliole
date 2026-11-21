@@ -2,6 +2,7 @@ import { rmSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 
 import { EpubArchiveEntries } from './epubArchiveEntries.js';
+import { replyThenDisconnect } from './epubBookProcessReply.js';
 import { serializeStagedEpubBook } from './epubBookStaging.js';
 import { buildRawEpubBook } from './epubImportBook.js';
 import { epubImageFilePath } from './epubStagedContent.js';
@@ -32,10 +33,9 @@ async function run() {
 }
 
 void run().then(
-  (book) => { finished = true; process.send?.({ book }); process.disconnect?.(); },
+  (book) => { finished = true; replyThenDisconnect({ book }); },
   (error: unknown) => {
     finished = true;
-    process.send?.({ error: error instanceof Error ? error.message : String(error) });
-    process.disconnect?.();
+    replyThenDisconnect({ error: error instanceof Error ? error.message : String(error) });
   }
 );
