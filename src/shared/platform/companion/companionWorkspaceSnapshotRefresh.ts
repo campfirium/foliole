@@ -32,6 +32,8 @@ async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null;
     const scoped = input.current && input.scope.kind === 'nodes'
       ? await (!input.scope.structure ? readScoped : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
       : null;
+    // A move to Trash only drops the trashed subtree from the visible order, which the merge already did.
+    if (scoped && input.scope.kind === 'nodes' && input.scope.structure && input.scope.trash) orderedNodeIds = scoped.nodeOrder;
     const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });

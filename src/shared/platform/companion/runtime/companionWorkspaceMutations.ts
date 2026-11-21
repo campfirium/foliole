@@ -10,6 +10,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { loadCompanionTrashWriteNodes } from './companionTrashWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow?: { session: ReviewSessionState; mode: ReviewSessionMode }) {
@@ -24,12 +25,16 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const now = new Date().toISOString();
     if (command.type === 'create-index') await ensureSyncSpecialRootNodes(db, [{ nodeId: VIRTUAL_ROOT_NODE_ID, referencedAt: now }]);
     const host = await iosCompanionHostName(db);
-    const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
-    if (!snapshot) throw new Error('workspace_unavailable');
-    const nodes = snapshot.nodesById;
+    // A move to Trash reads only the nodes it consumes; anything else needs the whole library.
+    const trashNodes = command.type === 'delete'
+      ? await loadCompanionTrashWriteNodes(db, [command.nodeId], { sequentialReading: true }) : null;
+    const snapshot = trashNodes ? null : await loadIosCompanionWorkspaceSnapshot(db);
+    if (!trashNodes && !snapshot) throw new Error('workspace_unavailable');
+    const nodes = trashNodes ?? snapshot!.nodesById;
     const mutation = buildWorkspaceMetadataMutation(command, nodes, now);
     const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node => [node.id, node])) };
-    const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
+    // The narrow Trash read already proved that no Sequential Reading source or locked item is in reach.
+    const readings = command.type === 'rename' || !snapshot ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
       changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot.nodeOrder, command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
     const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;

@@ -4,6 +4,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { loadCompanionTrashWriteNodes } from './companionTrashWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export type CompanionBatchTarget = { id: string; version: string };
@@ -42,8 +43,9 @@ export function canMoveCompanionBatchNodeToTrash(node: WorkspaceNodeSnapshot | u
 
 export function moveCompanionBatchToTrash(targets: readonly CompanionBatchTarget[]) {
   return runCompanionHistoryMutation(async db => {
-    const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
-    const nodes = snapshot?.nodesById ?? {};
+    // Batch moves to Trash skip Sequential Reading maintenance, so the moved subtrees and their ancestors suffice.
+    const nodes = await loadCompanionTrashWriteNodes(db, targets.map(target => target.id), { sequentialReading: false })
+      ?? (await loadIosCompanionWorkspaceSnapshot(db))?.nodesById ?? {};
     if (targets.some(({ id, version }) => !canMoveCompanionBatchNodeToTrash(nodes[id]) ||
       nodes[id]?.currentVersionId !== version)) throw new Error('workspace_batch_selection_changed');
     const now = new Date().toISOString();
