@@ -145,7 +145,8 @@ it('does not let a receipt for the old global directory clear work for a replace
 it('seeds, copies and confirms a large first backup in native batches with constant database calls per batch', async () => {
   // Every DbPort statement and BEGIN/COMMIT is one Capacitor bridge round trip on a phone.
   const calls = { count: 0 };
-  const counted = (port: DbPort): DbPort => ({ connectionIdentity: port.connectionIdentity,
+  const counted = (port: DbPort): DbPort => ({
+    ...(port.connectionIdentity ? { connectionIdentity: port.connectionIdentity } : {}),
     run: (sql, params) => { calls.count++; return port.run(sql, params); },
     query: (sql, params) => { calls.count++; return port.query(sql, params); },
     transaction: execute => { calls.count += 2; return port.transaction(tx => execute(counted(tx))); } });
