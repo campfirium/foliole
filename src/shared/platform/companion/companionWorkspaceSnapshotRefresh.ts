@@ -12,6 +12,7 @@ import { mergeCompanionNodeViews } from './companionNodeViewProjection.js';
 import { companionWorkspaceSnapshots, prepareCompanionWorkspaceIndex, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { timeCompanionActivity } from './runtime/companionActivityTiming.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
+import { markWholeLibraryWork } from './runtime/companionWholeLibraryWork.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
 import { mergeCompanionLocalState } from './sync/workspace-state/companionLocalStateProjection.js';
@@ -34,6 +35,7 @@ async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null;
       : null;
     // A move to Trash only drops the trashed subtree from the visible order, which the merge already did.
     if (scoped && input.scope.kind === 'nodes' && input.scope.structure && input.scope.trash) orderedNodeIds = scoped.nodeOrder;
+    if (!scoped) markWholeLibraryWork('full-refresh');
     const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });

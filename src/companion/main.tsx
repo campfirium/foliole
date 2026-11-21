@@ -3,7 +3,9 @@ import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
 import './companionMinimal.css';
+import { installCompanionSlowOperationLog, readCompanionSlowOperations } from '../shared/platform/companion/runtime/companionSlowOperations';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
+import { provideSupportLogSlowOperations } from '../shared/platform/supportLog/supportLog';
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 
 import { CompanionApp } from './CompanionApp';
@@ -11,6 +13,8 @@ import { installCompanionWebViewCompatibilityPolyfills } from './companionWebVie
 import type { AcceptanceResult } from './iosBridgeAcceptance';
 
 installCompanionWebViewCompatibilityPolyfills();
+installCompanionSlowOperationLog();
+provideSupportLogSlowOperations(readCompanionSlowOperations);
 if (getCompanionRuntimeCapability().kind === 'android-native') {
   document.documentElement.dataset.companionPlatform = 'android';
 }

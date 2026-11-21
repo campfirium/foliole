@@ -4,6 +4,7 @@ import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/atta
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
 import { registerCompanionWorkspaceRefresh, updateCommittedCompanionWorkspace } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
+import { recordCompanionMutationTiming } from '../../runtime/companionSlowOperations.js';
 import { traceCompanionSyncEvent } from '../diagnostics/companionDesktopSyncTrace.js';
 
 type MutationListener = () => void;
@@ -78,16 +79,23 @@ export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T
   const queuedAt = performance.now();
   let startedAt = queuedAt;
   let committedScope: WorkspaceRefreshScope | undefined;
-  const result = await timeFlowQueue(timing, 'mutation-queue', runCompanionSyncWriterTask, async () => {
-    startedAt = performance.now();
-    const saved = await task();
-    if (session === getCompanionReadingScope()) {
-      committedScope = typeof scope === 'function' ? scope(saved) : scope;
-      const refreshScope = committedScope;
-      await timeFlow(timing, 'mutation-publication', () => updateCommittedCompanionWorkspace(refreshScope));
-    }
-    return saved;
-  });
+  let result: T;
+  try {
+    result = await timeFlowQueue(timing, 'mutation-queue', runCompanionSyncWriterTask, async () => {
+      startedAt = performance.now();
+      const saved = await task();
+      if (session === getCompanionReadingScope()) {
+        committedScope = typeof scope === 'function' ? scope(saved) : scope;
+        const refreshScope = committedScope;
+        await timeFlow(timing, 'mutation-publication', () => updateCommittedCompanionWorkspace(refreshScope));
+      }
+      return saved;
+    });
+  } catch (error) {
+    recordCompanionMutationTiming(committedScope ?? (typeof scope === 'function' ? undefined : scope), queuedAt, startedAt, 'failed');
+    throw error;
+  }
+  recordCompanionMutationTiming(committedScope, queuedAt, startedAt, 'done');
   // Committed: the next line asks attachment work to yield, so this also marks the yield request.
   traceCompanionSyncEvent('local_edit', 'completed', { queuedMs: Math.round(startedAt - queuedAt),
     writeMs: Math.round(performance.now() - startedAt) });
@@ -97,11 +105,21 @@ export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T
 
 export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
-  const result = await runCompanionSyncWriterTask(async () => {
-    const saved = await task();
-    if (saved !== null && session === getCompanionReadingScope()) await updateCommittedCompanionWorkspace(scope);
-    return saved;
-  });
+  const queuedAt = performance.now();
+  let startedAt = queuedAt;
+  let result: T | null;
+  try {
+    result = await runCompanionSyncWriterTask(async () => {
+      startedAt = performance.now();
+      const saved = await task();
+      if (saved !== null && session === getCompanionReadingScope()) await updateCommittedCompanionWorkspace(scope);
+      return saved;
+    });
+  } catch (error) {
+    recordCompanionMutationTiming(scope, queuedAt, startedAt, 'failed');
+    throw error;
+  }
+  if (result !== null) recordCompanionMutationTiming(scope, queuedAt, startedAt, 'done');
   if (result !== null && session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
   return result;
 }

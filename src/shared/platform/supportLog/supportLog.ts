@@ -26,6 +26,12 @@ let initialized = false;
 let expiresAt = 0;
 let completed: ReturnType<typeof makeReport> | undefined;
 const subscribers = new Set<() => void>();
+let readSlowOperations: (() => unknown) | undefined;
+
+/** The phone installs its slow-operation reader so desktop bundles never load the companion runtime. */
+export function provideSupportLogSlowOperations(reader: (() => unknown) | undefined) {
+  readSlowOperations = reader;
+}
 
 function makeReport(elapsedMs: number, events: Entry[], dropped: number,
   androidSelection?: ReturnType<typeof stopAndroidSelectionTrace>, appVersion: string = packageJson.version,
@@ -153,6 +159,8 @@ export function serializeSupportLog(platform: 'desktop' | 'android' | 'ios', and
   if (state.phase !== 'ready' || !completed || !completed.events.every(validEntry)) return null;
   const { androidSelection: trace, androidFlow, ...report } = completed;
   if (androidSelection && !trace) return null;
-  return JSON.stringify({ ...report, ...(platform === 'android' && !androidSelection && androidFlow ? { androidFlow } : {}), ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
+  const slowOperations = platform !== 'desktop' && !androidSelection ? readSlowOperations?.() : undefined;
+  return JSON.stringify({ ...report, ...(platform === 'android' && !androidSelection && androidFlow ? { androidFlow } : {}),
+    ...(slowOperations ? { slowOperations } : {}), ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
     null, trace && androidSelection !== false ? undefined : 2);
 }

@@ -5,6 +5,7 @@ import { loadDerivedNodeOrderWithDbPort } from '../../../../../../lib/core/datab
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeAnchorKinds } from '../../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
+import { markWholeLibraryWork } from '../../runtime/companionWholeLibraryWork';
 
 import { loadCompanionWorkspaceDisplayNodeRows } from './companionSnapshotNodeRows';
 import {
@@ -19,6 +20,7 @@ const HOST_NAME_KEY = 'host_name';
 const ACTIVE_NODE_KEY = 'active_node_id';
 
 export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[], anchorKinds: WorkspaceNodeAnchorKinds) => void) {
+  markWholeLibraryWork('full-read');
   return connection.transaction(db => loadSnapshot(db, onNodeOrder));
 }
 
