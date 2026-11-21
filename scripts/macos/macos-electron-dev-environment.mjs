@@ -7,6 +7,31 @@ import {
   MACOS_DAILY_LIBRARY_HOME, MACOS_DEV_LIBRARY_HOME, MACOS_DEV_SYNC_PORT
 } from './macos-electron-dev-paths.mjs';
 
+// Agents start DEV through a sandbox-excluded `npm run macos:dev:open *` command, which
+// cannot carry an env prefix; the CDP port therefore travels as an argument.
+export function splitMacosElectronDevRemoteDebuggingPort(argv) {
+  const rest = [];
+  let port = null;
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index] ?? '';
+    let raw;
+    if (value === '--remote-debugging-port') {
+      raw = argv[index + 1] ?? '';
+      index += 1;
+    } else if (value.startsWith('--remote-debugging-port=')) {
+      raw = value.slice('--remote-debugging-port='.length);
+    } else {
+      rest.push(value);
+      continue;
+    }
+    if (!/^\d+$/u.test(raw) || Number(raw) < 1024 || Number(raw) > 65535) {
+      throw new Error('--remote-debugging-port requires a port between 1024 and 65535');
+    }
+    port = raw;
+  }
+  return { argv: rest, port };
+}
+
 function readLibraryHomeArg(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index] ?? '';

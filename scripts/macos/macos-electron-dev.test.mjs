@@ -15,7 +15,8 @@ import {
 } from './macos-electron-dev.mjs';
 import {
   createMacosDailyEnvironment,
-  resolveMacosElectronDevLibraryHome
+  resolveMacosElectronDevLibraryHome,
+  splitMacosElectronDevRemoteDebuggingPort
 } from './macos-electron-dev-environment.mjs';
 import {
   MACOS_DAILY_DEBUG_ROOT,
@@ -111,6 +112,16 @@ describe('macOS Electron dev entry', () => {
       .toBe(MACOS_DEV_SYNC_PORT);
     expect(MACOS_DEV_SYNC_PORT).toMatch(/^\d+$/u);
     expect(MACOS_DEV_SYNC_PORT).not.toBe('38641');
+  });
+
+  it('takes the CDP port as an argument and leaves the other options in place', () => {
+    expect(splitMacosElectronDevRemoteDebuggingPort(['--remote-debugging-port', '9333', '--library-home', '/x']))
+      .toEqual({ argv: ['--library-home', '/x'], port: '9333' });
+    expect(splitMacosElectronDevRemoteDebuggingPort(['--remote-debugging-port=9334'])).toEqual({ argv: [], port: '9334' });
+    expect(splitMacosElectronDevRemoteDebuggingPort([])).toEqual({ argv: [], port: null });
+    for (const argv of [['--remote-debugging-port'], ['--remote-debugging-port', 'abc'], ['--remote-debugging-port=80']]) {
+      expect(() => splitMacosElectronDevRemoteDebuggingPort(argv)).toThrow('--remote-debugging-port requires a port');
+    }
   });
 
   it('rejects an empty explicit library home', () => {
