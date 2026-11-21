@@ -198,4 +198,18 @@ describe('quality critical test routes', () => {
       'scripts/ios/ios-foreground-sync-lifecycle-runner.mjs'
     ], existing)).toEqual([]);
   });
+
+  it('routes phone write chains to the phone statement budget and leaves their tests alone', () => {
+    const budget = ['src/companion/companionActionSqlStatements.budget.integration.test.ts'];
+    for (const file of ['lib/core/sync/syncNodeApplyExecutor.ts', 'lib/core/flow/dailyFlowService.ts',
+      'src/shared/platform/companion/runtime/companionWorkspaceMutations.ts',
+      'src/shared/platform/companion/editing/companionContentEditing.ts',
+      'src/shared/platform/companionSyncNodeVersions.ts', 'src/companion/companionFlowMutation.ts']) {
+      expect(resolveCriticalTestFiles([file], existing)).toEqual(budget);
+    }
+    for (const file of ['lib/core/sync/syncNodeApplyExecutor.test.ts',
+      'src/shared/platform/companion/runtime/companionDailyFlow.integration.test.ts', 'src/companion/CompanionApp.tsx']) {
+      expect(resolveCriticalTestFiles([file], existing)).not.toContain(budget[0]);
+    }
+  });
 });
