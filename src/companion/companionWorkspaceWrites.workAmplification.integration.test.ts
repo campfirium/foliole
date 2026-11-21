@@ -214,8 +214,9 @@ it('builds the same change from the narrow read as from the whole library', asyn
   });
 });
 
-// Sequential Reading keeps the whole-library read for the write, but the write still names every node and reading
-// it changed, so the refresh merges them instead of reading the library a second time.
+// A Sequential Reading folder is maintained from a bounded read (companionWorkspaceSequentialReading.workAmplification
+// counts it). A Sequential Reading topic orders its items by the whole library's order, so a write in reach of one still
+// reads the library once. Either way the write names every node and reading it changed, so the refresh merges them.
 const sequentialReading = (state: 'active' | 'locked') => ({ intervalDurationMs: 1, intervalGrowthFactor: 2,
   lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z', priority: 5, readingPosition: 0,
   repetitionCount: 0, state });
@@ -236,11 +237,14 @@ const SEQUENTIAL_WRITES: Record<string, () => Promise<unknown>> = {
 };
 
 for (const [name, write] of Object.entries(SEQUENTIAL_WRITES)) {
-  it(`reads the whole library once for a ${name} a Sequential Reading source`, async () => {
-    await enableSequentialReading(name === 'move into' ? 'other' : name === 'shelve in' ? 'folder' : 'a');
+  // 'other' and 'folder' are folders; 'a' is a topic in a folder.
+  const source = name === 'move into' ? 'other' : name === 'shelve in' ? 'folder' : 'a';
+  const fullReads = source === 'a' ? 1 : 0;
+  it(`reads the whole library ${fullReads} time(s) for a ${name} a Sequential Reading ${source === 'a' ? 'topic' : 'folder'}`, async () => {
+    await enableSequentialReading(source);
     await write();
     const snapshot = await refreshCompanionWorkspaceAfterMutation();
-    expect(reads.fullSnapshots).toBe(1);
+    expect(reads.fullSnapshots).toBe(fullReads);
     const complete = await getIosCompanionDatabaseOwner().readSnapshot(db => loadIosCompanionWorkspaceSnapshot(db));
     const facts = (value: WorkspaceSnapshot | null) => value && { ...value, trashedNodeIds: [...value.trashedNodeIds].sort() };
     expect(facts(snapshot)).toEqual(facts(complete));
@@ -260,7 +264,7 @@ for (const [name, move] of Object.entries(UNLOCKING_MOVES)) {
     await enableSequentialReading('a');
     const before = (await refreshCompanionWorkspaceAfterMutation())!;
     reads.fullSnapshots = 0;
-    // A locked item moved out of its source becomes active.
+    // A locked item moved out of its source becomes active; the source is a topic, so the write reads the library once.
     await move();
     const snapshot = await refreshCompanionWorkspaceAfterMutation();
     expect(reads.fullSnapshots).toBe(1);

@@ -125,12 +125,22 @@ it('builds the same Trash change from the narrow read as from the whole library'
   });
 });
 
-it('keeps the whole-library read when Sequential Reading is in reach', async () => {
+it('moves a folder in a Sequential Reading folder to Trash without reading the whole library', async () => {
   library.database.prepare('UPDATE nodes SET sequential_reading_enabled = 1 WHERE id = ?').run('folder');
-  const owner = getIosCompanionDatabaseOwner();
-  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['sub'], { sequentialReading: true }))).toBeNull();
-  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['sub'], { sequentialReading: false }))).not.toBeNull();
+  await refreshCompanionWorkspaceAfterMutation(null);
+  reads.fullSnapshots = 0;
+  reads.orderDerivations = 0;
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'sub' });
+  await expectCompleteReread(await refreshCompanionWorkspaceAfterMutation());
+});
+
+it('keeps the whole-library read when a Sequential Reading topic is in reach', async () => {
+  // A topic source orders its items by the whole library's order.
+  library.database.prepare('UPDATE nodes SET sequential_reading_enabled = 1 WHERE id = ?').run('s1');
+  const owner = getIosCompanionDatabaseOwner();
+  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['s1x'], { sequentialReading: true }))).toBeNull();
+  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['s1x'], { sequentialReading: false }))).not.toBeNull();
+  await mutateCompanionWorkspace({ type: 'delete', nodeId: 's1x' });
   expect(reads.fullSnapshots).toBe(1);
 });
 

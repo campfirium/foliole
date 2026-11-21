@@ -5,14 +5,14 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
 import type { CompanionBatchTarget } from './companionWorkspaceBatchTrash';
-import { loadCompanionWriteNodes } from './companionWriteNodes';
+import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 /** Moves the selected nodes under one parent as a single undoable action. */
 export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], parentNodeId: string | null) {
   let readingNodeIds: string[] = [];
   return runCompanionHistoryMutation(async db => {
-    // The moved subtrees, their ancestors and the target's ancestors suffice unless Sequential Reading is in reach.
+    // The moved subtrees, their ancestors and the target's ancestors suffice unless a Sequential Reading topic is in reach.
     const narrow = await loadCompanionWriteNodes(db, targets.map(target => target.id), { sequentialReading: true, pathIds: [parentNodeId] });
     const snapshot = narrow ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrow && !snapshot) throw new Error('workspace_unavailable');
@@ -32,8 +32,8 @@ export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], par
       moved.push(id);
     }
     if (!moved.length) return [];
-    const readings = snapshot ? maintainWorkspaceSnapshotSequentialReading({ before, after, changedNodeIds: moved,
-      nodeOrder: snapshot.nodeOrder, now }) : [];
+    const readings = maintainWorkspaceSnapshotSequentialReading({ before, after, changedNodeIds: moved,
+      nodeOrder: snapshot?.nodeOrder ?? companionWriteNodeOrder(before), now });
     const host = await iosCompanionHostName(db);
     const records = await Promise.all([...changed.values()].map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Move', 'local_mutation', null, readings);

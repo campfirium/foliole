@@ -11,7 +11,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
-import { loadCompanionWriteNodes } from './companionWriteNodes';
+import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow?: { session: ReviewSessionState; mode: ReviewSessionMode }) {
@@ -34,9 +34,9 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const nodes = narrowNodes ?? snapshot!.nodesById;
     const mutation = buildWorkspaceMetadataMutation(command, nodes, now);
     const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node => [node.id, node])) };
-    // The narrow read already proved that no Sequential Reading source or locked item is in reach.
-    const readings = command.type === 'rename' || !snapshot ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
-      changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot.nodeOrder, command.nodeId])], now });
+    // The narrow read holds every Sequential Reading source in reach and what maintaining it consumes.
+    const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
+      changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot?.nodeOrder ?? companionWriteNodeOrder(nodes), command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
     const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;
     const records = await Promise.all(mutation.nodes.map(node => createCompanionMetadataVersion(db, node, host)));
