@@ -21,7 +21,9 @@ export type WorkspaceRelatedReading = z.infer<typeof workspaceRelatedReadingSche
 export const workspaceNodeMetadataHistorySchema = z.object({
   beforeSession: workspaceHistorySessionSchema.nullable().default(null),
   afterSession: workspaceHistorySessionSchema.nullable().default(null),
-  orders: z.array(z.object({ parentId: z.string(), before: z.array(z.string()), after: z.array(z.string()) })).default([]),
+  // A parent's order-source fingerprint; older entries kept complete child lists instead.
+  orders: z.array(z.union([z.object({ parentId: z.string(), sources: z.string() }),
+    z.object({ parentId: z.string(), before: z.array(z.string()), after: z.array(z.string()) })])).default([]),
   type: z.literal('nodes.change'), id: z.string(), title: z.string(),
   rootNodeId: z.string(), relatedReadings: z.array(workspaceRelatedReadingSchema).default([]), subtreeNodeIds: z.array(z.string()).nullable(),
   changes: z.array(z.object({ nodeId: z.string(), before: fields.nullable(), after: fields,

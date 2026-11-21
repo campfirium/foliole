@@ -18,7 +18,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
 import { appendCompanionFlowHistory, companionFlowHistoryKey } from './companionFlowHistoryStore';
 import { writeCompanionHistoryReadings } from './companionHistoryLearning';
-import { applyCompanionHistoryOrders, captureCompanionHistoryOrders, completeCompanionHistoryOrders, validateCompanionHistoryOrders } from './companionHistoryOrder';
+import { recordCompanionHistoryOrders, validateCompanionHistoryOrders } from './companionHistoryOrder';
 import { loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -37,7 +37,6 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   }
   const parents = records.flatMap((record, i) => before[i] && before[i]!.parentNodeId !== record.snapshot.parent_id
     ? [before[i]!.parentNodeId, record.snapshot.parent_id] : []);
-  const orders = await captureCompanionHistoryOrders(db, parents);
   const result = await applySyncNodesWithDbPort(db, records, {
     enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation
   });
@@ -49,7 +48,7 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   if (flowBefore) sessions = { beforeSession: flowBefore, afterSession:
     (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence, true)).session };
   const entry: WorkspaceNodeMetadataHistoryEntry = {
-    type: 'nodes.change', ...sessions, relatedReadings, orders: await completeCompanionHistoryOrders(db, orders), id: createCompanionUuid(), title, rootNodeId: records[0]!.object_id, subtreeNodeIds,
+    type: 'nodes.change', ...sessions, relatedReadings, orders: await recordCompanionHistoryOrders(db, parents), id: createCompanionUuid(), title, rootNodeId: records[0]!.object_id, subtreeNodeIds,
     changes: after.map((node, i) => {
       if (!node) throw new Error('workspace_mutation_not_applied');
       const previous = before[i];
@@ -69,7 +68,7 @@ export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: Worksp
   const nodes = { ...base, ...Object.fromEntries(loaded.filter(node => node !== null).map(node => [node.id, node])) };
   const host = await iosCompanionHostName(db);
   const targets = resolveWorkspaceMetadataHistory(entry, mode, nodes, new Date().toISOString());
-  await validateCompanionHistoryOrders(db, entry.orders, mode);
+  await validateCompanionHistoryOrders(db, entry.orders);
   await writeCompanionHistoryReadings(db, entry.relatedReadings, mode);
   const records = await Promise.all(targets.map(node => createCompanionMetadataVersion(db, node, host)));
   const restoring = targets.some(node => !node.deletedAt && nodes[node.id]?.deletedAt);
@@ -78,13 +77,12 @@ export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: Worksp
   if (result.conflictNodes.length || targets.some(node => !result.appliedIds.includes(node.id))) {
     throw new Error('workspace_history_not_applied');
   }
-  await applyCompanionHistoryOrders(db, entry.orders, mode, host);
   for (const node of targets) await collectNodeVersionPayloads(db, node.id, Number.MAX_SAFE_INTEGER);
 }
 
 /**
  * Reads the nodes a replay checks: the changed subtrees, their ancestors and both parents of every change.
- * A replay writes the saved related readings and parent orders instead of maintaining Sequential Reading,
+ * A replay writes the saved related readings and checks parent order fingerprints instead of maintaining Sequential Reading,
  * so it never needs the whole library for them. Returns null when a changed node is gone.
  */
 export function loadCompanionHistoryReplayNodes(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry) {

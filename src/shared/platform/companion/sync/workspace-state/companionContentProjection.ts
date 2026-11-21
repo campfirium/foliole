@@ -7,14 +7,16 @@ import { attachIosWorkspaceNodeAttachments, buildIosWorkspaceNodes } from './ios
 
 export type CompanionContentNode = Omit<WorkspaceNodeSnapshot, 'readwiseRemoteLifecycle'>;
 
-export async function loadCompanionContentProjection(db: DbPort, nodeIds: readonly string[]): Promise<Record<string, CompanionContentNode>> {
+/** Projects the named nodes and their children; `exact` projects only the named nodes. */
+export async function loadCompanionContentProjection(db: DbPort, nodeIds: readonly string[],
+  exact = false): Promise<Record<string, CompanionContentNode>> {
   return db.transaction(async tx => {
     const [host] = await tx.query("SELECT value FROM companion_meta WHERE key = 'host_name'");
     if (typeof host?.value !== 'string' || !host.value) throw new Error('Companion Host is unavailable.');
-    const { nodesById } = buildIosWorkspaceNodes(await loadCompanionSnapshotNodeRows(tx, host.value, nodeIds));
+    const { nodesById } = buildIosWorkspaceNodes(await loadCompanionSnapshotNodeRows(tx, host.value, nodeIds, exact));
     const attachments = await tx.query(`SELECT * FROM (${NODE_RESOURCES_SQL})
-      WHERE node_id IN (SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
-        OR parent_id IN (SELECT value FROM json_each(?)))`, [JSON.stringify(nodeIds), JSON.stringify(nodeIds)]);
+      WHERE node_id IN (SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))${exact ? ''
+        : ' OR parent_id IN (SELECT value FROM json_each(?))'})`, exact ? [JSON.stringify(nodeIds)] : [JSON.stringify(nodeIds), JSON.stringify(nodeIds)]);
     attachIosWorkspaceNodeAttachments(nodesById, attachments, host.value);
     // An unread source must not be represented as an observed null lifecycle.
     for (const node of Object.values(nodesById)) delete node.readwiseRemoteLifecycle;

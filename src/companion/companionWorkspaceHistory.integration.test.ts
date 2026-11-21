@@ -181,6 +181,42 @@ it('restores the original sibling placement when moving back', async () => {
   expect((await snapshot()).nodesById.b?.parentNodeId).toBe('destination');
 });
 
+it('replays a move without creating order facts or reading the folders it touched', async () => {
+  for (const id of ['a', 'b', 'c']) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', title: id, parentNodeId: 'folder' });
+  const sources = () => library.database.prepare('SELECT parent_id, child_ids_json FROM parent_order_sources ORDER BY parent_id').all();
+  const ordered = async () => (await snapshot()).nodeOrder.filter(id => ['a', 'b', 'c'].includes(id));
+  const before = { sources: sources(), order: await ordered() };
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'b', parentNodeId: 'destination' });
+  // The history keeps a fingerprint of each parent's order sources, never its children.
+  const stored = library.database.prepare('SELECT value FROM companion_meta WHERE key = ?').get(key) as { value: string };
+  expect(JSON.parse(stored.value).undoStack.at(-1).orders).toEqual([
+    { parentId: 'folder', sources: expect.any(String) }, { parentId: 'destination', sources: expect.any(String) }]);
+  await replay('undo');
+  // Creation-time order stays implicit: undo writes no order source of its own.
+  expect({ sources: sources(), order: await ordered() }).toEqual(before);
+  await replay('redo');
+  expect((await snapshot()).nodesById.b?.parentNodeId).toBe('destination');
+});
+
+it('refuses to replay a move after either parent was reordered', async () => {
+  for (const id of ['a', 'b']) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', title: id, parentNodeId: 'folder' });
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'b', parentNodeId: 'destination' });
+  await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder', childIds: ['a'], hostName: 'Search', now }), { kind: 'business' });
+  await expect(replay('undo')).rejects.toThrow('workspace_history_order_changed');
+});
+
+it('replays a move recorded with complete child lists', async () => {
+  for (const id of ['a', 'b']) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', title: id, parentNodeId: 'folder' });
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'b', parentNodeId: 'destination' });
+  const stored = library.database.prepare('SELECT value FROM companion_meta WHERE key = ?').get(key) as { value: string };
+  const history = JSON.parse(stored.value);
+  history.undoStack.at(-1).orders = [{ parentId: 'folder', before: ['a', 'b'], after: ['a'] },
+    { parentId: 'destination', before: [], after: ['b'] }];
+  library.database.prepare('UPDATE companion_meta SET value = ? WHERE key = ?').run(JSON.stringify(history), key);
+  await replay('undo');
+  expect((await snapshot()).nodesById.b?.parentNodeId).toBe('folder');
+});
+
 it('moves a subtree out of sequential reading and replays its related reading states atomically', async () => {
   const base = (await snapshot()).nodesById.folder!;
   const definitions = [

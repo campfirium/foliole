@@ -146,6 +146,33 @@ it('reads the same number of rows for the first Virtual folder however large the
   expect(await writeRows(400, firstIndex, false)).toBe(await writeRows(100, firstIndex, false));
 });
 
+// Folders grow without bound (an Inbox, a Readwise import), so a write must not grow with the folders it touches either.
+async function addSiblings(count: number, parents: string[]) {
+  const insert = library!.database.prepare('INSERT INTO nodes (id,kind,title,content,parent_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
+  for (let i = 0; i < count; i++) {
+    for (const parent of parents) insert.run(`${parent}-sibling-${i}`, 'topic', `s${i}`, 'body', parent, '1', '1');
+  }
+  await refreshCompanionWorkspaceAfterMutation(null);
+}
+
+async function writeRowsWithSiblings(siblings: number, name: string) {
+  await openLibrary(100);
+  // A folder move carries 'other' itself, so only its destination gains siblings.
+  await addSiblings(siblings, name === 'folder move' ? ['folder'] : ['folder', 'other']);
+  sqlRecording.start({ label: 'sibling-write', maxGroups: 2000 });
+  try {
+    await WRITES[name]!();
+    await refreshCompanionWorkspaceAfterMutation();
+  } finally { sqlRecording.stop(); }
+  return sqlRecording.snapshot()!.groups.reduce((total, group) => total + group.returnedRows, 0);
+}
+
+for (const name of ['rename', 'move', 'folder move', 'shelve', 'create', 'restore', 'batch move', 'batch restore']) {
+  it(`reads the same number of rows for a ${name} however many siblings its folders hold`, async () => {
+    expect(await writeRowsWithSiblings(300, name)).toBe(await writeRowsWithSiblings(0, name));
+  });
+}
+
 it('orders a restored subtree and a hand-ordered folder exactly as a complete reread does', async () => {
   const before = (await refreshCompanionWorkspaceAfterMutation())!;
   expect(before.nodeOrder.filter(id => ['a', 'b', 'c'].includes(id))).toEqual(['c', 'a', 'b']);
