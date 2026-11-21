@@ -49,7 +49,16 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     @PluginMethod public synchronized void cancelDatabase(PluginCall call) {
         if (call.getString("requestId") != null && call.getString("requestId").equals(activeRequest)) {
             attachmentCancelled = true;
-            if (operation == null && !copyingAttachment) activeRequest = null;
+            if (operation == null && !copyingAttachment) {
+                activeRequest = null;
+                // The database round already ended; never leave a released request shown or persisted as running.
+                if ("working".equals(phase)) {
+                    phase = "pending";
+                    try { store.status(phase, errorMessage); }
+                    catch (Exception error) { android.util.Log.e("FolioleFolderBackup", "Cannot persist cancelled backup", error); }
+                    emitState(null);
+                }
+            }
         }
         if (operation != null && operation.requestId.equals(call.getString("requestId"))) operation.cancel(null);
         call.resolve();
@@ -112,9 +121,12 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                 String[] result = job.run();
                 synchronized (this) {
                     phase = "1".equals(result[2]) ? "pending" : "working";
+                    if (!"1".equals(result[1])) {
+                        // No attachment phase follows an uncommitted round, so it must not stay persisted as running.
+                        activeRequest = null; phase = "pending"; store.status(phase, null);
+                    }
                     JSObject response = response(call, false, result);
                     operation = null;
-                    if (!"1".equals(result[1])) activeRequest = null;
                     emitState(response);
                     call.resolve(response);
                 }

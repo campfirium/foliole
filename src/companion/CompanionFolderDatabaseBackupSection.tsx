@@ -11,7 +11,7 @@ import { SettingsValueRow } from '../shared/ui/SettingsValueRow';
 
 import { CompanionBackupLocationDialog } from './CompanionBackupLocationDialog';
 import { CompanionBackupRestoreSection } from './CompanionBackupRestoreSection';
-import { companionBackupSummary } from './companionBackupSummary';
+import { companionBackupNeedsFolder, companionBackupSummary } from './companionBackupSummary';
 import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
 
 export function CompanionFolderDatabaseBackupSection() {
@@ -45,7 +45,7 @@ export function CompanionFolderDatabaseBackupSection() {
   }
 
   const working = busy || state?.phase === 'working';
-  const failed = Boolean(error || state?.errorMessage || state?.phase === 'failed');
+  const reselect = companionBackupNeedsFolder(state, error);
   if (!supported && !preview) return null;
   return (
     <section>
@@ -61,11 +61,11 @@ export function CompanionFolderDatabaseBackupSection() {
         </SettingsRow>
         <SettingsRow controlLayout="inline" description={<>
           <span role="status" data-settings-action-status>{companionBackupSummary(state, automatic, error, t)}</span>
-          {failed ? <span className="mt-1 block" role="alert">{t('companion.settings.storage.backupReselectHint')}</span> : null}
+          {reselect ? <span className="mt-1 block" role="alert">{t('companion.settings.storage.backupReselectHint')}</span> : null}
         </>}>
-          <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || (!state?.configured && !failed)}
-            onClick={() => void run(failed)} size="sm">
-            {t(working ? 'companion.settings.storage.backupWorking' : failed ? 'companion.settings.storage.backupReselect' : 'companion.settings.storage.backupNow')}
+          <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || (!state?.configured && !reselect)}
+            onClick={() => void run(reselect)} size="sm">
+            {t(working ? 'companion.settings.storage.backupWorking' : reselect ? 'companion.settings.storage.backupReselect' : 'companion.settings.storage.backupNow')}
           </AppButton></SettingsControlSlot>
         </SettingsRow>
       </SettingsSection>

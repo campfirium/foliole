@@ -1,5 +1,6 @@
 import type { CompanionFolderBackupState } from '../../lib/platform/companionFolderBackupContract';
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
+import { isCompanionFolderBackupDirectoryFailure } from '../shared/platform/companion/folderBackup/companionFolderBackupDirectoryFailure';
 
 export function companionBackupSummary(state: CompanionFolderBackupState | null, automatic: boolean | null,
   error: string | null, t: ReturnType<typeof useTranslation>) {
@@ -12,4 +13,10 @@ export function companionBackupSummary(state: CompanionFolderBackupState | null,
   if (automatic === null && state.pendingItems > 0) return t('companion.settings.storage.backupLoading');
   if (state.pendingItems === 0) return t('companion.settings.storage.backupComplete');
   return t(automatic ? 'companion.settings.storage.backupPendingAutomatic' : 'companion.settings.storage.backupPendingManual', { count: state.pendingItems });
+}
+
+/** Only a missing or unusable folder needs choosing again; any other failure retries the same folder. */
+export function companionBackupNeedsFolder(state: CompanionFolderBackupState | null, error: string | null) {
+  const failed = Boolean(error || state?.errorMessage || state?.phase === 'failed');
+  return failed && (!state?.configured || isCompanionFolderBackupDirectoryFailure(error || state?.errorMessage));
 }

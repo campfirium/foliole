@@ -34,6 +34,39 @@ it('shows the last unfinished attachment result without presenting it as a compl
   await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(true));
   view.unmount();
 });
+it.each([
+  ['Backup interrupted. Use Back up now to retry.', 'pending'],
+  ['confirm write refused', 'failed']
+] as const)('retries the same folder after a backup-stage error: %s', async (errorMessage, phase) => {
+  Object.assign(fixture.state, { phase, databaseSavedAt: '2026-11-04T07:55:00Z', attachmentFilesPending: 2, errorMessage });
+  fixture.request.mockResolvedValue({ state: { ...fixture.state, phase: 'saved', errorMessage: null, pendingItems: 0, attachmentFilesPending: 0 } });
+  const view = render(<CompanionFolderDatabaseBackupSection />);
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(errorMessage));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Choose again…' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Back up now' }));
+  await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(false));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('All backed up'));
+  view.unmount();
+});
+
+it('asks to choose again when a retry reports the folder grant is gone, and keeps that after reopening', async () => {
+  Object.assign(fixture.state, { phase: 'pending', errorMessage: 'Backup interrupted. Use Back up now to retry.' });
+  const revoked = 'Permission Denial: reading com.android.externalstorage.ExternalStorageProvider requires that you obtain access';
+  fixture.request.mockImplementationOnce(async () => {
+    Object.assign(fixture.state, { phase: 'failed', errorMessage: revoked });
+    throw new Error(revoked);
+  });
+  const first = render(<CompanionFolderDatabaseBackupSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Back up now' }));
+  await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(false));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Choose the backup folder again.'));
+  first.unmount();
+  const second = render(<CompanionFolderDatabaseBackupSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose again…' }));
+  await waitFor(() => expect(fixture.request).toHaveBeenLastCalledWith(true));
+  second.unmount();
+});
 vi.mock('../shared/platform/companion/folderBackup/companionAutomaticFolderBackup', () => ({
   getCompanionAutomaticFolderBackup: async () => fixture.automatic,
   setCompanionAutomaticFolderBackup: fixture.setAutomatic,

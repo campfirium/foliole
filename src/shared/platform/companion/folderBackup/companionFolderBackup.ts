@@ -56,8 +56,17 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
   const result = await port.backupDatabase({ sourceEpoch, requestId, chooseDirectory });
   if (result.requestId !== requestId) throw new Error('folder_backup_response_mismatch');
   if (!result.cancelled && result.databaseCommitted) {
-    const deletions = await validateFolderAttachmentDeletions(owner, deletionSnapshot, result.state.directoryId ?? '');
-    await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), false);
+    let deletions: Awaited<ReturnType<typeof validateFolderAttachmentDeletions>>;
+    try {
+      deletions = await validateFolderAttachmentDeletions(owner, deletionSnapshot, result.state.directoryId ?? '');
+      await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), false);
+    } catch (error) {
+      // The native database round already committed and still holds this request for attachments;
+      // finish it as failed so the durable state leaves "working" with the real error and its savedAt.
+      await port.finishAttachments({ requestId, copied: 0, pending: null,
+        errorMessage: error instanceof Error ? error.message : String(error) }).catch(() => undefined);
+      throw error;
+    }
     result.state = await consumeCompanionFolderAttachmentWork(port, {
       write: execute => runCompanionSyncWriterTask(() => owner.runWriter(execute, false)),
       inventory: async () => {
