@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest';
 
-import { canMergeWorkspaceContentProjection, canMergeWorkspaceTrashProjection, mergeWorkspaceContentProjection } from './workspaceContentProjection.js';
+import { DIVE_NODE_FILTER } from '../nodes/dive.js';
+import { createManualVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
+
+import {
+  canMergeWorkspaceContentProjection, canMergeWorkspaceMetadataProjection, canMergeWorkspaceTrashProjection, mergeWorkspaceContentProjection
+} from './workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from './workspaceSnapshot.js';
 
 function snapshot(): WorkspaceSnapshot {
@@ -80,4 +85,17 @@ it.each([
   const current = withChild();
   const nodes = change(current);
   expect(canMergeWorkspaceTrashProjection(current, nodes as WorkspaceSnapshot['nodesById'], Object.keys(nodes))).toBe(false);
+});
+
+it('merges a change to the sources of a Dive or Virtual folder but not to a real folder order or a filter', () => {
+  const current = snapshot();
+  const dive = { ...current.nodesById.topic!, id: 'dive', kind: 'folder' as const,
+    virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['a'] };
+  current.nodesById.dive = dive;
+  current.nodesById.folder = { ...dive, id: 'folder', virtualFilter: null };
+  expect(canMergeWorkspaceMetadataProjection(current, { dive: { ...dive, manualChildOrder: ['a', 'b'] } }, ['dive'])).toBe(true);
+  expect(canMergeWorkspaceMetadataProjection(current, { folder: { ...dive, id: 'folder', virtualFilter: null,
+    manualChildOrder: ['a', 'b'] } }, ['folder'])).toBe(false);
+  expect(canMergeWorkspaceMetadataProjection(current, { dive: { ...dive, manualChildOrder: ['a', 'b'],
+    virtualFilter: createManualVirtualNodeFilter() } }, ['dive'])).toBe(false);
 });

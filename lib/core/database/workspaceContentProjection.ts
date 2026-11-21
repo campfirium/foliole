@@ -72,7 +72,7 @@ const ORDER_FIELDS = ['title', 'parentNodeId', 'createdAt', 'deletedAt'] as cons
 
 /**
  * Accepts metadata writes confined to the named nodes: creations, renames, moves, restores, moves to Trash,
- * priority and shelving. Every baseline child of a named node must have been read too.
+ * priority, shelving and the sources of a Dive or Virtual folder. Every baseline child of a named node must have been read too.
  */
 export function canMergeWorkspaceMetadataProjection(
   current: WorkspaceSnapshot,
@@ -90,6 +90,11 @@ export function canMergeWorkspaceMetadataProjection(
     const before = structuralProjection(previous, reviewed.has(id), reading.has(id));
     const after = structuralProjection(node, reviewed.has(id), reading.has(id));
     for (const field of METADATA_FIELDS) { delete before[field]; delete after[field]; }
+    // A virtual folder's manual order lists its sources, not real children, so it never moves another node.
+    if (previous.virtualFilter && workspaceSnapshotValueEqual(previous.virtualFilter, node.virtualFilter)) {
+      delete before.manualChildOrder;
+      delete after.manualChildOrder;
+    }
     return workspaceSnapshotValueEqual(before, after);
   });
 }

@@ -9,6 +9,7 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 export type CompanionIndexSourceChange = 'add' | 'remove';
 
 export function changeCompanionIndexSource(indexId: string, sourceId: string, change: CompanionIndexSourceChange) {
+  // Only the folder's source list changes, so the refresh merges that one node.
   return runCompanionHistoryMutation(async db => {
     const index = await loadCompanionWorkspaceNodeFromDb(db, indexId);
     if (!index || index.deletedAt || !isManualVirtualFolderNode(index)) throw new Error('index_unavailable');
@@ -21,5 +22,5 @@ export function changeCompanionIndexSource(indexId: string, sourceId: string, ch
     const next = change === 'add' ? [...current, sourceId] : current.filter(id => id !== sourceId);
     await saveCompanionVirtualDirectoryVersion(db, { ...index, updatedAt: new Date().toISOString() },
       await iosCompanionHostName(db), { manual_child_order: JSON.stringify(next) });
-  }, { kind: 'nodes', nodeIds: [indexId], structure: true });
+  }, { kind: 'nodes', nodeIds: [indexId], structure: true, metadata: true });
 }

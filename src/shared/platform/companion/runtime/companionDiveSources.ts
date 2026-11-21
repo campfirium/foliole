@@ -27,6 +27,7 @@ export function removeCompanionDiveSources(diveId: string, sourceIds: readonly s
 }
 
 function changeCompanionDiveSources(diveId: string, change: (db: DbPort, dive: Dive) => Dive | Promise<Dive>) {
+  // Only the folder's source list changes, so the refresh merges that one node.
   return runCompanionHistoryMutation(async db => {
     const node = await loadCompanionWorkspaceNodeFromDb(db, diveId);
     const dive = node && !node.deletedAt ? readDiveNode(node) : null;
@@ -35,5 +36,5 @@ function changeCompanionDiveSources(diveId: string, change: (db: DbPort, dive: D
     if (updated === dive) return;
     await saveCompanionVirtualDirectoryVersion(db, { ...node, updatedAt: new Date().toISOString() },
       await iosCompanionHostName(db), { manual_child_order: JSON.stringify(updated.directSourceIds) });
-  }, { kind: 'nodes', nodeIds: [diveId], structure: true });
+  }, { kind: 'nodes', nodeIds: [diveId], structure: true, metadata: true });
 }
