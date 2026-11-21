@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionBatchTarget } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
@@ -22,10 +22,14 @@ export function CompanionDirectoryBatchTargetSheet({ action, targets, onClose, o
   const [parentId, setParentId] = useState('');
   const nodes = workspace?.snapshot?.nodesById ?? {};
   const first = nodes[targets[0]?.id ?? ''];
+  // The destination tree walks the whole library per source, so rebuild it only when the
+  // selection or the library changes, not on every pick or busy-state render.
+  // The host rebuilds the targets array per render, so key the ids by content.
+  const idsKey = targets.map(target => target.id).join('\u0000');
+  const ids = useMemo(() => (idsKey ? idsKey.split('\u0000') : []), [idsKey]);
+  const sources = useMemo(() => ids.flatMap(id => nodes[id] ? [nodes[id]!] : []), [ids, nodes]);
   if (!workspace || !first) return null;
   const disabled = workspace.busy || workspace.pending;
-  const ids = targets.map(target => target.id);
-  const sources = ids.flatMap(id => nodes[id] ? [nodes[id]!] : []);
   const canMoveToRoot = sources.every(node => node.kind === 'folder');
   const title = t(action === 'move' ? 'companion.batch.moveTitle' : 'companion.batch.addToDiveTitle', { count: targets.length });
   return <CompanionBottomSheet open onOpenChange={open => { if (!open && !workspace.busy) onClose(); }} title={title}>
