@@ -22,6 +22,7 @@ it.runIf(process.platform === 'darwin')('uses the production iOS worker and dura
   const report = JSON.parse(execFileSync(binary, [root], { encoding: 'utf8', timeout: 15_000 }));
   expect(report.initialPages).toBeGreaterThan(400);
   expect(report.changedPages).toBeLessThan(10);
+  expect(report.recreatedPages).toBeGreaterThan(400);
   expect(execFileSync('python3', ['-c',
     'import sqlite3,sys; d=sqlite3.connect(sys.argv[1]); assert d.execute("PRAGMA integrity_check").fetchone()==("ok",); assert d.execute("SELECT value FROM facts").fetchone()==("updated",);print("passed")',
     report.target], { encoding: 'utf8' })).toContain('passed');

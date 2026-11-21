@@ -63,7 +63,8 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         JSONObject profile = store.load();
         synchronized (this) { if (cancelled) throw new IllegalStateException("Backup cancelled."); }
         prepare(profile.optBoolean("ownsTarget"), profile.optBoolean("targetCreationPending"),
-            () -> updateTargetCreation(true), () -> updateTargetCreation(false));
+            () -> updateTargetCreation(true), () -> updateTargetCreation(false), this::forgetMissingTarget);
+        profile = store.load(); // a recreated target no longer expects the removed backup's fingerprint
         long active;
         synchronized (this) {
             if (cancelled) throw new IllegalStateException("Backup cancelled.");
@@ -82,6 +83,14 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     }
     private static String optional(JSONObject profile, String key) {
         return profile.has(key) && !profile.isNull(key) ? profile.optString(key) : null;
+    }
+    private void forgetMissingTarget() {
+        try {
+            store.update(profileId, value -> {
+                value.put("ownsTarget", false);
+                value.remove("fingerprint"); value.remove("pendingFingerprint"); value.remove("savedAt");
+            });
+        } catch (Exception error) { throw new IllegalStateException(error); }
     }
     private void updateTargetCreation(boolean pending) {
         try {

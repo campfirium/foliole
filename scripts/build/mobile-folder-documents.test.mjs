@@ -30,3 +30,7 @@ it.each(['foreign-empty', 'foreign-nonempty', 'pending-foreign'])('preserves %s 
     scenario, path.join(root, scenario), path.join(root, 'foreign.sqlite')], { encoding: 'utf8' }))
     .toContain('external facts retained');
 });
+it.each(['owned-missing', 'owned-missing-interrupted'])('recreates a removed owned backup in the same folder: %s', scenario => {
+  expect(execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
+    scenario, path.join(root, scenario)], { encoding: 'utf8' })).toContain('removed backup recreated');
+});

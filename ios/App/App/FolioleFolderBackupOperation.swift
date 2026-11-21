@@ -42,10 +42,10 @@ final class FolioleFolderBackupOperation {
         callbacks.forEach { $0() }
     }
 
-    func run(directory: URL, profile: FolioleFolderBackupProfile, filename: String) throws -> FolioleBackupResult {
+    func run(directory: URL, profile selected: FolioleFolderBackupProfile, filename: String) throws -> FolioleBackupResult {
         let target = directory.appendingPathComponent(filename)
         try checkActive()
-        try prepareTarget(target, profile: profile)
+        let profile = try prepareTarget(target, profile: selected)
         profileID = profile.id
         var options = FolioleBackupOptions()
         options.timeoutMilliseconds = 30_000
@@ -109,7 +109,7 @@ final class FolioleFolderBackupOperation {
         if cancelled { throw backupError("Backup cancelled.") }
     }
 
-    private func prepareTarget(_ target: URL, profile: FolioleFolderBackupProfile) throws {
+    private func prepareTarget(_ target: URL, profile: FolioleFolderBackupProfile) throws -> FolioleFolderBackupProfile {
         var info = stat()
         if lstat(target.path, &info) == 0 {
             guard info.st_mode & S_IFMT == S_IFREG,
@@ -124,13 +124,26 @@ final class FolioleFolderBackupOperation {
                   info.st_dev != sourceInfo.st_dev || info.st_ino != sourceInfo.st_ino else {
                 throw backupError("Backup destination is the active database.")
             }
-        } else {
-            guard errno == ENOENT, !profile.ownsTarget else { throw backupError("Backup file is missing or inaccessible.") }
-            try store.update(id: profile.id) { $0.targetCreationPending = true }
-            let descriptor = open(target.path, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW, S_IRUSR | S_IWUSR)
-            guard descriptor >= 0 else { throw backupError("Cannot create backup file.") }
-            close(descriptor)
-            try store.update(id: profile.id) { $0.ownsTarget = true; $0.targetCreationPending = false }
+            return profile
         }
+        guard errno == ENOENT else { throw backupError("Backup file is missing or inaccessible.") }
+        var current = profile
+        if profile.ownsTarget {
+            // The retained backup was removed from its folder. Nothing is left to protect, so forget its
+            // identity first (an empty target may only be written without an expected fingerprint) and
+            // create a new full backup in the same folder.
+            func forget(_ value: inout FolioleFolderBackupProfile) {
+                value.ownsTarget = false; value.fingerprint = nil; value.pendingFingerprint = nil; value.savedAt = nil
+            }
+            try store.update(id: profile.id, forget)
+            forget(&current)
+        }
+        try store.update(id: profile.id) { $0.targetCreationPending = true }
+        let descriptor = open(target.path, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else { throw backupError("Cannot create backup file.") }
+        close(descriptor)
+        try store.update(id: profile.id) { $0.ownsTarget = true; $0.targetCreationPending = false }
+        current.ownsTarget = true; current.targetCreationPending = false
+        return current
     }
 }

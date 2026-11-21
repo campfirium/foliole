@@ -34,20 +34,64 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
             try (var output = Files.newOutputStream(profile)) { properties.store(output, ""); }
         } catch (Exception error) { throw new IllegalStateException(error); }
     }
-    private void run(boolean failBeforeCreate) throws Exception {
+    private void forget(boolean failAfterForget) {
+        try {
+            if (Files.exists(root.resolve("Foliole.sqlite"))) throw new AssertionError("Forgot a backup that still exists");
+            Properties properties = load();
+            properties.setProperty("owned", "false");
+            properties.setProperty("forgotten", "true");
+            properties.remove("fingerprint");
+            try (var output = Files.newOutputStream(profile)) { properties.store(output, ""); }
+        } catch (Exception error) { throw new IllegalStateException(error); }
+        if (failAfterForget) throw new IllegalStateException("stopped after forgetting");
+    }
+    private void run(boolean failBeforeCreate) throws Exception { run(failBeforeCreate, false); }
+    private void run(boolean failBeforeCreate, boolean failAfterForget) throws Exception {
         Properties properties = load();
         boolean owned = Boolean.parseBoolean(properties.getProperty("owned"));
         boolean pending = Boolean.parseBoolean(properties.getProperty("pending"));
         Runnable begin = () -> { save("pending"); if (failBeforeCreate) throw new IllegalStateException("stopped before create"); };
         Runnable complete = () -> save("owned");
+        Runnable forget = () -> forget(failAfterForget);
         try {
-            // Run the earlier implementation too: a missing new overload is never the red assertion.
+            // Run the earlier implementations too: a missing new overload is never the red assertion.
             try {
                 Method method = FolioleFolderBackupDocuments.class.getDeclaredMethod("prepare",
-                    boolean.class, boolean.class, Runnable.class, Runnable.class);
-                method.invoke(this, owned, pending, begin, complete);
-            } catch (NoSuchMethodException oldImplementation) { prepareLegacy(owned, complete); }
+                    boolean.class, boolean.class, Runnable.class, Runnable.class, Runnable.class);
+                method.invoke(this, owned, pending, begin, complete, forget);
+            } catch (NoSuchMethodException previous) {
+                try {
+                    FolioleFolderBackupDocuments.class.getDeclaredMethod("prepare",
+                        boolean.class, boolean.class, Runnable.class, Runnable.class).invoke(this, owned, pending, begin, complete);
+                } catch (NoSuchMethodException oldImplementation) { prepareLegacy(owned, complete); }
+            }
         } catch (InvocationTargetException error) { throw (Exception) error.getCause(); }
+    }
+    private static void recreateRemovedBackup(Path root, Path file, boolean failAfterForget) throws Exception {
+        FolderDocumentsFixture first = new FolderDocumentsFixture(root);
+        first.run(false);
+        Properties established = first.load();
+        established.setProperty("fingerprint", "retained");
+        try (var output = Files.newOutputStream(first.profile)) { established.store(output, ""); }
+        Files.write(file, new byte[] { 1, 2, 3 });
+        Files.delete(file); // the user removed the backup from the folder that still belongs to Foliole
+        if (failAfterForget) {
+            expectFailure(new FolderDocumentsFixture(root), () -> new FolderDocumentsFixture(root).run(false, true));
+            if (Files.exists(file)) throw new AssertionError("Created before forgetting the removed backup");
+        }
+        new FolderDocumentsFixture(root).run(false);
+        Properties recreated = first.load();
+        if (!Files.exists(file) || Files.size(file) != 0) throw new AssertionError("Removed backup was not recreated");
+        if (!Boolean.parseBoolean(recreated.getProperty("owned")) || recreated.getProperty("fingerprint") != null
+            || !Boolean.parseBoolean(recreated.getProperty("forgotten"))) {
+            throw new AssertionError("Recreated backup kept the removed backup's identity");
+        }
+        System.out.println("removed backup recreated");
+    }
+    private interface Attempt { void run() throws Exception; }
+    private static void expectFailure(FolderDocumentsFixture ignored, Attempt attempt) throws Exception {
+        try { attempt.run(); } catch (Exception expected) { return; }
+        throw new AssertionError("Expected the interrupted operation to fail");
     }
     private void prepareLegacy(boolean owned, Runnable complete) throws Exception {
         FolioleFolderBackupDocuments.class.getDeclaredMethod("prepare", boolean.class, Runnable.class)
@@ -81,6 +125,10 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
                 expectFailure(first, false);
                 if (!java.util.Arrays.equals(original, Files.readAllBytes(file))) throw new AssertionError("Foreign file changed");
                 System.out.println("external facts retained");
+                return;
+            case "owned-missing":
+            case "owned-missing-interrupted":
+                recreateRemovedBackup(root, file, args[0].endsWith("interrupted"));
                 return;
             case "pending-foreign":
                 expectFailure(first, true);

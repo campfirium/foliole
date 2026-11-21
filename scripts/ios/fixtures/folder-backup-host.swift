@@ -41,6 +41,13 @@ struct BackupHostFixture {
         precondition(unchanged.committed == 1 && unchanged.pagesSent < 10)
         let persisted = try FolioleFolderBackupProfileStore(file: root.appendingPathComponent("private/profile.json")).load()!
         precondition(persisted.fingerprint != nil && persisted.pendingFingerprint == nil && persisted.savedAt != nil)
+        // The user removes the backup file but keeps the folder: the next round writes a new full backup there.
+        try FileManager.default.removeItem(at: directory.appendingPathComponent("Foliole.sqlite"))
+        let recreated = try run("recreated")
+        precondition(recreated.committed == 1 && recreated.pagesSent > 400, "removed backup was not recreated in full")
+        let renewed = try store.load()!
+        precondition(renewed.ownsTarget && renewed.fingerprint != nil && renewed.savedAt != nil && renewed.savedAt != persisted.savedAt,
+                     "recreated backup has no identity of its own")
         let cancelled = FolioleFolderBackupOperation(requestID: "cancel", epoch: "owner", source: source, store: store)
         var released = false
         cancelled.cancel { released = true }
@@ -58,6 +65,6 @@ struct BackupHostFixture {
         let cleared = try resetStore.load()
         precondition(cleared == nil)
         precondition(FileManager.default.fileExists(atPath: directory.appendingPathComponent("Foliole.sqlite").path))
-        print("{\"initialPages\":\(initial.pagesSent),\"changedPages\":\(delta.pagesSent),\"unchangedPages\":\(unchanged.pagesSent),\"target\":\"\(directory.path)/Foliole.sqlite\"}")
+        print("{\"recreatedPages\":\(recreated.pagesSent),\"initialPages\":\(initial.pagesSent),\"changedPages\":\(delta.pagesSent),\"unchangedPages\":\(unchanged.pagesSent),\"target\":\"\(directory.path)/Foliole.sqlite\"}")
     }
 }

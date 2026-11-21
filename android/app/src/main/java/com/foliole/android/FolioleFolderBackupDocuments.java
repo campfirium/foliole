@@ -36,7 +36,8 @@ class FolioleFolderBackupDocuments {
         }
         return found;
     }
-    void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership) throws Exception {
+    void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership,
+        Runnable forgetMissingTarget) throws Exception {
         Uri document = find(filename);
         if (document != null && !owned) {
             if (!creationPending || !isEmpty(document)) {
@@ -45,7 +46,10 @@ class FolioleFolderBackupDocuments {
             persistOwnership.run();
         }
         if (document == null) {
-            if (owned) throw new FileNotFoundException("Backup file is missing.");
+            // The retained backup was removed from its folder. Nothing is left to protect, so forget its
+            // identity first (an empty target may only be written without an expected fingerprint) and
+            // create a new full backup in the same folder.
+            if (owned) forgetMissingTarget.run();
             persistCreation.run();
             if (DocumentsContract.createDocument(context.getContentResolver(), root(), "application/octet-stream", filename) == null) {
                 throw new IllegalStateException("Cannot create backup database.");
