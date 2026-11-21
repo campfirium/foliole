@@ -4,10 +4,15 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
+import { applyCompanionTrashPreview, getCompanionTrashPreview, subscribeCompanionTrashPreview } from './companionTrashPreview';
+
 export function useCompanionWorkspaceState(initial: NativeCompanionWorkspaceSyncState) {
   const [metadata, setMetadata] = useState(initial);
-  const snapshot = useSyncExternalStore(companionWorkspaceSnapshots.subscribe, companionWorkspaceSnapshots.getSnapshot);
+  const published = useSyncExternalStore(companionWorkspaceSnapshots.subscribe, companionWorkspaceSnapshots.getSnapshot);
+  // A move to Trash shows its result before the write commits; the next publication supersedes it.
+  const trashPreview = useSyncExternalStore(subscribeCompanionTrashPreview, getCompanionTrashPreview);
   const native = isAvailableNativeCompanionRuntime();
+  const snapshot = useMemo(() => applyCompanionTrashPreview(published, trashPreview), [published, trashPreview]);
   const state = useMemo(() => native ? { ...metadata, workspace_snapshot: snapshot } : metadata,
     [metadata, native, snapshot]);
   const setState = useCallback((update: SetStateAction<NativeCompanionWorkspaceSyncState>) => {

@@ -14,6 +14,8 @@ import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/
 import { buildWorkspaceMetadataMutation } from '../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../store/workspaceSnapshotSequentialReading';
 
+import { buildCompanionTrashPreview } from './companionTrashPreview';
+
 // Work-amplification check WA-046: counts only, never durations.
 const reads = vi.hoisted(() => ({ fullSnapshots: 0, orderDerivations: 0 }));
 
@@ -127,4 +129,17 @@ it('keeps the whole-library read when Sequential Reading is in reach', async () 
   expect(await owner.readSnapshot(db => loadCompanionTrashWriteNodes(db, ['sub'], { sequentialReading: false }))).not.toBeNull();
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'sub' });
   expect(reads.fullSnapshots).toBe(1);
+});
+
+it('previews exactly the visible result the committed move to Trash publishes', async () => {
+  for (const roots of [['sub'], ['b', 'c']]) {
+    const before = (await refreshCompanionWorkspaceAfterMutation())!;
+    const preview = buildCompanionTrashPreview(before, roots, '2026-11-21T00:00:00.000Z');
+    if (roots.length === 1) await mutateCompanionWorkspace({ type: 'delete', nodeId: roots[0]! });
+    else await moveCompanionBatchToTrash(roots.map(id => ({ id, version: before.nodesById[id]!.currentVersionId! })));
+    const after = (await refreshCompanionWorkspaceAfterMutation())!;
+    const visible = (value: WorkspaceSnapshot) => ({ nodeOrder: value.nodeOrder, activeNodeId: value.activeNodeId,
+      trashedNodeIds: [...value.trashedNodeIds].sort() });
+    expect(visible(preview)).toEqual(visible(after));
+  }
 });

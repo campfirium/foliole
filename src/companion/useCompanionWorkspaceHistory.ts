@@ -35,12 +35,15 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
   const locked = useRef(false);
   const committed = useRef(false);
 
-  async function run(task: () => Promise<void>, afterSave?: () => void, failureKey: TranslationKey = 'companion.reading.historyError') {
+  /** `preview` shows the expected result at once and returns how to withdraw it if nothing commits. */
+  async function run(task: () => Promise<void>, afterSave?: () => void, failureKey: TranslationKey = 'companion.reading.historyError',
+    preview?: () => () => void) {
     if (locked.current) return;
     const scope = getCompanionReadingScope();
     locked.current = true;
     setBusy(true);
     setFailure(null);
+    const withdraw = committed.current ? undefined : preview?.();
     try {
       if (!committed.current) {
         await props.flush();
@@ -55,7 +58,12 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
       setPending(false);
       props.afterRefresh();
     } catch { setFailure(failureKey); setPending(committed.current); }
-    finally { locked.current = false; setBusy(false); }
+    finally {
+      // A committed write keeps its preview until the refreshed snapshot replaces it.
+      if (!committed.current) withdraw?.();
+      locked.current = false;
+      setBusy(false);
+    }
   }
   return { run, busy, pending, failure, clearFailure: () => setFailure(null) };
 }

@@ -22,6 +22,7 @@ import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import { resolveCompanionHistoryLabel } from './companionHistoryActionLabel';
 import { CompanionMenuRow } from './CompanionMenuSheet';
+import { previewCompanionTrash } from './companionTrashPreview';
 import { CompanionWorkspaceNodeSheet, type WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
 import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 
@@ -68,7 +69,8 @@ type TransactionRun = ReturnType<typeof useCompanionWorkspaceTransaction>['run']
 
 function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'purgeBatch'> {
   return {
-    moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error'),
+    moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error',
+      () => { const withdraw = previewCompanionTrash(targets.map(target => target.id)); onSaved(); return withdraw; }),
     moveBatch: (targets, parentNodeId, onSaved) => run(async () => { await moveCompanionBatch(targets, parentNodeId); }, onSaved, 'companion.batch.error'),
     addBatchToDive: (diveId, sourceIds, onSaved) => run(() => addCompanionDiveSources(diveId, sourceIds), onSaved,
       'desktop.nodeList.addToDive.saveFailed'),
@@ -123,7 +125,9 @@ export function CompanionWorkspaceActionsProvider(props: {
     retryRefresh: () => void run(async () => {}),
     execute: (command, onSaved) => run(async () => {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
-    }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type]), replay: mode => void replay(mode) };
+    }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type],
+    command.type === 'delete' ? () => { const withdraw = previewCompanionTrash([command.nodeId]); setSheet(null); return withdraw; } : undefined),
+    replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}
     {failure && !sheet && <div role="status" className="fixed bottom-24 left-3 right-3 z-[80] rounded-lg border bg-companion-base p-3 text-sm">
