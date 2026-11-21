@@ -4,6 +4,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
+import { recordNativeCommandFailure } from '../diagnostics/nativeCommandFailureLog.js';
 
 import { handleAssistantCommand } from './assistantCommands.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
@@ -37,6 +38,15 @@ function resolveTargetWindow(context?: InvokeContext) {
 }
 
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  try {
+    return await dispatchInvokeRequest(request, context);
+  } catch (error) {
+    await recordNativeCommandFailure(String(request.command), error);
+    throw error;
+  }
+}
+
+async function dispatchInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const command = request.command;
   const args = (request.args ?? {}) as Record<string, unknown>;
   recordIpcPayloadBudget({

@@ -8,6 +8,7 @@ import type { NativeCopyDiagnosticReportResult } from '../../lib/platform/native
 import { resolveFolioleAppVersion } from '../appVersion.js';
 
 import { summarizeRuntimeErrors } from './diagnosticErrorSummary.js';
+import { redactExportedDiagnosticText } from './diagnosticExportRedactor.js';
 import { redactDiagnosticValue } from './diagnosticRedactor.js';
 
 interface FileSummary {
@@ -39,6 +40,7 @@ const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
   'action',
   'code',
+  'command',
   'durationMs',
   'lastObservedBlocker',
   'message',
@@ -146,6 +148,7 @@ function asSafePayloadDetail(payload: unknown) {
     SAFE_PAYLOAD_KEYS
       .map((key) => [key, (payload as Record<string, unknown>)[key]])
       .filter(([, value]) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+      .map(([key, value]) => [key, typeof value === 'string' ? redactExportedDiagnosticText(value) : value])
   );
   const text = JSON.stringify(redactDiagnosticValue(safe));
   return text === '{}' ? undefined : text.slice(0, 180);
