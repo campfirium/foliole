@@ -29,12 +29,12 @@ const snapshot = inspection => async (options) => {
   return { database: { integrity: 'ok', inspection } };
 };
 
-it('leaves the test group through the product once the test app is a member with nothing unsynced', async () => {
+it('leaves the test group through the product, keeping unsynced test changes on the phone', async () => {
   const events = [];
   const maintenance = vi.fn(async () => ({ manifestPath: '/evidence/leave.json' }));
   const args = leaveArgs(events);
   const result = await leaveMacosA5TestAppSyncGroup(args, {
-    collectSnapshot: snapshot({ syncGroupId: 'test-group', dirtyRecordCount: 0, nodeCount: 3280 }), maintenance
+    collectSnapshot: snapshot({ syncGroupId: 'test-group', dirtyRecordCount: 570, nodeCount: 3280 }), maintenance
   });
 
   expect(events).toEqual([`shell am force-stop ${A5_TEST_APP_ID}`, 'mutation-boundary', 'install -r /test.apk']);
@@ -43,13 +43,12 @@ it('leaves the test group through the product once the test app is a member with
   }));
   expect(result.manifestPath).toBe('/evidence/leave.json');
   expect(JSON.parse(fs.readFileSync(path.join(args.evidenceRoot, 'test-leave-preflight.json'), 'utf8')))
-    .toMatchObject({ appId: A5_TEST_APP_ID, nodeCount: 3280, syncGroupId: 'test-group' });
+    .toMatchObject({ appId: A5_TEST_APP_ID, nodeCount: 3280, syncGroupId: 'test-group', unsyncedChangesKeptLocally: 570 });
 });
 
-it('refuses before any change when the test app is outside a group, has unsynced work, or cannot be read', async () => {
+it('refuses before any change when the test app is outside a group or cannot be read', async () => {
   for (const [inspection, message] of [
     [{ syncGroupId: null, dirtyRecordCount: 0 }, 'not in a sync group'],
-    [{ syncGroupId: 'test-group', dirtyRecordCount: 4 }, '4 unsynced changes'],
     [null, 'snapshot is unavailable']
   ]) {
     const events = [];

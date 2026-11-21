@@ -7,7 +7,10 @@ import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { A5_TEST_APP_ID, macosA5AppId } from './macos-a5-app-identity.mjs';
 
-/** Read-only proof that the test app is a member with nothing left to sync before it departs. */
+/**
+ * Read-only proof that the test app is a group member before it departs. Unsynced test
+ * changes stay on the phone and are recorded, not synced: the test group may then differ.
+ */
 export async function inspectTestAppDeparturePreflight({ env, execute, paths, serial }, dependencies = {}) {
   const collectSnapshot = dependencies.collectSnapshot ?? collectAndroidDeviceSnapshot;
   const appId = macosA5AppId(env);
@@ -22,16 +25,14 @@ export async function inspectTestAppDeparturePreflight({ env, execute, paths, se
   if (typeof inspection.syncGroupId !== 'string' || !inspection.syncGroupId) {
     throw new Error('The A5 test application is not in a sync group.');
   }
-  if ((inspection.dirtyRecordCount ?? 0) !== 0) {
-    throw new Error(`The A5 test application has ${inspection.dirtyRecordCount} unsynced changes; sync before leaving.`);
-  }
-  return { appId, dirtyRecordCount: 0, nodeCount: inspection.nodeCount, syncGroupId: inspection.syncGroupId };
+  return { appId, unsyncedChangesKeptLocally: inspection.dirtyRecordCount ?? 0, nodeCount: inspection.nodeCount,
+    syncGroupId: inspection.syncGroupId };
 }
 
 /**
  * Leave the test group through the product's own Leave flow. Unlike the daily joined-empty
- * reauthorization, the test library keeps its content, so the gate is membership plus no
- * unsynced changes; the daily application is never touched.
+ * reauthorization, the test library keeps its content, so the gate is membership only; the
+ * daily application is never touched.
  */
 export async function leaveMacosA5TestAppSyncGroup(args, dependencies = {}) {
   const maintenance = dependencies.maintenance ?? runMacosA5SyncGroupMaintenance;
