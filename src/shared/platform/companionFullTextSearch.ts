@@ -3,6 +3,7 @@ import {
   normalizeFullTextSearchIndexStrategy,
   type FullTextSearchIndexStrategy
 } from '../../../lib/core/database/fullTextSearchIndexStrategy';
+import { projectMarkdownExcerptText } from '../../features/nodes/model/nodeListLabelProjection';
 
 import { loadCompanionSearchSnapshot } from './companion/runtime/companionSearchSnapshot';
 import { loadCompanionWorkspaceNode } from './companion/runtime/companionWorkspaceNodeStore';
@@ -103,7 +104,7 @@ function toCompanionTopicSearchResult(result: NativeTopicSearchResult): Companio
   if (!nodeId) throw new Error('companion_topic_search_identity_missing');
   return {
     bodyStatus: normalizeBodyStatus(result.content_status),
-    excerpt: result.excerpt,
+    excerpt: projectMarkdownExcerptText(result.excerpt),
     matchStart: result.match_start,
     nodeId,
     openingText: result.opening_text,

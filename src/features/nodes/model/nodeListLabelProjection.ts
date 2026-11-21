@@ -71,3 +71,13 @@ export function projectMarkdownDisplayText(label: string) {
 }
 
 export const projectNodeListLabel = projectMarkdownDisplayText;
+
+// Search excerpts are raw Markdown slices that may span several lines; project each line so
+// block markers after a line break (headings, list items, quotes) are removed as well.
+export function projectMarkdownExcerptText(excerpt: string) {
+  return excerpt
+    .split(/\r?\n/)
+    .map((line) => projectMarkdownDisplayText(line))
+    .filter(Boolean)
+    .join(' ');
+}

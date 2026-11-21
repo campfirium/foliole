@@ -216,3 +216,13 @@ it('continues each result kind independently and stops querying exhausted kinds'
   expect(iosReads.pdf).not.toHaveBeenCalled();
   expect(page.pdf).toEqual([]);
 });
+
+it('returns topic excerpts as plain text while keeping the raw content match offset', async () => {
+  iosReads.topics.mockResolvedValueOnce([{
+    content_status: 'ready', excerpt: '## Field notes\nSample material for **checking** [reading](https://example.com)\n- review',
+    match_start: 3, node_id: 'topic-1', opening_text: null, title: 'Sample Field Notes', updated_at: '2026-04-26T01:00:00.000Z'
+  }]);
+  const api = await import('./companionFullTextSearch');
+  const { topics } = await api.searchCompanionFullText('field notes', 5);
+  expect(topics[0]).toMatchObject({ excerpt: 'Field notes Sample material for checking reading review', matchStart: 3 });
+});
