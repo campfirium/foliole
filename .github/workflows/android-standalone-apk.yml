@@ -1,6 +1,8 @@
 name: Android standalone APK
 # Builds a Play-signed APK for the QA-accepted preview tip and keeps it as a downloadable artifact.
 # Play only receives an internal-track draft, so no tester or user is offered an update.
+# The upload-signed AAB is kept before any Play call, so a failed Play step can be retried from it
+# by dispatching again with the same target_sha and version_code plus resume_run_id.
 on:
   workflow_dispatch:
     inputs:
@@ -12,7 +14,12 @@ on:
         description: Unused Play version code above every uploaded bundle
         required: true
         type: string
-permissions: { contents: read }
+      resume_run_id:
+        description: Earlier run ID whose signed AAB to resubmit instead of rebuilding (leave empty to build)
+        required: false
+        default: ''
+        type: string
+permissions: { contents: read, actions: read }
 concurrency: { group: android-standalone-apk, cancel-in-progress: false }
 jobs:
   apk:
@@ -22,6 +29,7 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
       VERSION_CODE: ${{ inputs.version_code }}
+      RESUME_RUN_ID: ${{ inputs.resume_run_id }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
@@ -33,21 +41,63 @@ jobs:
       - uses: actions/setup-java@v6.3.0
         with: { distribution: zulu, java-version: '21.0.13.1+2', check-latest: true }
       - name: Activate pinned npm
+        if: inputs.resume_run_id == ''
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Install Linux DNS-SD build headers
+        if: inputs.resume_run_id == ''
         run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
       - name: Install dependencies
+        if: inputs.resume_run_id == ''
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Install pinned SQLCipher toolchain and APK inspection tools
+        if: inputs.resume_run_id == ''
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653" "build-tools;35.0.0"'
+      - name: Restore the content-addressed SQLCipher Android build
+        if: inputs.resume_run_id == ''
+        uses: actions/cache@v4
+        with:
+          # mobile-sqlcipher.mjs keys its own output by pins, build scripts and folder-backup sources;
+          # this key hashes the same inputs, so any change still rebuilds from pinned sources.
+          path: |
+            .cache/mobile-sqlcipher/*/*/downloads/core.tar.gz
+            .cache/mobile-sqlcipher/*/*/downloads/vendor.pom
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.c
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.h
+            .cache/mobile-sqlcipher/*/*/android/*-dbpage.aar
+          key: mobile-sqlcipher-android-${{ runner.os }}-${{ runner.arch }}-ndk-25.2.9519653-${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}
       - name: Build the production AAB without credentials
+        if: inputs.resume_run_id == ''
         run: node .tmp/standalone-tools/scripts/android/play-standalone-apk.mjs build
       - name: Sign with the existing Play upload certificate
+        if: inputs.resume_run_id == ''
         env:
           ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
         run: node .tmp/standalone-tools/scripts/android/play-standalone-apk.mjs sign
+      - name: Keep the signed AAB before any Play call
+        if: inputs.resume_run_id == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: foliole-android-standalone-signed-${{ inputs.version_code }}-${{ inputs.target_sha }}
+          path: |
+            .tmp/artifacts/android-standalone-apk/app-release-signed.aab
+            .tmp/artifacts/android-standalone-apk/bundle.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+      - name: Install APK inspection tools
+        if: inputs.resume_run_id != ''
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
+      - name: Restore the signed AAB of the earlier run
+        if: inputs.resume_run_id != ''
+        uses: actions/download-artifact@v5
+        with:
+          # The name binds the artifact to this exact target and version code; deliver re-checks both and the digest.
+          name: foliole-android-standalone-signed-${{ inputs.version_code }}-${{ inputs.target_sha }}
+          path: .tmp/artifacts/android-standalone-apk
+          run-id: ${{ inputs.resume_run_id }}
+          github-token: ${{ github.token }}
       - name: Let Play sign the universal APK from an internal-track draft
         env:
           ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}

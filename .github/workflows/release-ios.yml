@@ -79,6 +79,17 @@ jobs:
           test "$(node -p 'require("./package.json").version')" = "$TARGET_VERSION"
       - name: Install pinned source dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Restore the content-addressed SQLCipher Apple build
+        uses: actions/cache@v4
+        with:
+          # mobile-sqlcipher.mjs keys its own output by pins, build scripts and folder-backup sources;
+          # this key hashes the same inputs plus the Xcode in use, so any change still rebuilds from pinned sources.
+          path: |
+            .cache/mobile-sqlcipher/*/*/downloads/core.tar.gz
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.c
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.h
+            .cache/mobile-sqlcipher/*/*/apple/SQLCipher.swift
+          key: mobile-sqlcipher-apple-${{ runner.os }}-${{ runner.arch }}-${{ env.DEVELOPER_DIR }}-${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: '4.0', bundler-cache: true }
       - name: Validate pinned Fastlane signing options without Apple access

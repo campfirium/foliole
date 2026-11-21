@@ -63,6 +63,18 @@ jobs:
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Install the SQLCipher native toolchain
         run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653"'
+      - name: Restore the content-addressed SQLCipher Android build
+        uses: actions/cache@v4
+        with:
+          # mobile-sqlcipher.mjs keys its own output by pins, build scripts and folder-backup sources;
+          # this key hashes the same inputs, so any change still rebuilds from pinned sources.
+          path: |
+            .cache/mobile-sqlcipher/*/*/downloads/core.tar.gz
+            .cache/mobile-sqlcipher/*/*/downloads/vendor.pom
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.c
+            .cache/mobile-sqlcipher/*/*/amalgamation/sqlite3.h
+            .cache/mobile-sqlcipher/*/*/android/*-dbpage.aar
+          key: mobile-sqlcipher-android-${{ runner.os }}-${{ runner.arch }}-ndk-25.2.9519653-${{ hashFiles('scripts/build/mobile-sqlcipher*', 'lib/native/folderBackup/**') }}
       - name: Run canonical Android host tail
         run: npm run quality:release:android:tail
       - name: Upload Android quality logs
