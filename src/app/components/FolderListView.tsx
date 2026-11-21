@@ -83,14 +83,18 @@ function buildFolderListRebuildKey(props: FolderListViewProps, listedNodes: Node
   return `${scopeKey}\u0000${membershipKey}`;
 }
 
-function buildFolderListCurrentViewActions(props: FolderListViewProps, deleteNodes: (nodeIds: string[]) => void, filteredNodes: Node[]) {
+function buildFolderListCurrentViewActions(
+  props: FolderListViewProps,
+  deleteNodes: (nodeIds: string[]) => void,
+  topicSnapshots: ReturnType<typeof buildCurrentViewTopicSnapshots>
+) {
   if (!props.onOpenMoveToNode) return null;
   return (
     <WorkspaceTopicTreeCurrentViewActions
       deleteNodes={deleteNodes}
       nodesById={props.nodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}
-      topicSnapshots={buildCurrentViewTopicSnapshots(filteredNodes)}
+      topicSnapshots={topicSnapshots}
       trashedNodeIds={props.trashedNodeIds ?? []}
     />
   );
@@ -106,12 +110,14 @@ function useResolvedFolderListState(props: FolderListViewProps) {
       props.nodeOrder,
       props.nodes,
       props.nodesById,
-      props.onSelectNode,
       props.regionLabel,
+      props.sortKey,
       props.trashedNodeIds
     ]
   );
   const manualChildOrder = resolveFolderManualChildOrder(props);
+  // A new array here re-sorted the whole folder on every render in manual order.
+  const listedNodeIds = useMemo(() => listedNodes.map((node) => node.id), [listedNodes]);
   const state = useFolderListViewState({
     controlledSearchQuery: props.searchQuery,
     controlledSortDirection: props.sortDirection,
@@ -123,9 +129,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
     listedNodes,
     nodeOpenStateById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
-    manualChildOrder: props.sortKey === 'manual'
-      ? listedNodes.map((node) => node.id)
-      : manualChildOrder,
+    manualChildOrder: props.sortKey === 'manual' ? listedNodeIds : manualChildOrder,
     onChangeSearchQuery: props.onChangeSearchQuery,
     onChangeSortDirection: props.onChangeSortDirection,
     onChangeSortKey: props.onChangeSortKey
@@ -164,7 +168,8 @@ export function FolderListView(props: FolderListViewProps) {
   const { nodeOpenStateById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const scrollElementRef = useRef<HTMLDivElement | null>(null);
-  const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
+  const topicSnapshots = useMemo(() => buildCurrentViewTopicSnapshots(state.filteredNodes), [state.filteredNodes]);
+  const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, topicSnapshots);
   const selection = useFolderListSelection({
     activeNodeId: props.activeNodeId,
     filteredNodes: state.filteredNodes,
