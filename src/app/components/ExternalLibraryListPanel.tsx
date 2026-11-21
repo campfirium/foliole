@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -70,6 +70,10 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
   );
 }
 
+function getExternalDocumentId(document: { absolutePath: string }) {
+  return document.absolutePath;
+}
+
 function useExternalDocumentListState(
   props: ExternalLibraryListPanelProps,
   searchQuery: string,
@@ -86,21 +90,30 @@ function useExternalDocumentListState(
     [folderEntries, props.selection, selectedFolder]
   );
 
-  const filteredDocuments = (browseState?.documentItems ?? []).filter(
-    (document) =>
-      !searchQuery.trim() ||
-      containsQuery(document.relativePath, searchQuery) ||
-      containsQuery(document.fileName, searchQuery) ||
-      containsQuery(document.title, searchQuery) ||
-      containsQuery(document.openingText ?? '', searchQuery)
+  // A new filtered array or sorter per render re-sorted the whole folder on every render.
+  const filteredDocuments = useMemo(
+    () =>
+      (browseState?.documentItems ?? []).filter(
+        (document) =>
+          !searchQuery.trim() ||
+          containsQuery(document.relativePath, searchQuery) ||
+          containsQuery(document.fileName, searchQuery) ||
+          containsQuery(document.title, searchQuery) ||
+          containsQuery(document.openingText ?? '', searchQuery)
+      ),
+    [browseState, searchQuery]
+  );
+  const sortItems = useCallback(
+    (items: typeof filteredDocuments) => sortExternalDocuments(items, sort, lastOpenedAtByPath),
+    [lastOpenedAtByPath, sort]
   );
   const documents = useStableWorkspaceContentItems({
-    getItemId: (document) => document.absolutePath,
+    getItemId: getExternalDocumentId,
     items: filteredDocuments,
     refreshKey: sortRefreshVersion,
     scopeKey: activeFolderId ?? 'root',
     sort,
-    sortItems: (items) => sortExternalDocuments(items, sort, lastOpenedAtByPath)
+    sortItems
   });
   return {
     documents,
