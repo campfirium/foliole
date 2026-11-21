@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 
 import { approvalFixtureSources } from './android-sync-group-approval-result.fixture.mjs';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const javaHome = process.env.JAVA_HOME ?? (process.platform === 'darwin'
@@ -27,7 +28,7 @@ beforeAll(() => {
   const compiled = spawnSync(binary('javac'), ['-d', directory, ...sources], {
     encoding: 'utf8', timeout: 60_000
   });
-  expect(compiled.error ?? compiled.stderr).toBe('');
+  expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
   expect(compiled.status).toBe(0);
 });
 
@@ -39,7 +40,7 @@ it('returns renderable provider state after Android approves a joining device', 
   const result = spawnSync(binary('java'), ['-cp', directory, 'com.foliole.android.ApprovalFixture'], {
     encoding: 'utf8', timeout: 5_000
   });
-  expect(result.error ?? result.stderr).toBe('');
+  expect(result.error ?? jvmStderr(result.stderr)).toBe('');
   expect(result.status).toBe(0);
   expect(result.stdout).toContain('Approval returns complete provider state');
 });

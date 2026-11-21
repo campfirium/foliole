@@ -47,7 +47,7 @@ it('changes code font without altering prose, retains it on reentry and can retu
   expect((returned.container.querySelector('[data-reading-font-size]') as HTMLElement).style.getPropertyValue('--content-panel-mono-font-family')).toContain('Device Mono');
   fireEvent.change(screen.getByRole('combobox', { name: 'Monospace font' }), { target: { value: 'default' } });
   expect(loadReadingTypographySettings().monospaceFont).toBeUndefined();
-  expect(returned.container.querySelector('[data-reading-font-size]')).toHaveStyle({ '--content-panel-font-family': proseFont });
+  expect((returned.container.querySelector('[data-reading-font-size]') as HTMLElement).style.getPropertyValue('--content-panel-font-family')).toBe(proseFont);
   await act(async () => undefined);
 });
 

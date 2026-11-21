@@ -65,8 +65,8 @@ describe('ReadableArticleDocument editing', () => {
     const { container } = renderReadableArticleDocument({
       readingTypographySettings: { ...defaultReadingTypographySettings, fontFamily: 'system:Noto Sans SC' }
     });
-    expect(container.querySelector('[data-reading-font-family]'))
-      .toHaveStyle({ '--content-panel-font-family': '"Noto Sans SC", var(--font-family-sans)' });
+    expect(container.querySelector<HTMLElement>('[data-reading-font-family]')?.style.getPropertyValue('--content-panel-font-family'))
+      .toBe('"Noto Sans SC", var(--font-family-sans)');
   });
 
   it('keeps the document read-only when no save handler exists', () => {

@@ -108,9 +108,9 @@ it('uses pinch gestures while adjusting a mask and keeps the image within reach 
   expect(plane.style.transform).toContain('scale(2)');
   fireEvent.pointerUp(canvas, { pointerId: 2 });
   fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 10000, clientY: 10000 });
-  const match = plane.style.transform.match(/translate\(([-.\d]+)px, ([-.\d]+)px\)/)!;
+  const match = plane.style.transform.match(/translate\(([-.\d]+)px(?:, ([-.\d]+)px)?\)/)!;
   expect(Math.abs(Number(match[1]))).toBeLessThanOrEqual(600);
-  expect(Math.abs(Number(match[2]))).toBeLessThanOrEqual(100);
+  expect(Math.abs(Number(match[2] ?? 0))).toBeLessThanOrEqual(100);
   expect(screen.getByLabelText('Mask 1')).toBeVisible();
 });
 
@@ -179,7 +179,7 @@ it('pans by default, arms one new mask explicitly, and returns to image movement
   fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 140, clientY: 340 });
   fireEvent.pointerUp(canvas, { pointerId: 1 });
   expect(canvas.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(0);
-  expect(canvas.querySelector('[data-cloze-image]')?.getAttribute('style')).toContain('translate(40px, 0px)');
+  expect(canvas.querySelector('[data-cloze-image]')?.getAttribute('style')).toMatch(/translate\(40px(?:, 0px)?\)/);
   drawImageClozeMask();
   expect(screen.getByRole('button', { name: 'New mask' })).toHaveAttribute('aria-pressed', 'false');
   expect(canvas.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(1);

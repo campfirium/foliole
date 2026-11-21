@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 const root = path.resolve('android/app/src/main/java/com/foliole/android');
 
@@ -85,11 +86,11 @@ it('resolves an absent image without entering the trash move and still restores 
       .map(([name, text]) => { const file = path.join(directory, name); fs.writeFileSync(file, text); return file; });
     const compiled = spawnSync(binary('javac'), ['-d', directory, ...sources,
       path.join(root, 'FolioleCompanionAttachmentFileResolver.java')], { encoding: 'utf8', timeout: 30000 });
-    expect(compiled.error ?? compiled.stderr).toBe('');
+    expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
     expect(compiled.status).toBe(0);
     const result = spawnSync(binary('java'), ['-cp', directory, 'com.foliole.android.ResolveReadOnlyFixture'],
       { encoding: 'utf8', timeout: 15000 });
-    expect(result.stderr).toBe('');
+    expect(jvmStderr(result.stderr)).toBe('');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Absent image stayed read-only; trashed image restored');
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }

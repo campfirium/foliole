@@ -173,9 +173,14 @@ async function expectSavedFormulaClozeRegions() {
   await waitFor(() => {
     expect(host.querySelector('.cm-md-formula-cloze-region')).toHaveAttribute('data-md-formula-region-hidden', 'true');
   });
-  expect(host.querySelector('.cm-md-formula-cloze-region')).toHaveStyle({
-    backgroundColor: 'color-mix(in srgb, rgb(var(--role-ink-rgb)) 5.5%, var(--role-content-bg) 94.5%)'
-  });
+  host.style.setProperty('--role-ink-rgb', '20 30 40');
+  host.style.setProperty('--role-content-bg', 'rgb(250, 250, 250)');
+  const reference = host.appendChild(document.createElement('div'));
+  reference.style.backgroundColor = 'color-mix(in srgb, rgb(var(--role-ink-rgb)) 5.5%, var(--role-content-bg) 94.5%)';
+  const expectedBackground = getComputedStyle(reference).backgroundColor;
+  reference.remove();
+  expect(expectedBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(host.querySelector('.cm-md-formula-cloze-region')!).backgroundColor).toBe(expectedBackground);
 
   adapter.destroy();
 }

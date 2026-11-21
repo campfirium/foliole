@@ -44,12 +44,14 @@ async function openSplitTopicDialog(page: import('@playwright/test').Page) {
   return dialog;
 }
 
+async function readTrashed(page: import('@playwright/test').Page, nodeId: string) {
+  return page.evaluate((targetNodeId) => globalThis.window?.__folioleWorkspaceDebug?.getNode(targetNodeId)?.trashed ?? null, nodeId);
+}
+
 async function closeSplitTopicDialogWithEscape(page: import('@playwright/test').Page, dialog: import('@playwright/test').Locator) {
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
-  expect(await page.evaluate((nodeId) =>
-    globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null,
-  SOURCE_TOPIC_ID)).toBe(false);
+  expect(await readTrashed(page, SOURCE_TOPIC_ID)).toBe(false);
 }
 
 async function readNode(page: import('@playwright/test').Page, title: string) {
@@ -79,9 +81,7 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toBeHidden();
   expect(await readNode(desktopWindow, FIRST_TITLE)).toBeNull();
-  expect(await desktopWindow.evaluate((nodeId) =>
-    globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null,
-  SOURCE_TOPIC_ID)).toBe(false);
+  expect(await readTrashed(desktopWindow, SOURCE_TOPIC_ID)).toBe(false);
 
   dialog = await openSplitTopicDialog(desktopWindow);
   await dialog.getByRole('textbox', { name: 'Delimiter' }).fill('---split---');
@@ -92,9 +92,7 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
     trashed: false
   });
   await expect.poll(() => readNode(desktopWindow, SECOND_TITLE)).toMatchObject({ trashed: false });
-  await expect.poll(() => desktopWindow.evaluate((nodeId) =>
-    globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null,
-  SOURCE_TOPIC_ID)).toBe(true);
+  await expect.poll(() => readTrashed(desktopWindow, SOURCE_TOPIC_ID)).toBe(true);
   await expect(desktopWindow.getByRole('treeitem', { name: FIRST_TITLE })).toBeVisible();
   await desktopWindow.getByRole('treeitem', { name: SECOND_TITLE }).click();
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText('Beta detail');
@@ -116,7 +114,7 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   await expect.poll(() => readNode(desktopWindow, 'Keep Beta')).toMatchObject({ parentNodeId: KEEP_SOURCE_TOPIC_ID, trashed: false });
   expect((await readNode(desktopWindow, 'Keep Alpha'))?.content.trimEnd().endsWith('---keep---')).toBe(true);
   expect((await readNode(desktopWindow, 'Keep Beta'))?.content.trimStart().startsWith('---keep---')).toBe(false);
-  expect(await desktopWindow.evaluate((nodeId) => globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null, KEEP_SOURCE_TOPIC_ID)).toBe(false);
+  expect(await readTrashed(desktopWindow, KEEP_SOURCE_TOPIC_ID)).toBe(false);
 
   await desktopWindow.evaluate((nodeId) => globalThis.window?.__folioleWorkspaceDebug?.openNode?.(nodeId), KEEP_SOURCE_TOPIC_ID);
   dialog = await openSplitTopicDialog(desktopWindow);

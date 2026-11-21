@@ -45,9 +45,9 @@ it('places the footer folder divider at the current list folder edge', () => {
     </AppearanceSettingsContext.Provider>
   );
 
-  expect(container.querySelector('[data-workspace-surface-divider="folder"]')).toHaveStyle({
-    left: 'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))'
-  });
+  expect(container.querySelector<HTMLElement>('[data-workspace-surface-divider="folder"]')?.style.left).toBe(
+    'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))'
+  );
 });
 
 it('hides titlebar list dividers below the responsive list breakpoint', () => {
@@ -73,7 +73,5 @@ it('keeps the titlebar rail divider on the shared 40px rail boundary', () => {
       <WorkspaceTitlebarDividers isListCollapsed={false} isRightSidebarCollapsed />
     </AppearanceSettingsContext.Provider>
   ).container;
-  expect(dividers.querySelector('[data-workspace-surface-divider="rail"]')).toHaveStyle({
-    left: 'var(--workspace-rail-width)'
-  });
+  expect(dividers.querySelector<HTMLElement>('[data-workspace-surface-divider="rail"]')?.style.left).toBe('var(--workspace-rail-width)');
 });
