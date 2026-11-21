@@ -6,9 +6,9 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
-import { loadCompanionTrashWriteNodes } from '../shared/platform/companion/runtime/companionTrashWriteNodes';
 import { collectCompanionBatchSubtree, moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
+import { loadCompanionWriteNodes } from '../shared/platform/companion/runtime/companionWriteNodes';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 import { buildWorkspaceMetadataMutation } from '../store/workspaceNodeMetadataMutation';
@@ -104,7 +104,7 @@ it('builds the same Trash change from the narrow read as from the whole library'
   const owner = getIosCompanionDatabaseOwner();
   await owner.readSnapshot(async db => {
     const complete = (await loadIosCompanionWorkspaceSnapshot(db))!;
-    const narrow = (await loadCompanionTrashWriteNodes(db, ['sub'], { sequentialReading: true }))!;
+    const narrow = (await loadCompanionWriteNodes(db, ['sub'], { sequentialReading: true }))!;
     const now = '2026-11-21T00:00:00.000Z';
     const fromComplete = buildWorkspaceMetadataMutation({ type: 'delete', nodeId: 'sub' }, complete.nodesById, now);
     // Content projections never carry the Readwise lifecycle; version records take it from the stored version instead.
@@ -116,7 +116,7 @@ it('builds the same Trash change from the narrow read as from the whole library'
     expect(maintainWorkspaceSnapshotSequentialReading({ before: complete.nodesById, after, changedNodeIds: ['sub'],
       nodeOrder: complete.nodeOrder, now })).toEqual([]);
     for (const id of Object.keys(narrow)) expect(narrow[id]).toEqual({ ...complete.nodesById[id], readwiseRemoteLifecycle: undefined });
-    const batch = (await loadCompanionTrashWriteNodes(db, ['b', 's1'], { sequentialReading: false }))!;
+    const batch = (await loadCompanionWriteNodes(db, ['b', 's1'], { sequentialReading: false }))!;
     const ids = (nodes: WorkspaceSnapshot['nodesById']) => collectCompanionBatchSubtree(nodes, ['b', 's1']).map(node => node.id);
     expect(ids(batch)).toEqual(ids(complete.nodesById));
   });
@@ -125,8 +125,8 @@ it('builds the same Trash change from the narrow read as from the whole library'
 it('keeps the whole-library read when Sequential Reading is in reach', async () => {
   library.database.prepare('UPDATE nodes SET sequential_reading_enabled = 1 WHERE id = ?').run('folder');
   const owner = getIosCompanionDatabaseOwner();
-  expect(await owner.readSnapshot(db => loadCompanionTrashWriteNodes(db, ['sub'], { sequentialReading: true }))).toBeNull();
-  expect(await owner.readSnapshot(db => loadCompanionTrashWriteNodes(db, ['sub'], { sequentialReading: false }))).not.toBeNull();
+  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['sub'], { sequentialReading: true }))).toBeNull();
+  expect(await owner.readSnapshot(db => loadCompanionWriteNodes(db, ['sub'], { sequentialReading: false }))).not.toBeNull();
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'sub' });
   expect(reads.fullSnapshots).toBe(1);
 });

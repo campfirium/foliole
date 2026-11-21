@@ -1,3 +1,4 @@
+import { parentOrderId } from './parentChildOrder.js';
 import type { WorkspaceSnapshot } from './workspaceSnapshot.js';
 import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 import { workspaceSnapshotValueEqual } from './workspaceSnapshotValueEqual.js';
@@ -63,6 +64,71 @@ export function canMergeWorkspaceTrashProjection(
   }
   return trashed.size > 0 && Object.values(current.nodesById)
     .every(node => node.parentNodeId === null || !trashed.has(node.parentNodeId) || nodes[node.id] !== undefined);
+}
+
+// Metadata writes may change these facts; the merge re-derives the order of every parent they touch.
+const METADATA_FIELDS = ['title', 'isTitleManual', 'parentNodeId', 'deletedAt', 'priority', 'shelvedAt'] as const;
+const ORDER_FIELDS = ['title', 'parentNodeId', 'createdAt', 'deletedAt'] as const;
+
+/**
+ * Accepts metadata writes confined to the named nodes: creations, renames, moves, restores, moves to Trash,
+ * priority and shelving. Every baseline child of a named node must have been read too.
+ */
+export function canMergeWorkspaceMetadataProjection(
+  current: WorkspaceSnapshot,
+  nodes: WorkspaceSnapshot['nodesById'],
+  expectedNodeIds: readonly string[],
+  reviewedNodeIds: readonly string[] = [],
+  readingNodeIds: readonly string[] = []
+) {
+  if (expectedNodeIds.some(id => !nodes[id])) return false;
+  const reviewed = new Set(reviewedNodeIds);
+  const reading = new Set(readingNodeIds);
+  return Object.entries(nodes).every(([id, node]) => {
+    const previous = current.nodesById[id];
+    if (!previous) return true;
+    const before = structuralProjection(previous, reviewed.has(id), reading.has(id));
+    const after = structuralProjection(node, reviewed.has(id), reading.has(id));
+    for (const field of METADATA_FIELDS) { delete before[field]; delete after[field]; }
+    return workspaceSnapshotValueEqual(before, after);
+  });
+}
+
+/**
+ * Parents (`parentOrderId` keys) whose children a metadata merge must order again: the old and new parents of
+ * every node whose order facts changed, and every node that appears or reappears together with its descendants.
+ */
+export function workspaceMetadataOrderParents(
+  current: WorkspaceSnapshot, nodesById: WorkspaceSnapshot['nodesById'], changed: WorkspaceSnapshot['nodesById']
+) {
+  const parents = new Set<string>();
+  const appeared: string[] = [];
+  for (const [id, node] of Object.entries(changed)) {
+    const previous = current.nodesById[id];
+    if (previous && ORDER_FIELDS.every(field => (previous[field] ?? null) === (node[field] ?? null))) continue;
+    if (previous) parents.add(parentOrderId(previous.parentNodeId));
+    parents.add(parentOrderId(node.parentNodeId));
+    if (!previous || (previous.deletedAt ?? null) !== (node.deletedAt ?? null)) appeared.push(id);
+  }
+  if (!appeared.length) return parents;
+  // Children hidden under a node that reappears are absent from the previous order, so they are ordered again too.
+  const children = new Map<string, string[]>();
+  for (const node of Object.values(nodesById)) {
+    if (node.parentNodeId === null) continue;
+    const siblings = children.get(node.parentNodeId);
+    if (siblings) siblings.push(node.id);
+    else children.set(node.parentNodeId, [node.id]);
+  }
+  const seen = new Set<string>();
+  const pending = [...appeared];
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    parents.add(id);
+    pending.push(...children.get(id) ?? []);
+  }
+  return parents;
 }
 
 /** The caller has checked structural equivalence against this exact baseline. */

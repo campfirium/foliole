@@ -56,21 +56,48 @@ export function loadDerivedNodeOrderWithDbPort(port: DbPort, members?: Workspace
     await tx.query<WorkspaceOrderSourceRow>(WORKSPACE_ORDER_SOURCES_SQL), visibleRooted));
 }
 
-function projectWorkspaceOrder(members: WorkspaceOrderMember[], rows: WorkspaceOrderSourceRow[], visibleRooted = false) {
+/** Reads the order sources of the named parents (`parentOrderId` keys) without reading any other parent. */
+export async function loadParentOrderSourcesWithDbPort(port: DbPort, parentOrderIds: readonly string[]) {
+  const rows = await port.query<WorkspaceOrderSourceRow>(`SELECT parent_id, author_id AS authorId, counter, child_ids_json
+    FROM parent_order_sources WHERE parent_id IN (SELECT value FROM json_each(?)) ORDER BY parent_id, author_id`,
+  [JSON.stringify(parentOrderIds)]);
+  return groupParentOrderSources(rows);
+}
+
+function groupParentOrderSources(rows: WorkspaceOrderSourceRow[]) {
   const sources = new Map<string, ParentOrderSource[]>();
   for (const { parent_id, authorId, counter, child_ids_json } of rows) {
     const group = sources.get(parent_id) ?? [];
     group.push({ authorId, counter, childIds: JSON.parse(child_ids_json) });
     sources.set(parent_id, group);
   }
-  return walkWorkspaceOrder(members, (parentId, children) => {
-    const group = sources.get(parentId);
-    if (!group?.length) return children.sort(compareMembers);
-    const byId = new Map(children.map(child => [child.id, child]));
-    return projectCurrentParentOrder(parseParentOrderSources(group), children.map(child => ({
-      id: child.id, title: child.title, createdAt: child.created_at
-    }))).map(id => byId.get(id)!);
-  }, visibleRooted);
+  return sources;
+}
+
+/** Orders one parent's children exactly as the derived workspace order does, including hidden children. */
+export function orderWorkspaceChildren<T extends WorkspaceOrderMember>(group: ParentOrderSource[] | undefined, children: T[]) {
+  if (!group?.length) return children.sort(compareMembers);
+  const byId = new Map(children.map(child => [child.id, child]));
+  return projectCurrentParentOrder(parseParentOrderSources(group), children.map(child => ({
+    id: child.id, title: child.title, createdAt: child.created_at
+  }))).map(id => byId.get(id)!);
+}
+
+function projectWorkspaceOrder(members: WorkspaceOrderMember[], rows: WorkspaceOrderSourceRow[], visibleRooted = false) {
+  const sources = groupParentOrderSources(rows);
+  return walkWorkspaceOrder(members, (parentId, children) => orderWorkspaceChildren(sources.get(parentId), children), visibleRooted);
+}
+
+/**
+ * Re-derives the visible rooted order after a scoped write without reading the library: parents in `ordered`
+ * are re-ordered from their `sources`; every other parent keeps its visible children in `previousOrder`'s order.
+ */
+export function deriveScopedVisibleNodeOrder(members: WorkspaceOrderMember[], previousOrder: readonly string[],
+  ordered: ReadonlySet<string>, sources: ReadonlyMap<string, ParentOrderSource[]>) {
+  const position = new Map(previousOrder.map((id, index) => [id, index]));
+  return walkWorkspaceOrder(members, (parentId, children) => ordered.has(parentId)
+    ? orderWorkspaceChildren(sources.get(parentId), children)
+    : children.filter(child => position.has(child.id)).sort((left, right) => position.get(left.id)! - position.get(right.id)!), true);
 }
 
 function compareMembers(left: NodeOrderMember, right: NodeOrderMember) {

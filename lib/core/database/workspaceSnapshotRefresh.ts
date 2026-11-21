@@ -15,6 +15,11 @@ export type WorkspaceRefreshScope =
     structure?: boolean;
     /** Every structural change in this scope moved `nodeIds` into Trash, so a scoped merge may prove it. */
     trash?: boolean;
+    /**
+     * Every change in this scope is a metadata write confined to `nodeIds` and their children,
+     * so a scoped merge may prove it and order again only the parents it touches.
+     */
+    metadata?: boolean;
   };
 
 interface PendingRefresh {
@@ -45,6 +50,7 @@ function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
   if (scopes.some(item => item.activeNode)) scope.activeNode = true;
   if (scopes.some(item => item.structure)) scope.structure = true;
   if (scopes.some(item => item.trash) && scopes.every(item => !item.structure || item.trash)) scope.trash = true;
+  if (scopes.some(item => item.metadata) && scopes.every(item => !item.structure || item.trash || item.metadata)) scope.metadata = true;
   return scope;
 }
 

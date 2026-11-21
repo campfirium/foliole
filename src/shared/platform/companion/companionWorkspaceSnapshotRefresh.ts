@@ -1,5 +1,7 @@
+import { deriveScopedVisibleNodeOrder, loadParentOrderSourcesWithDbPort } from '../../../../lib/core/database/parentChildOrder.js';
 import {
-  canMergeWorkspaceContentProjection, canMergeWorkspaceTrashProjection, mergeWorkspaceContentProjection
+  canMergeWorkspaceContentProjection, canMergeWorkspaceMetadataProjection, canMergeWorkspaceTrashProjection,
+  mergeWorkspaceContentProjection, workspaceMetadataOrderParents
 } from '../../../../lib/core/database/workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import { normalizeWorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshotContract.js';
@@ -31,10 +33,13 @@ async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null;
   let anchorKinds: WorkspaceNodeAnchorKinds | undefined;
   const snapshot = await owner.readSnapshot(async db => {
     const scoped = input.current && input.scope.kind === 'nodes'
-      ? await (!input.scope.structure ? readScoped : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
+      ? await (input.scope.metadata ? readScopedMetadata : !input.scope.structure ? readScoped
+        : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
       : null;
-    // A move to Trash only drops the trashed subtree from the visible order, which the merge already did.
-    if (scoped && input.scope.kind === 'nodes' && input.scope.structure && input.scope.trash) orderedNodeIds = scoped.nodeOrder;
+    // The structural merges already derived the visible order.
+    if (scoped && input.scope.kind === 'nodes' && (input.scope.metadata || (input.scope.structure && input.scope.trash))) {
+      orderedNodeIds = scoped.nodeOrder;
+    }
     if (!scoped) markWholeLibraryWork('full-refresh');
     const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
@@ -73,6 +78,30 @@ async function readScopedTrash(db: DbPort, current: WorkspaceSnapshot, scope: No
   // Trash membership, visible order and the active node derive from the merged nodes.
   const merged = normalizeWorkspaceSnapshot(mergeWorkspaceContentProjection(current, nodes));
   return mergeCompanionLocalState(db, await mergeCompanionNodeViews(db, merged, Object.keys(nodes)), scope);
+}
+
+/**
+ * A metadata write names every node it changed, so it is merged and only the parents it touches are ordered
+ * again; every other parent keeps its order from the baseline.
+ */
+async function readScopedMetadata(db: DbPort, current: WorkspaceSnapshot, scope: NodeScope) {
+  if (!scope.nodeIds.length) return null;
+  const reviewed = scope.reviewNodeIds ?? [];
+  const reading = scope.readingNodeIds ?? [];
+  const { nodes, expected } = await loadScopedNodes(db, current, new Set([...scope.nodeIds, ...reviewed, ...reading]));
+  if (!canMergeWorkspaceMetadataProjection(current, nodes, expected, reviewed, reading)) return null;
+  // A node created on this phone has no Readwise source.
+  for (const [id, node] of Object.entries(nodes)) if (!current.nodesById[id]) nodes[id] = { ...node, readwiseRemoteLifecycle: null };
+  const merged = mergeWorkspaceContentProjection(current, nodes);
+  const parents = workspaceMetadataOrderParents(current, merged.nodesById, nodes);
+  const nodeOrder = parents.size ? deriveScopedVisibleNodeOrder(Object.values(merged.nodesById).map(node => ({
+    id: node.id, parent_id: node.parentNodeId, title: node.title, created_at: node.createdAt, deleted_at: node.deletedAt ?? null
+  })), current.nodeOrder, parents, await loadParentOrderSourcesWithDbPort(db, [...parents])) : current.nodeOrder;
+  // The projection is authoritative for the named nodes, so their earlier Trash facts must not outlive a restore.
+  const named = new Set(Object.keys(nodes));
+  const next = normalizeWorkspaceSnapshot({ ...merged, nodeOrder, trashedNodeIds: merged.trashedNodeIds.filter(id => !named.has(id)),
+    trashedNodeDeletedAtById: Object.fromEntries(Object.entries(merged.trashedNodeDeletedAtById ?? {}).filter(([id]) => !named.has(id))) });
+  return mergeCompanionLocalState(db, await mergeCompanionNodeViews(db, next, Object.keys(nodes)), scope);
 }
 
 async function loadScopedNodes(db: DbPort, current: WorkspaceSnapshot, roots: ReadonlySet<string>) {
