@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -55,11 +57,22 @@ function getManualRootIds(ids: string[], nodesById: Record<string, Node>) {
 }
 
 export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
-  const nodeIds = props.nodes.map((node) => node.id);
+  // Each of these walks the result set or the whole library; rebuilding them per render
+  // also invalidated every tree model memo below that keys on them.
+  // Hosts rebuild the result array per render, so key the ids by content.
+  const nodeIdsKey = props.nodes.map((node) => node.id).join('\u0000');
+  const nodeIds = useMemo(() => (nodeIdsKey ? nodeIdsKey.split('\u0000') : []), [nodeIdsKey]);
+  const listNodesById = useMemo(() => toWorkspaceListNodesById(props.nodesById), [props.nodesById]);
   const virtualFolderId = props.virtualFolderId ?? resolveVirtualFolderId(props);
   const virtualFolderView = isManualVirtualNodeFilter(props.nodesById[virtualFolderId]?.virtualFilter)
     ? 'manual' as const
     : 'readonly' as const;
+
+  const manualRoots = virtualFolderView === 'manual' && Boolean(props.childrenByParent);
+  const itemIds = useMemo(
+    () => (manualRoots ? getManualRootIds(nodeIds, props.nodesById) : nodeIds),
+    [nodeIds, props.nodesById, manualRoots]
+  );
 
   return (
     <WorkspaceTopicTree
@@ -68,8 +81,8 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
       {...(props.continueAfterDelete ? { deleteBrowseRootId: virtualFolderId } : {})}
       {...(props.emptyState ? { emptyState: props.emptyState } : {})}
       {...(virtualFolderView === 'manual' && props.childrenByParent ? { childrenByParent: props.childrenByParent } : {})}
-      itemIds={virtualFolderView === 'manual' && props.childrenByParent ? getManualRootIds(nodeIds, props.nodesById) : nodeIds}
-      nodesById={toWorkspaceListNodesById(props.nodesById)}
+      itemIds={itemIds}
+      nodesById={listNodesById}
       onOpenMoveToNode={() => undefined}
       onSelectNode={props.onSelectNode}
       preserveItemOrder={props.preserveItemOrder ?? false}
