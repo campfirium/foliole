@@ -133,7 +133,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     return clearLinkPanelBrowsingData();
   }
   if (request.command === NATIVE_COMMANDS.copyDiagnosticReport) {
-    return copyDiagnosticReport({ app });
+    return copyDiagnosticReport({ app, scope: args.scope === 'errors' ? 'errors' : 'full' });
   }
   if (request.command === NATIVE_COMMANDS.syncAppMenuState) {
     syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'), asShortcutAccelerators(args.shortcutAccelerators), undefined,

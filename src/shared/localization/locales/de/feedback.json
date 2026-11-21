@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "Sie können bis zu 3 Bilder hinzufügen.",
   "feedback.error.failed": "Feedback konnte nicht gesendet werden. Dein Text ist noch da.",
   "feedback.error.unavailable": "Feedback ist in diesem Build nicht verfügbar.",
-  "feedback.error.verification": "Verifizierung konnte nicht geladen werden. Versuchen Sie es später noch einmal."
+  "feedback.error.verification": "Verifizierung konnte nicht geladen werden. Versuchen Sie es später noch einmal.",
+  "feedback.errorSummary.label": "Letzte Fehlerdetails anhängen (persönliche Angaben entfernt)"
 }

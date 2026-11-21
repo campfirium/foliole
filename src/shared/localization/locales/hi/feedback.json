@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "आप ज़्यादा से ज़्यादा 3 चित्र जोड़ सकते हैं।",
   "feedback.error.failed": "फ़ीडबैक भेजा नहीं जा सका। आपका लिखा टेक्स्ट अभी मौजूद है।",
   "feedback.error.unavailable": "इस बिल्ड में फ़ीडबैक भेजने की सुविधा उपलब्ध नहीं है।",
-  "feedback.error.verification": "सत्यापन लोड नहीं हो सका। बाद में फिर कोशिश करें।"
+  "feedback.error.verification": "सत्यापन लोड नहीं हो सका। बाद में फिर कोशिश करें।",
+  "feedback.errorSummary.label": "हाल की त्रुटियों का विवरण जोड़ें (व्यक्तिगत जानकारी हटाकर)"
 }

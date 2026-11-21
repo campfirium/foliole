@@ -46,5 +46,6 @@ export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'feedback.error.imageLimitReached': '最多添加 3 张图片。',
   'feedback.error.failed': '反馈未能发送，已输入内容还在。',
   'feedback.error.unavailable': '这个版本暂未配置反馈通道。',
-  'feedback.error.verification': '验证暂时无法加载，请稍后再试。'
+  'feedback.error.verification': '验证暂时无法加载，请稍后再试。',
+  'feedback.errorSummary.label': '附带最近的错误信息（已去除个人信息）'
 };

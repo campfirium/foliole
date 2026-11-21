@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "您最多可以新增 3 張圖像。",
   "feedback.error.failed": "無法發送回饋。你的文字還在這裡。",
   "feedback.error.unavailable": "此版本中不提供回饋。",
-  "feedback.error.verification": "驗證無法載入。稍後再試。"
+  "feedback.error.verification": "驗證無法載入。稍後再試。",
+  "feedback.errorSummary.label": "附上最近的錯誤資訊（已移除個人資訊）"
 }

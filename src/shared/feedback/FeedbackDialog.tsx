@@ -10,21 +10,19 @@ import {
   AppDialogPortal
 } from '../ui';
 
+import { fileToPayload, validateFile } from './feedbackAttachmentFiles';
 import {
   readRememberedFeedbackContact,
   updateRememberedFeedbackContact
 } from './feedbackContactPreference';
-import {
-  FEEDBACK_IMAGE_TYPES,
-  FEEDBACK_LIMITS,
-  type FeedbackAttachmentPayload
-} from './feedbackContract';
+import { FEEDBACK_LIMITS, type FeedbackAttachmentPayload } from './feedbackContract';
 import {
   buildFeedbackContentProps,
   createFeedbackPayload,
   FeedbackDialogContent
 } from './FeedbackDialogParts';
 import { useTurnstileToken } from './FeedbackDialogTurnstile';
+import { useFeedbackErrorSummaryOption } from './feedbackErrorSummary';
 
 interface FeedbackDialogProps {
   companionPlatform?: string | undefined;
@@ -40,31 +38,6 @@ interface FeedbackSubmitResponse {
   attachmentsAccepted?: boolean;
   ok?: boolean;
   warning?: string;
-}
-
-async function fileToPayload(file: File): Promise<FeedbackAttachmentPayload> {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return {
-    contentBase64: window.btoa(binary),
-    name: file.name,
-    size: file.size,
-    type: file.type
-  };
-}
-
-function validateFile(file: File) {
-  if (!FEEDBACK_IMAGE_TYPES.includes(file.type as never)) {
-    return 'type';
-  }
-  if (file.size > FEEDBACK_LIMITS.attachmentSizeBytes) {
-    return 'size';
-  }
-  return null;
 }
 
 export function FeedbackDialog({ companionPlatform, endpoint, onClose, open, turnstileSiteKey }: FeedbackDialogProps) {
@@ -105,10 +78,11 @@ function useFeedbackDialogController({
   const { locale } = useLocalization();
   const { isDemo } = useDemoRuntimeState();
   const turnstile = useTurnstileToken(turnstileSiteKey);
+  const { prepareMessage, toggle: errorSummary } = useFeedbackErrorSummaryOption(open, !isDemo && companionPlatform === undefined);
   const canSubmit = Boolean(endpoint && message.trim()) && state !== 'sending' && (!turnstileSiteKey || Boolean(turnstile.token));
   const submit = useFeedbackSubmitAction({
     draft: { appLanguage: locale, appVersion, attachments: attachmentState.attachments, contact, isDemo, message, companionPlatform },
-    endpoint,
+    endpoint, prepareMessage,
     setError,
     setAttachmentWarning,
     setState,
@@ -134,6 +108,7 @@ function useFeedbackDialogController({
       mobile: companionPlatform !== undefined,
       endpoint,
       error,
+      errorSummary,
       attachmentWarning,
       appVersion,
       message,
@@ -184,6 +159,7 @@ function useFeedbackAttachmentState() {
 function useFeedbackSubmitAction(args: {
   draft: Parameters<typeof createFeedbackPayload>[0];
   endpoint: string | undefined;
+  prepareMessage: (message: string) => Promise<string>;
   setAttachmentWarning: (value: boolean) => void;
   setError: (value: string) => void;
   setState: (value: SubmitState) => void;
@@ -200,7 +176,8 @@ function useFeedbackSubmitAction(args: {
     args.setAttachmentWarning(false);
     try {
       const response = await fetch(args.endpoint, {
-        body: JSON.stringify(createFeedbackPayload(args.draft, args.turnstileToken)),
+        body: JSON.stringify(createFeedbackPayload(
+          { ...args.draft, message: await args.prepareMessage(args.draft.message) }, args.turnstileToken)),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST'
       });

@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "Você pode adicionar até 3 imagens.",
   "feedback.error.failed": "Não foi possível enviar o feedback. Seu texto ainda está aqui.",
   "feedback.error.unavailable": "O feedback não está disponível nesta compilação.",
-  "feedback.error.verification": "A verificação não pôde ser carregada. Tente novamente mais tarde."
+  "feedback.error.verification": "A verificação não pôde ser carregada. Tente novamente mais tarde.",
+  "feedback.errorSummary.label": "Anexar detalhes de erros recentes (sem dados pessoais)"
 }

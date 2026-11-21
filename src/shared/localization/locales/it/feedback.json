@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "Puoi aggiungere fino a 3 immagini.",
   "feedback.error.failed": "Impossibile inviare il feedback. Il tuo testo è ancora qui.",
   "feedback.error.unavailable": "Il feedback non è disponibile in questa build.",
-  "feedback.error.verification": "Impossibile caricare la verifica. Riprova più tardi."
+  "feedback.error.verification": "Impossibile caricare la verifica. Riprova più tardi.",
+  "feedback.errorSummary.label": "Allega i dettagli degli errori recenti (dati personali rimossi)"
 }

@@ -140,7 +140,7 @@ export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
     result: NativeSupportLogState;
   };
   [NATIVE_COMMANDS.copyDiagnosticReport]: {
-    args: undefined;
+    args: { scope?: 'errors' } | undefined;
     result: NativeCopyDiagnosticReportResult;
   };
   [NATIVE_COMMANDS.loadLibraryPathSettings]: {

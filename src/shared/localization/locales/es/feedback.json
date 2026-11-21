@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "Puedes agregar hasta 3 imágenes.",
   "feedback.error.failed": "No se pudieron enviar comentarios. Tu texto todavía está aquí.",
   "feedback.error.unavailable": "Los comentarios no están disponibles en esta compilación.",
-  "feedback.error.verification": "No se pudo cargar la verificación. Vuelve a intentarlo más tarde."
+  "feedback.error.verification": "No se pudo cargar la verificación. Vuelve a intentarlo más tarde.",
+  "feedback.errorSummary.label": "Adjuntar detalles de errores recientes (sin datos personales)"
 }

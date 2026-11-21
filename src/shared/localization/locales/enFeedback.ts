@@ -44,5 +44,6 @@ export const EN_FEEDBACK_TRANSLATIONS = {
   'feedback.error.imageLimitReached': 'You can add up to 3 images.',
   'feedback.error.failed': 'Feedback could not be sent. Your text is still here.',
   'feedback.error.unavailable': 'Feedback is not available in this build.',
-  'feedback.error.verification': 'Verification could not load. Try again later.'
+  'feedback.error.verification': 'Verification could not load. Try again later.',
+  'feedback.errorSummary.label': 'Include recent error details (personal details removed)'
 } as const;

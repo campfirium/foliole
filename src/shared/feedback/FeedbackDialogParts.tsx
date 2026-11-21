@@ -18,6 +18,7 @@ import {
 import { FeedbackActions } from './FeedbackDialogActions';
 import { FeedbackAttachmentPicker } from './FeedbackDialogAttachments';
 import { FeedbackContactFields } from './FeedbackDialogContactFields';
+import { FeedbackErrorSummaryToggle } from './FeedbackDialogErrorSummary';
 import { FeedbackSuccessContent } from './FeedbackDialogSuccess';
 
 export type SubmitState = 'idle' | 'sending' | 'sent' | 'failed';
@@ -40,6 +41,7 @@ type FeedbackDialogContentProps = {
   contact: string;
   endpoint?: string | undefined;
   error: string;
+  errorSummary?: { checked: boolean; onCheckedChange: (checked: boolean) => void } | undefined;
   isTurnstileError: boolean;
   message: string;
   mobile: boolean;
@@ -102,6 +104,7 @@ function FeedbackFormContent(props: FeedbackDialogContentProps) {
         <FeedbackTextField message={props.message} onMessageChange={props.onMessageChange} />
         <FeedbackContactFields contact={props.contact} onContactChange={props.onContactChange} />
         <FeedbackAttachmentPicker attachments={props.attachments} onAppendFiles={props.onAppendFiles} onRemoveAttachment={props.onRemoveAttachment} />
+        {props.errorSummary ? <FeedbackErrorSummaryToggle {...props.errorSummary} /> : null}
         {props.turnstileSiteKey ? <div ref={props.turnstileContainerRef} /> : null}
         {props.mobile ? <p id="feedback-privacy" className="my-3 text-xs text-shellless-muted">{t('feedback.privacy')}</p> : null}
         <FeedbackStatus
@@ -141,6 +144,7 @@ export function buildFeedbackContentProps(args: {
   contact: string;
   endpoint: string | undefined;
   error: string;
+  errorSummary?: FeedbackDialogContentProps['errorSummary'];
   isTurnstileError: boolean;
   message: string;
   mobile: boolean;
@@ -160,6 +164,7 @@ export function buildFeedbackContentProps(args: {
     contact: args.contact,
     endpoint: args.endpoint,
     error: args.error,
+    errorSummary: args.errorSummary,
     isTurnstileError: args.isTurnstileError,
     message: args.message,
     mobile: args.mobile,

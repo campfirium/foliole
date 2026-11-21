@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "最大 3 つの画像を追加できます。",
   "feedback.error.failed": "フィードバックを送信できませんでした。あなたのテキストはまだここにあります。",
   "feedback.error.unavailable": "このビルドではフィードバックは利用できません。",
-  "feedback.error.verification": "検証を読み込めませんでした。後でもう一度試してください。"
+  "feedback.error.verification": "検証を読み込めませんでした。後でもう一度試してください。",
+  "feedback.errorSummary.label": "最近のエラー情報を添付（個人情報は除去済み）"
 }

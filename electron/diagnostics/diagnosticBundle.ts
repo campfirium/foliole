@@ -182,8 +182,14 @@ function formatFileList(files: FileSummary[], emptyText: string) {
 
 export async function copyDiagnosticReport(args: {
   app: Pick<App, 'getPath' | 'getVersion'>;
+  scope?: 'errors' | 'full';
 }): Promise<NativeCopyDiagnosticReportResult> {
   const logsDir = args.app.getPath('logs');
+  if (args.scope === 'errors') {
+    const errors = await collectRecentRuntimeErrors(logsDir);
+    const text = errors.length ? [`Platform: ${process.platform} ${os.release()}`, ...errors].join('\n') : '';
+    return { report_text: text, status: 'generated' };
+  }
   const crashDumpsDir = args.app.getPath('crashDumps');
   const [recentErrors, boot, crashFiles, logFiles] = await Promise.all([
     collectRecentRuntimeErrors(logsDir),

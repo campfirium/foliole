@@ -28,5 +28,6 @@
   "feedback.error.imageLimitReached": "Możesz dodać maksymalnie 3 obrazy.",
   "feedback.error.failed": "Nie można wysłać opinii. Twój tekst nadal tu jest.",
   "feedback.error.unavailable": "W tej kompilacji nie jest dostępna informacja zwrotna.",
-  "feedback.error.verification": "Nie udało się wczytać weryfikacji. Spróbuj ponownie później."
+  "feedback.error.verification": "Nie udało się wczytać weryfikacji. Spróbuj ponownie później.",
+  "feedback.errorSummary.label": "Dołącz szczegóły ostatnich błędów (bez danych osobowych)"
 }

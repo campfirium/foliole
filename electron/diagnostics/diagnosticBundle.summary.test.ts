@@ -75,3 +75,27 @@ it('shows each recent failure once with its redacted error text and repeat count
   expect(result.report_text).not.toContain('某本书');
   expect(result.report_text).not.toContain('/Volumes/Books');
 });
+
+it('returns only the platform and redacted error lines for the feedback scope, or nothing when clean', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-errors-scope-'));
+  roots.push(root);
+  const logsDir = path.join(root, 'logs');
+  await fs.mkdir(logsDir, { recursive: true });
+  const app = { getPath: (name: string) => ({ crashDumps: path.join(root, 'crash'), logs: logsDir })[name] as string, getVersion: () => '0.1.0' };
+
+  await expect(copyDiagnosticReport({ app, scope: 'errors' })).resolves.toEqual({ report_text: '', status: 'generated' });
+
+  await fs.writeFile(path.join(logsDir, 'runtime-2026-11-21.ndjson'), `${JSON.stringify({
+    event: 'native_command_failed',
+    level: 'warn',
+    occurred_at: '2026-11-21T05:38:32.590Z',
+    payload: { command: 'select_import_text_file', error: { message: 'EPERM: operation not permitted, open /Volumes/B/某本书.epub', name: 'Error' } },
+    source: 'electron.main'
+  })}\n`, 'utf8');
+  const result = await copyDiagnosticReport({ app, scope: 'errors' });
+
+  expect(result.report_text.split('\n')[0]).toMatch(/^Platform: /u);
+  expect(result.report_text).toContain('select_import_text_file');
+  expect(result.report_text).not.toContain('# Foliole Diagnostic Report');
+  expect(result.report_text).not.toContain('某本书');
+});
