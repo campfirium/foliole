@@ -5,7 +5,7 @@ import { NodeListStateSurface } from '../../features/nodes/components/NodeListSt
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeListTreeMenu } from '../../features/nodes/components/NodeListTreeMenu';
-import { useNodeListState, useNodeSelectionHandler } from '../../features/nodes/components/NodeListTreeState';
+import { useNodeSelectionHandler, useSelectionOnlyNodeListState, type NodeListState } from '../../features/nodes/components/NodeListTreeState';
 import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
 import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
@@ -17,9 +17,6 @@ import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { TrashResultHeader } from './TrashResultHeader';
 import { normalizeWorkspaceContentSort, sortTrashContentRows } from './workspaceContentSort';
-
-// A new Set per render made the node list rebuild the whole library's visible note rows.
-const NO_COLLAPSED_NOTE_NODE_IDS: ReadonlySet<string> = new Set();
 
 interface TrashResultListPanelProps {
   nodeOrder: string[];
@@ -94,7 +91,7 @@ function TrashRowsBody(props: {
 
 function TrashContextMenu(props: {
   contextMenu: ReturnType<typeof useNodeListContextMenu>;
-  listState: ReturnType<typeof useNodeListState>;
+  listState: NodeListState;
   nodesById: WorkspaceListNodesById;
   onSelectNode: (nodeId: string) => void;
   selectTrashNode: ReturnType<typeof useNodeSelectionHandler>;
@@ -131,7 +128,7 @@ function TrashContextMenu(props: {
 }
 
 function useRenderedTrashListState(
-  listState: ReturnType<typeof useNodeListState>,
+  listState: NodeListState,
   rows: ReturnType<typeof useTrashRows>['rows']
 ) {
   const rowIds = useMemo(() => rows.map((row) => row.node.id), [rows]);
@@ -158,7 +155,8 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const appearanceSettings = useOptionalAppearanceSettings();
   const rowSpacing = appearanceSettings?.nodeListRowSpacing ?? getNodeListRowSpacing();
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
-  const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, NO_COLLAPSED_NOTE_NODE_IDS);
+  // The trash page renders its own rows; it only needs selection state, not the library's note trees.
+  const listState = useSelectionOnlyNodeListState({ activeNodeId: null, isSelectionScopeActive: true, nodesById: props.nodesById, selectedTrashNodeId: props.selectedTrashNodeId });
   const { renderedListState, selectedNodeIds } = useRenderedTrashListState(listState, rows);
   const contextMenu = useNodeListContextMenu(props.nodesById, selectedNodeIds, props.trashedNodeIds);
   const selectTrashNode = useNodeSelectionHandler({

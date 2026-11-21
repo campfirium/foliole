@@ -128,6 +128,45 @@ export function useNodeListState(
   };
 }
 
+const NO_NODE_TREE_ROWS: NodeTreeRow[] = [];
+const NO_NODE_ROW_IDS: string[] = [];
+const NO_NODE_PARENTS: Record<string, string | null> = {};
+
+// Lists that render their own rows (the trash page) only need selection state; building the
+// library's note, virtual and trash trees for them is wasted work on mount and on every library change.
+export function useSelectionOnlyNodeListState(args: {
+  activeNodeId: string | null;
+  isSelectionScopeActive: boolean;
+  nodesById: WorkspaceListNodesById;
+  selectedTrashNodeId: string | null;
+}): NodeListState {
+  const trashedNodeIds = useWorkspaceStore((state) => state.trashedNodeIds);
+  const { selectedNodeIds, selectionAnchorNodeId, setSelectedNodeIds, setSelectionAnchorNodeId } = useNodeListSelection(
+    args.activeNodeId,
+    args.isSelectionScopeActive,
+    args.nodesById,
+    args.selectedTrashNodeId,
+    trashedNodeIds
+  );
+
+  return useMemo(() => ({
+    noteRows: NO_NODE_TREE_ROWS,
+    noteRowsAll: NO_NODE_TREE_ROWS,
+    noteParentById: NO_NODE_PARENTS,
+    trashRows: NO_NODE_TREE_ROWS,
+    trashRowsAll: NO_NODE_TREE_ROWS,
+    virtualRows: NO_NODE_TREE_ROWS,
+    virtualRowsAll: NO_NODE_TREE_ROWS,
+    noteRowIds: NO_NODE_ROW_IDS,
+    trashRowIds: NO_NODE_ROW_IDS,
+    virtualRowIds: NO_NODE_ROW_IDS,
+    selectedNodeIds,
+    setSelectedNodeIds,
+    selectionAnchorNodeId,
+    setSelectionAnchorNodeId
+  }), [selectedNodeIds, selectionAnchorNodeId, setSelectedNodeIds, setSelectionAnchorNodeId]);
+}
+
 export function useNodeListStateFromTreeData(args: {
   activeNodeId: string | null;
   collapsedNoteNodeIds: ReadonlySet<string>;

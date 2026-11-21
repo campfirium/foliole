@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
+import { buildNodeTree, buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -9,7 +9,11 @@ import { TrashResultListPanel } from './TrashResultListPanel';
 
 vi.mock('../../features/nodes/model/nodeTree', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../features/nodes/model/nodeTree')>();
-  return { ...actual, buildVisibleNodeTreeRows: vi.fn(actual.buildVisibleNodeTreeRows) };
+  return {
+    ...actual,
+    buildNodeTree: vi.fn(actual.buildNodeTree),
+    buildVisibleNodeTreeRows: vi.fn(actual.buildVisibleNodeTreeRows)
+  };
 });
 
 function createNode(id: string, parentNodeId: string | null, kind: WorkspaceListNode['kind'] = 'topic'): WorkspaceListNode {
@@ -52,6 +56,7 @@ describe('TrashResultListPanel re-renders', () => {
   beforeEach(() => {
     window.localStorage.clear();
     useWorkspaceStore.setState((state) => ({ ...state, trashedNodeDeletedAtById: {}, trashedNodeIds }));
+    vi.mocked(buildNodeTree).mockClear();
     vi.mocked(buildVisibleNodeTreeRows).mockClear();
   });
 
@@ -60,5 +65,22 @@ describe('TrashResultListPanel re-renders', () => {
     const buildsAfterMount = vi.mocked(buildVisibleNodeTreeRows).mock.calls.length;
     for (let tick = 1; tick <= 5; tick += 1) view.rerender(<Panel tick={tick} />);
     expect(buildVisibleNodeTreeRows).toHaveBeenCalledTimes(buildsAfterMount);
+  });
+
+  it('builds no library note trees on mount or when the library changes', () => {
+    const view = renderWithLocalization(<Panel tick={0} />);
+    const grownNodesById = { ...nodesById, added: createNode('added', 'folder') };
+    view.rerender(
+      <TrashResultListPanel
+        nodeOrder={[...nodeOrder, 'added']}
+        nodesById={grownNodesById}
+        onSelectNode={() => undefined}
+        onSelectTrashNode={() => undefined}
+        selectedTrashNodeId={null}
+        trashedNodeIds={trashedNodeIds}
+      />
+    );
+    expect(buildNodeTree).not.toHaveBeenCalled();
+    expect(buildVisibleNodeTreeRows).not.toHaveBeenCalled();
   });
 });
