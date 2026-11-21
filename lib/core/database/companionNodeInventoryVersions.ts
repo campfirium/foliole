@@ -1,5 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
+import { NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { migrateCompanionDailyFlowReadiness } from './dailyFlowReadinessMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS } from './framedSyncDigestSchema.js';
 import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
@@ -16,4 +17,7 @@ export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentV
   }
   if (currentVersion < 122 && targetVersion >= 122) await migrateCompanionIndependentImportHistoryInventory(db);
   if (currentVersion < 123 && targetVersion >= 123) await migrateCompanionDailyFlowReadiness(db);
+  if (currentVersion < 124 && targetVersion >= 124) {
+    for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) await db.run(sql);
+  }
 }

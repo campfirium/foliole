@@ -1,6 +1,7 @@
 import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
 import { retireAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
 import { migrateAttachmentReferenceCache } from './attachmentReferenceCacheSchema.js';
+import { NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCycleFlow } from './cycleFlowMigration.js';
 import { migrateDailyFlowLocalApplications } from './dailyFlowLocalApplicationMigration.js';
@@ -93,5 +94,8 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     for (const sql of RETIRE_COVERED_NODE_CHILD_STATE) db.exec(sql);
   } },
   { version: 195, migrate: migrateIndependentImportHistoryInventory },
-  { version: 196, migrate: migrateDailyFlowReadiness }
+  { version: 196, migrate: migrateDailyFlowReadiness },
+  { version: 197, migrate: db => {
+    for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) db.exec(sql);
+  } }
 ];

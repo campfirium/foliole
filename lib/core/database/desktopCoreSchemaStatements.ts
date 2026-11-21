@@ -1,4 +1,4 @@
-import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+import { CORE_INDEX_SCHEMA_STATEMENTS, NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
@@ -154,5 +154,6 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     PRIMARY KEY (node_id, host_name)
   )`,
   ...EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS,
-  ...CORE_INDEX_SCHEMA_STATEMENTS
+  ...CORE_INDEX_SCHEMA_STATEMENTS,
+  ...NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA
 ];

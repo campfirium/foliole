@@ -34,6 +34,7 @@ const DESKTOP_SCHEMA_FILES = {
   FRAMED_SYNC_DIGEST_TABLES: 'lib/core/database/framedSyncDigestSchema.ts',
   FRAMED_SYNC_DIGEST_SCHEMA: 'lib/core/database/framedSyncDigestSchema.ts',
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
+  NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA: 'lib/core/database/coreIndexSchemaStatements.ts',
   FOREGROUND_TIME_SCHEMA: 'lib/core/database/foregroundTimeSchema.ts',
   FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',
   NODE_CHILD_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',

@@ -1,4 +1,8 @@
-import { resolveRestoreNodeCandidates, type RestoreNodeCandidate } from '../../../../../lib/core/database/nodeRestoreConflicts';
+import {
+  MATCHING_IMPORT_CANDIDATES_SQL,
+  resolveRestoreNodeCandidates,
+  type RestoreNodeCandidate
+} from '../../../../../lib/core/database/nodeRestoreConflicts';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
@@ -7,9 +11,6 @@ import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from
 import { collectCompanionBatchSubtree, type CompanionBatchTarget } from './companionWorkspaceBatchTrash';
 import { loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
-
-const MATCHING_IMPORTS_SQL = `SELECT id, created_at, deleted_at, import_source_fingerprint, import_content_fingerprint
-  FROM nodes WHERE import_source_fingerprint = ? AND import_content_fingerprint = ?`;
 
 export function restoreCompanionBatchFromTrash(targets: readonly CompanionBatchTarget[]) {
   return runCompanionHistoryMutation(async db => {
@@ -33,7 +34,7 @@ async function loadRestoreCandidates(db: DbPort, trashed: readonly WorkspaceNode
   const candidates = new Map<string, RestoreNodeCandidate>(trashed.map(node => [node.id, candidate(node)]));
   for (const node of trashed) {
     if (!node.importSourceFingerprint || !node.importContentFingerprint) continue;
-    for (const row of await db.query(MATCHING_IMPORTS_SQL, [node.importSourceFingerprint, node.importContentFingerprint])) {
+    for (const row of await db.query(MATCHING_IMPORT_CANDIDATES_SQL, [node.importSourceFingerprint, node.importContentFingerprint])) {
       const id = String(row.id);
       if (!candidates.has(id)) candidates.set(id, { id, createdAt: String(row.created_at),
         deletedAt: typeof row.deleted_at === 'string' ? row.deleted_at : null,

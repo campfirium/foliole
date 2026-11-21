@@ -1,5 +1,9 @@
 import type { DatabaseDriver } from './driver.js';
 
+// Served by idx_nodes_import_fingerprints, so the lookup stays independent of library size.
+export const MATCHING_IMPORT_CANDIDATES_SQL = `SELECT id, created_at, deleted_at, import_source_fingerprint, import_content_fingerprint
+  FROM nodes WHERE import_source_fingerprint = ? AND import_content_fingerprint = ?`;
+
 export interface RestoreNodeConflict {
   liveNodeId: string;
   trashNodeId: string;
@@ -79,9 +83,7 @@ function readNodeCandidate(driver: DatabaseDriver, nodeId: string) {
 function readMatchingCandidates(driver: DatabaseDriver, target: RestoreNodeCandidate) {
   if (!target.importSourceFingerprint || !target.importContentFingerprint) return [];
   return driver.queryAll<NodeCandidateRow>(
-    `SELECT id, created_at, deleted_at, import_source_fingerprint, import_content_fingerprint
-     FROM nodes
-     WHERE import_source_fingerprint = ? AND import_content_fingerprint = ?`,
+    MATCHING_IMPORT_CANDIDATES_SQL,
     [target.importSourceFingerprint, target.importContentFingerprint]
   ).map(toRestoreNodeCandidate);
 }

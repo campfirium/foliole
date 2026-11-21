@@ -25,3 +25,11 @@ export const CORE_INDEX_SCHEMA_STATEMENTS = [
   'CREATE INDEX IF NOT EXISTS idx_review_log_reviewed_at_op ON review_log (reviewed_at, op_id)',
   'CREATE INDEX IF NOT EXISTS idx_review_log_host_name ON review_log (host_name)'
 ] as const;
+
+// Restoring an import from Trash looks up nodes sharing both fingerprints; most nodes have none.
+export const NODE_IMPORT_FINGERPRINT_INDEX_NAME = 'idx_nodes_import_fingerprints';
+export const NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA = [
+  `CREATE INDEX IF NOT EXISTS idx_nodes_import_fingerprints
+    ON nodes (import_source_fingerprint, import_content_fingerprint)
+    WHERE import_source_fingerprint IS NOT NULL`
+] as const;

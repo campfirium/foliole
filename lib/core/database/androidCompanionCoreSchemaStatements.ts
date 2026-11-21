@@ -1,4 +1,4 @@
-import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+import { CORE_INDEX_SCHEMA_STATEMENTS, NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
 
@@ -157,5 +157,6 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     PRIMARY KEY (node_id, attachment_id, role)
   )`,
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
-  ...CORE_INDEX_SCHEMA_STATEMENTS
+  ...CORE_INDEX_SCHEMA_STATEMENTS,
+  ...NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA
 ];
