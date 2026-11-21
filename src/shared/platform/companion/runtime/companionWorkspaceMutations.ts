@@ -12,6 +12,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
 import { withStoredTrashReadings } from './companionTrashSequentialReading';
+import { deriveCompanionWriteNodeOrder } from './companionWriteNodeOrder';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -40,7 +41,8 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
       [node.id, nodes === loaded ? node : { ...node, reading: nodes[node.id]?.reading ?? node.reading }])) };
     // The narrow read holds every Sequential Reading source in reach and what maintaining it consumes.
     const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
-      changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot?.nodeOrder ?? companionWriteNodeOrder(nodes), command.nodeId])], now });
+      changedNodeIds: [command.nodeId], nodeOrder: snapshot ? await deriveCompanionWriteNodeOrder(db, snapshot, after)
+        : [...new Set([...companionWriteNodeOrder(nodes), command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
     const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;
     const records = await Promise.all(mutation.nodes.map(node => createCompanionMetadataVersion(db, node, host)));

@@ -29,7 +29,7 @@ export function restoreCompanionBatchFromTrash(targets: readonly CompanionBatchT
     const host = await iosCompanionHostName(db);
     const restored = result.restoredNodeIds.map(id => ({ ...nodes[id]!, updatedAt: now, deletedAt: null }));
     const restoredIds = new Set(result.restoredNodeIds);
-    const readings = maintainCompanionBatchTrashReading(context, { ...nodes, ...Object.fromEntries(restored.map(node => [node.id, node])) },
+    const readings = await maintainCompanionBatchTrashReading(db, context, { ...nodes, ...Object.fromEntries(restored.map(node => [node.id, node])) },
       targets.map(target => target.id).filter(id => restoredIds.has(id)), now);
     const records = await Promise.all(restored.map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Restore from Trash', 'local_restore', null, readings);

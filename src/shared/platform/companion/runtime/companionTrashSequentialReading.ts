@@ -1,9 +1,11 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { maintainWorkspaceSnapshotSequentialReading } from '../../../../store/workspaceSnapshotSequentialReading';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
+import { deriveCompanionWriteNodeOrder } from './companionWriteNodeOrder';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -14,7 +16,8 @@ export async function loadCompanionBatchTrashNodes(db: DbPort, rootIds: readonly
   const narrow = await loadCompanionWriteNodes(db, rootIds, { sequentialReading: true });
   const snapshot = narrow ? null : await loadIosCompanionWorkspaceSnapshot(db);
   // The narrow read holds every Sequential Reading source in reach and what maintaining it consumes.
-  return { nodes: narrow ?? snapshot?.nodesById ?? {}, nodeOrder: narrow ? companionWriteNodeOrder(narrow) : snapshot?.nodeOrder ?? null };
+  return { nodes: narrow ?? snapshot?.nodesById ?? {}, snapshot,
+    nodeOrder: narrow ? companionWriteNodeOrder(narrow) : snapshot?.nodeOrder ?? null };
 }
 
 /**
@@ -34,12 +37,14 @@ export async function withStoredTrashReadings(db: DbPort, nodes: Nodes, nodeIds:
 }
 
 /**
- * Moving topics to or from Trash frees or retakes their Sequential Reading slots. Restored nodes are absent from
- * the visible order, so they are appended.
+ * Moving topics to or from Trash frees or retakes their Sequential Reading slots. A complete read plans from the
+ * visible order the write produces; a narrow read lists membership only, with restored nodes appended.
  */
-export function maintainCompanionBatchTrashReading(context: { nodes: Nodes; nodeOrder: string[] | null },
-  after: Nodes, changedNodeIds: string[], now: string) {
+export async function maintainCompanionBatchTrashReading(db: DbPort,
+  context: { nodes: Nodes; snapshot: WorkspaceSnapshot | null; nodeOrder: string[] | null }, after: Nodes,
+  changedNodeIds: string[], now: string) {
   if (!context.nodeOrder || !changedNodeIds.length) return [];
   return maintainWorkspaceSnapshotSequentialReading({ before: context.nodes, after, changedNodeIds,
-    nodeOrder: [...new Set([...context.nodeOrder, ...changedNodeIds])], now });
+    nodeOrder: context.snapshot ? await deriveCompanionWriteNodeOrder(db, context.snapshot, after)
+      : [...new Set([...context.nodeOrder, ...changedNodeIds])], now });
 }

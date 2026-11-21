@@ -5,6 +5,7 @@ import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCo
 import { runCompanionHistoryMutation } from './companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
 import type { CompanionBatchTarget } from './companionWorkspaceBatchTrash';
+import { deriveCompanionWriteNodeOrder } from './companionWriteNodeOrder';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -33,7 +34,7 @@ export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], par
     }
     if (!moved.length) return [];
     const readings = maintainWorkspaceSnapshotSequentialReading({ before, after, changedNodeIds: moved,
-      nodeOrder: snapshot?.nodeOrder ?? companionWriteNodeOrder(before), now });
+      nodeOrder: snapshot ? await deriveCompanionWriteNodeOrder(db, snapshot, after) : companionWriteNodeOrder(before), now });
     const host = await iosCompanionHostName(db);
     const records = await Promise.all([...changed.values()].map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Move', 'local_mutation', null, readings);

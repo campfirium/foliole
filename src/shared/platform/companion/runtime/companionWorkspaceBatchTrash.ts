@@ -52,7 +52,7 @@ export function moveCompanionBatchToTrash(targets: readonly CompanionBatchTarget
     const changes = collectCompanionBatchSubtree(nodes, targets.map(target => target.id)).filter(node => !node.deletedAt);
     if (changes.some(node => node.webPublishedAt)) throw new Error('workspace_batch_published_topic');
     const trashed = changes.map(node => ({ ...node, deletedAt: now, updatedAt: now }));
-    const readings = maintainCompanionBatchTrashReading(context, { ...nodes, ...Object.fromEntries(trashed.map(node => [node.id, node])) },
+    const readings = await maintainCompanionBatchTrashReading(db, context, { ...nodes, ...Object.fromEntries(trashed.map(node => [node.id, node])) },
       targets.map(target => target.id), now);
     const records = await Promise.all(trashed.map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash', 'local_mutation', null, readings);
