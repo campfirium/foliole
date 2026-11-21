@@ -50,8 +50,8 @@ export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompani
       await db.run('INSERT OR REPLACE INTO companion_meta(key,value,updated_at) VALUES (?,?,?)',
         [key, String(enabled), new Date().toISOString()]);
     }, false),
-    run: async continueWork => {
-      const result = await backUpCompanionDatabase(false, { automatic: true, continueWork });
+    run: async (continueWork, stopped) => {
+      const result = await backUpCompanionDatabase(false, { automatic: true, continueWork, stopped });
       return { errorMessage: result.state.errorMessage };
     }
   }, timing);

@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { CompanionFolderBackupPort } from '../../lib/platform/companionFolderBackupContract';
 import type { NativeCompanionFramedFileRequest } from '../../lib/platform/nativeCompanionFramedFilesContract';
 import { companionEpubBook } from '../../tests/fixtures/companionEpubBook';
+import { folderAttachmentCopyPort } from '../shared/platform/companion/folderBackup/companionFolderAttachmentCopyBatch.testSupport';
 import { consumeCompanionFolderAttachmentWork } from '../shared/platform/companion/folderBackup/consumeCompanionFolderAttachmentWork';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -45,9 +46,11 @@ async function copyAttachment({ storageKey }: { storageKey: string }) {
   expect(digest(await readFile(output))).toBe(storageKey.slice(0, 64));
   return { copied: true };
 }
+const copyOne = vi.fn(copyAttachment);
 const port = {
   prepareAttachmentDirectory: vi.fn(async () => undefined),
-  copyAttachment: vi.fn(copyAttachment),
+  copyAttachment: copyOne,
+  ...folderAttachmentCopyPort(input => copyOne(input)),
   finishAttachments: vi.fn(async (result: { pending: number | null; errorMessage: string | null }) => ({
     configured: true, directoryId: 'profile', directoryLabel: 'Backup', databaseSavedAt: 'database committed',
     phase: 'pending' as const, attachmentFilesPending: result.pending, errorMessage: result.errorMessage

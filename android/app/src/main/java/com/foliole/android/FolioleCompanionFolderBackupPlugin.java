@@ -12,12 +12,18 @@ import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import org.json.JSONObject;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @CapacitorPlugin(name = "FolioleCompanionFolderBackup")
 public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     private FolioleFolderBackupProfile store;
-    private String epoch, source, activeRequest;
+    private String epoch, source, activeRequest, stoppedRequest;
+    /** One worker for every attachment call; the calls of one request are already serialized by JS. */
+    private final ExecutorService attachmentWork = Executors.newSingleThreadExecutor(task -> new Thread(task, "FolioleBackupAttachment"));
     private FolioleFolderBackupOperation operation;
     private String phase = "idle", errorMessage;
     private boolean copyingAttachment, attachmentCancelled;
@@ -145,37 +151,60 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
         try {
             requireAttachmentRequest(call);
             JSONObject profile = store.load();
-            new Thread(() -> {
+            attachmentWork.execute(() -> {
                 try {
                     FolioleFolderBackupAttachmentTarget.prepareDirectory(getContext(), profile);
                     call.resolve();
                 } catch (Exception error) { call.reject(error.getMessage(), error); }
-            }, "FolioleBackupDirectory").start();
+            });
         } catch (Exception error) { call.reject(error.getMessage(), error); }
     }
-    @PluginMethod public synchronized void copyAttachment(PluginCall call) { processAttachment(call, false); }
-    @PluginMethod public synchronized void deleteAttachment(PluginCall call) { processAttachment(call, true); }
-    private void processAttachment(PluginCall call, boolean deleting) {
+    /** Copies a batch with one folder listing; per-key outcomes, and keys after a stop are left unattempted. */
+    @PluginMethod public synchronized void copyAttachments(PluginCall call) {
+        try {
+            com.getcapacitor.JSArray array = call.getArray("storageKeys");
+            if (array == null || array.length() > 64) throw new IllegalArgumentException("Invalid attachment batch.");
+            List<String> keys = new ArrayList<>();
+            for (int index = 0; index < array.length(); index++) keys.add(array.getString(index));
+            JSONObject profile = store.load();
+            processAttachment(call, () -> new JSObject().put("results", FolioleFolderBackupAttachmentTarget.copy(getContext(),
+                profile, keys, () -> attachmentStopRequested(call), () -> attachmentStopped(call))));
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+    @PluginMethod public synchronized void stopAttachments(PluginCall call) {
+        String requestId = call.getString("requestId");
+        if (requestId != null && requestId.equals(activeRequest)) stoppedRequest = requestId;
+        call.resolve();
+    }
+    @PluginMethod public synchronized void deleteAttachment(PluginCall call) {
+        try {
+            JSONObject profile = store.load();
+            processAttachment(call, () -> {
+                FolioleFolderBackupAttachmentTarget.delete(getContext(), profile, call.getString("storageKey"), () -> attachmentStopped(call));
+                return new JSObject();
+            });
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+    private interface AttachmentTask { JSObject run() throws Exception; }
+    private void processAttachment(PluginCall call, AttachmentTask task) {
         try {
             requireAttachmentRequest(call);
             if (copyingAttachment) throw new IllegalStateException("An attachment is already being copied.");
-            JSONObject profile = store.load();
             copyingAttachment = true;
-            new Thread(() -> {
+            attachmentWork.execute(() -> {
                 try {
-                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-                    if (deleting) FolioleFolderBackupAttachmentTarget.delete(getContext(), profile,
-                        call.getString("storageKey"), () -> attachmentStopped(call));
-                    boolean copied = !deleting && FolioleFolderBackupAttachmentTarget.copy(getContext(), profile,
-                        call.getString("storageKey"), () -> attachmentStopped(call));
+                    JSObject result = task.run();
                     synchronized (this) { copyingAttachment = false; }
-                    call.resolve(new JSObject().put("copied", copied));
+                    call.resolve(result);
                 } catch (Exception error) {
                     synchronized (this) { copyingAttachment = false; }
                     call.reject(error.getMessage(), error);
                 }
-            }, "FolioleBackupAttachment").start();
+            });
         } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+    private synchronized boolean attachmentStopRequested(PluginCall call) {
+        return call.getString("requestId") != null && call.getString("requestId").equals(stoppedRequest);
     }
     private synchronized boolean attachmentStopped(PluginCall call) {
         return attachmentCancelled || epoch == null || !epoch.equals(call.getString("sourceEpoch"));
@@ -231,6 +260,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     @Override protected synchronized void handleOnDestroy() {
         epoch = null; source = null; attachmentCancelled = true;
         if (operation != null) operation.cancel(null);
+        attachmentWork.shutdown();
         super.handleOnDestroy();
     }
 }

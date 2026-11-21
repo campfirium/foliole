@@ -1,6 +1,7 @@
 interface BackupWorkerPort {
   saveEnabled(enabled: boolean): Promise<void>;
-  run(continueWork: () => boolean): Promise<{ errorMessage: string | null }>;
+  /** `stopped` aborts when the round must stop claiming work, so native work can stop after its current file. */
+  run(continueWork: () => boolean, stopped: AbortSignal): Promise<{ errorMessage: string | null }>;
 }
 
 /** A round reads and fingerprints the whole database on both sides even when only one page differs,
@@ -21,6 +22,7 @@ export class CompanionFolderBackupWorker {
   private quietSince: number | null = null;
   private urgent = false;
   private running: Promise<void> | null = null;
+  private runStop: AbortController | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(enabled: boolean, private readonly port: BackupWorkerPort,
@@ -32,7 +34,7 @@ export class CompanionFolderBackupWorker {
 
   setEnabled(enabled: boolean, validate?: () => Promise<void>) {
     const version = ++this.settingVersion;
-    if (!enabled) { this.enabled = false; this.cancelRequest(); }
+    if (!enabled) { this.enabled = false; this.cancelRequest(); this.runStop?.abort(); }
     const setting = this.settingTail.catch(() => undefined).then(async () => {
       try {
         await validate?.();
@@ -79,15 +81,18 @@ export class CompanionFolderBackupWorker {
 
   private async runOnce() {
     const revision = this.revision;
+    const stop = this.runStop = new AbortController();
     try {
-      const result = await this.port.run(() => this.enabled && !this.closed);
+      const result = await this.port.run(() => this.enabled && !this.closed, stop.signal);
       if (result.errorMessage) this.failed = revision === this.revision;
     } catch { this.failed = revision === this.revision; }
+    finally { if (this.runStop === stop) this.runStop = null; }
   }
 
   async stop() {
     this.closed = true;
     this.cancelRequest();
+    this.runStop?.abort();
     await this.running;
   }
 

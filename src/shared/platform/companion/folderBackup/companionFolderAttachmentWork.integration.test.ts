@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
 import { confirmFolderAttachmentCopy, prepareFolderAttachmentCopy } from '../../../../../lib/core/database/companionFolderAttachmentWork';
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import { folderAttachmentWorkFixture } from './companionFolderAttachmentWork.testSupport';
 
@@ -139,4 +140,38 @@ it('does not let a receipt for the old global directory clear work for a replace
   await f.run('replacement');
   await expect(confirmFolderAttachmentCopy(f.db, 'profile', old as never)).rejects.toThrow('Backup folder changed');
   expect(f.inventory).toHaveBeenCalledTimes(2);
+});
+
+it('seeds, copies and confirms a large first backup in native batches with constant database calls per batch', async () => {
+  // Every DbPort statement and BEGIN/COMMIT is one Capacitor bridge round trip on a phone.
+  const calls = { count: 0 };
+  const counted = (port: DbPort): DbPort => ({ connectionIdentity: port.connectionIdentity,
+    run: (sql, params) => { calls.count++; return port.run(sql, params); },
+    query: (sql, params) => { calls.count++; return port.query(sql, params); },
+    transaction: execute => { calls.count += 2; return port.transaction(tx => execute(counted(tx))); } });
+  const f = await folderAttachmentWorkFixture(native, sqlite => counted(createBetterSqliteDbPort(sqlite)));
+  fixtures.push(f);
+  const items = [];
+  for (let index = 0; index < 70; index++) items.push(await f.receive(`attachment ${index}`));
+  calls.count = 0;
+  const state = await f.run();
+  expect(state).toMatchObject({ attachmentFilesCopied: 70, attachmentFilesPending: 0, errorMessage: null });
+  for (const item of items) expect(await readFile(item.file)).toEqual(item.bytes);
+  expect(f.port.copyAttachments).toHaveBeenCalledTimes(3);
+  // One-by-one bookkeeping took about 5 calls per attachment (350 here); batches keep it near constant.
+  expect(calls.count).toBeLessThanOrEqual(30);
+  expect(f.rows()).toEqual([]);
+});
+
+it('records a failed key in a batch and leaves keys a cancelled native batch did not reach untouched', async () => {
+  const f = await fixture();
+  await f.run();
+  const [first, second, third] = [await f.receive('one'), await f.receive('two'), await f.receive('three')];
+  const keys = [first, second, third].map(item => item.key).sort();
+  f.port.copyAttachments.mockImplementationOnce(async () => ({ results: [
+    { storageKey: keys[0]!, copied: true }, { storageKey: keys[1]!, errorMessage: 'provider refused' }] }));
+  const state = await f.run();
+  expect(state).toMatchObject({ attachmentFilesCopied: 1, attachmentFilesPending: 2, errorMessage: 'provider refused' });
+  expect(f.rows()).toEqual([expect.objectContaining({ storage_key: keys[1], last_error: 'provider refused' }),
+    expect.objectContaining({ storage_key: keys[2], last_error: null })]);
 });

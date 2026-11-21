@@ -9,13 +9,42 @@ extension FolioleCompanionFolderBackupPlugin {
         }
     }
 
-    @objc func copyAttachment(_ call: CAPPluginCall) {
+    /// Copies a batch inside one security scope and coordination; keys after a stop are left unattempted.
+    @objc func copyAttachments(_ call: CAPPluginCall) {
+        let keys = call.getArray("storageKeys", String.self) ?? []
+        let requestID = call.getString("requestId")
         attachmentTask(call) { root, profile, operation in
+            guard keys.count <= 64 else { throw backupError("Invalid attachment batch.") }
             let roots = try [false, true].map { try FolioleAttachmentMaintenanceFiles.directory($0) }
-            let copied = try FolioleFolderBackupAttachments.copy(call.getString("storageKey") ?? "", roots: roots,
-                directory: root, profile: profile.id, check: operation.checkActive)
-            return ["copied": copied]
+            var results = JSArray()
+            var published = false
+            for key in keys {
+                if self.attachmentStopRequested(requestID) { break }
+                do {
+                    let copied = try FolioleFolderBackupAttachments.copy(key, roots: roots, directory: root,
+                        profile: profile.id, check: operation.checkActive)
+                    published = published || copied
+                    results.append(["storageKey": key, "copied": copied] as JSObject)
+                } catch {
+                    if (try? operation.checkActive()) == nil { break }
+                    results.append(["storageKey": key, "errorMessage": error.localizedDescription] as JSObject)
+                }
+            }
+            if published { try FolioleFolderBackupAttachments.persist(root) }
+            return ["results": results]
         }
+    }
+
+    @objc func stopAttachments(_ call: CAPPluginCall) {
+        attachmentStopLock.lock()
+        stoppedAttachmentRequest = call.getString("requestId")
+        attachmentStopLock.unlock()
+        call.resolve()
+    }
+
+    private func attachmentStopRequested(_ requestID: String?) -> Bool {
+        attachmentStopLock.lock(); defer { attachmentStopLock.unlock() }
+        return requestID != nil && requestID == stoppedAttachmentRequest
     }
 
     @objc func deleteAttachment(_ call: CAPPluginCall) {

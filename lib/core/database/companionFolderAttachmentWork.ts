@@ -34,14 +34,15 @@ export async function configureFolderAttachmentProfile(db: DbPort, profile: stri
 }
 
 export async function seedFolderAttachmentBaseline(db: DbPort, profile: string, keys: readonly string[]) {
+  const unique = [...new Set(keys)];
+  for (const key of unique) checkKey(key);
   return db.transaction(async tx => {
     await requireProfile(tx, profile);
-    for (const key of new Set(keys)) {
-      checkKey(key);
-      await tx.run(`INSERT OR IGNORE INTO folder_attachment_work(storage_key,stage,action,token)
-        SELECT ?,'backup','copy',? WHERE NOT EXISTS
-        (SELECT 1 FROM folder_attachment_work WHERE storage_key=?)`, [key, crypto.randomUUID(), key]);
-    }
+    // One statement for the whole inventory; every bridge round trip is a fixed mobile cost.
+    if (unique.length) await tx.run(`INSERT OR IGNORE INTO folder_attachment_work(storage_key,stage,action,token)
+      SELECT entry.value ->> 0,'backup','copy',entry.value ->> 1 FROM json_each(?) AS entry WHERE NOT EXISTS
+      (SELECT 1 FROM folder_attachment_work WHERE storage_key=entry.value ->> 0)`,
+    [JSON.stringify(unique.map(key => [key, crypto.randomUUID()]))]);
     await writeMeta(tx, baselineKey, profile);
   });
 }
@@ -82,20 +83,40 @@ export async function readFolderAttachmentWork(db: DbPort, profile: string) {
 
 /** Native copy has verified the target before this confirmation; original receive completion stays independent. */
 export async function confirmFolderAttachmentCopy(db: DbPort, profile: string, work: FolderAttachmentWork) {
+  return confirmFolderAttachmentCopies(db, profile, [work]);
+}
+
+/** Confirms a batch in one transaction; each entry keeps its own token guard, as if confirmed one by one. */
+export async function confirmFolderAttachmentCopies(db: DbPort, profile: string, works: readonly FolderAttachmentWork[]) {
+  if (!works.length) return;
+  const entries = JSON.stringify(works.map(work => [work.storage_key, work.token, work.stage]));
   return db.transaction(async tx => {
     await requireProfile(tx, profile);
-    if (work.stage === 'source') await tx.run(`DELETE FROM folder_attachment_work
-      WHERE storage_key=? AND stage='backup' AND EXISTS
-      (SELECT 1 FROM folder_attachment_work s WHERE s.storage_key=? AND s.stage='source' AND s.token=?)`,
-    [work.storage_key, work.storage_key, work.token]);
-    await tx.run('DELETE FROM folder_attachment_work WHERE storage_key=? AND token=?', [work.storage_key, work.token]);
+    // A verified source intent also discharges the older backup obligation it superseded.
+    if (works.some(work => work.stage === 'source')) await tx.run(`DELETE FROM folder_attachment_work
+      WHERE stage='backup' AND storage_key IN (SELECT entry.value ->> 0 FROM json_each(?) AS entry
+        WHERE entry.value ->> 2='source' AND EXISTS (SELECT 1 FROM folder_attachment_work s
+          WHERE s.storage_key=entry.value ->> 0 AND s.stage='source' AND s.token=entry.value ->> 1))`, [entries]);
+    // The key list reaches rows through the primary key; the token check then runs only against the batch.
+    await tx.run(`DELETE FROM folder_attachment_work WHERE storage_key IN (SELECT entry.value ->> 0 FROM json_each(?) AS entry)
+      AND EXISTS (SELECT 1 FROM json_each(?) AS entry
+        WHERE entry.value ->> 0=folder_attachment_work.storage_key AND entry.value ->> 1=folder_attachment_work.token)`,
+    [entries, entries]);
   });
 }
 
 export async function failFolderAttachmentCopy(db: DbPort, profile: string, work: FolderAttachmentWork, error: string) {
+  return failFolderAttachmentCopies(db, profile, [{ work, error }]);
+}
+
+export async function failFolderAttachmentCopies(db: DbPort, profile: string,
+  failures: readonly { work: FolderAttachmentWork; error: string }[]) {
+  if (!failures.length) return;
   await requireProfile(db, profile);
-  await db.run('UPDATE folder_attachment_work SET last_error=? WHERE storage_key=? AND stage=? AND token=?',
-    [error, work.storage_key, work.stage, work.token]);
+  await db.run(`UPDATE folder_attachment_work SET last_error=entry.value ->> 3 FROM json_each(?) AS entry
+    WHERE folder_attachment_work.storage_key=entry.value ->> 0 AND folder_attachment_work.stage=entry.value ->> 2
+      AND folder_attachment_work.token=entry.value ->> 1`,
+  [JSON.stringify(failures.map(({ work, error }) => [work.storage_key, work.token, work.stage, error]))]);
 }
 
 export async function countFolderAttachmentWork(db: DbPort, profile: string) {

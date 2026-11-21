@@ -9,7 +9,7 @@ import { getCompanionFolderBackupPort } from './companionFolderBackupRuntimeRepo
 import { getCompanionFolderBackupState } from './companionFolderBackupState';
 import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAttachmentWork';
 
-interface BackupOptions { automatic?: boolean; continueWork?: () => boolean }
+interface BackupOptions { automatic?: boolean; continueWork?: () => boolean; stopped?: AbortSignal }
 const manualListeners = new Set<() => void>();
 export function subscribeManualCompanionFolderBackup(listener: () => void) {
   manualListeners.add(listener);

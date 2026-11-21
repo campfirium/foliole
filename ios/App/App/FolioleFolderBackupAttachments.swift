@@ -14,6 +14,7 @@ enum FolioleFolderBackupAttachments {
         return folder
     }
 
+    /// Publishes one verified copy; the folder entry becomes durable with `persist`.
     static func copy(_ key: String, roots: [URL], directory: URL, profile: String,
                      check: () throws -> Void) throws -> Bool {
         try validate(key)
@@ -31,16 +32,21 @@ enum FolioleFolderBackupAttachments {
         guard descriptor >= 0 else { throw backupError("Cannot create backup attachment.") }
         let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         defer { try? output.close(); try? FileManager.default.removeItem(at: partial) }
+        // The bytes are hashed as written and synced; reading them back would only re-read the page cache.
+        // Restore verifies each file against the hash in its name.
         guard try hash(source, output: output, check: check) == expected else { throw backupError("Source attachment is damaged.") }
         try output.synchronize()
         try output.close()
-        guard try hash(partial, check: check) == expected else { throw backupError("Cannot verify copied attachment.") }
         try check()
         guard renameatx_np(AT_FDCWD, partial.path, AT_FDCWD, target.path, UInt32(RENAME_EXCL)) == 0 else {
             throw backupError("Cannot publish backup attachment without replacing an existing file.")
         }
-        try syncDirectory(target.deletingLastPathComponent())
         return true
+    }
+
+    /// Makes the renames of a batch durable once; callers persist before reporting copies as complete.
+    static func persist(_ directory: URL) throws {
+        try syncDirectory(try prepare(directory))
     }
 
     static func delete(_ key: String, roots: [URL], directory: URL, check: () throws -> Void) throws {

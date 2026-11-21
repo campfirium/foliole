@@ -22,6 +22,7 @@ struct AttachmentBackupFixture {
             do { try action(); preconditionFailure("unsafe operation succeeded") } catch {}
         }
         verify(try copy())
+        try FolioleFolderBackupAttachments.persist(target)
         verify(try !copy())
         let saved = target.appendingPathComponent("Attachments/" + key)
         verify(try Data(contentsOf: saved) == data)

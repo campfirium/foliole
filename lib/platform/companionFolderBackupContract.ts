@@ -26,6 +26,13 @@ export interface CompanionFolderDatabaseBackupResult {
   state: CompanionFolderBackupState;
 }
 
+/** Most keys a single native copy call accepts; bounds cancellation latency and the result payload. */
+export const COMPANION_FOLDER_ATTACHMENT_COPY_BATCH = 32;
+
+export type CompanionFolderAttachmentCopyResult =
+  | { storageKey: string; copied: boolean; errorMessage?: undefined }
+  | { storageKey: string; errorMessage: string; copied?: undefined };
+
 export interface CompanionFolderBackupPort {
   addListener(event: 'backupStateChanged', listener: (event: {
     state: CompanionFolderBackupState; result?: CompanionFolderDatabaseBackupResult;
@@ -36,7 +43,12 @@ export interface CompanionFolderBackupPort {
   clearDirectory(): Promise<CompanionFolderBackupState>;
   backupDatabase(input: { sourceEpoch: string; requestId: string; chooseDirectory: boolean }): Promise<CompanionFolderDatabaseBackupResult>;
   prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
-  copyAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<{ copied: boolean }>;
+  /** Copies keys in order in one native call. A key without a result was not attempted (the request was cancelled). */
+  copyAttachments(input: { sourceEpoch: string; requestId: string; storageKeys: string[] }): Promise<{
+    results: CompanionFolderAttachmentCopyResult[];
+  }>;
+  /** Lets the in-flight copy finish its current file, then return without attempting the remaining keys. */
+  stopAttachments(input: { requestId: string }): Promise<void>;
   deleteAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<void>;
   finishAttachments(input: { requestId: string; copied: number; pending: number | null; errorMessage: string | null }): Promise<CompanionFolderBackupState>;
   cancelDatabase(input: { requestId: string }): Promise<void>;

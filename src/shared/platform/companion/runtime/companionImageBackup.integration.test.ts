@@ -6,6 +6,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
+import { folderAttachmentCopyPort } from '../folderBackup/companionFolderAttachmentCopyBatch.testSupport';
 import { consumeCompanionFolderAttachmentWork } from '../folderBackup/consumeCompanionFolderAttachmentWork';
 
 import { importCompanionArticleImage, recoverCompanionArticleImage } from './companionArticleImageRecovery';
@@ -38,7 +39,7 @@ const runBackup = () => consumeCompanionFolderAttachmentWork({
   addListener: unusedBackupMethod, openSource: unusedBackupMethod, closeSource: unusedBackupMethod,
   getState: unusedBackupMethod, clearDirectory: unusedBackupMethod, backupDatabase: unusedBackupMethod,
   deleteAttachment: unusedBackupMethod, cancelDatabase: unusedBackupMethod,
-  prepareAttachmentDirectory: async () => {}, copyAttachment: copy,
+  prepareAttachmentDirectory: async () => {}, ...folderAttachmentCopyPort(input => copy(input)),
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
     directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending' as const, attachmentFilesPending: pending, errorMessage })
 } satisfies CompanionFolderBackupPort, {

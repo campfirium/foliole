@@ -5,7 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { expect, it } from 'vitest';
 
-it('streams and verifies actual files, skips unchanged files and preserves valid files through failures and retry', () => {
+it('lists the folder once per batch without read-back, skips unchanged files and preserves valid files through failures and retry', () => {
   const java = process.env.JAVA_HOME ?? '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home';
   const parent = path.resolve('.tmp/artifacts/T692/attachment-contract');
   mkdirSync(parent, { recursive: true });
@@ -14,5 +14,6 @@ it('streams and verifies actual files, skips unchanged files and preserves valid
     'android/app/src/main/java/com/foliole/android/FolioleFolderBackupAttachmentCopy.java',
     'scripts/build/fixtures/attachments/com/foliole/android/FolderAttachmentCopyFixture.java']);
   const result = execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderAttachmentCopyFixture', root], { encoding: 'utf8' });
-  expect(result).toContain('cancellation and retry passed');
+  expect(result).toContain('one listing per batch without read-back');
+  expect(result).toContain('deletion and retry passed');
 });

@@ -8,7 +8,8 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
     public let identifier = "FolioleCompanionFolderBackupPlugin"
     public let jsName = "FolioleCompanionFolderBackup"
     public let pluginMethods: [CAPPluginMethod] = ["openSource", "closeSource", "getState", "clearDirectory", "backupDatabase",
-        "cancelDatabase", "prepareAttachmentDirectory", "copyAttachment", "deleteAttachment", "finishAttachments"]
+        "cancelDatabase", "prepareAttachmentDirectory", "copyAttachments", "stopAttachments", "deleteAttachment",
+        "finishAttachments"]
         .map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
     let store = FolioleFolderBackupProfileStore()
     let queue = DispatchQueue(label: "FolioleFolderBackup", qos: .utility)
@@ -18,6 +19,8 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
     var pickerCall: CAPPluginCall?
     var phase = "idle"
     var errorMessage: String?
+    let attachmentStopLock = NSLock()
+    var stoppedAttachmentRequest: String?
 
     @objc func openSource(_ call: CAPPluginCall) {
         DispatchQueue.main.async {

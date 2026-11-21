@@ -13,6 +13,7 @@ import type { NativeCompanionFramedFileRequest } from '../../../../../lib/platfo
 import { createCompanionAttachmentHost } from '../sync/framed/companionAttachmentBlockFiles';
 import { companionAttachmentNativeFiles } from '../sync/framed/companionAttachmentNativeFiles.testSupport';
 
+import { folderAttachmentCopyPort } from './companionFolderAttachmentCopyBatch.testSupport';
 import { companionFolderAttachmentRecorder } from './companionFolderAttachmentRecorder';
 import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAttachmentWork';
 
@@ -56,10 +57,11 @@ export async function folderAttachmentWorkFixture(native: {
     await rename(`${file}.partial`, file);
     return { copied: true };
   };
+  // Tests steer single files through copyAttachment; the batch contract replays it per key.
+  const copyAttachment = vi.fn(copy), batch = folderAttachmentCopyPort(input => copyAttachment(input));
   const port = {
-    cancelDatabase: vi.fn(async () => undefined),
-    prepareAttachmentDirectory: vi.fn(async () => undefined),
-    copyAttachment: vi.fn(copy),
+    cancelDatabase: vi.fn(async () => undefined), prepareAttachmentDirectory: vi.fn(async () => undefined), copyAttachment,
+    copyAttachments: vi.fn(batch.copyAttachments), stopAttachments: vi.fn(batch.stopAttachments),
     finishAttachments: vi.fn(async (input: { copied: number; pending: number | null; errorMessage: string | null }) => ({
       configured: true, directoryId: 'profile', directoryLabel: 'Backup', databaseSavedAt: 'database committed',
       phase: 'pending' as const, errorMessage: input.errorMessage,

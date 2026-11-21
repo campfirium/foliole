@@ -1,35 +1,47 @@
 package com.foliole.android;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
+import com.getcapacitor.JSArray;
+import com.getcapacitor.JSObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import org.json.JSONObject;
 
-/** SAF and app-file adapter for a single canonical attachment. */
-final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAttachmentCopy.Target {
-    private final Context context;
+/** SAF adapter for the backup Attachments folder; app attachment files are the sources. */
+final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAttachmentCopy.Documents {
+    private final ContentResolver resolver;
     private final Uri tree, folder;
-    private final String key, temporaryName;
-    private Uri temporary;
-    private ParcelFileDescriptor descriptor;
 
-    static boolean copy(Context context, JSONObject profile, String key, BooleanSupplier cancelled) throws Exception {
-        if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("Invalid attachment name.");
-        File source = new File(FolioleAttachmentMaintenanceFiles.directory(context, false), key);
-        if (!source.exists()) source = new File(FolioleAttachmentMaintenanceFiles.directory(context, true), key);
-        source = FolioleAttachmentBlockFiles.checkedSourceFile(source);
-        FolioleFolderBackupAttachmentTarget target = new FolioleFolderBackupAttachmentTarget(context, profile, key);
-        try (InputStream input = new FileInputStream(source)) {
-            return FolioleFolderBackupAttachmentCopy.copy(key.substring(0, 64), input, target, cancelled);
+    /** Copies keys in order; a stop request ends the batch between files, a cancellation also within one. */
+    static JSArray copy(Context context, JSONObject profile, List<String> keys, BooleanSupplier stopRequested,
+        BooleanSupplier cancelled) throws Exception {
+        FolioleFolderBackupAttachmentCopy.Folder folder = open(context, profile);
+        JSArray results = new JSArray();
+        for (String key : keys) {
+            if (stopRequested.getAsBoolean() || cancelled.getAsBoolean()) break;
+            try {
+                boolean copied;
+                try (InputStream input = new FileInputStream(source(context, key))) { copied = folder.copy(key, input, cancelled); }
+                results.put(new JSObject().put("storageKey", key).put("copied", copied));
+            } catch (InterruptedException stopped) { break; }
+            catch (Exception error) {
+                String message = error.getMessage();
+                results.put(new JSObject().put("storageKey", key).put("errorMessage", message == null ? error.toString() : message));
+            }
         }
+        return results;
     }
+
     static void delete(Context context, JSONObject profile, String key, BooleanSupplier cancelled) throws Exception {
         if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("Invalid attachment name.");
         // A failed deletion, local move, or a later restored source cannot authorize removing its backup.
@@ -38,80 +50,80 @@ final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAt
             if (!directory.isDirectory() || !directory.canRead()) throw new IllegalStateException("Cannot read source attachment directory.");
             if (new File(directory, key).exists()) throw new IllegalStateException("Source attachment still exists.");
         }
-        FolioleFolderBackupAttachmentTarget target = new FolioleFolderBackupAttachmentTarget(context, profile, key);
-        FolioleFolderBackupAttachmentCopy.delete(key.substring(0, 64), new FolioleFolderBackupAttachmentCopy.DeletionTarget() {
-            private Uri document;
-            public InputStream existing() throws Exception {
-                document = target.find(target.folder, key);
-                return document == null ? null : target.read(document);
-            }
-            public void remove() throws Exception {
-                if (!document.equals(target.find(target.folder, key))) throw new IllegalStateException("Backup attachment changed during deletion.");
-                if (!DocumentsContract.deleteDocument(context.getContentResolver(), document) || target.find(target.folder, key) != null) {
-                    throw new IllegalStateException("Cannot remove backup attachment.");
-                }
-            }
-        }, cancelled);
+        open(context, profile).delete(key, cancelled);
     }
 
     static void prepareDirectory(Context context, JSONObject profile) throws Exception {
-        new FolioleFolderBackupAttachmentTarget(context, profile, "");
+        new FolioleFolderBackupAttachmentTarget(context, profile);
     }
-    private FolioleFolderBackupAttachmentTarget(Context context, JSONObject profile, String key) throws Exception {
-        this.context = context;
-        this.key = key;
+
+    private static FolioleFolderBackupAttachmentCopy.Folder open(Context context, JSONObject profile) throws Exception {
+        return new FolioleFolderBackupAttachmentCopy.Folder(new FolioleFolderBackupAttachmentTarget(context, profile), profile.getString("id"));
+    }
+
+    private static File source(Context context, String key) throws Exception {
+        if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("Invalid attachment name.");
+        File source = new File(FolioleAttachmentMaintenanceFiles.directory(context, false), key);
+        if (!source.exists()) source = new File(FolioleAttachmentMaintenanceFiles.directory(context, true), key);
+        return FolioleAttachmentBlockFiles.checkedSourceFile(source);
+    }
+
+    private FolioleFolderBackupAttachmentTarget(Context context, JSONObject profile) throws Exception {
+        resolver = context.getContentResolver();
         tree = Uri.parse(profile.getString("tree"));
         Uri root = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
-        Uri found = find(root, "Attachments");
-        folder = found == null ? DocumentsContract.createDocument(context.getContentResolver(), root,
-            DocumentsContract.Document.MIME_TYPE_DIR, "Attachments") : found;
+        String found = null;
+        for (String[] child : children(root)) if ("Attachments".equals(child[0])) {
+            if (found != null) throw new IllegalStateException("Duplicate attachment filenames in backup folder.");
+            found = child[1];
+        }
+        folder = found == null ? DocumentsContract.createDocument(resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, "Attachments")
+            : uri(found);
         if (folder == null) throw new IllegalStateException("Cannot create attachment backup folder.");
-        temporaryName = ".foliole-" + profile.getString("id") + "-" + key + ".partial";
     }
-    private Uri find(Uri parent, String name) throws Exception {
+    private Uri uri(String documentId) { return DocumentsContract.buildDocumentUriUsingTree(tree, documentId); }
+    private List<String[]> children(Uri parent) throws Exception {
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getDocumentId(parent));
-        Uri found = null;
-        try (Cursor rows = context.getContentResolver().query(children, new String[] {
+        List<String[]> result = new ArrayList<>();
+        try (Cursor rows = resolver.query(children, new String[] {
             DocumentsContract.Document.COLUMN_DISPLAY_NAME, DocumentsContract.Document.COLUMN_DOCUMENT_ID }, null, null, null)) {
             if (rows == null) throw new IllegalStateException("Cannot read attachment backup folder.");
-            while (rows.moveToNext()) if (name.equals(rows.getString(0))) {
-                if (found != null) throw new IllegalStateException("Duplicate attachment filenames in backup folder.");
-                found = DocumentsContract.buildDocumentUriUsingTree(tree, rows.getString(1));
-            }
+            while (rows.moveToNext()) result.add(new String[] { rows.getString(0), rows.getString(1) });
         }
-        return found;
+        return result;
     }
-    @Override public InputStream existing() throws Exception {
-        Uri file = find(folder, key);
-        return file == null ? null : read(file);
+    @Override public List<String[]> children() throws Exception { return children(folder); }
+    @Override public String create(String displayName) throws Exception {
+        Uri created = DocumentsContract.createDocument(resolver, folder, "application/octet-stream", displayName);
+        if (created == null) throw new IllegalStateException("Cannot create backup attachment.");
+        return DocumentsContract.getDocumentId(created);
     }
-    private InputStream read(Uri file) throws Exception {
-        InputStream input = context.getContentResolver().openInputStream(file);
+    @Override public void write(String documentId, FolioleFolderBackupAttachmentCopy.StreamWriter writer) throws Exception {
+        ParcelFileDescriptor descriptor = resolver.openFileDescriptor(uri(documentId), "rwt");
+        if (descriptor == null) throw new IllegalStateException("Cannot write backup attachment.");
+        try (OutputStream output = new ParcelFileDescriptor.AutoCloseOutputStream(descriptor)) {
+            writer.write(output);
+            output.flush();
+            descriptor.getFileDescriptor().sync();
+        }
+    }
+    @Override public InputStream read(String documentId) throws Exception {
+        InputStream input = resolver.openInputStream(uri(documentId));
         if (input == null) throw new IllegalStateException("Cannot read backup attachment.");
         return input;
     }
-    @Override public OutputStream temporary() throws Exception {
-        temporary = find(folder, temporaryName);
-        if (temporary != null) discard();
-        temporary = DocumentsContract.createDocument(context.getContentResolver(), folder, "application/octet-stream", temporaryName);
-        if (temporary == null) throw new IllegalStateException("Cannot create backup attachment.");
-        descriptor = context.getContentResolver().openFileDescriptor(temporary, "rwt");
-        if (descriptor == null) { discard(); throw new IllegalStateException("Cannot write backup attachment."); }
-        return new ParcelFileDescriptor.AutoCloseOutputStream(descriptor);
+    @Override public String rename(String documentId, String displayName) throws Exception {
+        Uri renamed = DocumentsContract.renameDocument(resolver, uri(documentId), displayName);
+        if (renamed == null) throw new IllegalStateException("Cannot publish backup attachment.");
+        return DocumentsContract.getDocumentId(renamed);
     }
-    @Override public void sync() throws Exception { descriptor.getFileDescriptor().sync(); }
-    @Override public InputStream readTemporary() throws Exception { return read(temporary); }
-    @Override public void publish() throws Exception {
-        if (find(folder, key) != null) throw new IllegalStateException("Backup attachment appeared during copying.");
-        Uri published = DocumentsContract.renameDocument(context.getContentResolver(), temporary, key);
-        if (published == null) throw new IllegalStateException("Cannot publish backup attachment.");
-        temporary = null;
-        if (!published.equals(find(folder, key))) throw new IllegalStateException("Backup provider changed the attachment name.");
-    }
-    @Override public void discard() throws Exception {
-        if (temporary != null && !DocumentsContract.deleteDocument(context.getContentResolver(), temporary)) {
-            throw new IllegalStateException("Cannot remove unfinished backup attachment.");
+    @Override public String displayName(String documentId) throws Exception {
+        try (Cursor rows = resolver.query(uri(documentId), new String[] { DocumentsContract.Document.COLUMN_DISPLAY_NAME }, null, null, null)) {
+            if (rows == null || !rows.moveToFirst()) throw new IllegalStateException("Cannot read backup attachment.");
+            return rows.getString(0);
         }
-        temporary = null;
+    }
+    @Override public void delete(String documentId) throws Exception {
+        if (!DocumentsContract.deleteDocument(resolver, uri(documentId))) throw new IllegalStateException("Cannot remove backup attachment.");
     }
 }

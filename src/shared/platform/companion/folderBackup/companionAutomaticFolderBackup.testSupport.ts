@@ -11,6 +11,7 @@ import type { CompanionFolderBackupPort } from '../../../../../lib/platform/comp
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import { bindCompanionAutomaticFolderBackup } from './companionAutomaticFolderBackup';
+import { folderAttachmentCopyPort } from './companionFolderAttachmentCopyBatch.testSupport';
 import type { BackupWorkerTiming } from './companionFolderBackupWorker';
 
 const cleanup: (() => Promise<void>)[] = [];
@@ -51,7 +52,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
   });
   const forget = vi.fn(async () => { state.configured = false; state.directoryId = ''; return { ...state }; });
   runtime.port = { clearDirectory: forget, getState: async () => ({ ...state }), openSource: async () => {}, closeSource: async () => {},
-    backupDatabase: backup, prepareAttachmentDirectory: async () => {}, copyAttachment: copy, finishAttachments: finish,
+    backupDatabase: backup, prepareAttachmentDirectory: async () => {}, ...folderAttachmentCopyPort(copy), finishAttachments: finish,
     cancelDatabase: async () => {} } as unknown as CompanionFolderBackupPort;
   runtime.inventory.mockImplementation(async ({ trash }: { trash: boolean }) => ({ files: trash ? [] :
     (await readdir(source)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));
