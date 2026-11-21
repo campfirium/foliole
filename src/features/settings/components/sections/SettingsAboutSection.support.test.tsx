@@ -80,7 +80,7 @@ it('runs support commands from About settings', async () => {
 
   const emailTooltip = await screen.findByRole('tooltip');
   expect(emailTooltip).toHaveTextContent('hello@foliole.app');
-  expect(emailTooltip).toHaveStyle({ zIndex: 'var(--z-dropdown)' });
+  expect(emailTooltip.closest<HTMLElement>('[data-side]')?.style.zIndex).toBe('var(--z-dropdown)');
   expect(checkForFolioleUpdates).toHaveBeenCalledWith({ force: true });
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.openGitHubIssues);
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openYouTubePlaylist);
