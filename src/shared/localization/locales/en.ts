@@ -82,6 +82,7 @@ export const EN_TRANSLATIONS = {
   'language.zhHans': 'Simplified Chinese',
   'shared.textLimit.exceeded': 'This change exceeds the 1 MiB (UTF-8) limit for a single text field and was not saved. Shorten the text and try again.',
   'shared.titleLimit.shortened': 'Title shortened to 100 characters and saved.',
+  'shared.flowSourceSettings.saveFailed': 'Couldn\'t save that change. Try again.',
   'common.cancel': 'Cancel',
   'common.done': 'Done',
   ...EN_SHARED_UI_TRANSLATIONS,

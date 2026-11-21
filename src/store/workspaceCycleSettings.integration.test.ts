@@ -73,8 +73,15 @@ it('rejects changed learning facts without replacing them or publishing a new re
       after: { intervalDurationMs: 60000, intervalGrowthFactor: 1, lastHandledAt: now, nextAt: now,
         priority: 5, readingPosition: 0, repetitionCount: 3, state: 'dismissed' } }, now);
   };
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   expect(await app.sequential('folder', true, now)).toBe(false);
-  expect(app.getState()).toBe(before);
+  expect(warn).toHaveBeenCalledWith('[persistence] flow source settings save conflict', expect.objectContaining({
+    changed_settings: ['sequentialReadingEnabled'], reason: 'state_mismatch', source_node_id: 'folder' }));
+  expect(error).not.toHaveBeenCalled();
+  warn.mockRestore();
+  error.mockRestore();
+  expect(app.getState()).toEqual(before);
   expect((await snapshot(peer)).nodesById.a?.reading?.state).toBe('dismissed');
   expect((await snapshot(peer)).nodesById.folder?.sequentialReadingEnabled).not.toBe(true);
 });
@@ -84,7 +91,7 @@ it('retries a saved setting after losing the receipt without advancing progress 
   const before = app.getState();
   loseReceipt = true;
   expect(await app.sequential('folder', true, now)).toBe(false);
-  expect(app.getState()).toBe(before);
+  expect(app.getState()).toEqual(before);
   expect(await app.sequential('folder', true, now)).toBe(true);
   expect(app.getState().reviewSession.readTopicCount).toBe(before.reviewSession.readTopicCount);
   await assertDurable(peer, app.getState().reviewSession);

@@ -18,11 +18,12 @@ export function createSetNodeSequentialReadingAction(
   return (nodeId, enabled, now = new Date().toISOString()) => {
     if (get && hasDailyFlowRuntime()) {
       const before = get();
-      const plan = planSequentialReadingSourceStates({ enabled, nodeOrder: before.nodeOrder,
-        nodesById: before.nodesById, sourceNodeId: nodeId });
-      return plan ? saveWorkspaceFlowSourceSettings(set, get, before, nodeId, {
-        shelvedAt: before.nodesById[nodeId]!.shelvedAt ?? null, manualChildOrder: before.nodesById[nodeId]!.manualChildOrder ?? null, sequentialReadingEnabled: enabled
-      }, plan.changes, now) : false;
+      const source = before.nodesById[nodeId];
+      const plan = (nodesById: WorkspaceState['nodesById']) => planSequentialReadingSourceStates({ enabled, nodeOrder: get().nodeOrder,
+        nodesById, sourceNodeId: nodeId })?.changes ?? null;
+      return source && plan(before.nodesById) ? saveWorkspaceFlowSourceSettings(set, get, nodeId, {
+        shelvedAt: source.shelvedAt ?? null, manualChildOrder: source.manualChildOrder ?? null, sequentialReadingEnabled: enabled
+      }, plan, now) : false;
     }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
     let updated = false;

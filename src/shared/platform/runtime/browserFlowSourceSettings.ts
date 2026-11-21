@@ -8,7 +8,7 @@ import { createBrowserDailyFlowStore } from './browserDailyFlowStore';
 export async function saveBrowserFlowSourceSettings(candidate: BrowserWorkspaceCandidate,
   args: DailyFlowSourceSettingsArgs, scope: string) {
   const source = candidate.get().nodesById[args.sourceNodeId];
-  if (!source) throw new Error('daily_flow_source_changed');
+  if (!source) throw new Error('daily_flow_source_changed: source_missing');
   const store = createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet);
   const snapshot = await store.scopedLearningSnapshot([args.sourceNodeId, ...(args.guardedReadings ?? args.readings).map(value => value.nodeId)]);
   const actual = { shelvedAt: source.shelvedAt ?? null, manualChildOrder: source.manualChildOrder ?? null, sequentialReadingEnabled: source.sequentialReadingEnabled ?? null };

@@ -29,7 +29,7 @@ export function saveDailyFlowSourceSettings(db: DbPort, args: DailyFlowSourceSet
   return db.transaction(async tx => {
     const [row] = await tx.query<{ manual_child_order: string | null; sequential_reading_enabled: number | null; deleted_at: string | null; shelved_at: string | null; updated_at: string }>(
       'SELECT manual_child_order, sequential_reading_enabled, deleted_at, shelved_at, updated_at FROM nodes WHERE id=?', [args.sourceNodeId]);
-    if (!row || row.deleted_at) throw new Error('daily_flow_source_changed');
+    if (!row || row.deleted_at) throw new Error(`daily_flow_source_changed: ${row ? 'source_trashed' : 'source_missing'}`);
     const actual = { shelvedAt: row.shelved_at, manualChildOrder: row.manual_child_order ? JSON.parse(row.manual_child_order) : null,
       sequentialReadingEnabled: row.sequential_reading_enabled === null ? null : Boolean(row.sequential_reading_enabled) };
     const ids = (args.guardedReadings ?? args.readings).map(value => value.nodeId);
@@ -56,7 +56,8 @@ export function dailyFlowSourceSettingsAlreadySaved(snapshot: DailyFlowLearningS
   actual: DailyFlowSourceSettingsArgs['before'], args: DailyFlowSourceSettingsArgs, scope: string) {
   if (args.scope !== scope) throw new Error('daily_flow_library_changed');
   const sourceNode = snapshot.nodesById[args.sourceNodeId];
-  if (!sourceNode || snapshot.trashedNodeIds.includes(args.sourceNodeId) || hasDeletedAncestor(sourceNode, snapshot.nodesById)) throw new Error('daily_flow_source_changed');
+  if (!sourceNode) throw new Error('daily_flow_source_changed: source_missing');
+  if (snapshot.trashedNodeIds.includes(args.sourceNodeId) || hasDeletedAncestor(sourceNode, snapshot.nodesById)) throw new Error('daily_flow_source_changed: source_trashed');
   const matches = (side: 'before' | 'after') => actual.sequentialReadingEnabled === args[side].sequentialReadingEnabled &&
     actual.shelvedAt === args[side].shelvedAt && JSON.stringify(actual.manualChildOrder) === JSON.stringify(args[side].manualChildOrder) &&
     (args.guardedReadings ?? args.readings).every(value =>
@@ -66,7 +67,8 @@ export function dailyFlowSourceSettingsAlreadySaved(snapshot: DailyFlowLearningS
       ? sameLearningProfile(snapshot.nodesById[value.nodeId]!.reading, value[side])
       : (snapshot.nodesById[value.nodeId]!.reading?.state ?? null) === value[side]));
   if (matches('after')) return true;
-  if (!matches('before')) throw new Error('daily_flow_source_changed');
+  // The suffix names which guard tripped so diagnostics can tell a stale edit from a removed source.
+  if (!matches('before')) throw new Error('daily_flow_source_changed: state_mismatch');
   return false;
 }
 

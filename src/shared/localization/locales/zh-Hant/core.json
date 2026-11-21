@@ -4,6 +4,7 @@
   "language.zhHans": "簡體中文",
   "shared.textLimit.exceeded": "此變更超過單一文字欄位 1 MiB（UTF-8）的上限，未儲存。請縮短內容後再試一次。",
   "shared.titleLimit.shortened": "標題已保留前 100 個字元並儲存。",
+  "shared.flowSourceSettings.saveFailed": "這次變更沒有儲存，請再試一次。",
   "common.cancel": "取消",
   "common.done": "完成"
 }
