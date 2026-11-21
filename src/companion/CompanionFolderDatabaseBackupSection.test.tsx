@@ -98,7 +98,11 @@ it('retains working state across leaving and returning, then receives the actual
   first.unmount();
   const second = render(<CompanionFolderDatabaseBackupSection />);
   await screen.findByText('Documents/Backup');
-  expect(screen.getByRole('button', { name: 'Backing up…' })).toBeDisabled();
+  const working = screen.getByRole('button', { name: 'Backing up…' });
+  expect(working).toBeDisabled();
+  // The in-progress button carries the shared spinner like every other running action.
+  expect(working).toHaveAttribute('aria-busy', 'true');
+  expect(working.querySelector('.animate-spin')).not.toBeNull();
   const completed: CompanionFolderBackupState = { ...fixture.state, phase: 'saved', pendingItems: 0, databaseSavedAt: '2026-11-04T07:55:00Z' };
   act(() => { for (const listener of fixture.listeners) listener({ state: completed }); });
   expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled();

@@ -5,11 +5,12 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
-import type { CompanionFolderBackupPort, CompanionFolderBackupState } from '../../../../../lib/platform/companionFolderBackupContract';
+import { COMPANION_FOLDER_ATTACHMENT_COPY_BATCH, type CompanionFolderBackupPort,
+  type CompanionFolderBackupState } from '../../../../../lib/platform/companionFolderBackupContract';
 
 import { folderAttachmentWorkFixture } from './companionFolderAttachmentWork.testSupport';
 import { backUpCompanionDatabase } from './companionFolderBackup';
-import { getCompanionFolderBackupState } from './companionFolderBackupState';
+import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from './companionFolderBackupState';
 
 const runtime = vi.hoisted(() => ({ access: vi.fn(), inventory: vi.fn(), owner: null as unknown, port: null as unknown }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
@@ -27,7 +28,9 @@ async function fixture() {
   const f = await folderAttachmentWorkFixture({ access: runtime.access }, createBetterSqliteDbPort);
   fixtures.push(f); await f.run();
   runtime.owner = { read: f.host.write, readBackgroundSnapshot: f.host.write,
-    runWriter: f.host.write, folderBackupSource: async () => 'owner' };
+    runWriter: f.host.write, folderBackupSource: async () => 'owner',
+    // Backup bookkeeping never reaches committed-write observers in the real owner.
+    committedWrites: { subscribe: () => () => undefined } };
   runtime.inventory.mockImplementation(f.inventory);
   const durable = { phase: 'idle' as CompanionFolderBackupState['phase'], savedAt: null as string | null,
     error: null as string | null, pending: null as number | null };
@@ -113,4 +116,26 @@ it('retries an interrupted round into the same folder after reopening', async ()
   expect((await backUpCompanionDatabase()).state).toMatchObject({ phase: 'saved', pendingItems: 0, errorMessage: null });
   expect(backupDatabase).toHaveBeenCalledWith(expect.objectContaining({ chooseDirectory: false }));
   expect(await readFile(item.file)).toEqual(item.bytes);
+});
+
+it('announces the shrinking pending count to the settings page while attachment batches are still copying', async () => {
+  const { f } = await fixture();
+  await backUpCompanionDatabase();
+  const total = COMPANION_FOLDER_ATTACHMENT_COPY_BATCH + 1;
+  for (let index = 0; index < total; index++) await f.receive(`progress attachment ${index}`);
+  const observed: number[] = [];
+  let reads: Promise<void> = Promise.resolve();
+  const unsubscribe = subscribeCompanionFolderBackupWork(() => {
+    reads = reads.then(async () => {
+      const { pendingItems, phase } = await getCompanionFolderBackupState();
+      if (phase === 'working' && pendingItems != null) observed.push(pendingItems);
+    });
+  });
+  try {
+    expect((await backUpCompanionDatabase()).state).toMatchObject({ phase: 'saved', pendingItems: 0 });
+    await reads;
+  } finally { unsubscribe(); }
+  // After the database round and the first full batch, only the last attachment is still pending.
+  expect(observed).toContain(total);
+  expect(observed).toContain(1);
 });

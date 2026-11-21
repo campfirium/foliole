@@ -6,7 +6,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 import { captureFolderAttachmentDeletions, validateFolderAttachmentDeletions } from './companionFolderAttachmentDeletion';
 import { confirmFolderDatabaseBackup, readFolderBackupRevision } from './companionFolderBackupProgress';
 import { getCompanionFolderBackupPort } from './companionFolderBackupRuntimeRepository';
-import { getCompanionFolderBackupState } from './companionFolderBackupState';
+import { getCompanionFolderBackupState, notifyCompanionFolderBackupProgress } from './companionFolderBackupState';
 import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAttachmentWork';
 
 interface BackupOptions { automatic?: boolean; continueWork?: () => boolean; stopped?: AbortSignal }
@@ -60,6 +60,7 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
     try {
       deletions = await validateFolderAttachmentDeletions(owner, deletionSnapshot, result.state.directoryId ?? '');
       await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), { kind: 'backup' });
+      notifyCompanionFolderBackupProgress();
     } catch (error) {
       // The native database round already committed and still holds this request for attachments;
       // finish it as failed so the durable state leaves "working" with the real error and its savedAt.
@@ -68,7 +69,11 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
       throw error;
     }
     result.state = await consumeCompanionFolderAttachmentWork(port, {
-      write: execute => runCompanionSyncWriterTask(() => owner.runWriter(execute, { kind: 'backup' })),
+      write: async execute => {
+        const value = await runCompanionSyncWriterTask(() => owner.runWriter(execute, { kind: 'backup' }));
+        notifyCompanionFolderBackupProgress();
+        return value;
+      },
       inventory: async () => {
         const inventories = await Promise.all([false, true].map(trash =>
           FolioleCompanionSync.maintainAttachmentFiles({ operation: 'inventory', trash })));

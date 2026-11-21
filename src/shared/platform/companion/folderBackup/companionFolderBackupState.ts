@@ -20,6 +20,18 @@ export async function getCompanionFolderBackupState(nativeState?: CompanionFolde
   });
 }
 
+const progressListeners = new Set<() => void>();
+
+/** Backup bookkeeping opts out of committed-write notices (they would wake automatic backup and mark the
+ * library changed), so a running backup announces its own recorded progress for the pending count. */
+export function notifyCompanionFolderBackupProgress() {
+  for (const listener of progressListeners) {
+    try { listener(); } catch { /* Progress observers never change the backup result. */ }
+  }
+}
+
 export function subscribeCompanionFolderBackupWork(listener: () => void) {
-  return getIosCompanionDatabaseOwner().committedWrites.subscribe(listener);
+  progressListeners.add(listener);
+  const committed = getIosCompanionDatabaseOwner().committedWrites.subscribe(listener);
+  return () => { progressListeners.delete(listener); committed(); };
 }

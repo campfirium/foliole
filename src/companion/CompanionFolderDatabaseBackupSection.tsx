@@ -63,9 +63,9 @@ export function CompanionFolderDatabaseBackupSection() {
           <span role="status" data-settings-action-status>{companionBackupSummary(state, automatic, error, t)}</span>
           {reselect ? <span className="mt-1 block" role="alert">{t('companion.settings.storage.backupReselectHint')}</span> : null}
         </>}>
-          <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || (!state?.configured && !reselect)}
-            onClick={() => void run(reselect)} size="sm">
-            {t(working ? 'companion.settings.storage.backupWorking' : reselect ? 'companion.settings.storage.backupReselect' : 'companion.settings.storage.backupNow')}
+          <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={!supported || (!state?.configured && !reselect)}
+            loading={working} loadingLabel={t('companion.settings.storage.backupWorking')} onClick={() => void run(reselect)} size="sm">
+            {t(reselect ? 'companion.settings.storage.backupReselect' : 'companion.settings.storage.backupNow')}
           </AppButton></SettingsControlSlot>
         </SettingsRow>
       </SettingsSection>

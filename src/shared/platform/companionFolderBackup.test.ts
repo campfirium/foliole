@@ -10,7 +10,8 @@ vi.mock('./companion/folderBackup/companionFolderBackupRuntimeRepository', () =>
 vi.mock('./companion/folderBackup/companionFolderAttachmentDeletion', () => ({
   captureFolderAttachmentDeletions: vi.fn(async () => null), validateFolderAttachmentDeletions: f.validate
 }));
-vi.mock('./companion/folderBackup/companionFolderBackupState', () => ({ getCompanionFolderBackupState: async (state: unknown) => state }));
+vi.mock('./companion/folderBackup/companionFolderBackupState', () => ({ getCompanionFolderBackupState: async (state: unknown) => state,
+  notifyCompanionFolderBackupProgress: () => undefined }));
 vi.mock('./companion/folderBackup/consumeCompanionFolderAttachmentWork', () => ({ consumeCompanionFolderAttachmentWork: f.consume }));
 vi.mock('./companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: { maintainAttachmentFiles: f.inventory } }));
 
