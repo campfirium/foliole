@@ -11,6 +11,7 @@ import {
 } from '../../../shared/platform/attachmentResources';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
 import { PDF_DOCUMENT_OPTIONS } from '../model/pdfDocumentOptions';
+import { beginPdfReaderSession, notePdfReaderDocumentLoaded, notePdfReaderSourceResolved } from '../model/pdfReaderSession';
 import { configurePdfWorker } from '../model/pdfWorker';
 
 import { SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
@@ -50,6 +51,7 @@ function useAttachmentPdfSource(
         return;
       }
       if (resolution?.status === 'ready' && resolution.resource_url) {
+        notePdfReaderSourceResolved();
         setSource(resolution.resource_url);
         setState('ready');
         return;
@@ -77,6 +79,11 @@ function useAttachmentPdfSource(
   }, [attachmentId]);
 
   return { source, state };
+}
+
+// Source resolution is asynchronous, so it always lands after this session has begun.
+function usePdfReaderSession(attachmentId: string) {
+  useEffect(() => beginPdfReaderSession(), [attachmentId]);
 }
 
 function clampPdfZoom(value: number) {
@@ -122,6 +129,7 @@ export function SimplePdfDocument(props: {
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [zoom, setZoom] = useState(100);
   const pageWidth = width > 0 ? Math.floor((width * PDF_DEFAULT_FIT_RATIO * zoom) / 100) : undefined;
+  usePdfReaderSession(props.attachmentId);
 
   useEffect(() => {
     setLoadFailed(false);
@@ -150,9 +158,7 @@ export function SimplePdfDocument(props: {
           loading={<AppEmptyState description={t('desktop.pdf.simple.preparing.page')} title={t('desktop.pdf.simple.preparing.title')} />}
           noData={<AppEmptyState description={t('desktop.pdf.simple.noFile.description')} title={t('desktop.pdf.simple.noFile.title')} />}
           onLoadError={() => setLoadFailed(true)}
-          onLoadSuccess={({ numPages }) => {
-            setTotalPages(numPages);
-          }}
+          onLoadSuccess={({ numPages }) => { notePdfReaderDocumentLoaded(); setTotalPages(numPages); }}
           options={PDF_DOCUMENT_OPTIONS}
         >
           {pageWidth && totalPages ? <SimplePdfPageStack

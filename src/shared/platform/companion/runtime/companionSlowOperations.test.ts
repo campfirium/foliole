@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
+import type { PdfReaderSessionReport } from '../../../../features/pdf/model/pdfReaderSession';
 import { provideSupportLogSlowOperations, serializeSupportLog, startSupportLog, stopSupportLog } from '../../supportLog/supportLog';
 import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
@@ -8,7 +9,7 @@ import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyn
 import { timeCompanionActivity } from './companionActivityTiming';
 import {
   flushCompanionSlowOperations, installCompanionSlowOperationLog, readCompanionSlowOperations,
-  recordCompanionMutationTiming, resetCompanionSlowOperationsForTests
+  recordCompanionMutationTiming, recordCompanionReaderSession, resetCompanionSlowOperationsForTests
 } from './companionSlowOperations';
 import { markWholeLibraryWork, resetWholeLibraryWorkForTests } from './companionWholeLibraryWork';
 
@@ -109,7 +110,37 @@ it('adds the slow-operation log to the exported phone support report only', () =
   startSupportLog();
   stopSupportLog();
   expect(JSON.parse(serializeSupportLog('ios')!).slowOperations).toMatchObject({
-    thresholdsMs: { interactive: 500, background: 1500, round: 30_000 },
+    thresholdsMs: { interactive: 500, background: 1500, reader: 3000, round: 30_000 },
     entries: [{ operation: 'mutation.content', scopeNodes: 1, nodes: 3, attachments: 3 }], omitted: 0 });
   expect(JSON.parse(serializeSupportLog('desktop')!)).not.toHaveProperty('slowOperations');
+});
+
+it('marks a slow span that shared its time with other timed work', async () => {
+  const running = timeCompanionActivity('sync', slowTask(0));
+  await timeCompanionActivity('workspace-refresh', slowTask(700));
+  await running;
+  await timeCompanionActivity('read-intent', slowTask(700));
+  expect(readCompanionSlowOperations().entries.map(({ operation, overlapped }) => ({ operation, overlapped }))).toEqual([
+    { operation: 'workspace-refresh', overlapped: true }, { operation: 'read-intent', overlapped: undefined }]);
+});
+
+it('records an open PDF original only when it reloaded, redrew in place or showed its first page late', () => {
+  const session = (counts: Partial<PdfReaderSessionReport>): PdfReaderSessionReport => ({ startedAt: performance.now() - 9000,
+    endedAt: performance.now(), firstPageMs: 400, sourceResolutions: 1, documentLoads: 1, textLayerRenders: 4,
+    textLayerRebuilds: 0, ...counts });
+  recordCompanionReaderSession(session({}));
+  markWholeLibraryWork('full-read');
+  recordCompanionReaderSession(session({ sourceResolutions: 2, documentLoads: 2 }));
+  recordCompanionReaderSession(session({ textLayerRebuilds: 3 }));
+  recordCompanionReaderSession(session({ firstPageMs: 3200 }));
+
+  const entries = readCompanionSlowOperations().entries;
+  expect(entries).toHaveLength(3);
+  expect(entries[0]).toMatchObject({ operation: 'reader.open', status: 'done', durationMs: 400, fullReads: 1,
+    reader: { sessionMs: 9000, firstPageMs: 400, sourceResolutions: 2, documentLoads: 2, textLayerRenders: 4, textLayerRebuilds: 0 } });
+  expect(entries[1]!.reader!.textLayerRebuilds).toBe(3);
+  expect(entries[2]!.durationMs).toBe(3200);
+  flushCompanionSlowOperations();
+  resetCompanionSlowOperationsForTests({ keepStorage: true });
+  expect(readCompanionSlowOperations().entries).toHaveLength(3);
 });

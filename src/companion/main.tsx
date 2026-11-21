@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
 import './companionMinimal.css';
-import { installCompanionSlowOperationLog, readCompanionSlowOperations } from '../shared/platform/companion/runtime/companionSlowOperations';
+import { providePdfReaderSessionSink } from '../features/pdf/model/pdfReaderSession';
+import {
+  installCompanionSlowOperationLog, readCompanionSlowOperations, recordCompanionReaderSession
+} from '../shared/platform/companion/runtime/companionSlowOperations';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { provideSupportLogSlowOperations } from '../shared/platform/supportLog/supportLog';
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
@@ -15,6 +18,7 @@ import type { AcceptanceResult } from './iosBridgeAcceptance';
 installCompanionWebViewCompatibilityPolyfills();
 installCompanionSlowOperationLog();
 provideSupportLogSlowOperations(readCompanionSlowOperations);
+providePdfReaderSessionSink(recordCompanionReaderSession);
 if (getCompanionRuntimeCapability().kind === 'android-native') {
   document.documentElement.dataset.companionPlatform = 'android';
 }

@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Page } from 'react-pdf';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { resolvePdfCropScale, type PdfCropBox } from '../model/pdfAutoCrop';
+import { notePdfReaderTextLayer } from '../model/pdfReaderSession';
 
 import { useSimplePdfCropMeasurement } from './useSimplePdfCropMeasurement';
 
@@ -16,7 +17,14 @@ export function SimplePdfPage(props: {
 }) {
   const t = useTranslation();
   const pageRef = useRef<HTMLDivElement | null>(null);
-  const onTextLayerReady = useSimplePdfCropMeasurement({ ...props, pageRef });
+  const onCropTextLayerReady = useSimplePdfCropMeasurement({ ...props, pageRef });
+  const drawn = useRef<{ width: number | undefined } | null>(null);
+  // Stable per page and width like the measurement callback, or react-pdf would redraw the text layer each render.
+  const onTextLayerReady = useCallback(() => {
+    notePdfReaderTextLayer(drawn.current !== null && drawn.current.width === props.width);
+    drawn.current = { width: props.width };
+    onCropTextLayerReady();
+  }, [onCropTextLayerReady, props.width]);
   const width = props.width ?? 1;
   const cropScale = props.cropBox ? resolvePdfCropScale(width, props.cropBox) : 1;
   const cropWidth = props.cropBox ? (props.cropBox.right - props.cropBox.left) * cropScale : props.width;

@@ -1,40 +1,53 @@
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import type { PdfReaderSessionReport } from '../../../../features/pdf/model/pdfReaderSession';
 import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore';
 
-import { companionActivityKinds, subscribeCompanionActivityTimings } from './companionActivityTiming';
-import { attachmentTimingKinds, subscribeCompanionAttachmentTimings } from './companionAttachmentTiming';
+import { companionActivityKinds, pendingCompanionActivityTimings, subscribeCompanionActivityTimings } from './companionActivityTiming';
+import { attachmentTimingKinds, pendingCompanionAttachmentTimings, subscribeCompanionAttachmentTimings } from './companionAttachmentTiming';
 import { countWholeLibraryWork } from './companionWholeLibraryWork';
 
 const mutationKinds = ['trash', 'structure', 'content', 'review', 'reading', 'state', 'full'] as const;
 export const slowOperationNames = [
   ...mutationKinds.map(kind => `mutation.${kind}` as const),
   ...companionActivityKinds,
-  ...attachmentTimingKinds.map(kind => `attachment.${kind}` as const)
+  ...attachmentTimingKinds.map(kind => `attachment.${kind}` as const),
+  'reader.open'
 ] as const;
 type SlowOperationName = typeof slowOperationNames[number];
 
-/** Only counts and fixed names: no titles, text, paths or node ids ever reach an entry. */
+type ReaderCounts = Omit<PdfReaderSessionReport, 'startedAt' | 'endedAt'> & { sessionMs: number };
+const readerCountFields = ['sessionMs', 'sourceResolutions', 'documentLoads', 'textLayerRenders', 'textLayerRebuilds'] as const;
+
+/**
+ * Only counts and fixed names: no titles, text, paths or node ids ever reach an entry.
+ * `overlapped` warns that other timed work ran in the same span, so its whole-library counts may belong to that work.
+ */
 export type SlowOperation = {
   operation: SlowOperationName; status: 'done' | 'failed'; durationMs: number; queueMs?: number; scopeNodes?: number;
   nodes: number | null; attachments: number | null; fullReads: number; fullRefreshes: number; occurredAt: string;
+  overlapped?: true; reader?: ReaderCounts;
 };
 export type SlowOperationReport = { thresholdsMs: typeof slowOperationThresholdsMs; entries: SlowOperation[]; omitted: number };
 
-export const slowOperationThresholdsMs = { interactive: 500, background: 1500, round: 30_000 } as const;
+export const slowOperationThresholdsMs = { interactive: 500, background: 1500, reader: 3000, round: 30_000 } as const;
 const roundKinds: readonly string[] = ['sync', 'folder-backup'];
 const interactiveKinds: readonly string[] = ['workspace-refresh', 'read-intent'];
 const maxEntries = 40;
 const retentionMs = 3 * 86_400_000;
 const persistDelayMs = 1000;
 const storageKey = 'foliole-slow-operations';
+const spanCapacity = 64;
 
 let entries: SlowOperation[] | undefined;
 let omitted = 0;
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
+// Recently finished timed work, kept only to tell whether a slow span shared its time with other work.
+const recentSpans: { startedAt: number; endedAt: number }[] = [];
 const libraryScale = new WeakMap<WorkspaceSnapshot, { nodes: number; attachments: number }>();
 
 export function slowOperationThreshold(operation: SlowOperationName) {
+  if (operation === 'reader.open') return slowOperationThresholdsMs.reader;
   if (operation.startsWith('mutation.') || interactiveKinds.includes(operation)) return slowOperationThresholdsMs.interactive;
   return roundKinds.includes(operation) ? slowOperationThresholdsMs.round : slowOperationThresholdsMs.background;
 }
@@ -67,17 +80,45 @@ function mutationKind(scope: WorkspaceRefreshScope | undefined): typeof mutation
   return 'state';
 }
 
+/** Records an open PDF original only when it reloaded, redrew text layers in place, or showed its first page late. */
+export function recordCompanionReaderSession(report: PdfReaderSessionReport) {
+  const sessionMs = Math.max(0, Math.round(report.endedAt - report.startedAt));
+  const amplified = report.sourceResolutions > 1 || report.documentLoads > 1 || report.textLayerRebuilds > 0;
+  const durationMs = report.firstPageMs ?? sessionMs;
+  if (!amplified && (report.firstPageMs ?? 0) < slowOperationThresholdsMs.reader) return;
+  const { startedAt, endedAt, ...counts } = report;
+  pushEntry({ operation: 'reader.open', status: report.documentLoads > 0 ? 'done' : 'failed', durationMs,
+    ...libraryFacts(startedAt, endedAt), reader: { ...counts, sessionMs } });
+}
+
 function recordSlowOperation(operation: SlowOperationName, startedAt: number, status: 'done' | 'failed',
   extra: Pick<SlowOperation, 'queueMs' | 'scopeNodes'> = {}) {
   const endedAt = performance.now();
   const durationMs = Math.max(0, Math.round(endedAt - startedAt));
-  if (durationMs < slowOperationThreshold(operation)) return;
+  const slow = durationMs >= slowOperationThreshold(operation);
+  const overlapped = slow && sharedSpan(startedAt, endedAt);
+  if (recentSpans.length === spanCapacity) recentSpans.shift();
+  recentSpans.push({ startedAt, endedAt });
+  if (!slow) return;
+  pushEntry({ operation, status, durationMs, ...extra, ...libraryFacts(startedAt, endedAt), ...(overlapped ? { overlapped } : {}) });
+}
+
+function sharedSpan(startedAt: number, endedAt: number) {
+  return recentSpans.some(span => span.startedAt < endedAt && span.endedAt > startedAt)
+    || [...pendingCompanionActivityTimings(), ...pendingCompanionAttachmentTimings()].some(timing => timing.startedAt < endedAt);
+}
+
+function libraryFacts(startedAt: number, endedAt: number) {
   const scale = readLibraryScale(companionWorkspaceSnapshots.getSnapshot());
+  return { nodes: scale?.nodes ?? null, attachments: scale?.attachments ?? null,
+    fullReads: countWholeLibraryWork('full-read', startedAt, endedAt),
+    fullRefreshes: countWholeLibraryWork('full-refresh', startedAt, endedAt), occurredAt: minuteStamp(Date.now()) };
+}
+
+function pushEntry(entry: SlowOperation) {
   const list = loadEntries();
   if (list.length === maxEntries) { list.shift(); omitted += 1; }
-  list.push({ operation, status, durationMs, ...extra, nodes: scale?.nodes ?? null, attachments: scale?.attachments ?? null,
-    fullReads: countWholeLibraryWork('full-read', startedAt, endedAt),
-    fullRefreshes: countWholeLibraryWork('full-refresh', startedAt, endedAt), occurredAt: minuteStamp(Date.now()) });
+  list.push(entry);
   schedulePersist();
 }
 
@@ -134,7 +175,16 @@ function validEntry(value: unknown): value is SlowOperation {
     && (entry.status === 'done' || entry.status === 'failed') && count(entry.durationMs)
     && (entry.queueMs === undefined || count(entry.queueMs)) && (entry.scopeNodes === undefined || count(entry.scopeNodes))
     && nullableCount(entry.nodes) && nullableCount(entry.attachments) && count(entry.fullReads) && count(entry.fullRefreshes)
-    && typeof entry.occurredAt === 'string' && !Number.isNaN(Date.parse(entry.occurredAt));
+    && typeof entry.occurredAt === 'string' && !Number.isNaN(Date.parse(entry.occurredAt))
+    && (entry.overlapped === undefined || entry.overlapped === true) && (entry.reader === undefined || validReader(entry.reader));
+}
+
+function validReader(value: unknown) {
+  if (!value || typeof value !== 'object') return false;
+  const reader = value as Record<string, unknown>;
+  const count = (field: unknown) => Number.isSafeInteger(field) && (field as number) >= 0;
+  return Object.keys(reader).length === readerCountFields.length + 1 && readerCountFields.every(field => count(reader[field]))
+    && (reader.firstPageMs === null || count(reader.firstPageMs));
 }
 
 // One write per burst: a run of slow work must not turn into a run of storage writes.
@@ -154,10 +204,12 @@ export function flushCompanionSlowOperations() {
   }
 }
 
-export function resetCompanionSlowOperationsForTests() {
+export function resetCompanionSlowOperationsForTests(options: { keepStorage?: boolean } = {}) {
   clearTimeout(persistTimer);
   persistTimer = undefined;
   entries = undefined;
   omitted = 0;
+  recentSpans.length = 0;
+  if (options.keepStorage) return;
   try { localStorage.removeItem(storageKey); } catch { /* No store in this environment. */ }
 }
