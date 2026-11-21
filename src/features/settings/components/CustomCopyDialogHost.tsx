@@ -40,7 +40,7 @@ export function CustomCopyDialogHost() {
       return [item.key, item.value, overrides[item.key] ?? '']
         .some((value) => value.toLocaleLowerCase(locale).includes(normalizedQuery));
     }).slice(0, MAX_VISIBLE_ENTRIES);
-  }, [entries, locale, overrides, query, replacedOnly]);
+  }, [entries, locale, overrides, query, replacedOnly]); // unstable-reference-ok: the host re-renders only on its own open/query state and keeps at most MAX_VISIBLE_ENTRIES.
 
   useEffect(() => subscribeCustomCopyDialogOpen(() => setOpen(true)), []);
   useEffect(() => {

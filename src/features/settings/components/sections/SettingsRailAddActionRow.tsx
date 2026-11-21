@@ -154,6 +154,7 @@ export function AddRailActionRow({
       </button>
       <AddActionDialog
         actionQuery={actionQuery}
+        // unstable-reference-ok: a short action list filtered only while the settings dialog is open.
         actions={availableActions}
         iconQuery={iconQuery}
         onActionQueryChange={setActionQuery}

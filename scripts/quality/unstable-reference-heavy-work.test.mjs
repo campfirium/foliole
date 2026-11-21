@@ -4,7 +4,12 @@ import path from 'node:path';
 import ts from 'typescript';
 import { expect, it } from 'vitest';
 
-import { createScanner, findingId } from './unstable-reference-heavy-work.mjs';
+import {
+  collectChangedFiles,
+  createScanner,
+  findingId,
+  selectGuardFindings
+} from './unstable-reference-heavy-work.mjs';
 
 const ROOT = '/virtual';
 const REACT_PDF = `
@@ -12,7 +17,7 @@ export declare function Document(props: { file: unknown; options?: object; onLoa
 export declare function Page(props: { pageNumber: number; onRenderTextLayerSuccess?: () => void }): any;
 `;
 
-function scan(files) {
+function scanAll(files) {
   const sources = new Map(
     Object.entries({ ...files, 'node_modules/react-pdf/index.d.ts': REACT_PDF }).map(
       ([name, text]) => [path.join(ROOT, name), text]
@@ -45,7 +50,11 @@ function scan(files) {
   const rootNames = Object.keys(files).map((name) => path.join(ROOT, name));
   const program = ts.createProgram({ rootNames, options, host });
   const productionFiles = rootNames.map((name) => program.getSourceFile(name));
-  return createScanner({ program, repoRoot: ROOT }).run(productionFiles).findings;
+  return createScanner({ program, repoRoot: ROOT }).run(productionFiles);
+}
+
+function scan(files) {
+  return scanAll(files).findings;
 }
 
 const PDF_SOURCE = `export declare function loadAttachmentPdfSource(id: string): Promise<string>;`;
@@ -137,4 +146,38 @@ export function Parent() { return <Viewer file={'a' + 'b'} />; }
 `
   });
   expect(findings).toEqual([]);
+});
+
+it('honours a reviewed exemption only when it gives a reason', () => {
+  const files = (marker) => ({
+    'src/source.ts': PDF_SOURCE,
+    'src/SimplePdfDocument.tsx': PDF_DOCUMENT_BEFORE_FIX,
+    'src/Reader.tsx': READER.replace(
+      '  return <SimplePdfDocument',
+      `  // ${marker}\n  return <SimplePdfDocument`
+    )
+  });
+  const exempt = scanAll(files('unstable-reference-ok: attachment ids never change while open'));
+  expect(exempt.findings).toEqual([]);
+  expect(exempt.exempted.map((finding) => finding.exemption)).toEqual([
+    'attachment ids never change while open'
+  ]);
+  expect(scanAll(files('unstable-reference-ok:')).findings).toHaveLength(1);
+});
+
+it('guards only findings whose site or dependency chain touches a changed file', () => {
+  const findings = scan({
+    'src/source.ts': PDF_SOURCE,
+    'src/SimplePdfDocument.tsx': PDF_DOCUMENT_BEFORE_FIX,
+    'src/Reader.tsx': READER
+  });
+  expect(selectGuardFindings(findings, ['src/Reader.tsx'])).toHaveLength(1);
+  expect(selectGuardFindings(findings, ['src/SimplePdfDocument.tsx'])).toHaveLength(1);
+  expect(selectGuardFindings(findings, ['src/source.ts', 'src/Other.tsx'])).toEqual([]);
+});
+
+it('takes the changed file list from the quality gate when it is given', () => {
+  expect(
+    collectChangedFiles('/unused', { QUALITY_GATE_CHANGED_FILES: 'src/a.tsx\nsrc/b.ts src/a.tsx' })
+  ).toEqual(['src/a.tsx', 'src/b.ts']);
 });

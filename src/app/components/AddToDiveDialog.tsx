@@ -29,6 +29,7 @@ export function AddToDiveDialog({ dives, sourceIds, onAdd, onClose }: AddToDiveD
         const target = targets.find((dive) => dive.id === diveId);
         if (target) onAdd(diveId, sourceIds.filter((id) => !target.directSourceIds.includes(id)));
       }}
+      // unstable-reference-ok: the palette only filters this short Dive list while the dialog is open.
       targets={targets}
     />
   );

@@ -32,6 +32,16 @@ run_quality_gate_fast_global_static_guards() {
       "layer dependency boundary" \
       node scripts/check-layer-dependency-boundary.mjs
   fi
+
+  # Fails only on references recreated each render that reach heavy work and touch a changed
+  # src file; it exits immediately when no production src file changed.
+  if [[ -f "scripts/quality/unstable-reference-heavy-work.mjs" ]]; then
+    run_quality_gate_command \
+      "quality-gate-fast" \
+      "unstable-reference-guard" \
+      "unstable reference guard" \
+      node scripts/quality/unstable-reference-heavy-work.mjs --guard
+  fi
 }
 
 run_quality_gate_fast_light_mid_static_guards() {

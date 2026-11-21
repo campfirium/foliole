@@ -75,6 +75,7 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   });
   const rows = useTopicRows({
     childrenByParent: args.childrenByParent,
+    // unstable-reference-ok: the collapsed set lives in useState; a new one is built only when the folder changes.
     collapsedNodeIds: collapse.collapsedNodeIds,
     hideDismissedTopics: args.hideDismissedTopics ?? false,
     nodesById: args.nodesById,
@@ -85,6 +86,7 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   });
   const collapsibleNodeIds = useMemo(
     () => rows.filter((row) => row.hasChildren).map((row) => row.node.id),
+    // unstable-reference-ok: rows only change with the stored collapsed set or real tree inputs.
     [rows]
   );
 

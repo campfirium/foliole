@@ -121,6 +121,33 @@ describe('quality-gate-fast.sh global static guards', () => {
     }
   });
 
+  it.each([
+    { blocked: false, script: 'console.log("unstable reference guard ok");\n' },
+    { blocked: true, script: 'console.error("unstable reference blocked"); process.exit(1);\n' }
+  ])('runs the unstable reference guard before capped checks (blocked: $blocked)', async ({ blocked, script }) => {
+    const tempRoot = await createQualityGateTempRoot();
+    try {
+      const { changedFiles } = HEAVY_ROUTES[0];
+      await writeStaticGuardFixture(tempRoot, changedFiles);
+      await writeFixtureFile(tempRoot, 'scripts/quality/unstable-reference-heavy-work.mjs', script);
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: changedFiles.join('\n')
+      });
+      const output = `${result.stdout}\n${result.stderr}`;
+
+      if (blocked) {
+        expect(result.code).not.toBe(0);
+        expect(output).toContain('unstable reference blocked');
+        expect(output).not.toContain('[quality-gate-fast] capped local checks passed.');
+      } else {
+        expect(result.code, output).toBe(0);
+        expect(output).toContain('unstable reference guard ok');
+      }
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it.each(['--route', '--route-json'])('keeps %s planning free of static-guard execution', async (arg) => {
     const tempRoot = await createQualityGateTempRoot();
     try {

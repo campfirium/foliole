@@ -6,6 +6,7 @@
 // does heavy work (see unstable-reference-heavy-work-catalog.mjs). Output is a list
 // of audit candidates and a line-free baseline for diffing; it is not a lint gate.
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -450,6 +451,20 @@ export function createScanner({ program, repoRoot, options = {} }) {
     return match ? match[1] : null;
   }
 
+  // A reviewed false positive is marked at the reported site with
+  // `// unstable-reference-ok: <why this reference cannot cause repeated heavy work>`
+  // on the same line or the line above. A marker without a reason does not count.
+  function exemptionAt(node) {
+    const sf = node.getSourceFile();
+    const line = sf.getLineAndCharacterOfPosition(node.getStart()).line;
+    const lines = sf.text.split('\n');
+    for (const text of [lines[line], lines[line - 1]]) {
+      const match = /unstable-reference-ok:\s*(\S.*)$/u.exec(text ?? '');
+      if (match) return match[1].trim();
+    }
+    return null;
+  }
+
   const heavyUses = [];
   const edges = [];
 
@@ -598,6 +613,12 @@ export function createScanner({ program, repoRoot, options = {} }) {
     stats.edges = edges.length;
     const sinks = new Map();
     const findings = [];
+    const exempted = [];
+    const pushFinding = (finding, node) => {
+      const reason = exemptionAt(node);
+      if (reason) exempted.push({ ...finding, exemption: reason });
+      else findings.push(finding);
+    };
     const queue = [];
     const addSink = (id, key, chain) => {
       const keySet = sinks.get(id) ?? new Map();
@@ -609,14 +630,17 @@ export function createScanner({ program, repoRoot, options = {} }) {
     const report = (value, scope, node, result, chain) => {
       for (const reason of new Set(result.unstable)) {
         const tier = chain[chain.length - 1].tier;
-        findings.push({
-          tier,
-          reason,
-          at: where(node),
-          owner: scopeId(scope),
-          value: value.getText().slice(0, 60),
-          chain
-        });
+        pushFinding(
+          {
+            tier,
+            reason,
+            at: where(node),
+            owner: scopeId(scope),
+            value: value.getText().slice(0, 60),
+            chain
+          },
+          node
+        );
       }
     };
     for (const use of heavyUses) {
@@ -642,14 +666,17 @@ export function createScanner({ program, repoRoot, options = {} }) {
       const isComponent = /^[A-Z]/u.test(functionName(use.scope));
       for (const key of result.inputs) {
         if (key === '0' && isComponent) {
-          findings.push({
-            tier: chain[0].tier,
-            reason: 'whole props object',
-            at: where(use.node),
-            owner: scopeId(use.scope),
-            value: use.value.getText(),
-            chain
-          });
+          pushFinding(
+            {
+              tier: chain[0].tier,
+              reason: 'whole props object',
+              at: where(use.node),
+              owner: scopeId(use.scope),
+              value: use.value.getText(),
+              chain
+            },
+            use.node
+          );
           continue;
         }
         addSink(scopeId(use.scope), key, [{ ...chain[0], key }]);
@@ -683,6 +710,7 @@ export function createScanner({ program, repoRoot, options = {} }) {
     }
     return {
       findings: dedupe(findings),
+      exempted: dedupe(exempted),
       stats,
       sinkCount: [...sinks.values()].reduce((n, keys) => n + keys.size, 0)
     };
@@ -730,6 +758,7 @@ function parseArgs(argv) {
     if (['--project', '--json', '--baseline', '--write-baseline'].includes(flag))
       args[flag.slice(2)] = argv[++index];
     else if (flag === '--include-light') args.includeLight = true;
+    else if (flag === '--guard') args.guard = true;
   }
   return args;
 }
@@ -753,9 +782,74 @@ function readBaseline(file) {
   return { known: new Map(entries.map((entry) => [entry.id, entry])), meta };
 }
 
+// Same file set as the fast quality gate: QUALITY_GATE_CHANGED_FILES, else staged,
+// unstaged and untracked files.
+export function collectChangedFiles(repoRoot, env = process.env) {
+  if (env.QUALITY_GATE_CHANGED_FILES?.trim()) {
+    return [...new Set(env.QUALITY_GATE_CHANGED_FILES.split(/\s+/u).filter(Boolean))];
+  }
+  const git = (args) => execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' });
+  return [
+    ...new Set(
+      [
+        git(['diff', '--cached', '--name-only', '--diff-filter=ACMR']),
+        git(['diff', '--name-only', '--diff-filter=ACMR']),
+        git(['ls-files', '--others', '--exclude-standard'])
+      ]
+        .join('\n')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+    )
+  ];
+}
+
+const findingFiles = (finding) =>
+  [finding.at, ...finding.chain.map((step) => step.at)].map((at) => at.replace(/:\d+$/u, ''));
+
+// The baseline is empty, so any finding whose site or dependency chain touches a changed
+// file is new work for that change.
+export function selectGuardFindings(findings, changedFiles) {
+  const changed = new Set(changedFiles);
+  return findings.filter((finding) => findingFiles(finding).some((file) => changed.has(file)));
+}
+
+function runGuard(repoRoot, args) {
+  const relevant = collectChangedFiles(repoRoot).filter(isProductionFile);
+  if (relevant.length === 0) {
+    console.log('[unstable-reference-guard] skipped: no changed production src files');
+    return 0;
+  }
+  const program = createProgramFromProject(repoRoot, args.project);
+  const files = program
+    .getSourceFiles()
+    .filter((sf) =>
+      isProductionFile(path.relative(repoRoot, sf.fileName).replaceAll(path.sep, '/'))
+    );
+  const { findings } = createScanner({ program, repoRoot }).run(files);
+  const violations = selectGuardFindings(findings, relevant);
+  if (violations.length === 0) {
+    console.log(
+      `[unstable-reference-guard] ok: ${relevant.length} changed files, no new unstable references into heavy work`
+    );
+    return 0;
+  }
+  console.error(
+    `[unstable-reference-guard] ${violations.length} new reference(s) recreated each render reach heavy work.\n` +
+      'Keep the value stable (useCallback/useMemo with real inputs, or read the latest callback through a ref),\n' +
+      'or mark a reviewed false positive at the reported line: // unstable-reference-ok: <reason>'
+  );
+  for (const finding of violations) console.error(formatFinding(finding));
+  return 1;
+}
+
 function main() {
   const repoRoot = process.cwd();
   const args = parseArgs(process.argv.slice(2));
+  if (args.guard) {
+    process.exitCode = runGuard(repoRoot, args);
+    return;
+  }
   const program = createProgramFromProject(repoRoot, args.project);
   const files = program
     .getSourceFiles()
