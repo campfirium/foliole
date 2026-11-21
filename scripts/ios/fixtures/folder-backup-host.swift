@@ -46,7 +46,8 @@ struct BackupHostFixture {
         let recreated = try run("recreated")
         precondition(recreated.committed == 1 && recreated.pagesSent > 400, "removed backup was not recreated in full")
         let renewed = try store.load()!
-        precondition(renewed.ownsTarget && renewed.fingerprint != nil && renewed.savedAt != nil && renewed.savedAt != persisted.savedAt,
+        // A full re-copy (pagesSent above) proves the removed identity was forgotten; savedAt has one-second precision.
+        precondition(renewed.ownsTarget && !renewed.targetCreationPending && renewed.fingerprint != nil && renewed.savedAt != nil,
                      "recreated backup has no identity of its own")
         let cancelled = FolioleFolderBackupOperation(requestID: "cancel", epoch: "owner", source: source, store: store)
         var released = false
