@@ -57,17 +57,25 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             attachmentCancelled = true;
             if (operation == null && !copyingAttachment) {
                 activeRequest = null;
+                String failure = call.getString("errorMessage");
                 // The database round already ended; never leave a released request shown or persisted as running.
-                if ("working".equals(phase)) {
+                // A failure reported by the caller is the round's real outcome, so it ends as failed with that error.
+                if (failure != null && !failure.isEmpty()) {
+                    phase = "failed"; errorMessage = failure;
+                    persistReleased();
+                } else if ("working".equals(phase)) {
                     phase = "pending";
-                    try { store.status(phase, errorMessage); }
-                    catch (Exception error) { android.util.Log.e("FolioleFolderBackup", "Cannot persist cancelled backup", error); }
-                    emitState(null);
+                    persistReleased();
                 }
             }
         }
         if (operation != null && operation.requestId.equals(call.getString("requestId"))) operation.cancel(null);
         call.resolve();
+    }
+    private void persistReleased() {
+        try { store.status(phase, errorMessage); }
+        catch (Exception error) { android.util.Log.e("FolioleFolderBackup", "Cannot persist released backup", error); }
+        emitState(null);
     }
     @PluginMethod public synchronized void getState(PluginCall call) {
         try { call.resolve(state()); } catch (Exception error) { call.reject(error.getMessage(), error); }
@@ -80,8 +88,9 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
         } catch (Exception error) { call.reject(error.getMessage(), error); }
     }
     @PluginMethod public synchronized void backupDatabase(PluginCall call) {
+        // A second request must not release or fail the round that is still running.
+        if (activeRequest != null) { call.reject("A database backup is already running."); return; }
         try {
-            if (activeRequest != null) throw new IllegalStateException("A database backup is already running.");
             if (epoch == null || !epoch.equals(call.getString("sourceEpoch"))) throw new IllegalStateException("Database owner is closed.");
             activeRequest = call.getString("requestId");
             if (activeRequest == null) throw new IllegalArgumentException("Missing backup request.");

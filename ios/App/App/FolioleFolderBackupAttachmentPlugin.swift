@@ -70,6 +70,7 @@ extension FolioleCompanionFolderBackupPlugin {
                 try self.store.update(id: session.profile) { $0.attachmentFilesPending = pending; $0.attachmentError = error }
                 self.phase = error != nil ? "failed" : pending == 0 ? "saved" : "pending"
                 self.errorMessage = error
+                self.roundRequest = nil
                 var state = try self.state()
                 state["attachmentFilesCopied"] = copied
                 self.notifyListeners("backupStateChanged", data: ["state": state])

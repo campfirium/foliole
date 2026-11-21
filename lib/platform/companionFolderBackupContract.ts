@@ -51,5 +51,6 @@ export interface CompanionFolderBackupPort {
   stopAttachments(input: { requestId: string }): Promise<void>;
   deleteAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<void>;
   finishAttachments(input: { requestId: string; copied: number; pending: number | null; errorMessage: string | null }): Promise<CompanionFolderBackupState>;
-  cancelDatabase(input: { requestId: string }): Promise<void>;
+  /** Releases this request if its round is still open; with `errorMessage` the open round ends as failed with that error. */
+  cancelDatabase(input: { requestId: string; errorMessage?: string }): Promise<void>;
 }

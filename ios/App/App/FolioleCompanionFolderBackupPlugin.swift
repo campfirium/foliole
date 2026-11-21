@@ -21,6 +21,8 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
     var errorMessage: String?
     let attachmentStopLock = NSLock()
     var stoppedAttachmentRequest: String?
+    /// The latest request that reached the native round; only it may be ended as failed by its caller.
+    var roundRequest: String?
 
     @objc func openSource(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -72,8 +74,18 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
 
     @objc func cancelDatabase(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            if self.operation?.requestID == call.getString("requestId") { self.operation?.cancel() }
-            if self.session?.operation.requestID == call.getString("requestId") { self.session?.operation.cancel() }
+            let request = call.getString("requestId")
+            if self.operation?.requestID == request { self.operation?.cancel() }
+            if self.session?.operation.requestID == request { self.session?.operation.cancel() }
+            // A failure reported by the caller is the latest round's real outcome; keep it instead of the last phase.
+            if let failure = call.getString("errorMessage"), !failure.isEmpty, let request, request == self.roundRequest,
+               self.operation == nil, self.pickerCall == nil {
+                self.roundRequest = nil
+                self.phase = "failed"
+                self.errorMessage = failure
+                if let id = try? self.store.load()?.id { try? self.store.update(id: id) { $0.attachmentError = failure } }
+                if let state = try? self.state() { self.notifyListeners("backupStateChanged", data: ["state": state]) }
+            }
             call.resolve()
         }
     }
@@ -86,6 +98,7 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
                       let request = call.getString("requestId"), !request.isEmpty else { throw backupError("Database owner is closed.") }
                 self.session?.operation.cancel()
                 self.session = nil
+                self.roundRequest = request
                 self.operation = FolioleFolderBackupOperation(requestID: request, epoch: source.epoch, source: source.path, store: self.store)
                 let profile = try self.store.load()
                 if call.getBool("chooseDirectory") == true || profile == nil { try self.presentPicker(call) }

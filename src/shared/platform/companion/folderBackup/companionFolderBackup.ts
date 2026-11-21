@@ -80,7 +80,9 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
   result.state = await getCompanionFolderBackupState(result.state);
   return result;
   } catch (error) {
-    await port.cancelDatabase({ requestId }).catch(() => undefined);
+    // Every exit ends the native round: an open round records this real error instead of staying running.
+    await port.cancelDatabase({ requestId, errorMessage: error instanceof Error ? error.message : String(error) })
+      .catch(() => undefined);
     throw error;
   }
 }
