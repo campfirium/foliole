@@ -78,7 +78,7 @@ it.each(['a', 'b'])('restores the current Flow card together with deleted card %
     id, kind: 'item', parentNodeId: 'folder', title: id, content: 'Question', reveal: 'Answer', anchorLink: null,
     reading: null, review: null, isTitleManual: true, hideTitleHeading: false, createdAt: now, updatedAt: now
   }, 'remote')));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   const { session } = await openCompanionDailyFlow({ now, mode: 'review-first', preferredNodeId: 'a' });
   expect(session.currentNodeId).toBe('a');
   await mutateCompanionWorkspace({ type: 'delete', nodeId: deletedId }, { session, mode: 'review-first' });

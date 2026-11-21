@@ -22,5 +22,5 @@ export async function saveCompanionFlowResume(libraryScope: string, nodeId: stri
   await writeIosCompanionDatabase(async (db) => {
     await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
       [resumeKey(libraryScope), nodeId ?? '', new Date().toISOString()]);
-  });
+  }, { kind: 'device-local' });
 }

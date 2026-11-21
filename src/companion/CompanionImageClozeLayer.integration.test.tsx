@@ -45,7 +45,7 @@ beforeEach(async () => {
   library = await createSearchLibrary(0);
   native.resolve.mockResolvedValue({ status: 'ready', resource_url: png });
   const version = await toWorkspaceNativeNodeVersion(editableNode({ content }), 'source', 'parent-version');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
 });
 afterEach(async () => { await library.close(); restoreGeometry(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 

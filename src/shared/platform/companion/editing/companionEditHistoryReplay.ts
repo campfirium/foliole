@@ -43,7 +43,7 @@ export function applyCompanionEditHistory(documentId: string, mode: Mode) {
       if (entry.type !== 'text.edit') updated = replaceEditorOperationEntry(history, documentId, mode, await replayAnnotations(tx, entry, mode));
       await writeCompanionEditHistory(tx, history, moveEditorOperationEntry(updated, documentId, mode, result?.nativeState));
       return result ? { nodeId: result.nodeId, versionId: result.versionId } : { nodeId: documentId, versionId: document.currentVersionId ?? '' };
-    }));
+    }), { kind: 'business' });
   }, { kind: 'full' });
 }
 

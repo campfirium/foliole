@@ -37,7 +37,7 @@ async function generate(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const opened = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   const rows = await library.owner.read(db => db.query<{ node_id: string }>('SELECT node_id FROM daily_flow_entries ORDER BY order_key'));
   expect((await openCompanionDailyFlow({ now, mode: 'reading-only' })).session).toEqual(opened.session);
@@ -54,7 +54,7 @@ it.each(['android', 'ios'] as const)('%s preserves SQLite content flags, blob-on
         ['spaces', '   ', null, null], ['tab', '\t', null, ''], ['blob', '', 'body-reference', null]
       ] as const) await db.run(`INSERT INTO nodes (id,title,content,body_blob_hash,reveal,created_at,updated_at)
         VALUES (?,?,?,?,?,?,?)`, [id, id, content, blob, reveal, now, now]);
-    });
+    }, { kind: 'business' });
     const display = await refreshCompanionWorkspaceSnapshot();
     expect(display?.nodesById.blob?.hasContent).toBe(false);
     expect(display?.nodesById.blob?.bodyBlobHash).toBe('body-reference');
@@ -70,13 +70,13 @@ it.each(['android', 'ios'] as const)('%s preserves SQLite content flags, blob-on
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET content='Now complete', reveal='' WHERE id='spaces'");
       await tx.run("UPDATE nodes SET content=' ', reveal=NULL WHERE id='tab'");
-    })), scope);
+    }), { kind: 'business' }), scope);
     expect((await snapshots(library)).spaces).toMatchObject({ hasContent: true, hasReveal: true });
     expect((await generate(library)).sort()).toEqual(['blob', 'spaces']);
     await expect(runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET content='', reveal=NULL WHERE id='spaces'");
       throw new Error('rejected content');
-    })), scope)).rejects.toThrow('rejected content');
+    }), { kind: 'business' }), scope)).rejects.toThrow('rejected content');
     expect((await snapshots(library)).spaces).toMatchObject({ hasContent: true, hasReveal: true });
     library.owner.clearNodePriorities();
     await refreshCompanionWorkspaceSnapshot();

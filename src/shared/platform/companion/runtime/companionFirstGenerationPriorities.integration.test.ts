@@ -66,7 +66,7 @@ async function generate(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const result = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   const rows = await library.owner.read(db => db.query<{ node_id: string; initial_task: number; active: number }>(
     'SELECT node_id, initial_task, active FROM daily_flow_entries ORDER BY order_key'));
@@ -101,7 +101,7 @@ it.each(['android', 'ios'] as const)('%s generates from committed moves and pres
   library.owner.clearNodePriorities();
   expect(await generate(library)).toEqual(moved);
   await library.owner.runWriter(db => db.run(`CREATE TRIGGER reject_move BEFORE UPDATE OF parent_id ON nodes
-    WHEN NEW.id='branch' BEGIN SELECT RAISE(ABORT, 'move rejected'); END`));
+    WHEN NEW.id='branch' BEGIN SELECT RAISE(ABORT, 'move rejected'); END`), { kind: 'business' });
   await expect(mutateCompanionWorkspace({ type: 'move', nodeId: 'branch', parentNodeId: 'absolute' }))
     .rejects.toThrow('move rejected');
   expect(await generate(library)).toEqual(moved);

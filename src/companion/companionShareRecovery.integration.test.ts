@@ -208,7 +208,7 @@ it.each([true, false])('preserves a permanent deletion with receipt present = %s
     deletedAt: '2026-10-03T01:00:00Z', updatedAt: '2026-10-03T01:00:00Z'
   }, 'other-host', 'ver_deleted');
   await applyCompanionSyncNodeVersions([{ ...deleted, is_tombstone: true }]);
-  await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, topicId, Number.MAX_SAFE_INTEGER));
+  await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, topicId, Number.MAX_SAFE_INTEGER), { kind: 'business' });
   expect(readShareOriginalFacts(database!, topicId).versions).toEqual(expect.arrayContaining(originals.versions));
   expect(readShareOriginalFacts(database!, topicId).edges).toEqual(expect.arrayContaining(originals.edges));
   expect(database!.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content,

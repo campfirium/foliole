@@ -55,7 +55,7 @@ it('resumes the unfinished reading topic after restoring a cloze outside Flow', 
     isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
     createdAt: '2026-10-28T07:00:00.000Z', updatedAt: '2026-10-28T08:00:00.000Z'
   }, 'remote', 'restore-cloze');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const restored = (await refreshCompanionWorkspaceAfterMutation())!;
   ui.rerender({ active: false, value: restored });
   ui.rerender({ active: true, value: restored });

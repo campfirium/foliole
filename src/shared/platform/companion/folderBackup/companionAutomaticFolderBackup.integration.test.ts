@@ -49,7 +49,7 @@ it('stops claiming after disabling while letting one in-flight file finish, then
   await setCompanionAutomaticFolderBackup(true); await started.promise;
   try {
     await setCompanionAutomaticFolderBackup(false);
-    await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('interactive','Still responsive','','now','now')"));
+    await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('interactive','Still responsive','','now','now')"), { kind: 'business' });
     release.release(); await vi.waitFor(() => expect(f.finish).toHaveBeenLastCalledWith(expect.objectContaining({ pending: 1 })));
     expect(f.copy).toHaveBeenCalledTimes(1); expect(await getCompanionAutomaticFolderBackup()).toBe(false);
     await setCompanionAutomaticFolderBackup(true);
@@ -87,7 +87,7 @@ it('serializes manual work behind an automatic file and saves changes committed 
   const manual = backUpCompanionDatabase();
   try {
     const later = await f.publish('new original while copying');
-    await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('late','Later fact','','now','now')"));
+    await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('late','Later fact','','now','now')"), { kind: 'business' });
     expect(f.backup).toHaveBeenCalledTimes(calls);
     release.release(); await manual;
     await vi.waitFor(async () => expect(await f.readWork()).toEqual([]));
@@ -105,10 +105,10 @@ it('never opens a picker automatically and retains the previous preference if pe
   expect(f.backup).not.toHaveBeenCalled(); expect(await getCompanionAutomaticFolderBackup()).toBe(false);
   f.state.configured = true;
   await f.owner.runWriter(db => db.run(`CREATE TRIGGER refuse_automatic BEFORE INSERT ON companion_meta
-    WHEN NEW.key='folder_backup_automatic' BEGIN SELECT RAISE(ABORT,'setting write refused'); END`));
+    WHEN NEW.key='folder_backup_automatic' BEGIN SELECT RAISE(ABORT,'setting write refused'); END`), { kind: 'business' });
   await expect(setCompanionAutomaticFolderBackup(true)).rejects.toThrow('setting write refused');
   expect(await getCompanionAutomaticFolderBackup()).toBe(false); expect(f.backup).not.toHaveBeenCalled();
-  await f.owner.runWriter(db => db.run('DROP TRIGGER refuse_automatic'));
+  await f.owner.runWriter(db => db.run('DROP TRIGGER refuse_automatic'), { kind: 'business' });
   await setCompanionAutomaticFolderBackup(true); await vi.waitFor(() => expect(f.finish).toHaveBeenCalled());
 });
 
@@ -175,7 +175,7 @@ it('keeps an existing background reading snapshot alive through backup bookkeepi
   const outcome = reading.then(value => ({ value }), error => ({ error: String(error) }));
   try {
     await started.promise;
-    await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('backup-status','saved','now')"), false);
+    await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('backup-status','saved','now')"), { kind: 'backup' });
     release.release(); expect(await outcome).toEqual({ value: baseline });
   } finally { release.release(); await outcome; }
 });
@@ -184,7 +184,7 @@ it('keeps database edits pending across reopening and does not hide newer edits 
   const f = await fixture();
   await backUpCompanionDatabase();
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
-  await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('progress','New title','','now','now')"));
+  await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('progress','New title','','now','now')"), { kind: 'business' });
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
   await f.reopen();
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
@@ -196,7 +196,7 @@ it('keeps database edits pending across reopening and does not hide newer edits 
   });
   const saving = backUpCompanionDatabase();
   await started.promise;
-  await f.owner.runWriter(db => db.run("UPDATE nodes SET title='Changed during backup' WHERE id='progress'"));
+  await f.owner.runWriter(db => db.run("UPDATE nodes SET title='Changed during backup' WHERE id='progress'"), { kind: 'business' });
   release.release(); await saving;
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
   await backUpCompanionDatabase();
@@ -204,12 +204,12 @@ it('keeps database edits pending across reopening and does not hide newer edits 
   const target = new Database(path.join(f.target, 'Foliole.sqlite'), { readonly: true });
   try { expect(target.prepare("SELECT title FROM nodes WHERE id='progress'").pluck().get()).toBe('Changed during backup'); }
   finally { target.close(); }
-  await f.owner.runWriter(db => db.query('SELECT id FROM nodes'));
+  await f.owner.runWriter(db => db.query('SELECT id FROM nodes'), { kind: 'business' });
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
   await expect(f.owner.runWriter(async db => {
     await db.run("UPDATE nodes SET title='Rolled back' WHERE id='progress'");
     throw new Error('rollback progress');
-  })).rejects.toThrow('rollback progress');
+  }, { kind: 'business' })).rejects.toThrow('rollback progress');
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
 });
 
@@ -217,17 +217,17 @@ it('keeps database edits pending across reopening and does not hide newer edits 
 it('keeps a completed backup current when reopening rebinds the unchanged local writer', async () => {
   const f = await fixture();
   const binding = { deviceAnchor: 'bootstrap-device', libraryPath: '/stable/library' };
-  const bind = () => f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, binding));
+  const bind = () => f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, binding), { kind: 'business' });
   const author = await bind();
   await backUpCompanionDatabase();
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
   await f.reopen();
   expect(await bind()).toBe(author);
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
-  await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('real-setting','changed','now')"));
+  await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('real-setting','changed','now')"), { kind: 'business' });
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
   await backUpCompanionDatabase();
-  const next = await f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, { ...binding, deviceAnchor: 'replacement-device' }));
+  const next = await f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, { ...binding, deviceAnchor: 'replacement-device' }), { kind: 'business' });
   expect(next).not.toBe(author);
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
 });

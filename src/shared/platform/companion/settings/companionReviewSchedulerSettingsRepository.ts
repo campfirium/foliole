@@ -44,7 +44,7 @@ export async function saveCompanionReviewSettings(patch: ReviewSchedulerSettings
       });
       await saveIosSettingWithDb(tx, { key: KEY, scope: 'user_space', value_json: JSON.stringify(next) });
       return next;
-    }));
+    }), { kind: 'business' });
     hydrateCurrentReviewSchedulerSettings(settings);
     return settings;
   }, { kind: 'nodes', nodeIds: [] });

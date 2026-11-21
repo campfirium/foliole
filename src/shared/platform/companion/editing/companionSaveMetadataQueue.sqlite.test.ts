@@ -42,7 +42,7 @@ async function prepareTopic() {
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
   await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], {
     enqueueSearchInvalidations: false
-  }));
+  }), { kind: 'business' });
 }
 
 it('keeps sync metadata behind a real pending content commit on the shared writer', async () => {

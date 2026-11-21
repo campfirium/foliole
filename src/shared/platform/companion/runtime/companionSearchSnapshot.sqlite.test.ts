@@ -41,7 +41,7 @@ it.each(['remove', 'insert', 'reorder'] as const)('keeps all three result sets f
       await db.run("UPDATE external_documents SET updated_at='zzz',content='changed alpha' WHERE document_id='000000'");
       await db.run("UPDATE pdf_page_text SET text='no match' WHERE page=1");
     }
-  });
+  }, { kind: 'business' });
   for (const kind of ['topics', 'pdf', 'external'] as const) {
     const collected = [];
     for (let offset = 0; offset < 140; offset += 20) collected.push(...snapshot[kind].slice(offset, offset + 20));
@@ -76,10 +76,10 @@ it('serializes all categories with a real writer and keeps committed facts after
       await tx.run('DELETE FROM pdf_page_text WHERE page=1');
     });
     wrote = true;
-  }).then(() => writeIosCompanionDatabase(db => db.transaction(async (tx) => {
+  }, { kind: 'business' }).then(() => writeIosCompanionDatabase(db => db.transaction(async (tx) => {
       await tx.run("DELETE FROM pdf_page_text WHERE page=2");
       throw new Error('later apply failed');
-  })));
+  }), { kind: 'business' }));
   expect(wrote).toBe(false);
   release();
   const snapshot = await searching;
@@ -103,7 +103,7 @@ it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each c
       waiting = writeIosCompanionDatabase(async (db) => {
         await db.run("UPDATE nodes SET title=title WHERE id='000000'");
         writerWaitMs = performance.now() - queuedAt;
-      });
+      }, { kind: 'business' });
     }
     return rows;
   };

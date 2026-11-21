@@ -50,7 +50,7 @@ async function initializeCapacityWorkspaceAcceptance(root: HTMLElement) {
       const target = stage === 0 ? 1000 : 10000;
       status.textContent = `T219 workspace fixture: preparing ${target}`;
       try {
-        stage = await owner.runWriter((db) => prepareCapacityWorkspace(db, target, hostName));
+        stage = await owner.runWriter((db) => prepareCapacityWorkspace(db, target, hostName), { kind: 'business' });
         renderSetup();
       } catch (error) {
         status.dataset.status = 'failed';

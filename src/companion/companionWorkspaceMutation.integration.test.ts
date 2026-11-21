@@ -49,7 +49,7 @@ beforeEach(async () => {
   await getIosCompanionDatabaseOwner().runWriter((db) => db.run(
     'INSERT INTO nodes (id, title, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     ['topic', 'Topic', 'topic', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z']
-  ));
+  ), { kind: 'business' });
 });
 
 afterEach(async () => {

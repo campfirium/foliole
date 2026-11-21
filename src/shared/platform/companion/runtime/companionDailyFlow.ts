@@ -81,7 +81,7 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs, timing?: FlowTim
     () => getIosCompanionDatabaseOwner().runWriter(async db => {
     const settings = companionDailyFlowSettings();
     return openDailyFlow(db, args, settings, ownedCompanionDailyFlowPersistence(settings), timing);
-  }, true, timing, 'open-writer'));
+  }, { kind: 'business', timing, queue: 'open-writer' }));
 }
 
 export function loadCompanionDailySession() {

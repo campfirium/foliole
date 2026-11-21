@@ -25,7 +25,7 @@ beforeEach(async () => {
   const record = await toWorkspaceNativeNodeVersion({ id: 'topic', content: 'Original', kind: 'topic', title: 'Topic',
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: now, updatedAt: now }, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
 });
 afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
 
@@ -58,7 +58,7 @@ it('drops old undo and only its own holds on reopen while preserving saved text 
 });
 
 it('publishes both sequential writer operations without saving an undo payload', async () => {
-  await Promise.all(['one', 'two'].map(id => writeIosCompanionDatabase(db => db.transaction(tx => append(tx, id)))));
+  await Promise.all(['one', 'two'].map(id => writeIosCompanionDatabase(db => db.transaction(tx => append(tx, id)), { kind: 'business' })));
   expect(getEditorOperationSession(await loadCompanionEditHistory(), 'topic').undoStack).toHaveLength(2);
   expect(library.database.prepare("SELECT count(*) AS n FROM companion_meta WHERE key IN ('one','two')").get()).toEqual({ n: 2 });
   expect(library.database.prepare("SELECT value FROM companion_meta WHERE key='editor_operation_history'").get()).toBeUndefined();
@@ -68,7 +68,7 @@ it('discards a staged history when later work in the outer transaction fails', a
   await expect(writeIosCompanionDatabase(db => db.transaction(async tx => {
     await append(tx, 'failed');
     throw new Error('later mutation failed');
-  }))).rejects.toThrow('later mutation failed');
+  }), { kind: 'business' })).rejects.toThrow('later mutation failed');
   expect(await loadCompanionEditHistory()).toEqual(createEmptyEditorOperationHistory());
   expect(library.database.prepare("SELECT value FROM companion_meta WHERE key='failed'").get()).toBeUndefined();
 });
@@ -83,22 +83,22 @@ it('keeps SQL and candidate history together when an inner error is caught and t
       });
     } catch { /* The production port has no nested savepoint. */ }
     expect(getEditorOperationSession(await readCompanionEditHistoryFromDb(tx), 'topic').undoStack).toHaveLength(1);
-  }));
+  }), { kind: 'business' });
   expect(getEditorOperationSession(await loadCompanionEditHistory(), 'topic').undoStack).toHaveLength(1);
   expect(library.database.prepare("SELECT value FROM companion_meta WHERE key='nested'").get()).toEqual({ value: 'committed' });
 });
 
 it('does not publish a candidate when SQLite commit itself fails', async () => {
   vi.spyOn(library.connection, 'commitTransaction').mockRejectedValueOnce(new Error('commit failed'));
-  await expect(writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'commit-failed')))).rejects.toThrow('commit failed');
+  await expect(writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'commit-failed')), { kind: 'business' })).rejects.toThrow('commit failed');
   expect(await loadCompanionEditHistory()).toEqual(createEmptyEditorOperationHistory());
   expect(library.database.prepare("SELECT value FROM companion_meta WHERE key='commit-failed'").get()).toBeUndefined();
-  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'retry')));
+  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'retry')), { kind: 'business' });
   expect(getEditorOperationSession(await loadCompanionEditHistory(), 'topic').undoStack).toHaveLength(1);
 });
 
 it('refuses an undo queued in an earlier content lifetime', async () => {
-  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'before-switch')));
+  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'before-switch')), { kind: 'business' });
   const history = await loadCompanionEditHistory();
   const gate = Promise.withResolvers<void>();
   const blocker = runCompanionSyncWriterTask(() => gate.promise);
@@ -113,7 +113,7 @@ it('refuses an undo queued in an earlier content lifetime', async () => {
 });
 
 it('clears committed editing history even when the subsequent reload needs a fresh host bootstrap', async () => {
-  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'before-clear')));
+  await writeIosCompanionDatabase(db => db.transaction(tx => append(tx, 'before-clear')), { kind: 'business' });
   expect(getEditorOperationSession(await loadCompanionEditHistory(), 'topic').undoStack).toHaveLength(1);
   await expect(clearIosCompanionActiveData()).rejects.toThrow('Companion Host is unavailable.');
   expect(await loadCompanionEditHistory()).toEqual(createEmptyEditorOperationHistory());

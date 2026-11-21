@@ -22,13 +22,13 @@ it('reuses the committed snapshot before grading and reads registered mutations 
   try {
     await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
     await library.owner.runWriter(db => db.run(`INSERT INTO nodes
-      (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Body', 'now', 'now')`));
+      (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Body', 'now', 'now')`), { kind: 'business' });
     const before = await refreshCompanionWorkspaceAfterMutation();
     const reads = library.directoryQueries();
     expect(await refreshCompanionWorkspaceAfterMutation()).toBe(before);
     expect(library.directoryQueries()).toBe(reads);
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET title = 'After' WHERE id = 'topic'")), { kind: 'full' });
+      "UPDATE nodes SET title = 'After' WHERE id = 'topic'"), { kind: 'business' }), { kind: 'full' });
     const after = await refreshCompanionWorkspaceAfterMutation();
     expect(after?.nodesById.topic?.title).toBe('After');
     expect(library.directoryQueries()).toBe(reads + 1);
@@ -58,14 +58,14 @@ it.each([
   try {
     await owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
     await owner.runWriter(db => db.run(`INSERT INTO nodes
-      (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Old text', 'now', 'now')`));
+      (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Old text', 'now', 'now')`), { kind: 'business' });
     library.hold();
     snapshot = origin === 'remote'
       ? loadCompanionStateAfterStructureSyncReport().then(report => report.state?.workspace_snapshot ?? null)
       : refreshCompanionWorkspaceAfterMutation();
     await reading.promise;
     write = owner.runWriter(db => db.transaction(tx => tx.run(
-      "UPDATE nodes SET title = 'After', content = 'New text' WHERE id = 'topic'")));
+      "UPDATE nodes SET title = 'After', content = 'New text' WHERE id = 'topic'")), { kind: 'business' });
     const committedBeforeDisplay = await Promise.race([
       write.then(() => true),
       new Promise<false>(done => { timeout = setTimeout(() => done(false), 500); })
@@ -103,7 +103,7 @@ it('matches a complete snapshot after saving text that removes a child anchor ta
     await library.owner.open({ expectedHostName: 'display-fixture', now });
     for (const node of [topic, child, { ...topic, id: 'grandchild', parentNodeId: 'child' }]) {
       const record = await toWorkspaceNativeNodeVersion(node, 'remote', `${node.id}-base`);
-      await library.owner.runWriter(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+      await library.owner.runWriter(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
     }
     const before = await refreshCompanionWorkspaceAfterMutation();
     await saveCompanionContentEdit({ nodeId: 'topic', baseVersionId: 'topic-base', versionId: 'edited',
@@ -129,12 +129,12 @@ it('refreshes edited topic projections without transferring unrelated directory 
     await library.owner.runWriter(db => db.run(`WITH RECURSIVE series(n) AS (
       VALUES(1) UNION ALL SELECT n + 1 FROM series WHERE n < 30000
     ) INSERT INTO nodes (id, title, content, created_at, updated_at)
-      SELECT 'node-' || n, 'Topic ' || n, 'Old text', 'now', 'now' FROM series`));
+      SELECT 'node-' || n, 'Topic ' || n, 'Old text', 'now', 'now' FROM series`), { kind: 'business' });
     await library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET parent_id = 'node-1' WHERE id = 'node-2'"));
+      "UPDATE nodes SET parent_id = 'node-1' WHERE id = 'node-2'"), { kind: 'business' });
     const before = await refreshCompanionWorkspaceAfterMutation();
     await library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET content = '', opening_text = 'Changed body' WHERE id IN ('node-1', 'node-2')"));
+      "UPDATE nodes SET content = '', opening_text = 'Changed body' WHERE id IN ('node-1', 'node-2')"), { kind: 'business' });
     const plan = await library.owner.read(db => db.query(`EXPLAIN QUERY PLAN ${COMPANION_CONTENT_SNAPSHOT_SQL}`,
       ['["node-1"]', '["node-1"]', 'display-fixture']));
     expect(plan.some(row => /\bSCAN(?: TABLE)? (?:nodes|n|owner)\b/u.test(String(row.detail)))).toBe(false);
@@ -151,7 +151,7 @@ it('refreshes edited topic projections without transferring unrelated directory 
     const ids = Array.from({ length: 600 }, (_, index) => `node-${index + 1}`);
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
       "UPDATE nodes SET opening_text = 'Batch edited' WHERE id IN (SELECT value FROM json_each(?))",
-      [JSON.stringify(ids)])), { kind: 'nodes', nodeIds: ids });
+      [JSON.stringify(ids)]), { kind: 'business' }), { kind: 'nodes', nodeIds: ids });
     const queriesBefore = library.directoryQueries();
     const rowsBefore = library.directoryRows();
     const batch = await refreshCompanionWorkspaceSnapshot();
@@ -180,9 +180,9 @@ it.each(['insert', 'delete', 'move', 'restore', 'reference', 'order'] as const)(
     await library.owner.runWriter(db => db.run(`INSERT INTO nodes
       (id, parent_id, title, content, created_at, updated_at) VALUES
       ('topic', NULL, 'Topic', 'Body', 'now', 'now'),
-      ('child', 'topic', 'Child', 'Body', 'now', 'now')`));
+      ('child', 'topic', 'Child', 'Body', 'now', 'now')`), { kind: 'business' });
     if (action === 'restore') await library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET deleted_at = 'earlier' WHERE id = 'child'"));
+      "UPDATE nodes SET deleted_at = 'earlier' WHERE id = 'child'"), { kind: 'business' });
     const before = await refreshCompanionWorkspaceAfterMutation();
     await library.owner.runWriter(db => db.run(action === 'insert'
       ? "INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at) VALUES ('new', 'topic', 'New', 'Body', 'now', 'now')"
@@ -190,7 +190,7 @@ it.each(['insert', 'delete', 'move', 'restore', 'reference', 'order'] as const)(
       : action === 'restore' ? "UPDATE nodes SET deleted_at = NULL WHERE id = 'child'"
       : action === 'reference' ? `UPDATE nodes SET resource_references = '[{"storage_key":"${'a'.repeat(64)}.png","role":"image","original_name":null}]' WHERE id = 'child'`
       : action === 'order' ? `UPDATE nodes SET manual_child_order = '["child"]' WHERE id = 'topic'`
-        : "UPDATE nodes SET parent_id = NULL WHERE id = 'child'"));
+        : "UPDATE nodes SET parent_id = NULL WHERE id = 'child'"), { kind: 'business' });
     const actual = await refreshCompanionWorkspaceAfterMutation(before, 'topic');
     const complete = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     expect(actual).toEqual(complete);
@@ -210,10 +210,10 @@ it('publishes a local projection then a concurrent remote structural commit with
   try {
     await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
     await library.owner.runWriter(db => db.run(`INSERT INTO nodes
-      (id, title, content, created_at, updated_at) VALUES ('topic', 'Original', 'Body', 'now', 'now')`));
+      (id, title, content, created_at, updated_at) VALUES ('topic', 'Original', 'Body', 'now', 'now')`), { kind: 'business' });
     await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET opening_text = 'Local edit' WHERE id = 'topic'")), { kind: 'nodes', nodeIds: ['topic'] });
+      "UPDATE nodes SET opening_text = 'Local edit' WHERE id = 'topic'"), { kind: 'business' }), { kind: 'nodes', nodeIds: ['topic'] });
     library.hold();
     unsubscribe = companionWorkspaceSnapshots.subscribe(() => {
       const snapshot = companionWorkspaceSnapshots.getSnapshot();
@@ -225,7 +225,7 @@ it('publishes a local projection then a concurrent remote structural commit with
       await tx.run("UPDATE nodes SET title = 'Remote title' WHERE id = 'topic'");
       await tx.run(`INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at)
         VALUES ('remote-child', 'topic', 'Child', 'Body', 'now', 'now')`);
-    })), { kind: 'full' });
+    }), { kind: 'business' }), { kind: 'full' });
     library.release.resolve();
     await work;
     expect(published).toEqual(['Original', 'Remote title']);

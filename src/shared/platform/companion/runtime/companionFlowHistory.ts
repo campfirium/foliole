@@ -111,7 +111,7 @@ export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
     if (scope !== getCompanionReadingScope() || owner !== getIosCompanionDatabaseOwner()) {
       throw new Error('flow_history_context_changed');
     }
-    const result = await owner.runWriter(db => db.transaction(task), true, timing);
+    const result = await owner.runWriter(db => db.transaction(task), { kind: 'business', timing });
     onCommitted?.(result);
     return result;
   }, refreshScope, timing);

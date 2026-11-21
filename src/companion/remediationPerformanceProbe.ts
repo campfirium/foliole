@@ -35,7 +35,7 @@ export async function measureRemediationPerformance(fixture: Fixture, phase: (va
   phase('reading-settings');
   const mixed = await measureMixedBatch(fixture);
   phase('sync-details');
-  await fixture.owner.runWriter(db => db.transaction(flushRequestSyncInventoryDigests));
+  await fixture.owner.runWriter(db => db.transaction(flushRequestSyncInventoryDigests), { kind: 'business' });
   const details = await fixture.owner.readSnapshot(measureDetails);
   phase('external-lifecycle');
   const externalLifecycle = await runExternalMembershipAcceptance(fixture.owner);

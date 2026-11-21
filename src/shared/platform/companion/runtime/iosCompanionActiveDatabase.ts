@@ -2,6 +2,7 @@ import { companionContentResourceQueryDefinition } from '../../../../../lib/core
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
+import type { CompanionWriterOptions } from './capacitorCompanionDatabaseOwner';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 type QueryName = keyof typeof ANDROID_COMPANION_QUERY_DEFINITIONS;
@@ -11,8 +12,8 @@ export function readIosCompanionDatabase<T>(task: (db: DbPort) => Promise<T>) {
   return owner().read(task);
 }
 
-export function writeIosCompanionDatabase<T>(task: (db: DbPort) => Promise<T>) {
-  return owner().runWriter(task);
+export function writeIosCompanionDatabase<T>(task: (db: DbPort) => Promise<T>, write: CompanionWriterOptions) {
+  return owner().runWriter(task, write);
 }
 
 export function queryIosCompanionDatabase<T extends DbRow>(name: QueryName, params: DbParams = []) {

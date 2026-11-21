@@ -22,7 +22,7 @@ export async function runAttachmentThroughputNativeProbe(platform: 'android' | '
   const fixture = await openAttachmentThroughputFixture(platform, keys);
   const identity = companionFramedFileOwner(fixture.owner);
   const db: RequestSyncDatabaseHost = { files: createCompanionFramedSyncFiles(FolioleCompanionSync, identity),
-    readSnapshot: read => fixture.owner.readSnapshot(read), write: write => fixture.owner.runWriter(write) };
+    readSnapshot: read => fixture.owner.readSnapshot(read), write: write => fixture.owner.runWriter(write, { kind: 'business' }) };
   const host = await createCompanionAttachmentHost(db, identity);
   try {
     await removeThroughputFiles(keys);

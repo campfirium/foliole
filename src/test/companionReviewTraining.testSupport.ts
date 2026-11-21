@@ -31,7 +31,7 @@ export async function receiveMobileReviewModel(model: ReviewTrainingModel) {
       for (const id of ['source', 'mobile']) await db.run(`INSERT OR IGNORE INTO sync_group_devices
         (group_id, device_identity_key, device_anchor, canonical_library_path, device_name, platform, state, joined_at, updated_at)
         VALUES ('group', ?, ?, ?, ?, 'android', 'active', 'now', 'now')`, [id, id, `/${id}`, id]);
-    });
+    }, { kind: 'business' });
     source.sqlite.prepare("INSERT INTO settings(key, value, updated_at) VALUES ('host_name', ?, 'now')").run('"Desktop fixture"');
     writeSettingRecord(createBetterSqlite3Driver(source.sqlite), { key: reviewModelKey(model.folderId),
       valueJson: JSON.stringify(model), updatedAt: model.trainedAt });
@@ -46,7 +46,7 @@ export async function receiveMobileReviewModel(model: ReviewTrainingModel) {
           library_epoch: source.epoch, proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
         objectType: 'setting', globalId: difference.globalId, requestId: new Uint8Array(16),
         enqueueSearchInvalidations: false, facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob)
-      })));
+      })), { kind: 'business' });
     });
   } finally { await fixture.close(); }
 }

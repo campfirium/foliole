@@ -104,7 +104,7 @@ it('refills the display beyond two selector batches without waiting for the firs
   const { engine, session } = await ready();
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
-  const held = getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async () => { await waiting; }));
+  const held = getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async () => { await waiting; }), { kind: 'business' });
   let display = session;
   const targets: string[] = [];
   try {
@@ -171,7 +171,7 @@ it('keeps click time and learning day when processing crosses midnight', async (
   const { engine, session } = await ready();
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
-  const held = getIosCompanionDatabaseOwner().runWriter(async () => { await waiting; });
+  const held = getIosCompanionDatabaseOwner().runWriter(async () => { await waiting; }, { kind: 'business' });
   try {
     const b = (await engine.accept({ session, now, mode: 'recommended', historyKey: 'midnight-history' })).session;
     await engine.accept({ session: b, now: '2026-10-26T08:00:01.000Z', mode: 'recommended', historyKey: 'midnight-history' });
@@ -216,7 +216,7 @@ it('retains B successor through the complete A receipt and catalog refresh witho
   const owner = getIosCompanionDatabaseOwner();
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
-  const held = owner.runWriter(async () => { await waiting; });
+  const held = owner.runWriter(async () => { await waiting; }, { kind: 'business' });
   try {
     const b = (await engine.accept({ session, now, mode: 'recommended', historyKey: 'receipt-preparation' })).session;
     const prepared = await engine.displayPreparation.prepare({ session: b, now, mode: 'recommended' });

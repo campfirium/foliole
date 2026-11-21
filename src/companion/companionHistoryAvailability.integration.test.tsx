@@ -34,7 +34,7 @@ beforeEach(async () => {
     afterReading: null, beforeContext: context, afterContext: context };
   await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, {
     undoStack: Array.from({ length: 10 }, (_, i) => ({ ...entry, id: `entry-${i}` })), redoStack: []
-  }));
+  }), { kind: 'business' });
 });
 afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); });
 
@@ -79,7 +79,7 @@ it('shares concurrent availability reads but reads committed changes again', asy
   ]);
   expect(results).toMatchObject([{ canUndo: true, canRedo: false }, { canUndo: true, canRedo: false }]);
   expect(read).toHaveBeenCalledTimes(1);
-  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack: [], redoStack: [] }));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack: [], redoStack: [] }), { kind: 'business' });
   publishCompanionSyncMutationRevision({ kind: 'nodes', nodeIds: [] });
   expect(await loadCompanionFlowHistoryAvailability(key)).toMatchObject({ canUndo: false, canRedo: false });
   expect(read).toHaveBeenCalledTimes(2);

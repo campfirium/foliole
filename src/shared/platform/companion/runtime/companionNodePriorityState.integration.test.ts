@@ -27,7 +27,7 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
         await db.run(`INSERT INTO nodes (id,parent_id,priority,title,content,created_at,updated_at)
           VALUES (?,?,?,?,'Body',?,?)`, [id, parent, priority, id, now, now]);
       }
-    });
+    }, { kind: 'business' });
     await refreshCompanionWorkspaceSnapshot();
     const paths = () => library.owner.read(async db => (await library.owner.readNodeIndex(db, 5)).paths);
     expect((await paths()).get('leaf')).toEqual(['a', 'branch', 'leaf']);
@@ -39,21 +39,21 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
     const scope = { kind: 'nodes' as const, nodeIds: ['branch'], structure: true };
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET parent_id='b' WHERE id='branch'");
-    })), scope);
+    }), { kind: 'business' }), scope);
     expect((await values()).get('leaf')).toBe(8);
     expect((await paths()).get('leaf')).toEqual(['b', 'branch', 'leaf']);
     expect(library.priorityReads).toEqual([{ params: [JSON.stringify(['branch'])], rows: 1 }]);
     await expect(runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET priority=0 WHERE id='branch'");
       throw new Error('rollback');
-    })), scope)).rejects.toThrow('rollback');
+    }), { kind: 'business' }), scope)).rejects.toThrow('rollback');
     expect((await values()).get('leaf')).toBe(8);
     expect((await paths()).get('leaf')).toEqual(['b', 'branch', 'leaf']);
     expect(library.priorityReads).toHaveLength(1);
     await library.owner.runWriter(async db => {
       await db.transaction(tx => tx.run("UPDATE nodes SET priority=0 WHERE id='b'"));
       await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: ['b'] }, db);
-    });
+    }, { kind: 'business' });
     expect((await values()).get('leaf')).toBe(0);
     const reads = library.priorityReads.length;
     await runCompanionHighValueMutationTask(async () => null,
@@ -91,6 +91,6 @@ it('keeps failed refreshes unavailable and repairs every pending changed node', 
       await state.refresh(db, { kind: 'nodes', nodeIds: ['b'] });
       const result = await state.read(db, 5);
       expect([result.get('a'), result.get('b')]).toEqual([2, 8]);
-    });
+    }, { kind: 'business' });
   } finally { await library.close(); }
 });

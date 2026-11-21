@@ -29,7 +29,7 @@ it('shares committed state while ordinary queued snapshots retain their fresh-re
   let retained!: DbPort;
   let laterCompleted = false;
   try {
-    await owner.runWriter(db => db.run("UPDATE nodes SET title='new' WHERE id='000000'"));
+    await owner.runWriter(db => db.run("UPDATE nodes SET title='new' WHERE id='000000'"), { kind: 'business' });
     expect(await owner.readInteractiveSnapshot(async db => {
       retained = db;
       await expect(db.run('DELETE FROM nodes')).rejects.toThrow('write_forbidden');
@@ -61,7 +61,7 @@ it('keeps a foreground borrower alive when a writer cancels the background scan'
   });
   try {
     await borrowerEntered.wait;
-    await owner.runWriter(db => db.run("UPDATE nodes SET title='new' WHERE id='000000'"));
+    await owner.runWriter(db => db.run("UPDATE nodes SET title='new' WHERE id='000000'"), { kind: 'business' });
     mainGate.release(); await mainReturned.wait;
     expect(settled).toBe(false);
     borrowerGate.release();

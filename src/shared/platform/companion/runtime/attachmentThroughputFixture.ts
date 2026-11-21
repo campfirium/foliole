@@ -29,7 +29,7 @@ export async function openAttachmentThroughputFixture(platform: 'android' | 'ios
     await remove();
   };
   try {
-    await owner.runWriter(db => seedAttachmentThroughputFixture(db, keys));
+    await owner.runWriter(db => seedAttachmentThroughputFixture(db, keys), { kind: 'business' });
     await ensureCompanionSyncGroupDataOwner();
     return { owner, close };
   } catch (error) { await close(); throw error; }

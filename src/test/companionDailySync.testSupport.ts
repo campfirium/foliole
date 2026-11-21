@@ -26,6 +26,6 @@ export async function connectCompanionPeer(library: Library) {
   return { desktop, mobile, async exchange() {
     await syncRequestLibrary(mobile, desktop);
     await runCompanionSyncMutationTask(() => getIosCompanionDatabaseOwner().runWriter(() =>
-      syncRequestLibrary(desktop, mobile)), { kind: 'full' });
+      syncRequestLibrary(desktop, mobile), { kind: 'business' }), { kind: 'full' });
   } };
 }

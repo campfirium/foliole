@@ -48,7 +48,7 @@ async function openLibrary() {
 
 async function seed(node: WorkspaceNodeSnapshot) {
   const version = await toWorkspaceNativeNodeVersion(node, 'test-device', node.id + '-version');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
 }
 
 beforeEach(async () => {

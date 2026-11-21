@@ -70,7 +70,7 @@ export async function applyCompanionSyncNodeVersionsWithinWriterTask(
   if (usesSharedOwner() && !manager) {
     return getIosCompanionDatabaseOwner().runWriter((db) => (
       applyCompanionSyncNodeVersionsWithDbPort(db, nodes, operation)
-    ));
+    ), { kind: 'business' });
   }
   return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, operation);
 }
@@ -90,7 +90,7 @@ export async function applyCompanionTrashRestoreNodeVersions(
     if (usesSharedOwner() && !manager) {
       return getIosCompanionDatabaseOwner().runWriter((db) => (
         applyCompanionSyncNodeVersionsWithDbPort(db, nodes, 'local_restore')
-      ));
+      ), { kind: 'business' });
     }
     return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore');
   }, ids => ({ kind: 'nodes', nodeIds: ids, structure: true }));

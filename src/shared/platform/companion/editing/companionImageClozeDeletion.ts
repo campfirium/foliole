@@ -56,5 +56,5 @@ export function deleteCompanionImageCloze(request: Request) {
     if (applied.appliedIds.length !== versions.length + Number(Boolean(parentVersion))) throw new Error('image_cloze_delete_not_saved');
     if (annotations.length) await writeCompanionEditHistory(tx, history, pushEditorOperationEntry(history, { nodeId: parent.id, type: 'annotation.delete', title: 'Delete Annotation', canonical: 'confirmed', annotations }));
     return parentVersion?.version_id ?? parent.currentVersionId ?? null;
-  })), { kind: 'full' });
+  }), { kind: 'business' }), { kind: 'full' });
 }

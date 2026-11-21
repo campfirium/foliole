@@ -90,7 +90,7 @@ async function finishTenItems() {
       opId: `finish-${index}`, now, token: session.daily!, sourceSession: session,
       grade: { nodeId: id, before: null, grade: 4, reviewedAt: now,
         schedulerVersion: '', cardBefore: card, cardAfter: card }
-    }, companionDailyFlowSettings(), companionDailyFlowPersistence));
+    }, companionDailyFlowSettings(), companionDailyFlowPersistence), { kind: 'business' });
   }
   expect(flow.session.currentNodeId).toBeNull();
 }

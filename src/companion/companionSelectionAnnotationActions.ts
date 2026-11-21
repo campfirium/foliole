@@ -152,7 +152,7 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
         node_id: draft.node.id, review_json: JSON.stringify(toReviewPayload(draft.review))
       });
       return ids;
-    }));
+    }), { kind: 'business' });
     if (!appliedIds.includes(draft.node.id)) throw new Error('companion_annotation_not_applied');
     return { nodeId: draft.node.id, snapshot: draft.snapshot };
   }, { kind: 'full' });

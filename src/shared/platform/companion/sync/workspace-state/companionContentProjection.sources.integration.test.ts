@@ -41,7 +41,7 @@ it.each(['android', 'ios'] as const)('%s content refresh preserves unread source
           'fixture', '2026-10-01', ?, 'fixture', ?, ?, ?)`, [id, date, node, provider,
           JSON.stringify({ remoteLifecycle: state })]);
       }
-    });
+    }, { kind: 'business' });
     const before = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     expect(before!.nodesById.topic!.readwiseRemoteLifecycle).toEqual(lifecycle);
     expect(before!.nodesById.child!.readwiseRemoteLifecycle).toEqual(lifecycle);
@@ -50,7 +50,7 @@ it.each(['android', 'ios'] as const)('%s content refresh preserves unread source
     await library.owner.runWriter(async db => {
       await db.run('ALTER TABLE import_sources RENAME TO withheld_import_sources');
       await db.run("UPDATE nodes SET content = '', opening_text = 'Changed' WHERE id IN ('topic', 'child')");
-    });
+    }, { kind: 'business' });
     const projected = await library.owner.readSnapshot(db => loadCompanionContentProjection(db, ['topic']));
     expect(Object.keys(projected).sort()).toEqual(['child', 'topic']);
     expect(Object.values(projected).every(node => !Object.hasOwn(node, 'readwiseRemoteLifecycle'))).toBe(true);
@@ -62,7 +62,7 @@ it.each(['android', 'ios'] as const)('%s content refresh preserves unread source
     expect(refreshed!.nodesById.child).toMatchObject({ hasContent: false, readwiseRemoteLifecycle: lifecycle });
     expect(refreshed!.nodesById.unrelated).toBe(before!.nodesById.unrelated);
     expect(await refreshCompanionWorkspaceSnapshot({ kind: 'nodes', nodeIds: ['topic'] })).toBe(refreshed);
-    await library.owner.runWriter(db => db.run('ALTER TABLE withheld_import_sources RENAME TO import_sources'));
+    await library.owner.runWriter(db => db.run('ALTER TABLE withheld_import_sources RENAME TO import_sources'), { kind: 'business' });
     expect(refreshed).toEqual(await refreshCompanionWorkspaceSnapshot({ kind: 'full' }));
   } finally {
     await library.close();

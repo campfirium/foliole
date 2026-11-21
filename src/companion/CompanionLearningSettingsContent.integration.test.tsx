@@ -42,7 +42,7 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
     VALUES ('item','item','Question','Original','2026-10-01','2026-10-01')`).run();
   const score = (opId: string, reviewedAt: string) => writeIosCompanionDatabase(db => db.transaction(tx =>
     saveIosReviewWithDb(tx, { node_id: 'item', review_json: '{}', review_log_json: JSON.stringify({
-      opId, grade: 3, reviewedAt, schedulerVersion: 'test' }) })));
+      opId, grade: 3, reviewedAt, schedulerVersion: 'test' }) })), { kind: 'business' });
   await score('first', '2026-10-01T08:00:00Z');
   const before = library.database.prepare('SELECT * FROM node_review').all();
   const facts = library.database.prepare('SELECT * FROM review_log').all();
@@ -102,7 +102,7 @@ it('uses the saved maximum in subsequent reviews with the unchanged shared sched
   for (const [opId, reviewedAt] of [['one', '2026-10-01T08:00:00Z'], ['two', '2026-10-20T08:00:00Z']]) {
     await writeIosCompanionDatabase(db => db.transaction(tx => saveIosReviewWithDb(tx, {
       node_id: 'item', review_json: '{}', review_log_json: JSON.stringify({ opId, grade: 4, reviewedAt, schedulerVersion: 'test' })
-    })));
+    })), { kind: 'business' });
   }
   const history = await readIosCompanionDatabase(db => readNodeReviewHistoryWithDb(db, 'item'));
   expect(history.parameters.maximumIntervalDays).toBe(10);

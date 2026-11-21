@@ -64,7 +64,7 @@ beforeEach(async () => {
       await db.run('INSERT INTO nodes (id, title, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
         [nodeId, nodeId, 'topic', '2026-10-03T00:00:00Z', '2026-10-03T00:00:00Z']);
     }
-  });
+  }, { kind: 'business' });
   vi.useFakeTimers();
 });
 

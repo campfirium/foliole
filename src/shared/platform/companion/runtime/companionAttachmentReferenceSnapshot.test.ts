@@ -10,12 +10,12 @@ it('allows a committed write during the readonly scan and rejects its stale conc
   const library = createDisplayLibrary('android');
   try {
     await library.owner.open({ expectedHostName: 'scan-fixture', now: '2026-10-19T00:00:00.000Z' });
-    await library.owner.runWriter(db => db.run("INSERT INTO nodes (id, title, content, created_at, updated_at) VALUES ('a', 'A', '', 'now', 'now')"));
+    await library.owner.runWriter(db => db.run("INSERT INTO nodes (id, title, content, created_at, updated_at) VALUES ('a', 'A', '', 'now', 'now')"), { kind: 'business' });
     const original = library.owner.readBackgroundSnapshot.bind(library.owner);
     let wroteDuringScan = false;
     library.owner.readBackgroundSnapshot = (task, signal) => original(async db => {
       await db.query('SELECT id FROM nodes');
-      await library.owner.runWriter(writer => writer.run("UPDATE nodes SET title = 'Edited' WHERE id = 'a'"));
+      await library.owner.runWriter(writer => writer.run("UPDATE nodes SET title = 'Edited' WHERE id = 'a'"), { kind: 'business' });
       wroteDuringScan = true;
       return task(db);
     }, signal);
@@ -43,7 +43,7 @@ it.each(['android', 'ios'] as const)('%s yields an attachment scan to foreground
     await library.owner.runWriter(db => db.run(`WITH RECURSIVE ids(id) AS (
       VALUES (1) UNION ALL SELECT id + 1 FROM ids WHERE id < 200
     ) INSERT INTO nodes (id, title, content, created_at, updated_at)
-      SELECT 'scan-' || id, 'Topic', 'Body', 'now', 'now' FROM ids`));
+      SELECT 'scan-' || id, 'Topic', 'Body', 'now', 'now' FROM ids`), { kind: 'business' });
     const original = library.owner.readBackgroundSnapshot.bind(library.owner);
     let foreground: Promise<unknown> | undefined;
     let batches = 0;
@@ -78,10 +78,10 @@ it.each(['android', 'ios'] as const)('%s eventually completes scanning amid repe
     await library.owner.runWriter(db => db.run(`WITH RECURSIVE ids(id) AS (
       VALUES (1) UNION ALL SELECT id + 1 FROM ids WHERE id < 200
     ) INSERT INTO nodes (id, title, content, created_at, updated_at)
-      SELECT 'scan-' || id, 'Topic', 'Body', 'now', 'now' FROM ids`));
+      SELECT 'scan-' || id, 'Topic', 'Body', 'now', 'now' FROM ids`), { kind: 'business' });
     const image = `${'a'.repeat(64)}.png`;
     await library.owner.runWriter(db => db.run("UPDATE nodes SET content = ? WHERE id = 'scan-99'",
-      [`![image](asset://${image})`]));
+      [`![image](asset://${image})`]), { kind: 'business' });
     const original = library.owner.readBackgroundSnapshot.bind(library.owner);
     let foreground: Promise<unknown> | undefined;
     const firstBatches: string[] = [];
@@ -117,14 +117,14 @@ it.each(['android', 'ios'] as const)('%s rejects a write between released scan b
   const library = createDisplayLibrary(platform);
   try {
     await library.owner.open({ expectedHostName: 'scan-fixture', now: '2026-10-19T00:00:00.000Z' });
-    await library.owner.runWriter(db => db.run("INSERT INTO nodes (id, title, content, created_at, updated_at) VALUES ('a', 'A', '', 'now', 'now')"));
+    await library.owner.runWriter(db => db.run("INSERT INTO nodes (id, title, content, created_at, updated_at) VALUES ('a', 'A', '', 'now', 'now')"), { kind: 'business' });
     const original = library.owner.readBackgroundSnapshot.bind(library.owner);
     let wrote = false;
     library.owner.readBackgroundSnapshot = async (task, signal) => {
       const result = await original(task, signal);
       if (!wrote) {
         wrote = true;
-        await library.owner.runWriter(db => db.run("UPDATE nodes SET content = 'Changed between batches' WHERE id = 'a'"));
+        await library.owner.runWriter(db => db.run("UPDATE nodes SET content = 'Changed between batches' WHERE id = 'a'"), { kind: 'business' });
       }
       return result;
     };

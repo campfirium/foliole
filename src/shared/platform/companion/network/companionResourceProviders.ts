@@ -68,7 +68,7 @@ export async function runCompanionResourceProviderBatch(args: {
   const readyAttachments = args.needs.filter((need) => need.kind === 'attachment' &&
     result.ready.includes(`attachment:${need.id}`)).map((need) => need.id);
   if (readyAttachments.length) await getIosCompanionDatabaseOwner().runWriter((db) =>
-    recordFramedSyncResourceAvailability(db, readyAttachments, true));
+    recordFramedSyncResourceAvailability(db, readyAttachments, true), { kind: 'business' });
   const issues = [...observed.issues, ...result.issues];
   if (issues.length) console.warn('[sync] resource provider failures', { issues });
   return { ...result, issues };

@@ -134,7 +134,7 @@ function saveSyncEndpoint(payload: Record<string, unknown>) {
 }
 
 function writer<T>(task: (db: DbPort) => Promise<T>) {
-  return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(task));
+  return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(task, { kind: 'business' }));
 }
 
 function requiredText(value: unknown) {

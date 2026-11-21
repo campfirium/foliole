@@ -179,7 +179,7 @@ export class CompanionReadIntents {
         const outcome = await runCompanionHighValueMutationTask(() => {
           this.applyingNodeId = row.intent.nodeId;
           return this.owner.runWriterSequence((db, commit) => applyReadIntent(db, this.journal,
-            row.intent.admittedCommand ? row : row.intent.id, preparedNavigation, commit, timing), timing);
+            row.intent.admittedCommand ? row : row.intent.id, preparedNavigation, commit, timing), { kind: 'business', timing });
         }, { kind: 'nodes', nodeIds: [], readingNodeIds: row.command?.readings?.map(value => value.nodeId) ?? [row.intent.nodeId] }, timing)
           .finally(() => { this.applyingNodeId = null; });
         await timeFlow(timing, 'read-settle', () => this.journal.settle(row.intent.id, outcome.state,
@@ -208,7 +208,7 @@ export class CompanionReadIntents {
           this.rows.shift();
           this.timings.delete(row.intent.id);
           this.jobs.delete(row.intent.id);
-          this.receipt = await this.owner.runWriter(db => db.transaction(tx => correctReadIntent(tx, row.intent)));
+          this.receipt = await this.owner.runWriter(db => db.transaction(tx => correctReadIntent(tx, row.intent)), { kind: 'business' });
           this.correction = true;
           this.failure = 'The clicked topic changed before it could be saved.';
           this.publish();

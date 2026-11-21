@@ -28,7 +28,7 @@ it('loads consecutive demanded bodies while a learning writer is still uncommitt
     await db.run('UPDATE nodes SET content=? WHERE id=?', ['Uncommitted replacement', '000001']);
     entered();
     await gate;
-  })).then(() => { committed = true; });
+  }), { kind: 'business' }).then(() => { committed = true; });
   await started;
   const results: Array<{ nodeId: string | undefined; content: string | undefined }> = [];
   const reading = (async () => {
@@ -65,7 +65,7 @@ it('keeps the document and annotation catalog in one committed snapshot during c
     await owner.runWriter(db => db.run(`INSERT INTO nodes
       (id, parent_id, title, content, anchor_link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ['new-note', '000001', 'Note', 'prefix', JSON.stringify({ id: 'anchor', kind: 'highlight',
-      locator: { from: 0, to: 6, originalText: 'prefix' } }), 'now', 'now']));
+      locator: { from: 0, to: 6, originalText: 'prefix' } }), 'now', 'now']), { kind: 'business' });
   } finally { release(); }
   expect((await reading)?.content).toContain('prefix alpha');
   await expect(loadPreparedCompanionArticle(source, '000001', () => true)).rejects.toThrow('article changed');
@@ -76,7 +76,7 @@ it('rejects foreground admission as soon as database closing is requested behind
   let entered!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   const started = new Promise<void>(resolve => { entered = resolve; });
-  const writer = owner.runWriter(async () => { entered(); await gate; });
+  const writer = owner.runWriter(async () => { entered(); await gate; }, { kind: 'business' });
   await started;
   const closing = owner.close();
   try {
@@ -126,7 +126,7 @@ it('rejects an older borrowed document when the current catalog already contains
   });
   await started;
   try {
-    await owner.runWriter(db => db.run('UPDATE nodes SET deleted_at=? WHERE id=?', ['now', '000001']));
+    await owner.runWriter(db => db.run('UPDATE nodes SET deleted_at=? WHERE id=?', ['now', '000001']), { kind: 'business' });
     source.nodesById['000001'] = { ...source.nodesById['000001']!, deletedAt: 'now' };
     await expect(loadPreparedCompanionArticle(source, '000001', () => true)).rejects.toThrow('article changed');
   } finally { release(); await sync; }

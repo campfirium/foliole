@@ -72,7 +72,7 @@ it.each(['android', 'ios'])('imports through the %s production owner, preserves 
   expect(run).toMatchObject({ source_kind: 'text', source_name: 'source.txt', node_id: id,
     duplicate_semantic: 'new', result_status: 'imported' });
   const payload = await getIosCompanionDatabaseOwner().runWriter(db => readFramedSyncObjectPayload(db,
-    { globalId: run.source_fingerprint as string, objectType: 'import_source' }));
+    { globalId: run.source_fingerprint as string, objectType: 'import_source' }), { kind: 'business' });
   const sync = library.database.prepare("SELECT content_hash FROM sync_object_state WHERE object_type='import_source'").get();
   expect(sync).toEqual({ content_hash: computeSyncContentHash('import_source', JSON.parse(payload!)) });
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));

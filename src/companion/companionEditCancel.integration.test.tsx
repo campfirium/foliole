@@ -80,7 +80,7 @@ it('cancel restores the topic in SQLite after autosaved input and leaves editing
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const prompts: string[] = [];
   unregister = registerAppConfirmationHandler(async (options) => { prompts.push(options.title); return true; });
   const stored = () => library!.database.prepare('SELECT content FROM nodes WHERE id=?').get('topic');

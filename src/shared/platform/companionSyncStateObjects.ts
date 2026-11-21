@@ -21,7 +21,7 @@ export async function applyCompanionSyncObjects(objects: NativeSyncObjectRecord[
   if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
     return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => (
       applySyncObjectsWithDbPort(db, objects)
-    )));
+    ), { kind: 'business' }));
   }
   return runCompanionSyncWriterTask(() => applyCompanionSyncObjectsWithSharedCoreOnDevice(objects));
 }

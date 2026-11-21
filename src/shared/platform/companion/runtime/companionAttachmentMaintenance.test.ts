@@ -59,7 +59,7 @@ it('does not hold the writer while inventory waits and refuses cleanup after an 
     maintenance = runCompanionAttachmentMaintenance({ action: 'observe' });
     const outcome = maintenance.then(() => 'completed', error => String(error));
     await inventory.promise;
-    const writing = library.owner.runWriter(db => db.run("INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('edit','Edited','','now','now')"));
+    const writing = library.owner.runWriter(db => db.run("INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('edit','Edited','','now','now')"), { kind: 'business' });
     const completed = await Promise.race([writing.then(() => true), new Promise<boolean>(done => setTimeout(() => done(false), 200))]);
     release.resolve();
     await writing;
@@ -132,7 +132,7 @@ it.each(['new-reference', 'cancelled', 'replacement', 'file-error'] as const)(
       await Promise.race([started.promise, observing]);
       if (mode === 'new-reference') await library.owner.runWriter(db => db.run(
         "INSERT INTO nodes(id,title,content,body_blob_hash,created_at,updated_at) VALUES ('new','New',?,?,'now','now')",
-        [`![image](asset://${key})`, hashTextBody(`![image](asset://${key})`)]));
+        [`![image](asset://${key})`, hashTextBody(`![image](asset://${key})`)]), { kind: 'business' });
       if (mode === 'cancelled') signal.abort(new Error('maintenance cancelled'));
       if (replacement) {
         await library.owner.close();
@@ -174,7 +174,7 @@ it('queues the live article again when a referenced file is missing from the inv
       await db.run(`INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('live','Live','![image](asset://${key})','now','now')`);
       await db.run("UPDATE nodes SET body_blob_hash=? WHERE id='live'", [hashTextBody(`![image](asset://${key})`)]);
       await db.run('DELETE FROM attachment_parse_queue');
-    });
+    }, { kind: 'business' });
     await runCompanionAttachmentMaintenance({ action: 'observe' });
     expect(await library.owner.read(db => db.query('SELECT article_id FROM attachment_parse_queue'))).toEqual([{ article_id: 'live' }]);
     expect(await library.owner.read(db => db.query('SELECT available FROM framed_sync_resource_availability WHERE hash = ?',
@@ -193,7 +193,7 @@ it('reuses unchanged current bodies without parsing them on the UI thread', asyn
   try {
     await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00Z' });
     await library.owner.runWriter(db => db.run(`INSERT INTO nodes(id,title,content,body_blob_hash,created_at,updated_at)
-      VALUES ('unchanged','Unchanged','Article body',?,'now','now')`, [hashTextBody('Article body')]));
+      VALUES ('unchanged','Unchanged','Article body',?,'now','now')`, [hashTextBody('Article body')]), { kind: 'business' });
     await runCompanionAttachmentMaintenance({ action: 'observe' });
     parsing.calls = 0;
     worker.monitor.parsed = 0;
@@ -228,7 +228,7 @@ it.each(['unreferenced', 'mounted', 'failed'])('records only a successful genuin
       if (mode === 'mounted') await db.run(`INSERT INTO nodes(id,title,content,resource_references,created_at,updated_at)
         VALUES ('mounted','Mounted','',?,'now','now')`, [JSON.stringify([{ storage_key: key, role: 'reference', original_name: null }])]);
       if (mode === 'failed') { await prepareFolderAttachmentCopy(db, key); await completeFolderAttachmentCopy(db, key); }
-    });
+    }, { kind: 'business' });
     if (mode === 'failed') {
       await expect(runCompanionAttachmentMaintenance({ action: 'empty-trash' })).rejects.toThrow('source delete refused');
       expect(await readFile(file, 'utf8')).toBe('original');

@@ -42,7 +42,7 @@ afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await library.
 async function setupLegacy() {
   source = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now,
     snapshot: await snapshot(), history: { key, mode: 'recommended', session: source } })).session!;
-  source = await writeIosCompanionDatabase(db => legacyContinuation(db, source, now));
+  source = await writeIosCompanionDatabase(db => legacyContinuation(db, source, now), { kind: 'business' });
   expect(source.currentNodeId).toBeNull();
   expect(source.continueNodeId).toBeTruthy();
 }
@@ -94,7 +94,7 @@ it('legacy compatibility: rejects altered payloads and superseded receipts witho
   const args = { opId: dailyFlowOperationId(source.daily!, source.continueNodeId!, 'continue-reading'),
     now: later, token: source.daily!, navigation: 'continue-reading' as const, expectedContinueNodeId: source.continueNodeId! };
   await expect(writeIosCompanionDatabase(db => commitDailyFlow(db, args, companionDailyFlowSettings(),
-    companionDailyFlowPersistence))).rejects.toThrow('daily_flow_operation_mismatch');
+    companionDailyFlowPersistence), { kind: 'business' })).rejects.toThrow('daily_flow_operation_mismatch');
   await openCompanionDailyFlow({ now, mode: 'recommended', refresh: true });
   const daily = await readIosCompanionDatabase(db => readDailyFlow(db));
   await expect(saveCompanionDailyNavigation(source, later)).rejects.toThrow('daily_flow_ack_superseded');

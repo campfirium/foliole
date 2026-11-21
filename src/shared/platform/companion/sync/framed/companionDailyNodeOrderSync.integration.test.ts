@@ -39,7 +39,7 @@ it('uses committed order and eligibility after real HTTP changes while display n
       await db.run('DELETE FROM daily_flow_state');
       await db.run('DELETE FROM daily_flow_entries');
       await db.run('DELETE FROM daily_flow_operations');
-    });
+    }, { kind: 'business' });
     const changed = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'reading-only' });
     expect(changed.session.currentNodeId).toBeNull();
     expect(host.sqlite.prepare("SELECT node_id FROM daily_flow_entries WHERE node_id LIKE 'order-%'").all()).toEqual([]);

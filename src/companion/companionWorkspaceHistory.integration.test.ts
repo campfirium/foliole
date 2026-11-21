@@ -124,7 +124,7 @@ it('preserves bodies, resource links and raw version metadata through rename and
     content: 'Body with attachments', reveal: null, anchorLink: null, reading: null, review: null,
     isTitleManual: true, hideTitleHeading: false, createdAt: now, updatedAt: now,
     attachments: [{ attachmentId: 'attachment', mimeType: 'image/png', originalName: 'pic.png', role: 'inline' }] }, 'remote', 'rich-base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   await mutateCompanionWorkspace({ type: 'rename', nodeId: 'rich', title: 'Changed' });
   await replay('undo');
   await replay('redo');
@@ -172,7 +172,7 @@ it('refuses to undo creation across an externally added child', async () => {
 
 it('restores the original sibling placement when moving back', async () => {
   for (const id of ['a', 'b', 'c']) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', title: id, parentNodeId: 'folder' });
-  await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder', childIds: ['c', 'b', 'a'], hostName: 'Search', now }));
+  await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder', childIds: ['c', 'b', 'a'], hostName: 'Search', now }), { kind: 'business' });
   const before = library.database.prepare('SELECT child_ids_json FROM parent_order_sources WHERE parent_id = ?').get('folder');
   await mutateCompanionWorkspace({ type: 'move', nodeId: 'b', parentNodeId: 'destination' });
   await replay('undo');
@@ -189,7 +189,7 @@ it('moves a subtree out of sequential reading and replays its related reading st
     { ...base, id: 'locked', kind: 'topic' as const, parentNodeId: 'moved', content: 'Reading content' }
   ];
   const records = await Promise.all(definitions.map(node => toWorkspaceNativeNodeVersion({ ...node, currentVersionId: null }, 'remote')));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   const reading = { state: 'locked' as const, intervalDurationMs: 1000, intervalGrowthFactor: 2,
     lastHandledAt: now, nextAt: now, priority: 5, readingPosition: 17, repetitionCount: 2 };
   await saveCompanionSyncNodeReadingRecord({ nodeId: 'locked', reading });

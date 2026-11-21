@@ -36,7 +36,7 @@ beforeEach(async () => {
       VALUES ('folder', 'folder', 'Search', '', 'now', 'now'),
       ('a', 'topic', 'A', 'needle', 'now', 'now'), ('b', 'topic', 'B', 'other', 'now', 'now')`);
     await db.run('UPDATE nodes SET virtual_filter = ? WHERE id = ?', [textFilter('needle'), 'folder']);
-  });
+  }, { kind: 'business' });
   await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
 });
 
@@ -60,7 +60,7 @@ async function openFolder() {
 }
 
 async function applySync(nodeIds: string[], write: Parameters<CapacitorCompanionDatabaseOwner['runWriter']>[0]) {
-  await library.owner.runWriter(write);
+  await library.owner.runWriter(write, { kind: 'business' });
   registerCompanionSyncAppliedRefresh({ kind: 'nodes', nodeIds });
   await act(async () => { await refreshCompanionWorkspaceSnapshot(); });
 }

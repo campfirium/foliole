@@ -22,5 +22,5 @@ export async function saveCompanionNavigationResume(libraryScope: string, value:
   await writeIosCompanionDatabase(async (db) => {
     await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
       [resumeKey(libraryScope), value, new Date().toISOString()]);
-  });
+  }, { kind: 'device-local' });
 }

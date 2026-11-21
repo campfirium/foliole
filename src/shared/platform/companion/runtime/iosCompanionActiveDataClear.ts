@@ -19,6 +19,6 @@ export async function clearIosCompanionActiveData() {
     }
     await tx.run(ANDROID_COMPANION_MUTATION_DEFINITIONS.companionMetaDeleteExceptDeviceId);
     stageCompanionSessionHistory(tx, createEmptyEditorOperationHistory());
-  }));
+  }), { kind: 'business' });
   return loadIosCompanionWorkspaceSyncState();
 }

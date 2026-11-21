@@ -67,5 +67,5 @@ export function saveCompanionReviewTrainingModel(value: ReviewTrainingModel, lib
     await saveIosSettingWithDb(tx, { key: identity.key, value_json: JSON.stringify(model),
       scope: identity.scope, platform: identity.platform, form_factor: identity.formFactor });
     return null;
-  })), { kind: 'nodes', nodeIds: [] });
+  }), { kind: 'business' }), { kind: 'nodes', nodeIds: [] });
 }

@@ -28,7 +28,7 @@ async function openLibrary() {
   runtime.owner = library.owner;
   await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
   await library.owner.runWriter(db => db.run(`INSERT INTO nodes (id, title, content, created_at, updated_at)
-    VALUES ('a', 'A', 'Body A', 'now', 'now'), ('b', 'B', 'Body B', 'now', 'now')`));
+    VALUES ('a', 'A', 'Body A', 'now', 'now'), ('b', 'B', 'Body B', 'now', 'now')`), { kind: 'business' });
   const baseline = await refreshCompanionWorkspaceAfterMutation();
   return { library, baseline, reads: library.fullDirectoryQueries() };
 }
@@ -73,7 +73,7 @@ it('persists the next sequential topic released by dismissing the current topic'
       await db.run(`INSERT INTO nodes (id, kind, title, sequential_reading_enabled, created_at, updated_at)
         VALUES ('source', 'folder', 'Source', 1, 'now', 'now')`);
       await db.run("UPDATE nodes SET parent_id = 'source' WHERE id IN ('a', 'b')");
-    });
+    }, { kind: 'business' });
     await saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading });
     await saveCompanionSyncNodeReadingRecord({ nodeId: 'b', reading: { ...reading, state: 'locked' } });
     const snapshot = await refreshCompanionWorkspaceAfterMutation();
@@ -130,7 +130,7 @@ it('still rejects an older remote reading profile after a newer local reading co
       updated_at: '2026-10-19T00:00:00.000Z', payload_json: JSON.stringify({
         state: 'locked', last_handled_at: '2026-10-17T00:00:00.000Z', repetition_count: 1
       })
-    }));
+    }), { kind: 'business' });
     expect(applied).toBe(false);
     expect((await readComplete())?.nodesById.a?.reading).toEqual(reading);
   } finally { await library.close(); }
@@ -148,7 +148,7 @@ it.each([
       lastHandledAt: '2026-10-18T01:00:00.000Z', nextAt: '2026-10-19T01:00:00.000Z',
       priority: 1, readingPosition: 0, repetitionCount: 1, state: 'active'
     } });
-    await library.owner.runWriter(db => db.run(sql));
+    await library.owner.runWriter(db => db.run(sql), { kind: 'business' });
     const displayed = await refreshCompanionWorkspaceAfterMutation();
     expect(library.fullDirectoryQueries()).toBe(reads + 1);
     expect(displayed).toEqual(await readComplete());

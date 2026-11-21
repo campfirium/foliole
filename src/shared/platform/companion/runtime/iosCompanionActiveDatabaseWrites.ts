@@ -20,7 +20,7 @@ import {
 export function saveIosSetting(args: {
   form_factor?: string; key: string; platform?: string; scope?: string; value_json: string;
 }) {
-  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosSettingWithDb(tx, args)));
+  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosSettingWithDb(tx, args)), { kind: 'business' });
 }
 
 export async function saveIosSettingWithDb(tx: DbPort, args: {
@@ -48,7 +48,7 @@ export function saveIosOpenState(args: { last_opened_at: string; node_id: string
 }
 
 export function saveIosReading(args: { node_id: string; reading_json: string; completedReviewDay?: string }) {
-  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosReadingWithDb(tx, args)));
+  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosReadingWithDb(tx, args)), { kind: 'business' });
 }
 
 export async function saveIosReadingWithDb(tx: DbPort, args: {
@@ -69,7 +69,7 @@ export async function saveIosReadingWithDb(tx: DbPort, args: {
 }
 
 export function saveIosReview(args: { node_id: string; review_json: string; review_log_json?: string }) {
-  return writeIosCompanionDatabase((db) => db.transaction(tx => saveIosReviewWithDb(tx, args)));
+  return writeIosCompanionDatabase((db) => db.transaction(tx => saveIosReviewWithDb(tx, args)), { kind: 'business' });
 }
 
 export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; review_json: string; review_log_json?: string }) {
@@ -112,7 +112,7 @@ async function writeObject(
 ) {
   return writeIosCompanionDatabase((db) => db.transaction((tx) => applyLocalObject(
     tx, objectType, objectId, payload, (record) => apply(tx, record)
-  )));
+  )), { kind: 'business' });
 }
 
 async function applyLocalObject(
@@ -143,7 +143,7 @@ async function writeViewState(
     await markIosCompanionMutation({ contentHash, db: tx, hostName, objectId,
       objectType: 'view_state', skipUnchanged: true, updatedAt: now });
     return { content_hash: contentHash, object_id: objectId };
-  }));
+  }), { kind: 'business' });
 }
 
 async function mark(db: DbPort, objectType: string, objectId: string, contentHash: string, updatedAt: string) {

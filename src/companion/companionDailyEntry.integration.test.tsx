@@ -65,7 +65,7 @@ it('takes the first native current from saved facts instead of seeding it with a
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const app = renderHook(() => useCompanionFlowSession({ snapshot, ready: true, active: true,
     libraryScope: 'entry-fixture' }));
   await waitFor(() => expect(app.result.current.ready).toBe(true));

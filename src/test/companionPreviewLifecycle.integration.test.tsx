@@ -26,7 +26,7 @@ it('flushes pending reading, navigation and draft work before shutting down the 
   library = await createResumeLibrary();
   const snapshot = await library.snapshot();
   const activity = new CompanionReadingActivity('article', () => {});
-  activity.flushDraft = () => writeIosCompanionDatabase(db => db.run('UPDATE nodes SET title = ? WHERE id = ?', ['Saved draft', 'article']).then(() => undefined));
+  activity.flushDraft = () => writeIosCompanionDatabase(db => db.run('UPDATE nodes SET title = ? WHERE id = ?', ['Saved draft', 'article']).then(() => undefined), { kind: 'business' });
   function Surface() {
     const [, setAction] = useCompanionNavigationField('activeAction', 'review');
     const scroll = useCompanionViewStateSync({ activeAction: 'recent', selectedBrowseNodeId: 'article',

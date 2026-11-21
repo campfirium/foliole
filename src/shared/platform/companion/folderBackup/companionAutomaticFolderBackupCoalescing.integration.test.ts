@@ -32,7 +32,7 @@ async function commitNodes(f: Fixture, count: number, gapMs = 0) {
   for (let i = 0; i < count; i++) {
     await new Promise(done => setTimeout(done, gapMs));
     await f.owner.runWriter(db => db.run('INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES (?,?,?,?,?)',
-      [`burst-${i}`, `Burst ${i}`, '', 'now', 'now']));
+      [`burst-${i}`, `Burst ${i}`, '', 'now', 'now']), { kind: 'business' });
   }
 }
 

@@ -48,7 +48,7 @@ it('requeries database text when a sync refresh publishes while opening a virtua
         ('a', 'topic', 'A', 'needle', 'now', 'now'), ('b', 'topic', 'B', 'other', 'now', 'now')`);
       await db.run('UPDATE nodes SET virtual_filter = ? WHERE id = ?', [JSON.stringify({ version: 1, match: 'all',
         conditions: [{ field: 'text', operator: 'contains', value: 'needle' }] }), 'folder']);
-    });
+    }, { kind: 'business' });
     const snapshot = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     const state: NativeCompanionWorkspaceSyncState = { endpoint_url: null, last_synced_at: null,
       remembered_targets: [], sync_events: [], sync_onboarding_status: 'completed', workspace_snapshot: snapshot };
@@ -60,7 +60,7 @@ it('requeries database text when a sync refresh publishes while opening a virtua
     await library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET content = 'other' WHERE id = 'a'");
       await tx.run("UPDATE nodes SET content = 'needle' WHERE id = 'b'");
-    }));
+    }), { kind: 'business' });
     await act(async () => {
       await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
       release();

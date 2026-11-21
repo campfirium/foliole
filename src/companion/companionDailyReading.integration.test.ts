@@ -40,7 +40,7 @@ beforeEach(async () => {
     parentNodeId: null, reveal: null, anchorLink: null,
     isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: now }, 'remote', `base-${i}`)));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
 });
 afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
@@ -133,7 +133,7 @@ it.each(['read', 'later'] as const)('%s uses the configured short interval and t
   const target = session.currentNodeId!;
   const previous = { intervalDurationMs: 60000, intervalGrowthFactor: 4, lastHandledAt: now,
     nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 1, state: 'active' as const };
-  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: target, reading_json: JSON.stringify(toReadingPayload(previous)) }));
+  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: target, reading_json: JSON.stringify(toReadingPayload(previous)) }), { kind: 'business' });
   hydrateCurrentReviewSchedulerSettings({ ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, pushQueue: {
     ...DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue, readingInitialIntervalMs: 60000,
     readingIntervalGrowthFactorRange: { min: 4, max: 4 } } });
@@ -165,12 +165,12 @@ it('Dismiss releases the related sequential topic and restores both facts with p
   const source = await toWorkspaceNativeNodeVersion({ id: 'source', title: 'Source', content: '', kind: 'folder',
     parentNodeId: null, reveal: null, anchorLink: null, isTitleManual: true, hideTitleHeading: false,
     reading: null, review: null, sequentialReadingEnabled: true, createdAt: now, updatedAt: now }, 'remote', 'source');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [source], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [source], { enqueueSearchInvalidations: false }), { kind: 'business' });
   library.database.prepare("UPDATE nodes SET shelved_at=? WHERE id NOT IN ('node-0','node-1','source')").run(now);
   library.database.prepare('UPDATE nodes SET parent_id=? WHERE id IN (?,?)').run('source', first, second);
   const locked = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now,
     nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 0, state: 'locked' as const };
-  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: second, reading_json: JSON.stringify(toReadingPayload(locked)) }));
+  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: second, reading_json: JSON.stringify(toReadingPayload(locked)) }), { kind: 'business' });
   session = (await openCompanionDailyFlow({ now, mode: 'reading-only', preferredNodeId: first })).session;
   expect(session.currentNodeId).toBe(first);
   session = (await act('dismiss')).session!;
@@ -198,14 +198,14 @@ it.each(['locked', 'active', 'new'] as const)('puts the %s next chapter before t
   const source = await toWorkspaceNativeNodeVersion({ id: 'book', title: 'Book', content: '', kind: 'folder',
     parentNodeId: null, reveal: null, anchorLink: null, isTitleManual: true, hideTitleHeading: false,
     reading: null, review: null, sequentialReadingEnabled: true, createdAt: now, updatedAt: now }, 'remote', 'book');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [source], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [source], { enqueueSearchInvalidations: false }), { kind: 'business' });
   library.database.prepare('UPDATE nodes SET parent_id=?, title=? WHERE id=?').run('book', '1', first);
   library.database.prepare('UPDATE nodes SET parent_id=?, title=? WHERE id=?').run('book', '2', second);
   if (state !== 'active') {
     const reading = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now,
       nextAt: '2026-11-26T08:00:00.000Z', priority: 9, readingPosition: 0, repetitionCount: 0,
       state: state === 'locked' ? 'locked' as const : 'active' as const };
-    await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: second, reading_json: JSON.stringify(toReadingPayload(reading)) }));
+    await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: second, reading_json: JSON.stringify(toReadingPayload(reading)) }), { kind: 'business' });
   }
   if (state === 'new') library.database.prepare('DELETE FROM daily_flow_entries WHERE node_id=?').run(second);
   session = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: first })).session;
@@ -230,7 +230,7 @@ it('keeps only the new due time from fixed Later and resumes the regular Read in
   const target = session.currentNodeId!;
   const previous = { intervalDurationMs: 60000, intervalGrowthFactor: 4, lastHandledAt: '2026-10-26T07:00:00.000Z',
     nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 1, state: 'active' as const };
-  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: target, reading_json: JSON.stringify(toReadingPayload(previous)) }));
+  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: target, reading_json: JSON.stringify(toReadingPayload(previous)) }), { kind: 'business' });
   await saveCompanionReviewSettings({ readingLaterDays: 3, pushQueue: {
     readingInitialIntervalMs: 60000, readingIntervalGrowthFactorRange: { min: 4, max: 4 }
   } });

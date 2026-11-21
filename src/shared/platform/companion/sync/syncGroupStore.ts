@@ -87,7 +87,7 @@ export function joinCompanionSyncGroup(args: {
         providerDeviceName: args.provider.deviceName, providerPlatform: args.provider.platform });
     }
     return (await loadGroup(tx))!;
-  }));
+  }), { kind: 'business' });
 }
 
 export function leaveCompanionSyncGroupDevice() {
@@ -107,7 +107,7 @@ export function leaveCompanionSyncGroupDevice() {
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
     await tx.run('DELETE FROM sync_group_metadata');
     await tx.run('DELETE FROM sync_group_nonce_ledger');
-  }));
+  }), { kind: 'business' });
 }
 
 async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {

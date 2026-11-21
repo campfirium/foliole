@@ -15,7 +15,7 @@ export async function saveCompanionDailyNavigation(source: ReviewSessionState, n
   const args = retainDailyFlowRetry({ opId: dailyFlowOperationId(token, target, 'continue-reading'),
     now, token, navigation: 'continue-reading', expectedContinueNodeId: target });
   const result = await writeIosCompanionDatabase(db => commitDailyFlow(db, args,
-    companionDailyFlowSettings(), companionDailyFlowPersistence));
+    companionDailyFlowSettings(), companionDailyFlowPersistence), { kind: 'business' });
   settleDailyFlowRetry(args.opId);
   return result;
 }

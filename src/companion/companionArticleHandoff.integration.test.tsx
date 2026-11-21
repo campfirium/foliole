@@ -52,7 +52,7 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
     await draft;
     await host.owner.runWriter(db => db.transaction(tx => saveCompanionContentEditWithDb(tx, {
       nodeId: 'topic', content: savedContent, baseVersionId: 'base', versionId: 'saved', updatedAt: '2026-11-11T00:00:00Z'
-    })));
+    })), { kind: 'business' });
     activity.flushDraft = null;
   };
   const view = renderWithLocalization(<Actions activity={activity} close={close} />);

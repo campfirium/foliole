@@ -107,7 +107,7 @@ it.each(['highlight', 'note'])('preserves %s interaction across an incoming save
     parentNodeId: null, isTitleManual: true, hideTitleHeading: false, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const base = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [base], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [base], { enqueueSearchInvalidations: false }), { kind: 'business' });
   renderWithLocalization(<AnnotationSurface initial={await loadCompanionWorkspaceSyncState()} />);
   if (kind === 'note') {
     fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
@@ -116,7 +116,7 @@ it.each(['highlight', 'note'])('preserves %s interaction across an incoming save
   const incoming = await toWorkspaceNativeNodeVersion({ ...node, currentVersionId: 'base',
     content: 'Alpha Beta Gamma remote saved tail', updatedAt: '2026-10-10T00:00:01Z' }, 'remote', 'received');
   await act(async () => {
-    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [incoming], { enqueueSearchInvalidations: false }));
+    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [incoming], { enqueueSearchInvalidations: false }), { kind: 'business' });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh workspace' }));
   });
   if (kind === 'note') expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('Unsaved reader note');

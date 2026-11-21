@@ -46,7 +46,7 @@ export async function createSpareDevice(cleanups: (() => void)[]) {
   };
   const { manager, owner } = await open();
   await owner.runWriter(db => db.run(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
-    VALUES ('spare-topic', NULL, 'topic', 'Spare only', '', '2026-11-20', '2026-11-20')`));
+    VALUES ('spare-topic', NULL, 'topic', 'Spare only', '', '2026-11-20', '2026-11-20')`), { kind: 'business' });
   const port = {
     stage: vi.fn(async () => {
       writeV082Backup(stagingFile).close();

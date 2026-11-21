@@ -38,13 +38,13 @@ it.each([false, true].flatMap(pendingRefresh => (['soon', 'read', 'later', 'dism
         anchorLink: null, isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
         createdAt: '2026-10-26T00:00:00.000Z', updatedAt: '2026-10-26T08:00:00.000Z'
       }, 'remote', `base-${id}`)));
-      await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+      await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
     }
     const initial = (await refreshCompanionWorkspaceAfterMutation())!;
     const ui = renderHook(() => useDailyFlowSurface(initial));
     await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
     await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
-    await getIosCompanionDatabaseOwner().runWriter(async () => null);
+    await getIosCompanionDatabaseOwner().runWriter(async () => null, { kind: 'business' });
     await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
     const target = ui.result.current.surface.readableArticle!.nodeId;
     if (pendingRefresh) registerCompanionWorkspaceRefresh({ kind: 'nodes', nodeIds: [], openStateNodeIds: [target] });
@@ -90,7 +90,7 @@ async function openSurface() {
   await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
   await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
-  await getIosCompanionDatabaseOwner().runWriter(async () => null);
+  await getIosCompanionDatabaseOwner().runWriter(async () => null, { kind: 'business' });
   return ui;
 }
 

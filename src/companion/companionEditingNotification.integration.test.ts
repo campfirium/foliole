@@ -33,7 +33,7 @@ it('announces committed input before retained-body maintenance finishes', async 
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   let release = () => {};
   maintenance.wait = new Promise<void>(resolve => { release = resolve; });
   maintenance.entered = false;

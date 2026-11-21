@@ -40,7 +40,7 @@ async function seedItems() {
     anchorLink: null, isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
     createdAt: '2026-10-26T00:00:00.000Z', updatedAt: '2026-10-26T08:00:00.000Z'
   }, 'remote', `base-${id}`)));
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
 }
 
 function observeFolderNodeVisits() {
@@ -130,7 +130,7 @@ it('returns from Flow to current remote membership, titles, previews and sort or
     toWorkspaceNativeNodeVersion({ ...initial.nodesById['000003']!, deletedAt: updatedAt, updatedAt }, 'remote', 'deleted')
   ]);
   await act(async () => {
-    await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+    await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
     registerCompanionSyncAppliedRefresh({ kind: 'nodes', nodeIds: ['000002', '000003'] });
     await ui.result.current.workspace.refreshAfterMutation();
   });

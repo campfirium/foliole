@@ -14,6 +14,7 @@ vi.mock('../../appLifecycle', () => ({
   subscribeNativeAppBackground: async (handler: () => void) => { lifecycle.background = handler; return () => {}; }
 }));
 
+import type { CompanionWriterOptions } from './capacitorCompanionDatabaseOwner';
 import { CompanionDatabaseCommits } from './companionDatabaseCommits';
 import { companionForegroundTimeSnapshot, flushCompanionForegroundTime, startCompanionForegroundTime, stopCompanionForegroundTime } from './companionForegroundTime';
 
@@ -165,7 +166,8 @@ it('keeps a finished folder backup current while foreground checkpoints are save
   const commits = new CompanionDatabaseCommits();
   // The production commit boundary decides which writes mark the backup stale and wake automatic backup.
   const committed = { foregroundTimeOwnerId: async () => '11111111-1111-4111-8111-111111111111',
-    runWriter: <T>(task: (db: typeof port) => Promise<T>, businessWrite = true) => commits.write(port, task, businessWrite) };
+    runWriter: <T>(task: (db: typeof port) => Promise<T>, write: CompanionWriterOptions) =>
+      commits.write(port, task, write.kind === 'business') };
   await markFolderBackupChanged(port);
   await startCompanionForegroundTime(committed);
   // Only the first launch creates the source row; the backup taken after it must then stay current.
@@ -178,7 +180,7 @@ it('keeps a finished folder backup current while foreground checkpoints are save
   expect(await isFolderDatabaseBackupCurrent(port, 'profile')).toBe(true);
   expect(woken).not.toHaveBeenCalled();
   // A real library edit through the same boundary still marks the backup stale.
-  await committed.runWriter(tx => tx.run("UPDATE companion_meta SET value='renamed' WHERE key='host_name'"));
+  await committed.runWriter(tx => tx.run("UPDATE companion_meta SET value='renamed' WHERE key='host_name'"), { kind: 'business' });
   expect(await isFolderDatabaseBackupCurrent(port, 'profile')).toBe(false);
   expect(woken).toHaveBeenCalledTimes(1);
 });

@@ -71,7 +71,7 @@ const sourceFiles = async () => (await readdir(source)).filter(key => /^[a-f0-9]
 const rows = () => getIosCompanionDatabaseOwner().read(db => db.query<{ storage_key: string; stage: string }>(
   'SELECT storage_key,stage FROM folder_attachment_work ORDER BY storage_key,stage'));
 const runBackup = () => consumeCompanionFolderAttachmentWork(port as unknown as CompanionFolderBackupPort, {
-  write: task => getIosCompanionDatabaseOwner().runWriter(task), inventory
+  write: task => getIosCompanionDatabaseOwner().runWriter(task, { kind: 'business' }), inventory
 }, { requestId: 'manual-request', sourceEpoch: 'owner', profile: 'profile' });
 async function importFile(kind: 'pdf' | 'epub', failRefresh = false) {
   const bytes = kind === 'pdf' ? await readFile('tests/desktop/fixtures/pdf-user-journey.pdf') : companionEpubBook();

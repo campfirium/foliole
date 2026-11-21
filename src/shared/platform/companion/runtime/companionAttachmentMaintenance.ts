@@ -107,7 +107,7 @@ function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner
     });
     expectedRevision = await attachmentDatabaseRevision(db);
     return result;
-  });
+  }, { kind: 'business' });
   const withStableRevision: AttachmentMaintenancePort['withStableRevision'] = (snapshotRevision, action) =>
     commit(snapshotRevision, tx => timeCompanionAttachment('protected-write', async () => {
       activeDb = tx;
@@ -115,5 +115,5 @@ function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner
       finally { activeDb = undefined; }
     }));
   return { check, commit, withStableRevision,
-    write: <T>(action: (db: DbPort) => Promise<T>) => activeDb ? action(activeDb) : owner.runWriter(action) };
+    write: <T>(action: (db: DbPort) => Promise<T>) => activeDb ? action(activeDb) : owner.runWriter(action, { kind: 'business' }) };
 }

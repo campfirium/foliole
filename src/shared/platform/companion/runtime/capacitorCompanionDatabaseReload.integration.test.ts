@@ -35,7 +35,7 @@ it('reopens the companion database after the renderer reloads without closing it
   const first = openRenderer(native);
   const before = await first.opened;
   await first.owner.runWriter(db => db.run(
-    "INSERT INTO companion_meta (key, value, updated_at) VALUES ('reload_probe', 'kept', '2026-10-23')"));
+    "INSERT INTO companion_meta (key, value, updated_at) VALUES ('reload_probe', 'kept', '2026-10-23')"), { kind: 'business' });
 
   // Reload: the old document disappears without close(); native keeps its connection.
   const second = openRenderer(native);
@@ -71,7 +71,7 @@ it('rolls back an interrupted document transaction before reopening without losi
   const first = openRenderer(native);
   const before = await first.opened;
   await first.owner.runWriter(db => db.run(
-    "INSERT INTO companion_meta (key, value, updated_at) VALUES ('reload_probe', 'kept', '2026-10-23')"));
+    "INSERT INTO companion_meta (key, value, updated_at) VALUES ('reload_probe', 'kept', '2026-10-23')"), { kind: 'business' });
   let entered!: () => void;
   const writing = new Promise<void>(resolve => { entered = resolve; });
   void first.owner.runWriter(db => db.transaction(async tx => {
@@ -79,14 +79,14 @@ it('rolls back an interrupted document transaction before reopening without losi
     entered();
     // The document disappears here; its JavaScript finally block cannot run.
     await new Promise(() => undefined);
-  }));
+  }), { kind: 'business' });
   await writing;
 
   const second = openRenderer(native);
   expect((await second.opened).deviceId).toBe(before.deviceId);
   expect(await readProbe(second.owner)).toEqual([{ value: 'kept' }]);
   await second.owner.runWriter(db => db.run(
-    "UPDATE companion_meta SET value = 'writable' WHERE key = 'reload_probe'"));
+    "UPDATE companion_meta SET value = 'writable' WHERE key = 'reload_probe'"), { kind: 'business' });
   expect(await readProbe(second.owner)).toEqual([{ value: 'writable' }]);
   await second.owner.close();
   expect(native.nativeConnections()).toEqual([]);
@@ -100,7 +100,7 @@ it('does not recover or roll back a transaction owned by the current document', 
     await tx.run("INSERT INTO companion_meta (key, value, updated_at) VALUES ('reload_probe', 'kept', 'now')");
     await expect(createOwnedCompanionConnection(current.manager, false)).rejects.toThrow('already exists');
     expect(await readProbeFrom(tx)).toEqual([{ value: 'kept' }]);
-  }));
+  }), { kind: 'business' });
   expect(await readProbe(current.owner)).toEqual([{ value: 'kept' }]);
   await current.owner.close();
 });

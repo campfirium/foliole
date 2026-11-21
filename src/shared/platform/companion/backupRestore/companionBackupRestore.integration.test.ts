@@ -40,7 +40,7 @@ describe('staging a backup for restore on the spare phone', () => {
     await device.owner.runWriter(async db => {
       await db.run("INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('g', 'Home', 'k', 'now', 'now')");
       await db.run("INSERT INTO sync_group_local_state (singleton_id, group_id, local_device_identity_key, state, updated_at) VALUES (1, 'g', 'spare', 'active', 'now')");
-    });
+    }, { kind: 'business' });
     await expect(stageCompanionBackupRestore(device, 'folder')).rejects.toThrow('restore_sync_group_active');
     expect(device.port.stage).not.toHaveBeenCalled();
   });

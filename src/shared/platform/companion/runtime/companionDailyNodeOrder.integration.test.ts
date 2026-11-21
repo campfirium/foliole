@@ -25,7 +25,7 @@ async function openLibrary(platform: 'android' | 'ios', order = ['c', 'a', 'b'])
     for (const id of ['a', 'b', 'c']) await db.run(`INSERT INTO nodes
       (id,title,content,priority,created_at,updated_at) VALUES (?,?,'Complete body',0,?,?)`, [id,id,now,now]);
     await db.run(`INSERT INTO parent_order_sources VALUES ('parent-child-order:root','fixture',1,?)`, [JSON.stringify(order)]);
-  });
+  }, { kind: 'business' });
   return library;
 }
 
@@ -35,7 +35,7 @@ async function generate(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const result = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   const rows = await library.owner.read(db => db.query<{ node_id: string }>(
     'SELECT node_id FROM daily_flow_entries ORDER BY order_key'));
@@ -48,7 +48,7 @@ async function rootOrder(library: Library, ids: string[], reject = false) {
   return runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
     await tx.run("UPDATE parent_order_sources SET counter=counter+1,child_ids_json = ? WHERE parent_id = 'parent-child-order:root'", [JSON.stringify(ids)]);
     if (reject) throw new Error('order rejected');
-  })), { kind: 'nodes', nodeIds: [], structure: true });
+  }), { kind: 'business' }), { kind: 'nodes', nodeIds: [], structure: true });
 }
 
 it.each(['android', 'ios'] as const)('%s reuses the prepared directory order for the first complete daily list', async platform => {
@@ -84,7 +84,7 @@ it.each(['android', 'ios'] as const)('%s detects parent and visibility changes i
   try {
     await refreshCompanionWorkspaceSnapshot();
     const update = (sql: string, nodeId: string) => runCompanionHighValueMutationTask(
-      () => library.owner.runWriter(db => db.transaction(tx => tx.run(sql))), { kind: 'nodes', nodeIds: [nodeId] });
+      () => library.owner.runWriter(db => db.transaction(tx => tx.run(sql)), { kind: 'business' }), { kind: 'nodes', nodeIds: [nodeId] });
     await update("UPDATE nodes SET parent_id='b' WHERE id='a'", 'a');
     expect(await generate(library)).toEqual(['c', 'b', 'a']);
     await update("UPDATE nodes SET deleted_at='deleted' WHERE id='b'", 'b');
@@ -112,12 +112,12 @@ it.each(['android', 'ios'] as const)('%s refreshes an open directory and its dai
       await tx.run("DELETE FROM parent_order_sources WHERE parent_id = 'parent-child-order:root'");
       await tx.run(`INSERT INTO parent_order_sources VALUES
         ('parent-child-order:root','first',1,'["a"]'), ('parent-child-order:root','second',1,'["b"]')`);
-    })), { kind: 'nodes', nodeIds: [], structure: true });
+    }), { kind: 'business' }), { kind: 'nodes', nodeIds: [], structure: true });
     const display = async () => (await refreshCompanionWorkspaceSnapshot())?.nodeOrder.filter(id => id !== 'special-inbox');
     expect(await display()).toEqual(['a', 'b', 'c']);
     expect(await generate(library)).toEqual(['a', 'b', 'c']);
     await runCompanionHighValueMutationTask(
-      () => library.owner.runWriter(db => db.run("UPDATE nodes SET title='z' WHERE id='a'")),
+      () => library.owner.runWriter(db => db.run("UPDATE nodes SET title='z' WHERE id='a'"), { kind: 'business' }),
       { kind: 'nodes', nodeIds: ['a'] });
     expect(await generate(library)).toEqual(['b', 'a', 'c']);
     expect(await display()).toEqual(['b', 'a', 'c']);
@@ -135,7 +135,7 @@ it.each(['android', 'ios'] as const)('%s rejects an older prepared order after a
     await library.owner.runWriter(async db => {
       await db.transaction(tx => tx.run("UPDATE parent_order_sources SET counter=counter+1,child_ids_json='[\"b\",\"c\",\"a\"]' WHERE parent_id='parent-child-order:root'"));
       await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: [], structure: true }, db);
-    });
+    }, { kind: 'business' });
     library.release.resolve();
     const older = await pending;
     expect(older?.nodeOrder.filter(id => id !== 'special-inbox')).toEqual(['c', 'a', 'b']);
@@ -176,7 +176,8 @@ it.each(['android', 'ios'] as const)('%s keeps disconnected display-only members
           VALUES ('orphan','absent','Orphan','Body',0,'2026-01-01','2026-01-01'),
           ('cycle-a','cycle-b','Cycle A','Body',0,'2026-01-01','2026-01-01'),('cycle-b','cycle-a','Cycle B','Body',0,'2026-01-01','2026-01-01')`);
       } finally { await db.run('PRAGMA foreign_keys = ON'); }
-    }, false);
+      // PRAGMA foreign_keys is ignored inside a transaction, and only business writes wrap one.
+    }, { kind: 'derived' });
     const snapshot = await refreshCompanionWorkspaceSnapshot();
     expect(snapshot?.nodeOrder).toEqual(expect.arrayContaining(['orphan', 'cycle-a', 'cycle-b']));
     const reads = library.nodeOrderReads.length;

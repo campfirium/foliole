@@ -101,7 +101,7 @@ it('keeps a newer reading position while committing the frozen learning result',
   await engine.displayPreparation.prepare({ session, now, mode: 'recommended' });
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
-  const held = getIosCompanionDatabaseOwner().runWriter(async () => { await waiting; });
+  const held = getIosCompanionDatabaseOwner().runWriter(async () => { await waiting; }, { kind: 'business' });
   const position = saveIosReading({ node_id: '000000', reading_json: JSON.stringify({ ...profile, reading_position: 77 }) });
   try {
     await engine.accept({ session, now, mode: 'recommended', historyKey: 'position-history' });

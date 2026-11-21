@@ -38,7 +38,7 @@ async function members(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const result = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   expect((await openCompanionDailyFlow({ now, mode: 'reading-only' })).session).toEqual(result.session);
   return library.owner.read(async db => (await db.query<{ node_id: string }>(
@@ -58,7 +58,7 @@ it.each(['android', 'ios'] as const)('%s preserves resolved, unmapped and malfor
       ] as const) await db.run(`INSERT INTO nodes
         (id,title,content,anchor_link,anchor_resolution_status,created_at,updated_at) VALUES (?,?,'Text',?,?,?,?)`,
       [id, id, raw, status, now, now]);
-    });
+    }, { kind: 'business' });
     const display = await refreshCompanionWorkspaceSnapshot();
     expect(display?.nodesById.missing?.anchorLink?.kind).toBe('image-excerpt');
     const before = await anchors(library);
@@ -69,7 +69,7 @@ it.each(['android', 'ios'] as const)('%s preserves resolved, unmapped and malfor
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET anchor_resolution_status='unmapped_missing' WHERE id='resolved'");
       await tx.run("UPDATE nodes SET anchor_resolution_status='resolved' WHERE id='missing'");
-    })), scope);
+    }), { kind: 'business' }), scope);
     expect((await anchors(library)).resolved?.anchorLink).toBeNull();
     expect((await members(library)).sort()).toEqual(['invalid', 'resolved', 'wildcard']);
     library.owner.clearNodePriorities();

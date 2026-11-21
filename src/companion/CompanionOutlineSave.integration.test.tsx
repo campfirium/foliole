@@ -23,7 +23,7 @@ it.each(['android', 'ios'] as const)('%s saves the current body through SQLite b
     await pending;
     await host.owner.runWriter(db => db.transaction(tx => saveCompanionContentEditWithDb(tx, {
       nodeId: 'node-1', content: savedContent, baseVersionId: 'base', versionId: 'saved', updatedAt: '2026-11-05T00:00:00Z'
-    })));
+    })), { kind: 'business' });
   };
   const onOpenNode = vi.fn((id: string) => {
     expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id='node-1'").get()).toEqual({ content: savedContent });

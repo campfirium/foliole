@@ -27,7 +27,7 @@ export async function loadCompanionNodeTextAlternative(nodeId: string, alternati
   const now = new Date().toISOString();
   const expired = await readIosCompanionDatabase(db => findTopicsWithExpiredText(db, [nodeId], now));
   if (expired.has(nodeId)) await runCompanionOptionalHighValueMutationTask(() => writeIosCompanionDatabase(async db =>
-    await expireTopicText(db, nodeId, now) ? true : null), { kind: 'full' });
+    await expireTopicText(db, nodeId, now) ? true : null, { kind: 'business' }), { kind: 'full' });
   return readIosCompanionDatabase(async (db) => {
     const alternatives = textAlternativesSchema.parse(await db.query(`SELECT entry.alternative_id AS id,
       entry.body_blob_hash, entry.source_host_name, entry.created_at, entry.expires_at
@@ -54,5 +54,5 @@ export async function updateCompanionNodeTextAlternativeStatus(nodeId: string, a
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action: status,
       now: new Date().toISOString(), versionId: createOpaqueVersionRef(createCompanionUuid()),
       hostName: await iosCompanionHostName(tx) }, { enqueueSearchInvalidations: false });
-  })), { kind: 'full' });
+  }), { kind: 'business' }), { kind: 'full' });
 }

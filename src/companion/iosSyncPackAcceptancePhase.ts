@@ -26,5 +26,5 @@ export async function advanceIosSyncPackAcceptancePhase(phase: IosSyncPackAccept
     `INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     [PHASE_KEY, next, new Date().toISOString()]
-  ));
+  ), { kind: 'business' });
 }

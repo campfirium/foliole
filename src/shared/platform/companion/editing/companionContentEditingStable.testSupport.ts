@@ -34,12 +34,12 @@ export async function stableEditingHost(platform: 'android' | 'ios') {
     isDatabase: async () => ({ result: true }) };
   const owner = new CapacitorCompanionDatabaseOwner(manager as never, platform);
   await owner.open({ expectedHostName: 'mobile', now: editTime });
-  await owner.runWriter(migrateCompanionFramedSyncInventory);
+  await owner.runWriter(migrateCompanionFramedSyncInventory, { kind: 'business' });
   return {
     owner, get sqlite() { return sqlite; },
     async seed(node: WorkspaceNodeSnapshot, version: string) {
       const record = await toWorkspaceNativeNodeVersion(node, 'remote', version);
-      await owner.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+      await owner.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
     },
     async reopen() {
       await owner.close();

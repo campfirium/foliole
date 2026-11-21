@@ -29,6 +29,6 @@ export async function resetCompanionTestItemReviews() {
       await restartDailyFlowItemReviews(tx, ids, new Date().toISOString(), settings,
         ownedCompanionDailyFlowPersistence(settings));
       return ids;
-    }));
+    }), { kind: 'business' });
   }, nodeIds => ({ kind: 'nodes', nodeIds: [], reviewNodeIds: nodeIds }));
 }

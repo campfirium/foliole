@@ -27,7 +27,7 @@ const node: WorkspaceNodeSnapshot = { id: 'topic', content: 'Original body', kin
 beforeEach(async () => {
   library = await createSearchLibrary(0);
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
 });
 afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
 
@@ -68,7 +68,7 @@ it('rejects stale undo after another device changes the body', async () => {
   await edit('Saved');
   const current = await loadCompanionWorkspaceNode('topic');
   const version = await toWorkspaceNativeNodeVersion({ ...current!, content: 'Other device', updatedAt: '2026-10-26T00:00:00Z' }, 'remote');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
   await expect(applyCompanionEditHistory('topic', 'undo')).rejects.toThrow('editor_history_content_changed');
   expect(stored()).toEqual({ content: 'Other device' });
   expect((await session()).redoStack).toHaveLength(0);
@@ -130,7 +130,7 @@ it('retains separate typing groups recorded by the production editor', async () 
 
 it('keeps body and answer changes in their actual editing order', async () => {
   const record = await toWorkspaceNativeNodeVersion({ ...node, kind: 'item', reveal: 'Answer', currentVersionId: 'base' }, 'remote');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const source = await readCompanionContentSource('topic');
   await saveCompanionContentEdit({ nodeId: 'topic', content: 'Third', reveal: 'Next answer', baseContent: source.content,
     baseVersionId: source.versionId, versionId: crypto.randomUUID(), updatedAt: new Date().toISOString(), historyTransactions: [
@@ -160,7 +160,7 @@ it('restores image descriptions after removing an image and collecting old text 
 it('undoes deletion of an existing synced highlight with no earlier local history', async () => {
   const existing = await toWorkspaceNativeNodeVersion({ ...node, id: 'synced-highlight', content: 'Original', parentNodeId: 'topic',
     anchorLink: { id: 'synced-anchor', kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Original' } } }, 'remote');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [existing], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [existing], { enqueueSearchInvalidations: false }), { kind: 'business' });
   await deleteCompanionExistingHighlight({ deviceId: 'phone', nodeId: 'synced-highlight',
     snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
   await applyCompanionEditHistory('topic', 'undo');
@@ -174,7 +174,7 @@ it('uses the desktop document-history limit and releases evicted document holds'
   for (let index = 0; index < 13; index++) {
     const id = `document-${index}`;
     const record = await toWorkspaceNativeNodeVersion({ ...node, id }, 'remote');
-    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
     const source = await readCompanionContentSource(id);
     await saveCompanionContentEdit({ nodeId: id, content: `Edited ${index}`, baseContent: source.content,
       baseVersionId: source.versionId, versionId: crypto.randomUUID(), updatedAt: new Date().toISOString() });

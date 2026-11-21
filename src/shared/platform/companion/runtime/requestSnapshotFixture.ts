@@ -57,7 +57,7 @@ export async function openRequestSnapshotFixture(platform: 'android' | 'ios') {
   try {
     await owner.open({ allowCreate: true, now: new Date().toISOString(), expectedHostName: 'Snapshot acceptance' });
     await configureCompanionFramedPayloadBudget(owner);
-    await owner.runWriter(db => applySyncNodesWithDbPort(db, Array.from({ length: 48 }, (_, index) => snapshotProbeRecord(index)), { enqueueSearchInvalidations: false }));
+    await owner.runWriter(db => applySyncNodesWithDbPort(db, Array.from({ length: 48 }, (_, index) => snapshotProbeRecord(index)), { enqueueSearchInvalidations: false }), { kind: 'business' });
     return { owner, close, name };
   } catch (error) { await close(); throw error; }
 }

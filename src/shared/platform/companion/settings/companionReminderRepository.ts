@@ -54,6 +54,6 @@ export async function saveCompanionReminderRule(value: ReminderRule) {
         value_json = excluded.value_json, content_hash = excluded.content_hash, updated_at = excluded.updated_at`,
     [payload.key, payload.scope, payload.platform, payload.form_factor, payload.host_name,
       payload.value_json, hash, new Date().toISOString()]
-  )));
+  ), { kind: 'business' }));
   reminderChanges.dispatchEvent(new Event('change'));
 }

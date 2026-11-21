@@ -34,7 +34,7 @@ it.each(['android', 'ios'] as const)('%s reuses a Flow-prepared index without re
       for (let index = 0; index < 128; index++) await db.run(`INSERT INTO nodes
         (id,parent_id,title,content,created_at,updated_at) VALUES (?,'parent',?,'Complete body',?,?)`,
       [`topic-${index}`, `Title ${index}`, now, now]);
-    });
+    }, { kind: 'business' });
     const first = await openCompanionDailyFlow({ now, mode: 'reading-only' });
     expect(first.session.totalNodeCount).toBe(128);
     const before = await library.owner.read(async db => library.owner.readNodeMetadata(db));

@@ -51,8 +51,8 @@ it('reuses one connection and serializes every shared writer task', async () => 
     events.push('first-start');
     await gate;
     events.push('first-end');
-  });
-  const second = owner.runWriter(async () => { events.push('second'); });
+  }, { kind: 'business' });
+  const second = owner.runWriter(async () => { events.push('second'); }, { kind: 'business' });
   await vi.waitFor(() => expect(events).toEqual(['first-start']));
   release();
   await Promise.all([first, second]);
@@ -73,7 +73,7 @@ it('lets shared reads observe only committed writer state', async () => {
     events.push('write-start');
     await gate;
     events.push('write-commit');
-  });
+  }, { kind: 'business' });
   const read = owner.read(async () => { events.push('read'); });
 
   await vi.waitFor(() => expect(events).toEqual(['write-start']));
@@ -85,7 +85,7 @@ it('lets shared reads observe only committed writer state', async () => {
 it('waits for writers, checkpoints WAL, and closes the unique owner connection', async () => {
   const { connection, manager, owner } = harness('wal');
   await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
-  await owner.runWriter(async (db) => db.run("INSERT INTO companion_meta VALUES ('k','v','now')"));
+  await owner.runWriter(async (db) => db.run("INSERT INTO companion_meta VALUES ('k','v','now')"), { kind: 'business' });
   await owner.close();
 
   expect(connection.query).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)', []);
@@ -108,7 +108,7 @@ it.each(['android', 'ios'] as const)('%s keeps a multi-query read intact before 
     events.push('read-end');
   });
   await vi.waitFor(() => expect(events).toEqual(['read-start']));
-  const write = owner.runWriter(async () => { events.push('write'); });
+  const write = owner.runWriter(async () => { events.push('write'); }, { kind: 'business' });
   const close = owner.close().then(() => { events.push('close'); });
   await Promise.resolve();
   await Promise.resolve();
@@ -128,7 +128,7 @@ it('rejects work after close and can reopen in the same call order', async () =>
   const close = owner.close();
   const duplicateClose = owner.close();
   const rejectedRead = expect(owner.read(async () => true)).rejects.toThrow('not open');
-  const rejectedWrite = expect(owner.runWriter(async () => true)).rejects.toThrow('not open');
+  const rejectedWrite = expect(owner.runWriter(async () => true, { kind: 'business' })).rejects.toThrow('not open');
   const reopen = owner.open(request);
   const read = owner.read(async (db) => db.query('SELECT 1'));
   await Promise.all([close, duplicateClose, rejectedRead, rejectedWrite, reopen, read]);
@@ -141,7 +141,7 @@ it('does not let a failed read or writer strand subsequent work', async () => {
   await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
   const readFailure = expect(owner.read(async () => { throw new Error('read failed'); }))
     .rejects.toThrow('read failed');
-  const writeFailure = expect(owner.runWriter(async () => { throw new Error('write failed'); }))
+  const writeFailure = expect(owner.runWriter(async () => { throw new Error('write failed'); }, { kind: 'business' }))
     .rejects.toThrow('write failed');
   const recovery = owner.read(async (db) => db.query('SELECT 1'));
   await Promise.all([readFailure, writeFailure, recovery]);
@@ -162,7 +162,7 @@ it('allows writers during a readonly snapshot and drains cancellation before clo
     await db.query('SELECT 2');
   });
   await started;
-  expect(await owner.runWriter(async () => 'written')).toBe('written');
+  expect(await owner.runWriter(async () => 'written', { kind: 'business' })).toBe('written');
   const rejected = expect(read).rejects.toThrow('owner_closed');
   const close = owner.close();
   await Promise.resolve();
@@ -221,7 +221,7 @@ it('keeps interactive writers available during backup source registration and wa
   };
   const registration = owner.folderBackupSource(port);
   let written = false;
-  await owner.runWriter(async () => { written = true; });
+  await owner.runWriter(async () => { written = true; }, { kind: 'business' });
   expect(written).toBe(true);
   register();
   const epoch = await registration;

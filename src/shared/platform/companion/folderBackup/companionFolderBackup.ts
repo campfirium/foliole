@@ -59,7 +59,7 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
     let deletions: Awaited<ReturnType<typeof validateFolderAttachmentDeletions>>;
     try {
       deletions = await validateFolderAttachmentDeletions(owner, deletionSnapshot, result.state.directoryId ?? '');
-      await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), false);
+      await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), { kind: 'backup' });
     } catch (error) {
       // The native database round already committed and still holds this request for attachments;
       // finish it as failed so the durable state leaves "working" with the real error and its savedAt.
@@ -68,7 +68,7 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
       throw error;
     }
     result.state = await consumeCompanionFolderAttachmentWork(port, {
-      write: execute => runCompanionSyncWriterTask(() => owner.runWriter(execute, false)),
+      write: execute => runCompanionSyncWriterTask(() => owner.runWriter(execute, { kind: 'backup' })),
       inventory: async () => {
         const inventories = await Promise.all([false, true].map(trash =>
           FolioleCompanionSync.maintainAttachmentFiles({ operation: 'inventory', trash })));

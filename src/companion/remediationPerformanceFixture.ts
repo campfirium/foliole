@@ -52,7 +52,7 @@ export async function openRemediationPerformanceFixture(platform: 'android' | 'i
     await initializeIosCompanionDatabase({ booted_at: time, database_path: null, database_ready: false,
       host_name: 'Remediation acceptance', runtime_kind: platform === 'android' ? 'android-capacitor' : 'ios-capacitor' }, manager);
     const owner = getIosCompanionDatabaseOwner();
-    await owner.runWriter(seedRemediationPerformanceFixture);
+    await owner.runWriter(seedRemediationPerformanceFixture, { kind: 'business' });
     return { owner, close, fullReads: () => fullReads };
   } catch (error) { await close(); throw error; }
 }

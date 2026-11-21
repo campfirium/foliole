@@ -23,7 +23,7 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
     const identity = companionFramedFileOwner(owner);
     const db: RequestSyncDatabaseHost = {
       files: createCompanionFramedSyncFiles(FolioleCompanionSync, identity),
-      readSnapshot: read => owner.readSnapshot(read), write: write => owner.runWriter(write)
+      readSnapshot: read => owner.readSnapshot(read), write: write => owner.runWriter(write, { kind: 'business' })
     };
     return createCompanionAttachmentHost(db, identity);
   };

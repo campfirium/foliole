@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
+import type { CompanionWriterOptions } from '../shared/platform/companion/runtime/capacitorCompanionDatabaseOwner';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { appendCompanionFlowHistory, writeCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
@@ -50,16 +51,17 @@ function observeWriterBytes() {
       return db.run(sql, params);
     }, transaction: task => db.transaction(tx => task(observe(tx)))
   });
-  vi.spyOn(owner, 'runWriter').mockImplementation(<T>(task: (db: DbPort) => Promise<T>) => original(db => task(observe(db))));
+  vi.spyOn(owner, 'runWriter').mockImplementation(<T>(task: (db: DbPort) => Promise<T>, write: CompanionWriterOptions) =>
+    original(db => task(observe(db)), write));
   return () => bytes;
 }
 
 it('appends only the new entry across the bridge and retains the newest fifty undo steps', async () => {
   const undoStack = Array.from({ length: 50 }, (_, i) => entry(`old-${i}`));
-  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [entry('redo')] }));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [entry('redo')] }), { kind: 'business' });
   const bytes = observeWriterBytes();
   const next = entry('new');
-  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, next)));
+  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, next)), { kind: 'business' });
   expect(bytes()).toBeLessThan(JSON.stringify(next).length * 3);
   const saved = await loadRestoredHistory();
   expect(saved.undoStack).toEqual([...undoStack.slice(1), next]);
@@ -68,10 +70,10 @@ it('appends only the new entry across the bridge and retains the newest fifty un
 
 it('creates an empty history atomically and leaves its prior contents on a rejected append', async () => {
   const next = entry('first');
-  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, next)));
+  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, next)), { kind: 'business' });
   library.database.exec(`CREATE TRIGGER reject_append BEFORE INSERT ON companion_meta
     WHEN NEW.key = '${key}' BEGIN SELECT RAISE(ABORT, 'append failed'); END;`);
-  await expect(writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('failed')))))
+  await expect(writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('failed'))), { kind: 'business' }))
     .rejects.toThrow('append failed');
   expect((await loadRestoredHistory()).undoStack).toEqual([next]);
 });
@@ -80,14 +82,14 @@ it('refuses to replace a stored history with an invalid stack shape', async () =
   const invalid = JSON.stringify({ undoStack: 'not an array', redoStack: [] });
   library.database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
     .run(key, invalid, '2026-10-26');
-  await expect(writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new')))))
+  await expect(writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))), { kind: 'business' }))
     .rejects.toThrow();
   expect(library.database.prepare('SELECT value FROM companion_meta WHERE key = ?').get(key)).toEqual({ value: invalid });
 });
 
 it('does not inspect the complete history once per retained undo step', async () => {
   const undoStack = Array.from({ length: 50 }, (_, i) => entry(`old-${i}`));
-  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [] }));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [] }), { kind: 'business' });
   const storedBytes = JSON.stringify({ undoStack, redoStack: [] }).length;
   const native = new Database(':memory:');
   const length = native.prepare('SELECT json_array_length(?, ?) AS size');
@@ -97,7 +99,7 @@ it('does not inspect the complete history once per retained undo step', async ()
     return (length.get(value, path) as { size: number }).size;
   });
   try {
-    await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))));
+    await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))), { kind: 'business' });
     expect(inspectedBytes).toBeLessThanOrEqual(storedBytes * 2);
     expect((await loadRestoredHistory()).undoStack).toEqual([...undoStack.slice(1), entry('new')]);
   } finally { native.close(); }
@@ -105,8 +107,8 @@ it('does not inspect the complete history once per retained undo step', async ()
 
 it('trims an oversized stored stack to the same newest fifty steps', async () => {
   const undoStack = Array.from({ length: 53 }, (_, i) => entry(`old-${i}`));
-  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [entry('redo')] }));
-  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [entry('redo')] }), { kind: 'business' });
+  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))), { kind: 'business' });
   const saved = await loadRestoredHistory();
   expect(saved.undoStack).toEqual([...undoStack.slice(4), entry('new')]);
   expect(saved.redoStack).toEqual([]);

@@ -31,7 +31,7 @@ beforeEach(async () => {
   const record = await toWorkspaceNativeNodeVersion({ id: 'topic', content: 'Body', reveal: 'Answer', kind: 'item', title: 'Item',
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, anchorLink: null,
     reading: null, review: null, createdAt: now, updatedAt: now }, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
 });
 afterEach(async () => { adapters.splice(0).forEach(adapter => adapter.destroy()); await library.close(); });
 

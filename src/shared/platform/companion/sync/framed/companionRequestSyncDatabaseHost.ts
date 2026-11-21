@@ -52,7 +52,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
     write: write => runCompanionSyncWriterTask(() => owner.runWriter(db => {
       checkLibrary();
       return write(db);
-    }))
+    }, { kind: 'business' }))
   };
   async function withDeferredNodePriorities<T>(run: () => Promise<T>) {
     deferNodePriorities = true;
@@ -66,7 +66,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
           if (session === getCompanionReadingScope()) {
             await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: [] }, db);
           }
-        }, false);
+        }, { kind: 'derived' });
       });
     }
   }

@@ -130,7 +130,7 @@ it('exports a phone-trained model through production request/framed sync into an
       for (const id of ['source', 'mobile']) await db.run(`INSERT OR IGNORE INTO sync_group_devices
         (group_id,device_identity_key,device_anchor,canonical_library_path,device_name,platform,state,joined_at,updated_at)
         VALUES ('group',?,?,?,?,'android','active','now','now')`, [id, id, `/${id}`, id]);
-    });
+    }, { kind: 'business' });
     const plan = await loadReviewTrainingPlan();
     await saveReviewTrainingModel(await train(await loadReviewTrainingInput('folder', plan.libraryScope)), plan.libraryScope);
     const before = desktop.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();

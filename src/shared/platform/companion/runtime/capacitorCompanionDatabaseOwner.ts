@@ -43,6 +43,31 @@ export interface CapacitorCompanionOpenResult extends CompanionDatabaseBootstrap
   databasePath: string;
 }
 
+/**
+ * What a writer changes, chosen explicitly by every caller (there is no default).
+ *
+ * - `business`: library data the user would lose without a backup (nodes, reviews, reading, settings,
+ *   sync membership). It aborts background attachment scans, marks the folder backup stale and wakes
+ *   automatic backup.
+ * - `usage`: foreground-time statistics. Still synchronized, but recorded every minute while the App is open.
+ * - `device-local`: shell context that never leaves this device, such as navigation and flow resume positions.
+ * - `backup`: the folder backup's own bookkeeping; marking it stale would make every backup schedule another.
+ * - `derived`: caches rebuilt from library data, such as the attachment reference cache written by the scan.
+ *
+ * Only `business` writes have the side effects above; every other kind commits silently.
+ */
+export type CompanionWriteKind = 'business' | 'usage' | 'device-local' | 'backup' | 'derived';
+
+export interface CompanionWriterOptions {
+  kind: CompanionWriteKind;
+  timing?: FlowTiming | undefined;
+  queue?: FlowTimingStage | undefined;
+}
+
+function isLibraryChange(kind: CompanionWriteKind) {
+  return kind === 'business';
+}
+
 export class CapacitorCompanionDatabaseOwner {
   readonly committedWrites = new CompanionDatabaseCommits();
   private connection: SQLiteDBConnection | null = null;
@@ -147,18 +172,24 @@ export class CapacitorCompanionDatabaseOwner {
     }
   }
 
-  runWriter<T>(task: (db: DbPort) => Promise<T>, businessWrite = true,
-    timing?: FlowTiming, queue: FlowTimingStage = 'mutation-writer'): Promise<T> {
-    if (businessWrite) for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return timeFlowQueue(timing, queue, execute => this.enqueue(execute),
-      () => timeFlow(timing, 'write', () => this.committedWrites.write(this.requireDb(), task, businessWrite)));
+  runWriter<T>(task: (db: DbPort) => Promise<T>, write: CompanionWriterOptions): Promise<T> {
+    const libraryChange = isLibraryChange(write.kind);
+    if (libraryChange) this.abortBackgroundReaders();
+    return timeFlowQueue(write.timing, write.queue ?? 'mutation-writer', execute => this.enqueue(execute),
+      () => timeFlow(write.timing, 'write', () => this.committedWrites.write(this.requireDb(), task, libraryChange)));
   }
 
-  runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>, timing?: FlowTiming): Promise<T> {
+  runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>,
+    write: Omit<CompanionWriterOptions, 'queue'>): Promise<T> {
+    const libraryChange = isLibraryChange(write.kind);
+    if (libraryChange) this.abortBackgroundReaders();
+    return timeFlowQueue(write.timing, 'mutation-writer', execute => this.enqueue(execute),
+      () => task(this.requireDb(), execute => timeFlow(write.timing, 'write',
+        () => this.committedWrites.write(this.requireDb(), execute, libraryChange))));
+  }
+
+  private abortBackgroundReaders() {
     for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return timeFlowQueue(timing, 'mutation-writer', execute => this.enqueue(execute),
-      () => task(this.requireDb(), execute => timeFlow(timing, 'write',
-        () => this.committedWrites.write(this.requireDb(), execute, true))));
   }
 
   readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {

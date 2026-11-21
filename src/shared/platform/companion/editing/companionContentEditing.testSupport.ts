@@ -30,5 +30,5 @@ export async function openContentEditDatabase(directory: string, now: string) {
 
 export async function insertContentEditNode(owner: CapacitorCompanionDatabaseOwner, value: WorkspaceNodeSnapshot, versionId: string) {
   const record = await toWorkspaceNativeNodeVersion(value, 'remote', versionId);
-  await owner.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await owner.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
 }

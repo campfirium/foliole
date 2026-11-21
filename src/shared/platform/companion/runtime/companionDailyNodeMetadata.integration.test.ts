@@ -32,7 +32,7 @@ async function seed(library: Library) {
     [`node-${i}`, `Topic ${i}`, now, now, i === 3 ? now : null, i === 0 ? 0 : null]);
     await db.run(`INSERT INTO node_reading (node_id,last_handled_at,next_at,priority,repetition_count)
       VALUES ('node-1',?,?,7,3)`, [now, now]);
-  });
+  }, { kind: 'business' });
 }
 
 async function generate(library: Library) {
@@ -40,7 +40,7 @@ async function generate(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const result = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   const rows = await library.owner.read(db => db.query('SELECT * FROM daily_flow_entries ORDER BY order_key'));
   return { result, rows };

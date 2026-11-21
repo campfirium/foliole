@@ -22,7 +22,7 @@ it.each(['android', 'ios'] as const)('%s measures scan contention, mixed persist
   runtime.owner = library.owner;
   try {
     await library.owner.open({ expectedHostName: 'Remediation acceptance', now: '2026-10-19T00:00:00.000Z' });
-    await library.owner.runWriter(seedRemediationPerformanceFixture);
+    await library.owner.runWriter(seedRemediationPerformanceFixture, { kind: 'business' });
     const phases: string[] = [];
     const result = await measureRemediationPerformance({ ...library, fullReads: library.fullDirectoryQueries },
       phase => phases.push(phase));

@@ -43,7 +43,7 @@ const runBackup = () => consumeCompanionFolderAttachmentWork({
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
     directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending' as const, attachmentFilesPending: pending, errorMessage })
 } satisfies CompanionFolderBackupPort, {
-  write: task => owner().runWriter(task), inventory
+  write: task => owner().runWriter(task, { kind: 'business' }), inventory
 }, { requestId: 'manual', sourceEpoch: 'owner', profile: 'profile' });
 
 beforeEach(async () => {

@@ -12,7 +12,7 @@ import { externalAcceptanceBody, externalAcceptanceGroup, seedExternalMembership
 
 export async function runExternalMembershipAcceptance(owner: CapacitorCompanionDatabaseOwner) {
   const now = new Date().toISOString();
-  const devices = await owner.runWriter(db => db.transaction(tx => seedExternalMembershipAcceptance(tx, now)));
+  const devices = await owner.runWriter(db => db.transaction(tx => seedExternalMembershipAcceptance(tx, now)), { kind: 'business' });
   const provider = devices[1]!;
   const sender = devices[2]!.device_identity_key;
   const state: SyncGroupMemberStatePayload = { contract_version: 3, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
@@ -49,7 +49,7 @@ async function applyState(state: SyncGroupMemberStatePayload, sender: string) {
 
 function maintain(owner: CapacitorCompanionDatabaseOwner, time: number) {
   return owner.runWriter(db => db.transaction(tx =>
-    completeEligibleRemovals(tx, externalAcceptanceGroup, new Date(time).toISOString())));
+    completeEligibleRemovals(tx, externalAcceptanceGroup, new Date(time).toISOString())), { kind: 'business' });
 }
 
 async function assertExternalState(db: DbPort, visible: boolean, retained: boolean) {

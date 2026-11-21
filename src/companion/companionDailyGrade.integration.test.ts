@@ -39,7 +39,7 @@ beforeEach(async () => {
     parentNodeId: null, reveal: i < 12 ? `Answer ${i}` : null, anchorLink: null,
     isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: now }, 'remote', `base-${i}`)));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
 });
 afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
@@ -134,7 +134,7 @@ it.each(['grade', 'read', 'reject', 'ineligible'] as const)('keeps committed pee
   const peer = createDisplayLibrary('ios');
   try {
     await peer.owner.open({ expectedHostName: 'display-fixture', now });
-    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, baseRecords, { enqueueSearchInvalidations: false }));
+    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, baseRecords, { enqueueSearchInvalidations: false }), { kind: 'business' });
     if (action === 'read') session = (await openCompanionDailyFlow({ now, mode: 'reading-only' })).session;
     const target = session.currentNodeId!;
     const before = await snapshot();
@@ -148,7 +148,7 @@ it.each(['grade', 'read', 'reject', 'ineligible'] as const)('keeps committed pee
           currentVersionId: null, review: null, reading: null, updatedAt: stamp, priority: 1 }, 'peer', 'new-topic')
       ]);
     });
-    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
     await applyCompanionSyncNodeVersions(records);
     const act = () => persistFlowMutation({ action: action === 'read' ? 'read' : 'grade', grade: 3,
       nodeId: target, now, snapshot: before, history: { key, mode: action === 'read' ? 'reading-only' : 'recommended', session } });

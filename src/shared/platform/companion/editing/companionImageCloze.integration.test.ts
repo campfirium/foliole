@@ -35,7 +35,7 @@ async function prepare(kind: 'topic' | 'item' = 'topic') {
   library = await createSearchLibrary(0);
   const node = editableNode({ content, kind, resourceReferences: [{ storage_key: key, original_name: 'Diagram.png', role: 'image' }] });
   const version = await toWorkspaceNativeNodeVersion(node, 'source', 'parent-version');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
   native.resolve.mockResolvedValue({ status: 'ready', resource_url: 'data:image/png;base64,png' });
   const image = collectImageMatches(0, content)[0]!;
   return { nodeId: 'new-item', parentNodeId: 'topic', expectedContent: content, expectedVersionId: 'parent-version',
@@ -106,7 +106,7 @@ it('deletes the selected linked Item and its grouped masks durably, supports ret
   await createCompanionImageCloze(request);
   await createCompanionImageCloze({ ...request, nodeId: 'other', regions: [{ ...request.regions[0]!, id: 'other-region' }] });
   const childVersion = await toWorkspaceNativeNodeVersion(editableNode({ id: 'descendant', parentNodeId: 'new-item', content: 'Keep this child', anchorLink: null }), 'source');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [childVersion], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [childVersion], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const other = await loadCompanionWorkspaceNode('other');
   const schedules = library!.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   expect(schedules.length).toBeGreaterThanOrEqual(2);
@@ -125,7 +125,7 @@ it('deletes the selected linked Item and its grouped masks durably, supports ret
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
   await applyCompanionEditHistory('topic', 'undo');
   const foreign = await toWorkspaceNativeNodeVersion(editableNode({ id: 'foreign-child', parentNodeId: 'new-item', content: 'Added after undo', anchorLink: null }), 'source');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [foreign], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [foreign], { enqueueSearchInvalidations: false }), { kind: 'business' });
   await expect(applyCompanionEditHistory('topic', 'redo')).rejects.toThrow('has_children');
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
   await deleteCompanionImageCloze({ ...remove, expectedVersionId: (await loadCompanionWorkspaceNode('topic'))!.currentVersionId ?? null });
@@ -160,7 +160,7 @@ it('edits an existing grouped mask on the original Item and parent, retaining re
   const original = (await loadCompanionWorkspaceNode(request.nodeId))!;
   const parent = (await loadCompanionWorkspaceNode('topic'))!;
   const version = await toWorkspaceNativeNodeVersion({ ...parent, imageRegions: original.imageRegions ?? null }, 'source', 'parent-regions');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const schedules = library!.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   const before = request.regions[0]!;
   const after = { ...before, x: 0.1, y: 0.15, width: 0.4, height: 0.35 };

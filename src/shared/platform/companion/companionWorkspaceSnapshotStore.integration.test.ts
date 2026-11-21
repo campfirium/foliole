@@ -51,7 +51,7 @@ it.each(['android', 'ios'] as const)('%s refreshes committed root and nested ord
       await db.run(`INSERT INTO parent_order_sources VALUES (?, 'fixture', 1, ?)`,
         [ROOT_CHILD_ORDER_ID, JSON.stringify(['folder', 'other'])]);
       await db.run(`INSERT INTO parent_order_sources VALUES ('folder', 'fixture', 1, ?)`, [JSON.stringify(['a', 'b'])]);
-    });
+    }, { kind: 'business' });
     let before = await refreshCompanionWorkspaceSnapshot();
     expect(before?.nodeOrder).toEqual(['folder', 'a', 'b', 'other', 'special-inbox']);
     for (const parent of [ROOT_CHILD_ORDER_ID, 'folder']) {

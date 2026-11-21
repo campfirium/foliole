@@ -27,30 +27,31 @@ export async function readCompanionContentSource(nodeId: string, holdId?: string
     return { ...(current.snapshot.kind === 'item' ? { reveal: current.snapshot.reveal ?? null } : {}),
       content: current.body_text ?? '', imageReferences: contentImageReferences(current), versionId: current.version_id };
   };
+  // Edit holds are device-local: every owner open clears them, so retaining one must not stale the backup.
   return holdId
-    ? runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction(read)))
+    ? runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction(read), { kind: 'device-local' }))
     : readIosCompanionDatabase(read);
 }
 
 export async function retainCompanionContentBase(nodeId: string, versionId: string, holdId: string) {
   return runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction((tx) =>
     retainLocalEditBase(tx, { holdId, nodeId, versionId })
-  )));
+  ), { kind: 'device-local' }));
 }
 
 export async function releaseCompanionContentBase(nodeId: string, holdId: string) {
   return runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) =>
-    releaseLocalEditBase(db, holdId, nodeId)
+    releaseLocalEditBase(db, holdId, nodeId), { kind: 'business' }
   ));
 }
 
 export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   if (!isNativeCompanionNodeVersionWriteRuntime()) throw new Error('content_edit_runtime_unavailable');
   const result = await runCompanionHighValueMutationTask(() =>
-    writeIosCompanionDatabase((port) => port.transaction(db => saveCompanionContentEditWithDb(db, edit))),
+    writeIosCompanionDatabase((port) => port.transaction(db => saveCompanionContentEditWithDb(db, edit)), { kind: 'business' }),
     { kind: 'nodes', nodeIds: [edit.nodeId] });
   await runCompanionSyncWriterTask(() =>
-    writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32)))
+    writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32), { kind: 'business' }))
     .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
   return result;
 }

@@ -42,7 +42,7 @@ it('persists real editor input after only the shared 1200 ms buffer wait', async
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const initial = await loadCompanionWorkspaceSyncState();
   const save = createCompanionTopicContentSaveHandler({ state: initial,
     refreshAfterMutation: async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot

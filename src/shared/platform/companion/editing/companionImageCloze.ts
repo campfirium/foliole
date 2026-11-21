@@ -91,7 +91,7 @@ export async function saveCompanionImageCloze(request: CompanionImageClozeReques
     await saveIosReviewWithDb(tx, { node_id: node.id, review_json: JSON.stringify(review) });
     await recordCompanionAnnotationHistory(tx, { documentId: parent.id, before: null, after: { ...node, currentVersionId: version.version_id } });
     return node.id;
-  })), { kind: 'full' });
+  }), { kind: 'business' }), { kind: 'full' });
 }
 
 export async function createCompanionImageCloze(request: CompanionImageClozeRequest) {

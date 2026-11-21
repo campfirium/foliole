@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
+import { confirmFolderDatabaseBackup, isFolderDatabaseBackupCurrent, readFolderBackupRevision } from '../folderBackup/companionFolderBackupProgress';
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import { readCompanionObservationReferences } from './companionAttachmentObservation';
@@ -20,7 +21,7 @@ async function open(platform: 'android' | 'ios', count = 40) {
   await library.owner.runWriter(db => db.transaction(async tx => {
     for (let i = 0; i < count; i++) await tx.run(`INSERT INTO nodes(id,title,content,body_blob_hash,created_at,updated_at)
       VALUES (?,'Article',?,?,'now','now')`, [`article-${String(i).padStart(3, '0')}`, body, hashTextBody(body)]);
-  }));
+  }), { kind: 'business' });
   return library;
 }
 
@@ -34,10 +35,10 @@ it.each(['android', 'ios'] as const)('%s reuses persisted inputs, updates bodies
     await readCompanionObservationReferences(library.owner, generation);
     expect(worker.monitor.parsed).toBe(0);
     await library.owner.runWriter(db => db.run("UPDATE nodes SET content='',body_blob_hash=?,resource_references=? WHERE id='article-000'",
-      [hashTextBody(''), JSON.stringify([{ storage_key: pdf, role: 'reference', original_name: null }])]));
+      [hashTextBody(''), JSON.stringify([{ storage_key: pdf, role: 'reference', original_name: null }])]), { kind: 'business' });
     expect((await readCompanionObservationReferences(library.owner, generation))?.storageKeys).toEqual([image, pdf]);
     expect(worker.monitor.parsed).toBe(1);
-    await library.owner.runWriter(db => db.run("UPDATE nodes SET deleted_at='now' WHERE id='article-000'"));
+    await library.owner.runWriter(db => db.run("UPDATE nodes SET deleted_at='now' WHERE id='article-000'"), { kind: 'business' });
     expect((await readCompanionObservationReferences(library.owner, generation))?.storageKeys).toEqual([image, pdf]);
     await library.owner.close();
     reopened = createDisplayLibrary(platform, library.file);
@@ -45,9 +46,23 @@ it.each(['android', 'ios'] as const)('%s reuses persisted inputs, updates bodies
     worker.monitor.parsed = 0;
     expect((await readCompanionObservationReferences(reopened.owner, generation))?.storageKeys).toEqual([image, pdf]);
     expect(worker.monitor.parsed).toBe(0);
-    await reopened.owner.runWriter(db => db.run("DELETE FROM nodes WHERE id='article-000'"));
+    await reopened.owner.runWriter(db => db.run("DELETE FROM nodes WHERE id='article-000'"), { kind: 'business' });
     expect((await readCompanionObservationReferences(reopened.owner, generation))?.storageKeys).toEqual([image]);
   } finally { await reopened?.close(); await library.close(); }
+});
+
+it.each(['android', 'ios'] as const)('%s fills the reference cache without staling the folder backup or waking it', async platform => {
+  const library = await open(platform);
+  try {
+    await library.owner.runWriter(async db => confirmFolderDatabaseBackup(db, 'profile', await readFolderBackupRevision(db)),
+      { kind: 'backup' });
+    const woken = vi.fn();
+    library.owner.committedWrites.subscribe(woken);
+    expect((await readCompanionObservationReferences(library.owner, generation))?.storageKeys).toEqual([image]);
+    expect(worker.monitor.batches).toBeGreaterThan(1);
+    expect(await library.owner.read(db => isFolderDatabaseBackupCurrent(db, 'profile'))).toBe(true);
+    expect(woken).not.toHaveBeenCalled();
+  } finally { await library.close(); }
 });
 
 it.each(['android', 'ios'] as const)('%s discards an overtaken batch and lets foreground writes finish before parsing completes', async platform => {
@@ -57,7 +72,7 @@ it.each(['android', 'ios'] as const)('%s discards an overtaken batch and lets fo
     worker.monitor.beforeResult = async () => {
       if (wrote) return;
       wrote = true;
-      await library.owner.runWriter(db => db.run("UPDATE nodes SET content='',body_blob_hash=NULL WHERE id='article-000'"));
+      await library.owner.runWriter(db => db.run("UPDATE nodes SET content='',body_blob_hash=NULL WHERE id='article-000'"), { kind: 'business' });
     };
     expect(await readCompanionObservationReferences(library.owner, generation)).toBeNull();
     expect(wrote).toBe(true);
@@ -92,7 +107,7 @@ it('rejects a replaced generation and unreadable inputs without claiming complet
     await expect(readCompanionObservationReferences(library.owner, async () => currentGeneration)).rejects.toThrow('database_replaced');
     expect(await library.owner.read(db => db.query('SELECT * FROM attachment_reference_cache'))).toEqual([]);
     worker.monitor.beforeResult = undefined;
-    await library.owner.runWriter(db => db.run("UPDATE nodes SET body_blob_hash=NULL WHERE id='article-000'"));
+    await library.owner.runWriter(db => db.run("UPDATE nodes SET body_blob_hash=NULL WHERE id='article-000'"), { kind: 'business' });
     await expect(readCompanionObservationReferences(library.owner, generation)).rejects.toThrow('body_unreadable');
   } finally { await library.close(); }
 });
@@ -103,7 +118,7 @@ it('yields a readonly batch to a foreground writer and permits a later complete 
   try {
     library.owner.readBackgroundSnapshot = (task, signal) => original(async db => {
       await db.query('SELECT id FROM nodes');
-      await library.owner.runWriter(writer => writer.run("UPDATE nodes SET title='Edited' WHERE id='article-000'"));
+      await library.owner.runWriter(writer => writer.run("UPDATE nodes SET title='Edited' WHERE id='article-000'"), { kind: 'business' });
       return task(db);
     }, signal);
     await expect(readCompanionObservationReferences(library.owner, generation)).rejects.toThrow('attachment_scan_foreground_write');

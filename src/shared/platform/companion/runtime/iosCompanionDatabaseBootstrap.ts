@@ -110,7 +110,7 @@ async function initializeDatabase(
     const identity = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: result.databasePath });
     await owner.runWriter((db) => bindParentOrderWriterWithDbPort(db, {
       deviceAnchor: identity.device_anchor, libraryPath: identity.canonical_library_path
-    }));
+    }), { kind: 'business' });
     await configureCompanionFramedPayloadBudget(owner);
   } catch (error) {
     await owner.close();

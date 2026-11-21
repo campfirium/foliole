@@ -34,7 +34,7 @@ export async function runRequestSnapshotProbe(platform: 'android' | 'ios', phase
     }
     requireValue(cancelled, 'Background did not cancel the production request');
     requireValue((await files.list('requests')).length === 0, 'Request files retained after cancellation');
-    const checkpoint = await owner.runWriter(db => db.query('PRAGMA wal_checkpoint(TRUNCATE)'));
+    const checkpoint = await owner.runWriter(db => db.query('PRAGMA wal_checkpoint(TRUNCATE)'), { kind: 'business' });
     requireValue(checkpoint[0]?.busy === 0 && checkpoint[0]?.log === 0, 'Readonly snapshot retained after cancellation');
     phase('cancelled');
     await foreground.active;
@@ -69,7 +69,7 @@ function createSnapshotGenerator(owner: Awaited<ReturnType<typeof openRequestSna
       if (crossed || nextVersion === null) return;
       crossed = true;
       const started = performance.now();
-      await owner.runWriter(db => applySyncNodesWithDbPort(db, [snapshotProbeRecord(nextVersion)], { enqueueSearchInvalidations: false }));
+      await owner.runWriter(db => applySyncNodesWithDbPort(db, [snapshotProbeRecord(nextVersion)], { enqueueSearchInvalidations: false }), { kind: 'business' });
       writeTimes.push(performance.now() - started);
       if (background) {
         phase('await-background');

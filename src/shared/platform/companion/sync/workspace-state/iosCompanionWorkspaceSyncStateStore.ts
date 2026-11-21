@@ -56,7 +56,7 @@ export async function updateIosCompanionWorkspaceSyncMetadata(
     }
     return { ...current, ...patch };
   });
-  return manager ? withConnection(manager, save) : getIosCompanionDatabaseOwner().runWriter(save);
+  return manager ? withConnection(manager, save) : getIosCompanionDatabaseOwner().runWriter(save, { kind: 'business' });
 }
 
 async function loadState(connection: DbPort) {

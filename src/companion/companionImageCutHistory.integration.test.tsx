@@ -65,7 +65,7 @@ it('cuts through the real autosaving editor and restores or reapplies the image 
   const record = await toWorkspaceNativeNodeVersion({ id: 'topic', content: original, kind: 'topic', title: 'Topic',
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-11-17T00:00:00Z', updatedAt: '2026-11-17T00:00:00Z' }, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const view = render(<LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider>
     <CompanionDraftProvider><Reader /></CompanionDraftProvider>
   </MouseGestureSettingsProvider></LocalizationProvider>);

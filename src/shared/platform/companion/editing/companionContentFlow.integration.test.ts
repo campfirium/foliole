@@ -33,7 +33,7 @@ it.each(['android', 'ios'])('%s content save through the owner preserves its gen
       createdAt: '2026-01-01T00:00:00.000Z', updatedAt: now
     }, `base-${id}`);
     const config = { scope: directory, newDayStartsAtHour: 4, pushQueue: DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue };
-    const opened = await host.owner.runWriter(db => openDailyFlow(db, { now, mode: 'reading-only' }, config, companionDailyFlowPersistence));
+    const opened = await host.owner.runWriter(db => openDailyFlow(db, { now, mode: 'reading-only' }, config, companionDailyFlowPersistence), { kind: 'business' });
     const id = opened.session.currentNodeId!;
     const before = await host.owner.read(db => readCycleRows(db));
     const source = await readCompanionContentSource(id, 'editor');

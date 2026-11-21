@@ -93,7 +93,7 @@ it.each(['android', 'ios'] as const)('%s rolls back answer existence and history
     await saveCompanionContentEditWithDb(tx, { nodeId: 'topic', content: 'Question', reveal: '',
       baseVersionId: source.versionId, versionId: 'failed', updatedAt: '2026-10-29T05:00:00.000Z' });
     throw new Error('later save step failed');
-  }))).rejects.toThrow('later save step failed');
+  }), { kind: 'business' })).rejects.toThrow('later save step failed');
   await expectFact(host, null);
   expect(await applyCompanionEditHistory('topic', 'undo')).toBe(false);
   expect(host.sqlite.prepare("SELECT version_id FROM node_sync_versions WHERE version_id = 'failed'").get()).toBeUndefined();

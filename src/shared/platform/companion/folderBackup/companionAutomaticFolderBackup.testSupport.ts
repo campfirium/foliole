@@ -61,9 +61,9 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
   cleanup.push(async () => { await stop(); await library.close(); await rm(root, { recursive: true, force: true }); });
   const publish = async (text: string) => {
     const bytes = Buffer.from(text), key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
-    await library.owner.runWriter(db => prepareFolderAttachmentCopy(db, key));
+    await library.owner.runWriter(db => prepareFolderAttachmentCopy(db, key), { kind: 'business' });
     await writeFile(path.join(source, key), bytes);
-    await library.owner.runWriter(db => db.transaction(tx => completeFolderAttachmentCopy(tx, key)));
+    await library.owner.runWriter(db => db.transaction(tx => completeFolderAttachmentCopy(tx, key)), { kind: 'business' });
     return { key, bytes };
   };
   const reopen = async () => {

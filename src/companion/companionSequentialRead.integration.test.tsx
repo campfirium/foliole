@@ -42,7 +42,7 @@ beforeEach(async () => {
     intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now, nextAt: now };
   await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, {
     node_id: nextChapter, reading_json: JSON.stringify(toReadingPayload(locked))
-  }));
+  }), { kind: 'business' });
 });
 
 afterEach(async () => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });

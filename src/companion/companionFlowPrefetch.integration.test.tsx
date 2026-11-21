@@ -76,7 +76,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
     expect(hook.result.current.view).toEqual(before);
     expect(visits).toBe(0);
     Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, writable: true, value: kind });
-    await getIosCompanionDatabaseOwner().runWriter(db => db.run("UPDATE nodes SET kind = 'folder' WHERE id = ?", [next]));
+    await getIosCompanionDatabaseOwner().runWriter(db => db.run("UPDATE nodes SET kind = 'folder' WHERE id = ?", [next]), { kind: 'business' });
     const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     hook.rerender({ snapshot: changed });
     expect(hook.result.current.view.currentCard?.nodeId).toBe(before.currentCard?.nodeId);

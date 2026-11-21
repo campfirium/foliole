@@ -24,7 +24,7 @@ async function generate(library: Library) {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
-  });
+  }, { kind: 'business' });
   const opened = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   const rows = await library.owner.read(db => db.query('SELECT * FROM daily_flow_entries ORDER BY order_key'));
   expect((await openCompanionDailyFlow({ now, mode: 'reading-only' })).session).toEqual(opened.session);
@@ -41,7 +41,7 @@ it.each(['android', 'ios'] as const)('%s keeps complete membership after same-co
       for (const id of ['keep', 'old']) await db.run(`INSERT INTO nodes
         (id,title,content,created_at,updated_at) VALUES (?,?,'Complete body',?,?)`, [id, id, now, now]);
       await db.run("INSERT INTO node_reading (node_id,last_handled_at,next_at,repetition_count) VALUES ('keep',?,?,1)", [now, now]);
-    });
+    }, { kind: 'business' });
     await refreshCompanionWorkspaceSnapshot();
     expect((await generate(library)).rows.map(row => row.node_id).sort()).toEqual(['keep', 'old']);
     const scope = { kind: 'nodes' as const, nodeIds: ['old', 'new'] };
@@ -49,17 +49,17 @@ it.each(['android', 'ios'] as const)('%s keeps complete membership after same-co
       await tx.run("DELETE FROM nodes WHERE id='old'");
       await tx.run(`INSERT INTO nodes (id,title,content,created_at,updated_at)
         VALUES ('new','New','Complete new body',?,?)`, [now, now]);
-    })), scope);
+    }), { kind: 'business' }), scope);
     const changed = await generate(library);
     expect(changed.rows.map(row => row.node_id).sort()).toEqual(['keep', 'new']);
     await expect(runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("DELETE FROM nodes WHERE id='new'");
       throw new Error('replacement rejected');
-    })), scope)).rejects.toThrow('replacement rejected');
+    }), { kind: 'business' }), scope)).rejects.toThrow('replacement rejected');
     expect(await generate(library)).toEqual(changed);
     const index = await library.owner.read(async db => library.owner.readNodeMetadata(db));
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
-      "UPDATE node_reading SET repetition_count=8 WHERE node_id='keep'")),
+      "UPDATE node_reading SET repetition_count=8 WHERE node_id='keep'"), { kind: 'business' }),
     { kind: 'nodes', nodeIds: [], readingNodeIds: ['keep'] });
     await library.owner.read(async db => {
       expect(await library.owner.readNodeMetadata(db)).toBe(index);

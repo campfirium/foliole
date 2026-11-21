@@ -64,7 +64,7 @@ it('keeps the search snapshot when one real request commits and the next request
   const apply = (seq: number) => {
     updateSource(source, seq);
     return writeIosCompanionDatabase(db => withLibraryRequestSnapshot(source,
-      { ...target, port: db }, async replay => { await replay(); }));
+      { ...target, port: db }, async replay => { await replay(); }), { kind: 'business' });
   };
   await apply(1);
   library.database.exec("CREATE TRIGGER fail_pack BEFORE INSERT ON external_documents BEGIN SELECT RAISE(ABORT,'later pack failure'); END");

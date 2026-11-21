@@ -91,7 +91,7 @@ export async function applyCompanionSyncGroupMemberState(
       }
       await completeEligibleRemovals(tx, context.groupId, now);
       return { local_exited: localExited, normal_sync_ready: true, state: await loadState(tx, context) };
-    })
+    }), { kind: 'business' }
   ));
 }
 

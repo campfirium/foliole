@@ -84,7 +84,7 @@ export async function activateCompanionWebDavCredential(offer: WebDavCredentialO
     } else {
       await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [PEER_IDENTITY_KEY]);
     }
-  }));
+  }), { kind: 'business' });
   for (const listener of listeners) listener();
 }
 
@@ -108,7 +108,7 @@ export async function receiveCompanionWebDavAuthenticatedPolicy(update: SyncSess
       sameWebDavAttachmentPolicy(binding.attachment_policy, update.policy)) return false;
     await saveBinding(tx, { ...binding, attachment_policy: update.policy });
     return true;
-  }));
+  }), { kind: 'business' });
   if (changed) for (const listener of listeners) listener();
 }
 
@@ -156,7 +156,7 @@ export async function receiveCompanionWebDavRelay(binding: WebDavRelayBinding | 
     const credentialVersion = previous && matches(previous, local) ? previous.credential_version : undefined;
     await saveBinding(tx, { ...binding, credential_version: credentialVersion });
     return { id: binding.id, changed: true };
-  }));
+  }), { kind: 'business' });
   if (result?.changed) for (const listener of listeners) listener();
   return result?.id === binding.id ? result.id : undefined;
 }

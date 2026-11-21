@@ -50,7 +50,7 @@ async function receivePosition(page: number, attachmentId = attachment, observed
     content_hash: computeSyncContentHash('node_reading_resume', payload), object_id: 'article',
     deleted_at: null, object_type: 'node_reading_resume', payload_json: JSON.stringify(payload),
     updated_at: '2026-11-11T00:00:00Z'
-  }));
+  }), { kind: 'business' });
 }
 
 let restoreRangeGeometry: () => void;

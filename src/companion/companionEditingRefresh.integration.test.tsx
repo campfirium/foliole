@@ -72,7 +72,7 @@ it('keeps editing mounted across actual SQLite autosave refreshes and persists c
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const view = render(<ReadingProbe initial={await loadCompanionWorkspaceSyncState()} />);
   const edit = await screen.findByRole('button', { name: 'Edit' });
   await waitFor(() => expect(edit).toBeEnabled());
@@ -106,7 +106,7 @@ it.each([
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
     reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   const initial = await loadCompanionWorkspaceSyncState();
   const save = createCompanionTopicContentSaveHandler({ state: initial,
     refreshAfterMutation: async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot
@@ -130,7 +130,7 @@ it.each([
     if (!remote.version_id || typeof remote.body_text !== 'string') throw new Error('Expected a complete remote version');
     const remoteVersionId = remote.version_id;
     const remoteBody = remote.body_text;
-    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [remote], { enqueueSearchInvalidations: false }));
+    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [remote], { enqueueSearchInvalidations: false }), { kind: 'business' });
     await act(async () => { view.rerender(document(remoteBody, remoteVersionId)); });
     expect(editor!.getContent()).toBe('Immediate input Original body');
   }

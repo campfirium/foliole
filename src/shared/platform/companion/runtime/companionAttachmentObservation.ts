@@ -33,7 +33,7 @@ export async function readCompanionObservationReferences(owner: CapacitorCompani
       await owner.runWriter(async db => {
         assertOwner();
         await saveAttachmentReferenceResults(db, results);
-      });
+      }, { kind: 'derived' });
       after = rows.at(-1)!.id;
     }
     await assertSource();

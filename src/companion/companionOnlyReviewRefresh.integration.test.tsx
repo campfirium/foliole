@@ -103,7 +103,7 @@ it('adds newly due FSRS items after confirmed database convergence without repla
     mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first']);
   act(() => ui.rerender({ value: firstRefresh }));
   expect(ui.result.current.view.queueNodeIds).toEqual([]);
-  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync)).toBe(true);
+  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync, { kind: 'business' })).toBe(true);
   act(() => ui.rerender({ value: { ...firstRefresh, nodesById: { ...firstRefresh.nodesById } } }));
   await waitFor(() => expect(ui.result.current.view.queueNodeIds).toEqual(['first']));
   expect(ui.result.current.view.currentCard?.nodeId).toBe('first');
@@ -114,7 +114,7 @@ it('adds newly due FSRS items after confirmed database convergence without repla
   expect(buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(secondRefresh),
     mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first', 'second']);
   act(() => ui.rerender({ value: secondRefresh }));
-  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync)).toBe(true);
+  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync, { kind: 'business' })).toBe(true);
   act(() => ui.rerender({ value: { ...secondRefresh, nodesById: { ...secondRefresh.nodesById } } }));
   await waitFor(async () => {
     const session = (await loadCompanionDailySession())!;

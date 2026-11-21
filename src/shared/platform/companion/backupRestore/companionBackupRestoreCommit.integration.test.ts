@@ -50,7 +50,7 @@ describe('replacing the spare phone library with a staged backup', () => {
     await device.owner.runWriter(async db => {
       await db.run("INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('g', 'Home', 'k', 'now', 'now')");
       await db.run("INSERT INTO sync_group_local_state (singleton_id, group_id, local_device_identity_key, state, updated_at) VALUES (1, 'g', 'spare', 'active', 'now')");
-    });
+    }, { kind: 'business' });
     await expect(commitCompanionBackupRestore(context)).rejects.toThrow('restore_sync_group_active');
     expect(context.closeDatabase).not.toHaveBeenCalled();
     expect(device.port.commit).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('putting the previous spare phone library back', () => {
     await device.owner.runWriter(async db => {
       await db.run("INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('g', 'Home', 'k', 'now', 'now')");
       await db.run("INSERT INTO sync_group_local_state (singleton_id, group_id, local_device_identity_key, state, updated_at) VALUES (1, 'g', 'spare', 'active', 'now')");
-    });
+    }, { kind: 'business' });
     await expect(revertCompanionBackupRestore(context)).rejects.toThrow('restore_sync_group_active');
     expect(device.port.revert).not.toHaveBeenCalled();
     expect(context.closeDatabase).not.toHaveBeenCalled();

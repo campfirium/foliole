@@ -39,7 +39,7 @@ async function fixture() {
   older.snapshot.image_sources = JSON.stringify({ [image.storage_key]: 'https://example.com/selected.png' });
   const newer = textBranch('mac2', 'Mac two', base, new Date(now - 1000).toISOString());
   for (const records of [[base, main], [older], [newer]]) {
-    await writeIosCompanionDatabase(db => applyConvergentSyncNodesWithDbPort(db, records));
+    await writeIosCompanionDatabase(db => applyConvergentSyncNodesWithDbPort(db, records), { kind: 'business' });
   }
   const alternatives = await readIosCompanionDatabase(db => readTopicAlternativeRecords(db, 'topic'));
   const selected = alternatives.find(entry => entry.source_host_name === 'mac1')!;

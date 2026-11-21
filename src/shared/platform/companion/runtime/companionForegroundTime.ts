@@ -43,7 +43,7 @@ function persistSnapshot(state: Recording, snapshot: ReturnType<ForegroundTimeRe
     mark: async (tx, record) => markIosCompanionMutation({ db: tx,
       hostName: await iosCompanionHostName(tx), objectType: 'foreground_source',
       objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt })
-  }), false));
+  }), { kind: 'usage' }));
   state.tail = request.then(() => { lastFailure = null; }, (error: unknown) => { lastFailure = error; });
   return request;
 }
@@ -67,7 +67,7 @@ export async function startCompanionForegroundTime(owner: ForegroundTimeOwner) {
   const source = await owner.runWriter(async (db) => {
     const sourceId = await loadForegroundSourceWithDbPort(db, ownerId);
     return { sourceId, baseline: await loadForegroundBaseline(db, sourceId), pending: await loadSyncGroupOverwriteProgress(db) };
-  });
+  }, { kind: 'usage' });
   const state: Recording = { owner,
     counter: new ForegroundTimeRecording(() => ({ wallMs: Date.now(), monotonicMs: performance.now() }), source.sourceId, source.baseline),
     active: false, timer: null, unsubscribes: [], tail: Promise.resolve() };
@@ -130,7 +130,7 @@ async function finishMaintenance(state: Recording) {
   const source = await state.owner.runWriter(async (db) => {
     const sourceId = await loadForegroundSourceWithDbPort(db, ownerId);
     return { sourceId, baseline: await loadForegroundBaseline(db, sourceId) };
-  });
+  }, { kind: 'usage' });
   state.counter.finishMaintenance(source.sourceId, source.baseline);
   await persist(state);
 }

@@ -46,7 +46,7 @@ async function writeExistingHighlight(args: ExistingHighlightMutation, withinWri
         documentId: node.parentNodeId, before: { ...sourceNode, review }, after: versionedNode
       });
       return ids;
-    }))
+    }), { kind: 'business' })
     : await applyCompanionLocalNodeVersions([nodeVersion]);
   if (withinWriter && !appliedIds.includes(node.id)) throw new Error('companion_annotation_not_applied');
   return {

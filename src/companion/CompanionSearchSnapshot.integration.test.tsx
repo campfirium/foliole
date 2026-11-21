@@ -28,7 +28,7 @@ it('continues the production hook against its original SQLite result set and ref
     await db.run("UPDATE nodes SET deleted_at='now' WHERE id='000124'");
     await db.run("UPDATE external_documents SET is_present=0 WHERE document_id='000124'");
     await db.run('DELETE FROM pdf_page_text WHERE page=1');
-  });
+  }, { kind: 'business' });
   for (let i = 0; i < 6; i++) await act(async () => { await hook.result.current.loadMore(); });
   expect(hook.result.current.results?.topics).toHaveLength(125);
   expect(hook.result.current.results?.external).toHaveLength(125);
@@ -58,13 +58,13 @@ it('rejects deleted topics at open and reads current external content instead of
   await writeIosCompanionDatabase(async (db) => {
     await db.run('UPDATE nodes SET deleted_at=? WHERE id=?', ['now', result.nodeId]);
     await db.run("UPDATE external_documents SET content='changed alpha body' WHERE document_id='000124'");
-  });
+  }, { kind: 'business' });
   await act(() => navigation.result.current.open(result));
   expect(navigation.result.current.failed).toBe(true);
   expect(open).not.toHaveBeenCalled();
   expect(search.result.current.results!.external[0]!.content).toBe('');
   expect((await loadCompanionExternalDocument('000124'))?.content).toBe('changed alpha body');
-  await writeIosCompanionDatabase((db) => db.run("UPDATE external_documents SET is_present=0 WHERE document_id='000124'"));
+  await writeIosCompanionDatabase((db) => db.run("UPDATE external_documents SET is_present=0 WHERE document_id='000124'"), { kind: 'business' });
   expect(await loadCompanionExternalDocument('000124')).toBeNull();
   navigation.unmount();
   search.unmount();
