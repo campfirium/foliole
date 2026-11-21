@@ -26,26 +26,43 @@ function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: Workspa
   return timeCompanionActivity('workspace-refresh', () => readWorkspaceSnapshot(input));
 }
 
+const readTotals = { reads: 0, queueMs: 0, readMs: 0 };
+
+/** Running totals of snapshot reads: a caller diffs two calls to see what its refresh waited for and read. */
+export function companionWorkspaceReadTotals() {
+  return { ...readTotals };
+}
+
 async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
   const owner = getIosCompanionDatabaseOwner();
   const revision = owner.nodePriorityRevision;
   let orderedNodeIds: readonly string[] | undefined;
   let anchorKinds: WorkspaceNodeAnchorKinds | undefined;
-  const snapshot = await owner.readSnapshot(async db => {
-    const scoped = input.current && input.scope.kind === 'nodes'
-      ? await (input.scope.metadata ? readScopedMetadata : !input.scope.structure ? readScoped
-        : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
-      : null;
-    // The structural merges already derived the visible order.
-    if (scoped && input.scope.kind === 'nodes' && (input.scope.metadata || (input.scope.structure && input.scope.trash))) {
-      orderedNodeIds = scoped.nodeOrder;
-    }
-    if (!scoped) markWholeLibraryWork('full-refresh');
-    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
-    return next && attachOpenCompanionVirtualFolderResults(db, next);
-  });
-  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision, orderedNodeIds, anchorKinds);
-  return snapshot;
+  const requestedAt = performance.now();
+  let startedAt = requestedAt;
+  try {
+    const snapshot = await owner.readSnapshot(async db => {
+      startedAt = performance.now();
+      const scoped = input.current && input.scope.kind === 'nodes'
+        ? await (input.scope.metadata ? readScopedMetadata : !input.scope.structure ? readScoped
+          : input.scope.trash ? readScopedTrash : noScopedRead)(db, input.current, input.scope)
+        : null;
+      // The structural merges already derived the visible order.
+      if (scoped && input.scope.kind === 'nodes' && (input.scope.metadata || (input.scope.structure && input.scope.trash))) {
+        orderedNodeIds = scoped.nodeOrder;
+      }
+      if (!scoped) markWholeLibraryWork('full-refresh');
+      const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
+      return next && attachOpenCompanionVirtualFolderResults(db, next);
+    });
+    if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision, orderedNodeIds, anchorKinds);
+    return snapshot;
+  } finally {
+    // The wait before the read starts covers both the owner queue and the serialized snapshot connection.
+    readTotals.reads += 1;
+    readTotals.queueMs += startedAt - requestedAt;
+    readTotals.readMs += performance.now() - startedAt;
+  }
 }
 
 /** Returns null when the committed scope cannot be proven against this baseline. */

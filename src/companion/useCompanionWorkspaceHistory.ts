@@ -4,6 +4,7 @@ import type { TranslationKey } from '../shared/localization/translations';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
 import type { CompanionHistoryTop } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
+import { startCompanionWorkspaceActionTiming } from '../shared/platform/companion/runtime/companionWorkspaceActionTiming';
 import { subscribeCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -44,21 +45,29 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
     setBusy(true);
     setFailure(null);
     const withdraw = committed.current ? undefined : preview?.();
+    const timing = startCompanionWorkspaceActionTiming();
+    const timed = async <T,>(stage: Parameters<typeof timing.stage>[0], work: () => Promise<T>) => {
+      const end = timing.stage(stage);
+      try { return await work(); } finally { end(); }
+    };
+    let status: 'completed' | 'failed' | null = null;
     try {
       if (!committed.current) {
-        await props.flush();
+        await timed('flush', () => props.flush());
         if (scope !== getCompanionReadingScope()) return;
-        await task();
+        await timed('task', task);
         committed.current = true;
         if (scope === getCompanionReadingScope()) afterSave?.();
       }
       if (scope !== getCompanionReadingScope()) return;
-      if (!await props.refresh()) throw new Error('workspace_refresh_failed');
+      if (!await timed('refresh', () => props.refresh())) throw new Error('workspace_refresh_failed');
+      status = 'completed';
       committed.current = false;
       setPending(false);
       props.afterRefresh();
-    } catch { setFailure(failureKey); setPending(committed.current); }
+    } catch { status = 'failed'; setFailure(failureKey); setPending(committed.current); }
     finally {
+      if (status) timing.finish(status);
       // A committed write keeps its preview until the refreshed snapshot replaces it.
       if (!committed.current) withdraw?.();
       locked.current = false;

@@ -77,6 +77,9 @@ export class WorkspaceSnapshotRefresh<T> {
 
   getSnapshot = () => this.snapshot;
 
+  /** True while a refresh is reading; a caller that refreshes now waits for it and for every scope registered meanwhile. */
+  get refreshing() { return this.running !== null; }
+
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
