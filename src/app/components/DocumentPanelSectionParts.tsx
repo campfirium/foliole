@@ -51,6 +51,8 @@ interface DocumentPanelContentProps {
   children: (state: { content: ReactNode; isPdfSurface: boolean }) => ReactNode;
 }
 
+const NO_PDF_HIGHLIGHT_LOCATORS: PdfHighlightLocator[] = [];
+
 function getDocumentPanelFlags(args: {
   activeNode: Node | undefined;
   activeNodeId: string | null;
@@ -93,9 +95,12 @@ function useDocumentPanelContentState(args: {
   );
   const sourceDetails = useNodeSourceDetails(shouldLoadSourceDetails ? args.activeNodeId : null);
   const pdfDocumentSurface = resolvePdfDocumentSurface(args.activeNodeId, sourceDetails.isLoading, sourceDetails.value);
+  // resolvePdfDocumentSurface returns a new object every render; keying on it re-collected the
+  // subtree locators each render and changed every PDF page's excerpt context.
+  const hasPdfDocumentSurface = Boolean(pdfDocumentSurface);
   const pdfHighlightLocators = useMemo(() => {
-    if (!args.activeNodeId || !pdfDocumentSurface) {
-      return [];
+    if (!args.activeNodeId || !hasPdfDocumentSurface) {
+      return NO_PDF_HIGHLIGHT_LOCATORS;
     }
     return collectPdfHighlightLocators(
       args.activeNodeId,
@@ -103,7 +108,7 @@ function useDocumentPanelContentState(args: {
       args.nodesById,
       args.trashedNodeIds
     );
-  }, [args.activeNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds, pdfDocumentSurface]);
+  }, [args.activeNodeId, args.nodeOrder, args.nodesById, args.trashedNodeIds, hasPdfDocumentSurface]);
   const documentFlags = getDocumentPanelFlags({
     activeNode,
     activeNodeId: args.activeNodeId,
