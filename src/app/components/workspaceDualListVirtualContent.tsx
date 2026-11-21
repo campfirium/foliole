@@ -15,7 +15,7 @@ import { resolveSystemEntryDisplayName } from '../../shared/localization/systemE
 import { PublishedVirtualResultListPanel } from './PublishedVirtualResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
-import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
+import { useVirtualContentItems } from './workspaceVirtualContentModel';
 
 function resolveVirtualHeader(args: {
   activeVirtualNode: Node | undefined;
@@ -52,6 +52,21 @@ function resolveVirtualHeader(args: {
   };
 }
 
+function resolveVirtualEmptyState(isRemovedView: boolean, isShelvedView: boolean, t: Translate) {
+  return {
+    description: isRemovedView
+      ? t('desktop.virtualSearch.removed.empty.description')
+      : isShelvedView
+      ? t('desktop.virtualSearch.shelved.empty.description')
+      : t('desktop.virtualSearch.saved.empty.description'),
+    title: isRemovedView
+      ? t('desktop.virtualSearch.removed.empty.title')
+      : isShelvedView
+      ? t('desktop.virtualSearch.shelved.empty.title')
+      : t('desktop.virtualSearch.empty.title')
+  };
+}
+
 function renderPublishedContentColumn(props: WorkspaceDualListContentProps) {
   return (
     <PublishedVirtualResultListPanel
@@ -79,6 +94,33 @@ export function renderVirtualContentColumn(
   if (activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID) {
     return renderPublishedContentColumn(props);
   }
+  return (
+    <VirtualSearchContentColumn
+      activeVirtualNodeId={activeVirtualNodeId}
+      childrenByParent={childrenByParent}
+      locale={locale}
+      props={props}
+      t={t}
+      virtualResultIndex={virtualResultIndex}
+    />
+  );
+}
+
+function VirtualSearchContentColumn({
+  activeVirtualNodeId,
+  childrenByParent,
+  locale,
+  props,
+  t,
+  virtualResultIndex
+}: {
+  activeVirtualNodeId: string;
+  childrenByParent: Map<string | null, string[]>;
+  locale: AppLocale;
+  props: WorkspaceDualListContentProps;
+  t: Translate;
+  virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>;
+}) {
   const activeVirtualNode = props.nodesById[activeVirtualNodeId];
   const preservesCollectionOrder = Boolean(
     isManualVirtualNodeFilter(activeVirtualNode?.virtualFilter) ||
@@ -88,8 +130,15 @@ export function renderVirtualContentColumn(
   );
   const isRemovedView = activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID;
   const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
-  const itemIds = resolveVirtualContentItemIds(props, virtualResultIndex);
-  const items = itemIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
+  const items = useVirtualContentItems(
+    activeVirtualNodeId,
+    {
+      nodeOrder: props.nodeOrder,
+      nodesById: props.nodesById,
+      trashedNodeIds: props.trashedNodeIds
+    },
+    virtualResultIndex
+  );
 
   return (
     <VirtualResultListPanel
@@ -97,18 +146,7 @@ export function renderVirtualContentColumn(
       continueAfterDelete={!props.isStudyMode && !isRemovedView}
       activeNodeId={props.activeNodeId}
       childrenByParent={childrenByParent}
-      emptyState={{
-        description: isRemovedView
-          ? t('desktop.virtualSearch.removed.empty.description')
-          : isShelvedView
-          ? t('desktop.virtualSearch.shelved.empty.description')
-          : t('desktop.virtualSearch.saved.empty.description'),
-        title: isRemovedView
-          ? t('desktop.virtualSearch.removed.empty.title')
-          : isShelvedView
-          ? t('desktop.virtualSearch.shelved.empty.title')
-          : t('desktop.virtualSearch.empty.title')
-      }}
+      emptyState={resolveVirtualEmptyState(isRemovedView, isShelvedView, t)}
       header={resolveVirtualHeader({
         activeVirtualNode,
         activeVirtualNodeId,

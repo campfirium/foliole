@@ -189,6 +189,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
             workspace={props}
           />
         ) : props.isVirtualViewOpen
+          // unstable-reference-ok: useVirtualNodeResultIndex returns its ref-cached index until nodeOrder, nodesById or trashedNodeIds change.
           ? renderVirtualContentColumn(props, virtualResultIndex, t, locale, dualListState.topicChildrenByParent)
             : props.isExternalViewOpen
               ? renderExternalContentColumn(props)
