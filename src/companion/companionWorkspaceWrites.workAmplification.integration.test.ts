@@ -150,15 +150,18 @@ it('reads the same number of rows for the first Virtual folder however large the
 async function addSiblings(count: number, parents: string[]) {
   const insert = library!.database.prepare('INSERT INTO nodes (id,kind,title,content,parent_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
   for (let i = 0; i < count; i++) {
-    for (const parent of parents) insert.run(`${parent}-sibling-${i}`, 'topic', `s${i}`, 'body', parent, '1', '1');
+    for (const parent of parents) {
+      const kind = library!.database.prepare('SELECT kind FROM nodes WHERE id = ?').pluck().get(parent) === 'folder' ? 'topic' : 'item';
+      insert.run(`${parent}-sibling-${i}`, kind, `s${i}`, 'body', parent, '1', '1');
+    }
   }
   await refreshCompanionWorkspaceAfterMutation(null);
 }
 
-async function writeRowsWithSiblings(siblings: number, name: string) {
+async function writeRowsWithSiblings(siblings: number, name: string, parents?: string[]) {
   await openLibrary(100);
   // A folder move carries 'other' itself, so only its destination gains siblings.
-  await addSiblings(siblings, name === 'folder move' ? ['folder'] : ['folder', 'other']);
+  await addSiblings(siblings, parents ?? (name === 'folder move' ? ['folder'] : ['folder', 'other']));
   sqlRecording.start({ label: 'sibling-write', maxGroups: 2000 });
   try {
     await WRITES[name]!();
@@ -170,6 +173,14 @@ async function writeRowsWithSiblings(siblings: number, name: string) {
 for (const name of ['rename', 'move', 'folder move', 'shelve', 'create', 'restore', 'batch move', 'batch restore']) {
   it(`reads the same number of rows for a ${name} however many siblings its folders hold`, async () => {
     expect(await writeRowsWithSiblings(300, name)).toBe(await writeRowsWithSiblings(0, name));
+  });
+}
+
+// A moved or shelved node keeps its subtree as it is, so a large folder moves at the cost of a small one.
+const CARRIED: Record<string, string[]> = { move: ['a'], 'folder move': ['other'], shelve: ['b'], 'batch move': ['a', 'b'] };
+for (const [name, parents] of Object.entries(CARRIED)) {
+  it(`reads the same number of rows for a ${name} however large the subtree it carries is`, async () => {
+    expect(await writeRowsWithSiblings(300, name, parents)).toBe(await writeRowsWithSiblings(0, name, parents));
   });
 }
 
@@ -275,3 +286,15 @@ for (const [name, move] of Object.entries(UNLOCKING_MOVES)) {
       .toEqual({ ...complete, trashedNodeIds: [...complete!.trashedNodeIds].sort() });
   });
 }
+
+it('reads the subtree a move carries, not the library, when it holds a locked item', async () => {
+  library!.database.prepare("INSERT INTO node_reading (node_id, last_handled_at, next_at, state) VALUES ('ax', '0', '0', 'locked')").run();
+  await refreshCompanionWorkspaceAfterMutation(null);
+  reads.fullSnapshots = 0;
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' });
+  const snapshot = await refreshCompanionWorkspaceAfterMutation();
+  expect(reads.fullSnapshots).toBe(0);
+  const complete = await getIosCompanionDatabaseOwner().readSnapshot(db => loadIosCompanionWorkspaceSnapshot(db));
+  expect({ ...snapshot, trashedNodeIds: [...snapshot!.trashedNodeIds].sort() })
+    .toEqual({ ...complete, trashedNodeIds: [...complete!.trashedNodeIds].sort() });
+});

@@ -13,8 +13,9 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], parentNodeId: string | null) {
   let readingNodeIds: string[] = [];
   return runCompanionHistoryMutation(async db => {
-    // The moved subtrees, their ancestors and the target's ancestors suffice unless a Sequential Reading topic is in reach.
-    const narrow = await loadCompanionWriteNodes(db, targets.map(target => target.id), { sequentialReading: true, pathIds: [parentNodeId] });
+    // The moved nodes, their ancestors and the target's ancestors suffice unless a Sequential Reading topic is in reach;
+    // the moved subtrees travel unchanged, so they are probed, never read.
+    const narrow = await loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: targets.map(target => target.id), pathIds: [parentNodeId] });
     const snapshot = narrow ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrow && !snapshot) throw new Error('workspace_unavailable');
     const before = narrow ?? snapshot!.nodesById;

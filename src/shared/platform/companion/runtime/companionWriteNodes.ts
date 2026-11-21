@@ -15,6 +15,13 @@ const WRITE_NODE_IDS_SQL = `WITH RECURSIVE descendants(id) AS (
 
 type WriteNodes = Record<string, WorkspaceNodeSnapshot>;
 
+// Whether a subtree holds an enabled Sequential Reading source or a locked item, answered from ids alone.
+const SUBTREE_READING_PROBE_SQL = `WITH RECURSIVE descendants(id) AS (
+  SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
+  UNION SELECT child.id FROM nodes child JOIN descendants parent ON child.parent_id = parent.id
+) SELECT 1 AS found FROM descendants d JOIN nodes n ON n.id = d.id LEFT JOIN node_reading r ON r.node_id = d.id
+  WHERE n.sequential_reading_enabled = 1 OR r.state = 'locked' LIMIT 1`;
+
 async function loadSubtreesAndAncestors(db: DbPort, rootIds: readonly string[], ancestorIds: readonly string[]) {
   const rows = await db.query(WRITE_NODE_IDS_SQL, [JSON.stringify(rootIds), JSON.stringify(ancestorIds)]);
   const nodes: WriteNodes = await loadCompanionContentProjection(db, rows.flatMap(row => typeof row.id === 'string' ? [row.id] : []), true);
@@ -42,25 +49,33 @@ function enabledSourceFolders(nodes: WriteNodes, ids: readonly string[]) {
 /**
  * Reads the nodes a single-node write consumes instead of the whole library: the subtrees it changes,
  * their ancestors and the ancestors of `pathIds` (such as a move target). Siblings are never read, so the cost
- * does not grow with the size of the folders on the way.
+ * does not grow with the size of the folders on the way. A node in `keptIds` keeps its subtree as it is (a move
+ * or a shelve), so its subtree is read only when probing it finds an enabled source or a locked item.
  * With `sequentialReading`, it also reads what maintaining an enabled Sequential Reading folder on those chains needs:
  * the folder's children, whose order is the folder's own, and the subtree of each child topic that is done or dismissed,
  * which still holds the folder's slot while an item below it can be read. A shelved child never holds the slot.
  * Returns null when the caller needs the whole library.
  */
 export async function loadCompanionWriteNodes(db: DbPort, rootIds: readonly string[],
-  options: { sequentialReading: boolean; pathIds?: readonly (string | null)[] }): Promise<WriteNodes | null> {
-  const paths = (options.pathIds ?? []).filter((id): id is string => id !== null);
-  const nodes = await loadSubtreesAndAncestors(db, rootIds, [...rootIds, ...paths]);
-  if (rootIds.some(id => !nodes[id])) return null;
+  options: { sequentialReading: boolean; pathIds?: readonly (string | null)[]; keptIds?: readonly string[] }): Promise<WriteNodes | null> {
+  // A kept subtree is read only when Sequential Reading maintenance may consume it: an enabled source or a
+  // locked item inside it.
+  const probed = options.sequentialReading && options.keptIds?.length
+    && (await db.query(SUBTREE_READING_PROBE_SQL, [JSON.stringify(options.keptIds)])).length > 0;
+  const roots = probed ? [...rootIds, ...options.keptIds!] : rootIds;
+  const kept = probed ? [] : options.keptIds ?? [];
+  const paths = [...kept, ...(options.pathIds ?? []).filter((id): id is string => id !== null)];
+  const nodes = await loadSubtreesAndAncestors(db, roots, [...roots, ...paths]);
+  if ([...roots, ...kept].some(id => !nodes[id])) return null;
   if (!options.sequentialReading) return nodes;
-  const sources = enabledSourceFolders(nodes, [...rootIds, ...paths]);
+  const sources = enabledSourceFolders(nodes, [...roots, ...paths]);
   if (!sources) return null;
   if (!sources.length) return nodes;
   // The content projection of the sources also projects their children.
   const children: WriteNodes = await loadCompanionContentProjection(db, sources);
+  // A kept topic joining a source holds its slot through its unread subtree as well.
   const holders = Object.values(children).filter(node => node.parentNodeId !== null && sources.includes(node.parentNodeId) &&
-    node.kind === 'topic' && !node.shelvedAt && isUnavailableSequentialTopic(node) && !nodes[node.id]).map(node => node.id);
+    node.kind === 'topic' && !node.shelvedAt && isUnavailableSequentialTopic(node) && (!nodes[node.id] || kept.includes(node.id))).map(node => node.id);
   const held = holders.length ? await loadSubtreesAndAncestors(db, holders, []) : {};
   return { ...held, ...children, ...nodes };
 }

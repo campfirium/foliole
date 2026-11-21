@@ -67,8 +67,10 @@ function loadNarrowWriteNodes(db: DbPort, command: Exclude<WorkspaceMetadataComm
     // so the creation only needs to know that the id is free.
     case 'create-dive': case 'create-index':
       return loadCompanionWriteNodes(db, [], { sequentialReading: true, pathIds: [command.nodeId] });
-    case 'move': return loadCompanionWriteNodes(db, [command.nodeId], { sequentialReading: true, pathIds: [command.parentNodeId] });
-    case 'delete': case 'restore': case 'shelve': case 'unshelve':
+    // A move or a shelve changes only the node itself; its subtree is probed, never read.
+    case 'move': return loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: [command.nodeId], pathIds: [command.parentNodeId] });
+    case 'shelve': case 'unshelve': return loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: [command.nodeId] });
+    case 'delete': case 'restore':
       return loadCompanionWriteNodes(db, [command.nodeId], { sequentialReading: true });
     default: return null;
   }

@@ -105,7 +105,11 @@ async function readScopedMetadata(db: DbPort, current: WorkspaceSnapshot, scope:
   if (!scope.nodeIds.length) return null;
   const reviewed = scope.reviewNodeIds ?? [];
   const reading = scope.readingNodeIds ?? [];
-  const { nodes, expected } = await loadScopedNodes(db, current, new Set([...scope.nodeIds, ...reviewed, ...reading]));
+  const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
+  // Children keep their projection unless a named node appears, disappears or changes visibility; a move or a
+  // rename keeps them as they are, so only the named nodes are read and the cost does not grow with the subtree.
+  let { nodes, expected } = await loadScopedNodes(db, current, roots, true);
+  if (changesChildVisibility(current, nodes)) ({ nodes, expected } = await loadScopedNodes(db, current, roots));
   if (!canMergeWorkspaceMetadataProjection(current, nodes, expected, reviewed, reading)) return null;
   // A node created on this phone has no Readwise source.
   for (const [id, node] of Object.entries(nodes)) if (!current.nodesById[id]) nodes[id] = { ...node, readwiseRemoteLifecycle: null };
@@ -121,14 +125,26 @@ async function readScopedMetadata(db: DbPort, current: WorkspaceSnapshot, scope:
   return mergeCompanionLocalState(db, await mergeCompanionNodeViews(db, next, Object.keys(nodes)), scope);
 }
 
-async function loadScopedNodes(db: DbPort, current: WorkspaceSnapshot, roots: ReadonlySet<string>) {
-  const projection = await loadCompanionContentProjection(db, [...roots]);
+/** Whether a named node's children may project differently: Trash state or visibility of an existing node changed. */
+function changesChildVisibility(current: WorkspaceSnapshot, nodes: WorkspaceSnapshot['nodesById']) {
+  const visible = new Set(current.nodeOrder);
+  return Object.values(nodes).some(node => {
+    const previous = current.nodesById[node.id];
+    if (!previous) return false;
+    if ((previous.deletedAt ?? null) !== (node.deletedAt ?? null)) return true;
+    const parentVisible = node.parentNodeId === null || (visible.has(node.parentNodeId) && !nodes[node.parentNodeId]?.deletedAt);
+    return visible.has(node.id) !== (parentVisible && !node.deletedAt);
+  });
+}
+
+async function loadScopedNodes(db: DbPort, current: WorkspaceSnapshot, roots: ReadonlySet<string>, exact = false) {
+  const projection = await loadCompanionContentProjection(db, [...roots], exact);
   const nodes = Object.fromEntries(Object.entries(projection).map(([id, node]) => {
     const lifecycle = current.nodesById[id]?.readwiseRemoteLifecycle;
     return [id, lifecycle !== undefined ? { ...node, readwiseRemoteLifecycle: lifecycle } : node];
   }));
   const expected = Object.values(current.nodesById)
-    .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
+    .filter(node => roots.has(node.id) || (!exact && node.parentNodeId !== null && roots.has(node.parentNodeId)))
     .map(node => node.id);
   return { nodes, expected };
 }
