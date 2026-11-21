@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { EpubArchiveEntries } from './epubArchiveEntries.js';
 import { replyThenDisconnect } from './epubBookProcessReply.js';
 import { serializeStagedEpubBook } from './epubBookStaging.js';
-import { buildRawEpubBook } from './epubImportBook.js';
+import { buildRawEpubBook } from './epubRawBookBuild.js';
 import { epubImageFilePath } from './epubStagedContent.js';
 
 let finished = false;
