@@ -69,7 +69,7 @@ async function persistDeleteTransition(args: {
       isExactIdSet(result.restoredNodeIds, args.entry.nodeIds)
     : 'deletedNodeIds' in result && isExactIdSet(result.deletedNodeIds, args.entry.nodeIds);
   if (!exact) return { status: 'invalid' as const };
-  return { status: 'applied' as const, nodeOrder: 'nodeOrder' in result ? result.nodeOrder : undefined,
+  return { status: 'applied' as const, childOrders: 'childOrders' in result ? result.childOrders : undefined,
     manualParentOrders: 'manualParentOrders' in result ? result.manualParentOrders : undefined };
 }
 
@@ -137,7 +137,7 @@ export async function applyWorkspaceDeleteHistory(args: {
   const context = args.mode === 'undo' ? args.entry.beforeContext : args.entry.afterContext;
   const navigation = args.mode === 'undo' ? args.entry.beforeNavigation : args.entry.afterNavigation;
   const nodeOrder = args.mode === 'undo'
-    ? restoreDeleteHistoryOrder(latest, args.entry, persisted.nodeOrder) : latest.nodeOrder;
+    ? restoreDeleteHistoryOrder(latest, args.entry, persisted.childOrders) : latest.nodeOrder;
   const latestParents = withMutationTimestamp(rawParents, latest, args.mutationTimestamp);
   const restoredState = { ...latest, nodesById: { ...latest.nodesById, ...latestParents } };
   const nodesById = args.mode === 'undo'

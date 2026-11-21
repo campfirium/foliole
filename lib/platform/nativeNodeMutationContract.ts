@@ -92,7 +92,8 @@ export type { NativeMoveNodesArgs, NativeMoveNodesResult, NativeMoveNodePatch } 
 export interface NativeRestoreNodesResult {
   annotationHistory?: import('./nativeTrashCommandMap.js').NativeAnnotationTrashReceipt;
   restoredNodeIds: string[];
-  nodeOrder?: string[];
+  /** Visible child sequences of the parents the restore changed; the rest of the list order is unchanged. */
+  childOrders?: Array<{ parentNodeId: string | null; childIds: string[] }>;
   manualParentOrders?: Array<{ parentNodeId: string; childIds: string[]; updatedAt: string }>;
   skippedConflicts: Array<{
     liveNodeId: string;

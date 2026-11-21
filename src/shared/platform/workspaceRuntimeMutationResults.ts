@@ -17,7 +17,9 @@ export function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreN
       (!('annotationHistory' in value) || annotationTrashReceiptSchema.safeParse(value.annotationHistory).success) &&
       Array.isArray((value as WorkspaceRestoreNodesResult).restoredNodeIds) &&
       Array.isArray((value as WorkspaceRestoreNodesResult).skippedConflicts) &&
-      (!('nodeOrder' in value) || isStringArray((value as WorkspaceRestoreNodesResult).nodeOrder)) &&
+      (!('childOrders' in value) || (Array.isArray((value as WorkspaceRestoreNodesResult).childOrders) &&
+        (value as WorkspaceRestoreNodesResult).childOrders!.every(order => isObjectRecord(order) &&
+          (order.parentNodeId === null || typeof order.parentNodeId === 'string') && isStringArray(order.childIds)))) &&
       (!('manualParentOrders' in value) || (Array.isArray((value as WorkspaceRestoreNodesResult).manualParentOrders) &&
         (value as WorkspaceRestoreNodesResult).manualParentOrders!.every(order => isObjectRecord(order) &&
           typeof order.parentNodeId === 'string' && isStringArray(order.childIds) && typeof order.updatedAt === 'string')))

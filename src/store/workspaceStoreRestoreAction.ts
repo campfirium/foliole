@@ -4,6 +4,7 @@ import type { WorkspaceRestoreNodesResult } from '../shared/platform/workspaceRu
 import { collectNodeSubtreeIds } from './workspaceHelpers';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { restoreStructureParentOrders } from './workspaceStructureParentOrders';
 import { applyWorkspaceTrashLifecycle } from './workspaceTrashLifecycle';
 import { collectTrashRootActionTargets } from './workspaceTrashMutationTargets';
 
@@ -58,7 +59,7 @@ function applyRestoreResult(
   const nextState = {
     ...state,
     activeNodeId: targetNodeId,
-    nodeOrder: result.nodeOrder ?? state.nodeOrder,
+    nodeOrder: result.childOrders ? restoreStructureParentOrders(state, result.childOrders) : state.nodeOrder,
     trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
     trashedNodeIds: nextTrashedNodeIds
   };

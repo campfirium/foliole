@@ -7,15 +7,14 @@ import type { WorkspaceState } from './workspaceStore';
 import { captureStructureParentOrders, restoreStructureParentOrders } from './workspaceStructureParentOrders';
 
 export function restoreDeleteHistoryOrder(
-  state: WorkspaceState, entry: WorkspaceDeleteHistoryEntry, committedOrder?: string[]
+  state: WorkspaceState, entry: WorkspaceDeleteHistoryEntry, committedOrders?: NativeRestoreNodesResult['childOrders']
 ) {
   const targets = new Set(entry.nodeIds);
   const current = { ...state, nodeOrder: [...new Set([...state.nodeOrder, ...entry.nodeIds])] };
   const orders = captureStructureParentOrders(current, entry.parentOrders.map(order => order.parentNodeId));
   const restored = orders.map(order => {
-    const saved = committedOrder
-      ? committedOrder.filter(id => state.nodesById[id]?.parentNodeId === order.parentNodeId)
-      : entry.parentOrders.find(saved => saved.parentNodeId === order.parentNodeId)!.childIds;
+    const saved = committedOrders?.find(committed => committed.parentNodeId === order.parentNodeId)?.childIds
+      ?? entry.parentOrders.find(saved => saved.parentNodeId === order.parentNodeId)!.childIds;
     return { ...order, childIds: restoreDeletedChildOrder(order.childIds, saved, targets) };
   });
   return restoreStructureParentOrders(current, restored);

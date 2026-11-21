@@ -1,5 +1,5 @@
+import { loadRestoredChildOrders } from '../../lib/core/database/restoredChildOrders.js';
 import { restoreDeletedParentOrders } from '../../lib/core/database/restoreDeletedParentOrders.js';
-import { loadVisibleWorkspaceNodeOrder } from '../../lib/core/database/workspaceVisibleNodeOrder.js';
 import type { NativeRestoreNodesResult } from '../../lib/platform/nativeNodeMutationContract.js';
 import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 
@@ -77,7 +77,7 @@ export function restoreNodesWithParents(input: NativeRestoreNodesArgs): NativeRe
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
     const manualParentOrders = input.parentOrders
       ? persistManualOrders(restoreDeletedParentOrders(driver, restored.restoredNodeIds, input.parentOrders)) : [];
-    return { ...restored, ...(history ? { annotationHistory: { ...history, deletedAt: null } } : {}), nodeOrder: loadVisibleWorkspaceNodeOrder(driver),
+    return { ...restored, ...(history ? { annotationHistory: { ...history, deletedAt: null } } : {}), childOrders: loadRestoredChildOrders(driver, restored.restoredNodeIds),
       ...(manualParentOrders.length ? { manualParentOrders } : {}) };
   });
   scheduleNodeSyncVersionDrain();

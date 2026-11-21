@@ -82,7 +82,7 @@ it('commits delete, undo and redo with parent regions while preserving the paren
   ]));
   expect(restoreNodesWithParents({ nodeIds: deletion.nodeIds, parentUpdates: [{ ...parentUpdate, imageRegions: regions }] }))
     .toEqual({ restoredNodeIds: deletion.nodeIds, skippedConflicts: [],
-      nodeOrder: ['special-inbox', 'special-virtual-root', 'parent', 'node-child'] });
+      childOrders: [{ parentNodeId: 'parent', childIds: ['node-child'] }, { parentNodeId: 'node-child', childIds: [] }] });
   closeDatabaseConnection();
   expect(rows()).toEqual(expect.arrayContaining([
     expect.objectContaining({ id: 'node-child', deleted_at: null }),
@@ -93,7 +93,7 @@ it('commits delete, undo and redo with parent regions while preserving the paren
   expect(rows()).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'node-child', deleted_at: timestamp })]));
 });
 
-it('returns the visible list order on restore without loading the full list snapshot', () => {
+it('returns the visible child order of each parent the restore changed, matching a full reread', () => {
   seedNode('folder-gone', null, 2);
   seedNode('gone-child', 'folder-gone', 3);
   seedNode('later', null, 4);
@@ -102,8 +102,12 @@ it('returns the visible list order on restore without loading the full list snap
   fullListSnapshot.loads = 0;
   const restored = restoreNodesWithParents({ nodeIds: deletion.nodeIds });
   expect(fullListSnapshot.loads).toBe(0);
-  expect(restored.nodeOrder).toEqual(['special-inbox', 'special-virtual-root', 'parent', 'node-child', 'later']);
-  expect(restored.nodeOrder).toEqual(loadWorkspaceListSnapshot().nodeOrder);
+  expect(restored.childOrders).toEqual([{ parentNodeId: 'parent', childIds: ['node-child'] }, { parentNodeId: 'node-child', childIds: [] }]);
+  const after = loadWorkspaceListSnapshot();
+  expect(after.nodeOrder).toEqual(['special-inbox', 'special-virtual-root', 'parent', 'node-child', 'later']);
+  for (const { parentNodeId, childIds } of restored.childOrders!) {
+    expect(childIds).toEqual(after.nodeOrder.filter(id => after.nodesById[id]?.parentNodeId === parentNodeId));
+  }
 });
 
 it('rolls back restored children when restoring parent regions fails', () => {

@@ -83,7 +83,7 @@ vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollection
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(moveNodes).mockReturnValue({ movedNodeIds: ['node-2'], parentOrders: [], nodes: [], readings: [] });
-  vi.mocked(restoreNodes).mockReturnValue({ nodeOrder: ['node-1'], restoredNodeIds: ['node-1'], skippedConflicts: [] });
+  vi.mocked(restoreNodes).mockReturnValue({ restoredNodeIds: ['node-1'], skippedConflicts: [] });
 });
 
 it('handles node mutation commands', async () => {
@@ -224,7 +224,6 @@ it('handles soft delete node command', async () => {
 
 it('handles restore and permanent delete node commands', async () => {
   await expect(handleInvokeRequest({ command: 'restore_nodes', args: { nodeIds: ['node-1'] } })).resolves.toEqual({
-    nodeOrder: ['node-1'],
     restoredNodeIds: ['node-1'],
     skippedConflicts: []
   });

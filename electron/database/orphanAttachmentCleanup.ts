@@ -2,6 +2,7 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { parseNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
+import { ASSET_MARKDOWN_SCHEME } from '../../lib/platform/assetMarkdownUrl.js';
 import { buildCanonicalAttachmentStorageKey, parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { moveAttachmentToTrash } from '../attachments/attachmentTrashFiles.js';
 
@@ -36,14 +37,22 @@ function collectNodeKeys(rows: NodeResourcesRow[]) {
   return keys;
 }
 
+/**
+ * Only rows that can name an attachment: `collectNodeKeys` finds none in a body without an asset URL
+ * or in an empty reference list, so skipping those rows keeps the result of reading every node.
+ */
+const REFERENCING_NODE_ROWS_SQL = `SELECT n.id, n.content, n.body_blob_hash, n.resource_references
+  FROM nodes n
+  WHERE (instr(n.content, '${ASSET_MARKDOWN_SCHEME}') > 0 OR n.resource_references NOT IN ('', '[]'))`;
+
 export function createAttachmentCleanupPlan(nodeIds: string[]): AttachmentCleanupPlan {
-  const rows = openDatabaseConnection().driver.queryAll<NodeResourcesRow>(
-    `SELECT n.id, n.content, n.body_blob_hash, n.resource_references
-     FROM nodes n`
-  );
-  const removed = new Set(nodeIds);
-  const candidates = collectNodeKeys(rows.filter((row) => removed.has(row.id)));
-  const retainedKeys = collectNodeKeys(rows.filter((row) => !removed.has(row.id)));
+  const driver = openDatabaseConnection().driver;
+  const removedIds = JSON.stringify(nodeIds);
+  const candidates = collectNodeKeys(driver.queryAll<NodeResourcesRow>(
+    `${REFERENCING_NODE_ROWS_SQL} AND n.id IN (SELECT value FROM json_each(?))`, [removedIds]));
+  // Nothing to release: the rest of the library cannot change the plan, so it is not read.
+  const retainedKeys = candidates.size ? collectNodeKeys(driver.queryAll<NodeResourcesRow>(
+    `${REFERENCING_NODE_ROWS_SQL} AND n.id NOT IN (SELECT value FROM json_each(?))`, [removedIds])) : new Set<string>();
   return { candidates: [...candidates].sort().map((key) => {
     const identity = parseCanonicalAttachmentStorageKey(key)!;
     return { id: identity.contentHash, mime_type: identity.mimeType };
