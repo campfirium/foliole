@@ -65,7 +65,7 @@ async function openLibrary(size: number) {
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'gone' });
   // A hand-ordered folder: its order comes from order sources, not from creation time.
   await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder',
-    childIds: ['c', 'a', 'gone', 'b'], now, hostName: 'Search' }));
+    childIds: ['c', 'a', 'gone', 'b'], now, hostName: 'Search' }), { kind: 'business' });
   await refreshCompanionWorkspaceAfterMutation(null);
 }
 beforeEach(() => openLibrary(100));
@@ -85,7 +85,7 @@ async function moveOutOfSequentialReading() {
     { ...base, id: 'locked', kind: 'topic', parentNodeId: 'moved', title: 'locked', content: 'Reading content' }
   ];
   const records = await Promise.all(definitions.map(node => toWorkspaceNativeNodeVersion({ ...node, currentVersionId: null }, 'remote')));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   await saveCompanionSyncNodeReadingRecord({ nodeId: 'locked', reading: { state: 'locked', intervalDurationMs: 1000,
     intervalGrowthFactor: 2, lastHandledAt: now, nextAt: now, priority: 5, readingPosition: 17, repetitionCount: 2 } });
   await mutateCompanionWorkspace({ type: 'move', nodeId: 'moved', parentNodeId: 'other' });
@@ -175,6 +175,6 @@ it('refuses a replay whose subtree changed from the narrow read as well', async 
   // A child added under the trashed subtree after the move makes its saved subtree stale.
   const base = (await refreshCompanionWorkspaceAfterMutation())!.nodesById.ax!;
   const record = await toWorkspaceNativeNodeVersion({ ...base, id: 'late', title: 'late', currentVersionId: null }, 'remote');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }), { kind: 'business' });
   await expect(replay('undo')).rejects.toThrow('workspace_history_subtree_changed');
 });
