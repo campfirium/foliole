@@ -1,11 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const f = vi.hoisted(() => ({ backup: vi.fn(), consume: vi.fn(), validate: vi.fn(), register: vi.fn(), inventory: vi.fn(), cancel: vi.fn(async () => undefined), writer: vi.fn() }));
+const f = vi.hoisted(() => ({ backup: vi.fn(), consume: vi.fn(), validate: vi.fn(), register: vi.fn(), inventory: vi.fn(), cancel: vi.fn(async () => undefined), finish: vi.fn(async () => ({})), writer: vi.fn() }));
 vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => {
   const owner = { folderBackupSource: f.register, runWriter: f.writer, read: vi.fn(async () => 'initial') };
   return { getIosCompanionDatabaseOwner: () => owner };
 });
-vi.mock('./companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({ getCompanionFolderBackupPort: () => ({ backupDatabase: f.backup, cancelDatabase: f.cancel }) }));
+vi.mock('./companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({ getCompanionFolderBackupPort: () => ({ backupDatabase: f.backup, cancelDatabase: f.cancel,
+  finishAttachments: f.finish }) }));
 vi.mock('./companion/folderBackup/companionFolderAttachmentDeletion', () => ({
   captureFolderAttachmentDeletions: vi.fn(async () => null), validateFolderAttachmentDeletions: f.validate
 }));
@@ -44,7 +45,10 @@ it('releases the native request when the database owner closes after its databas
     state: { directoryId: 'current-directory' } }));
   f.validate.mockRejectedValueOnce(new Error('owner closed'));
   await expect(backUpCompanionDatabase()).rejects.toThrow('owner closed');
-  expect(f.cancel).toHaveBeenCalledWith({ requestId: f.backup.mock.calls[0]![0].requestId });
+  const requestId = f.backup.mock.calls[0]![0].requestId;
+  // The committed round ends as failed with the real error, then the request is released with that error.
+  expect(f.finish).toHaveBeenCalledWith({ requestId, copied: 0, pending: null, errorMessage: 'owner closed' });
+  expect(f.cancel).toHaveBeenCalledWith({ requestId, errorMessage: 'owner closed' });
   expect(f.consume).not.toHaveBeenCalled();
 });
 
