@@ -8,6 +8,7 @@ import { AppDialog, AppDialogPortal, AppDialogTitle } from '../shared/ui/Dialog'
 import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../shared/ui/SettingsTouchSheet';
 
 import { companionBackupRestoreMessage } from './companionBackupRestoreMessage';
+import { failCompanionLibrarySwitch } from './companionLibrarySwitch';
 import { formatCompanionTopicDate } from './CompanionRecentArticleList';
 import { companionLibrarySwapContext, reloadCompanionApp } from './useCompanionBackupRestore';
 
@@ -51,7 +52,10 @@ export function CompanionBackupRevertRow() {
   async function revert() {
     setView({ step: 'reverting' });
     try { await revertCompanionBackupRestore(companionLibrarySwapContext()); }
-    catch (error) { setView({ step: 'failed', error: companionBackupRestoreMessage(error, t) }); }
+    catch (error) {
+      const message = companionBackupRestoreMessage(error, t);
+      if (!failCompanionLibrarySwitch(message)) setView({ step: 'failed', error: message });
+    }
   }
   const date = savedAt ? formatCompanionTopicDate(savedAt, locale) : '';
   return <>

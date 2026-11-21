@@ -13,6 +13,7 @@ import {
 } from '../shared/ui/StartupSurface';
 
 import { CompanionColorModeProvider } from './CompanionColorModeProvider';
+import { CompanionLibrarySwitchGate } from './CompanionLibrarySwitchGate';
 import { CompanionShell } from './CompanionShell';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { CompanionTextScaleProvider } from './CompanionTextScale';
@@ -57,7 +58,9 @@ function CompanionAppContent() {
       );
     }
 
-    return <CompanionShell bootstrapState={bootstrap.state} />;
+    return <CompanionLibrarySwitchGate onReopen={reloadCompanionRuntime}>
+      <CompanionShell bootstrapState={bootstrap.state} />
+    </CompanionLibrarySwitchGate>;
   })();
 
   return <MouseGestureSettingsProvider>{content}</MouseGestureSettingsProvider>;

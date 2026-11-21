@@ -27,5 +27,7 @@ export const ZH_HANS_COMPANION_APP_TRANSLATIONS: Partial<Record<TranslationKey, 
   'companion.app.bootstrapFailed': '移动端启动失败',
   'companion.app.iosPrepared.eyebrow': 'Foliole iPhone 端',
   'companion.app.iosPrepared.message': '本机存储已经就绪。当前版本暂不提供主题浏览、复习和同步。',
-  'companion.app.iosPrepared.title': 'iPhone 端已准备好'
+  'companion.app.iosPrepared.title': 'iPhone 端已准备好',
+  'companion.app.switchingLibrary': '正在切换资料库…',
+  'companion.app.switchFailed': '无法切换资料库'
 };

@@ -12,5 +12,7 @@
   "companion.app.bootstrapFailed": "同伴引導失敗",
   "companion.app.iosPrepared.eyebrow": "iPhone 版 Foliole",
   "companion.app.iosPrepared.message": "本地儲存已準備就緒。此版本中不提供主題瀏覽、審閱和同步。",
-  "companion.app.iosPrepared.title": "這款 iPhone 已準備就緒"
+  "companion.app.iosPrepared.title": "這款 iPhone 已準備就緒",
+  "companion.app.switchingLibrary": "正在切換資料庫…",
+  "companion.app.switchFailed": "無法切換資料庫"
 }

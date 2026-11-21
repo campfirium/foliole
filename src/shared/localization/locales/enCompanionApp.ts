@@ -27,5 +27,7 @@ export const EN_COMPANION_APP_TRANSLATIONS = {
   'companion.app.iosPrepared.eyebrow': 'Foliole for iPhone',
   'companion.app.iosPrepared.message':
     'Local storage is ready. Topic browsing, review, and sync are not available in this build.',
-  'companion.app.iosPrepared.title': 'This iPhone is ready'
+  'companion.app.iosPrepared.title': 'This iPhone is ready',
+  'companion.app.switchingLibrary': 'Switching library…',
+  'companion.app.switchFailed': 'Couldn’t switch library'
 } as const;

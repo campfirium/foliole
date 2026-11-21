@@ -17,6 +17,7 @@ import {
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 
 import { companionBackupRestoreMessage } from './companionBackupRestoreMessage';
+import { closeForCompanionLibrarySwitch, failCompanionLibrarySwitch } from './companionLibrarySwitch';
 
 export type CompanionBackupRestoreView =
   | { step: 'closed' }
@@ -33,7 +34,8 @@ export function reloadCompanionApp() { window.location.reload(); }
 export function companionLibrarySwapContext() {
   return {
     owner: getIosCompanionDatabaseOwner(), port: getCompanionBackupRestorePort(),
-    exclusive: runWithCompanionAttachmentMaintenance, closeDatabase: closeIosCompanionDatabase,
+    exclusive: runWithCompanionAttachmentMaintenance,
+    closeDatabase: () => closeForCompanionLibrarySwitch(closeIosCompanionDatabase),
     forgetBackupFolder: () => getCompanionFolderBackupPort().clearDirectory(), reload: reloadCompanionApp
   };
 }
@@ -68,7 +70,8 @@ export function useCompanionBackupRestore() {
     try {
       await commitCompanionBackupRestore(companionLibrarySwapContext());
     } catch (error) {
-      setView({ step: 'failed', error: companionBackupRestoreMessage(error, t) });
+      const message = companionBackupRestoreMessage(error, t);
+      if (!failCompanionLibrarySwitch(message)) setView({ step: 'failed', error: message });
     }
   }, [t]);
 
