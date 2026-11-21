@@ -74,10 +74,11 @@ if (isIosBridgeAcceptance) {
   const renderer = ReactDOM.createRoot(rootElement);
   if (import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined)
     window.__foliolePreviewUnmount = () => renderer.unmount();
+  // The main module is running, so the offline Android failure screen is no longer needed.
+  window.dispatchEvent(new Event('foliole-companion-startup-settled'));
   renderer.render(
     <React.StrictMode>
-      <StartupErrorBoundary moduleLabel="Companion renderer"
-        onError={() => window.dispatchEvent(new Event('foliole-companion-startup-settled'))}>
+      <StartupErrorBoundary moduleLabel="Companion renderer">
         <CompanionApp />
       </StartupErrorBoundary>
     </React.StrictMode>

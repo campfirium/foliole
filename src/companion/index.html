@@ -4,35 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#181918" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#161918" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <style>
       #android-startup[hidden] { display: none; }
-      #android-startup { position: fixed; inset: 0; top: 0; right: 0; bottom: 0; left: 0;
-        z-index: 10000; overflow: auto; padding: 1.5rem; box-sizing: border-box; background: #fff;
-        color: #242424; font: 1rem/1.5 system-ui, sans-serif; overflow-wrap: break-word; }
-      #android-startup > div { max-width: 36rem; margin: 1rem auto; }
-      #android-startup h1 { font-size: 1.4rem; }
-      #android-startup summary { padding: .65rem 0; cursor: pointer; }
+      #android-startup { position: fixed; inset: 0; top: 0; right: 0; bottom: 0; left: 0; z-index: 10000;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        padding: 0 36px; box-sizing: border-box; background: #fff; color: #1f2120; text-align: center;
+        font: 15px/1.7 system-ui, -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif; }
+      #android-startup img { width: 56px; height: 56px; margin-bottom: 8px; border-radius: 14px; }
+      #android-startup h1 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.4; }
+      #android-startup p { margin: 0; max-width: 22rem; color: #6b6e6a; overflow-wrap: anywhere; }
+      #android-startup button { margin-top: 16px; min-height: 40px; padding: 0 16px; border: 1px solid #7c7e7b;
+        border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 14px; font-weight: 500; }
       @media (prefers-color-scheme: dark) {
-        #android-startup { background: #181918; color: #eee; }
+        #android-startup { background: #161918; color: #e6e7e3; }
+        #android-startup p { color: #a2a39f; }
+        #android-startup button { border-color: #7a7c74; }
       }
     </style>
     <title>Foliole Companion</title>
   </head>
   <body>
-    <main id="android-startup" data-chromium-minimum="__FOLIOLE_ANDROID_WEBVIEW_MINIMUM__" hidden>
-      <div>
-        <h1 id="android-startup-title">Opening Foliole…</h1>
-        <p id="android-startup-description" role="status"></p>
-        <details id="android-startup-help">
-          <summary>Having trouble opening Foliole?</summary>
-          <p id="android-startup-version"></p>
-          <p id="android-startup-update"></p>
-          <p id="android-startup-reopen"></p>
-        </details>
-      </div>
+    <main id="android-startup" data-chromium-minimum="__FOLIOLE_ANDROID_WEBVIEW_MINIMUM__" role="alert" hidden>
+      <img src="/favicon.png" alt="" />
+      <h1 id="android-startup-title"></h1>
+      <p id="android-startup-description"></p>
+      <button id="android-startup-copy" type="button"></button>
     </main>
     <div id="root"></div>
     <script src="/android-startup.js"></script>
