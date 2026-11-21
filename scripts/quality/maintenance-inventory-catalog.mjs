@@ -74,6 +74,12 @@ export const MECHANISM_GUARDS = [
     count: { file: 'electron/database/scaleGuardKnownFindings.testSupport.ts', pattern: /^\s*reason: /gmu, label: '已登记债务' }
   },
   {
+    label: '手机端单个动作 SQL 语句数预算',
+    files: ['src/companion/companionActionSqlStatements.budget.integration.test.ts'],
+    wiring: 'test',
+    count: { file: 'src/companion/companionActionSqlStatements.budget.integration.test.ts', pattern: /overBudget: \{ wa: /gu, label: '超预算动作' }
+  },
+  {
     label: '必填写入类别（runWriter kind）',
     marker: { text: 'CompanionWriteKind', pathspec: 'src/' },
     wiring: 'runtime'
