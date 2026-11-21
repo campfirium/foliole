@@ -36,12 +36,14 @@ function persist(state: Recording) {
 }
 
 function persistSnapshot(state: Recording, snapshot: ReturnType<ForegroundTimeRecording['snapshot']>) {
+  // A once-a-minute usage checkpoint is not a library edit: it still records its sync mutation, but must not
+  // mark the folder backup stale, wake automatic backup or abort background attachment scans every minute.
   const request = state.tail.then(() => state.owner.runWriter((db) => saveForegroundTime(db, {
     ...snapshot, hash: iosCompanionContentHash,
     mark: async (tx, record) => markIosCompanionMutation({ db: tx,
       hostName: await iosCompanionHostName(tx), objectType: 'foreground_source',
       objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt })
-  })));
+  }), false));
   state.tail = request.then(() => { lastFailure = null; }, (error: unknown) => { lastFailure = error; });
   return request;
 }

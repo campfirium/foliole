@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
+import { confirmFolderDatabaseBackup, isFolderDatabaseBackupCurrent, markFolderBackupChanged, readFolderBackupRevision } from '../folderBackup/companionFolderBackupProgress';
 
 
 const lifecycle = vi.hoisted(() => ({ foreground: () => {}, background: () => {}, active: true }));
@@ -13,6 +14,7 @@ vi.mock('../../appLifecycle', () => ({
   subscribeNativeAppBackground: async (handler: () => void) => { lifecycle.background = handler; return () => {}; }
 }));
 
+import { CompanionDatabaseCommits } from './companionDatabaseCommits';
 import { companionForegroundTimeSnapshot, flushCompanionForegroundTime, startCompanionForegroundTime, stopCompanionForegroundTime } from './companionForegroundTime';
 
 let db: Database.Database;
@@ -156,4 +158,27 @@ it('keeps a reopened incomplete overwrite in maintenance until its durable progr
   });
   expect(companionForegroundTimeSnapshot()!.sourceId).toBe(source);
   expect(total()).toEqual({ total: 120_000 });
+});
+
+it('keeps a finished folder backup current while foreground checkpoints are saved every minute', async () => {
+  const port = createBetterSqliteDbPort(db);
+  const commits = new CompanionDatabaseCommits();
+  // The production commit boundary decides which writes mark the backup stale and wake automatic backup.
+  const committed = { foregroundTimeOwnerId: async () => '11111111-1111-4111-8111-111111111111',
+    runWriter: <T>(task: (db: typeof port) => Promise<T>, businessWrite = true) => commits.write(port, task, businessWrite) };
+  await markFolderBackupChanged(port);
+  await startCompanionForegroundTime(committed);
+  // Only the first launch creates the source row; the backup taken after it must then stay current.
+  await confirmFolderDatabaseBackup(port, 'profile', await readFolderBackupRevision(port));
+  const woken = vi.fn(); commits.subscribe(woken);
+  const seq = db.prepare('SELECT state_seq FROM sync_object_state').get();
+  await vi.advanceTimersByTimeAsync(180_000); await flushCompanionForegroundTime();
+  expect(total()).toEqual({ total: 180_000 });
+  expect(db.prepare('SELECT state_seq FROM sync_object_state').get()).not.toEqual(seq);
+  expect(await isFolderDatabaseBackupCurrent(port, 'profile')).toBe(true);
+  expect(woken).not.toHaveBeenCalled();
+  // A real library edit through the same boundary still marks the backup stale.
+  await committed.runWriter(tx => tx.run("UPDATE companion_meta SET value='renamed' WHERE key='host_name'"));
+  expect(await isFolderDatabaseBackupCurrent(port, 'profile')).toBe(false);
+  expect(woken).toHaveBeenCalledTimes(1);
 });
