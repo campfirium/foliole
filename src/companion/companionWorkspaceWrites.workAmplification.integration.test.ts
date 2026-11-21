@@ -6,6 +6,8 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { addCompanionDiveSource, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
+import { changeCompanionIndexSource } from '../shared/platform/companion/runtime/companionIndexSources';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
@@ -40,7 +42,7 @@ vi.mock('../../lib/core/database/parentChildOrder', async importOriginal => {
 });
 
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
-async function openLibrary(size: number) {
+async function openLibrary(size: number, virtualFolders = true) {
   await library?.close();
   // An enlarged library: a whole-library read is the amplification this check counts.
   library = await createSearchLibrary(size, 16);
@@ -52,6 +54,11 @@ async function openLibrary(size: number) {
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'ax', kind: 'item', parentNodeId: 'a', title: 'ax' });
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'gx', kind: 'item', parentNodeId: 'gone', title: 'gx' });
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'gone' });
+  if (virtualFolders) {
+    await mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive', title: 'dive', sourceId: 'b' });
+    await mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index', title: 'index' });
+    await changeCompanionIndexSource('index', 'c', 'add');
+  }
   // A hand-ordered folder: its order comes from order sources, not from creation time.
   await writeIosCompanionDatabase(db => saveLocalCurrentParentOrderWithDbPort(db, { parentId: 'folder',
     childIds: ['c', 'a', 'gone', 'b'], now: '2026-11-21T00:00:00.000Z', hostName: 'Search' }), { kind: 'business' });
@@ -75,6 +82,13 @@ const WRITES: Record<string, () => Promise<unknown>> = {
   priority: () => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 }),
   create: () => mutateCompanionWorkspace({ type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' }),
   restore: () => mutateCompanionWorkspace({ type: 'restore', nodeId: 'gone' }),
+  'Dive creation': () => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' }),
+  'empty Dive creation': () => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: null }),
+  'Virtual folder creation': () => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' }),
+  'Dive source addition': () => addCompanionDiveSource('dive', 'c'),
+  'Dive source removal': () => removeCompanionDiveSources('dive', ['b']),
+  'Virtual folder source addition': () => changeCompanionIndexSource('index', 'a', 'add'),
+  'Virtual folder source removal': () => changeCompanionIndexSource('index', 'c', 'remove'),
   'batch move': async () => moveCompanionBatch(await versions(['a', 'b']), 'other'),
   'batch restore': async () => restoreCompanionBatchFromTrash(await versions(['gone'])),
   'scroll position': () => saveCompanionSyncNodeViewState({ nodeId: 'a', scrollTop: 120 }),
@@ -83,8 +97,8 @@ const WRITES: Record<string, () => Promise<unknown>> = {
     repetitionCount: 1, state: 'active' } })
 };
 
-async function writeRows(size: number, write: () => Promise<unknown>) {
-  await openLibrary(size);
+async function writeRows(size: number, write: () => Promise<unknown>, virtualFolders = true) {
+  await openLibrary(size, virtualFolders);
   sqlRecording.start({ label: 'single-write', maxGroups: 2000 });
   try {
     await write();
@@ -115,6 +129,23 @@ for (const [name, write] of Object.entries(WRITES)) {
   });
 }
 
+// The first Virtual folder also creates the Virtual root, which the refresh must name as well.
+const firstIndex = () => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' });
+
+it('publishes the first Virtual folder and its new root without reading or ordering the whole library', async () => {
+  await openLibrary(100, false);
+  const before = (await refreshCompanionWorkspaceAfterMutation())!;
+  expect(before.nodesById['special-virtual-root']).toBeUndefined();
+  await firstIndex();
+  const snapshot = await refreshCompanionWorkspaceAfterMutation();
+  expect(snapshot!.nodesById['index-new']!.parentNodeId).toBe('special-virtual-root');
+  await expectCompleteReread(snapshot);
+});
+
+it('reads the same number of rows for the first Virtual folder however large the library is', async () => {
+  expect(await writeRows(400, firstIndex, false)).toBe(await writeRows(100, firstIndex, false));
+});
+
 it('orders a restored subtree and a hand-ordered folder exactly as a complete reread does', async () => {
   const before = (await refreshCompanionWorkspaceAfterMutation())!;
   expect(before.nodeOrder.filter(id => ['a', 'b', 'c'].includes(id))).toEqual(['c', 'a', 'b']);
@@ -130,7 +161,9 @@ it('builds the same change from the narrow read as from the whole library', asyn
   const commands: WorkspaceMetadataCommand[] = [
     { type: 'rename', nodeId: 'a', title: 'Renamed' }, { type: 'move', nodeId: 'a', parentNodeId: 'other' },
     { type: 'shelve', nodeId: 'b' }, { type: 'restore', nodeId: 'gone' },
-    { type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' }
+    { type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' },
+    { type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' },
+    { type: 'create-index', nodeId: 'index-new', title: 'new' }
   ];
   const owner = getIosCompanionDatabaseOwner();
   await owner.readSnapshot(async db => {
@@ -140,9 +173,9 @@ it('builds the same change from the narrow read as from the whole library', asyn
     const withoutLifecycle = (mutation: ReturnType<typeof buildWorkspaceMetadataMutation>) => ({ ...mutation,
       nodes: mutation.nodes.map(node => { const copy = { ...node }; delete copy.readwiseRemoteLifecycle; return copy; }) });
     for (const command of commands) {
-      const roots = command.type === 'rename' || command.type === 'create' ? [] : [command.nodeId];
+      const roots = ['rename', 'create', 'create-dive', 'create-index'].includes(command.type) ? [] : [command.nodeId];
       const paths = command.type === 'move' || command.type === 'create' ? [command.parentNodeId]
-        : command.type === 'rename' ? [command.nodeId] : [];
+        : command.type === 'rename' || command.type === 'create-dive' || command.type === 'create-index' ? [command.nodeId] : [];
       const narrow = (await loadCompanionWriteNodes(db, roots, { sequentialReading: true, pathIds: paths }))!;
       expect(withoutLifecycle(buildWorkspaceMetadataMutation(command, narrow, now)))
         .toEqual(withoutLifecycle(buildWorkspaceMetadataMutation(command, complete.nodesById, now)));

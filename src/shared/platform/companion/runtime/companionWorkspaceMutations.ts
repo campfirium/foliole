@@ -24,9 +24,10 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
       if (!source) throw new Error('A Dive source is unavailable');
     }
     const now = new Date().toISOString();
-    if (command.type === 'create-index') await ensureSyncSpecialRootNodes(db, [{ nodeId: VIRTUAL_ROOT_NODE_ID, referencedAt: now }]);
+    const createdRoots = command.type === 'create-index'
+      ? await ensureSyncSpecialRootNodes(db, [{ nodeId: VIRTUAL_ROOT_NODE_ID, referencedAt: now }]) : [];
     const host = await iosCompanionHostName(db);
-    // A single-node write reads only the nodes it consumes; a Dive or Virtual creation needs the whole library.
+    // A single-node write reads only the nodes it consumes.
     const narrowNodes = await loadNarrowWriteNodes(db, command);
     const snapshot = narrowNodes ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrowNodes && !snapshot) throw new Error('workspace_unavailable');
@@ -41,7 +42,7 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const records = await Promise.all(mutation.nodes.map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions);
-    changed = { nodeIds: [...new Set([command.nodeId, ...mutation.nodes.map(node => node.id)])],
+    changed = { nodeIds: [...new Set([command.nodeId, ...mutation.nodes.map(node => node.id), ...createdRoots])],
       readingNodeIds: readings.map(change => change.nodeId), narrow: narrowNodes !== null };
     return command.nodeId;
   }, () => ({ kind: 'nodes', nodeIds: changed.nodeIds, structure: true,
@@ -55,6 +56,10 @@ function loadNarrowWriteNodes(db: DbPort, command: Exclude<WorkspaceMetadataComm
     // A rename touches only the node and skips Sequential Reading maintenance.
     case 'rename': return loadCompanionWriteNodes(db, [], { sequentialReading: false, pathIds: [command.nodeId] });
     case 'create': return loadCompanionWriteNodes(db, [], { sequentialReading: true, pathIds: [command.nodeId, command.parentNodeId] });
+    // A Dive sits at the root and a Virtual folder under the Virtual root; neither has children of its own,
+    // so the creation only needs to know that the id is free.
+    case 'create-dive': case 'create-index':
+      return loadCompanionWriteNodes(db, [], { sequentialReading: true, pathIds: [command.nodeId] });
     case 'move': return loadCompanionWriteNodes(db, [command.nodeId], { sequentialReading: true, pathIds: [command.parentNodeId] });
     case 'delete': case 'restore': case 'shelve': case 'unshelve':
       return loadCompanionWriteNodes(db, [command.nodeId], { sequentialReading: true });
