@@ -98,6 +98,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                FolioleDocumentPickerLocation.startInDocuments(intent);
                 startActivityForResult(call, intent, "folderSelected");
             } else start(call);
         } catch (Exception error) { activeRequest = null; failed(error); emitState(null); call.reject(error.getMessage(), error); }

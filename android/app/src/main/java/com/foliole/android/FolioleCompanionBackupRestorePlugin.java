@@ -64,6 +64,7 @@ public final class FolioleCompanionBackupRestorePlugin extends Plugin {
             intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         }
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        FolioleDocumentPickerLocation.startInDocuments(intent);
         running = true;
         cancelled = false;
         try { startActivityForResult(call, intent, zip ? "zipSelected" : "folderSelected"); }
