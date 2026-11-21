@@ -164,36 +164,47 @@ export function PdfVisualExcerptRuntimeProvider(props: { children: ReactNode; cu
     pagesRef.current.clear();
   }, [creation.reset, props.nodeId, props.source, selection.setSelected]);
 
+  // Every mounted PDF page reads this context, so the value must only change with the fields
+  // below; the hook result objects themselves are rebuilt on every render.
+  const { createRequest, creating, error, pending, reset } = creation;
+  const { selected, setSelected } = selection;
+  const imageLocators = useMemo(
+    () => props.locators.filter((locator) => locator.kind === 'image-excerpt'),
+    [props.locators]
+  );
   const value = useMemo<PdfVisualExcerptRuntimeValue>(
     () => ({
-      clearOutlineSelection: () => selection.setSelected(null),
-      clearCreationError: creation.reset,
-      createAnnotatedDisplayedRect: (page, rect, note) => creation.createRequest({ note, page, rect }),
-      createDisplayedRect: (page, rect) => creation.createRequest({ page, rect }),
-      creating: creation.creating,
-      error: creation.error,
+      clearOutlineSelection: () => setSelected(null),
+      clearCreationError: reset,
+      createAnnotatedDisplayedRect: (page, rect, note) => createRequest({ note, page, rect }),
+      createDisplayedRect: (page, rect) => createRequest({ page, rect }),
+      creating,
+      error,
       deleteSelectedOutline: () => {
-        if (!selection.selected) return;
-        deleteAnnotations([selection.selected.nodeId]);
-        selection.setSelected(null);
+        if (!selected) return;
+        deleteAnnotations([selected.nodeId]);
+        setSelected(null);
       },
-      imageLocators: props.locators.filter((locator) => locator.kind === 'image-excerpt'),
+      imageLocators,
       interactionMode,
       openExcerpt: (nodeId) => {
         openNode(nodeId);
       },
-      pending: creation.pending,
+      pending,
       registerPage: (pageNumber, page) => {
         pagesRef.current.set(pageNumber, page);
       },
-      retry: () => (creation.error ? creation.createRequest(creation.error) : Promise.resolve(false)),
+      retry: () => (error ? createRequest(error) : Promise.resolve(false)),
       rotation: props.rotation,
-      selectedOutline: selection.selected,
+      selectedOutline: selected,
       surfaceKey: `${props.nodeId ?? ''}:${props.source}:${props.currentPage}`,
-      selectOutline: selection.setSelected,
+      selectOutline: setSelected,
       toggleInteractionMode: () => setInteractionMode((mode) => (mode === 'ordinary' ? 'quick' : 'ordinary'))
     }),
-    [creation, deleteAnnotations, interactionMode, openNode, props.locators, props.rotation, selection]
+    [
+      createRequest, creating, deleteAnnotations, error, imageLocators, interactionMode, openNode, pending,
+      props.currentPage, props.nodeId, props.rotation, props.source, reset, selected, setSelected
+    ]
   );
   return <PdfVisualExcerptRuntimeContext.Provider value={value}>{props.children}</PdfVisualExcerptRuntimeContext.Provider>;
 }

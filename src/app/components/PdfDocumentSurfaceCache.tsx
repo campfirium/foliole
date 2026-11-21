@@ -11,6 +11,8 @@ import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PersistPdfViewState } from './usePdfReadingResume';
 
 const MAX_CACHED_SURFACES = 3;
+// Hidden cached surfaces get one shared empty list so their excerpt runtime value stays put.
+const NO_HIGHLIGHT_LOCATORS: PdfHighlightLocator[] = [];
 const PdfDocumentSurface = lazy(() =>
   import('./PdfDocumentSurface').then((module) => ({ default: module.PdfDocumentSurface }))
 );
@@ -133,7 +135,7 @@ function renderCachedSurfaceEntry(
     <div className={isVisible ? 'flex min-h-0 flex-1 flex-col' : 'hidden'} key={entry.nodeId}>
       <Suspense fallback={null}>
         <PdfDocumentSurface
-          highlightLocators={isActiveNode ? props.highlightLocators : []}
+          highlightLocators={isActiveNode ? props.highlightLocators : NO_HIGHLIGHT_LOCATORS}
           isVisible={isVisible}
           nodeId={entry.nodeId}
           {...definedProps({ nodeViewState: isActiveNode ? props.editorNodeViewState : undefined })}
