@@ -67,10 +67,11 @@ const createFailureKeys = {
 
 type TransactionRun = ReturnType<typeof useCompanionWorkspaceTransaction>['run'];
 
-/** A creation or a move to Trash shows at once and closes the sheet; a failure withdraws it and reports below. */
+/** A creation (including a Dive or Virtual folder) or a move to Trash shows at once and closes the sheet; a failure withdraws it and reports below. */
 function previewMetadataCommand(command: WorkspaceMetadataCommand, closeSheet: () => void) {
   const preview = command.type === 'delete' ? () => previewCompanionTrash([command.nodeId])
-    : command.type === 'create' ? () => previewCompanionCreate(command) : null;
+    : command.type === 'create' || command.type === 'create-dive' || command.type === 'create-index'
+      ? () => previewCompanionCreate(command) : null;
   return preview ? () => { const withdraw = preview(); closeSheet(); return withdraw; } : undefined;
 }
 

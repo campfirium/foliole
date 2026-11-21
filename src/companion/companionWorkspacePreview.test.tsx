@@ -2,12 +2,14 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 
-import { previewCompanionCreate, previewCompanionTrash } from './companionWorkspacePreview';
+import { buildCompanionCreatePreview, previewCompanionCreate, previewCompanionTrash } from './companionWorkspacePreview';
 import { useCompanionWorkspaceTransaction } from './useCompanionWorkspaceHistory';
 import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
@@ -108,5 +110,55 @@ it('shows nothing early when the creation cannot be built', () => {
   companionWorkspaceSnapshots.reset(base);
   const workspace = renderWorkspace();
   act(() => { previewCompanionCreate({ ...createTopic, nodeId: 'a' }); });
+  expect(workspace.shown()).toBe(base);
+});
+
+const createDive = { type: 'create-dive', title: ' New dive ', nodeId: 'dive-new', sourceId: 'a' } as const;
+const createIndex = { type: 'create-index', title: 'New index', nodeId: 'node-index' } as const;
+
+it('shows a new Dive at the root before the write finishes and keeps it after the write commits', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createDive, 'now')); });
+  expect(workspace.shown().nodesById['dive-new']).toMatchObject({ kind: 'folder', parentNodeId: null, title: 'New dive',
+    virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['a'] });
+  expect(workspace.shown().nodeOrder).toContain('dive-new');
+  const committed = { ...base, nodeOrder: [...base.nodeOrder, 'dive-new'] };
+  await act(async () => { write.resolve(); companionWorkspaceSnapshots.reset(committed); await running; });
+  expect(workspace.shown()).toBe(committed);
+});
+
+it('shows a new Virtual folder with the Virtual root the write creates, and removes both when the write fails', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createIndex, 'now')); });
+  expect(workspace.shown().nodesById[VIRTUAL_ROOT_NODE_ID]).toMatchObject({ kind: 'folder', parentNodeId: null, title: 'Virtual' });
+  expect(workspace.shown().nodesById['node-index']).toMatchObject({ parentNodeId: VIRTUAL_ROOT_NODE_ID, title: 'New index' });
+  await act(async () => { write.reject(new Error('write_failed')); await running; });
+  expect(workspace.shown()).toBe(base);
+});
+
+it('keeps an existing Virtual root as it is when a Virtual folder is previewed', () => {
+  const base = library();
+  const root = { ...node(VIRTUAL_ROOT_NODE_ID, null), title: 'Virtual' };
+  const withRoot = { ...base, nodesById: { ...base.nodesById, [VIRTUAL_ROOT_NODE_ID]: root } };
+  expect(buildCompanionCreatePreview(withRoot, createIndex, 'now').nodesById[VIRTUAL_ROOT_NODE_ID]).toBe(root);
+});
+
+it('removes a new Dive again when the write fails', async () => {
+  const base = library();
+  companionWorkspaceSnapshots.reset(base);
+  const workspace = renderWorkspace();
+  const write = deferred();
+  let running!: Promise<void>;
+  act(() => { running = workspace.run(() => write.promise, undefined, undefined, () => previewCompanionCreate(createDive)); });
+  expect(workspace.shown().nodesById['dive-new']).toBeDefined();
+  await act(async () => { write.reject(new Error('write_failed')); await running; });
   expect(workspace.shown()).toBe(base);
 });

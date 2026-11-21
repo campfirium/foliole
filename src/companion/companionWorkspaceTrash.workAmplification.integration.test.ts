@@ -2,8 +2,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { loadDerivedNodeOrderWithDbPort } from '../../lib/core/database/parentChildOrder';
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
+import { resolveCompanionDirectoryCounts } from '../shared/platform/companion/browse/companionDirectoryCounts';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { collectCompanionBatchSubtree, moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
@@ -11,6 +13,7 @@ import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/c
 import { loadCompanionWriteNodes } from '../shared/platform/companion/runtime/companionWriteNodes';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
+import { resolveCompanionFolderViewByNodeId } from '../shared/platform/companionBrowseLists';
 import { buildWorkspaceMetadataMutation } from '../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../store/workspaceSnapshotSequentialReading';
 
@@ -154,6 +157,37 @@ it('previews exactly the visible result the committed creation publishes', async
     const visible = (value: WorkspaceSnapshot) => {
       const { kind, title, parentNodeId, deletedAt } = value.nodesById[command.nodeId]!;
       return { nodeOrder: value.nodeOrder, activeNodeId: value.activeNodeId, node: { kind, title, parentNodeId, deletedAt: deletedAt ?? null } };
+    };
+    expect(visible(preview)).toEqual(visible(after));
+  }
+});
+
+it('previews exactly the visible result the committed Dive and Virtual folder creations publish', async () => {
+  // The first Virtual folder also creates the Virtual root; the second finds it in place.
+  for (const command of [{ type: 'create-dive', nodeId: 'new-dive', title: 'New dive', sourceId: 'a' },
+    { type: 'create-dive', nodeId: 'empty-dive', title: 'Empty dive', sourceId: null },
+    { type: 'create-index', nodeId: 'node-index', title: 'New index' },
+    { type: 'create-index', nodeId: 'node-index-2', title: 'Second index' }] as const) {
+    const before = (await refreshCompanionWorkspaceAfterMutation())!;
+    if (command.nodeId === 'node-index') expect(before.nodesById[VIRTUAL_ROOT_NODE_ID]).toBeUndefined();
+    // Folder views order by time, so the preview takes the clock the way the phone does.
+    const preview = buildCompanionCreatePreview(before, command, new Date().toISOString());
+    expect(preview).not.toBe(before);
+    await mutateCompanionWorkspace(command);
+    const after = (await refreshCompanionWorkspaceAfterMutation())!;
+    const visible = (value: WorkspaceSnapshot) => {
+      const pick = (id: string) => {
+        const node = value.nodesById[id];
+        // A stored empty member order reads back as absent; both show no members.
+        return node && { kind: node.kind, title: node.title, parentNodeId: node.parentNodeId, deletedAt: node.deletedAt ?? null,
+          virtualFilter: node.virtualFilter ?? null, manualChildOrder: node.manualChildOrder?.length ? node.manualChildOrder : null };
+      };
+      const counts = resolveCompanionDirectoryCounts(value);
+      return { nodeOrder: value.nodeOrder, activeNodeId: value.activeNodeId, node: pick(command.nodeId),
+        virtualRoot: pick(VIRTUAL_ROOT_NODE_ID), results: counts.countVirtualResults(command.nodeId),
+        virtualRootChildren: counts.countChildren(VIRTUAL_ROOT_NODE_ID, 'visible'),
+        items: resolveCompanionFolderViewByNodeId(value, command.nodeId)?.items.map(item => item.nodeId) ?? null,
+        virtualRootItems: resolveCompanionFolderViewByNodeId(value, VIRTUAL_ROOT_NODE_ID)?.items.map(item => item.nodeId) ?? null };
     };
     expect(visible(preview)).toEqual(visible(after));
   }

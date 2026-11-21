@@ -102,17 +102,18 @@ it('retries refresh without creating a second object or recording a second actio
   expect((await loadCompanionFlowHistory(companionFlowHistoryKey('Search'))).undoStack).toHaveLength(1);
 });
 
-it('keeps the create form available after SQLite rejects the write', async () => {
+it('withdraws a previewed creation after SQLite rejects the write and creates it on the next try', async () => {
   render(<Harness />);
   library.database.exec(`CREATE TRIGGER reject_insert BEFORE INSERT ON nodes
     WHEN NEW.title = 'Created folder' BEGIN SELECT RAISE(ABORT, 'create rejected'); END`);
   await createFolder();
+  // The sheet closes on submit; the rejected write removes the previewed folder and reports the failure.
   expect(await screen.findByRole('status')).toHaveTextContent('Could not create the folder.');
   expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
-  const name = screen.getByRole('textbox', { name: 'Name' });
-  expect(name).toHaveValue('Created folder');
+  expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Created folder' })).toBeNull();
   library.database.exec('DROP TRIGGER reject_insert');
-  fireEvent.click(within(name.closest('form')!).getByRole('button', { name: 'Done' }));
+  await createFolder();
   expect(await screen.findByRole('button', { name: 'Created folder' })).toBeVisible();
 });
 

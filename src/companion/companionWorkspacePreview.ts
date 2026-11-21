@@ -1,10 +1,14 @@
+import { specialRootNodeDefinition } from '../../lib/core/database/nodeMutationSpecialRoots';
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
+import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import { collectWorkspaceMetadataSubtree } from '../store/workspaceNodeMetadataHistory';
 import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 
 type WorkspacePreview = { base: WorkspaceSnapshot; snapshot: WorkspaceSnapshot };
+type CompanionCreateCommand = Extract<WorkspaceMetadataCommand, { type: 'create' | 'create-dive' | 'create-index' }>;
 
 let current: WorkspacePreview | null = null;
 const listeners = new Set<() => void>();
@@ -47,19 +51,26 @@ export function previewCompanionTrash(rootIds: readonly string[], now = new Date
   return previewCompanionWorkspace(base => buildCompanionTrashPreview(base, rootIds, now));
 }
 
-/** Shows a new folder, topic or item in its parent at once while the write runs. */
-export function previewCompanionCreate(command: Extract<WorkspaceMetadataCommand, { type: 'create' }>, now = new Date().toISOString()) {
+/** Shows a new folder, topic, item, Dive or Virtual folder in its parent at once while the write runs. */
+export function previewCompanionCreate(command: CompanionCreateCommand, now = new Date().toISOString()) {
   return previewCompanionWorkspace(base => buildCompanionCreatePreview(base, command, now));
 }
 
-export function buildCompanionCreatePreview(snapshot: WorkspaceSnapshot,
-  command: Extract<WorkspaceMetadataCommand, { type: 'create' }>, now: string): WorkspaceSnapshot {
+export function buildCompanionCreatePreview(snapshot: WorkspaceSnapshot, command: CompanionCreateCommand, now: string): WorkspaceSnapshot {
   let nodes;
   // The write validates the same command against the stored library; a preview that cannot be built shows nothing early.
   try { nodes = buildWorkspaceMetadataMutation(command, snapshot.nodesById, now).nodes; } catch { return snapshot; }
+  // A Virtual folder write creates the Virtual root first when the library has none yet.
+  if (command.type === 'create-index' && !snapshot.nodesById[VIRTUAL_ROOT_NODE_ID]) nodes = [virtualRootNode(now), ...nodes];
   return normalizeWorkspaceSnapshot({ ...snapshot,
     nodesById: { ...snapshot.nodesById, ...Object.fromEntries(nodes.map(node => [node.id, node])) },
     nodeOrder: [...snapshot.nodeOrder, ...nodes.map(node => node.id)] });
+}
+
+function virtualRootNode(now: string): WorkspaceNodeSnapshot {
+  return { id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', title: specialRootNodeDefinition(VIRTUAL_ROOT_NODE_ID)!.title, parentNodeId: null,
+    isTitleManual: true, hideTitleHeading: false, content: '', reveal: null, anchorLink: null, reading: null, review: null,
+    createdAt: now, updatedAt: now, deletedAt: null };
 }
 
 export function buildCompanionTrashPreview(snapshot: WorkspaceSnapshot, rootIds: readonly string[], now: string): WorkspaceSnapshot {
