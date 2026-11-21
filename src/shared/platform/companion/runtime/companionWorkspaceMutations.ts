@@ -17,7 +17,7 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow?: { session: ReviewSessionState; mode: ReviewSessionMode }) {
   if (command.type === 'set-priority') return setCompanionPriority(command);
   // The refresh names every node this write changed so a move to Trash can merge instead of rereading the library.
-  let changed = { nodeIds: [command.nodeId], readingNodeIds: [] as string[], narrow: false };
+  let changed = { nodeIds: [command.nodeId], readingNodeIds: [] as string[] };
   return runCompanionHistoryMutation(async db => {
     if (command.type === 'create-dive' && command.sourceId) {
       const [source] = await db.query(DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs(command.sourceId));
@@ -43,11 +43,12 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions);
     changed = { nodeIds: [...new Set([command.nodeId, ...mutation.nodes.map(node => node.id), ...createdRoots])],
-      readingNodeIds: readings.map(change => change.nodeId), narrow: narrowNodes !== null };
+      readingNodeIds: readings.map(change => change.nodeId) };
     return command.nodeId;
   }, () => ({ kind: 'nodes', nodeIds: changed.nodeIds, structure: true,
-    // A narrow write changed only the nodes it names, so the refresh merges them as well.
-    ...(command.type === 'delete' ? { trash: true } : changed.narrow ? { metadata: true } : {}),
+    // The write names every node and Sequential Reading change it made, even after a whole-library read,
+    // so the refresh merges them as well and only falls back when the merge cannot be proven.
+    ...(command.type === 'delete' ? { trash: true } : { metadata: true }),
     ...(changed.readingNodeIds.length ? { readingNodeIds: changed.readingNodeIds } : {}) }));
 }
 

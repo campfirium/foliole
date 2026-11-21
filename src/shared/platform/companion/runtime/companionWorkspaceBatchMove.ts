@@ -10,15 +10,13 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 
 /** Moves the selected nodes under one parent as a single undoable action. */
 export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], parentNodeId: string | null) {
-  let narrowRead = false;
+  let readingNodeIds: string[] = [];
   return runCompanionHistoryMutation(async db => {
     // The moved subtrees, their ancestors and the target's ancestors suffice unless Sequential Reading is in reach.
     const narrow = await loadCompanionWriteNodes(db, targets.map(target => target.id), { sequentialReading: true, pathIds: [parentNodeId] });
     const snapshot = narrow ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrow && !snapshot) throw new Error('workspace_unavailable');
     const before = narrow ?? snapshot!.nodesById;
-    // Without Sequential Reading in reach the move changes only the nodes it names, so the refresh merges them.
-    narrowRead = narrow !== null;
     if (targets.some(({ id, version }) => before[id]?.currentVersionId !== version)) {
       throw new Error('workspace_batch_selection_changed');
     }
@@ -39,6 +37,9 @@ export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], par
     const host = await iosCompanionHostName(db);
     const records = await Promise.all([...changed.values()].map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, 'Move', 'local_mutation', null, readings);
-    return moved;
-  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, ...(narrowRead ? { metadata: true } : {}) }));
+    readingNodeIds = readings.map(change => change.nodeId);
+    return [...new Set([...moved, ...changed.keys()])];
+  // The move names every node and Sequential Reading change it made, even after a whole-library read,
+  // so the refresh merges them and only falls back when the merge cannot be proven.
+  }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, metadata: true, ...(readingNodeIds.length ? { readingNodeIds } : {}) }));
 }

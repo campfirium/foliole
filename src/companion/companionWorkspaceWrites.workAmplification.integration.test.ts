@@ -214,11 +214,60 @@ it('builds the same change from the narrow read as from the whole library', asyn
   });
 });
 
-it('keeps the whole-library read and refresh when Sequential Reading is in reach of a move', async () => {
-  library!.database.prepare('UPDATE nodes SET sequential_reading_enabled = 1 WHERE id = ?').run('other');
+// Sequential Reading keeps the whole-library read for the write, but the write still names every node and reading
+// it changed, so the refresh merges them instead of reading the library a second time.
+const sequentialReading = (state: 'active' | 'locked') => ({ intervalDurationMs: 1, intervalGrowthFactor: 2,
+  lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z', priority: 5, readingPosition: 0,
+  repetitionCount: 0, state });
+
+async function enableSequentialReading(folder: string) {
+  library!.database.prepare('UPDATE nodes SET sequential_reading_enabled = 1 WHERE id = ?').run(folder);
   await refreshCompanionWorkspaceAfterMutation(null);
   reads.fullSnapshots = 0;
-  await mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' });
-  await refreshCompanionWorkspaceAfterMutation();
-  expect(reads.fullSnapshots).toBe(2);
-});
+  reads.orderDerivations = 0;
+}
+
+const SEQUENTIAL_WRITES: Record<string, () => Promise<unknown>> = {
+  'move into': () => mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' }),
+  'move out of': () => mutateCompanionWorkspace({ type: 'move', nodeId: 'ax', parentNodeId: 'other' }),
+  'shelve in': () => mutateCompanionWorkspace({ type: 'shelve', nodeId: 'b' }),
+  'create in': () => mutateCompanionWorkspace({ type: 'create', nodeId: 'new', kind: 'item', parentNodeId: 'a', title: 'new' }),
+  'batch move out of': async () => moveCompanionBatch(await versions(['ax']), 'other')
+};
+
+for (const [name, write] of Object.entries(SEQUENTIAL_WRITES)) {
+  it(`reads the whole library once for a ${name} a Sequential Reading source`, async () => {
+    await enableSequentialReading(name === 'move into' ? 'other' : name === 'shelve in' ? 'folder' : 'a');
+    await write();
+    const snapshot = await refreshCompanionWorkspaceAfterMutation();
+    expect(reads.fullSnapshots).toBe(1);
+    const complete = await getIosCompanionDatabaseOwner().readSnapshot(db => loadIosCompanionWorkspaceSnapshot(db));
+    const facts = (value: WorkspaceSnapshot | null) => value && { ...value, trashedNodeIds: [...value.trashedNodeIds].sort() };
+    expect(facts(snapshot)).toEqual(facts(complete));
+  });
+}
+
+const UNLOCKING_MOVES: Record<string, () => Promise<unknown>> = {
+  move: () => mutateCompanionWorkspace({ type: 'move', nodeId: 'ay', parentNodeId: 'other' }),
+  'batch move': async () => moveCompanionBatch(await versions(['ay']), 'other')
+};
+
+for (const [name, move] of Object.entries(UNLOCKING_MOVES)) {
+  it(`merges the reading a ${name} out of a Sequential Reading source unlocks`, async () => {
+    await mutateCompanionWorkspace({ type: 'create', nodeId: 'ay', kind: 'item', parentNodeId: 'a', title: 'ay' });
+    await saveCompanionSyncNodeReadingRecord({ nodeId: 'ax', reading: sequentialReading('active') });
+    await saveCompanionSyncNodeReadingRecord({ nodeId: 'ay', reading: sequentialReading('locked') });
+    await enableSequentialReading('a');
+    const before = (await refreshCompanionWorkspaceAfterMutation())!;
+    reads.fullSnapshots = 0;
+    // A locked item moved out of its source becomes active.
+    await move();
+    const snapshot = await refreshCompanionWorkspaceAfterMutation();
+    expect(reads.fullSnapshots).toBe(1);
+    expect(before.nodesById.ay!.reading?.state).toBe('locked');
+    expect(snapshot!.nodesById.ay!.reading?.state).not.toBe('locked');
+    const complete = await getIosCompanionDatabaseOwner().readSnapshot(db => loadIosCompanionWorkspaceSnapshot(db));
+    expect({ ...snapshot, trashedNodeIds: [...snapshot!.trashedNodeIds].sort() })
+      .toEqual({ ...complete, trashedNodeIds: [...complete!.trashedNodeIds].sort() });
+  });
+}

@@ -88,6 +88,8 @@ async function moveOutOfSequentialReading() {
   await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }), { kind: 'business' });
   await saveCompanionSyncNodeReadingRecord({ nodeId: 'locked', reading: { state: 'locked', intervalDurationMs: 1000,
     intervalGrowthFactor: 2, lastHandledAt: now, nextAt: now, priority: 5, readingPosition: 17, repetitionCount: 2 } });
+  // A sync publishes the nodes it applied; the move's refresh merges only what the move changed.
+  await refreshCompanionWorkspaceAfterMutation(null);
   await mutateCompanionWorkspace({ type: 'move', nodeId: 'moved', parentNodeId: 'other' });
 }
 
