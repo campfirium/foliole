@@ -61,17 +61,27 @@ export interface CompanionBackupRestoreCommitContext extends Pick<CompanionBacku
 }
 
 /**
- * Close every writer of the current library, then swap in the staged candidate. A failure
- * leaves the database closed, so the caller reopens the app either way.
+ * Close every writer of the current library, then swap libraries natively. A failure after
+ * the close leaves the database closed, so the caller offers to reopen the app.
  */
-export async function commitCompanionBackupRestore(context: CompanionBackupRestoreCommitContext) {
+async function replaceCompanionLibrary(context: CompanionBackupRestoreCommitContext, swap: () => Promise<void>) {
   await context.owner.read(readThisDevice);
   await context.exclusive(async () => {
     await context.closeDatabase();
-    await context.port.commit();
+    await swap();
   });
   await context.forgetBackupFolder().catch(() => undefined);
   context.reload();
+}
+
+/** Swap in the staged candidate; the current library becomes the previous one. */
+export function commitCompanionBackupRestore(context: CompanionBackupRestoreCommitContext) {
+  return replaceCompanionLibrary(context, () => context.port.commit());
+}
+
+/** Put the previous library back; the current library becomes the previous one. */
+export function revertCompanionBackupRestore(context: CompanionBackupRestoreCommitContext) {
+  return replaceCompanionLibrary(context, () => context.port.revert());
 }
 
 export function discardCompanionBackupRestore(context: Pick<CompanionBackupRestoreContext, 'port'>) {

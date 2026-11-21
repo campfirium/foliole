@@ -15,14 +15,20 @@ import { V082_IMAGE_A, writeV082Backup } from './companionV082Backup.testSupport
 
 export const STAGING = 'foliole-restore-staging';
 
-/** Renames like the native swap: the closed library moves aside, the staged copy takes its place. */
-function swapFiles(root: string, library: string, staged: string) {
-  const previous = path.join(root, 'restore-previous');
-  mkdirSync(previous, { recursive: true });
-  for (const suffix of ['', '-wal', '-shm']) {
-    if (existsSync(library + suffix)) renameSync(library + suffix, path.join(previous, path.basename(library) + suffix));
-  }
-  renameSync(staged, library);
+const SUFFIXES = ['', '-wal', '-shm'];
+
+function moveLibrary(from: string, to: string) {
+  for (const suffix of SUFFIXES) if (existsSync(from + suffix)) renameSync(from + suffix, to + suffix);
+}
+
+/** Renames like the native swap: the closed library moves aside and the incoming one takes its place. */
+function swapFiles(root: string, library: string, incoming: string) {
+  const previous = path.join(root, 'restore-previous', path.basename(library));
+  const outgoing = path.join(root, 'restore-outgoing.db');
+  moveLibrary(library, outgoing);
+  moveLibrary(incoming, library);
+  mkdirSync(path.dirname(previous), { recursive: true });
+  moveLibrary(outgoing, previous);
 }
 
 /** An Android phone with its own small library, opened the way the app opens it. */
@@ -50,7 +56,8 @@ export async function createSpareDevice(cleanups: (() => void)[]) {
     cancel: vi.fn(async () => undefined),
     discard: vi.fn(async () => undefined),
     commit: vi.fn(async () => swapFiles(root, library, stagingFile)),
-    previous: vi.fn(async () => ({ exists: false, savedAt: null })),
+    revert: vi.fn(async () => swapFiles(root, library, path.join(root, 'restore-previous', path.basename(library)))),
+    previous: vi.fn(async () => ({ exists: existsSync(path.join(root, 'restore-previous')), savedAt: null })),
     addListener: vi.fn()
   } satisfies CompanionBackupRestorePort;
   const openCandidate = <T,>(database: string, task: (db: DbPort) => Promise<T>) =>

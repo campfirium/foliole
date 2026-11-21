@@ -167,5 +167,13 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.restoreReplaceConfirm': '替换',
   'companion.settings.storage.restoreReplacing': '正在替换资料库…',
   'companion.settings.storage.restoreReopen': '重新打开 Foliole',
-  'companion.settings.storage.restoreErrorNotStaged': '这份备份已不在准备状态，请重新选择。'
+  'companion.settings.storage.restoreErrorNotStaged': '这份备份已不在准备状态，请重新选择。',
+  'companion.settings.storage.revert': '还原上一份资料库',
+  'companion.settings.storage.revertHint': '换回 {date} 被替换下来的资料库。',
+  'companion.settings.storage.revertChoose': '还原…',
+  'companion.settings.storage.revertTitle': '要还原上一份资料库吗？',
+  'companion.settings.storage.revertDescription': '这台手机上现在的资料库会被移到一旁保存，不会删除，之后可以再换回来。完成后 Foliole 会重新打开。',
+  'companion.settings.storage.revertConfirm': '还原',
+  'companion.settings.storage.revertWorking': '正在还原资料库…',
+  'companion.settings.storage.restoreErrorNoPrevious': '这台手机上没有上一份资料库。'
 };

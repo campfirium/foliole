@@ -113,6 +113,44 @@ public class FolioleBackupRestoreSwapTest {
         assertEquals("second", swap().previousSavedAt());
     }
 
+    private void assertReverted() throws Exception {
+        assertEquals("spare-library", read(database));
+        assertEquals("spare-wal", read(new File(databases, "foliole-companionSQLite.db-wal")));
+        assertEquals("spare-image", read(new File(files, "attachments/spare.png")));
+        assertEquals("spare-backup-folder", read(new File(files, "folder-database-backup.json")));
+        assertEquals("main-library", read(new File(files, "restore-previous/database/foliole-companionSQLite.db")));
+        assertTrue(new File(files, "restore-previous/attachments/main.png").isFile());
+        assertFalse(staged.exists());
+        assertFalse(new File(files, "restore-staging").exists());
+        assertFalse(swap().interrupted());
+    }
+
+    @Test public void revertingPutsThePreviousLibraryBackAndKeepsTheRestoredOne() throws Exception {
+        swap().commit("restored");
+        stage("unfinished-staging", "other.png");
+        swap().revert("reverted");
+        assertReverted();
+        assertEquals("reverted", swap().previousSavedAt());
+        swap().revert("again");
+        assertEquals("main-library", read(database));
+    }
+
+    @Test public void finishesARevertInterruptedWhileMovingThePreviousLibraryOut() throws Exception {
+        swap().commit("restored");
+        write(new File(files, "restore-commit"), "revert");
+        File slot = new File(files, "restore-previous/database");
+        assertTrue(new File(slot, database.getName()).renameTo(staged));
+        swap().commit("reverted");
+        assertReverted();
+    }
+
+    @Test public void refusesToRevertWithoutAPreviousLibrary() throws Exception {
+        try { swap().revert("now"); fail("expected restore_no_previous"); }
+        catch (IllegalStateException error) { assertEquals("restore_no_previous", error.getMessage()); }
+        assertEquals("spare-library", read(database));
+        assertTrue(staged.isFile());
+    }
+
     private void deleteAll() throws Exception {
         FolioleBackupRestoreStaging.deleteTree(databases);
         FolioleBackupRestoreStaging.deleteTree(files);

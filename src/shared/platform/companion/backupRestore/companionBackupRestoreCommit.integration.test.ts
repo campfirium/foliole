@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { commitCompanionBackupRestore, stageCompanionBackupRestore } from './companionBackupRestore';
+import { commitCompanionBackupRestore, revertCompanionBackupRestore, stageCompanionBackupRestore } from './companionBackupRestore';
 import { createSpareDevice } from './companionBackupRestoreDevice.testSupport';
 
 const cleanups: (() => void)[] = [];
@@ -67,5 +67,38 @@ describe('replacing the spare phone library with a staged backup', () => {
     const reopened = await device.reopen();
     expect(await read(reopened, "SELECT id FROM nodes WHERE kind = 'topic'")).toEqual([{ id: 'spare-topic' }]);
     await reopened.close();
+  });
+});
+
+describe('putting the previous spare phone library back', () => {
+  it('reopens the original library and keeps the restored one as the previous library', async () => {
+    const { device, context } = await stagedSpareDevice();
+    await commitCompanionBackupRestore(context);
+    const restored = await device.reopen();
+    const reverting = { ...context, owner: restored, closeDatabase: vi.fn(() => restored.close()), reload: vi.fn() };
+
+    await revertCompanionBackupRestore(reverting);
+    expect(device.port.revert).toHaveBeenCalledOnce();
+    expect(reverting.reload).toHaveBeenCalledOnce();
+    const original = await device.reopen();
+    expect(await read(original, "SELECT id FROM nodes WHERE kind = 'topic'")).toEqual([{ id: 'spare-topic' }]);
+    await original.close();
+
+    const current = await device.reopen();
+    await revertCompanionBackupRestore({ ...reverting, owner: current, closeDatabase: () => current.close() });
+    const again = await device.reopen();
+    expect(await read(again, "SELECT id FROM nodes WHERE kind = 'topic'")).toEqual([{ id: 'topic-1' }]);
+    await again.close();
+  });
+
+  it('does not put the previous library back while the current one is in a sync group', async () => {
+    const { device, context } = await stagedSpareDevice();
+    await device.owner.runWriter(async db => {
+      await db.run("INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('g', 'Home', 'k', 'now', 'now')");
+      await db.run("INSERT INTO sync_group_local_state (singleton_id, group_id, local_device_identity_key, state, updated_at) VALUES (1, 'g', 'spare', 'active', 'now')");
+    });
+    await expect(revertCompanionBackupRestore(context)).rejects.toThrow('restore_sync_group_active');
+    expect(device.port.revert).not.toHaveBeenCalled();
+    expect(context.closeDatabase).not.toHaveBeenCalled();
   });
 });

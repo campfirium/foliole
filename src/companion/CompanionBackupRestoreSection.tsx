@@ -5,6 +5,7 @@ import { AppButton, AppSpinner, SettingsControlSlot, SettingsRow, SettingsSectio
 import { AppDialog, AppDialogPortal, AppDialogTitle } from '../shared/ui/Dialog';
 import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../shared/ui/SettingsTouchSheet';
 
+import { CompanionBackupRevertRow } from './CompanionBackupRevertRow';
 import { formatCompanionTopicDate } from './CompanionRecentArticleList';
 import { useCompanionBackupRestore, type CompanionBackupRestoreView } from './useCompanionBackupRestore';
 
@@ -104,6 +105,7 @@ export function CompanionBackupRestoreSection() {
           {t('companion.settings.storage.restoreChoose')}
         </AppButton></SettingsControlSlot>
       </SettingsRow>
+      <CompanionBackupRevertRow />
     </SettingsSection>
     <AppDialog open={view.step !== 'closed'} onOpenChange={open => { if (!open) restore.close(); }}>
       <AppDialogPortal><SettingsTouchSheetOverlay /><SettingsTouchSheet>

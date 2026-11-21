@@ -29,6 +29,15 @@ export type CompanionBackupRestoreView =
 
 export function reloadCompanionApp() { window.location.reload(); }
 
+/** Everything a library swap needs from the running app: one writer queue, then a reload. */
+export function companionLibrarySwapContext() {
+  return {
+    owner: getIosCompanionDatabaseOwner(), port: getCompanionBackupRestorePort(),
+    exclusive: runWithCompanionAttachmentMaintenance, closeDatabase: closeIosCompanionDatabase,
+    forgetBackupFolder: () => getCompanionFolderBackupPort().clearDirectory(), reload: reloadCompanionApp
+  };
+}
+
 export function useCompanionBackupRestore() {
   const t = useTranslation();
   const [view, setView] = useState<CompanionBackupRestoreView>({ step: 'closed' });
@@ -57,11 +66,7 @@ export function useCompanionBackupRestore() {
   const replace = useCallback(async () => {
     setView({ step: 'replacing' });
     try {
-      await commitCompanionBackupRestore({
-        owner: getIosCompanionDatabaseOwner(), port: getCompanionBackupRestorePort(),
-        exclusive: runWithCompanionAttachmentMaintenance, closeDatabase: closeIosCompanionDatabase,
-        forgetBackupFolder: () => getCompanionFolderBackupPort().clearDirectory(), reload: reloadCompanionApp
-      });
+      await commitCompanionBackupRestore(companionLibrarySwapContext());
     } catch (error) {
       setView({ step: 'failed', error: companionBackupRestoreMessage(error, t) });
     }

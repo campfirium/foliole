@@ -167,5 +167,13 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.restoreReplaceConfirm': 'Replace',
   'companion.settings.storage.restoreReplacing': 'Replacing library…',
   'companion.settings.storage.restoreReopen': 'Reopen Foliole',
-  'companion.settings.storage.restoreErrorNotStaged': 'The backup is no longer ready. Choose it again.'
+  'companion.settings.storage.restoreErrorNotStaged': 'The backup is no longer ready. Choose it again.',
+  'companion.settings.storage.revert': 'Put back previous library',
+  'companion.settings.storage.revertHint': 'Swap back the library that was set aside on {date}.',
+  'companion.settings.storage.revertChoose': 'Put back…',
+  'companion.settings.storage.revertTitle': 'Put back the previous library?',
+  'companion.settings.storage.revertDescription': 'The library now on this phone is set aside, not deleted, so you can swap it back later. Foliole reopens when it’s done.',
+  'companion.settings.storage.revertConfirm': 'Put back',
+  'companion.settings.storage.revertWorking': 'Putting back library…',
+  'companion.settings.storage.restoreErrorNoPrevious': 'There is no previous library on this phone.'
 } as const;

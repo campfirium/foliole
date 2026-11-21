@@ -16,11 +16,12 @@ final class FolioleBackupRestoreSwap {
     static final String[] DATABASE_SUFFIXES = { "", "-wal", "-shm", "-journal" };
     private static final String[] LIBRARY_FILES = { "attachments", "attachments.trash",
         "folder-database-backup.json", "attachment-observations.json" };
-    private final File database, stagedDatabase, files, stagedAttachments, previous, partial, marker;
+    private final File database, stagedDatabase, files, stagedAttachments, stagingRoot, previous, partial, marker;
 
     FolioleBackupRestoreSwap(File database, File stagedDatabase, File files, File stagedAttachments) {
         this.database = database; this.stagedDatabase = stagedDatabase; this.files = files;
         this.stagedAttachments = stagedAttachments;
+        stagingRoot = stagedAttachments.getParentFile();
         previous = new File(files, "restore-previous");
         partial = new File(files, "restore-previous.partial");
         marker = new File(files, "restore-commit");
@@ -38,6 +39,14 @@ final class FolioleBackupRestoreSwap {
             write(marker, "prepare");
         }
         String phase = read(marker);
+        if (phase.equals("revert")) {
+            File slot = new File(previous, "database");
+            for (String suffix : DATABASE_SUFFIXES) move(new File(slot, database.getName() + suffix), new File(stagedDatabase.getPath() + suffix));
+            if (!stagingRoot.isDirectory() && !stagingRoot.mkdirs()) throw new IOException("restore_swap_unavailable");
+            for (String name : LIBRARY_FILES) move(new File(previous, name), new File(stagingRoot, name));
+            if (!stagedDatabase.isFile()) throw new IllegalStateException("restore_swap_database_missing");
+            write(marker, phase = "prepare");
+        }
         if (phase.equals("prepare")) {
             FolioleBackupRestoreStaging.deleteTree(previous);
             if (!partial.isDirectory() && !partial.mkdirs()) throw new IOException("restore_swap_unavailable");
@@ -59,15 +68,34 @@ final class FolioleBackupRestoreSwap {
                 if (!suffix.isEmpty()) move(new File(stagedDatabase.getPath() + suffix), new File(database.getPath() + suffix));
             }
             move(stagedDatabase, database);
-            move(stagedAttachments, new File(files, "attachments"));
-            File trash = new File(files, "attachments.trash");
-            if (!trash.isDirectory() && !trash.mkdirs()) throw new IOException("restore_swap_unavailable");
-            FolioleBackupRestoreStaging.deleteTree(stagedAttachments.getParentFile());
+            for (String name : LIBRARY_FILES) move(new File(stagingRoot, name), new File(files, name));
+            for (String name : new String[] { "attachments", "attachments.trash" }) {
+                File directory = new File(files, name);
+                if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("restore_swap_unavailable");
+            }
+            FolioleBackupRestoreStaging.deleteTree(stagingRoot);
             if (!database.isFile()) throw new IllegalStateException("restore_swap_database_missing");
             if (!marker.delete()) throw new IOException("restore_swap_unavailable");
             return;
         }
         throw new IllegalStateException("restore_swap_marker_invalid");
+    }
+
+    /**
+     * Put the previous library back. The library it replaces takes the previous slot, so
+     * reverting is itself reversible; an unfinished staged backup is discarded first.
+     */
+    void revert(String now) throws IOException {
+        if (!interrupted()) {
+            if (!hasPrevious()) throw new IllegalStateException("restore_no_previous");
+            for (String suffix : DATABASE_SUFFIXES) {
+                File staged = new File(stagedDatabase.getPath() + suffix);
+                if (staged.exists() && !staged.delete()) throw new IOException("restore_staging_busy");
+            }
+            FolioleBackupRestoreStaging.deleteTree(stagingRoot);
+            write(marker, "revert");
+        }
+        commit(now);
     }
 
     /** Move only what is still at its source; a destination that already exists is never overwritten. */

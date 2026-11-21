@@ -29,14 +29,21 @@ public final class FolioleCompanionBackupRestorePlugin extends Plugin {
         } catch (Exception error) { android.util.Log.e("FolioleBackupRestore", "Cannot finish interrupted restore", error); }
     }
 
-    @PluginMethod public synchronized void commit(PluginCall call) {
+    @PluginMethod public void commit(PluginCall call) { replace(call, false); }
+    @PluginMethod public void revert(PluginCall call) { replace(call, true); }
+
+    private synchronized void replace(PluginCall call, boolean revert) {
         if (running) { call.reject("restore_already_running"); return; }
         running = true;
         new Thread(() -> {
-            try { swap().commit(java.time.Instant.now().toString()); call.resolve(); }
-            catch (Exception error) { call.reject(error.getMessage(), error); }
+            try {
+                FolioleBackupRestoreSwap swap = swap();
+                String now = java.time.Instant.now().toString();
+                if (revert) swap.revert(now); else swap.commit(now);
+                call.resolve();
+            } catch (Exception error) { call.reject(error.getMessage(), error); }
             finally { finished(); }
-        }, "FolioleBackupRestoreCommit").start();
+        }, "FolioleBackupRestoreSwap").start();
     }
 
     @PluginMethod public void previous(PluginCall call) {
