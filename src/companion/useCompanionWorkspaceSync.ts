@@ -2,8 +2,8 @@ import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } 
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { publishCompanionSyncMembershipChanged } from '../shared/platform/companion/sync/companionSyncApplied';
 import { leaveCompanionSyncGroupAfterAdoptionStops } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
-import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
@@ -93,7 +93,7 @@ async function leaveCompanionWorkspaceSyncGroup(args: {
 }) {
   await leaveCompanionSyncGroupAfterAdoptionStops();
   args.markLeft();
-  publishCompanionSyncMutationRevision({ kind: 'full' });
+  publishCompanionSyncMembershipChanged();
   await args.saveEndpoint('');
 }
 

@@ -4,9 +4,9 @@ import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGro
 import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgroundWork';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { publishCompanionSyncMembershipChanged } from './companionSyncApplied';
 import { describeCompanionSyncReceiveIssue, type CompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
-import { publishCompanionSyncMutationRevision } from './mutation/companionSyncMutationRevision';
 import { leaveCompanionSyncGroupDevice } from './syncGroupStore';
 
 type ActiveAdoptionRun = { phase: 'receiving' | 'paused' | 'failed'; completed: number; total: number | null;
@@ -94,7 +94,7 @@ export function runPendingCompanionSyncGroupAdoption() {
       work.release();
     }
     publish({ phase: 'none' });
-    publishCompanionSyncMutationRevision({ kind: 'full' });
+    publishCompanionSyncMembershipChanged();
     return true;
   })().finally(() => { running = null; });
   return running;

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { publishCompanionSyncMembershipChanged } from '../shared/platform/companion/sync/companionSyncApplied';
 import { hydrateCompanionSyncGroupAdoptionRun } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
-import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
 import {
@@ -85,7 +85,7 @@ function useJoinCompletion(args: {
     }).then((group) => {
       setPendingRequest(null); setStatus('idle'); onErrorRef.current(null);
       setJoined(true);
-      publishCompanionSyncMutationRevision({ kind: 'full' });
+      publishCompanionSyncMembershipChanged();
       return group;
     }, async (error: unknown) => {
       // Membership already written: the scheduler continues the interrupted adoption.

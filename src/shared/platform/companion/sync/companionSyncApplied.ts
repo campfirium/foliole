@@ -1,6 +1,8 @@
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh.js';
 import { registerCompanionWorkspaceRefresh } from '../companionWorkspaceSnapshotStore.js';
 
+import { publishCompanionSyncMutationRevision } from './mutation/companionSyncMutationRevision.js';
+
 const listeners = new Set<() => void>();
 
 export function subscribeCompanionSyncApplied(listener: () => void) {
@@ -14,6 +16,15 @@ export function publishCompanionSyncApplied(scope: WorkspaceRefreshScope = { kin
     try { listener(); }
     catch { /* A view observer cannot invalidate an already committed object. */ }
   }
+}
+
+/**
+ * Joining, adopting or leaving a group can change the whole library. The full reread runs now through the applied-refresh
+ * observers, so it is not left registered for the next edit's refresh to pay for.
+ */
+export function publishCompanionSyncMembershipChanged() {
+  publishCompanionSyncMutationRevision({ kind: 'full' });
+  publishCompanionSyncApplied({ kind: 'full' });
 }
 
 const readingResumeListeners = new Set<(nodeId: string) => void>();
