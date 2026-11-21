@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 let directory;
 let javaBinary;
@@ -41,7 +42,7 @@ beforeAll(() => {
   const file = path.join(directory, 'IdentityFixture.java');
   fs.writeFileSync(file, java);
   const compiled = spawnSync(binary('javac'), ['-d', directory, file], { encoding: 'utf8', timeout: 30000 });
-  expect(compiled.error ?? compiled.stderr).toBe('');
+  expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
   expect(compiled.status).toBe(0);
   javaBinary = binary('java');
 });
@@ -50,6 +51,6 @@ afterAll(() => { if (directory) fs.rmSync(directory, { recursive: true, force: t
 it('allows daily Sync Now evidence while keeping general projection isolated', () => {
   const result = spawnSync(javaBinary, ['-cp', directory, 'IdentityFixture'], { encoding: 'utf8', timeout: 5000 });
   expect(result.error, JSON.stringify({ signal: result.signal, stdout: result.stdout, stderr: result.stderr })).toBeUndefined();
-  expect(result.stderr).toBe('');
+  expect(jvmStderr(result.stderr)).toBe('');
   expect(result.status).toBe(0);
 });

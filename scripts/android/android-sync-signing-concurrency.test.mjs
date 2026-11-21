@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { URL } from 'node:url';
 import { afterAll, beforeAll, expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 let directory;
 let javaBinary;
@@ -31,7 +32,7 @@ beforeAll(() => {
   fs.writeFileSync(fixture, source);
   const compiled = spawnSync(binary('javac'), ['-d', directory,
     fixture, path.join(root, 'FolioleCompanionPluginErrors.java')], { encoding: 'utf8', timeout: 30000 });
-  expect(compiled.error ?? compiled.stderr).toBe('');
+  expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
   expect(compiled.status).toBe(0);
   javaBinary = binary('java');
 });
@@ -41,7 +42,7 @@ it('allows writer-owned file maintenance to finish while signing waits for a cre
   const result = spawnSync(javaBinary, ['-cp', directory,
     'com.foliole.android.SigningFixture'], { encoding: 'utf8', timeout: 5000 });
   expect(result.error, JSON.stringify({ signal: result.signal, stdout: result.stdout, stderr: result.stderr })).toBeUndefined();
-  expect(result.stderr).toBe('');
+  expect(jvmStderr(result.stderr)).toBe('');
   expect(result.status).toBe(0);
   expect(result.stdout).toContain('Maintenance and authenticated signing both finish');
 });

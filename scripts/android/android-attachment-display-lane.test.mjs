@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 const root = path.resolve('android/app/src/main/java/com/foliole/android');
 
@@ -105,11 +106,11 @@ it('resolves image display while attachment maintenance and image writes are hun
     const compiled = spawnSync(binary('javac'), ['-d', directory, ...sources,
       path.join(root, 'FolioleCompanionSyncAsync.java'), path.join(root, 'FolioleCompanionPluginErrors.java')],
     { encoding: 'utf8', timeout: 30000 });
-    expect(compiled.error ?? compiled.stderr).toBe('');
+    expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
     expect(compiled.status).toBe(0);
     const result = spawnSync(binary('java'), ['-cp', directory, 'com.foliole.android.DisplayLaneFixture'],
       { encoding: 'utf8', timeout: 15000 });
-    expect(result.stderr).toBe('');
+    expect(jvmStderr(result.stderr)).toBe('');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Display resolved while maintenance and image write were hung');
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }

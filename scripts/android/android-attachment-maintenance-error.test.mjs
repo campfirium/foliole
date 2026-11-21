@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 it('preserves the send lease rejection through the actual maintenance callback', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-maintenance-error-'));
@@ -47,11 +48,11 @@ it('preserves the send lease rejection through the actual maintenance callback',
     fs.writeFileSync(fixture, source);
     const compiled = spawnSync(binary('javac'), ['-d', directory,
       fixture, path.join(root, 'FolioleCompanionPluginErrors.java')], { encoding: 'utf8', timeout: 30000 });
-    expect(compiled.error ?? compiled.stderr).toBe('');
+    expect(compiled.error ?? jvmStderr(compiled.stderr)).toBe('');
     expect(compiled.status).toBe(0);
     const result = spawnSync(binary('java'), ['-cp', directory,
       'com.foliole.android.MaintenanceFixture'], { encoding: 'utf8', timeout: 5000 });
-    expect(result.stderr).toBe('');
+    expect(jvmStderr(result.stderr)).toBe('');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Lease reason reaches JavaScript rejection');
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }

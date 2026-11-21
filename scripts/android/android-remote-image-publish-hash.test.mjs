@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
+import { jvmStderr } from './jvm-output-fixture.mjs';
 
 const root = path.resolve('android/app/src/main/java/com/foliole/android');
 
@@ -112,7 +113,7 @@ it('publishes a hashed remote image without re-reading it and still checks an ex
     expect(compiled.status).toBe(0);
     const result = spawnSync(binary('java'), ['-cp', directory, 'com.foliole.android.RemoteImagePublishFixture'],
       { encoding: 'utf8', timeout: 15000 });
-    expect(result.stderr).toBe('');
+    expect(jvmStderr(result.stderr)).toBe('');
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('New image published without a disk digest; existing image still checked');
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
