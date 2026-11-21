@@ -1,0 +1,32 @@
+{
+  "formatVersion": 1,
+  "runs": [
+    {
+      "item": "system-integration",
+      "release": "v0.8.0",
+      "revision": "28502c058f37f93c4c357b1a88c0628e516486dd",
+      "date": "2026-11-06",
+      "note": "seeded from the T729E pre-release run .tmp/artifacts/system-integration/t729e-release (scope all; review and sync-framed failed there)"
+    },
+    {
+      "item": "database-audit",
+      "release": "v0.8.0",
+      "date": "2026-11-06",
+      "note": "seeded from the T729E pre-release run .tmp/artifacts/quality-maintenance/T729E-final-20261106/database"
+    },
+    {
+      "item": "performance-quarterly",
+      "release": "v0.8.0",
+      "revision": "cf8eb502f33ad6c0da297df7ec3b883f8f42249e",
+      "date": "2026-11-06",
+      "note": "seeded from the T729E pre-release run .tmp/artifacts/t285-quarterly-1793963123706"
+    },
+    {
+      "item": "upgrade-recovery",
+      "release": "v0.8.0",
+      "revision": "e99a621508e3fa0069100c3c6e14712848fbc92a",
+      "date": "2026-11-06",
+      "note": "seeded from the T729E pre-release run .tmp/artifacts/t286-drills/quarterly-l04Tsj (quarterly, 89/89 passed)"
+    }
+  ]
+}
