@@ -18,6 +18,9 @@ import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 import { TrashResultHeader } from './TrashResultHeader';
 import { normalizeWorkspaceContentSort, sortTrashContentRows } from './workspaceContentSort';
 
+// A new Set per render made the node list rebuild the whole library's visible note rows.
+const NO_COLLAPSED_NOTE_NODE_IDS: ReadonlySet<string> = new Set();
+
 interface TrashResultListPanelProps {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
@@ -155,7 +158,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const appearanceSettings = useOptionalAppearanceSettings();
   const rowSpacing = appearanceSettings?.nodeListRowSpacing ?? getNodeListRowSpacing();
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
-  const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
+  const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, NO_COLLAPSED_NOTE_NODE_IDS);
   const { renderedListState, selectedNodeIds } = useRenderedTrashListState(listState, rows);
   const contextMenu = useNodeListContextMenu(props.nodesById, selectedNodeIds, props.trashedNodeIds);
   const selectTrashNode = useNodeSelectionHandler({
