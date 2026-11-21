@@ -1,5 +1,7 @@
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
+import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import { createInitialNewItemReviewProfile } from '../../../../../lib/core/review/newItemReviewSlots';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { parseAssetMarkdownUrl } from '../../../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
@@ -8,11 +10,11 @@ import { buildImageClozeSourcePayload, type ImageClozeDraftRegion } from '../../
 import { imageClozeNodeFields } from '../../../../features/image-cloze/model/imageClozeDraft';
 import type { ImageClozeRegionEdit } from '../../../../features/image-cloze/model/imageClozeRegionEdit';
 import { deriveNodeTitleForCloze } from '../../../../features/nodes/model/deriveNodeTitle';
-import { createNewItemReviewProfiles } from '../../../../store/newItemReviewSlots';
+import { allocateNewItemReviewDueDates } from '../../../../store/newItemReviewSlots';
 import { assertNodeTextForSave } from '../../../ui/nodeTextSaveBudget';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
-import { loadCompanionWorkspaceSyncState } from '../../companionWorkspaceSync';
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
+import { loadNewItemReviewLoadWithDb } from '../runtime/companionNewItemReviewLoad';
 import { loadCompanionWorkspaceNodeFromDb } from '../runtime/companionWorkspaceNodeStore';
 import { saveIosReviewWithDb } from '../runtime/iosCompanionActiveDatabaseWrites';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -62,14 +64,16 @@ export async function saveCompanionImageCloze(request: CompanionImageClozeReques
     attachment_id: hash, content_hash: hash, mime_type: identity.mimeType, presence_only: true, storage_key: key
   });
   if (resource?.status !== 'ready') throw new Error('image_cloze_image_missing');
-  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   const now = new Date().toISOString();
-  const review = createNewItemReviewProfiles({ batchSize: 1, nodesById: snapshot?.nodesById ?? {}, now })[0]!;
+  // Without region edits the write changes only the source and the new cloze, and spreads the cloze over the review load of the days it
+  // may be due on, so neither the write nor the refresh reads the library.
   return runCompanionHighValueMutationTask(() => getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async tx => {
     assertScope();
     const parent = await applyCompanionImageClozeRegionEdits(tx, request);
     assertScope();
     if (!fields) return null;
+    const review = createInitialNewItemReviewProfile(allocateNewItemReviewDueDates({ batchSize: 1,
+      nodes: await loadNewItemReviewLoadWithDb(tx, now), now })[0]!);
     const existing = await loadCompanionWorkspaceNodeFromDb(tx, request.nodeId);
     if (existing) {
       if (existing.deletedAt || existing.parentNodeId !== request.parentNodeId || existing.content !== fields.content ||
@@ -91,7 +95,11 @@ export async function saveCompanionImageCloze(request: CompanionImageClozeReques
     await saveIosReviewWithDb(tx, { node_id: node.id, review_json: JSON.stringify(review) });
     await recordCompanionAnnotationHistory(tx, { documentId: parent.id, before: null, after: { ...node, currentVersionId: version.version_id } });
     return node.id;
-  }), { kind: 'business' }), { kind: 'full' });
+  }), { kind: 'business' }), (nodeId): WorkspaceRefreshScope => request.edits?.length
+    // Region edits also rewrite earlier clozes of the image, which this write does not name.
+    ? { kind: 'full' }
+    : { kind: 'nodes', nodeIds: nodeId ? [nodeId, request.parentNodeId] : [request.parentNodeId], structure: true, metadata: true,
+      ...(nodeId ? { reviewNodeIds: [nodeId] } : {}) });
 }
 
 export async function createCompanionImageCloze(request: CompanionImageClozeRequest) {

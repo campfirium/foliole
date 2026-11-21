@@ -46,15 +46,12 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites',
     nativeWrites.saveReview({ nodeId: args.node_id, review: JSON.parse(args.review_json) })
 }));
 
-vi.mock('../shared/platform/companionWorkspaceSync', () => ({
-  loadCompanionWorkspaceSyncState: vi.fn(async () => ({
-    endpoint_url: null,
-    last_synced_at: null,
-    remembered_targets: [],
-    sync_events: [],
-    sync_onboarding_status: 'accepted',
-    workspace_snapshot: device.snapshot
-  }))
+// The write reads its parent and the review load from the device, never the caller's snapshot.
+vi.mock('../../lib/core/database/companionWorkspaceNodeRead', () => ({
+  loadCompanionWorkspaceNodeFromDb: vi.fn(async (_db: unknown, nodeId: string) => device.snapshot?.nodesById[nodeId] ?? null)
+}));
+vi.mock('../shared/platform/companion/runtime/companionNewItemReviewLoad', () => ({
+  loadNewItemReviewLoadWithDb: vi.fn(async () => Object.values(device.snapshot?.nodesById ?? {}))
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => ({
@@ -156,9 +153,22 @@ it('serializes unawaited native note, cloze, and highlight mutations against dev
   const nodeIds = results.map((result) => result?.nodeId);
   expect(nodeIds).not.toContain(undefined);
   expect(device.snapshot?.nodeOrder).toEqual(['parent', ...nodeIds]);
-  expect(results[2]?.snapshot.nodeOrder).toEqual(['parent', ...nodeIds]);
+  // Each preview adds its own node; the published refresh merges the device's nodes instead.
+  results.forEach((result, index) => expect(result).toMatchObject({ published: true,
+    snapshot: { nodeOrder: ['parent', nodeIds[index]] } }));
   expect(device.snapshot?.nodesById[nodeIds[1]!]!.review).not.toBeNull();
   expect(nativeWrites.apply).toHaveBeenCalledTimes(3);
+});
+
+it('refuses an annotation whose parent the device has moved to Trash', async () => {
+  const { persistCompanionSelectionAnnotation } = await import('./companionSelectionAnnotationActions');
+  const staleSnapshot = device.snapshot;
+  device.snapshot = { ...staleSnapshot!, nodesById: { parent: { ...staleSnapshot!.nodesById.parent!, deletedAt: '2026-08-05T00:00:00.000Z' } } };
+
+  expect(await persistCompanionSelectionAnnotation({
+    deviceId: 'android-device', kind: 'highlight', payload: createPayload('highlight'), snapshot: staleSnapshot
+  })).toBeNull();
+  expect(nativeWrites.apply).not.toHaveBeenCalled();
 });
 
 it('propagates a native annotation write failure without publishing a snapshot result', async () => {

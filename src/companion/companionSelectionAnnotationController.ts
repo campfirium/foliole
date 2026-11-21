@@ -1,3 +1,4 @@
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
@@ -16,6 +17,14 @@ import type { SelectionAnnotationPayload } from '@/shared/selectionAnnotationAct
 
 type ReturnTypeOfUseCompanionWorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 
+/**
+ * A native write has already published the nodes it changed, so the refresh merges them; handing it the preview
+ * would ask for a complete reread. Without a local database the preview is what the refresh stores.
+ */
+function refreshPreview(result: { published?: true; snapshot: WorkspaceSnapshot }) {
+  return result.published ? undefined : result.snapshot;
+}
+
 export function createCompanionExistingHighlightRangeHandler(workspaceSync: ReturnTypeOfUseCompanionWorkspaceSync): CompanionHighlightRangeHandler {
   return async (nodeId, range, parentContent, guard) => {
     const result = await persistCompanionHighlightRange({ deviceId: workspaceSync.bootstrapState.device_id,
@@ -23,7 +32,7 @@ export function createCompanionExistingHighlightRangeHandler(workspaceSync: Retu
     if (!result) return null;
     const refresh = () => {
       if (guard.scope !== getCompanionReadingScope()) return Promise.reject(new Error('companion_annotation_library_changed'));
-      return workspaceSync.refreshAfterMutation(result.snapshot);
+      return workspaceSync.refreshAfterMutation(refreshPreview(result));
     };
     try { await refresh(); }
     catch { throw new CompanionSelectionRefreshError(refresh); }
@@ -44,9 +53,9 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
       return null;
     }
     try {
-      await workspaceSync.refreshAfterMutation(result.snapshot);
+      await workspaceSync.refreshAfterMutation(refreshPreview(result));
     } catch {
-      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(refreshPreview(result)));
     }
     return result.nodeId;
   };
@@ -64,9 +73,9 @@ export function createCompanionExistingHighlightNoteHandler(workspaceSync: Retur
     });
     if (!result) return null;
     try {
-      await workspaceSync.refreshAfterMutation(result.snapshot);
+      await workspaceSync.refreshAfterMutation(refreshPreview(result));
     } catch {
-      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(refreshPreview(result)));
     }
     return result.nodeId;
   };
@@ -85,7 +94,7 @@ export function createCompanionExistingHighlightDeleteHandler(workspaceSync: Ret
     if (!result) return null;
     const refresh = () => {
       if (scope !== getCompanionReadingScope()) return Promise.reject(new Error('companion_annotation_library_changed'));
-      return workspaceSync.refreshAfterMutation(result.snapshot);
+      return workspaceSync.refreshAfterMutation(refreshPreview(result));
     };
     try {
       await refresh();

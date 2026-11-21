@@ -2,6 +2,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 const native = vi.hoisted(() => ({ resolve: vi.fn() }));
+const reads = vi.hoisted(() => ({ fullSnapshots: 0 }));
+vi.mock('../sync/workspace-state/iosCompanionWorkspaceSnapshotStore', async importOriginal => {
+  const original = await importOriginal<typeof import('../sync/workspace-state/iosCompanionWorkspaceSnapshotStore')>();
+  return { ...original, loadIosCompanionWorkspaceSnapshot: (...args: Parameters<typeof original.loadIosCompanionWorkspaceSnapshot>) => {
+    reads.fullSnapshots += 1;
+    return original.loadIosCompanionWorkspaceSnapshot(...args);
+  } };
+});
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../runtime/companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false, convertFileSrc: (url: string) => url }, registerPlugin: () => ({
@@ -14,11 +22,13 @@ import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeA
 import { collectImageMatches } from '../../../../features/editor/model/markdownImageMatches';
 import { getImageClozeLocator } from '../../../../features/image-cloze/model/imageCloze';
 import { loadCompanionWorkspaceSyncState } from '../../companionWorkspaceSync';
+import { refreshCompanionWorkspaceAfterMutation } from '../companionWorkspaceRepository';
 import { loadPreparedCompanionArticle } from '../reading/companionArticlePreparation';
 import { getCompanionReadingScope, invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 import { createSearchLibrary, reopenSearchLibrary } from '../runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../runtime/companionWorkspaceNodeStore';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
+import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { editableNode } from './companionContentEditingStable.testSupport';
 import { applyCompanionEditHistory } from './companionEditHistoryReplay';
@@ -59,6 +69,19 @@ it('creates an anchored, reviewable Item with the original resource, retries onc
   const reopened = await reopenSearchLibrary(library!.root, '2026-11-05T00:00:00Z');
   expect(await loadCompanionWorkspaceNode('new-item')).toEqual(saved);
   expect(reopened.db.prepare("SELECT sync_dirty FROM sync_object_state WHERE object_type='node' AND object_id='new-item'").pluck().get()).toBe(1);
+});
+
+it('creates an Item without reading the whole library in the write or the refresh after it', async () => {
+  const request = await prepare();
+  await refreshCompanionWorkspaceAfterMutation(null);
+  reads.fullSnapshots = 0;
+  expect(await createCompanionImageCloze(request)).toBe('new-item');
+  // The layer refreshes its source after the write.
+  const snapshot = await refreshCompanionWorkspaceAfterMutation(undefined, 'topic');
+  expect(reads.fullSnapshots).toBe(0);
+  const complete = await getIosCompanionDatabaseOwner().readSnapshot(db => loadIosCompanionWorkspaceSnapshot(db));
+  expect(snapshot).toEqual(complete);
+  expect(snapshot?.nodesById['new-item']?.review).toBeTruthy();
 });
 
 it('rolls back a failed create including its history, then retries the same request successfully', async () => {

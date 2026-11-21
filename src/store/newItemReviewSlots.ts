@@ -2,10 +2,10 @@ import {
   allocateNewItemReviewDueDates as allocateSharedNewItemReviewDueDates,
   createInitialNewItemReviewProfile
 } from '../../lib/core/review/newItemReviewSlots.js';
-import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-type ReviewSlotNode = Pick<Node, 'kind' | 'review'>;
+// Only an item's due date counts toward the load a new item is spread over.
+type ReviewSlotNode = { kind: string; review?: { due: string } | null };
 
 export function allocateNewItemReviewDueDates(args: {
   batchSize: number;

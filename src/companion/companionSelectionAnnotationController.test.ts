@@ -41,3 +41,14 @@ it('keeps the readable parent active after creating a selection annotation', asy
 
   expect(refreshAfterMutation).toHaveBeenCalledWith(expect.any(Object));
 });
+
+it('lets the refresh merge what a native annotation write already published', async () => {
+  const refreshAfterMutation = vi.fn();
+  const snapshot = { nodesById: {}, nodeOrder: [], trashedNodeIds: [] };
+  persistCompanionSelectionAnnotation.mockResolvedValue({ nodeId: 'highlight-1', published: true, snapshot });
+  await createCompanionSelectionAnnotationHandler({ bootstrapState: { device_id: 'android-device' }, refreshAfterMutation,
+    state: { workspace_snapshot: snapshot } } as never)('highlight', { anchorId: 'a', clozeContent: '', entries: [],
+    parentNodeId: 'parent-1', selectionText: 'Beta' });
+  // A preview would ask for a complete reread.
+  expect(refreshAfterMutation).toHaveBeenCalledWith(undefined);
+});

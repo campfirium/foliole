@@ -103,23 +103,30 @@ export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T
   return result;
 }
 
-export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>, scope: WorkspaceRefreshScope) {
+export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>,
+  scope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope)) {
   const session = getCompanionReadingScope();
   const queuedAt = performance.now();
   let startedAt = queuedAt;
+  let committedScope: WorkspaceRefreshScope | undefined;
   let result: T | null;
   try {
     result = await runCompanionSyncWriterTask(async () => {
       startedAt = performance.now();
       const saved = await task();
-      if (saved !== null && session === getCompanionReadingScope()) await updateCommittedCompanionWorkspace(scope);
+      if (saved !== null && session === getCompanionReadingScope()) {
+        committedScope = typeof scope === 'function' ? scope(saved) : scope;
+        await updateCommittedCompanionWorkspace(committedScope);
+      }
       return saved;
     });
   } catch (error) {
-    recordCompanionMutationTiming(scope, queuedAt, startedAt, 'failed');
+    recordCompanionMutationTiming(committedScope ?? (typeof scope === 'function' ? undefined : scope), queuedAt, startedAt, 'failed');
     throw error;
   }
-  if (result !== null) recordCompanionMutationTiming(scope, queuedAt, startedAt, 'done');
-  if (result !== null && session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
+  if (result === null) return result;
+  const publishedScope = committedScope ?? (typeof scope === 'function' ? scope(result) : scope);
+  recordCompanionMutationTiming(publishedScope, queuedAt, startedAt, 'done');
+  if (session === getCompanionReadingScope()) publishCompanionHighValueMutation(publishedScope);
   return result;
 }

@@ -1,5 +1,7 @@
+import { loadCompanionWorkspaceNodeFromDb } from '../../lib/core/database/companionWorkspaceNodeRead';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots';
 import type { NativeWorkspaceReviewProfile } from '../../lib/platform/nativeStorageContract';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import {
@@ -8,6 +10,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import { getHighlightAnnotationPrefix } from '../shared/config/highlightAnnotationPrefixSetting';
 import { recordCompanionAnnotationHistory } from '../shared/platform/companion/editing/companionEditHistoryRecording';
+import { loadNewItemReviewLoadWithDb } from '../shared/platform/companion/runtime/companionNewItemReviewLoad';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
@@ -19,7 +22,6 @@ import {
 import { toReviewPayload } from '../shared/platform/companionSyncStateWriters';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import {
   createSelectionAnnotatedHighlightContent,
   createSelectionAnnotationAnchorLink,
@@ -28,11 +30,9 @@ import {
   type SelectionAnnotationPayload
 } from '../shared/selectionAnnotationActions';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
-import { createNewItemReviewProfiles } from '../store/newItemReviewSlots';
+import { allocateNewItemReviewDueDates } from '../store/newItemReviewSlots';
 
-import {
-  toCompanionNativeNodeVersion
-} from './companionAnnotationNodeVersion';
+import { toCompanionNativeNodeVersion } from './companionAnnotationNodeVersion';
 export { addNoteToCompanionExistingHighlight, deleteCompanionExistingHighlight } from './companionExistingHighlightPersistence';
 
 interface PersistSelectionAnnotationArgs {
@@ -47,9 +47,13 @@ interface AnnotationDraft {
   node: WorkspaceNodeSnapshot;
   nodeVersion: NativeSyncNodeRecord;
   review: NativeWorkspaceReviewProfile | null;
-  snapshot: WorkspaceSnapshot;
 }
 
+/** What a new annotation consumes: its parent and, for a cloze, the review load it spreads over. */
+interface AnnotationSource {
+  parentNode: WorkspaceNodeSnapshot | null | undefined;
+  reviewNodes: Iterable<{ kind: string; review?: { due: string } | null } | undefined>;
+}
 function createNode(args: {
   content: string;
   kind: 'item' | 'topic';
@@ -79,9 +83,9 @@ function createNode(args: {
   };
 }
 
-async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promise<AnnotationDraft | null> {
-  const parentNode = args.snapshot?.nodesById[args.payload.parentNodeId];
-  if (!args.snapshot || !parentNode || !canCreateSelectionAnnotation(parentNode) || args.snapshot.trashedNodeIds.includes(parentNode.id)) {
+async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs, source: AnnotationSource): Promise<AnnotationDraft | null> {
+  const parentNode = source.parentNode;
+  if (!parentNode || !canCreateSelectionAnnotation(parentNode) || parentNode.deletedAt) {
     return null;
   }
   const timestamp = new Date().toISOString();
@@ -100,7 +104,7 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
     parentNodeId: parentNode.id,
     payload: args.payload,
     review: args.kind === 'cloze'
-      ? createNewItemReviewProfiles({ batchSize: 1, nodesById: args.snapshot.nodesById, now: timestamp })[0]!
+      ? createInitialNewItemReviewProfile(allocateNewItemReviewDueDates({ batchSize: 1, nodes: source.reviewNodes, now: timestamp })[0]!)
       : null,
     reveal: args.kind === 'cloze' ? cloze.answer : null,
     timestamp,
@@ -108,15 +112,21 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
   });
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
+  return { node: versionedNode, nodeVersion, review: versionedNode.review };
+}
+
+function snapshotSource(snapshot: WorkspaceSnapshot | null, parentNodeId: string): AnnotationSource {
+  const parentNode = snapshot?.nodesById[parentNodeId];
+  // The snapshot keeps Trash facts apart from the node it projects.
+  const trashed = parentNode && snapshot!.trashedNodeIds.includes(parentNode.id);
+  return { parentNode: trashed ? null : parentNode, reviewNodes: Object.values(snapshot?.nodesById ?? {}) };
+}
+
+function withAnnotation(snapshot: WorkspaceSnapshot, node: WorkspaceNodeSnapshot): WorkspaceSnapshot {
   return {
-    node: versionedNode,
-    nodeVersion,
-    review: versionedNode.review,
-    snapshot: {
-      ...args.snapshot,
-      nodeOrder: [...args.snapshot.nodeOrder, versionedNode.id],
-      nodesById: { ...args.snapshot.nodesById, [versionedNode.id]: versionedNode }
-    }
+    ...snapshot,
+    nodeOrder: [...snapshot.nodeOrder, node.id],
+    nodesById: { ...snapshot.nodesById, [node.id]: node }
   };
 }
 
@@ -124,7 +134,8 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
   if (isAvailableNativeCompanionRuntime()) {
     return persistNativeSelectionAnnotation(args);
   }
-  const draft = await buildAnnotationDraft(args);
+  if (!args.snapshot) return null;
+  const draft = await buildAnnotationDraft(args, snapshotSource(args.snapshot, args.payload.parentNodeId));
   if (!draft) {
     return null;
   }
@@ -134,26 +145,33 @@ export async function persistCompanionSelectionAnnotation(args: PersistSelection
   }
   return {
     nodeId: draft.node.id,
-    snapshot: draft.snapshot
+    snapshot: withAnnotation(args.snapshot, draft.node)
   };
 }
 
+/**
+ * The write reads only the parent and, for a cloze, the review load of the days it may be due on; the refresh then
+ * merges the new node instead of rereading the library.
+ */
 async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotationArgs) {
+  if (!args.snapshot) return null;
+  const snapshot = args.snapshot;
   return runCompanionOptionalHighValueMutationTask(async () => {
-    const currentState = await loadCompanionWorkspaceSyncState();
-    const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
-    if (!draft) return null;
-    const appliedIds = await writeIosCompanionDatabase(db => db.transaction(async tx => {
-      const ids = await applyCompanionSyncNodeVersionsWithDbPort(tx, [draft.nodeVersion], 'local_mutation');
-      if (ids.includes(draft.node.id)) await recordCompanionAnnotationHistory(tx, {
-        documentId: args.payload.parentNodeId, before: null, after: draft.node
+    const draft = await writeIosCompanionDatabase(db => db.transaction(async tx => {
+      const parentNode = await loadCompanionWorkspaceNodeFromDb(tx, args.payload.parentNodeId);
+      const reviewNodes = args.kind === 'cloze' ? await loadNewItemReviewLoadWithDb(tx, new Date().toISOString()) : [];
+      const built = await buildAnnotationDraft(args, { parentNode, reviewNodes });
+      if (!built) return null;
+      const ids = await applyCompanionSyncNodeVersionsWithDbPort(tx, [built.nodeVersion], 'local_mutation');
+      if (!ids.includes(built.node.id)) throw new Error('companion_annotation_not_applied');
+      await recordCompanionAnnotationHistory(tx, { documentId: args.payload.parentNodeId, before: null, after: built.node });
+      if (built.review) await saveIosReviewWithDb(tx, {
+        node_id: built.node.id, review_json: JSON.stringify(toReviewPayload(built.review))
       });
-      if (ids.includes(draft.node.id) && draft.review) await saveIosReviewWithDb(tx, {
-        node_id: draft.node.id, review_json: JSON.stringify(toReviewPayload(draft.review))
-      });
-      return ids;
+      return built;
     }), { kind: 'business' });
-    if (!appliedIds.includes(draft.node.id)) throw new Error('companion_annotation_not_applied');
-    return { nodeId: draft.node.id, snapshot: draft.snapshot };
-  }, { kind: 'full' });
+    if (!draft) return null;
+    return { nodeId: draft.node.id, published: true as const, snapshot: withAnnotation(snapshot, draft.node) };
+  }, result => ({ kind: 'nodes', nodeIds: [result.nodeId], structure: true, metadata: true,
+    ...(args.kind === 'cloze' ? { reviewNodeIds: [result.nodeId] } : {}) }));
 }

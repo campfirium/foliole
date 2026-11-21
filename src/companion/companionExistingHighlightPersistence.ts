@@ -22,10 +22,17 @@ interface ExistingHighlightMutation {
   update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot | Promise<WorkspaceNodeSnapshot>;
 }
 
-export function persistExistingHighlightNode(args: ExistingHighlightMutation) {
-  return isAvailableNativeCompanionRuntime()
-    ? runCompanionOptionalHighValueMutationTask(() => writeExistingHighlight(args, true), { kind: 'full' })
-    : writeExistingHighlight(args, false);
+/**
+ * The write changes only the highlight itself, so the refresh merges that node: an edit may retitle it and a deletion
+ * moves it to Trash, and both scopes fall back to a complete reread when the merge cannot be proven.
+ */
+export async function persistExistingHighlightNode(args: ExistingHighlightMutation) {
+  if (!isAvailableNativeCompanionRuntime()) return writeExistingHighlight(args, false);
+  const result = await runCompanionOptionalHighValueMutationTask(() => writeExistingHighlight(args, true), saved => ({
+    kind: 'nodes', nodeIds: [saved.nodeId], structure: true,
+    ...(saved.snapshot.nodesById[saved.nodeId]?.deletedAt ? { trash: true } : { metadata: true })
+  }));
+  return result && { ...result, published: true as const };
 }
 
 async function writeExistingHighlight(args: ExistingHighlightMutation, withinWriter: boolean) {
