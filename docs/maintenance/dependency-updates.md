@@ -170,23 +170,31 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-### November 21 asar, Capacitor, glob, Prettier, FSRS and jsdom batch
+None pending.
 
-The November 20 deferrals were reviewed from their current verified
-`app/renovate` heads before the next QA freeze. Each changed only
-`package.json` and `package-lock.json`, and every target is past the
-seven-day release-age window. Local `dev` reproduces the updates through npm
-and updates the generated iOS Capacitor declaration and its resolved pin to
-the official 8.6.2 tag. FSRS 0.6.1 now requires the same `@emnapi` beta that
-the existing paired override selects, so its nested copies are gone. jsdom 31
-drops its CSS parser dependency chain.
+### Completed November 21 centralized batch
 
-Local evidence: both FSRS training integration tests under the Electron ABI,
-40 jsdom component test files, asar and Capacitor script contracts that run
-without a JDK or Xcode, and the Vite build. Full hosted QA, including
-dependency hardening, Android and iOS native builds, is pending.
+The six November 20 deferrals were reviewed from verified `app/renovate` heads
+and adopted locally in `cfdb90631`, including the iOS Capacitor Swift package
+pin for 8.6.2. The candidate needed three test-only repairs: jsdom 31 resolves
+`var()` in computed styles and shortens `translate(x, 0px)`, a split topic
+spec exceeded the function length limit, and Java script tests treated the JVM
+`Picked up JAVA_TOOL_OPTIONS` notice as a failure.
+[Full quality run 44876737103](https://github.com/campfirium/foliole/actions/runs/44876737103)
+passed on `ef60f453e` with all 59 jobs successful, including dependency
+hardening and the Android and iOS native builds. The integrated `b286a59d0`
+passed 34 affected test files and reached origin/dev, `preview` advanced to
+`ef60f453e`, and the QA workspace was released. Renovate closed all six
+proposals after delivery and their source refs are absent.
 
-| Proposal | Reviewed head | Local target |
+The November 20 Electron, SQLite and web tooling batch (`10760453d`) and the
+Android Gradle 9.9.2 Wrapper patch (`9fdb07034`) were already contained in the
+earlier full-tested `preview` tip `6453cc073` and in this candidate. Their
+proposals (#267, #280, #282, #283, #285, #288) are closed with source refs
+absent. Gradle coverage gaps and upstream alert states remain with their own
+security review.
+
+| Proposal | Reviewed head | Target |
 | --- | --- | --- |
 | [#293](https://github.com/campfirium/foliole/pull/293) | `d611ddeeaa888ada1bc4ee2d4bb7f6955ffadae1` | @electron/asar 4.3.2 |
 | [#292](https://github.com/campfirium/foliole/pull/292) | `2129c3ee177e7bc95e38d8ce44b30ede8d5c70ed` | Capacitor 8.6.2 with the iOS Swift package pin |
@@ -194,46 +202,6 @@ dependency hardening, Android and iOS native builds, is pending.
 | [#286](https://github.com/campfirium/foliole/pull/286) | `890678fbf6ce7f04cc38ecf237aab236a7613d8c` | Prettier 3.10.1 |
 | [#279](https://github.com/campfirium/foliole/pull/279) | `dd6655ad829bc5631f9662493fec97015079bb5e` | FSRS WASM binding 0.6.1 |
 | [#242](https://github.com/campfirium/foliole/pull/242) | `d4cedee6980fc603b7fee94e83e9163bd9452320` | jsdom 31.0.1 |
-
-### November 20 Android Gradle security patch
-
-Local `dev` updates the Android Wrapper from 9.9.1 to
-[9.9.2](https://github.com/gradle/gradle/releases/tag/v9.9.2), the patched
-version for GHSA-4mf6-7pm2-6wm8, GHSA-99wf-vhq9-wm2x, GHSA-35pj-rg5r-8rpv,
-and GHSA-7f7r-77ff-fr6f. This update was applied directly from Gradle's
-release. The official distribution checksum is pinned, and the existing
-Wrapper JAR matches the official 9.9.2 JAR checksum.
-
-The tightened version check rejected 9.9.1. All five focused integrity tests
-passed on 9.9.2, and the Mac build produced the debug and instrumentation
-test APKs with JDK 21. Centralized QA should verify candidate containment,
-Android host quality, dependency hardening, and Wrapper integrity. Existing
-coverage gaps and upstream alert states remain open for their own review.
-
-### November 20 Electron, SQLite, and web tooling batch
-
-Local adoption `10760453d` on `campfirium/foliole:dev` passed a clean npm install,
-Electron native rebuild, the local fast gate, dependency scan, desktop and
-companion Web builds, and 96 targeted tests. The running Electron 45.4.1
-binary reported Node.js 24.22.3 and SQLite 3.54.1. The production npm audit
-reported zero findings. The existing installer backport and its private glob
-pin remain in the resolved graph.
-
-All proposals below targeted `dev` and were reviewed from verified
-`app/renovate` heads. Full hosted QA, including dependency hardening, is
-pending. After it passes, verify integrated remote dev containment before
-closing the proposals and cleaning up their source refs.
-
-| Proposal | Reviewed head | Local target |
-| --- | --- | --- |
-| [#267](https://github.com/campfirium/foliole/pull/267) | `08411365f92e770647657f78ac2ab3f3826ce337` | Electron 45.4.1 |
-| [#280](https://github.com/campfirium/foliole/pull/280) | `60afa5a42a2a0d837d500a5dd61fb7f63ed2a4b4` | Knip 6.45.1 |
-| [#282](https://github.com/campfirium/foliole/pull/282) | `233c1df3e317352039d42cabbb6dcc6126c1d20e` | minimatch 11.0.8 |
-| [#283](https://github.com/campfirium/foliole/pull/283) | `8032480c58eba2b13362c2910294b91e38ab9676` | Vite 8.3.8 |
-| [#285](https://github.com/campfirium/foliole/pull/285) | `96af82233269cb267fcb10c332917876611a4f0a` | lucide-react 1.72.0 |
-| [#286](https://github.com/campfirium/foliole/pull/286) | `df2a30195ed3a671886f858a957eea13494dd75b` | Prettier 3.10.0 |
-| [#287](https://github.com/campfirium/foliole/pull/287) | `b0a7769226d485eca002d6f4a29a6a51883c151f` | glob 14.0.5 in the ASAR and Capacitor overrides |
-| [#288](https://github.com/campfirium/foliole/pull/288) | `7223f31d4b5effc981342711e554fd9ed0674405` | better-sqlite3 13.1.1 |
 
 ### November 12 Node.js security assessment
 
