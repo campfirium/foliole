@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, onTestFailed } from 'vitest';
 
 import { assertAgentCompletionMessage } from './codex/codex-task-completion.mjs';
-import { formatGateQueueMessage, resourcesForClass } from './lib/resource-gate.mjs';
+import { formatGateQueueMessage, isLockStale, resourcesForClass, sharedGateRoot } from './lib/resource-gate.mjs';
 import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -239,5 +239,33 @@ describe('resource gate', () => {
       args: ['--version'],
       bin: 'node'
     });
+  });
+
+  it('shares one lock directory across all worktrees of the repository', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-gate-root-'));
+    try {
+      const mainRoot = path.join(tempDir, 'main');
+      const worktree = path.join(mainRoot, '.claude', 'worktrees', 'wt');
+      const gitDir = path.join(mainRoot, '.git', 'worktrees', 'wt');
+      await mkdir(gitDir, { recursive: true });
+      await mkdir(worktree, { recursive: true });
+      await writeFile(path.join(worktree, '.git'), `gitdir: ${gitDir}\n`, 'utf8');
+      await writeFile(path.join(gitDir, 'commondir'), '../..\n', 'utf8');
+
+      expect(sharedGateRoot(mainRoot)).toBe(mainRoot);
+      expect(sharedGateRoot(worktree)).toBe(mainRoot);
+      expect(sharedGateRoot(path.join(tempDir, 'not-a-repo'))).toBe(path.join(tempDir, 'not-a-repo'));
+    } finally {
+      await rm(tempDir, { force: true, recursive: true });
+    }
+  });
+
+  it('keeps a lock whose holder looks dead but is still heartbeating', () => {
+    const lock = (ageMs) => ({ heartbeatAt: Date.now() - ageMs, pid: 99999999, schemaVersion: 1, startedAt: Date.now() - ageMs });
+
+    expect(isLockStale(lock(1_000), 60 * 60_000, 30_000)).toBe(false);
+    expect(isLockStale(lock(120_000), 60 * 60_000, 30_000)).toBe(true);
+    expect(isLockStale({ ...lock(120_000), pid: process.pid }, 60 * 60_000, 30_000)).toBe(false);
+    expect(isLockStale({ ...lock(2 * 60 * 60_000), pid: process.pid }, 60 * 60_000, 30_000)).toBe(true);
   });
 });

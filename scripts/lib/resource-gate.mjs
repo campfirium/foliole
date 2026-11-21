@@ -1,5 +1,6 @@
 /* global process */
 
+import { readFileSync, statSync } from 'node:fs';
 import { mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -53,8 +54,25 @@ function heldResources(env = process.env) {
   );
 }
 
+// Every git worktree of this repository must share one set of locks; otherwise sessions in
+// different worktrees each hold their own "exclusive" lock and run heavy work at the same time.
+export function sharedGateRoot(repoRoot) {
+  const dotGit = path.join(repoRoot, '.git');
+  try {
+    if (statSync(dotGit).isDirectory()) return repoRoot;
+    const pointer = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, 'utf8'))?.[1]?.trim();
+    if (!pointer) return repoRoot;
+    const gitDir = path.resolve(repoRoot, pointer);
+    const commonDir = path.resolve(gitDir, readFileSync(path.join(gitDir, 'commondir'), 'utf8').trim());
+    return path.basename(commonDir) === '.git' ? path.dirname(commonDir) : repoRoot;
+  } catch {
+    return repoRoot;
+  }
+}
+
 function runtimeDir(repoRoot, env = process.env) {
-  return path.resolve(repoRoot, env.FOLIOLE_RESOURCE_GATE_RUNTIME_DIR ?? env.DESKTOP_VALIDATION_SERIAL_RUNTIME_DIR ?? '.lab/internal/runtime');
+  const override = env.FOLIOLE_RESOURCE_GATE_RUNTIME_DIR ?? env.DESKTOP_VALIDATION_SERIAL_RUNTIME_DIR;
+  return override ? path.resolve(repoRoot, override) : path.join(sharedGateRoot(repoRoot), '.lab/internal/runtime');
 }
 
 function lockPath(repoRoot, resource, env = process.env) {
@@ -98,13 +116,17 @@ async function tryAcquireLock({ className, commandLabel, filePath, resource }) {
   }
 }
 
-function isLockStale(lock, staleMs) {
+// A sandboxed caller cannot see processes it did not start, so a live holder can look dead.
+// A missing pid only counts once the holder has also missed its heartbeats.
+export function isLockStale(lock, staleMs, heartbeatMs = DEFAULT_HEARTBEAT_MS) {
   if (!lock || lock.schemaVersion !== 1) {
     return true;
   }
   const lastSeenAt = Number(lock.heartbeatAt ?? lock.startedAt ?? 0);
-  const staleByTime = !Number.isFinite(lastSeenAt) || Date.now() - lastSeenAt > staleMs;
-  return !isPidAlive(Number(lock.pid)) || staleByTime;
+  if (!Number.isFinite(lastSeenAt)) return true;
+  const ageMs = Date.now() - lastSeenAt;
+  if (ageMs > staleMs) return true;
+  return ageMs > Math.min(staleMs, heartbeatMs * 3) && !isPidAlive(Number(lock.pid));
 }
 
 async function removeStaleLock(filePath, staleMs) {
@@ -120,7 +142,8 @@ async function removeStaleLock(filePath, staleMs) {
       throw error;
     }
   }
-  if (isLockStale(lock, staleMs)) {
+  const heartbeatMs = parsePositiveInt(process.env.FOLIOLE_RESOURCE_GATE_HEARTBEAT_MS, DEFAULT_HEARTBEAT_MS);
+  if (isLockStale(lock, staleMs, heartbeatMs)) {
     await rm(filePath, { force: true });
     return true;
   }
