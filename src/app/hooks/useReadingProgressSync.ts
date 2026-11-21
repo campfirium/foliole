@@ -106,29 +106,32 @@ function useReadingProgressFlushCallbacks(args: {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }) {
   const lastSyncedSignatureRef = useRef<string | null>(null);
-  const persistence: ReadingProgressPersistenceArgs = args;
+  // The host rebuilds these arguments on every render. The flush callbacks read them at call
+  // time so they keep one identity, and effects keyed on them do not re-run per render.
+  const persistenceRef = useRef<ReadingProgressPersistenceArgs>(args);
+  persistenceRef.current = args;
 
   const flushReadingProgress = useCallback(
     (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null, captureMode?: ReadingProgressCaptureMode) =>
       flushReadingProgressToRuntime({
         lastSyncedSignatureRef,
-        persistence,
+        persistence: persistenceRef.current,
         ...definedProps({
           activeNodeIdOverride,
           captureMode,
           captureNodeIdOverride
         })
       }),
-    [persistence]
+    []
   );
 
   const flushReadingProgressImmediately = useCallback(
     () =>
       flushReadingProgressBeforeClose({
         lastSyncedSignatureRef,
-        persistence
+        persistence: persistenceRef.current
       }),
-    [persistence]
+    []
   );
 
   return { flushReadingProgress, flushReadingProgressImmediately };

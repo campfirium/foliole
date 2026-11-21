@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
@@ -49,6 +49,15 @@ function isReadingPositionRestoreActive(
   return Boolean(getReadingPositionSyncState?.());
 }
 
+// The desktop controller rebuilds callbacks and getters on every render. Effects below read
+// them through this ref so they re-run only on real inputs; re-running per render would flush
+// progress on every render and cancel a pending debounced save.
+function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
 function useReadingProgressEffects({
   activeNodeId,
   browseRootNodeId,
@@ -56,24 +65,26 @@ function useReadingProgressEffects({
   lifecycleFlush,
   syncActiveNodeReadingProgress
 }: ReadingProgressEffectsOptions) {
+  const latest = useLatest({ lifecycleFlush, syncActiveNodeReadingProgress });
   useEffect(() => {
     if (!isWorkspaceHydrated) {
       return;
     }
-    syncActiveNodeReadingProgress(activeNodeId);
-  }, [activeNodeId, browseRootNodeId, isWorkspaceHydrated, syncActiveNodeReadingProgress]);
+    latest.current.syncActiveNodeReadingProgress(activeNodeId);
+  }, [activeNodeId, browseRootNodeId, isWorkspaceHydrated, latest]);
 
   useEffect(() => {
     if (!isWorkspaceHydrated) {
       return;
     }
-    window.addEventListener('beforeunload', lifecycleFlush);
-    window.addEventListener('pagehide', lifecycleFlush);
+    const flush = () => latest.current.lifecycleFlush();
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
     return () => {
-      window.removeEventListener('beforeunload', lifecycleFlush);
-      window.removeEventListener('pagehide', lifecycleFlush);
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
     };
-  }, [isWorkspaceHydrated, lifecycleFlush]);
+  }, [isWorkspaceHydrated, latest]);
 }
 
 export function useReadingProgressCloseFlushRegistration(
@@ -101,11 +112,13 @@ export function useReadingProgressLifecycle(args: {
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isWorkspaceHydrated: boolean;
 }) {
-  const lifecycleFlush = useMemo(
-    () => () => {
-      void args.flushReadingProgressImmediately();
-    },
-    [args.flushReadingProgressImmediately]
+  const { flushReadingProgress, flushReadingProgressImmediately } = args;
+  const lifecycleFlush = useCallback(() => {
+    void flushReadingProgressImmediately();
+  }, [flushReadingProgressImmediately]);
+  const syncActiveNodeReadingProgress = useCallback(
+    (activeNodeIdOverride?: string | null) => flushReadingProgress(activeNodeIdOverride, null),
+    [flushReadingProgress]
   );
 
   useReadingProgressEffects({
@@ -113,38 +126,31 @@ export function useReadingProgressLifecycle(args: {
     ...definedProps({ browseRootNodeId: args.browseRootNodeId }),
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
-    syncActiveNodeReadingProgress: (activeNodeIdOverride) =>
-      args.flushReadingProgress(activeNodeIdOverride, null),
+    syncActiveNodeReadingProgress,
     ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState })
   });
 }
 
 export function useImmediateReadingProgressCapture(args: ImmediateReadingProgressCaptureArgs) {
+  const latest = useLatest(args);
+  const { activeNodeId, isViewingTrashNode, isWorkspaceHydrated } = args;
+  // The editor adapter is attached to the ref without a re-render, so read it on each render and
+  // subscribe again only when the instance changes; the first render after it attaches subscribes.
+  const editor = args.editorRef.current;
   useEffect(() => {
-    if (!args.isWorkspaceHydrated || !args.activeNodeId || args.isViewingTrashNode || !args.editorRef.current) {
+    if (!isWorkspaceHydrated || !activeNodeId || isViewingTrashNode || !editor) {
       return;
     }
 
-    const nodeId = args.activeNodeId;
-    const unsubscribe = args.editorRef.current.onScroll((event) => {
-      if (event.userInitiated) captureImmediateReadingProgress(args);
-      else if (!isReadingPositionRestoreActive(args.getReadingPositionSyncState)) args.onProgrammaticScroll?.(nodeId);
+    const nodeId = activeNodeId;
+    const unsubscribe = editor.onScroll((event) => {
+      const current = latest.current;
+      if (event.userInitiated) captureImmediateReadingProgress(current);
+      else if (!isReadingPositionRestoreActive(current.getReadingPositionSyncState)) current.onProgrammaticScroll?.(nodeId);
     });
 
     return unsubscribe;
-  }, [
-    args.activeNodeId,
-    args.editorRef,
-    args.getReadingPositionSelection,
-    args.getReadingPositionSyncState,
-    args.isImmersiveMode,
-    args.isViewingTrashNode,
-    args.isWorkspaceHydrated,
-    args.nodeViewById,
-    args.onProgrammaticScroll,
-    args.pendingNodeViewByIdRef,
-    args.shouldSuppressReadingProgressCapture
-  ]);
+  }, [activeNodeId, editor, isViewingTrashNode, isWorkspaceHydrated, latest]);
 }
 
 function isUserInitiatedEditorScroll(event: EditorScrollEvent) {
@@ -190,17 +196,22 @@ export function useDebouncedReadingProgressPersistence(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   shouldSuppressReadingProgressCapture?: ShouldSuppressReadingProgressCapture;
 }) {
+  const latest = useLatest(args);
+  const { activeNodeId, isViewingTrashNode, isWorkspaceHydrated } = args;
+  // The editor adapter is attached to the ref without a re-render, so read it on each render and
+  // subscribe again only when the instance changes; the first render after it attaches subscribes.
+  const editor = args.editorRef.current;
   useEffect(() => {
-    if (!args.isWorkspaceHydrated || !args.activeNodeId || args.isViewingTrashNode || !args.editorRef.current) {
+    if (!isWorkspaceHydrated || !activeNodeId || isViewingTrashNode || !editor) {
       return;
     }
 
     let timeoutId: number | null = null;
-    const unsubscribe = args.editorRef.current.onScroll((event) => {
+    const unsubscribe = editor.onScroll((event) => {
       if (
         !isUserInitiatedEditorScroll(event) ||
-        isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
-        args.shouldSuppressReadingProgressCapture?.()
+        isReadingPositionRestoreActive(latest.current.getReadingPositionSyncState) ||
+        latest.current.shouldSuppressReadingProgressCapture?.()
       ) {
         if (timeoutId !== null) {
           window.clearTimeout(timeoutId);
@@ -212,15 +223,15 @@ export function useDebouncedReadingProgressPersistence(args: {
         window.clearTimeout(timeoutId);
       }
       pushDebugTrace('reading-progress.debounce-scheduled', {
-        activeNodeId: args.activeNodeId,
+        activeNodeId,
         delayMs: READING_PROGRESS_DEBOUNCE_MS
       });
       timeoutId = window.setTimeout(() => {
         timeoutId = null;
         pushDebugTrace('reading-progress.debounce-fired', {
-          activeNodeId: args.activeNodeId
+          activeNodeId
         });
-        args.flushReadingProgress();
+        latest.current.flushReadingProgress();
       }, READING_PROGRESS_DEBOUNCE_MS);
     });
 
@@ -230,13 +241,5 @@ export function useDebouncedReadingProgressPersistence(args: {
       }
       unsubscribe();
     };
-  }, [
-    args.activeNodeId,
-    args.editorRef,
-    args.flushReadingProgress,
-    args.getReadingPositionSyncState,
-    args.isViewingTrashNode,
-    args.isWorkspaceHydrated,
-    args.shouldSuppressReadingProgressCapture
-  ]);
+  }, [activeNodeId, editor, isViewingTrashNode, isWorkspaceHydrated, latest]);
 }
