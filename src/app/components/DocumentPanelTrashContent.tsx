@@ -1,6 +1,6 @@
 import { ChevronDown, Trash2 } from 'lucide-react';
 import type { JSX } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import { TRASH_FOLDER_LIST_SORT_OPTIONS } from '../../features/nodes/model/folderListSortOptions';
@@ -186,7 +186,11 @@ export function DocumentPanelTrashContent({
   trashedNodeIds: string[];
 }) {
   const t = useTranslation();
-  const listedNodes = collectTrashFolderNodes({ folderNodeId, nodeOrder, nodesById, trashedNodeIds });
+  // A new array here made FolderListView re-sort the Trash folder on every render.
+  const listedNodes = useMemo(
+    () => collectTrashFolderNodes({ folderNodeId, nodeOrder, nodesById, trashedNodeIds }),
+    [folderNodeId, nodeOrder, nodesById, trashedNodeIds]
+  );
   const normalizedSort = normalizeTrashFolderSort(folderListSortKey, folderListSortDirection);
 
   return (

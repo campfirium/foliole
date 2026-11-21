@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { collectRemovedTopicIds, collectShelvedTopicIds } from '../../features/nodes/model/builtinVirtualTopicIds';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -32,6 +32,8 @@ interface VirtualDocumentSurfaceProps {
   trashedNodeIds: string[];
 }
 
+const NO_RESULT_NODES: Node[] = [];
+
 function filterVisibleVirtualResults(nodes: Node[], trashedNodeIds: string[]) {
   return nodes.filter((node) => !trashedNodeIds.includes(node.id));
 }
@@ -43,24 +45,30 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
   const updateVirtualNodeFilter = useWorkspaceStore((state) => state.updateVirtualNodeFilter);
   const trimmedQuery = query.trim();
-  const resultNodes = trimmedQuery
-    ? filterVisibleVirtualResults(
-        getOrderedVirtualNodeResultNodes(
-          VIRTUAL_ROOT_NODE_ID,
-          props.nodeOrder,
-          props.nodesById,
-          createVirtualNodeFilterFromKeyword(trimmedQuery)
-        ),
-        props.trashedNodeIds
-      )
-    : [];
+  // Virtual results filter the whole library; FolderListView re-sorts on every new array.
+  const resultNodes = useMemo(
+    () =>
+      trimmedQuery
+        ? filterVisibleVirtualResults(
+            getOrderedVirtualNodeResultNodes(
+              VIRTUAL_ROOT_NODE_ID,
+              props.nodeOrder,
+              props.nodesById,
+              createVirtualNodeFilterFromKeyword(trimmedQuery)
+            ),
+            props.trashedNodeIds
+          )
+        : NO_RESULT_NODES,
+    [props.nodeOrder, props.nodesById, props.trashedNodeIds, trimmedQuery]
+  );
+  const resultNodeIds = useMemo(() => resultNodes.map((node) => node.id), [resultNodes]);
 
   return (
     <FolderListView
       emptyState={trimmedQuery ? { description: t('desktop.virtualSearch.empty.description'), title: t('desktop.virtualSearch.empty.title') } : undefined}
       filterSearchResults={false}
       folderTitle={resolveSystemEntryDisplayName(locale, 'virtual-root')}
-      nodeOrder={resultNodes.map((node) => node.id)}
+      nodeOrder={resultNodeIds}
       nodes={resultNodes}
       nodesById={props.nodesById}
       onChangeSearchQuery={setQuery}
@@ -95,15 +103,20 @@ function VirtualRootDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'no
 function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'activeNode' | 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'>) {
   const t = useTranslation();
   const query = getVirtualNodePrimaryKeyword(props.activeNode.virtualFilter);
-  const resultNodes = filterVisibleVirtualResults(
-    getOrderedVirtualNodeResultNodes(
-      props.activeNode.id,
-      props.nodeOrder,
-      props.nodesById,
-      props.activeNode.virtualFilter
-    ),
-    props.trashedNodeIds
+  const resultNodes = useMemo(
+    () =>
+      filterVisibleVirtualResults(
+        getOrderedVirtualNodeResultNodes(
+          props.activeNode.id,
+          props.nodeOrder,
+          props.nodesById,
+          props.activeNode.virtualFilter
+        ),
+        props.trashedNodeIds
+      ),
+    [props.activeNode.id, props.activeNode.virtualFilter, props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
+  const resultNodeIds = useMemo(() => resultNodes.map((node) => node.id), [resultNodes]);
 
   return (
     <FolderListView
@@ -111,7 +124,7 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
       filterSearchResults={false}
       folderNodeId={props.activeNode.id}
       folderTitle={props.activeNode.title || t('desktop.virtualSearch.title')}
-      nodeOrder={resultNodes.map((node) => node.id)}
+      nodeOrder={resultNodeIds}
       nodes={resultNodes}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
@@ -131,8 +144,12 @@ export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurface
 }) {
   const { locale, t } = useLocalization();
   const isShelved = props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
-  const nodeIds = isShelved ? collectShelvedTopicIds(props) : collectRemovedTopicIds(props);
-  const nodes = nodeIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
+  const { nodeOrder, nodesById, trashedNodeIds } = props;
+  const nodes = useMemo(() => {
+    const snapshot = { nodeOrder, nodesById, trashedNodeIds };
+    const nodeIds = isShelved ? collectShelvedTopicIds(snapshot) : collectRemovedTopicIds(snapshot);
+    return nodeIds.map((nodeId) => nodesById[nodeId]).filter((node): node is Node => Boolean(node));
+  }, [isShelved, nodeOrder, nodesById, trashedNodeIds]);
 
   return (
     <FolderListView
