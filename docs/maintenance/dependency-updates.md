@@ -170,7 +170,23 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-None pending.
+November 22 batch, `campfirium/Foliole` base `dev`, all from verified
+`app/renovate` heads and published more than seven days earlier. Adopted
+locally in one commit; the November 22 centralized check owns hosted coverage
+(full scope, including Android for the Gradle plugin) and PR closure.
+
+| PR | Head | Update |
+| --- | --- | --- |
+| #297 | `a81cde869` | `com.android.tools.build:gradle` 9.5.1 → 9.5.2 |
+| #298 | `60fe93ccb` | `postcss` 8.5.32 → 8.5.33 |
+| #299 | `c24ea4fa7` | `playwright`, `@playwright/test` 1.65.0 → 1.65.1 |
+| #300 | `0fed3074b` | `eslint` 10.14.0 → 10.15.0 |
+| #302 | `c320a6525` | `lucide-react` 1.72.0 → 1.73.0 |
+| #303 | `f6c7be8b0` | `better-sqlite3` 13.1.1 → 13.2.0 |
+
+Local evidence: real SQLite integration through the Electron runner loads the
+new `better-sqlite3` prebuilt binary and passes; the remaining static gate runs
+in the QA checkout before dispatch.
 
 ### Completed November 21 centralized batch
 
