@@ -154,6 +154,16 @@ export function resolveLoadedCompanionArticle(
   } : null;
 }
 
+/**
+ * Lays an article already read from the database over a snapshot whose only change is what sits in Trash,
+ * so moving an open article to Trash or back does not read its text again.
+ */
+export function rebaseLoadedCompanionArticle(snapshot: WorkspaceSnapshot | null, article: CompanionReadableArticle) {
+  return resolveLoadedCompanionArticle(snapshot, { id: article.nodeId, current_version_id: article.currentVersionId ?? null,
+    body_blob_hash: article.bodyBlobHash ?? null, content: article.content, content_status: article.bodyStatus ?? 'ready',
+    pdf_attachment_id: article.pdfAttachmentId, reveal: article.reveal ?? null, title: article.title });
+}
+
 export function resolveReadableCompanionTrashArticleByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null

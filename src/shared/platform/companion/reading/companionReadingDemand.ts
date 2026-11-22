@@ -26,10 +26,10 @@ export function companionArticleChildIds(nodes: WorkspaceSnapshot['nodesById'], 
   return index.get(parentId) ?? [];
 }
 
-function contentFacts(node: Node) {
+function contentFacts(node: Node, deletion = true) {
   return [node.id, node.currentVersionId, node.bodyBlobHash, node.bodyStatus, node.content,
     node.reveal, node.title, node.hideTitleHeading, node.anchorLink, node.parentNodeId,
-    node.deletedAt, node.attachments, node.imageRegions, node.imageSources];
+    deletion ? node.deletedAt : null, node.attachments, node.imageRegions, node.imageSources];
 }
 
 export function hasCompanionReadingDemand(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
@@ -47,6 +47,20 @@ export function companionReadingDemandKey(snapshot: WorkspaceSnapshot | null, no
     .sort((a, b) => a.localeCompare(b))
     .map((id) => [contentFacts(snapshot.nodesById[id]!), isCanonicalTrashedNodeId(snapshot, id)]);
   return JSON.stringify([snapshot.libraryScope, visible, trashed, contentFacts(snapshot.nodesById[nodeId]), annotations]);
+}
+
+/**
+ * What a loaded article read from the database: the same facts as the demand key without what sits in Trash.
+ * Two snapshots with the same text key differ only in Trash state, which the article takes from the snapshot.
+ */
+export function companionReadingTextKey(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
+  if (!companionReadingDemandKey(snapshot, nodeId)) return null;
+  const nodes = snapshot!.nodesById;
+  const annotations = companionArticleChildIds(nodes, nodeId!)
+    .filter(id => nodes[id]?.anchorLink)
+    .sort((a, b) => a.localeCompare(b))
+    .map(id => contentFacts(nodes[id]!, false));
+  return JSON.stringify([snapshot!.libraryScope, contentFacts(nodes[nodeId!]!, false), annotations]);
 }
 
 export class CompanionReadingSnapshotChanged extends Error {

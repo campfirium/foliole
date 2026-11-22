@@ -4,9 +4,9 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { loadPreparedCompanionArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
 import { loadCompanionPdfTextResume } from '../shared/platform/companion/reading/companionPdfTextResume';
-import { companionReadingDemandKey, CompanionReadingSnapshotChanged, hasCompanionReadingDemand } from '../shared/platform/companion/reading/companionReadingDemand';
+import { companionReadingDemandKey, CompanionReadingSnapshotChanged, companionReadingTextKey, hasCompanionReadingDemand } from '../shared/platform/companion/reading/companionReadingDemand';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import { rebaseLoadedCompanionArticle, type CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 type Article = CompanionReadableArticle | null;
 interface Request {
@@ -21,6 +21,8 @@ interface DisplayedArticle {
   libraryScope: string | undefined;
   nodeId: string;
   scope: object;
+  /** The text facts the read was checked against; a snapshot with the same ones changed only what sits in Trash. */
+  textKey: string | null;
 }
 
 function useArticleInvalidation(snapshot: WorkspaceSnapshot | null,
@@ -100,6 +102,8 @@ export function useCompanionReadableArticleLoader(
     }
     const scope = getCompanionReadingScope();
     if (current.current?.key === key && current.current.scope === scope) return current.current.promise;
+    const rebased = rebaseDisplayedArticle(displayed, snapshot, { key, nodeId, scope });
+    if (rebased) { current.current = rebased; setReadableArticle(rebased.article!); return rebased.promise; }
     if (displayed.current?.nodeId !== nodeId || displayed.current.scope !== scope ||
       displayed.current.libraryScope !== snapshot?.libraryScope) release();
     const request: Request = { key, nodeId, scope, promise: Promise.resolve(null) };
@@ -112,7 +116,8 @@ export function useCompanionReadableArticleLoader(
       ? withPdfTextResume(article) : article).then((article) => {
       if (!isCurrent()) return null;
       request.article = article;
-      displayed.current = article ? { article, libraryScope: snapshot?.libraryScope, nodeId, scope } : null;
+      displayed.current = article ? { article, libraryScope: snapshot?.libraryScope, nodeId, scope,
+        textKey: companionReadingTextKey(snapshot, nodeId) } : null;
       setReadableArticle(article);
       return article;
     }).catch(async (error: unknown) => {
@@ -130,6 +135,22 @@ export function useCompanionReadableArticleLoader(
   }, [onError, onSnapshotChanged, release, setReadableArticle, snapshot]);
   const readableArticle = useLiveReadingPosition(resolveVisibleArticle(displayed.current, snapshot), snapshot);
   return { openReadableArticle, readableArticle };
+}
+
+/**
+ * Moving the open article (with its annotations) to Trash or back changes no text it read, so the shown article
+ * is laid over the new snapshot instead of read again; a preview ahead of the write would otherwise fail the
+ * database check and reread the whole library while the write runs.
+ */
+function rebaseDisplayedArticle(displayed: MutableRefObject<DisplayedArticle | null>, snapshot: WorkspaceSnapshot | null,
+  demand: Pick<Request, 'key' | 'nodeId' | 'scope'>): Request | null {
+  const visible = displayed.current;
+  if (!visible?.article || !visible.textKey || visible.nodeId !== demand.nodeId || visible.scope !== demand.scope ||
+    visible.libraryScope !== snapshot?.libraryScope || visible.textKey !== companionReadingTextKey(snapshot, demand.nodeId)) return null;
+  const article = rebaseLoadedCompanionArticle(snapshot, visible.article);
+  if (!article) return null;
+  displayed.current = { ...visible, article };
+  return { ...demand, article, promise: Promise.resolve(article) };
 }
 
 function resolveVisibleArticle(visible: DisplayedArticle | null, snapshot: WorkspaceSnapshot | null): Article {
