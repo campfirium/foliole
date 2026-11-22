@@ -3,7 +3,7 @@ import { maintainWorkspaceSnapshotSequentialReading } from '../../../../store/wo
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
-import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersions } from './companionNodeHistory';
 import type { CompanionBatchTarget } from './companionWorkspaceBatchTrash';
 import { deriveCompanionWriteNodeOrder } from './companionWriteNodeOrder';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
@@ -15,7 +15,8 @@ export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], par
   return runCompanionHistoryMutation(async db => {
     // The moved nodes, their ancestors and the target's ancestors suffice unless a Sequential Reading topic is in reach;
     // the moved subtrees travel unchanged, so they are probed, never read.
-    const narrow = await loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: targets.map(target => target.id), pathIds: [parentNodeId] });
+    const host = await iosCompanionHostName(db);
+    const narrow = await loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: true, keptIds: targets.map(target => target.id), pathIds: [parentNodeId] });
     const snapshot = narrow ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrow && !snapshot) throw new Error('workspace_unavailable');
     const before = narrow ?? snapshot!.nodesById;
@@ -36,9 +37,8 @@ export function moveCompanionBatch(targets: readonly CompanionBatchTarget[], par
     if (!moved.length) return [];
     const readings = maintainWorkspaceSnapshotSequentialReading({ before, after, changedNodeIds: moved,
       nodeOrder: snapshot ? await deriveCompanionWriteNodeOrder(db, snapshot, after) : companionWriteNodeOrder(before), now });
-    const host = await iosCompanionHostName(db);
-    const records = await Promise.all([...changed.values()].map(node => createCompanionMetadataVersion(db, node, host)));
-    await commitCompanionNodeHistoryWithDb(db, records, 'Move', 'local_mutation', null, readings);
+    const records = await createCompanionMetadataVersions(db, [...changed.values()], host);
+    await commitCompanionNodeHistoryWithDb(db, records, 'Move', 'local_mutation', null, readings, undefined, host);
     readingNodeIds = readings.map(change => change.nodeId);
     return [...new Set([...moved, ...changed.keys()])];
   // The move names every node and Sequential Reading change it made, even after a whole-library read,

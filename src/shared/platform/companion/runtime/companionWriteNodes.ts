@@ -25,7 +25,7 @@ const WRITE_NODE_IDS_SQL = `WITH RECURSIVE descendants(id) AS (
 
 type WriteNodes = Record<string, WorkspaceNodeSnapshot>;
 // `host` is the Companion Host when the caller has read it; `attachments: false` skips attachments nobody reads.
-type ProjectionOptions = { host?: string; attachments?: boolean };
+type ProjectionOptions = { host?: string | undefined; attachments?: boolean };
 
 async function loadSubtreesAndAncestors(db: DbPort, rootIds: readonly string[], ancestorIds: readonly string[],
   read: ProjectionOptions, probeIds: readonly string[] = []) {

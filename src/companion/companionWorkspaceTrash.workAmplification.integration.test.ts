@@ -8,6 +8,7 @@ import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { resolveCompanionDirectoryCounts } from '../shared/platform/companion/browse/companionDirectoryCounts';
 import { watchCompanionWorkspaceRefreshDegradations } from '../shared/platform/companion/companionWorkspaceRefreshDegradation.testSupport';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { collectCompanionBatchSubtree, moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
@@ -96,6 +97,8 @@ it('moves a selection to Trash and shows it without reading the whole library', 
 async function trashWriteRows(size: number) {
   await library.close();
   await openLibrary(size);
+  // A release of superseded bodies scheduled by the fixture's edits must not land in the measured window.
+  await settleCompanionNodeVersionCollections();
   sqlRecording.start({ label: 'trash-write', maxGroups: 2000 });
   try { await mutateCompanionWorkspace({ type: 'delete', nodeId: 'sub' }); }
   finally { sqlRecording.stop(); }

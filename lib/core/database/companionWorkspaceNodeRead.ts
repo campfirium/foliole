@@ -12,6 +12,14 @@ export async function loadCompanionWorkspaceNodeFromDb(db: DbPort, nodeId: strin
   return node;
 }
 
+/** `loadCompanionWorkspaceNodeFromDb` with learning state for several nodes in one statement, keyed by id. */
+export async function loadCompanionWorkspaceNodesFromDb(db: DbPort, nodeIds: readonly string[], learningHost: string) {
+  const rows = await db.query<WorkspaceNodeRowShape & DbRow>(
+    LEARNING_NODE_SQL.replace('WHERE n.id = ?', 'WHERE n.id IN (SELECT value FROM json_each(?))'),
+    [learningHost, JSON.stringify([...new Set(nodeIds)])]);
+  return new Map(rows.map(row => [row.id, buildWorkspaceSnapshotNode(row)]));
+}
+
 const LEARNING_NODE_SQL = `SELECT n.*,
   nr.due AS review_due, nr.last_review_at AS review_last_review_at,
   nr.state AS review_state, nr.stability AS review_stability, nr.stability_fast AS review_stability_fast,

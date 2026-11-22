@@ -8,6 +8,7 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
@@ -144,6 +145,8 @@ for (const [name, write] of Object.entries(BOOKS_WRITES)) for (const held of [fa
   it(`reads the same number of rows for a ${name} a Sequential Reading folder${held ? ' with a held slot' : ''} however large the library is`, async () => {
     const rows = async (size: number) => {
       await openBooks(size, held);
+      // A release of superseded bodies scheduled by the fixture's edits must not land in the measured window.
+      await settleCompanionNodeVersionCollections();
       sqlRecording.start({ label: 'books-write', maxGroups: 2000 });
       try {
         await write();

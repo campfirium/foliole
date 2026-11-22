@@ -2,7 +2,7 @@ import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/wor
 import { prepareWorkspaceNodeChildrenIndex } from '../../../../features/nodes/model/workspaceNodeChildrenIndex';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
-import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersions } from './companionNodeHistory';
 import { loadCompanionBatchTrashNodes, maintainCompanionBatchTrashReading } from './companionTrashSequentialReading';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -43,19 +43,19 @@ export function canMoveCompanionBatchNodeToTrash(node: WorkspaceNodeSnapshot | u
 export function moveCompanionBatchToTrash(targets: readonly CompanionBatchTarget[]) {
   let readingNodeIds: string[] = [];
   return runCompanionHistoryMutation(async db => {
-    const context = await loadCompanionBatchTrashNodes(db, targets.map(target => target.id));
+    const host = await iosCompanionHostName(db);
+    const context = await loadCompanionBatchTrashNodes(db, targets.map(target => target.id), host);
     const nodes = context.nodes;
     if (targets.some(({ id, version }) => !canMoveCompanionBatchNodeToTrash(nodes[id]) ||
       nodes[id]?.currentVersionId !== version)) throw new Error('workspace_batch_selection_changed');
     const now = new Date().toISOString();
-    const host = await iosCompanionHostName(db);
     const changes = collectCompanionBatchSubtree(nodes, targets.map(target => target.id)).filter(node => !node.deletedAt);
     if (changes.some(node => node.webPublishedAt)) throw new Error('workspace_batch_published_topic');
     const trashed = changes.map(node => ({ ...node, deletedAt: now, updatedAt: now }));
     const readings = await maintainCompanionBatchTrashReading(db, context, { ...nodes, ...Object.fromEntries(trashed.map(node => [node.id, node])) },
       targets.map(target => target.id), now);
-    const records = await Promise.all(trashed.map(node => createCompanionMetadataVersion(db, node, host)));
-    await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash', 'local_mutation', null, readings);
+    const records = await createCompanionMetadataVersions(db, trashed, host);
+    await commitCompanionNodeHistoryWithDb(db, records, 'Move to Trash', 'local_mutation', null, readings, undefined, host);
     readingNodeIds = readings.map(change => change.nodeId);
     return changes.map(node => node.id);
   }, nodeIds => ({ kind: 'nodes', nodeIds, structure: true, trash: true, ...(readingNodeIds.length ? { readingNodeIds } : {}) }));

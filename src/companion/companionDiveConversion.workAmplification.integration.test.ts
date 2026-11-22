@@ -10,6 +10,7 @@ import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeF
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
 import { changeCompanionIndexSource } from '../shared/platform/companion/runtime/companionIndexSources';
+import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -82,6 +83,8 @@ const CONVERSIONS: Record<string, { withIndex: boolean; run: () => Promise<unkno
 
 async function writeRows(size: number, conversion: typeof CONVERSIONS[string]) {
   await openLibrary(size, conversion.withIndex);
+  // A release of superseded bodies scheduled by the fixture's edits must not land in the measured window.
+  await settleCompanionNodeVersionCollections();
   sqlRecording.start({ label: 'conversion', maxGroups: 2000 });
   try {
     await conversion.run();

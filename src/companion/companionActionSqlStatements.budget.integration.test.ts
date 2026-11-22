@@ -123,26 +123,26 @@ const ACTIONS: Record<string, Action> = {
   rename: { budget: { write: 11, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'rename', nodeId: 'a', title: 'Renamed' })) },
   move: { budget: { write: 12, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' })) },
   'folder move': { budget: { write: 12, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'other', parentNodeId: 'folder' })) },
-  'batch move': { budget: { write: 16, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  'batch move': { budget: { write: 12, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['a', 'b']);
     return () => moveCompanionBatch(versions, 'other');
   }) },
   create: { budget: { write: 12, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' })) },
   'move to Trash': { budget: { write: 16, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'delete', nodeId: 'b' })) },
-  'batch move to Trash': { budget: { write: 20, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  'batch move to Trash': { budget: { write: 16, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['b', 'c']);
     return () => moveCompanionBatchToTrash(versions);
   }) },
-  restore: { budget: { write: 18, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'restore', nodeId: 'gone' })) },
-  'batch restore': { budget: { write: 21, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  restore: { budget: { write: 17, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'restore', nodeId: 'gone' })) },
+  'batch restore': { budget: { write: 17, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['gone']);
     return () => restoreCompanionBatchFromTrash(versions);
   }) },
   shelve: { budget: { write: 11, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'shelve', nodeId: 'b' })) },
   unshelve: { budget: { write: 11, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'unshelve', nodeId: 'shelved' })) },
-  priority: { budget: { write: 11, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 })) },
-  'undo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 49, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('undo')) },
-  'redo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 46, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('redo')) },
+  priority: { budget: { write: 10, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 })) },
+  'undo move': { budget: { write: 15, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('undo')) },
+  'redo move': { budget: { write: 15, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('redo')) },
   'Dive creation': { budget: { write: 13, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' })) },
   'Virtual folder creation': { budget: { write: 13, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' })) },
   'Dive source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 29, refresh: 6 }, run: workspace(() => addCompanionDiveSource('dive', 'c')) },
@@ -221,5 +221,36 @@ for (const [name, action] of Object.entries(ACTIONS)) {
       expect(counts.write > action.budget.write || counts.refresh > action.budget.refresh,
         `${name} now fits its budget (${action.overBudget.wa}); remove overBudget`).toBe(true);
     }
+  });
+}
+
+// A batch action reads and writes all its nodes together, so its statement count does not grow with the selection.
+const BATCHES: Record<string, (ids: string[]) => Promise<unknown>> = {
+  'batch move': async ids => { const versions = await currentVersions(ids); phase = 'write'; await moveCompanionBatch(versions, 'other'); },
+  'batch move to Trash': async ids => { const versions = await currentVersions(ids); phase = 'write'; await moveCompanionBatchToTrash(versions); },
+  'batch restore': async ids => {
+    await moveCompanionBatchToTrash(await currentVersions(ids));
+    const versions = await currentVersions(ids);
+    phase = 'write';
+    await restoreCompanionBatchFromTrash(versions);
+  }
+};
+
+async function batchWrites(run: (ids: string[]) => Promise<unknown>, size: number) {
+  await library?.close();
+  await openWorkspace();
+  const ids = Array.from({ length: size }, (_, index) => `batch-${index}`);
+  for (const id of ids) await mutateCompanionWorkspace({ type: 'create', nodeId: id, kind: 'topic', parentNodeId: 'folder', title: id });
+  recorded.write = [];
+  sqlRecording.start({ label: 'action-budget', maxGroups: 2000 });
+  try { await run(ids); } finally { phase = null; sqlRecording.stop(); }
+  return recorded.write.length;
+}
+
+for (const [name, run] of Object.entries(BATCHES)) {
+  it(`keeps a phone ${name} at the same statement count for two and six nodes`, async () => {
+    const two = await batchWrites(run, 2);
+    const six = await batchWrites(run, 6);
+    expect({ name, six }).toEqual({ name, six: two });
   });
 }

@@ -9,7 +9,7 @@ import { watchCompanionWorkspaceRefreshDegradations } from '../shared/platform/c
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { addCompanionDiveSource, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
 import { changeCompanionIndexSource } from '../shared/platform/companion/runtime/companionIndexSources';
-import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { createSearchLibrary, recordAfterPendingBodyReleases } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
@@ -102,7 +102,7 @@ const WRITES: Record<string, () => Promise<unknown>> = {
 
 async function writeRows(size: number, write: () => Promise<unknown>, virtualFolders = true) {
   await openLibrary(size, virtualFolders);
-  sqlRecording.start({ label: 'single-write', maxGroups: 2000 });
+  await recordAfterPendingBodyReleases('single-write');
   try {
     await write();
     await refreshCompanionWorkspaceAfterMutation();
@@ -165,7 +165,7 @@ async function writeRowsWithSiblings(siblings: number, name: string, parents?: s
   await openLibrary(100);
   // A folder move carries 'other' itself, so only its destination gains siblings.
   await addSiblings(siblings, parents ?? (name === 'folder move' ? ['folder'] : ['folder', 'other']));
-  sqlRecording.start({ label: 'sibling-write', maxGroups: 2000 });
+  await recordAfterPendingBodyReleases('sibling-write');
   try {
     await WRITES[name]!();
     await refreshCompanionWorkspaceAfterMutation();

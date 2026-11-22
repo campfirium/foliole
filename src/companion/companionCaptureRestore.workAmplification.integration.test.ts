@@ -5,6 +5,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { watchCompanionWorkspaceRefreshDegradations } from '../shared/platform/companion/companionWorkspaceRefreshDegradation.testSupport';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -60,6 +61,8 @@ const WRITES: Record<string, () => Promise<unknown>> = {
 
 async function writeRows(size: number, write: () => Promise<unknown>) {
   await openLibrary(size);
+  // A release of superseded bodies scheduled by the fixture's edits must not land in the measured window.
+  await settleCompanionNodeVersionCollections();
   sqlRecording.start({ label: 'single-write', maxGroups: 2000 });
   try { await write(); } finally { sqlRecording.stop(); }
   return sqlRecording.snapshot()!.groups.reduce((total, group) => total + group.returnedRows, 0);

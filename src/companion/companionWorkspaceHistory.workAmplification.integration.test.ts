@@ -11,7 +11,7 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey, readCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
-import { loadCompanionHistoryReplayNodes } from '../shared/platform/companion/runtime/companionNodeHistory';
+import { loadCompanionHistoryReplayNodes, settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
@@ -115,6 +115,8 @@ async function prepare(size: number, change: () => Promise<unknown>, mode: 'undo
 
 async function replayRows(size: number, change: () => Promise<unknown>, mode: 'undo' | 'redo') {
   await prepare(size, change, mode);
+  // A release of superseded bodies scheduled by the fixture's edits must not land in the measured window.
+  await settleCompanionNodeVersionCollections();
   sqlRecording.start({ label: 'history-replay', maxGroups: 2000 });
   try {
     await replay(mode);
@@ -150,9 +152,11 @@ for (const [name, change] of Object.entries(CHANGES)) {
 
 it('resolves the same replay from the narrow read as from the whole library', async () => {
   // Content projections never carry the Readwise lifecycle; version records take it from the stored version instead.
+  // The narrow read skips attachments, which a metadata replay never reads.
   const withoutLifecycle = (nodes: WorkspaceNodeSnapshot[]) => nodes.map(node => {
     const copy = { ...node };
     delete copy.readwiseRemoteLifecycle;
+    delete copy.attachments;
     return copy;
   });
   const resolve = (mode: 'undo' | 'redo') => getIosCompanionDatabaseOwner().readSnapshot(async db => {

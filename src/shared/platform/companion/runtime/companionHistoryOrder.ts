@@ -1,14 +1,9 @@
 import { loadParentOrderSourcesWithDbPort, ROOT_CHILD_ORDER_ID } from '../../../../../lib/core/database/parentChildOrder';
 import { currentParentOrderHash, parseParentOrderSources } from '../../../../../lib/core/sync/currentParentOrder';
-import { loadCurrentParentOrderSources } from '../../../../../lib/core/sync/currentParentOrderStore';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
 
 type Order = WorkspaceNodeMetadataHistoryEntry['orders'][number];
-
-async function parentOrderFingerprint(db: DbPort, parentId: string) {
-  return currentParentOrderHash(parentId, await loadCurrentParentOrderSources(db, parentId));
-}
 
 /**
  * Fingerprints the order sources of the parents a move left and entered. A move rewrites only node parents,
@@ -26,9 +21,11 @@ export async function recordCompanionHistoryOrders(db: DbPort, parentIds: (strin
 }
 
 export async function validateCompanionHistoryOrders(db: DbPort, orders: Order[]) {
-  for (const order of orders) {
-    // Entries from before fingerprints carry complete child lists and replay without an order check.
-    if (!('sources' in order)) continue;
-    if (await parentOrderFingerprint(db, order.parentId) !== order.sources) throw new Error('workspace_history_order_changed');
-  }
+  // Entries from before fingerprints carry complete child lists and replay without an order check.
+  const checked = orders.filter((order): order is Extract<Order, { sources: string }> => 'sources' in order);
+  if (!checked.length) return;
+  // Every checked parent's sources are read together, as recording them did.
+  const current = await recordCompanionHistoryOrders(db, checked.map(order => order.parentId));
+  const fingerprints = new Map(current.map(order => [order.parentId, 'sources' in order ? order.sources : null]));
+  if (checked.some(order => fingerprints.get(order.parentId) !== order.sources)) throw new Error('workspace_history_order_changed');
 }

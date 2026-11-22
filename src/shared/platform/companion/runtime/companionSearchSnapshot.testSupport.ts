@@ -4,8 +4,10 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
+import { sqlRecording } from '../../../../../lib/core/diagnostics/sqlRecording';
 import { createFakeCapacitorConnection, createFakeCapacitorDatabaseManager } from '../../companionSyncNodeVersionsTestSupport';
 
+import { settleCompanionNodeVersionCollections } from './companionNodeHistory';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 
 export async function createSearchLibrary(count = 125, bodySize = 4096) {
@@ -79,4 +81,10 @@ export async function reopenSearchLibrary(root: string, now: string, databaseExi
   await initializeIosCompanionDatabase({ booted_at: now, database_path: null, database_ready: false,
     host_name: 'Search', runtime_kind: 'android-capacitor' }, manager);
   return { db, connection };
+}
+
+/** Starts a SQL recording once the body releases the fixture's edits scheduled have run, so none lands in the window. */
+export async function recordAfterPendingBodyReleases(label: string) {
+  await settleCompanionNodeVersionCollections();
+  sqlRecording.start({ label, maxGroups: 2000 });
 }

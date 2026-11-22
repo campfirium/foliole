@@ -10,7 +10,7 @@ import type { ReviewSessionState } from '../../../../store/workspaceStoreTypes';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
-import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from './companionNodeHistory';
+import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion, createCompanionMetadataVersions } from './companionNodeHistory';
 import { withStoredTrashReadings } from './companionTrashSequentialReading';
 import { deriveCompanionWriteNodeOrder } from './companionWriteNodeOrder';
 import { companionWriteNodeOrder, loadCompanionWriteNodes } from './companionWriteNodes';
@@ -36,7 +36,7 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const loaded = narrowNodes ?? snapshot!.nodesById;
     const mutation = buildWorkspaceMetadataMutation(command, loaded, now);
     // A restored topic retakes its Sequential Reading slot from its stored reading profile.
-    const nodes = command.type === 'restore' ? await withStoredTrashReadings(db, loaded, mutation.nodes.map(node => node.id)) : loaded;
+    const nodes = command.type === 'restore' ? await withStoredTrashReadings(db, loaded, mutation.nodes.map(node => node.id), host) : loaded;
     const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node =>
       [node.id, nodes === loaded ? node : { ...node, reading: nodes[node.id]?.reading ?? node.reading }])) };
     // The narrow read holds every Sequential Reading source in reach and what maintaining it consumes.
@@ -45,7 +45,7 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
         : [...new Set([...companionWriteNodeOrder(nodes), command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
     const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;
-    const records = await Promise.all(mutation.nodes.map(node => createCompanionMetadataVersion(db, node, host)));
+    const records = await createCompanionMetadataVersions(db, mutation.nodes, host);
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions, host);
     changed = { nodeIds: [...new Set([command.nodeId, ...mutation.nodes.map(node => node.id), ...createdRoots])],
@@ -85,7 +85,7 @@ function setCompanionPriority(command: Extract<WorkspaceMetadataCommand, { type:
     if (next) {
       const host = await iosCompanionHostName(db);
       const record = await createCompanionMetadataVersion(db, next, host);
-      await commitCompanionNodeHistoryWithDb(db, [record], mutation.title);
+      await commitCompanionNodeHistoryWithDb(db, [record], mutation.title, 'local_mutation', null, [], undefined, host);
     }
     return command.nodeId;
   }, { kind: 'nodes', nodeIds: [command.nodeId], metadata: true });

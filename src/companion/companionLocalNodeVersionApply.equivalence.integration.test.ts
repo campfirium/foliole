@@ -2,11 +2,17 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
+import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
+import { moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companionSyncStateWriters';
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
+import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 // T835: a local edit stored through the local write path leaves the database exactly as the remote apply chain did.
 const path = vi.hoisted(() => ({ legacy: false, uuid: 0, remoteApplies: 0 }));
@@ -40,7 +46,27 @@ const reading = (state: 'active' | 'locked') => ({ intervalDurationMs: 1, interv
   lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z', priority: 5, readingPosition: 0,
   repetitionCount: 0, state });
 
-async function run(legacy: boolean, commands: WorkspaceMetadataCommand[]) {
+// An edit, an undo or redo of the latest edit, or a batch action on the named nodes.
+type Step = WorkspaceMetadataCommand | { type: 'undo' | 'redo' }
+  | { type: 'batch-move'; nodeIds: string[]; parentNodeId: string } | { type: 'batch-trash' | 'batch-restore'; nodeIds: string[] };
+
+async function versions(ids: string[]) {
+  const snapshot = (await refreshCompanionWorkspaceAfterMutation())!;
+  return ids.map(id => ({ id, version: snapshot.nodesById[id]!.currentVersionId! }));
+}
+
+async function runStep(step: Step) {
+  switch (step.type) {
+    case 'undo': case 'redo':
+      return replayCompanionFlowHistory(companionFlowHistoryKey('Search'), step.type, createEmptyReviewSession());
+    case 'batch-move': return moveCompanionBatch(await versions(step.nodeIds), step.parentNodeId);
+    case 'batch-trash': return moveCompanionBatchToTrash(await versions(step.nodeIds));
+    case 'batch-restore': return restoreCompanionBatchFromTrash(await versions(step.nodeIds));
+    default: return mutateCompanionWorkspace(step);
+  }
+}
+
+async function run(legacy: boolean, commands: Step[]) {
   await library?.close();
   path.legacy = true;
   path.uuid = 0;
@@ -64,7 +90,7 @@ async function run(legacy: boolean, commands: WorkspaceMetadataCommand[]) {
   path.remoteApplies = 0;
   for (const command of commands) {
     vi.setSystemTime(new Date(Date.now() + 1000));
-    await mutateCompanionWorkspace(command);
+    await runStep(command);
   }
   await settleCompanionNodeVersionCollections();
   // The fixture stamps its own rows with the real clock, so only what the commands changed is compared.
@@ -88,7 +114,7 @@ function dump(database: Awaited<ReturnType<typeof createSearchLibrary>>['databas
   }));
 }
 
-const SCENARIOS: Record<string, WorkspaceMetadataCommand[]> = {
+const SCENARIOS: Record<string, Step[]> = {
   move: [{ type: 'move', nodeId: 'a', parentNodeId: 'other' }],
   'folder move': [{ type: 'move', nodeId: 'folder', parentNodeId: 'other' }],
   rename: [{ type: 'rename', nodeId: 'b', title: 'Renamed' }],
@@ -100,7 +126,15 @@ const SCENARIOS: Record<string, WorkspaceMetadataCommand[]> = {
   'Dive creation': [{ type: 'create-dive', nodeId: 'dive', title: 'dive', sourceId: 'b' }],
   'Virtual folder creation': [{ type: 'create-index', nodeId: 'index', title: 'index' }],
   'several edits': [{ type: 'move', nodeId: 'b', parentNodeId: 'other' }, { type: 'rename', nodeId: 'b', title: 'x' },
-    { type: 'delete', nodeId: 'b' }, { type: 'restore', nodeId: 'b' }]
+    { type: 'delete', nodeId: 'b' }, { type: 'restore', nodeId: 'b' }],
+  'undo and redo of a move': [{ type: 'move', nodeId: 'a', parentNodeId: 'other' }, { type: 'undo' }, { type: 'redo' }],
+  'undo of a move to Trash': [{ type: 'delete', nodeId: 'a' }, { type: 'undo' }],
+  'undo and redo of a restore': [{ type: 'restore', nodeId: 'gone' }, { type: 'undo' }, { type: 'redo' }],
+  'undo of a rename': [{ type: 'rename', nodeId: 'b', title: 'Renamed' }, { type: 'undo' }],
+  'batch move': [{ type: 'batch-move', nodeIds: ['a', 'b'], parentNodeId: 'other' }],
+  'batch move to Trash': [{ type: 'batch-trash', nodeIds: ['b', 'c'] }],
+  'batch restore': [{ type: 'batch-restore', nodeIds: ['gone'] }],
+  'undo and redo of a batch move': [{ type: 'batch-move', nodeIds: ['a', 'b'], parentNodeId: 'other' }, { type: 'undo' }, { type: 'redo' }]
 };
 
 for (const [name, commands] of Object.entries(SCENARIOS)) {

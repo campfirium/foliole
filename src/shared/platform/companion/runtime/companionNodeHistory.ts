@@ -8,8 +8,7 @@ import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalNodeVersionsWithDbPort, nodeColumns, readLocalNodeVersionStates } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { loadCurrentSyncNodeRecordInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
 import { topicTextSnapshotHash } from '../../../../../lib/core/sync/topicTextSnapshotHash';
 import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
 import { resolveWorkspaceMetadataHistory, workspaceNodeMetadata, type WorkspaceRelatedReading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
@@ -120,22 +119,22 @@ export async function settleCompanionNodeVersionCollections() {
 }
 
 export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry, mode: 'undo' | 'redo') {
-  const base = await loadCompanionHistoryReplayNodes(db, entry) ?? (await loadIosCompanionWorkspaceSnapshot(db))?.nodesById;
+  const host = await iosCompanionHostName(db);
+  const base = await loadCompanionHistoryReplayNodes(db, entry, host) ?? (await loadIosCompanionWorkspaceSnapshot(db))?.nodesById;
   if (!base) throw new Error('workspace_history_unavailable');
   const loaded = await Promise.all(entry.changes.map(change => loadCompanionWorkspaceNodeFromDb(db, change.nodeId)));
   const nodes = { ...base, ...Object.fromEntries(loaded.filter(node => node !== null).map(node => [node.id, node])) };
-  const host = await iosCompanionHostName(db);
   const targets = resolveWorkspaceMetadataHistory(entry, mode, nodes, new Date().toISOString());
   await validateCompanionHistoryOrders(db, entry.orders);
   await writeCompanionHistoryReadings(db, entry.relatedReadings, mode);
-  const records = await Promise.all(targets.map(node => createCompanionMetadataVersion(db, node, host)));
+  const records = await createCompanionMetadataVersions(db, targets, host);
   const restoring = targets.some(node => !node.deletedAt && nodes[node.id]?.deletedAt);
-  const result = await applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true, operation: restoring ? 'local_restore' : 'local_mutation' });
+  // A replay stores versions this host builds on the current ones, as an edit does.
+  const result = await applyLocalNodeVersionsWithDbPort(db, records, restoring ? 'local_restore' : 'local_mutation');
   if (result.conflictNodes.length || targets.some(node => !result.appliedIds.includes(node.id))) {
     throw new Error('workspace_history_not_applied');
   }
-  for (const node of targets) await collectNodeVersionPayloads(db, node.id, Number.MAX_SAFE_INTEGER);
+  scheduleCompanionNodeVersionCollection(targets.map(node => node.id));
 }
 
 /**
@@ -143,23 +142,36 @@ export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: Worksp
  * A replay writes the saved related readings and checks parent order fingerprints instead of maintaining Sequential Reading,
  * so it never needs the whole library for them. Returns null when a changed node is gone.
  */
-export function loadCompanionHistoryReplayNodes(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry) {
+export function loadCompanionHistoryReplayNodes(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry, host?: string) {
   return loadCompanionWriteNodes(db, [...new Set([entry.rootNodeId, ...entry.changes.map(change => change.nodeId)])], {
-    sequentialReading: false, pathIds: entry.changes.flatMap(change => [change.before?.parentNodeId ?? null, change.after.parentNodeId])
+    host, attachments: false, sequentialReading: false, pathIds: entry.changes.flatMap(change => [change.before?.parentNodeId ?? null, change.after.parentNodeId])
   });
 }
 
 export async function createCompanionMetadataVersion(db: DbPort, node: WorkspaceNodeSnapshot, host: string, versionId?: string) {
-  const current = await loadCurrentSyncNodeRecordInOneRead(db, node.id);
-  if (!current) {
-    if (await loadCompanionWorkspaceNodeFromDb(db, node.id)) throw new Error('workspace_base_unavailable');
-    return toWorkspaceNativeNodeVersion(node, host, versionId);
+  return (await createCompanionMetadataVersions(db, [node], host, versionId ? [versionId] : undefined))[0]!;
+}
+
+/** Builds the next version of every node on top of its current one, reading all current versions in one statement. */
+export async function createCompanionMetadataVersions(db: DbPort, nodes: readonly WorkspaceNodeSnapshot[], host: string,
+  versionIds?: readonly string[]): Promise<NativeSyncNodeRecord[]> {
+  const currents = await loadCurrentSyncNodeRecordsInOneRead(db, nodes.map(node => node.id));
+  const records: NativeSyncNodeRecord[] = [];
+  for (const [index, node] of nodes.entries()) {
+    const versionId = versionIds?.[index];
+    const current = currents.get(node.id);
+    if (!current) {
+      if (await loadCompanionWorkspaceNodeFromDb(db, node.id)) throw new Error('workspace_base_unavailable');
+      records.push(await toWorkspaceNativeNodeVersion(node, host, versionId));
+      continue;
+    }
+    const snapshot = { ...current.snapshot, title: node.title, is_title_manual: node.isTitleManual,
+      parent_id: node.parentNodeId, priority: node.priority ?? null, deleted_at: node.deletedAt ?? null, shelved_at: node.shelvedAt ?? null,
+      sequential_reading_enabled: node.sequentialReadingEnabled ?? null, updated_at: node.updatedAt };
+    records.push({ ...current, snapshot, content_hash: topicTextSnapshotHash(snapshot), host_name: host,
+      version_id: versionId ?? `ver_${createCompanionUuid()}`, version_created_at: node.updatedAt, updated_at: node.updatedAt,
+      parent_version_id: current.version_id, parent_version_ids: current.version_id ? [current.version_id] : [],
+      ancestor_version_ids: current.version_id ? [current.version_id, ...current.ancestor_version_ids] : [] });
   }
-  const snapshot = { ...current.snapshot, title: node.title, is_title_manual: node.isTitleManual,
-    parent_id: node.parentNodeId, priority: node.priority ?? null, deleted_at: node.deletedAt ?? null, shelved_at: node.shelvedAt ?? null,
-    sequential_reading_enabled: node.sequentialReadingEnabled ?? null, updated_at: node.updatedAt };
-  return { ...current, snapshot, content_hash: topicTextSnapshotHash(snapshot), host_name: host,
-    version_id: versionId ?? `ver_${createCompanionUuid()}`, version_created_at: node.updatedAt, updated_at: node.updatedAt,
-    parent_version_id: current.version_id, parent_version_ids: current.version_id ? [current.version_id] : [],
-    ancestor_version_ids: current.version_id ? [current.version_id, ...current.ancestor_version_ids] : [] };
+  return records;
 }
