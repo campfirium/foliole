@@ -5,6 +5,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { mergeDesktopLibrary } from '../import/desktopLibraryMerge.js';
 import { asAnchorLink } from '../ipc/commandParserAnchorLink.js';
 import { handleReadingAndReviewCommand } from '../ipc/storageReadCommands.js';
 
@@ -131,6 +132,12 @@ function seed(args: Readonly<Record<string, unknown>>) {
   return args.includeWorkspace === false ? { nodeId: String(args.nodeId) } : snapshot();
 }
 
+async function libraryMerge(args: Readonly<Record<string, unknown>>) {
+  const result = await mergeDesktopLibrary({ sourcePath: String(args.sourcePath), attachmentsDirectory: null, folderTitle: 'Merged library' });
+  flushDirtyNodeSyncVersions();
+  return result;
+}
+
 function snapshot() {
   return {
     databasePath: openDatabaseConnection().dbPath,
@@ -164,9 +171,9 @@ async function run(command: Command) {
   if (command.action === 'seed_request_scale') return seedRequestSyncScaleFixture();
   if (command.action === 'request_counts') return { ...requestCounts };
   if (command.action === 'expired_overwrite') return beginDesktopExpiredMemberOverwrite();
-  if (command.action === 'cost_start') return cost.start();
-  if (command.action === 'cost_stop') return cost.stop();
+  if (command.action === 'cost_start' || command.action === 'cost_stop') return command.action === 'cost_start' ? cost.start() : cost.stop();
   if (command.action === 'seed') return seed(command.args);
+  if (command.action === 'library_merge') return libraryMerge(command.args);
   if (command.action === 'seed_parent_order_performance') return seedParentOrderPerformance(command.args);
   if (command.action === 'edit_parent_order_performance') return editParentOrderPerformance(command.args);
   if (['retain_edit', 'release_edit', 'local_content_edit', 'content_editing_session', 'editor_content_edit'].includes(command.action))

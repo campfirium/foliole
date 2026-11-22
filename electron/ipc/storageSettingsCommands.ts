@@ -46,6 +46,7 @@ import { activateReadwiseWithHandoff } from '../sync/readwiseOwnerHandoff.js';
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
 import { listCssSnippetFiles, resolveCssSnippetDirectory } from './cssSnippetFiles.js';
 import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
+import { handleLibraryMergeCommand } from './libraryMergeCommands.js';
 import {
   loadLibraryPathSettings,
   loadLibraryPathSettingsSync,
@@ -225,8 +226,8 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.loadDatabaseMaintenanceStatus)
     return loadDatabaseMaintenanceStatus();
   if (command === NATIVE_COMMANDS.loadBackupSettings) return loadBackupSettings();
-  const sourceDispositionResult = handleSourceDispositionCommand(command, window);
-  if (sourceDispositionResult !== undefined) return sourceDispositionResult;
+  const backupToolResult = handleLibraryMergeCommand(command, args, window) ?? handleSourceDispositionCommand(command, window);
+  if (backupToolResult !== undefined) return backupToolResult;
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks)
     return rebuildMirrorAttachmentLinks();

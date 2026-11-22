@@ -149,6 +149,8 @@ const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
   NATIVE_COMMANDS.nextBackupSearch,
   NATIVE_COMMANDS.cancelBackupSearch,
   NATIVE_COMMANDS.compactSqliteDatabase,
+  // Takes the connection once per batch.
+  NATIVE_COMMANDS.mergeLibrary,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,
   NATIVE_COMMANDS.resolveReadwiseJoinDecision,

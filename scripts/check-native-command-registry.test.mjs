@@ -56,7 +56,7 @@ async function createFixture(overrides = {}) {
     'assistantCommands.ts', 'assistantLocalHistoryCommands.ts', 'companionPairingCommands.ts', 'importCommands.ts', 'reviewCommands.ts',
     'storageAttachmentCommands.ts', 'storageCommandSupport.ts', 'storageExternalSearchCommands.ts',
     'storageLocalFileCommands.ts', 'storageNodeMutationCommands.ts', 'storageReadCommands.ts',
-    'storageSettingsCommands.ts', 'storageSyncCommands.ts', 'windowCommands.ts'
+    'storageSettingsCommands.ts', 'storageSyncCommands.ts', 'windowCommands.ts', 'libraryMergeCommands.ts'
   ]) await write(repoRoot, `electron/ipc/${file}`);
   return repoRoot;
 }

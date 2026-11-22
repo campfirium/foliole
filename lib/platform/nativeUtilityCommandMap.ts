@@ -4,6 +4,7 @@ import type { BackupRestoreSyncChoice, BackupRestoreSyncPreview } from './backup
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDatabaseCompactionResult, NativeDatabaseSpaceStatus } from './nativeDatabaseCompactionContract.js';
 import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
+import type { NativeLibraryMergeArgs, NativeLibraryMergeResult, NativeLibraryMergeSource } from './nativeLibraryMergeContract.js';
 import type {
   NativeExportSourceDispositionResult,
   NativeImportSourceDispositionResult,
@@ -195,6 +196,18 @@ export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
   [NATIVE_COMMANDS.importSourceDispositions]: {
     args: undefined;
     result: NativeImportSourceDispositionResult;
+  };
+  [NATIVE_COMMANDS.pickLibraryMergeSource]: {
+    args: undefined;
+    result: NativeLibraryMergeSource | null;
+  };
+  [NATIVE_COMMANDS.pickLibraryMergeAttachments]: {
+    args: { defaultPath?: string | null };
+    result: string | null;
+  };
+  [NATIVE_COMMANDS.mergeLibrary]: {
+    args: NativeLibraryMergeArgs;
+    result: NativeLibraryMergeResult;
   };
   [NATIVE_COMMANDS.restoreSourceDispositions]: {
     args: undefined;

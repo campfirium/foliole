@@ -28,6 +28,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storagePublishingCommands.ts',
   'electron/ipc/storageReadCommands.ts',
   'electron/ipc/storageSettingsCommands.ts',
+  'electron/ipc/libraryMergeCommands.ts',
   'electron/ipc/storageSyncCommands.ts',
   'electron/ipc/syncGroupCommands.ts',
   'electron/ipc/updateCommands.ts',
@@ -52,7 +53,7 @@ function readFile(repoRoot, relativePath) {
 
 function collectCommandDefinitions(repoRoot) {
   const sources = [readFile(repoRoot, 'lib/platform/nativeCommands.ts')];
-  for (const file of ['lib/platform/nativeDiveCommands.ts', 'lib/platform/articleTarget.ts']) {
+  for (const file of ['lib/platform/nativeDiveCommands.ts', 'lib/platform/articleTarget.ts', 'lib/platform/nativeBackupToolCommands.ts']) {
     if (fs.existsSync(path.join(repoRoot, file))) sources.push(readFile(repoRoot, file));
   }
   return sources.flatMap(source =>

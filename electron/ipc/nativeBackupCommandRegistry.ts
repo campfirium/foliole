@@ -10,6 +10,9 @@ export const NATIVE_BACKUP_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.backupSqliteDatabase, route: 'storage', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.restoreSqliteDatabase, route: 'storage', capability: 'restoreMutation' },
   { command: NATIVE_COMMANDS.compactSqliteDatabase, route: 'storage', capability: 'restoreMutation' },
+  { command: NATIVE_COMMANDS.pickLibraryMergeSource, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.pickLibraryMergeAttachments, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.mergeLibrary, route: 'storage', capability: 'restoreMutation' },
   { command: NATIVE_COMMANDS.startBackupSearch, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.nextBackupSearch, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.cancelBackupSearch, route: 'storage', capability: 'read' }

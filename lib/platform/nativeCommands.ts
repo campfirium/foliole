@@ -1,6 +1,7 @@
 import { NATIVE_ARTICLE_TARGET_COMMANDS } from './articleTarget.js';
 import { NATIVE_FOLDER_LIST_SORT_COMMANDS } from './folderListSortMemoryContract.js';
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
+import { NATIVE_BACKUP_TOOL_COMMANDS } from './nativeBackupToolCommands.js';
 import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
@@ -105,9 +106,6 @@ export const NATIVE_COMMANDS = {
   loadDatabaseSpaceStatus: 'load_database_space_status',
   loadBackupSettings: 'load_backup_settings',
   loadBackupRetentionStatus: 'load_backup_retention_status',
-  startBackupSearch: 'start_backup_search',
-  nextBackupSearch: 'next_backup_search',
-  cancelBackupSearch: 'cancel_backup_search',
   rebuildMirrorOutput: 'rebuild_mirror_output',
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   exportCurrentArticleMirror: 'export_current_article_mirror',
@@ -254,6 +252,7 @@ export const NATIVE_COMMANDS = {
   restoreNodes: 'restore_nodes',
   deleteNodesPermanently: 'delete_nodes_permanently',
   ...NATIVE_DAILY_FLOW_COMMANDS, ...NATIVE_REMINDER_COMMANDS, ...NATIVE_FOLDER_LIST_SORT_COMMANDS,
+  ...NATIVE_BACKUP_TOOL_COMMANDS,
   applyReviewGrade: 'apply_review_grade'
 } as const;
 

@@ -12,6 +12,7 @@ import type {
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult
 } from '../../../lib/platform/nativeContract';
+import type { NativeLibraryMergeArgs } from '../../../lib/platform/nativeLibraryMergeContract';
 
 import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -137,4 +138,19 @@ export async function inspectBackupRestoreSyncInRuntime(sourcePath: string) {
 
 export function subscribeDatabaseBackupsChanged(handler: () => void) {
   return getElectronAPI()?.onDatabaseBackupsChanged?.(handler) ?? (() => undefined);
+}
+
+export async function pickLibraryMergeSourceInRuntime(): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.pickLibraryMergeSource) : null;
+}
+
+export async function pickLibraryMergeAttachmentsInRuntime(defaultPath: string | null): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.pickLibraryMergeAttachments, { defaultPath }) : null;
+}
+
+export async function mergeLibraryInRuntime(args: NativeLibraryMergeArgs): Promise<unknown | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.mergeLibrary, args) : null;
 }
