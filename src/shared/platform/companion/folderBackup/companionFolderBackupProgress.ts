@@ -21,6 +21,16 @@ export async function markFolderBackupChanged(db: DbPort) {
   await writeMeta(db, revisionKey, crypto.randomUUID());
 }
 
+/**
+ * Marks the folder backup stale when the connection changed rows after `totalChanges` (an earlier
+ * `total_changes()`), deciding and writing in one statement. Returns whether it did.
+ */
+export async function markFolderBackupChangedSince(db: DbPort, totalChanges: number) {
+  const result = await db.run(`INSERT OR REPLACE INTO companion_meta(key,value,updated_at)
+    SELECT ?,?,? WHERE total_changes() > ?`, [revisionKey, crypto.randomUUID(), new Date().toISOString(), totalChanges]);
+  return result.changes > 0;
+}
+
 export async function confirmFolderDatabaseBackup(db: DbPort, target: string, revision: string) {
   await db.transaction(async tx => {
     await writeMeta(tx, savedKey, revision);

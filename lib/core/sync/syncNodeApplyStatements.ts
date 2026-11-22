@@ -69,6 +69,15 @@ ON CONFLICT(version_id) DO NOTHING`;
 
 
 
+const REMOTE_NODE_COLUMNS = UPSERT_REMOTE_NODE_SQL.slice(UPSERT_REMOTE_NODE_SQL.indexOf('(') + 1, UPSERT_REMOTE_NODE_SQL.indexOf(')'))
+  .split(',').map(column => column.trim());
+
+/** The `nodes` columns `buildRemoteNodeUpsert` and `buildRemoteNodeUpdate` write, with the values they write. */
+export function remoteNodeColumnValues(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty = 0) {
+  const params = buildRemoteNodeParams(record, bodyBlobHash, syncDirty);
+  return Object.fromEntries(REMOTE_NODE_COLUMNS.map((column, index) => [column, params[index] ?? null]));
+}
+
 export function buildRemoteNodeUpsert(
   record: NativeSyncNodeRecord,
   bodyBlobHash: string,

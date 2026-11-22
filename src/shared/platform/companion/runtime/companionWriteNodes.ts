@@ -4,28 +4,35 @@ import { isSequentialReadingSourceFolder } from '../../../../../lib/core/review/
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { loadCompanionContentProjection } from '../sync/workspace-state/companionContentProjection';
 
-// Every descendant of the subtree roots plus every ancestor of the subtree and path roots.
+// Every descendant of the subtree roots plus every ancestor of the subtree and path roots. Kept subtrees are
+// probed in the same read: when one holds an enabled Sequential Reading source or a locked item, its nodes are
+// returned as well and `probed` is 1 on every row.
 const WRITE_NODE_IDS_SQL = `WITH RECURSIVE descendants(id) AS (
   SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
   UNION SELECT child.id FROM nodes child JOIN descendants parent ON child.parent_id = parent.id
 ), ancestors(id, parent_id) AS (
   SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
   UNION SELECT parent.id, parent.parent_id FROM nodes parent JOIN ancestors child ON parent.id = child.parent_id
-) SELECT id FROM descendants UNION SELECT id FROM ancestors`;
+), kept(id) AS (
+  SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
+  UNION SELECT child.id FROM nodes child JOIN kept parent ON child.parent_id = parent.id
+), probe(found) AS (
+  SELECT EXISTS (SELECT 1 FROM kept d JOIN nodes n ON n.id = d.id LEFT JOIN node_reading r ON r.node_id = d.id
+    WHERE n.sequential_reading_enabled = 1 OR r.state = 'locked')
+) SELECT id, (SELECT found FROM probe) AS probed FROM descendants
+  UNION SELECT id, (SELECT found FROM probe) FROM ancestors
+  UNION SELECT id, 1 FROM kept WHERE (SELECT found FROM probe) = 1`;
 
 type WriteNodes = Record<string, WorkspaceNodeSnapshot>;
+// `host` is the Companion Host when the caller has read it; `attachments: false` skips attachments nobody reads.
+type ProjectionOptions = { host?: string; attachments?: boolean };
 
-// Whether a subtree holds an enabled Sequential Reading source or a locked item, answered from ids alone.
-const SUBTREE_READING_PROBE_SQL = `WITH RECURSIVE descendants(id) AS (
-  SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
-  UNION SELECT child.id FROM nodes child JOIN descendants parent ON child.parent_id = parent.id
-) SELECT 1 AS found FROM descendants d JOIN nodes n ON n.id = d.id LEFT JOIN node_reading r ON r.node_id = d.id
-  WHERE n.sequential_reading_enabled = 1 OR r.state = 'locked' LIMIT 1`;
-
-async function loadSubtreesAndAncestors(db: DbPort, rootIds: readonly string[], ancestorIds: readonly string[]) {
-  const rows = await db.query(WRITE_NODE_IDS_SQL, [JSON.stringify(rootIds), JSON.stringify(ancestorIds)]);
-  const nodes: WriteNodes = await loadCompanionContentProjection(db, rows.flatMap(row => typeof row.id === 'string' ? [row.id] : []), true);
-  return nodes;
+async function loadSubtreesAndAncestors(db: DbPort, rootIds: readonly string[], ancestorIds: readonly string[],
+  read: ProjectionOptions, probeIds: readonly string[] = []) {
+  const rows = await db.query(WRITE_NODE_IDS_SQL, [JSON.stringify(rootIds), JSON.stringify(ancestorIds), JSON.stringify(probeIds)]);
+  const ids = [...new Set(rows.flatMap(row => typeof row.id === 'string' ? [row.id] : []))];
+  const nodes: WriteNodes = await loadCompanionContentProjection(db, ids, true, read.host, read.attachments ?? true);
+  return { nodes, probed: rows.some(row => Number(row.probed) === 1) };
 }
 
 /**
@@ -57,26 +64,27 @@ function enabledSourceFolders(nodes: WriteNodes, ids: readonly string[]) {
  * Returns null when the caller needs the whole library.
  */
 export async function loadCompanionWriteNodes(db: DbPort, rootIds: readonly string[],
-  options: { sequentialReading: boolean; pathIds?: readonly (string | null)[]; keptIds?: readonly string[] }): Promise<WriteNodes | null> {
+  options: { sequentialReading: boolean; pathIds?: readonly (string | null)[]; keptIds?: readonly string[] } & ProjectionOptions): Promise<WriteNodes | null> {
   // A kept subtree is read only when Sequential Reading maintenance may consume it: an enabled source or a
-  // locked item inside it.
-  const probed = options.sequentialReading && options.keptIds?.length
-    && (await db.query(SUBTREE_READING_PROBE_SQL, [JSON.stringify(options.keptIds)])).length > 0;
-  const roots = probed ? [...rootIds, ...options.keptIds!] : rootIds;
-  const kept = probed ? [] : options.keptIds ?? [];
-  const paths = [...kept, ...(options.pathIds ?? []).filter((id): id is string => id !== null)];
-  const nodes = await loadSubtreesAndAncestors(db, roots, [...roots, ...paths]);
+  // locked item inside it. The probe and the read are one statement; a probed subtree is read with the roots.
+  const keptIds = options.keptIds ?? [];
+  const paths = [...keptIds, ...(options.pathIds ?? []).filter((id): id is string => id !== null)];
+  const read = await loadSubtreesAndAncestors(db, rootIds, [...rootIds, ...paths], options,
+    options.sequentialReading ? keptIds : []);
+  const { nodes, probed } = read;
+  const roots = probed ? [...rootIds, ...keptIds] : rootIds;
+  const kept = probed ? [] : keptIds;
   if ([...roots, ...kept].some(id => !nodes[id])) return null;
   if (!options.sequentialReading) return nodes;
-  const sources = enabledSourceFolders(nodes, [...roots, ...paths]);
+  const sources = enabledSourceFolders(nodes, [...rootIds, ...paths]);
   if (!sources) return null;
   if (!sources.length) return nodes;
   // The content projection of the sources also projects their children.
-  const children: WriteNodes = await loadCompanionContentProjection(db, sources);
+  const children: WriteNodes = await loadCompanionContentProjection(db, sources, false, options.host, options.attachments ?? true);
   // A kept topic joining a source holds its slot through its unread subtree as well.
   const holders = Object.values(children).filter(node => node.parentNodeId !== null && sources.includes(node.parentNodeId) &&
     node.kind === 'topic' && !node.shelvedAt && isUnavailableSequentialTopic(node) && (!nodes[node.id] || kept.includes(node.id))).map(node => node.id);
-  const held = holders.length ? await loadSubtreesAndAncestors(db, holders, []) : {};
+  const held = holders.length ? (await loadSubtreesAndAncestors(db, holders, [], options)).nodes : {};
   return { ...held, ...children, ...nodes };
 }
 

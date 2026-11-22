@@ -14,14 +14,14 @@ export interface AncestorMetadata {
   alternatives: string | null;
 }
 
-export async function loadSyncNodeAncestorGraph(db: DbPort, roots: readonly string[]): Promise<SyncNodeAncestorGraph> {
-  const parents = new Map<string, string[]>();
-  const ids = [...new Set(roots)];
-  for (let offset = 0; offset < ids.length; offset += 400) {
-    const chunk = ids.slice(offset, offset + 400);
-    const rows = await db.query<{ version_id: string; parent_version_id: string | null }>(`
-      WITH RECURSIVE ancestors(version_id) AS (
-        VALUES ${chunk.map(() => '(?)').join(',')}
+/**
+ * The ancestor closure of the versions `roots` selects, as `ancestors(version_id)`, and `ancestor_edges` giving
+ * each closure member's parents in ordinal order: stored edges, else a legacy single parent, as
+ * `loadSyncNodeVersionParents` reads them. A version without parents has one row with a null parent.
+ */
+export function syncNodeAncestorEdgesCte(roots: string) {
+  return `WITH RECURSIVE ancestors(version_id) AS (
+        ${roots}
         UNION
         SELECT edge.parent_version_id FROM ancestors a
           JOIN node_sync_version_parents edge ON edge.version_id = a.version_id
@@ -35,15 +35,25 @@ export async function loadSyncNodeAncestorGraph(db: DbPort, roots: readonly stri
           WHERE t.parent_version_id IS NOT NULL AND t.parent_version_id <> '' AND NOT EXISTS (
             SELECT 1 FROM node_sync_version_parents edge WHERE edge.version_id = a.version_id)
           AND NOT EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = a.version_id)
-      )
+      ), ancestor_edges(version_id, parent_version_id, ordinal) AS (
       SELECT a.version_id, CASE WHEN edge.version_id IS NOT NULL THEN edge.parent_version_id
-        WHEN v.version_id IS NOT NULL THEN NULLIF(v.parent_version_id, '') ELSE NULLIF(t.parent_version_id, '') END AS parent_version_id
+        WHEN v.version_id IS NOT NULL THEN NULLIF(v.parent_version_id, '') ELSE NULLIF(t.parent_version_id, '') END AS parent_version_id, edge.ordinal
       FROM ancestors a
       LEFT JOIN node_sync_version_parents edge ON edge.version_id = a.version_id
       LEFT JOIN node_sync_versions v ON v.version_id = a.version_id
       LEFT JOIN node_sync_tombstones t ON t.rowid = (
             SELECT rowid FROM node_sync_tombstones WHERE version_id = a.version_id LIMIT 1)
-      ORDER BY a.version_id, edge.ordinal`, chunk);
+      )`;
+}
+
+export async function loadSyncNodeAncestorGraph(db: DbPort, roots: readonly string[]): Promise<SyncNodeAncestorGraph> {
+  const parents = new Map<string, string[]>();
+  const ids = [...new Set(roots)];
+  for (let offset = 0; offset < ids.length; offset += 400) {
+    const chunk = ids.slice(offset, offset + 400);
+    const rows = await db.query<{ version_id: string; parent_version_id: string | null }>(`
+      ${syncNodeAncestorEdgesCte(`VALUES ${chunk.map(() => '(?)').join(',')}`)}
+      SELECT version_id, parent_version_id FROM ancestor_edges ORDER BY version_id, ordinal`, chunk);
     const loaded = new Map<string, string[]>();
     for (const row of rows) {
       const list = loaded.get(row.version_id) ?? [];

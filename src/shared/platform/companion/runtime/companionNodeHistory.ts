@@ -1,15 +1,15 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
-import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { buildWorkspaceSnapshotNode, type WorkspaceNodeRowShape, type WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { openCycleFlow } from '../../../../../lib/core/flow/cycleFlowOpen';
 import { dailyFlowSettingsForInstant } from '../../../../../lib/core/flow/dailyFlowDayWindow';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
+import { applyLocalNodeVersionsWithDbPort, nodeColumns, readLocalNodeVersionStates } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
 import { topicTextSnapshotHash } from '../../../../../lib/core/sync/topicTextSnapshotHash';
 import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
 import { resolveWorkspaceMetadataHistory, workspaceNodeMetadata, type WorkspaceRelatedReading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
@@ -35,17 +35,26 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   const flowArgs = { now, mode: daily?.mode as 'recommended' | 'review-first' | 'reading-only' };
   const settings = await dailyFlowSettingsForInstant(db, companionDailyFlowSettings(), now, false, daily);
   const flowBefore = daily ? (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence)).session : null;
-  const before = await Promise.all(records.map(record => loadCompanionWorkspaceNodeFromDb(db, record.object_id)));
+  // One read gives the nodes as they are and what the local write path checks before storing the records.
+  const states = await readLocalNodeVersionStates(db, records);
+  const before = records.map(record => {
+    const state = states.get(record.object_id);
+    return state?.node_id ? buildWorkspaceSnapshotNode(nodeColumns(state) as unknown as WorkspaceNodeRowShape) : null;
+  });
   if (records.some((record, i) => (before[i]?.currentVersionId ?? null) !== (record.parent_version_id ?? null))) {
     throw new Error('workspace_history_source_changed');
   }
   const parents = records.flatMap((record, i) => before[i] && before[i]!.parentNodeId !== record.snapshot.parent_id
     ? [before[i]!.parentNodeId, record.snapshot.parent_id] : []);
-  const result = await applyLocalNodeVersionsWithDbPort(db, records, operation);
+  const result = await applyLocalNodeVersionsWithDbPort(db, records, operation, states);
   if (result.conflictNodes.length || records.some(record => !result.appliedIds.includes(record.object_id))) {
     throw new Error('workspace_mutation_not_applied');
   }
-  const after = await Promise.all(records.map(record => loadCompanionWorkspaceNodeFromDb(db, record.object_id)));
+  // The local path returns the rows it wrote; after the remote apply chain the nodes are read back.
+  const after = await Promise.all(records.map(async record => {
+    const row = result.rows?.get(record.object_id);
+    return row ? buildWorkspaceSnapshotNode(row as unknown as WorkspaceNodeRowShape) : loadCompanionWorkspaceNodeFromDb(db, record.object_id);
+  }));
   await writeCompanionHistoryReadings(db, relatedReadings, 'redo');
   if (flowBefore) sessions = { beforeSession: flowBefore, afterSession:
     (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence, true)).session };
@@ -141,7 +150,7 @@ export function loadCompanionHistoryReplayNodes(db: DbPort, entry: WorkspaceNode
 }
 
 export async function createCompanionMetadataVersion(db: DbPort, node: WorkspaceNodeSnapshot, host: string, versionId?: string) {
-  const current = await loadCurrentSyncNodeRecord(db, node.id);
+  const current = await loadCurrentSyncNodeRecordInOneRead(db, node.id);
   if (!current) {
     if (await loadCompanionWorkspaceNodeFromDb(db, node.id)) throw new Error('workspace_base_unavailable');
     return toWorkspaceNativeNodeVersion(node, host, versionId);

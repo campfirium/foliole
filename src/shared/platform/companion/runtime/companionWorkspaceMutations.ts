@@ -29,8 +29,8 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const createdRoots = command.type === 'create-index'
       ? await ensureSyncSpecialRootNodes(db, [{ nodeId: VIRTUAL_ROOT_NODE_ID, referencedAt: now }]) : [];
     const host = await iosCompanionHostName(db);
-    // A single-node write reads only the nodes it consumes.
-    const narrowNodes = await loadNarrowWriteNodes(db, command);
+    // A single-node write reads only the nodes it consumes; a metadata edit never reads their attachments.
+    const narrowNodes = await loadNarrowWriteNodes(db, command, host);
     const snapshot = narrowNodes ? null : await loadIosCompanionWorkspaceSnapshot(db);
     if (!narrowNodes && !snapshot) throw new Error('workspace_unavailable');
     const loaded = narrowNodes ?? snapshot!.nodesById;
@@ -58,20 +58,20 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     ...(changed.readingNodeIds.length ? { readingNodeIds: changed.readingNodeIds } : {}) }));
 }
 
-function loadNarrowWriteNodes(db: DbPort, command: Exclude<WorkspaceMetadataCommand, { type: 'set-priority' }>) {
+function loadNarrowWriteNodes(db: DbPort, command: Exclude<WorkspaceMetadataCommand, { type: 'set-priority' }>, host: string) {
   switch (command.type) {
     // A rename touches only the node and skips Sequential Reading maintenance.
-    case 'rename': return loadCompanionWriteNodes(db, [], { sequentialReading: false, pathIds: [command.nodeId] });
-    case 'create': return loadCompanionWriteNodes(db, [], { sequentialReading: true, pathIds: [command.nodeId, command.parentNodeId] });
+    case 'rename': return loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: false, pathIds: [command.nodeId] });
+    case 'create': return loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: true, pathIds: [command.nodeId, command.parentNodeId] });
     // A Dive sits at the root and a Virtual folder under the Virtual root; neither has children of its own,
     // so the creation only needs to know that the id is free.
     case 'create-dive': case 'create-index':
-      return loadCompanionWriteNodes(db, [], { sequentialReading: true, pathIds: [command.nodeId] });
+      return loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: true, pathIds: [command.nodeId] });
     // A move or a shelve changes only the node itself; its subtree is probed, never read.
-    case 'move': return loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: [command.nodeId], pathIds: [command.parentNodeId] });
-    case 'shelve': case 'unshelve': return loadCompanionWriteNodes(db, [], { sequentialReading: true, keptIds: [command.nodeId] });
+    case 'move': return loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: true, keptIds: [command.nodeId], pathIds: [command.parentNodeId] });
+    case 'shelve': case 'unshelve': return loadCompanionWriteNodes(db, [], { host, attachments: false, sequentialReading: true, keptIds: [command.nodeId] });
     case 'delete': case 'restore':
-      return loadCompanionWriteNodes(db, [command.nodeId], { sequentialReading: true });
+      return loadCompanionWriteNodes(db, [command.nodeId], { host, attachments: false, sequentialReading: true });
     default: return null;
   }
 }

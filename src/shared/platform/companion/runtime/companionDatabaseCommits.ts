@@ -1,5 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { markFolderBackupChanged } from '../folderBackup/companionFolderBackupProgress';
+import { markFolderBackupChangedSince } from '../folderBackup/companionFolderBackupProgress';
 
 /** Observes successful owner writes; backup bookkeeping explicitly opts out. */
 export class CompanionDatabaseCommits {
@@ -14,11 +14,10 @@ export class CompanionDatabaseCommits {
     if (!notify) return execute(db);
     let changed = false;
     const result = await db.transaction(async tx => {
-      const before = await tx.query('SELECT total_changes() AS changes');
+      const [before] = await tx.query<{ changes: number }>('SELECT total_changes() AS changes');
       const value = await execute(tx);
-      const after = await tx.query('SELECT total_changes() AS changes');
-      changed = JSON.stringify(before) !== JSON.stringify(after);
-      if (changed) await markFolderBackupChanged(tx);
+      // Whether the write changed a row and the stale backup mark are one statement.
+      changed = await markFolderBackupChangedSince(tx, Number(before!.changes));
       return value;
     });
     if (changed) {
