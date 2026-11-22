@@ -75,8 +75,7 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
 /**
  * Releasing superseded bodies does not change what the edit shows, so it waits until editing has paused (every edit
  * restarts the wait, up to a limit so continuous editing still releases) and then runs as one write for every node
- * edited meanwhile; a release that fires during the next edit would hold up that edit's refresh. An interrupted
- * release only keeps an older body until the node's next write or sync collects it.
+ * edited meanwhile. An interrupted release only keeps an older body until the node's next write or sync collects it.
  */
 export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[]) {
   // A release belongs to the library that was edited; switching libraries leaves the rest to that library's next write.
@@ -85,18 +84,45 @@ export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[
   try { owner = getIosCompanionDatabaseOwner(); } catch { return; }
   if (collectionOwner !== owner) pendingCollectionIds.clear();
   collectionOwner = owner;
+  if (!pendingCollectionIds.size) firstPendingAt = Date.now();
   for (const id of nodeIds) pendingCollectionIds.add(id);
-  if (!pendingCollectionIds.size) return;
-  const now = Date.now();
-  if (!collectionTimer) firstPendingAt = now;
-  else clearTimeout(collectionTimer);
-  const delay = Math.max(0, Math.min(COLLECTION_DELAY_MS, firstPendingAt + COLLECTION_MAX_WAIT_MS - now));
-  collectionTimer = setTimeout(() => { void runPendingCollections(); }, delay);
+  armCollectionTimer();
+}
+
+/**
+ * Holds the release off while a foreground save and its refresh run, and restarts the wait once they end. The release
+ * shares the database queue with the refresh reads, so one that fires as the next save starts (saves about as far
+ * apart as the wait) would run between that save's write and its refresh; restarting the wait inside the write comes
+ * too late to prevent that. A release past the limit runs shortly after the save ends instead of inside it.
+ */
+export async function holdCompanionNodeVersionCollectionDuring<T>(task: () => Promise<T>): Promise<T> {
+  heldBySaves += 1;
+  if (collectionTimer) clearTimeout(collectionTimer);
+  collectionTimer = null;
+  try { return await task(); }
+  finally {
+    heldBySaves -= 1;
+    armCollectionTimer();
+  }
+}
+
+function armCollectionTimer() {
+  if (!pendingCollectionIds.size || heldBySaves) return;
+  if (collectionTimer) clearTimeout(collectionTimer);
+  const delay = Math.max(COLLECTION_SETTLE_MS,
+    Math.min(COLLECTION_DELAY_MS, firstPendingAt + COLLECTION_MAX_WAIT_MS - Date.now()));
+  collectionTimer = setTimeout(() => {
+    collectionTimer = null;
+    if (!heldBySaves) void runPendingCollections();
+  }, delay);
 }
 
 const COLLECTION_DELAY_MS = 1500;
 const COLLECTION_MAX_WAIT_MS = 10_000;
+// Lets the saved article paint before a release past the limit takes the database.
+const COLLECTION_SETTLE_MS = 300;
 let firstPendingAt = 0;
+let heldBySaves = 0;
 const pendingCollectionIds = new Set<string>();
 let collectionTimer: ReturnType<typeof setTimeout> | null = null;
 let runningCollection: Promise<void> | null = null;
