@@ -32,10 +32,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('updates list width from pointer drag on desktop', async () => {
+// Narrow windows can dock the list through sidebar layout tiers, so its splitter must still resize there.
+it.each([1440, 1000])('updates list width from pointer drag at a %ipx window', async (windowWidth) => {
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,
-    value: 1440,
+    value: windowWidth,
     writable: true
   });
 

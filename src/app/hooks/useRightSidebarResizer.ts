@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as R
 
 import { clampRightSidebarWidth } from '../../store/workspaceLayoutConstraints';
 
-const DESKTOP_BREAKPOINT = 1280;
 const SPLITTER_KEYBOARD_STEP = 16;
 
 interface ResizeStartState {
@@ -71,9 +70,7 @@ export function useRightSidebarResizer(
   }, [isResizingRightSidebar, setRightSidebarWidth]);
 
   const handleRightSidebarSplitterPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (window.innerWidth < DESKTOP_BREAKPOINT) {
-      return;
-    }
+    // Sidebar layout tiers decide where a splitter shows, so a visible splitter always resizes.
     event.preventDefault();
     resizeStartRef.current = { startWidth: rightSidebarWidth, startX: event.clientX };
     setIsResizingRightSidebar(true);

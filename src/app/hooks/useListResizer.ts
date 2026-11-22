@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 
-const MOBILE_BREAKPOINT = 1080;
 const SPLITTER_KEYBOARD_STEP = 16;
 
 interface ResizeStartState {
@@ -69,9 +68,7 @@ export function useListResizer(
   }, [isResizingList, setListWidth]);
 
   const handleSplitterPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (window.innerWidth <= MOBILE_BREAKPOINT) {
-      return;
-    }
+    // Sidebar layout tiers decide where a splitter shows, so a visible splitter always resizes.
     event.preventDefault();
     resizeStartRef.current = { startWidth: listWidth, startX: event.clientX };
     setIsResizingList(true);
