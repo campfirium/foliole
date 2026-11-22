@@ -4,10 +4,13 @@ import { writeFileSync } from 'node:fs';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
+import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { readCompanionContentSource, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
 import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
 import { addCompanionDiveSource, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
 import { replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
@@ -146,6 +149,8 @@ const ACTIONS: Record<string, Action> = {
   'Dive source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => removeCompanionDiveSources('dive', ['b'])) },
   'Virtual folder source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 35, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'a', 'add')) },
   'Virtual folder source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'c', 'remove')) },
+  'Dive to Virtual folder conversion': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 41, refresh: 6 }, run: workspace(() => convertCompanionDiveDirectory('dive', 'index', JSON.stringify(DIVE_NODE_FILTER))) },
+  'Virtual folder to Dive conversion': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 38, refresh: 6 }, run: workspace(() => convertCompanionDiveDirectory('index', 'dive', JSON.stringify(createManualVirtualNodeFilter()))) },
   'reading progress': { budget: { write: 10, refresh: 3 }, run: workspace(() => saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading: {
     intervalDurationMs: 1, intervalGrowthFactor: 2, lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z',
     priority: 5, readingPosition: 3, repetitionCount: 1, state: 'active' } })) },

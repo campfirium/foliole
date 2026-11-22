@@ -87,7 +87,7 @@ it.each([
   expect(canMergeWorkspaceTrashProjection(current, nodes as WorkspaceSnapshot['nodesById'], Object.keys(nodes))).toBe(false);
 });
 
-it('merges a change to the sources of a Dive or Virtual folder but not to a real folder order or a filter', () => {
+it('merges a change to the sources or kind of a Dive or Virtual folder but not to a real folder order or filter', () => {
   const current = snapshot();
   const dive = { ...current.nodesById.topic!, id: 'dive', kind: 'folder' as const,
     virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['a'] };
@@ -96,6 +96,9 @@ it('merges a change to the sources of a Dive or Virtual folder but not to a real
   expect(canMergeWorkspaceMetadataProjection(current, { dive: { ...dive, manualChildOrder: ['a', 'b'] } }, ['dive'])).toBe(true);
   expect(canMergeWorkspaceMetadataProjection(current, { folder: { ...dive, id: 'folder', virtualFilter: null,
     manualChildOrder: ['a', 'b'] } }, ['folder'])).toBe(false);
+  // A Dive converted into a Virtual folder keeps being a virtual folder.
   expect(canMergeWorkspaceMetadataProjection(current, { dive: { ...dive, manualChildOrder: ['a', 'b'],
-    virtualFilter: createManualVirtualNodeFilter() } }, ['dive'])).toBe(false);
+    virtualFilter: createManualVirtualNodeFilter() } }, ['dive'])).toBe(true);
+  expect(canMergeWorkspaceMetadataProjection(current, { dive: { ...dive, virtualFilter: null } }, ['dive'])).toBe(false);
+  expect(canMergeWorkspaceMetadataProjection(current, { folder: { ...dive, id: 'folder' } }, ['folder'])).toBe(false);
 });

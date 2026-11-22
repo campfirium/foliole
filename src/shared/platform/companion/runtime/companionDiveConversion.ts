@@ -16,7 +16,12 @@ import { saveCompanionVirtualDirectoryVersion } from './companionVirtualDirector
 import { loadCompanionVirtualFolderResultIds } from './companionVirtualFolderResults';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
+/**
+ * The folder has no children and only changes its own parent, filter and sources, so the refresh merges it (and the
+ * Virtual root when this conversion creates it) as metadata instead of rereading the library.
+ */
 export function convertCompanionDiveDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string) {
+  let changedNodeIds = [nodeId];
   return runCompanionHistoryMutation(async db => {
     const node = await loadCompanionWorkspaceNodeFromDb(db, nodeId);
     const [child] = await db.query('SELECT 1 FROM nodes WHERE parent_id = ? LIMIT 1', [nodeId]);
@@ -28,7 +33,9 @@ export function convertCompanionDiveDirectory(nodeId: string, target: DiveDirect
     const { parentNodeId, virtualFilter } = diveDirectoryConversionFields(target);
     const updatedAt = new Date().toISOString();
     const hostName = await iosCompanionHostName(db);
-    if (parentNodeId) await ensureSyncSpecialRootNodes(db, [{ nodeId: parentNodeId, referencedAt: updatedAt }]);
+    if (parentNodeId) {
+      changedNodeIds = [nodeId, ...await ensureSyncSpecialRootNodes(db, [{ nodeId: parentNodeId, referencedAt: updatedAt }])];
+    }
     const parentId = parentOrderId(parentNodeId);
     const previous = await readCurrentParentOrderWithDbPort(db, parentId);
     await saveCompanionVirtualDirectoryVersion(db, { ...node, parentNodeId, updatedAt }, hostName, {
@@ -37,9 +44,10 @@ export function convertCompanionDiveDirectory(nodeId: string, target: DiveDirect
     await saveLocalCurrentParentOrderWithDbPort(db, {
       parentId, childIds: [...previous, nodeId], hostName, now: updatedAt
     });
-  }, { kind: 'nodes', nodeIds: [nodeId], structure: true });
+  }, () => ({ kind: 'nodes', nodeIds: changedNodeIds, structure: true, metadata: true }));
 }
 
+// Matching a text or collection filter is a question about the whole library, so this one read stays.
 async function loadConversionMatchOrder(db: DbPort, nodeId: string) {
   const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
   if (!snapshot?.nodesById[nodeId]) throw new Error('Directory is unavailable for conversion');
