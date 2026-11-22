@@ -19,6 +19,10 @@ import {
 } from './macos-electron-dev-environment.mjs';
 import { resolveMacosElectronDevPaths } from './macos-electron-dev-paths.mjs';
 import { runMacosElectronDev } from './electron-dev-preview.mjs';
+import {
+  launchDetachedMacosElectronDev,
+  resolveMacosElectronDevLauncherLogFile
+} from './macos-electron-dev-launch.mjs';
 import { runMacosElectronDevSupervisor } from './macos-electron-dev-supervisor.mjs';
 
 export const MACOS_ELECTRON_DEV_ACTIONS = new Set([
@@ -79,7 +83,14 @@ export async function runMacosElectronDevAction(action, options = {}) {
       await stopMacosElectronDev({ paths });
     }
     console.log(`[macos-electron-dev] status: OPENING mode=${mode}${port ? ` cdp=${port}` : ''}`);
-    return runMacosElectronDevSupervisor(launch);
+    // DEV belongs to the user, not to the caller: start it detached and return once it is ready.
+    const snapshot = await (options.launchDetached ?? launchDetachedMacosElectronDev)({
+      argv: options.argv ?? process.argv.slice(3),
+      env: launch.env ?? process.env,
+      paths
+    });
+    console.log(`[macos-electron-dev] status: OPENED mode=${mode} session=${snapshot.ready.appReady.session} launch_log=${resolveMacosElectronDevLauncherLogFile(paths)}`);
+    return 0;
   }
   if (action === 'stop') {
     const stopped = await stopMacosElectronDev({ paths });
