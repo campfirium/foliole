@@ -1,5 +1,6 @@
 import { buildBreadcrumbDisplayPath } from '../../../shared/lib/breadcrumbDisplayPath';
 import { capBreadcrumbLabel } from '../../../shared/lib/breadcrumbLabel';
+import { resolveClozeAnswerTexts, toBreadcrumbTitleText } from '../../../shared/lib/breadcrumbTitleText';
 import { useLocalization } from '../../../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle } from '../../../shared/localization/systemEntryNames';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -18,8 +19,9 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
   const sourceItems = buildBreadcrumbDisplayPath(activeNodeId, nodesById, {
     untitledLabel: t('desktop.search.context.untitled')
   });
+  const hiddenAnswers = resolveClozeAnswerTexts(activeNodeId ? nodesById[activeNodeId] : null);
   const items = sourceItems.map((item) => {
-    const title = resolveNodeDisplayTitle(locale, item.id, item.title);
+    const title = toBreadcrumbTitleText(resolveNodeDisplayTitle(locale, item.id, nodesById[item.id]?.title.trim() || item.title), hiddenAnswers);
     return { id: item.id, label: capBreadcrumbLabel(title), title };
   });
 

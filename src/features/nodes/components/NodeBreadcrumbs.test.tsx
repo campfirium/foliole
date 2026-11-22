@@ -126,3 +126,27 @@ it('routes nested topic breadcrumb selections to that topic', () => {
 
   expect(onSelectNode).toHaveBeenCalledWith('topic-2');
 });
+
+it('hides the open cloze answer in its parent extract title', () => {
+  const base = { createdAt: '', hasContent: true, hasReveal: false, review: null, updatedAt: '' };
+  renderWithLocalization(
+    <NodeBreadcrumbs
+      activeNodeId="cloze-1"
+      nodesById={{
+        'topic-1': { ...base, id: 'topic-1', kind: 'topic', parentNodeId: null, title: 'Article' },
+        'extract-1': { ...base, id: 'extract-1', kind: 'item', parentNodeId: 'topic-1', title: 'Cells **burn** sugar' },
+        'cloze-1': {
+          ...base,
+          anchorLink: { id: 'a-1', kind: 'cloze', locator: { from: 6, originalText: 'burn', to: 10 } },
+          id: 'cloze-1',
+          kind: 'item',
+          parentNodeId: 'extract-1',
+          title: 'Cells [...] sugar'
+        }
+      }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  expect(screen.getByRole('button', { name: 'Cells * sugar' })).toBeInTheDocument();
+  expect(screen.queryByText(/burn/)).not.toBeInTheDocument();
+});

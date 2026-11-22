@@ -48,3 +48,18 @@ it('caps CJK levels by display width and cuts before an early colon', () => {
   topic.title = '第1章 微习惯的惊人力量';
   expect(buildReviewBreadcrumbItems(snapshot, 'item-1').map(item => item.label)).toEqual(['掌控习惯…', '第1章 微习惯…', 'Inner review…']);
 });
+
+it('drops Markdown marks and hides a cloze answer in the ancestors behind a single *', () => {
+  const snapshot = createBreadcrumbSnapshot();
+  const topic = snapshot.nodesById['topic-1'];
+  const extract = snapshot.nodesById['topic-2'];
+  const item = snapshot.nodesById['item-1'];
+  if (!topic || !extract || !item) throw new Error('Missing breadcrumb fixture');
+  topic.title = '## **Light** #notes';
+  extract.title = '光合作用发生在**叶绿体**中';
+  item.content = '光合作用发生在[...]中';
+  item.anchorLink = { id: 'anchor-1', kind: 'cloze', locator: { from: 7, originalText: '叶绿体', to: 10 } };
+  const items = buildReviewBreadcrumbItems(snapshot, 'item-1');
+  expect(items.map(entry => entry.title)).toEqual(['Inbox', 'Light notes', '光合作用发生在*中']);
+  expect(items.map(entry => entry.label).join('')).not.toContain('叶绿体');
+});
