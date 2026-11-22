@@ -13,7 +13,8 @@ import { cleanupConfig, freeBytes } from './scheduled-disk-cleanup.mjs';
 
 export const UD_LOW_BYTES = 60 * 1024 ** 3;
 export const INTERNAL_LOW_BYTES = 15 * 1024 ** 3;
-const DAILY_AFTER_MINUTES = 4 * 60 + 30;
+// The full round runs only while the user is usually away; a missed noon window falls to the evening one.
+export const ROUND_WINDOWS = [{ end: 14 * 60, start: 12 * 60 }, { end: 21 * 60 + 20, start: 19 * 60 + 20 }];
 const LOW_SPACE_ROUND_GAP_MS = 6 * 60 * 60 * 1000;
 const GATE_STALE_MS = 60 * 60 * 1000;
 const ROUND_TIMEOUT_MS = 60 * 60 * 1000;
@@ -86,7 +87,9 @@ export function runTick({
   if (internal < INTERNAL_LOW_BYTES) once('internal-low', `内盘只剩 ${gib(internal)}，低于 ${gib(INTERNAL_LOW_BYTES)}，需要人工处理。`);
   const now = new Date(nowMs);
   const reasons = [];
-  if (now.getHours() * 60 + now.getMinutes() >= DAILY_AFTER_MINUTES && state.lastRoundDay !== dayStamp(nowMs)) reasons.push('daily');
+  const minute = now.getHours() * 60 + now.getMinutes();
+  const inWindow = ROUND_WINDOWS.some((window) => minute >= window.start && minute < window.end);
+  if (inWindow && state.lastRoundDay !== dayStamp(nowMs)) reasons.push('daily');
   if (ud < UD_LOW_BYTES && nowMs - (state.lastLowSpaceRoundAt ?? 0) >= LOW_SPACE_ROUND_GAP_MS) reasons.push('ud-low');
   if (reasons.length === 0) return save({ action: 'idle', free: { internal, ud } });
   const busy = [...holders(config.repoRoot), ...(fs.existsSync(config.a5LeasePath) ? ['a5-lease'] : [])];

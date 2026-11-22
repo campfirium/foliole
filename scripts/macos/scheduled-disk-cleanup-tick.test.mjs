@@ -35,13 +35,20 @@ function harness({ internal = 100 * GIB, ud = 200 * GIB } = {}) {
 const at = (hour, day = 22) => new Date(2026, 10, day, hour, 0).getTime();
 
 describe('scheduled disk cleanup tick', () => {
-  it('runs the daily round once after 04:30 and stays idle otherwise', () => {
-    const { calls, done, tick } = harness();
+  it('runs the daily round once, only in the noon or 19:20 window, and stays idle otherwise', () => {
+    const { calls, done, holders, tick } = harness();
     try {
-      expect(tick(at(3)).action).toBe('idle');
-      expect(tick(at(5))).toMatchObject({ action: 'round', reasons: ['daily'] });
-      expect(tick(at(6)).action).toBe('idle');
-      expect(tick(at(5, 23)).action).toBe('round');
+      expect(tick(at(5)).action).toBe('idle');
+      expect(tick(at(15)).action).toBe('idle');
+      expect(tick(at(12))).toMatchObject({ action: 'round', reasons: ['daily'] });
+      expect(tick(at(13)).action).toBe('idle');
+      expect(tick(at(20)).action).toBe('idle');
+      holders.list = ['node-heavy:tests:1'];
+      expect(tick(at(12, 23)).action).toBe('deferred');
+      holders.list = [];
+      expect(tick(at(19, 23)).action).toBe('idle');
+      expect(tick(at(19, 23) + 20 * 60 * 1000)).toMatchObject({ action: 'round', reasons: ['daily'] });
+      expect(tick(at(22, 23)).action).toBe('idle');
       expect(calls.rounds).toEqual([['daily'], ['daily']]);
       expect(calls.notes).toEqual(['超过 5G 的任务目录：T742 6.0G。']);
     } finally {
@@ -53,14 +60,14 @@ describe('scheduled disk cleanup tick', () => {
     const { calls, done, holders, tick } = harness();
     try {
       holders.list = ['preview:resident-preview:123'];
-      expect(tick(at(5))).toMatchObject({ action: 'deferred', busy: ['preview:resident-preview:123'] });
-      expect(tick(at(5, 23) + HOUR).action).toBe('deferred');
-      expect(tick(at(7, 23) + HOUR).action).toBe('deferred');
+      expect(tick(at(12))).toMatchObject({ action: 'deferred', busy: ['preview:resident-preview:123'] });
+      expect(tick(at(12, 23) + HOUR).action).toBe('deferred');
+      expect(tick(at(20, 23)).action).toBe('deferred');
       expect(calls.rounds).toEqual([]);
       expect(calls.notes).toHaveLength(1);
       expect(calls.notes[0]).toContain('推迟超过 24 小时');
       holders.list = [];
-      expect(tick(at(8, 23)).action).toBe('round');
+      expect(tick(at(20, 23) + HOUR / 2).action).toBe('round');
     } finally {
       done();
     }
@@ -71,10 +78,11 @@ describe('scheduled disk cleanup tick', () => {
     try {
       expect(tick(at(1))).toMatchObject({ action: 'round', reasons: ['ud-low'] });
       expect(tick(at(2)).action).toBe('idle');
-      expect(tick(at(6)).action).toBe('idle'); // the low-space round already was today's full round
+      expect(tick(at(6)).action).toBe('idle');
       expect(tick(at(7))).toMatchObject({ reasons: ['ud-low'] });
+      expect(tick(at(12)).action).toBe('idle'); // the low-space round already was today's full round
       space.ud = 200 * GIB;
-      expect(tick(at(14)).action).toBe('idle');
+      expect(tick(at(15)).action).toBe('idle');
       expect(calls.rounds).toEqual([['ud-low'], ['ud-low']]);
       expect(calls.notes.filter((note) => note.startsWith('UD 剩'))).toHaveLength(2);
     } finally {
@@ -106,6 +114,7 @@ describe('scheduled disk cleanup tick', () => {
       const result = installCleanupAgent({ homeDirectory: root, nodePath: '/opt/homebrew/bin/node', repositoryRoot: '/repo' }, deps);
       const plist = fs.readFileSync(result.paths.plistPath, 'utf8');
       expect(plist).toContain('<key>StartInterval</key><integer>3600</integer>');
+      expect(plist).toContain('<key>Hour</key><integer>19</integer><key>Minute</key><integer>20</integer>');
       expect(plist).toContain('/repo/scripts/macos/scheduled-disk-cleanup-tick.mjs');
       expect(loaded.value).toBe(true);
       expect(uninstallCleanupAgent({ homeDirectory: root }, deps)).toMatchObject({ removed: true });

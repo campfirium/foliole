@@ -52,6 +52,10 @@ export function cleanupAgentXml({ logsDirectory, nodePath, repositoryRoot }) {
     <key>PATH</key><string>${xml(searchPath)}</string>
   </dict>
   <key>StartInterval</key><integer>3600</integer>
+  <key>StartCalendarInterval</key><array>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>20</integer></dict>
+  </array>
   <key>ProcessType</key><string>Background</string>
   <key>LowPriorityIO</key><true/>
   <key>Nice</key><integer>10</integer>
