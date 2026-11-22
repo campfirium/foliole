@@ -43,7 +43,10 @@ export interface CompanionFolderBackupPort {
   closeSource(input: { sourceEpoch: string }): Promise<void>;
   getState(): Promise<CompanionFolderBackupState>;
   clearDirectory(): Promise<CompanionFolderBackupState>;
-  backupDatabase(input: { sourceEpoch: string; requestId: string; chooseDirectory: boolean }): Promise<CompanionFolderDatabaseBackupResult>;
+  /** `replaceExisting` is the user's confirmation that a backup this library does not own may be overwritten. */
+  backupDatabase(input: {
+    sourceEpoch: string; requestId: string; chooseDirectory: boolean; replaceExisting?: boolean;
+  }): Promise<CompanionFolderDatabaseBackupResult>;
   prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
   /** Copies keys in order in one native call. A key without a result was not attempted (the request was cancelled). */
   copyAttachments(input: { sourceEpoch: string; requestId: string; storageKeys: string[] }): Promise<{

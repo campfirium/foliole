@@ -50,8 +50,21 @@ public final class FolioleCompanionBackupRestorePlugin extends Plugin {
         try {
             FolioleBackupRestoreSwap swap = swap();
             String savedAt = swap.previousSavedAt();
-            call.resolve(new JSObject().put("exists", savedAt != null).put("savedAt", savedAt == null ? org.json.JSONObject.NULL : savedAt));
+            call.resolve(new JSObject().put("exists", savedAt != null).put("savedAt", savedAt == null ? org.json.JSONObject.NULL : savedAt)
+                .put("bytes", savedAt == null ? 0 : swap.previousBytes()));
         } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+
+    @PluginMethod public void deletePrevious(PluginCall call) {
+        synchronized (this) {
+            if (running) { call.reject("restore_already_running"); return; }
+            running = true;
+        }
+        new Thread(() -> {
+            try { swap().deletePrevious(); call.resolve(); }
+            catch (Exception error) { call.reject(error.getMessage(), error); }
+            finally { finished(); }
+        }, "FolioleBackupRestoreDelete").start();
     }
 
     @PluginMethod public synchronized void stage(PluginCall call) {

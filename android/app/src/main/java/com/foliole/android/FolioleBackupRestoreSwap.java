@@ -33,6 +33,24 @@ final class FolioleBackupRestoreSwap {
         return hasPrevious() ? new String(Files.readAllBytes(new File(previous, "saved-at").toPath()), StandardCharsets.UTF_8) : null;
     }
 
+    /** Space the previous library takes on this phone. */
+    long previousBytes() { return size(previous); }
+
+    /** Delete the previous library for good. Never while a swap is unfinished: it may hold the only library. */
+    void deletePrevious() throws IOException {
+        if (interrupted()) throw new IllegalStateException("restore_swap_unfinished");
+        FolioleBackupRestoreStaging.deleteTree(partial);
+        FolioleBackupRestoreStaging.deleteTree(previous);
+    }
+
+    private static long size(File file) {
+        if (file.isFile()) return file.length();
+        File[] children = file.listFiles();
+        long total = 0;
+        if (children != null) for (File child : children) total += size(child);
+        return total;
+    }
+
     void commit(String now) throws IOException {
         if (!interrupted()) {
             if (!stagedDatabase.isFile() || !stagedAttachments.isDirectory()) throw new IllegalStateException("restore_nothing_staged");

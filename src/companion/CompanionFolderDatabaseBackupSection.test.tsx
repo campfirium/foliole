@@ -178,3 +178,17 @@ it('keeps the remaining work visible in both modes and separates location detail
   await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(true));
   view.unmount();
 });
+
+it('offers to replace a backup this library does not own instead of only asking for another folder', async () => {
+  const other = 'This folder already contains an unrecognized backup file. Choose another folder.';
+  fixture.request.mockImplementationOnce(async () => { throw new Error(other); });
+  fixture.request.mockResolvedValueOnce({ state: { ...fixture.state, phase: 'saved', errorMessage: null, pendingItems: 0 } });
+  const view = render(<CompanionFolderDatabaseBackupSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Back up now' }));
+  expect(await screen.findByText('This folder has another backup')).toBeInTheDocument();
+  expect(fixture.request).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByTestId('companion-backup-replace'));
+  await waitFor(() => expect(fixture.request).toHaveBeenLastCalledWith(false, { replaceExisting: true }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('All backed up'));
+  view.unmount();
+});

@@ -175,5 +175,14 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.revertDescription': 'The library now on this phone is set aside, not deleted, so you can swap it back later. Foliole reopens when it’s done.',
   'companion.settings.storage.revertConfirm': 'Put back',
   'companion.settings.storage.revertWorking': 'Putting back library…',
+  'companion.settings.storage.backupReplaceTitle': 'This folder has another backup',
+  'companion.settings.storage.backupReplaceDescription': 'It is not a backup of the library on this phone, for example the backup of a library a restore replaced. Replace it with a backup of the current library?',
+  'companion.settings.storage.backupReplaceConfirm': 'Replace',
+  'companion.settings.storage.backupReplaceOther': 'Choose another folder…',
+  'companion.settings.storage.revertDelete': 'Delete…',
+  'companion.settings.storage.revertDeleteTitle': 'Delete the previous library?',
+  'companion.settings.storage.revertDeleteDescription': 'The library set aside on {date} is deleted and can no longer be put back. This frees about {size} and cannot be undone.',
+  'companion.settings.storage.revertDeleteConfirm': 'Delete',
+  'companion.settings.storage.revertDeleting': 'Deleting library…',
   'companion.settings.storage.restoreErrorNoPrevious': 'There is no previous library on this phone.'
 } as const;

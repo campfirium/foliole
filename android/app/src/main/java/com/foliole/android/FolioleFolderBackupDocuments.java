@@ -38,12 +38,29 @@ class FolioleFolderBackupDocuments {
     }
     void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership,
         Runnable forgetMissingTarget) throws Exception {
+        prepare(owned, creationPending, persistCreation, persistOwnership, forgetMissingTarget, false);
+    }
+    /**
+     * {@code replaceExisting} is the user's confirmation that a backup this profile does not own
+     * (for example the backup of a library a restore replaced) may be removed and written anew.
+     */
+    void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership,
+        Runnable forgetMissingTarget, boolean replaceExisting) throws Exception {
         Uri document = find(filename);
         if (document != null && !owned) {
             if (!creationPending || !isEmpty(document)) {
-                throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
-            }
-            persistOwnership.run();
+                if (!replaceExisting) {
+                    throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
+                }
+                Uri journal = find(filename + "-journal");
+                if (journal != null && !DocumentsContract.deleteDocument(context.getContentResolver(), journal)) {
+                    throw new IllegalStateException("Cannot remove the other backup.");
+                }
+                if (!DocumentsContract.deleteDocument(context.getContentResolver(), document)) {
+                    throw new IllegalStateException("Cannot remove the other backup.");
+                }
+                document = null;
+            } else persistOwnership.run();
         }
         if (document == null) {
             // The retained backup was removed from its folder. Nothing is left to protect, so forget its

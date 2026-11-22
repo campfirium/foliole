@@ -8,6 +8,7 @@ import {
   stageCompanionBackupRestore
 } from '../shared/platform/companion/backupRestore/companionBackupRestore';
 import { getCompanionBackupRestorePort } from '../shared/platform/companion/backupRestore/companionBackupRestoreRuntimeRepository';
+import { settleCompanionFolderBackups } from '../shared/platform/companion/folderBackup/companionFolderBackup';
 import { getCompanionFolderBackupPort } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { runWithCompanionAttachmentMaintenance } from '../shared/platform/companion/runtime/companionAttachmentMaintenance';
 import {
@@ -34,6 +35,7 @@ export function reloadCompanionApp() { window.location.reload(); }
 export function companionLibrarySwapContext() {
   return {
     owner: getIosCompanionDatabaseOwner(), port: getCompanionBackupRestorePort(),
+    settleBackups: settleCompanionFolderBackups,
     exclusive: runWithCompanionAttachmentMaintenance,
     closeDatabase: () => closeForCompanionLibrarySwitch(closeIosCompanionDatabase),
     forgetBackupFolder: () => getCompanionFolderBackupPort().clearDirectory(), reload: reloadCompanionApp

@@ -175,5 +175,14 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.revertDescription': '这台手机上现在的资料库会被移到一旁保存，不会删除，之后可以再换回来。完成后 Foliole 会重新打开。',
   'companion.settings.storage.revertConfirm': '还原',
   'companion.settings.storage.revertWorking': '正在还原资料库…',
+  'companion.settings.storage.backupReplaceTitle': '这个文件夹里已有另一份备份',
+  'companion.settings.storage.backupReplaceDescription': '它不是这台手机当前资料库的备份，比如恢复前那份资料库的备份。要替换成当前资料库的备份吗？',
+  'companion.settings.storage.backupReplaceConfirm': '替换',
+  'companion.settings.storage.backupReplaceOther': '选择其他文件夹…',
+  'companion.settings.storage.revertDelete': '删除…',
+  'companion.settings.storage.revertDeleteTitle': '要删除上一份资料库吗？',
+  'companion.settings.storage.revertDeleteDescription': '{date} 被替换下来的资料库会被删除，之后无法再还原。将释放约 {size}，删除后无法恢复。',
+  'companion.settings.storage.revertDeleteConfirm': '删除',
+  'companion.settings.storage.revertDeleting': '正在删除资料库…',
   'companion.settings.storage.restoreErrorNoPrevious': '这台手机上没有上一份资料库。'
 };

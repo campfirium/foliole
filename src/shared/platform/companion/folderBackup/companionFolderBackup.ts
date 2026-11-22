@@ -9,7 +9,7 @@ import { getCompanionFolderBackupPort } from './companionFolderBackupRuntimeRepo
 import { getCompanionFolderBackupState, notifyCompanionFolderBackupProgress } from './companionFolderBackupState';
 import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAttachmentWork';
 
-interface BackupOptions { automatic?: boolean; continueWork?: () => boolean; stopped?: AbortSignal }
+interface BackupOptions { automatic?: boolean; continueWork?: () => boolean; stopped?: AbortSignal; replaceExisting?: boolean }
 const manualListeners = new Set<() => void>();
 export function subscribeManualCompanionFolderBackup(listener: () => void) {
   manualListeners.add(listener);
@@ -30,6 +30,11 @@ function enqueueBackup<T>(run: () => Promise<T>) {
 
 export function forgetCompanionFolderBackupDirectory() {
   return enqueueBackup(() => getCompanionFolderBackupPort().clearDirectory());
+}
+
+/** Resolves once every queued backup round, manual or automatic, has ended. */
+export function settleCompanionFolderBackups() {
+  return backupTail.then(() => undefined, () => undefined);
 }
 
 export function backUpCompanionDatabase(chooseDirectory = false, options: BackupOptions = {}) {
@@ -53,7 +58,7 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
   const deletionSnapshot = await captureFolderAttachmentDeletions(owner).catch(() => null);
   try {
   const revision = await owner.read(readFolderBackupRevision);
-  const result = await port.backupDatabase({ sourceEpoch, requestId, chooseDirectory });
+  const result = await port.backupDatabase({ sourceEpoch, requestId, chooseDirectory, ...(options.replaceExisting ? { replaceExisting: true } : {}) });
   if (result.requestId !== requestId) throw new Error('folder_backup_response_mismatch');
   if (!result.cancelled && result.databaseCommitted) {
     let deletions: Awaited<ReturnType<typeof validateFolderAttachmentDeletions>>;

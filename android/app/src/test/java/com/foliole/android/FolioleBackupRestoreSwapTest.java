@@ -151,6 +151,21 @@ public class FolioleBackupRestoreSwapTest {
         assertTrue(staged.isFile());
     }
 
+    @Test public void deletesThePreviousLibraryForGoodButNeverDuringASwap() throws Exception {
+        swap().commit("restored");
+        assertTrue(swap().previousBytes() > 0);
+        write(new File(files, "restore-commit"), "install");
+        try { swap().deletePrevious(); fail("expected restore_swap_unfinished"); }
+        catch (IllegalStateException error) { assertEquals("restore_swap_unfinished", error.getMessage()); }
+        assertTrue(swap().hasPrevious());
+        assertTrue(new File(files, "restore-commit").delete());
+        swap().deletePrevious();
+        assertFalse(swap().hasPrevious());
+        assertFalse(new File(files, "restore-previous").exists());
+        assertEquals(0, swap().previousBytes());
+        assertEquals("main-library", read(database));
+    }
+
     private void deleteAll() throws Exception {
         FolioleBackupRestoreStaging.deleteTree(databases);
         FolioleBackupRestoreStaging.deleteTree(files);

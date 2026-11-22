@@ -9,10 +9,16 @@ import { getCompanionRuntimeCapability } from '../shared/platform/companionRunti
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 import { SettingsValueRow } from '../shared/ui/SettingsValueRow';
 
-import { CompanionBackupLocationDialog } from './CompanionBackupLocationDialog';
+import { CompanionBackupLocationDialog, CompanionBackupReplacePrompt } from './CompanionBackupLocationDialog';
 import { CompanionBackupRestoreSection } from './CompanionBackupRestoreSection';
 import { companionBackupNeedsFolder, companionBackupSummary } from './companionBackupSummary';
 import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
+
+async function requestBackup(chooseDirectory: boolean, replaceExisting: boolean) {
+  const presentation = getCompanionSettingsPreview();
+  if (presentation) return presentation.backUp(chooseDirectory);
+  return (await (replaceExisting ? backUpCompanionDatabase(false, { replaceExisting }) : backUpCompanionDatabase(chooseDirectory))).state;
+}
 
 export function CompanionFolderDatabaseBackupSection() {
   const t = useTranslation();
@@ -23,11 +29,11 @@ export function CompanionFolderDatabaseBackupSection() {
   const [changingAutomatic, setChangingAutomatic] = useState(false);
   const [busy, setBusy] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  async function run(chooseDirectory: boolean) {
+  async function run(chooseDirectory: boolean, replaceExisting = false) {
     setBusy(true);
     setError(null);
     try {
-      const next = presentation ? await presentation.backUp(chooseDirectory) : (await backUpCompanionDatabase(chooseDirectory)).state;
+      const next = await requestBackup(chooseDirectory, replaceExisting);
       setState(next);
       return next;
     }
@@ -71,8 +77,8 @@ export function CompanionFolderDatabaseBackupSection() {
       </SettingsSection>
       <CompanionBackupRestoreSection />
       <CompanionBackupLocationDialog open={locationOpen} onOpenChange={setLocationOpen} working={working}
-        label={state?.directoryLabel ?? ''}
-        onChange={() => { setLocationOpen(false); void run(true); }} />
+        label={state?.directoryLabel ?? ''} onChange={() => { setLocationOpen(false); void run(true); }} />
+      <CompanionBackupReplacePrompt error={error} onReplace={() => void run(false, true)} onChooseOther={() => void run(true)} />
     </section>
   );
 }

@@ -130,6 +130,22 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
             case "owned-missing-interrupted":
                 recreateRemovedBackup(root, file, args[0].endsWith("interrupted"));
                 return;
+            case "foreign-replaced": {
+                Files.write(file, Files.readAllBytes(Path.of(args[2])));
+                Files.write(root.resolve("Foliole.sqlite-journal"), new byte[] { 7 });
+                Properties properties = first.load();
+                FolioleFolderBackupDocuments.class.getDeclaredMethod("prepare", boolean.class, boolean.class,
+                    Runnable.class, Runnable.class, Runnable.class, boolean.class)
+                    .invoke(first, false, false, (Runnable) () -> first.save("pending"), (Runnable) () -> first.save("owned"),
+                        (Runnable) () -> { throw new AssertionError("Forgot an identity it never owned"); }, true);
+                if (!Files.exists(file) || Files.size(file) != 0) throw new AssertionError("Other backup was not replaced");
+                if (Files.exists(root.resolve("Foliole.sqlite-journal"))) throw new AssertionError("Other backup journal kept");
+                if (!Boolean.parseBoolean(first.load().getProperty("owned")) || properties.getProperty("owned") != null) {
+                    throw new AssertionError("Replaced backup is not owned");
+                }
+                System.out.println("other backup replaced");
+                return;
+            }
             case "pending-foreign":
                 expectFailure(first, true);
                 Files.write(file, Files.readAllBytes(Path.of(args[2])));

@@ -58,6 +58,7 @@ export async function createSpareDevice(cleanups: (() => void)[]) {
     commit: vi.fn(async () => swapFiles(root, library, stagingFile)),
     revert: vi.fn(async () => swapFiles(root, library, path.join(root, 'restore-previous', path.basename(library)))),
     previous: vi.fn(async () => ({ exists: existsSync(path.join(root, 'restore-previous')), savedAt: null })),
+    deletePrevious: vi.fn(async () => rmSync(path.join(root, 'restore-previous'), { recursive: true, force: true })),
     addListener: vi.fn()
   } satisfies CompanionBackupRestorePort;
   const openCandidate = <T,>(database: string, task: (db: DbPort) => Promise<T>) =>

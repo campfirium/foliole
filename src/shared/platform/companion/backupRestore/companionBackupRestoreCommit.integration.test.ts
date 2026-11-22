@@ -13,6 +13,7 @@ async function stagedSpareDevice() {
   const context = {
     owner: device.owner,
     port: device.port,
+    settleBackups: vi.fn(async () => { order.push('settle'); }),
     exclusive<T>(task: () => Promise<T>) { order.push('exclusive'); return task(); },
     closeDatabase: vi.fn(async () => { order.push('close'); await device.owner.close(); }),
     forgetBackupFolder: vi.fn(async () => { order.push('forget'); }),
@@ -34,7 +35,7 @@ describe('replacing the spare phone library with a staged backup', () => {
     const spareId = await read<{ value: string }>(device.owner, "SELECT value FROM companion_meta WHERE key = 'device_id'");
 
     await commitCompanionBackupRestore(context);
-    expect(order).toEqual(['exclusive', 'close', 'commit:closed', 'forget', 'reload']);
+    expect(order).toEqual(['settle', 'exclusive', 'close', 'commit:closed', 'forget', 'reload']);
 
     const restored = await device.reopen();
     expect(await read(restored, "SELECT id, title FROM nodes WHERE kind = 'topic'")).toEqual([{ id: 'topic-1', title: 'Images' }]);

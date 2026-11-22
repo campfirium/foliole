@@ -12,3 +12,8 @@ const directoryFailures = [
 export function isCompanionFolderBackupDirectoryFailure(message: string | null | undefined) {
   return Boolean(message) && directoryFailures.some(pattern => pattern.test(message!));
 }
+
+/** The chosen folder already holds a backup this library does not own, e.g. one a restore replaced. */
+export function isCompanionFolderBackupOtherBackup(message: string | null | undefined) {
+  return Boolean(message) && /unrecognized backup file/i.test(message!);
+}

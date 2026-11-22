@@ -122,7 +122,8 @@ public final class FolioleCompanionFolderBackupPlugin: CAPPlugin, CAPBridgedPlug
                 guard let path = self.sourcePath, let epoch = self.round.epoch else { throw backupError("Database owner is closed.") }
                 self.session?.operation.cancel()
                 self.session = nil
-                self.operation = FolioleFolderBackupOperation(requestID: request, epoch: epoch, source: path, store: self.store)
+                self.operation = FolioleFolderBackupOperation(requestID: request, epoch: epoch, source: path, store: self.store,
+                    replaceExisting: call.getBool("replaceExisting") == true)
                 let profile = try self.store.load()
                 if call.getBool("chooseDirectory") == true || profile == nil { try self.presentPicker(call) }
                 else { self.start(call) }

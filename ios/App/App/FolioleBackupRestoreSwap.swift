@@ -33,6 +33,21 @@ final class FolioleBackupRestoreSwap {
         hasPrevious ? try read(previous.appendingPathComponent("saved-at")) : nil
     }
 
+    /// Space the previous library takes on this phone.
+    func previousBytes() -> Int64 {
+        guard let items = FileManager.default.enumerator(at: previous, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
+        var total: Int64 = 0
+        for case let item as URL in items { total += Int64((try? item.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0) }
+        return total
+    }
+
+    /// Delete the previous library for good. Never while a swap is unfinished: it may hold the only library.
+    func deletePrevious() throws {
+        if interrupted { throw restoreError("restore_swap_unfinished") }
+        try FolioleBackupRestoreStaging.deleteTree(partial)
+        try FolioleBackupRestoreStaging.deleteTree(previous)
+    }
+
     func commit(_ now: String) throws {
         if !interrupted {
             guard exists(stagedDatabase), isDirectory(stagedAttachments) else { throw restoreError("restore_nothing_staged") }

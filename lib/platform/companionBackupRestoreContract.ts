@@ -22,7 +22,10 @@ export interface CompanionBackupRestorePort {
   commit(): Promise<void>;
   /** Put the previous library back; the library it replaces becomes the previous one. */
   revert(): Promise<void>;
-  previous(): Promise<{ exists: boolean; savedAt: string | null }>;
+  /** `bytes` is the space the previous library takes on this phone. */
+  previous(): Promise<{ exists: boolean; savedAt: string | null; bytes?: number }>;
+  /** Delete the previous library for good; it can no longer be put back. */
+  deletePrevious(): Promise<void>;
   addListener(event: 'restoreProgress', listener: (event: { bytes: number; files: number }) => void):
     Promise<{ remove(): Promise<void> }>;
 }

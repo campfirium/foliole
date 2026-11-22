@@ -34,3 +34,8 @@ it.each(['owned-missing', 'owned-missing-interrupted'])('recreates a removed own
   expect(execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
     scenario, path.join(root, scenario)], { encoding: 'utf8' })).toContain('removed backup recreated');
 });
+it('replaces another backup only when the user confirmed it', () => {
+  expect(execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
+    'foreign-replaced', path.join(root, 'foreign-replaced'), path.join(root, 'foreign.sqlite')], { encoding: 'utf8' }))
+    .toContain('other backup replaced');
+});

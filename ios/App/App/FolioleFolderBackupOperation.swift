@@ -15,12 +15,15 @@ final class FolioleFolderBackupOperation {
     var profileID = ""
     var preparedFingerprint: String?
     var callbackError: Error?
+    /// The user confirmed that a backup this profile does not own may be removed and written anew.
+    let replaceExisting: Bool
 
-    init(requestID: String, epoch: String, source: String, store: FolioleFolderBackupProfileStore) {
+    init(requestID: String, epoch: String, source: String, store: FolioleFolderBackupProfileStore, replaceExisting: Bool = false) {
         self.requestID = requestID
         self.epoch = epoch
         self.source = source
         self.store = store
+        self.replaceExisting = replaceExisting
     }
 
     func cancel(afterSourceReleased callback: (() -> Void)? = nil) {
@@ -111,6 +114,11 @@ final class FolioleFolderBackupOperation {
 
     private func prepareTarget(_ target: URL, profile: FolioleFolderBackupProfile) throws -> FolioleFolderBackupProfile {
         var info = stat()
+        if lstat(target.path, &info) == 0, info.st_mode & S_IFMT == S_IFREG, replaceExisting, !profile.ownsTarget,
+           !(profile.targetCreationPending && info.st_size == 0) {
+            unlink(target.path + "-journal")
+            guard unlink(target.path) == 0 else { throw backupError("Cannot remove the other backup.") }
+        }
         if lstat(target.path, &info) == 0 {
             guard info.st_mode & S_IFMT == S_IFREG,
                   profile.ownsTarget || (profile.targetCreationPending && info.st_size == 0) else {

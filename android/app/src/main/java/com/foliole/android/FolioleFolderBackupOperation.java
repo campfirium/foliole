@@ -13,6 +13,7 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     final String requestId, epoch, source;
     private final FolioleFolderBackupProfile store;
     private final String profileId;
+    private final boolean replaceExisting;
     private long handle;
     private boolean cancelled, released;
     private String preparedFingerprint;
@@ -20,9 +21,10 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     private final List<Runnable> releaseCallbacks = new ArrayList<>();
 
     FolioleFolderBackupOperation(Context context, JSONObject profile, String requestId,
-        String epoch, String source, FolioleFolderBackupProfile store) throws Exception {
+        String epoch, String source, FolioleFolderBackupProfile store, boolean replaceExisting) throws Exception {
         super(context, Uri.parse(profile.getString("tree")));
         this.profileId = profile.getString("id");
+        this.replaceExisting = replaceExisting;
         this.requestId = requestId; this.epoch = epoch; this.source = source; this.store = store;
     }
     private native long createNative(String source, String expected, String pending);
@@ -63,7 +65,7 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         JSONObject profile = store.load();
         synchronized (this) { if (cancelled) throw new IllegalStateException("Backup cancelled."); }
         prepare(profile.optBoolean("ownsTarget"), profile.optBoolean("targetCreationPending"),
-            () -> updateTargetCreation(true), () -> updateTargetCreation(false), this::forgetMissingTarget);
+            () -> updateTargetCreation(true), () -> updateTargetCreation(false), this::forgetMissingTarget, replaceExisting);
         profile = store.load(); // a recreated target no longer expects the removed backup's fingerprint
         long active;
         synchronized (this) {

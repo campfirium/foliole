@@ -14,6 +14,10 @@ final class FolioleCompanionAppDataStore {
         deleteRecursively(new File(context.getFilesDir(), "attachments"));
         deleteRecursively(new File(context.getFilesDir(), "attachments.trash"));
         deleteRecursively(new File(context.getFilesDir(), "attachment-observations.json"));
+        // The library a restore set aside, and any unfinished restore reading, belong to the data being cleared.
+        for (String name : new String[] { "restore-previous", "restore-previous.partial", "restore-staging" }) {
+            deleteRecursively(new File(context.getFilesDir(), name));
+        }
         context.getSharedPreferences("foliole_workgroup_request_nonces", Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences("foliole_workgroup_response_nonces", Context.MODE_PRIVATE).edit().clear().commit();
         return new JSObject();

@@ -49,6 +49,18 @@ struct BackupHostFixture {
         // A full re-copy (pagesSent above) proves the removed identity was forgotten; savedAt has one-second precision.
         precondition(renewed.ownsTarget && !renewed.targetCreationPending && renewed.fingerprint != nil && renewed.savedAt != nil,
                      "recreated backup has no identity of its own")
+        // A library that does not own this folder's backup (e.g. after a restore) may replace it only when confirmed.
+        let otherStore = FolioleFolderBackupProfileStore(file: root.appendingPathComponent("private/other.json"))
+        try otherStore.save(FolioleFolderBackupProfile(bookmark: directory.bookmarkData(options: .minimalBookmark), label: "selected"))
+        do {
+            _ = try FolioleFolderBackupOperation(requestID: "other", epoch: "owner", source: source, store: otherStore)
+                .run(directory: directory, profile: otherStore.load()!, filename: "Foliole.sqlite")
+            preconditionFailure("wrote over a backup it does not own")
+        } catch {}
+        let replaced = try FolioleFolderBackupOperation(requestID: "replace", epoch: "owner", source: source, store: otherStore,
+            replaceExisting: true).run(directory: directory, profile: otherStore.load()!, filename: "Foliole.sqlite")
+        let replacedProfile = try otherStore.load()!
+        precondition(replaced.committed == 1 && replaced.pagesSent > 400 && replacedProfile.ownsTarget, "confirmed replacement failed")
         let cancelled = FolioleFolderBackupOperation(requestID: "cancel", epoch: "owner", source: source, store: store)
         var released = false
         cancelled.cancel { released = true }
@@ -62,9 +74,14 @@ struct BackupHostFixture {
         let reset = root.appendingPathComponent("reset")
         let resetStore = FolioleFolderBackupProfileStore(file: reset.appendingPathComponent("folder-database-backup.json"))
         try resetStore.save(persisted)
+        let setAside = reset.appendingPathComponent("restore-previous/database", isDirectory: true)
+        try FileManager.default.createDirectory(at: setAside, withIntermediateDirectories: true)
+        try Data([1]).write(to: setAside.appendingPathComponent("old.db"))
         try FolioleCompanionAppDataFiles.clear(support: reset, attachmentDirectory: "attachments", defaults: defaults)
         let cleared = try resetStore.load()
         precondition(cleared == nil)
+        precondition(!FileManager.default.fileExists(atPath: reset.appendingPathComponent("restore-previous").path),
+                     "clearing app data kept the set-aside library")
         precondition(FileManager.default.fileExists(atPath: directory.appendingPathComponent("Foliole.sqlite").path))
         print("{\"recreatedPages\":\(recreated.pagesSent),\"initialPages\":\(initial.pagesSent),\"changedPages\":\(delta.pagesSent),\"unchangedPages\":\(unchanged.pagesSent),\"target\":\"\(directory.path)/Foliole.sqlite\"}")
     }

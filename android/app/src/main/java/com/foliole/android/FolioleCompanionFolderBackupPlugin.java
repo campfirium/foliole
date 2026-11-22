@@ -149,7 +149,8 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     private synchronized void start(PluginCall call) throws Exception {
         String epoch = call.getString("sourceEpoch");
         if (round.epoch() == null || !round.epoch().equals(epoch)) throw new IllegalStateException("Database owner is closed.");
-        FolioleFolderBackupOperation job = new FolioleFolderBackupOperation(getContext(), store.load(), round.request(), epoch, source, store);
+        FolioleFolderBackupOperation job = new FolioleFolderBackupOperation(getContext(), store.load(), round.request(), epoch, source, store,
+            call.getBoolean("replaceExisting", false));
         round.started(epoch);
         operation = job; attachmentCancelled = false;
         emitState(null);

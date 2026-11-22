@@ -52,6 +52,8 @@ export async function stageCompanionBackupRestore(
 }
 
 export interface CompanionBackupRestoreCommitContext extends Pick<CompanionBackupRestoreContext, 'owner' | 'port'> {
+  /** Waits until no folder backup round, manual or automatic, still reads the current library. */
+  settleBackups(): Promise<void>;
   /** Serializes the swap with attachment file maintenance. */
   exclusive<T>(task: () => Promise<T>): Promise<T>;
   closeDatabase(): Promise<void>;
@@ -66,6 +68,7 @@ export interface CompanionBackupRestoreCommitContext extends Pick<CompanionBacku
  */
 async function replaceCompanionLibrary(context: CompanionBackupRestoreCommitContext, swap: () => Promise<void>) {
   await context.owner.read(readThisDevice);
+  await context.settleBackups();
   await context.exclusive(async () => {
     await context.closeDatabase();
     await swap();

@@ -165,5 +165,14 @@
   "companion.settings.storage.revertDescription": "這支手機上現在的資料庫會被移到一旁保存，不會刪除，之後可以再換回來。完成後 Foliole 會重新開啟。",
   "companion.settings.storage.revertConfirm": "還原",
   "companion.settings.storage.revertWorking": "正在還原資料庫…",
-  "companion.settings.storage.restoreErrorNoPrevious": "這支手機上沒有上一份資料庫。"
+  "companion.settings.storage.restoreErrorNoPrevious": "這支手機上沒有上一份資料庫。",
+  "companion.settings.storage.backupReplaceTitle": "這個資料夾裡已有另一份備份",
+  "companion.settings.storage.backupReplaceDescription": "它不是這支手機目前資料庫的備份，例如恢復前那份資料庫的備份。要取代成目前資料庫的備份嗎？",
+  "companion.settings.storage.backupReplaceConfirm": "取代",
+  "companion.settings.storage.backupReplaceOther": "選擇其他資料夾…",
+  "companion.settings.storage.revertDelete": "刪除…",
+  "companion.settings.storage.revertDeleteTitle": "要刪除上一份資料庫嗎？",
+  "companion.settings.storage.revertDeleteDescription": "{date} 被取代下來的資料庫會被刪除，之後無法再還原。將釋放約 {size}，刪除後無法復原。",
+  "companion.settings.storage.revertDeleteConfirm": "刪除",
+  "companion.settings.storage.revertDeleting": "正在刪除資料庫…"
 }

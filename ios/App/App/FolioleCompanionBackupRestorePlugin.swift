@@ -7,7 +7,7 @@ import Foundation
 public final class FolioleCompanionBackupRestorePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "FolioleCompanionBackupRestorePlugin"
     public let jsName = "FolioleCompanionBackupRestore"
-    public let pluginMethods: [CAPPluginMethod] = ["stage", "cancel", "discard", "commit", "revert", "previous"]
+    public let pluginMethods: [CAPPluginMethod] = ["stage", "cancel", "discard", "commit", "revert", "previous", "deletePrevious"]
         .map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
     static let stagingDatabase = "foliole-restore-staging"
     let queue = DispatchQueue(label: "FolioleBackupRestore", qos: .utility)
@@ -53,9 +53,23 @@ public final class FolioleCompanionBackupRestorePlugin: CAPPlugin, CAPBridgedPlu
 
     @objc func previous(_ call: CAPPluginCall) {
         do {
-            let savedAt = try FolioleBackupRestorePaths.current().swap().previousSavedAt()
-            call.resolve(["exists": savedAt != nil, "savedAt": savedAt as Any? ?? NSNull()])
+            let swap = try FolioleBackupRestorePaths.current().swap()
+            let savedAt = try swap.previousSavedAt()
+            call.resolve(["exists": savedAt != nil, "savedAt": savedAt as Any? ?? NSNull(),
+                          "bytes": savedAt == nil ? 0 : swap.previousBytes()])
         } catch { call.reject(error.localizedDescription) }
+    }
+
+    @objc func deletePrevious(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard !self.running else { call.reject("restore_already_running"); return }
+            self.running = true
+            self.queue.async {
+                do { try FolioleBackupRestorePaths.current().swap().deletePrevious(); call.resolve() }
+                catch { call.reject(error.localizedDescription) }
+                DispatchQueue.main.async { self.running = false }
+            }
+        }
     }
 
     private func replace(_ call: CAPPluginCall, revert: Bool) {

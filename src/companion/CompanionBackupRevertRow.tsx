@@ -12,7 +12,26 @@ import { failCompanionLibrarySwitch } from './companionLibrarySwitch';
 import { formatCompanionTopicDate } from './CompanionRecentArticleList';
 import { companionLibrarySwapContext, reloadCompanionApp } from './useCompanionBackupRestore';
 
-type RevertStep = { step: 'closed' | 'confirm' | 'reverting' } | { step: 'failed'; error: string };
+type RevertStep = { step: 'closed' | 'confirm' | 'reverting' | 'deleteConfirm' | 'deleting' } | { step: 'failed'; error: string };
+
+function megabytes(bytes: number) {
+  return `${Math.max(1, Math.ceil(bytes / (1024 * 1024)))} MB`;
+}
+
+function DeleteSheetBody({ view, size, date, onDelete }: { view: RevertStep; size: string; date: string; onDelete(): void }) {
+  const { t } = useLocalization();
+  if (view.step === 'deleting') {
+    return <p data-settings-sheet-location role="status" className="flex items-center gap-3">
+      <AppSpinner decorative size="sm" /><span>{t('companion.settings.storage.revertDeleting')}</span>
+    </p>;
+  }
+  return <>
+    <p data-settings-sheet-location>{t('companion.settings.storage.revertDeleteDescription', { date, size })}</p>
+    <button type="button" data-settings-sheet-primary data-testid="companion-revert-delete-confirm" onClick={onDelete}>
+      {t('companion.settings.storage.revertDeleteConfirm')}
+    </button>
+  </>;
+}
 
 function RevertSheetBody({ view, onRevert }: { view: RevertStep; onRevert(): void }) {
   const { t } = useLocalization();
@@ -35,19 +54,25 @@ function RevertSheetBody({ view, onRevert }: { view: RevertStep; onRevert(): voi
   </>;
 }
 
-/** Offers to put back the library a restore set aside, while one is kept on this phone. */
-export function CompanionBackupRevertRow() {
-  const { locale, t } = useLocalization();
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [view, setView] = useState<RevertStep>({ step: 'closed' });
+/** The library a restore set aside on this phone: null while none is kept. */
+function usePreviousLibrary() {
+  const [previous, setPrevious] = useState<{ savedAt: string; bytes: number } | null>(null);
   useEffect(() => {
     let active = true;
     void getCompanionBackupRestorePort().previous()
-      .then(previous => { if (active && previous.exists) setSavedAt(previous.savedAt ?? ''); })
+      .then(value => { if (active && value.exists) setPrevious({ savedAt: value.savedAt ?? '', bytes: value.bytes ?? 0 }); })
       .catch(() => undefined);
     return () => { active = false; };
   }, []);
-  if (savedAt === null) return null;
+  return { previous, forget: () => setPrevious(null) };
+}
+
+/** Offers to put back or delete the library a restore set aside, while one is kept on this phone. */
+export function CompanionBackupRevertRow() {
+  const { locale, t } = useLocalization();
+  const { previous, forget } = usePreviousLibrary();
+  const [view, setView] = useState<RevertStep>({ step: 'closed' });
+  if (previous === null) return null;
 
   async function revert() {
     setView({ step: 'reverting' });
@@ -57,21 +82,39 @@ export function CompanionBackupRevertRow() {
       if (!failCompanionLibrarySwitch(message)) setView({ step: 'failed', error: message });
     }
   }
-  const date = savedAt ? formatCompanionTopicDate(savedAt, locale) : '';
+  async function remove() {
+    setView({ step: 'deleting' });
+    try {
+      await getCompanionBackupRestorePort().deletePrevious();
+      setView({ step: 'closed' });
+      forget();
+    } catch (error) { setView({ step: 'failed', error: companionBackupRestoreMessage(error, t) }); }
+  }
+  const date = previous.savedAt ? formatCompanionTopicDate(previous.savedAt, locale) : '';
+  const deleting = view.step === 'deleteConfirm' || view.step === 'deleting';
   return <>
     <SettingsRow controlLayout="inline" title={t('companion.settings.storage.revert')}
       description={t('companion.settings.storage.revertHint', { date })}>
-      <SettingsControlSlot><AppButton data-testid="companion-revert-open" onClick={() => setView({ step: 'confirm' })} size="sm">
-        {t('companion.settings.storage.revertChoose')}
-      </AppButton></SettingsControlSlot>
+      <SettingsControlSlot className="flex gap-2">
+        <AppButton data-testid="companion-revert-delete" onClick={() => setView({ step: 'deleteConfirm' })} size="sm">
+          {t('companion.settings.storage.revertDelete')}
+        </AppButton>
+        <AppButton data-testid="companion-revert-open" onClick={() => setView({ step: 'confirm' })} size="sm">
+          {t('companion.settings.storage.revertChoose')}
+        </AppButton>
+      </SettingsControlSlot>
     </SettingsRow>
-    <AppDialog open={view.step !== 'closed'} onOpenChange={open => { if (!open && view.step === 'confirm') setView({ step: 'closed' }); }}>
+    <AppDialog open={view.step !== 'closed'} onOpenChange={open => {
+      if (!open && (view.step === 'confirm' || view.step === 'deleteConfirm')) setView({ step: 'closed' });
+    }}>
       <AppDialogPortal><SettingsTouchSheetOverlay /><SettingsTouchSheet>
         <div data-settings-sheet-header>
-          <AppDialogTitle>{t('companion.settings.storage.revertTitle')}</AppDialogTitle>
-          {view.step === 'confirm' ? <button type="button" onClick={() => setView({ step: 'closed' })}>{t('common.cancel')}</button> : null}
+          <AppDialogTitle>{t(deleting ? 'companion.settings.storage.revertDeleteTitle' : 'companion.settings.storage.revertTitle')}</AppDialogTitle>
+          {view.step === 'confirm' || view.step === 'deleteConfirm'
+            ? <button type="button" onClick={() => setView({ step: 'closed' })}>{t('common.cancel')}</button> : null}
         </div>
-        <RevertSheetBody view={view} onRevert={() => void revert()} />
+        {deleting ? <DeleteSheetBody view={view} size={megabytes(previous.bytes)} date={date} onDelete={() => void remove()} />
+          : <RevertSheetBody view={view} onRevert={() => void revert()} />}
       </SettingsTouchSheet></AppDialogPortal>
     </AppDialog>
   </>;
