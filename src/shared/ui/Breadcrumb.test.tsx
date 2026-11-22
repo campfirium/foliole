@@ -1,21 +1,24 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../localization/testLocalization';
 
 import { AppBreadcrumb } from './Breadcrumb';
 
-it('keeps breadcrumb labels on one truncated line', () => {
+it('keeps the ancestor levels on one line and selects a level by id', () => {
+  const onSelect = vi.fn();
   renderWithLocalization(
     <AppBreadcrumb
       items={[
-        { id: 'guide', label: 'Guides' },
-        { id: 'welcome', label: 'Welcome to Foliole' },
-        { id: 'reading', label: 'Reading: Break the Whole into Pieces', isCurrent: true }
+        { id: 'guide', label: 'Guides', title: 'Guides' },
+        { id: 'welcome', label: 'Welcome to…', title: 'Welcome to Foliole' }
       ]}
-      onSelect={vi.fn()}
+      onSelect={onSelect}
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Reading: Break the Whole into Pieces' })).toHaveClass('whitespace-nowrap');
+  expect(screen.getByRole('navigation')).toHaveClass('whitespace-nowrap', 'overflow-hidden');
+  expect(screen.queryByRole('button', { name: 'Expand breadcrumb path' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Welcome to…' }));
+  expect(onSelect).toHaveBeenCalledWith('welcome');
 });

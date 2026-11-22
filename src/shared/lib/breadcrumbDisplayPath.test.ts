@@ -47,18 +47,4 @@ describe('buildBreadcrumbDisplayPath', () => {
       { id: 'derivedItem', targetNodeId: 'article', title: 'De...' }
     ]);
   });
-
-  it('appends the current node as a full-title final level when requested', () => {
-    const nodesById = {
-      folder: createNode('folder', 'Inbox', null, 'folder'),
-      article: createNode('article', 'Article title', 'folder', 'topic'),
-      current: createNode('current', '  ', 'article', 'item')
-    };
-
-    expect(buildBreadcrumbDisplayPath('current', nodesById, { includeCurrent: true, untitledLabel: 'Untitled' })).toEqual([
-      { id: 'folder', targetNodeId: 'folder', title: 'Inbox' },
-      { id: 'article', targetNodeId: 'article', title: 'Article title' },
-      { id: 'current', isCurrent: true, targetNodeId: 'current', title: 'Untitled' }
-    ]);
-  });
 });

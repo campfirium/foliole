@@ -31,7 +31,7 @@ import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
-type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
+type ReviewBreadcrumbItem = { id: string; label: string; targetNodeId: string; title: string };
 export type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   directorySelection: CompanionDirectorySelection;
   browseSortDirection?: FolderListSortDirection;

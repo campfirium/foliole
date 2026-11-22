@@ -5,7 +5,7 @@ import { renderWithLocalization } from '../../../shared/localization/testLocaliz
 
 import { NodeBreadcrumbs } from './NodeBreadcrumbs';
 
-it('shows breadcrumb titles without kind labels', () => {
+it('shows only the ancestors, without kind labels', () => {
   renderWithLocalization(
     <NodeBreadcrumbs
       activeNodeId="item-1"
@@ -61,7 +61,7 @@ it('shows breadcrumb titles without kind labels', () => {
 
   expect(screen.getByRole('button', { name: 'Knowledge' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Article' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Card' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.queryByRole('button', { name: 'Card' })).not.toBeInTheDocument();
   expect(screen.queryByText('Folder')).not.toBeInTheDocument();
   expect(screen.queryByText('Topic')).not.toBeInTheDocument();
 });
@@ -121,9 +121,6 @@ it('routes nested topic breadcrumb selections to that topic', () => {
       onSelectNode={onSelectNode}
     />
   );
-
-  fireEvent.click(screen.getByRole('button', { name: 'Card' }));
-  expect(onSelectNode).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole('button', { name: 'Nested topic' }));
 

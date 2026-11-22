@@ -100,30 +100,27 @@ async function renderBreadcrumbShell(surface: Omit<ReturnType<typeof createItemR
 }
 
 describe('CompanionShell review breadcrumb', () => {
-  it('ends the compact ancestor path with the current nested topic as a non-clickable level', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+  it('lists the capped ancestors of the current nested topic without repeating it', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     await renderBreadcrumbShell();
 
     const breadcrumb = screen.getByRole('navigation', { name: 'Review breadcrumb' });
-    expect(within(breadcrumb).getByRole('button', { name: 'Inbo' })).toBeInTheDocument();
-    expect(within(breadcrumb).getByRole('button', { name: 'Topi' })).toBeInTheDocument();
-    const current = within(breadcrumb).getByText('Inner review topic');
-    expect(current).toHaveAttribute('aria-current', 'page');
-    expect(within(breadcrumb).queryByRole('button', { name: 'Inner review topic' })).not.toBeInTheDocument();
+    expect(within(breadcrumb).getAllByRole('button').map(button => button.textContent)).toEqual(['Inbox', 'Topic node…']);
+    expect(within(breadcrumb).queryByText('Inner review topic')).not.toBeInTheDocument();
   });
 
   it('shows the same path above an article opened from normal Browse', async () => {
     const { surface } = await renderBreadcrumbShell({ ...createItemReviewSurface(), activeAction: 'recent', selectedBrowseNodeId: 'topic-2' });
 
     const breadcrumb = screen.getByRole('navigation', { name: 'Review breadcrumb' });
-    expect(within(breadcrumb).getByText('Inner review topic')).toHaveAttribute('aria-current', 'page');
-    fireEvent.click(within(breadcrumb).getByRole('button', { name: 'Inbo' }));
+    expect(within(breadcrumb).queryByText('Inner review topic')).not.toBeInTheDocument();
+    fireEvent.click(within(breadcrumb).getByRole('button', { name: 'Inbox' }));
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
   });
 
   it('routes folder breadcrumbs to the folder browse surface target', async () => {
     const { surface } = await renderBreadcrumbShell();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Inbo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inbox' }));
 
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
   });
@@ -136,7 +133,7 @@ describe('CompanionShell review breadcrumb', () => {
     };
     await renderBreadcrumbShell(surface);
 
-    fireEvent.click(screen.getByRole('button', { name: '...' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inner review…' }));
 
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-2');
   });
@@ -148,7 +145,7 @@ it.each(['review', 'recent'])('keeps navigation hidden while a breadcrumb articl
   const { refresh, container } = await renderBreadcrumbShell(surface);
   expect(container.querySelector('header')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Topi' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Topic node…' }));
   expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
   useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction, isFlowBrowsing: activeAction === 'review',
     selectedBrowseNodeId: 'topic-1', readableArticle: null });
@@ -179,7 +176,7 @@ it('opens the Capture editor from the Flow reading toolbar in a single tap and r
   expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveFocus();
   expect(screen.queryByRole('button', { name: 'Find in document' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-  expect(screen.getByText('Topi')).toBeInTheDocument();
+  expect(screen.getByText('Topic node…')).toBeInTheDocument();
   expect(surface.handleTabAction).not.toHaveBeenCalled();
 });
 

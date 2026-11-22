@@ -18,6 +18,7 @@ export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'desktop.feedback.mergeFailed': '合并失败。',
   'shared.breadcrumb.aria': '面包屑',
   'shared.breadcrumb.expand': '展开面包屑路径',
+  'shared.breadcrumb.location': '所在位置',
   'shared.confirm.cancel': '取消',
   'shared.confirm.confirm': '确认',
   'shared.close': '关闭',

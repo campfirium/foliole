@@ -48,9 +48,9 @@ describe('CompanionReviewCard', () => {
     renderWithLocalization(
       <CompanionReviewCard
         breadcrumbItems={[
-          { id: 'folder-1', label: 'Projects', targetNodeId: 'folder-1' },
-          { id: 'folder-2', label: 'Reading', targetNodeId: 'folder-2' },
-          { id: 'topic-1', isCurrent: true, label: 'Article title', targetNodeId: 'topic-1' }
+          { id: 'folder-1', label: 'Projects', targetNodeId: 'folder-1', title: 'Projects' },
+          { id: 'folder-2', label: 'Reading', targetNodeId: 'folder-2', title: 'Reading' },
+          { id: 'topic-1', label: 'Article title', targetNodeId: 'topic-1', title: 'Article title' }
         ]}
         card={createCard()}
       />

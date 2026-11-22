@@ -16,6 +16,7 @@
   "desktop.feedback.mergeFailed": "병합하지 못했습니다.",
   "shared.breadcrumb.aria": "탐색경로",
   "shared.breadcrumb.expand": "탐색경로 경로 확장",
+  "shared.breadcrumb.location": "위치",
   "shared.confirm.cancel": "취소",
   "shared.confirm.confirm": "확인",
   "shared.close": "닫기",

@@ -49,11 +49,11 @@ it('opens both item ancestors within Flow, browses other content, and resumes th
   const before = reviewFacts();
   renderWithLocalization(<ReviewBreadcrumb items={buildReviewBreadcrumbItems(snapshot, 'item')}
     onSelectItem={nodeId => ui.result.current.surface.handleSelectBrowseNode(nodeId)} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Fold' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Folder' }));
   expect(ui.result.current.surface.activeAction).toBe('review');
   expect(ui.result.current.surface.browsedFolder?.nodeId).toBe('folder');
   expect(ui.result.current.surface.isFlowBrowsing).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: '...' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Article' }));
   await waitFor(() => expect(ui.result.current.surface.selectedBrowseNodeId).toBe('article'));
   act(() => ui.result.current.surface.handleSelectBrowseNode('other'));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('other'));

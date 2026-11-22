@@ -16,6 +16,7 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'desktop.feedback.mergeFailed': 'Merge failed.',
   'shared.breadcrumb.aria': 'Breadcrumb',
   'shared.breadcrumb.expand': 'Expand breadcrumb path',
+  'shared.breadcrumb.location': 'Location',
   'shared.confirm.cancel': 'Cancel',
   'shared.confirm.confirm': 'Confirm',
   'shared.close': 'Close',

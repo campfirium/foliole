@@ -34,7 +34,7 @@ function ReviewAnswerUnavailable() {
 }
 
 function resolveReviewSourceLabel(items: CompanionReviewBreadcrumbItem[]) {
-  return items.find((item) => item.isCurrent)?.label ?? items.at(-1)?.label ?? null;
+  return items.at(-1)?.label ?? null;
 }
 
 function ReviewSourceEyebrow(props: { items: CompanionReviewBreadcrumbItem[] }) {
