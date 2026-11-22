@@ -135,7 +135,7 @@ function buildCompanionShellModel(args: {
 
 function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) {
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
-  const browseSort = useCompanionBrowseSortState();
+  const browseSort = useCompanionBrowseSortState(workspaceSync.state.workspace_snapshot);
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useCompanionNavigationField('isBrowseDirectoryOpen', false);
   const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort);
   const companionTabs = useCompanionTabsConfig();
@@ -164,6 +164,7 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     setSettingsPage,
     settingsPage,
     surface,
+    toggleHomeQuickSort: browseSort.toggleHomeQuickSort,
     workspaceSync
   });
   useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen });

@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { hydrateCompanionFolderListSortMemory } from '../shared/platform/companion/settings/companionFolderListSortMemoryStore';
 import { getCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -45,6 +46,7 @@ async function refreshConflictAwareState(args: {
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
+  await hydrateCompanionFolderListSortMemory().catch(() => null);
   return nextState;
 }
 

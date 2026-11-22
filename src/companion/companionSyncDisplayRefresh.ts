@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { hydrateCompanionFolderListSortMemory } from '../shared/platform/companion/settings/companionFolderListSortMemoryStore';
 
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { loadCompanionStateAfterStructureSyncReport } from './companionStructureSyncSnapshot';
@@ -24,5 +25,6 @@ export async function refreshCompanionSyncDisplay(args: {
   args.setState(current => active()
     ? { ...current, workspace_snapshot: report.state?.workspace_snapshot ?? null } : current);
   if (!active()) return;
-  await Promise.allSettled([hydrateCompanionReviewSchedulerSettings(), hydrateCompanionSystemEntryDisplayNames()]);
+  await Promise.allSettled([hydrateCompanionReviewSchedulerSettings(), hydrateCompanionSystemEntryDisplayNames(),
+    hydrateCompanionFolderListSortMemory()]);
 }

@@ -1,12 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore,
   type Dispatch, type ReactNode, type SetStateAction } from 'react';
 
+import { HOME_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionNavigationResume, saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
+import {
+  hydrateCompanionFolderListSortMemory,
+  readCompanionFolderListSort,
+  rememberCompanionFolderListSort
+} from '../shared/platform/companion/settings/companionFolderListSortMemoryStore';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-import { restoreCompanionNavigation, type CompanionNavigationState } from './companionNavigationState';
+import { readLegacyCompanionBrowseSort, restoreCompanionNavigation, type CompanionNavigationState } from './companionNavigationState';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 
 type Navigation = { flush(): Promise<void>; saveForReload(update: Partial<CompanionNavigationState>): Promise<void>;
@@ -45,6 +51,14 @@ export function CompanionNavigationProvider(props: {
   return <NavigationOwner key={props.libraryScope} {...props} scope={scope} />;
 }
 
+/** Moves the single Browse sort older navigation kept into the home list's record, unless home already has one. */
+async function migrateLegacyBrowseSort(value: string | null) {
+  let legacy: ReturnType<typeof readLegacyCompanionBrowseSort>;
+  try { legacy = readLegacyCompanionBrowseSort(value); } catch { return; }
+  if (!legacy || readCompanionFolderListSort(HOME_NODE_ID)) return;
+  await rememberCompanionFolderListSort(HOME_NODE_ID, legacy, { direction: 'desc', key: 'dateSaved' });
+}
+
 function NavigationOwner(props: {
   children: ReactNode; ready: boolean; snapshot: WorkspaceSnapshot | null; libraryScope: string; scope: object;
 }) {
@@ -56,9 +70,11 @@ function NavigationOwner(props: {
   useEffect(() => {
     if (!props.ready) return;
     let cancelled = false;
-    void loadCompanionNavigationResume(props.libraryScope).then(value => {
-      if (!cancelled) setLoaded({ scope: props.scope, state: restoreCompanionNavigation(value, props.snapshot) });
-    }).catch(reason => { if (!cancelled) setError(reason); });
+    void Promise.all([loadCompanionNavigationResume(props.libraryScope), hydrateCompanionFolderListSortMemory()])
+      .then(async ([value]) => {
+        await migrateLegacyBrowseSort(value);
+        if (!cancelled) setLoaded({ scope: props.scope, state: restoreCompanionNavigation(value, props.snapshot) });
+      }).catch(reason => { if (!cancelled) setError(reason); });
     return () => { cancelled = true; };
     // Snapshot refreshes do not replace user-owned navigation.
   }, [props.ready, props.libraryScope, props.scope, hasWorkspace]);

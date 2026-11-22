@@ -47,16 +47,15 @@ function useCompanionSecondaryDestinations(args: {
 
 function handlePrimaryNavigationAction(args: {
   action: CompanionTabAction;
-  browseSortKey: ReturnType<typeof useCompanionBrowseSortState>['browseSortKey'];
   isBrowseDirectoryOpen: boolean;
-  setBrowseSortKey: ReturnType<typeof useCompanionBrowseSortState>['setBrowseSortKey'];
   setIsBrowseDirectoryOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
+  toggleHomeQuickSort(): void;
 }) {
   if (args.action === 'recent' && args.surface.activeAction === 'recent'
     && !args.isBrowseDirectoryOpen && !args.surface.selectedBrowseNodeId && !args.surface.isFlowBrowsing) {
-    args.setBrowseSortKey(args.browseSortKey === 'dateLastOpened' ? 'dateSaved' : 'dateLastOpened');
+    args.toggleHomeQuickSort();
   }
   args.surface.handleTabAction(args.action);
   if (args.action === 'recent') args.setIsBrowseDirectoryOpen(false);
@@ -76,6 +75,7 @@ export function useCompanionShellActions(args: {
   setSettingsPage(page: CompanionSettingsPage): void;
   settingsPage: CompanionSettingsPage;
   surface: ReturnType<typeof useCompanionArticleSurface>;
+  toggleHomeQuickSort: ReturnType<typeof useCompanionBrowseSortState>['toggleHomeQuickSort'];
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
 }) {
   const topBarProps = useCompanionTopBarProps({
@@ -105,12 +105,11 @@ export function useCompanionShellActions(args: {
   return {
     handleNavigationAction: (action: CompanionTabAction) => handlePrimaryNavigationAction({
       action,
-      browseSortKey: args.browseSortKey,
       isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-      setBrowseSortKey: args.setBrowseSortKey,
       setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
       setSettingsPage: args.setSettingsPage,
-      surface: args.surface
+      surface: args.surface,
+      toggleHomeQuickSort: args.toggleHomeQuickSort
     }),
     secondaryDestinations,
     topBarProps

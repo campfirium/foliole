@@ -66,7 +66,7 @@ export function renderResumeSurface(snapshot: WorkspaceSnapshot, ready = true) {
   return renderHook(() => {
     const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
     const loader = useCompanionReadableArticleLoader(snapshot, setReadableArticle);
-    const sort = useCompanionBrowseSortState();
+    const sort = useCompanionBrowseSortState(snapshot);
     const workspaceSync = { ...createWorkspaceSync(snapshot), ...loader, readableArticle };
     const surface = useCompanionArticleSurface(workspaceSync, createFloatingBar(), {
       sortKey: sort.browseSortKey, sortDirection: sort.browseSortDirection

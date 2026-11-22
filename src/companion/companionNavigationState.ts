@@ -15,8 +15,6 @@ const directorySelection = z.discriminatedUnion('kind', [
 ]);
 
 const navigationSchema = z.object({
-  browseSortKey: z.enum(['dateDeleted', 'dateImported', 'dateLastOpened', 'dateSaved', 'manual', 'name']).default('dateSaved'),
-  browseSortDirection: z.enum(['asc', 'desc']).default('desc'),
   activeAction: z.enum(['review', 'recent', 'search', 'more']),
   selectedBrowseNodeId: z.string().nullable(),
   browseReturnNodeId: z.string().nullable(),
@@ -38,12 +36,28 @@ export type CompanionNavigationState = z.infer<typeof navigationSchema>;
 
 export function initialCompanionNavigation(hasWorkspace: boolean): CompanionNavigationState {
   return {
-    browseSortKey: 'dateSaved', browseSortDirection: 'desc',
     activeAction: hasWorkspace ? 'review' : 'more', selectedBrowseNodeId: null, browseReturnNodeId: null,
     isBrowseDirectoryOpen: false, flowSessionMode: 'recommended', directorySelection: { kind: 'root' },
     settingsPage: 'list', searchTopicNodeId: null, searchQuery: '',
     searchExternalDocumentId: null, searchPdf: null, externalScrollTopById: {}, originalPdfNodeId: null, pdfPositionById: {}
   };
+}
+
+const legacyBrowseSort = z.object({
+  browseSortKey: z.enum(['dateDeleted', 'dateImported', 'dateLastOpened', 'dateSaved', 'manual', 'name']),
+  browseSortDirection: z.enum(['asc', 'desc'])
+});
+
+/**
+ * Navigation saved before sorts were kept per list held one Browse sort. It becomes the home list's choice once;
+ * absent, invalid or default values leave home on its default.
+ */
+export function readLegacyCompanionBrowseSort(value: string | null) {
+  if (!value) return null;
+  const result = legacyBrowseSort.safeParse(JSON.parse(value));
+  if (!result.success) return null;
+  const { browseSortKey: key, browseSortDirection: direction } = result.data;
+  return key === 'dateSaved' && direction === 'desc' ? null : { direction, key };
 }
 
 export function restoreCompanionNavigation(value: string | null, snapshot: WorkspaceSnapshot | null) {
