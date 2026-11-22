@@ -39,12 +39,12 @@ it('collapses far levels that do not fit into a leading … that lists the full 
   expect(select).toHaveBeenCalledWith('folder-1');
 });
 
-it('caps CJK levels at six glyphs and cuts before an early colon', () => {
+it('caps CJK levels by display width and cuts before an early colon', () => {
   const snapshot = createBreadcrumbSnapshot();
   const folder = snapshot.nodesById['folder-1'];
   const topic = snapshot.nodesById['topic-1'];
   if (!folder || !topic) throw new Error('Missing breadcrumb fixture');
   folder.title = '掌控习惯：一个简单可行的自我提升方法';
   topic.title = '第1章 微习惯的惊人力量';
-  expect(buildReviewBreadcrumbItems(snapshot, 'item-1').map(item => item.label)).toEqual(['掌控习惯…', '第1章 微习…', 'Inner review…']);
+  expect(buildReviewBreadcrumbItems(snapshot, 'item-1').map(item => item.label)).toEqual(['掌控习惯…', '第1章 微习惯…', 'Inner review…']);
 });
