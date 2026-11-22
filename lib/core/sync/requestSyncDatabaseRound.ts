@@ -19,12 +19,14 @@ export interface RequestSyncDatabaseRoundPort {
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown, stage?: RequestSyncObjectFailureStage): void;
   /** Starts watching for local changes; when one arrives, the pass stops pulling so it can go out first. */
   watchLocalChanges?(): () => boolean;
+  /** Optional duration target for transfers that use the batch-boundary priority check. */
+  pullTargetMs?: number;
 }
 
 export const REQUEST_SYNC_MAX_PASSES = 4;
-/** First pull batch while local changes may be waiting; later batches are sized from measured apply time. */
+/** First pull batch while local changes may be waiting; later batches use measured transfer time. */
 export const REQUEST_SYNC_YIELDING_PULL_OBJECTS = 8;
-/** Applying one pull batch is the longest wait a new edit can see before it goes out. */
+/** Keep ordinary pulls short enough to yield promptly to new local edits. */
 export const REQUEST_SYNC_YIELDING_PULL_TARGET_MS = 1500;
 
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
@@ -108,7 +110,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   localChanged = port.watchLocalChanges?.(), rejected = new Set<string>()) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
   const attempted: FramedSyncInventoryDifference[] = [];
-  const sizer = pullBatchSizer(Boolean(localChanged));
+  const sizer = pullBatchSizer(Boolean(localChanged), port.pullTargetMs);
   let yielded = false;
   const eligible = differences.filter(difference => !rejected.has(key(difference)));
   for (const batch of directionBatches(eligible, sizer.next)) {
@@ -194,14 +196,14 @@ function* directionBatches(differences: readonly FramedSyncInventoryDifference[]
 }
 
 /** Where a local change may be waiting, keep each pull batch near the target time on this device. */
-function pullBatchSizer(yielding: boolean) {
+function pullBatchSizer(yielding: boolean, targetMs = REQUEST_SYNC_YIELDING_PULL_TARGET_MS) {
   let size = yielding ? REQUEST_SYNC_YIELDING_PULL_OBJECTS : REQUEST_SYNC_BATCH_OBJECTS;
   return {
     next: () => size,
     measured(objects: number, elapsedMs: number) {
       if (!yielding) return;
       const perObject = Math.max(elapsedMs, 1) / objects;
-      size = Math.min(REQUEST_SYNC_BATCH_OBJECTS, Math.max(1, Math.floor(REQUEST_SYNC_YIELDING_PULL_TARGET_MS / perObject)));
+      size = Math.min(REQUEST_SYNC_BATCH_OBJECTS, Math.max(1, Math.floor(targetMs / perObject)));
     }
   };
 }

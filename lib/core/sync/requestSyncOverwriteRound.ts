@@ -12,6 +12,8 @@ import { assertSyncGroupOverwriteInbound, finishSyncGroupOverwriteProgress,
   type SyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from './syncGroupRestoreEvents.js';
 
+const FIRST_ADOPTION_PULL_TARGET_MS = 3000;
+
 /** A prepared business recovery accepts only its fixed source and never sends local differences. */
 export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost,
   progress: SyncGroupOverwriteProgress, port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
@@ -26,7 +28,8 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
   const differences = compareFramedSyncDatabaseInventories(inventories)
     .filter(difference => difference.direction === 'remote_to_local');
   // Recovery dependencies are also restricted to the chosen source.
-  const round = await deliverRequestSyncDatabaseDifferences(port,
+  const delivery = isAdoption ? { ...port, pullTargetMs: FIRST_ADOPTION_PULL_TARGET_MS } : port;
+  const round = await deliverRequestSyncDatabaseDifferences(delivery,
     { local: [], remote: inventories.remote }, isAdoption ? orderAdoptionPulls(differences) : differences, signal);
   const confirmed = await port.exchangeInventory();
   const transferred = round.delivered.length;
