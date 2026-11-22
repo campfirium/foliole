@@ -83,6 +83,7 @@ describe('restore candidate rejection', () => {
 
   it('rejects a database that is not a Foliole library', async () => {
     const sqlite = new Database(path.join(directory(), 'Foliole.sqlite'));
+    databases.push(sqlite);
     const port = createBetterSqliteDbPort(sqlite);
     sqlite.exec('CREATE TABLE unrelated (id INTEGER)');
     await expect(prepare(port)).rejects.toBeInstanceOf(CompanionDatabaseBlockedError);
