@@ -70,6 +70,7 @@ function queryResult(
   meta: Map<string, string>,
   values: unknown[]
 ) {
+  if (sql === 'SELECT total_changes() AS changes') return { values: [{ changes: 0 }] };
   if (sql.includes('SELECT source_epoch FROM sync_state_sequence')) return { values: [{ source_epoch: 'test-epoch' }] };
   if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
   if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'wal' }] };

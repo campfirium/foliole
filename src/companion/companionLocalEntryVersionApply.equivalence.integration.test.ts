@@ -47,8 +47,7 @@ import { settleCompanionNodeVersionCollections } from '../shared/platform/compan
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-
-import { changedCompanionRows, dumpCompanionTables } from './companionLocalNodeVersionApply.equivalence.testSupport';
+import { changedCompanionRows, dumpCompanionTables } from '../test/companionLocalNodeVersionApplyEquivalence.testSupport';
 
 const hash = 'a'.repeat(64);
 const key = `${hash}.png`;

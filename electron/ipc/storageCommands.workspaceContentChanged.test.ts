@@ -137,7 +137,10 @@ it('notifies workspace content changes after current source reimport', async () 
 
   expect(reimportCurrentTopicSource).toHaveBeenCalledWith('node-1');
   expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
-  expect(notifyWorkspaceContentChanged).toHaveBeenCalledWith(null, { refreshingWindow: origin });
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledWith(null, {
+    refreshingWindow: origin,
+    workspaceScope: { kind: 'nodes', nodeIds: ['node-1'], structure: true }
+  });
 });
 
 it.each(['failed', 'unavailable'])('does not announce successful reimport on %s', async status => {

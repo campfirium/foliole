@@ -16,6 +16,7 @@ function harness(journalMode = 'delete', platform: 'android' | 'ios' = 'ios') {
     isDBOpen: vi.fn(async () => ({ result: true })),
     open: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string, values: unknown[] = []) => {
+      if (sql === 'SELECT total_changes() AS changes') return { values: [{ changes: 0 }] };
       if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
       if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: journalMode }] };
       if (sql === 'PRAGMA journal_mode = WAL') return { values: [{ journal_mode: 'wal' }] };

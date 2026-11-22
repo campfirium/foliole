@@ -39,8 +39,8 @@ import { settleCompanionNodeVersionCollections } from '../shared/platform/compan
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import { changedCompanionRows, dumpCompanionTables } from '../test/companionLocalNodeVersionApplyEquivalence.testSupport';
 
-import { changedCompanionRows, dumpCompanionTables } from './companionLocalNodeVersionApply.equivalence.testSupport';
 import { deleteCompanionExistingHighlight, persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;

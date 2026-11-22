@@ -40,6 +40,12 @@ export async function installCompanionSchema(db: DbPort) {
       await addColumnIfMissing(db, rule);
     }
   }
+  // Libraries from before version 19 lack these columns; the import fingerprint index needs them.
+  if (await companionTableExists(db, 'nodes')) {
+    for (const rule of [REPAIRS.nodesImportSourceFingerprint, REPAIRS.nodesImportContentFingerprint]) {
+      await addColumnIfMissing(db, rule);
+    }
+  }
   const legacyMembers = await companionColumnExists(db, 'sync_group_members', 'device_id');
   const legacyLocalState = await companionTableExists(db, 'sync_group_local_state') &&
     !await companionColumnExists(db, 'sync_group_local_state', 'local_device_identity_key');

@@ -18,7 +18,8 @@ it.each(['desktop', 'companion'] as const)('upgrades a %s day list in place and 
   session = await act(peer, session, ['x', 'y'].includes(session.currentNodeId!) ? 'grade' : 'read');
   const rows = await readCycleRows(peer.port);
   const stored = await readDailyFlow(peer.port);
-  const [from, to] = host === 'desktop' ? [DATABASE_SCHEMA_VERSION - 1, DATABASE_SCHEMA_VERSION] : [122, 123];
+  // The readiness table arrived in desktop 196 and companion 123; later migrations must not hide it.
+  const [from, to] = host === 'desktop' ? [195, DATABASE_SCHEMA_VERSION] : [122, 123];
   peer.db.exec(`DROP TRIGGER daily_flow_entry_readiness_retire; DROP TABLE daily_flow_entry_readiness;
     PRAGMA user_version=${from}`);
   if (host === 'desktop') initializeDatabaseSchema(peer.db);

@@ -13,8 +13,7 @@ import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/c
 import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companionSyncStateWriters';
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
-
-import { changedCompanionRows, dumpCompanionTables } from './companionLocalNodeVersionApply.equivalence.testSupport';
+import { changedCompanionRows, dumpCompanionTables } from '../test/companionLocalNodeVersionApplyEquivalence.testSupport';
 
 // T835: a local edit stored through the local write path leaves the database exactly as the remote apply chain did.
 const path = vi.hoisted(() => ({ legacy: false, uuid: 0, remoteApplies: 0 }));

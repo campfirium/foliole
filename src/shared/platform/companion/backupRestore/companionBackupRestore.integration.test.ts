@@ -48,7 +48,10 @@ describe('staging a backup for restore on the spare phone', () => {
   it('discards the staged copy when the backup cannot become a library', async () => {
     const device = await spareDevice();
     device.port.stage.mockImplementationOnce(async () => {
-      writeV082Backup(device.stagingFile).pragma(`user_version = ${COMPANION_DATABASE_VERSION + 1}`);
+      const staged = writeV082Backup(device.stagingFile);
+      staged.pragma(`user_version = ${COMPANION_DATABASE_VERSION + 1}`);
+      // Windows cannot remove a file this process still holds open.
+      staged.close();
       return { cancelled: false, database: STAGING, sourceLabel: 'Backup', storageKeys: [], skippedFiles: 0, damagedFiles: 0 };
     });
     await expect(stageCompanionBackupRestore(device, 'folder')).rejects.toMatchObject({ reason: 'newer-version' });

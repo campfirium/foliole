@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
 
-const { appendDiagnosticLog } = vi.hoisted(() => ({ appendDiagnosticLog: vi.fn((_record: unknown) => Promise.resolve()) }));
+const { appendDiagnosticLog } = vi.hoisted(() => ({ appendDiagnosticLog: vi.fn<(record: unknown) => Promise<void>>(() => Promise.resolve()) }));
 vi.mock('./diagnosticLog.js', () => ({ appendDiagnosticLog }));
 
 import {

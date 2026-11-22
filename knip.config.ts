@@ -35,6 +35,7 @@ const config = {
     'python3',
     'rg',
     'ruby',
+    'shasum',
     'sqlite3',
     'swiftc',
     'taskkill',

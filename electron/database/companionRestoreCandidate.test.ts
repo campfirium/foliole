@@ -16,7 +16,12 @@ const IMAGE_A = V082_IMAGE_A;
 const IMAGE_B = V082_IMAGE_B;
 const NOW = '2026-11-21T00:00:00Z';
 const roots: string[] = [];
-afterEach(() => { for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true }); });
+const databases: { close(): unknown; open: boolean }[] = [];
+afterEach(() => {
+  // Windows cannot remove a database file this process still holds open.
+  for (const database of databases.splice(0)) if (database.open) database.close();
+  for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
+});
 
 function directory() {
   const base = path.resolve('.tmp/artifacts');
@@ -28,6 +33,7 @@ function directory() {
 
 function v082Backup() {
   const sqlite = writeV082Backup(path.join(directory(), 'Foliole.sqlite'));
+  databases.push(sqlite);
   return { port: createBetterSqliteDbPort(sqlite), sqlite };
 }
 
@@ -77,6 +83,7 @@ describe('restore candidate rejection', () => {
 
   it('rejects a database that is not a Foliole library', async () => {
     const sqlite = new Database(path.join(directory(), 'Foliole.sqlite'));
+    databases.push(sqlite);
     const port = createBetterSqliteDbPort(sqlite);
     sqlite.exec('CREATE TABLE unrelated (id INTEGER)');
     await expect(prepare(port)).rejects.toBeInstanceOf(CompanionDatabaseBlockedError);
