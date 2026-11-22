@@ -14,6 +14,7 @@ import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyn
 import { resolveWorkspaceMetadataHistory, workspaceNodeMetadata, type WorkspaceRelatedReading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { createCompanionUuid } from '../../companionUuid';
+import { traceCompanionSyncEvent } from '../sync/diagnostics/companionDesktopSyncTrace';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
@@ -109,11 +110,16 @@ function runPendingCollections() {
   pendingCollectionIds.clear();
   if (!ids.length || !owner) return runningCollection ?? Promise.resolve();
   const previous = runningCollection ?? Promise.resolve();
+  const queuedAt = performance.now();
   const collection = previous.then(() => runCompanionSyncWriterTask(async () => {
     if (owner !== getIosCompanionDatabaseOwner()) return;
+    const startedAt = performance.now();
     await owner.runWriter(async db => {
       for (const id of ids) await collectNodeVersionPayloads(db, id, Number.MAX_SAFE_INTEGER);
     }, { kind: 'business' });
+    // When the release ran and for how long it held the database, to tell whether it sat in a foreground action.
+    traceCompanionSyncEvent('version_collection', 'completed', { nodes: ids.length,
+      queuedMs: Math.round(startedAt - queuedAt), writeMs: Math.round(performance.now() - startedAt) });
   })).then(() => undefined, (error: unknown) => {
     console.warn('[node-version-retention] local collection failed', error);
   });

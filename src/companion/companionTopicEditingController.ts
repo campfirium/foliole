@@ -1,9 +1,11 @@
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
+import { companionWorkspaceReadTotals } from '../shared/platform/companion/companionWorkspaceSnapshotRefresh';
 import type { CompanionContentEdit, CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import { readCompanionContentSource, releaseCompanionContentBase, retainCompanionContentBase, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
 import { companionTextHistorySource } from '../shared/platform/companion/editing/companionEditHistoryRepository';
 import { ContentSavedRefreshError } from '../shared/platform/companion/editing/contentSavedRefreshError';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { traceCompanionSyncEvent } from '../shared/platform/companion/sync/diagnostics/companionDesktopSyncTrace';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -31,10 +33,19 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
       const input = edit ?? { nodeId, content, baseVersionId: (await readSource(nodeId)).versionId,
         versionId: createOpaqueVersionRef(createCompanionUuid()), updatedAt: new Date().toISOString() };
       requireCurrentScope();
+      const startedAt = performance.now();
       const acknowledgement = await saveCompanionContentEdit(input);
+      const savedAt = performance.now();
+      const reads = companionWorkspaceReadTotals();
       const refresh = () => { requireCurrentScope(); return workspaceSync.refreshAfterMutation(undefined, nodeId); };
       try { await refresh(); }
       catch { throw new ContentSavedRefreshError(acknowledgement, refresh); }
+      // Splits a body save into its write and the refresh after it, and how long that refresh waited behind other
+      // database work, so a slow save shows which part held it up.
+      const after = companionWorkspaceReadTotals();
+      traceCompanionSyncEvent('content_save', 'completed', { saveMs: Math.round(savedAt - startedAt),
+        refreshMs: Math.round(performance.now() - savedAt), refreshReads: after.reads - reads.reads,
+        refreshQueueMs: Math.round(after.queueMs - reads.queueMs), refreshReadMs: Math.round(after.readMs - reads.readMs) });
       return acknowledgement;
     }
     const result = await persistCompanionTopicContent({
