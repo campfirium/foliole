@@ -30,7 +30,10 @@ it('notifies the originating window after adopting a body committed outside the 
   await handleStorageCommand('promote_node_text_alternative', {
     node_id: 'topic', alternative_id: 'alt'
   }, origin);
-  expect(mutations.notify).toHaveBeenCalledExactlyOnceWith();
+  // No refreshing window is excluded, so the originating window refreshes the adopted topic too.
+  expect(mutations.notify).toHaveBeenCalledExactlyOnceWith(null, {
+    workspaceScope: { kind: 'nodes', nodeIds: ['topic'], structure: true }
+  });
 });
 
 it.each([['promote', 'promoted'], ['dismiss', 'dismissed']] as const)('routes %s with its owner and only notifies committed changes', async (action, status) => {
