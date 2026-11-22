@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 import { checked } from './macos-a5-process.mjs';
+import { macosA5CapsulesRoot } from './macos-a5-build-capsule.mjs';
 import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
 
 // A sealed template is a frozen capsule right after its Android build. Runs never use it
@@ -13,7 +14,9 @@ import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
 const TEMPLATE_FILE = 'template.json';
 const OWNER_FILE = 'owner.json';
 const SCHEMA_VERSION = 1;
-export const MACOS_A5_BUILD_TEMPLATE_KEEP = 6;
+export const MACOS_A5_BUILD_TEMPLATE_KEEP = 3;
+// Sealing is skipped below about two templates (~2.5 GB each) of free space on the volume.
+export const MACOS_A5_BUILD_TEMPLATE_MIN_FREE_BYTES = 5 * 1024 ** 3;
 export const MACOS_A5_BUILD_TEMPLATE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const STALE_TEMPORARY_MS = 24 * 60 * 60 * 1000;
 const BUILD_ENV_PREFIXES = ['FOLIOLE_', 'VITE_', 'ANDROID_', 'JAVA_', 'GRADLE_', 'NODE_', 'npm_config_'];
@@ -34,7 +37,7 @@ function fileDigest(filePath, fsApi) {
 
 export function macosA5BuildTemplateEligible(context) {
   return context.formalSourceClass === 'frozen-build' && Boolean(context.acceptedRevision)
-    && !UNCACHED_ACTIONS.has(context.action);
+    && !UNCACHED_ACTIONS.has(context.action) && Boolean(context.buildStorage?.templatesRoot);
 }
 
 export function macosA5BuildEnvDigest(env) {
@@ -92,7 +95,14 @@ export function macosA5BuildTemplateKey(context, {
 }
 
 export function macosA5BuildTemplatesRoot(context) {
-  return path.join(context.controllerStateRoot, 'build-templates');
+  const root = context.buildStorage?.templatesRoot;
+  if (!root) throw new Error('Build templates need the shared build volume.');
+  return root;
+}
+
+function freeBytes(directory, fsApi) {
+  const stats = fsApi.statfsSync(directory);
+  return Number(stats.bavail) * Number(stats.bsize);
 }
 
 function readSeal(templateRoot, fsApi) {
@@ -133,7 +143,7 @@ export function openReusedMacosA5BuildCapsule(context, key, {
     removeTemplate(templateRoot, fsApi);
     return null;
   }
-  const capsulesRoot = path.join(context.controllerStateRoot, 'capsules');
+  const capsulesRoot = macosA5CapsulesRoot(context);
   fsApi.mkdirSync(capsulesRoot, { recursive: true });
   const capsuleRoot = fsApi.mkdtempSync(path.join(capsulesRoot, `${context.runId}-`));
   fsApi.writeFileSync(path.join(capsuleRoot, OWNER_FILE), `${JSON.stringify({
@@ -198,13 +208,22 @@ export function pruneMacosA5BuildTemplates(templatesRoot, {
 // Seals the capsule right after a successful Android build. Failure never fails the run.
 export function sealMacosA5BuildTemplate(capsule, key, {
   fsApi = fs, log = (line) => process.stderr.write(`${line}\n`),
+  minFreeBytes = MACOS_A5_BUILD_TEMPLATE_MIN_FREE_BYTES,
   now = () => new Date().toISOString(), run = checked
 } = {}) {
-  const templatesRoot = macosA5BuildTemplatesRoot(capsule);
+  let templatesRoot;
+  try { templatesRoot = macosA5BuildTemplatesRoot(capsule); }
+  catch (error) { log(`[macos-a5-build-template] seal skipped: ${error.message}`); return false; }
   const target = path.join(templatesRoot, key.digest);
   const temporary = path.join(templatesRoot, `.tmp-${capsule.runId}`);
   try {
     if (readSeal(target, fsApi)) return false;
+    fsApi.mkdirSync(templatesRoot, { recursive: true });
+    const available = freeBytes(templatesRoot, fsApi);
+    if (available < minFreeBytes) {
+      log(`[macos-a5-build-template] seal skipped: only ${(available / 1024 ** 3).toFixed(1)} GiB free`);
+      return false;
+    }
     const artifacts = artifactPaths(capsule.buildRoot);
     const seal = {
       androidTestApkDigest: fileDigest(artifacts.androidTestApk, fsApi),

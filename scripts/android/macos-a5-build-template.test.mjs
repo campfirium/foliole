@@ -48,11 +48,13 @@ function repository() {
 }
 
 function contextFor(root, runId, overrides = {}) {
-  return createMacosA5ExecutionContext({
+  const shared = path.join(root, 'shared-volume/a5-build');
+  return Object.freeze({ ...createMacosA5ExecutionContext({
     acceptedRevision: git(root, ['rev-parse', 'HEAD']),
     acceptedTree: git(root, ['rev-parse', 'HEAD^{tree}']),
     action: 'deploy', formalSourceClass: 'frozen-build', repoRoot: root, runId, ...overrides
-  });
+  }), buildStorage: { capsulesRoot: path.join(shared, 'capsules'), shared: true,
+    templatesRoot: path.join(shared, 'build-templates') } });
 }
 
 function keyFor(context, { env = { FOLIOLE_ANDROID_COMPANION_SYNC_PORT: '38644' },
@@ -72,7 +74,7 @@ function archiveDigestOf(context) {
 
 // A capsule as it stands right after a successful Android build.
 function builtCapsule(context) {
-  const capsuleRoot = path.join(context.controllerStateRoot, 'capsules', `${context.runId}-built`);
+  const capsuleRoot = path.join(context.buildStorage.capsulesRoot, `${context.runId}-built`);
   const buildRoot = path.join(capsuleRoot, 'source');
   for (const [relative, body] of [[APK, 'apk-bytes'], [TEST_APK, 'test-apk-bytes'],
     ['node_modules/.bin/cap', 'cap']]) {
@@ -130,6 +132,9 @@ it('only caches the standard frozen debug build', () => {
   }
   expect(macosA5BuildTemplateEligible(contextFor(root, RUN_A, {
     acceptedRevision: null, formalSourceClass: null }))).toBe(false);
+  const internalOnly = Object.freeze({ ...contextFor(root, RUN_A),
+    buildStorage: { capsulesRoot: '/internal/capsules', shared: false, templatesRoot: null } });
+  expect(macosA5BuildTemplateEligible(internalOnly)).toBe(false);
 });
 
 it('clones a sealed template into a private capsule owned by the next run', () => {
@@ -166,7 +171,7 @@ it('discards a template whose artifacts no longer match the seal and removes the
   fs.writeFileSync(path.join(templateRoot, 'source', APK), 'tampered');
   expect(openReusedMacosA5BuildCapsule(next, key, { log: quiet, run })).toBeNull();
   expect(fs.existsSync(templateRoot)).toBe(false);
-  const capsules = fs.readdirSync(path.join(next.controllerStateRoot, 'capsules'));
+  const capsules = fs.readdirSync(next.buildStorage.capsulesRoot);
   expect(capsules.filter((name) => name.startsWith(RUN_B))).toEqual([]);
 });
 
@@ -191,7 +196,7 @@ it('keeps the first sealed template when a concurrent run seals the same key', (
   expect(names).toEqual([key.digest]);
 });
 
-it('evicts the least recently used templates beyond the limit, old ones and leftovers', () => {
+it('keeps three recently used templates and evicts the rest, old ones and leftovers', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'macos-a5-template-prune-'));
   roots.push(root);
   const now = Date.now();
@@ -213,7 +218,28 @@ it('evicts the least recently used templates beyond the limit, old ones and left
   make('.tmp-crashed', 2 * day, false);
   make('.tmp-active', 60_000, false);
   const removed = pruneMacosA5BuildTemplates(root, { now: () => now });
-  expect(removed.sort()).toEqual(['.tmp-crashed', 'old', 't6', 'unsealed']);
-  expect(fs.readdirSync(root).sort())
-    .toEqual(['.tmp-active', 't0', 't1', 't2', 't3', 't4', 't5']);
+  expect(removed.sort()).toEqual(['.tmp-crashed', 'old', 't3', 't4', 't5', 't6', 'unsealed']);
+  expect(fs.readdirSync(root).sort()).toEqual(['.tmp-active', 't0', 't1', 't2']);
+});
+
+it('skips sealing without failing the run when the volume is short of space', () => {
+  const root = repository();
+  const context = contextFor(root, RUN_A);
+  const lines = [];
+  const capsule = builtCapsule(context);
+  expect(sealMacosA5BuildTemplate(capsule, keyFor(context), { log: (line) => lines.push(line),
+    minFreeBytes: Number.MAX_SAFE_INTEGER, run })).toBe(false);
+  expect(lines.join('\n')).toContain('GiB free');
+  expect(fs.readdirSync(macosA5BuildTemplatesRoot(context))).toEqual([]);
+});
+
+it('skips sealing on the internal fallback', () => {
+  const root = repository();
+  const context = Object.freeze({ ...contextFor(root, RUN_A),
+    buildStorage: { capsulesRoot: '/internal/capsules', shared: false, templatesRoot: null } });
+  const capsule = builtCapsule(contextFor(root, RUN_A));
+  const lines = [];
+  expect(sealMacosA5BuildTemplate({ ...capsule, buildStorage: context.buildStorage },
+    keyFor(context), { log: (line) => lines.push(line), run })).toBe(false);
+  expect(lines.join('\n')).toContain('shared build volume');
 });

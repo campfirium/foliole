@@ -9,7 +9,7 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import {
-  closeMacosA5BuildCapsule, openMacosA5BuildCapsule
+  closeMacosA5BuildCapsule, macosA5BuildStorage, openMacosA5BuildCapsule
 } from './macos-a5-build-capsule.mjs';
 import { createMacosA5ExecutionContext } from './macos-a5-execution-context.mjs';
 import { beginFormalA5Candidate } from './macos-a5-formal-candidate.mjs';
@@ -200,4 +200,36 @@ it('refuses cleanup after its ownership marker is changed', () => {
   fs.writeFileSync(path.join(capsule.capsuleRoot, 'owner.json'), '{}\n');
   expect(() => closeMacosA5BuildCapsule(capsule)).toThrow('another run');
   expect(fs.existsSync(capsule.buildRoot)).toBe(true);
+});
+
+it('creates and cleans a capsule under the shared build volume', () => {
+  const root = fixture();
+  const candidate = beginFormalA5Candidate(root);
+  const shared = path.join(root, 'shared-volume/a5-build');
+  const base = context(root, candidate);
+  const storage = { capsulesRoot: path.join(shared, 'capsules'), shared: true,
+    templatesRoot: path.join(shared, 'build-templates') };
+  const capsule = openMacosA5BuildCapsule(Object.freeze({ ...base, buildStorage: storage }),
+    { run: runner([]) });
+  expect(path.dirname(capsule.capsuleRoot)).toBe(storage.capsulesRoot);
+  closeMacosA5BuildCapsule(capsule);
+  expect(fs.readdirSync(storage.capsulesRoot)).toEqual([]);
+});
+
+it('falls back to internal capsules without templates when the shared volume is absent', () => {
+  const root = fixture();
+  const base = context(root, beginFormalA5Candidate(root));
+  const sameDevice = { ...fs, statSync: () => ({ dev: 1 }) };
+  const absent = macosA5BuildStorage(base, { fsApi: sameDevice, root: path.join(root, 'v/a5-build'),
+    volume: path.join(root, 'v') });
+  expect(absent).toMatchObject({ capsulesRoot: path.join(base.controllerStateRoot, 'capsules'),
+    shared: false, templatesRoot: null });
+  expect(absent.reason).toContain('is not mounted');
+  let calls = 0;
+  const mounted = { ...fs, statSync: () => ({ dev: (calls += 1) }) };
+  const present = macosA5BuildStorage(base, { fsApi: mounted, root: path.join(root, 'v/a5-build'),
+    volume: path.join(root, 'v') });
+  expect(present).toEqual({ capsulesRoot: path.join(root, 'v/a5-build/capsules'), shared: true,
+    templatesRoot: path.join(root, 'v/a5-build/build-templates') });
+  expect(fs.existsSync(present.capsulesRoot)).toBe(true);
 });

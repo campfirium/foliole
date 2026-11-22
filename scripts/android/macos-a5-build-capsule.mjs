@@ -10,6 +10,38 @@ import { checked } from './macos-a5-process.mjs';
 import { withMacosA5BuildRoot } from './macos-a5-execution-context.mjs';
 
 const OWNER_FILE = 'owner.json';
+// Capsules and sealed templates live together on the external APFS volume so a template
+// clones copy-on-write; without the volume, runs build on the internal disk uncached.
+export const MACOS_A5_BUILD_VOLUME = '/Volumes/UD';
+export const MACOS_A5_SHARED_BUILD_ROOT = path.join(MACOS_A5_BUILD_VOLUME, 'Foliole/a5-build');
+
+function internalCapsulesRoot(context) {
+  return path.join(context.controllerStateRoot, 'capsules');
+}
+
+function mountedVolume(volume, fsApi) {
+  try {
+    return fsApi.statSync(volume).dev !== fsApi.statSync(path.dirname(volume)).dev;
+  } catch { return false; }
+}
+
+export function macosA5BuildStorage(context, {
+  fsApi = fs, root = MACOS_A5_SHARED_BUILD_ROOT, volume = MACOS_A5_BUILD_VOLUME
+} = {}) {
+  const internal = { capsulesRoot: internalCapsulesRoot(context), shared: false, templatesRoot: null };
+  if (!mountedVolume(volume, fsApi)) return { ...internal, reason: `${volume} is not mounted` };
+  try {
+    fsApi.mkdirSync(path.join(root, 'capsules'), { recursive: true });
+    return { capsulesRoot: path.join(root, 'capsules'), shared: true,
+      templatesRoot: path.join(root, 'build-templates') };
+  } catch (error) {
+    return { ...internal, reason: `${root} is unavailable: ${error.message}` };
+  }
+}
+
+export function macosA5CapsulesRoot(context) {
+  return context.buildStorage?.capsulesRoot ?? internalCapsulesRoot(context);
+}
 
 function materializeHiddenElectronRuntime(context, fsApi, run) {
   if (!context.requiresHiddenDesktopRuntime) return;
@@ -42,8 +74,8 @@ function capsuleOwner(context) {
 }
 
 function assertCapsulePath(context, capsuleRoot) {
-  const capsulesRoot = path.join(context.controllerStateRoot, 'capsules');
-  if (path.dirname(capsuleRoot) !== capsulesRoot
+  const allowedRoots = [internalCapsulesRoot(context), macosA5CapsulesRoot(context)];
+  if (!allowedRoots.includes(path.dirname(capsuleRoot))
       || !path.basename(capsuleRoot).startsWith(`${context.runId}-`)) {
     throw new Error('Unsafe macOS A5 build capsule root.');
   }
@@ -74,7 +106,7 @@ export function openMacosA5BuildCapsule(context, {
   if (context.formalSourceClass !== 'frozen-build' || !context.acceptedRevision) {
     throw new Error('A frozen accepted revision is required for a build capsule.');
   }
-  const capsulesRoot = path.join(context.controllerStateRoot, 'capsules');
+  const capsulesRoot = macosA5CapsulesRoot(context);
   fsApi.mkdirSync(capsulesRoot, { recursive: true });
   const capsuleRoot = fsApi.mkdtempSync(path.join(capsulesRoot, `${context.runId}-`));
   assertCapsulePath(context, capsuleRoot);
