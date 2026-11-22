@@ -4,12 +4,13 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
 import { contentImageReferences } from '../../../../../lib/core/sync/localContentEditResources';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
-import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
-import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordsInOneRead, loadRetainedSyncNodeVersionFactInOneRead } from '../../../../../lib/core/sync/syncNodeGraphOneRead';
 import { resolveNodeDerivedTitle } from '../../../../features/nodes/model/nodeDerivedTitle';
 import { assertNodeTextForSave } from '../../../ui/nodeTextSaveBudget';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from '../../companionWorkspaceRuntimeRepository';
+import { scheduleCompanionNodeVersionCollection } from '../runtime/companionNodeHistory';
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
 import { iosCompanionHostName } from '../runtime/iosCompanionMutationState';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
@@ -50,9 +51,6 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   const result = await runCompanionHighValueMutationTask(() =>
     writeIosCompanionDatabase((port) => port.transaction(db => saveCompanionContentEditWithDb(db, edit)), { kind: 'business' }),
     { kind: 'nodes', nodeIds: [edit.nodeId] });
-  await runCompanionSyncWriterTask(() =>
-    writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32), { kind: 'business' }))
-    .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
   return result;
 }
 
@@ -60,12 +58,12 @@ export async function saveCompanionContentEditWithDb(db: DbPort, edit: Companion
   const [alreadySubmitted] = await db.query('SELECT version_id FROM node_sync_versions WHERE version_id = ?', [edit.versionId]);
   const before = await loadCompanionWorkspaceNodeFromDb(db, edit.nodeId);
   await requireEditableContentNode(db, edit.nodeId);
-  const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
+  const base = await loadRetainedSyncNodeVersionFactInOneRead(db, edit.baseVersionId);
   if (!base || (base.snapshot.kind !== 'topic' && base.snapshot.kind !== 'item')) throw new Error('content_edit_base_unavailable');
   assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
     anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link),
     ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) });
-  const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
+  const previous = (await loadCurrentSyncNodeRecordsInOneRead(db, [edit.nodeId])).get(edit.nodeId) ?? null;
   const children = await readCompanionContentAnchors(db, edit.nodeId);
   const hostName = await iosCompanionHostName(db);
   const result = await applyLocalContentEdit(db, {
@@ -74,7 +72,9 @@ export async function saveCompanionContentEditWithDb(db: DbPort, edit: Companion
     hostName,
     title: resolveNodeDerivedTitle({ isTitleManual: Boolean(base.snapshot.is_title_manual),
       kind: base.snapshot.kind, title: base.snapshot.title }, edit.content)
-  }, undefined, { enqueueSearchInvalidations: false });
+  // The node was checked above and its base and current versions read; an edit on the current version is stored
+  // through the local write path and its superseded bodies are released after the edit.
+  }, undefined, { enqueueSearchInvalidations: false }, { fastForward: true, collectInline: false, known: { base, current: previous } });
   if (!result.current.version_id) throw new Error('content_edit_result_unavailable');
   if (edit.holdId) {
     await retainLocalEditBase(db, {
@@ -83,6 +83,8 @@ export async function saveCompanionContentEditWithDb(db: DbPort, edit: Companion
   }
   await remapCompanionContentAnchors({ db, children, hostName, updatedAt: edit.updatedAt,
     previousContent: previous?.body_text ?? '', nextContent: result.current.body_text ?? '' });
+  // Superseded bodies are released in one later write once editing settles, as for every local edit.
+  scheduleCompanionNodeVersionCollection([edit.nodeId]);
   const after = await loadCompanionWorkspaceNodeFromDb(db, edit.nodeId);
   if (recordHistory && !alreadySubmitted && before && after) await recordCompanionContentHistory(db, { edit, before, after });
   return {

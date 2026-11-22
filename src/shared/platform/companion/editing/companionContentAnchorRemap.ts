@@ -1,8 +1,9 @@
 import { remapRawStoredAnchorLink } from '../../../../../lib/core/database/storedAnchorLinkRemap';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { applyEditorSyncNodeRecord } from '../../../../../lib/core/sync/localContentEditBranch';
+import { applyLocalNodeVersionsWithDbPort, localNodeVersionsReady, readLocalNodeVersionStates } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
-import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraphOneRead';
 import { hashText } from '../../../../../lib/core/sync/syncNodeResolution';
 import { createCompanionUuid } from '../../companionUuid';
 
@@ -28,23 +29,37 @@ export async function remapCompanionContentAnchors(args: {
   updatedAt: string;
 }) {
   if (args.previousContent === args.nextContent) return;
-  for (const child of args.children) {
+  const changed = args.children.flatMap(child => {
     const remapped = remapRawStoredAnchorLink({
       value: child.anchor_link, imageRegions: child.image_regions,
       previousContent: args.previousContent, nextContent: args.nextContent
     });
-    if (!('value' in remapped)) continue;
-    if (remapped.value === child.anchor_link && remapped.imageRegions === child.image_regions) continue;
-    const base = await loadCurrentSyncNodeRecord(args.db, child.id, false);
+    if (!('value' in remapped)) return [];
+    if (remapped.value === child.anchor_link && remapped.imageRegions === child.image_regions) return [];
+    return [{ child, remapped }];
+  });
+  if (!changed.length) return;
+  // Every remapped child's current version is read in one statement and the new versions are stored together.
+  const bases = await loadCurrentSyncNodeRecordsInOneRead(args.db, changed.map(({ child }) => child.id));
+  const records = changed.map(({ child, remapped }) => {
+    const base = bases.get(child.id);
     if (!base?.version_id) throw new Error('Topic edit anchor remap requires synced child base versions.');
     const snapshot = { ...base.snapshot, anchor_link: remapped.value,
       image_regions: remapped.imageRegions, updated_at: args.updatedAt };
-    const result = await applyEditorSyncNodeRecord(args.db, {
+    return {
       ...base, snapshot, content_hash: hashText(JSON.stringify(snapshot)),
       ancestor_version_ids: [base.version_id], parent_version_id: base.version_id,
       parent_version_ids: [base.version_id], version_id: createOpaqueVersionRef(createCompanionUuid()),
       host_name: args.hostName, updated_at: args.updatedAt, version_created_at: args.updatedAt
-    }, { enqueueSearchInvalidations: false });
+    };
+  });
+  const states = await readLocalNodeVersionStates(args.db, records);
+  if (localNodeVersionsReady(records, states, 'local_mutation')) {
+    await applyLocalNodeVersionsWithDbPort(args.db, records, 'local_mutation', states);
+    return;
+  }
+  for (const record of records) {
+    const result = await applyEditorSyncNodeRecord(args.db, record, { enqueueSearchInvalidations: false });
     if (result.conflictNodes.length || result.blockedIds.length || result.tombstoneBlockedIds.length) {
       throw new Error('content_edit_anchor_remap_failed');
     }

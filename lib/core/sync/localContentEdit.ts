@@ -9,9 +9,11 @@ import type { DbPort } from './dbPort.js';
 import { applyLocalContentEditBranch, type LocalContentEditOptions } from './localContentEditBranch.js';
 import { assertLocalContentEditReceipt, recordLocalContentEditReceipt } from './localContentEditReceipt.js';
 import { contentEditImageInputHash, localContentEditResources, localContentEditImageSources, parseNewImageReferences, type ContentImageReference } from './localContentEditResources.js';
+import { applyLocalNodeVersionsWithDbPort, localNodeVersionsReady, readLocalNodeVersionStates } from './localNodeVersionApply.js';
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecordsInOneRead } from './syncNodeGraphOneRead.js';
 import { topicTextSnapshotHash } from './topicTextSnapshotHash.js';
 
 export interface LocalContentEdit {
@@ -33,15 +35,29 @@ type LocalContentEditInput = LocalContentEdit & {
   updatedAt: string;
 };
 
+/**
+ * How a host without its own fast-forward write stores an edit. With `fastForward`, an edit on the node's current
+ * version goes through the local write path; `collectInline: false` leaves releasing superseded bodies to the
+ * caller; `known` passes the live node check and the base and current records the caller read in this transaction.
+ */
+export interface LocalContentEditStorage {
+  fastForward?: boolean;
+  collectInline?: boolean;
+  known?: { base: NativeSyncNodeRecord; current: NativeSyncNodeRecord | null };
+}
+
 /** Uses the same version graph and resolution as an offline edit arriving from a peer. */
 export async function applyLocalContentEdit(port: DbPort, input: LocalContentEditInput,
-  applyFastForward?: (record: NativeSyncNodeRecord) => void, options: LocalContentEditOptions = {}) {
+  applyFastForward?: (record: NativeSyncNodeRecord) => void, options: LocalContentEditOptions = {},
+  storage: LocalContentEditStorage = {}) {
   return port.transaction(async (tx) => {
-    const [live] = await tx.query<{ deleted_at: string | null }>(
-      'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
-    );
-    if (!live || live.deleted_at) throw new Error('content_edit_node_unavailable');
-    const base = await loadRetainedSyncNodeVersionFact(tx, input.baseVersionId);
+    if (!storage.known) {
+      const [live] = await tx.query<{ deleted_at: string | null }>(
+        'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
+      );
+      if (!live || live.deleted_at) throw new Error('content_edit_node_unavailable');
+    }
+    const base = storage.known?.base ?? await loadRetainedSyncNodeVersionFact(tx, input.baseVersionId);
     if (!base || base.object_id !== input.nodeId) throw new Error('content_edit_base_unavailable');
     if (input.baseContent !== undefined) {
       const hash = base.snapshot.body_blob_hash ?? (typeof base.body_text === 'string' ? hashTextBody(base.body_text) : null);
@@ -49,7 +65,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
       base.body_text = input.baseContent;
     }
     const stored = await loadRetainedSyncNodeVersionFact(tx, input.versionId, false);
-    const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
+    const current = !stored && storage.known ? storage.known.current : await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
     if (base.body_text === null && typeof current.body_text === 'string' && hashTextBody(current.body_text) === base.snapshot.body_blob_hash) {
       base.body_text = current.body_text;
@@ -74,15 +90,27 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     const record = createEditRecord(base, input, sameBody, imageSources,
       stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added, input.reveal));
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
-    if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward(record);
-    else await applyLocalContentEditBranch(tx, stored?.body_text === null ? record : stored ?? record, options);
+    const fastForward = current.version_id === input.baseVersionId;
+    if (fastForward && applyFastForward) applyFastForward(record);
+    else if (!(fastForward && storage.fastForward && !stored && await storeLocally(tx, record))) {
+      await applyLocalContentEditBranch(tx, stored?.body_text === null ? record : stored ?? record, options);
+    }
     await recordLocalContentEditReceipt(tx, input.versionId, imageInputHash);
     await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
-    await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
-    const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
+    if (storage.collectInline !== false) await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
+    const applied = storage.fastForward ? (await loadCurrentSyncNodeRecordsInOneRead(tx, [input.nodeId])).get(input.nodeId)
+      : await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
     if (!applied) throw new Error('content_edit_result_unavailable');
     return { current: applied, submittedVersionId: input.versionId };
   });
+}
+
+/** Stores a fast-forward edit through the local write path when it qualifies; otherwise the caller takes the branch. */
+async function storeLocally(tx: DbPort, record: NativeSyncNodeRecord) {
+  const states = await readLocalNodeVersionStates(tx, [record]);
+  if (!localNodeVersionsReady([record], states, 'local_mutation')) return false;
+  await applyLocalNodeVersionsWithDbPort(tx, [record], 'local_mutation', states);
+  return true;
 }
 
 function resolveEditFields(input: LocalContentEditInput, base: NativeSyncNodeRecord): LocalContentEditInput {

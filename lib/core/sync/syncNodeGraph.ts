@@ -1,7 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
-import { loadSyncNodeAncestorGraph, syncNodeAncestorEdgesCte, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
+import { loadSyncNodeAncestorGraph, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 import { cachedSyncNodeParents, loadAncestorDistances, loadSyncNodeVersionAncestors, loadSyncNodeVersionParents } from './syncNodeLineage.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
 import { readTombstoneTextSnapshot, readTopicTextSnapshot } from './topicTextBodies.js';
@@ -37,42 +37,6 @@ export async function loadCurrentSyncNodeRecord(
     [objectId]
   );
   return row ? storedVersionToRecord(port, row, includeAncestors) : null;
-}
-
-/**
- * `loadCurrentSyncNodeRecord` for several nodes in one read: the current version rows come with the ancestor graph
- * of all of them, so building the records' parents and ancestors issues no further statements. Nodes without a
- * stored current version are absent from the result.
- */
-export async function loadCurrentSyncNodeRecordsInOneRead(port: DbPort, objectIds: readonly string[]) {
-  const records = new Map<string, NativeSyncNodeRecord>();
-  if (!objectIds.length) return records;
-  const ids = JSON.stringify([...new Set(objectIds)]);
-  const rows = await port.query<StoredSyncNodeVersionRow & { node_id: string | null; lineage: string | null }>(
-    `${syncNodeAncestorEdgesCte(`SELECT current_version_id FROM nodes
-       WHERE id IN (SELECT value FROM json_each(?)) AND current_version_id IS NOT NULL`)}
-     SELECT n.id AS node_id, v.version_id, v.object_id, v.parent_version_id, v.host_name, v.created_at, v.content_hash,
-       v.body_text, v.snapshot_json, NULL AS lineage
-     FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
-     WHERE n.id IN (SELECT value FROM json_each(?))
-     UNION ALL SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-       (SELECT json_group_array(json_array(version_id, parent_version_id, ordinal)) FROM ancestor_edges)`,
-    [ids, ids]
-  );
-  const graph = rows.find(row => row.node_id === null)?.lineage;
-  const edges = (JSON.parse(graph ?? '[]') as [string, string | null, number | null][])
-    .sort((left, right) => left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : (left[2] ?? 0) - (right[2] ?? 0));
-  const lineage = new Map<string, string[]>();
-  for (const [versionId, parentId] of edges) {
-    const list = lineage.get(versionId) ?? [];
-    if (parentId !== null) list.push(parentId);
-    lineage.set(versionId, list);
-  }
-  for (const row of rows) {
-    if (row.node_id === null) continue;
-    records.set(row.node_id, await storedVersionToRecord(port, row, true, lineage.get(row.version_id) ?? [], true, lineage));
-  }
-  return records;
 }
 
 export async function loadStoredSyncNodeVersionRecord(
@@ -234,7 +198,7 @@ export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, 
   return Boolean(match);
 }
 
-async function storedVersionToRecord(
+export async function storedVersionToRecord(
   port: DbPort,
   row: StoredSyncNodeVersionRow,
   includeAncestors: boolean,

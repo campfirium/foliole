@@ -8,7 +8,7 @@ import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalNodeVersionsWithDbPort, nodeColumns, readLocalNodeVersionStates } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
-import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraphOneRead';
 import { topicTextSnapshotHash } from '../../../../../lib/core/sync/topicTextSnapshotHash';
 import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
 import { resolveWorkspaceMetadataHistory, workspaceNodeMetadata, type WorkspaceRelatedReading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
@@ -78,7 +78,9 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
  */
 export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[]) {
   // A release belongs to the library that was edited; switching libraries leaves the rest to that library's next write.
-  const owner = getIosCompanionDatabaseOwner();
+  // A write through a connection outside the active owner (a side database) leaves it to the node's next write or sync.
+  let owner: ReturnType<typeof getIosCompanionDatabaseOwner>;
+  try { owner = getIosCompanionDatabaseOwner(); } catch { return; }
   if (collectionOwner !== owner) pendingCollectionIds.clear();
   collectionOwner = owner;
   for (const id of nodeIds) pendingCollectionIds.add(id);

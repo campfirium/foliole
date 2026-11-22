@@ -155,7 +155,7 @@ const ACTIONS: Record<string, Action> = {
     intervalDurationMs: 1, intervalGrowthFactor: 2, lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z',
     priority: 5, readingPosition: 3, repetitionCount: 1, state: 'active' } })) },
   'scroll position': { budget: { write: 6, refresh: 2 }, run: workspace(() => saveCompanionSyncNodeViewState({ nodeId: 'a', scrollTop: 120 })) },
-  'body save': { budget: { write: 30, refresh: 8 }, overBudget: { wa: 'WA-057', write: 75, refresh: 8 }, run: async () => {
+  'body save': { budget: { write: 23, refresh: 8 }, run: async () => {
     await openWorkspace();
     const source = await readCompanionContentSource('a', 'editor');
     phase = 'write';

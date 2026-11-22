@@ -74,6 +74,28 @@ function applied(ids: string[]): ApplySyncNodesWithDbPortResult {
     conflictRecords: [], conflictNodes: [], skippedConflictCopyIds: [], tombstoneBlockedIds: [], unmappedAnchorRecords: [] };
 }
 
+function localNodeVersionsEligible(records: readonly NativeSyncNodeRecord[]) {
+  return records.every(eligible) && new Set(records.map(record => record.object_id)).size === records.length;
+}
+
+/**
+ * Whether the local path stores `records` itself: each is built on its node's current version (or creates a node),
+ * nothing is tombstoned and the version is new. `states` comes from `readLocalNodeVersionStates`.
+ */
+export function localNodeVersionsReady(records: readonly NativeSyncNodeRecord[],
+  states: ReadonlyMap<string, LocalNodeVersionState>, operation: LocalNodeVersionOperation) {
+  if (!localNodeVersionsEligible(records)) return false;
+  return records.every(record => {
+    const state = states.get(record.object_id);
+    if (!state || state.tombstoned || state.parent_tombstoned || state.version_stored || !state.parent_version_stored) return false;
+    const local = state.node_id ? { current_version_id: state.current_version_id, deleted_at: state.deleted_at,
+      sync_dirty: state.sync_dirty ?? 0 } : null;
+    if ((local?.current_version_id ?? null) !== (record.parent_version_id ?? null)) return false;
+    const decision = decideIncomingNodeApply(local, record, operation);
+    return decision === 'apply_fast_forward' || decision === 'apply_missing_local';
+  });
+}
+
 /**
  * Stores versions this host has just built on top of each node's current version. The remote apply chain validates
  * incoming dependencies, guards tombstones and decides conflicts for records from another host; a local record whose
@@ -84,23 +106,17 @@ export async function applyLocalNodeVersionsWithDbPort(port: DbPort, records: Na
   operation: LocalNodeVersionOperation, read?: ReadonlyMap<string, LocalNodeVersionState>): Promise<LocalNodeVersionApplyResult> {
   const legacy = (db: DbPort) => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation });
   if (!records.length) return applied([]);
-  if (!records.every(eligible) || new Set(records.map(record => record.object_id)).size !== records.length) return legacy(port);
+  if (!localNodeVersionsEligible(records)) return legacy(port);
   for (const record of records) assertSyncNodeTextWithinBudget(record.snapshot);
   // A new node's body hash is computed here, outside the transaction, as the remote apply chain does.
   const hashes = await prepareSyncNodeTextBodyHashes(records, {});
+  const ordered = orderNodesForApply([...records]);
+  // The states are read before any transaction opens, as the remote apply chain validates before its own, so a
+  // record the local path cannot store reaches that chain untouched. Phone writes run one at a time in the writer
+  // queue; a caller that already read the states in its transaction passes them in.
+  const states = read ?? await readLocalNodeVersionStates(port, ordered);
+  if (!localNodeVersionsReady(ordered, states, operation)) return legacy(port);
   return port.transaction(async tx => {
-    const ordered = orderNodesForApply([...records]);
-    // A caller that already read the states in this transaction passes them in.
-    const states = read ?? await readLocalNodeVersionStates(tx, ordered);
-    for (const record of ordered) {
-      const state = states.get(record.object_id);
-      if (!state || state.tombstoned || state.parent_tombstoned || state.version_stored || !state.parent_version_stored) return legacy(tx);
-      const local = state.node_id ? { current_version_id: state.current_version_id, deleted_at: state.deleted_at,
-        sync_dirty: state.sync_dirty ?? 0 } : null;
-      if ((local?.current_version_id ?? null) !== (record.parent_version_id ?? null)) return legacy(tx);
-      const decision = decideIncomingNodeApply(local, record, operation);
-      if (decision !== 'apply_fast_forward' && decision !== 'apply_missing_local') return legacy(tx);
-    }
     const statements: DbStatement[] = [];
     const stored = new Map<string, Record<string, unknown>>();
     for (const record of ordered) {

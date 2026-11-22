@@ -9,6 +9,7 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { NODE_TEXT_MAX_BYTES } from '../../../../../lib/core/nodes/nodeTextBudget';
 import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
+import { settleCompanionNodeVersionCollections } from '../runtime/companionNodeHistory';
 
 import type { CompanionContentEdit } from './companionContentEditContract';
 import { readCompanionContentSource, releaseCompanionContentBase, saveCompanionContentEdit } from './companionContentEditing';
@@ -73,6 +74,8 @@ it('replays an uncertain acknowledgement without creating another input version'
   await readCompanionContentSource('topic', 'unacknowledged-input');
   const request = edit('Apples tea\nBread\nMilk\n');
   const first = await saveCompanionContentEdit(request);
+  // Superseded bodies are released in a later write once the edit settles.
+  await settleCompanionNodeVersionCollections();
   expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted, json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = 'base'")
     .get()).toEqual({ body_text: null, deleted: 1, hash: hashTextBody(baseline) });
   const replay = await saveCompanionContentEdit(request);
@@ -119,6 +122,7 @@ it('reclaims middle bodies during continued editing against an offline device ba
     });
     baseVersionId = ack.submittedVersionId;
   }
+  await settleCompanionNodeVersionCollections();
   const rows = database.prepare('SELECT version_id, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id')
     .all('topic') as { version_id: string; body_text: string | null }[];
   expect(rows.filter((row) => row.body_text !== null).map((row) => row.version_id))

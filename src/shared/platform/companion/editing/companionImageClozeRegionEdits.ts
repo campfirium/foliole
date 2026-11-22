@@ -2,7 +2,7 @@ import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/w
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
-import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraphOneRead';
 import { invalidateEditorOperationSession } from '../../../../features/editor/model/editorOperationHistory';
 import { getImageClozeLocator, listImageClozePresentationRegions } from '../../../../features/image-cloze/model/imageCloze';
 import { findLiveImageClozeChildNodeIds } from '../../../../features/image-cloze/model/imageClozeDeleteTargets';

@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
+import { settleCompanionNodeVersionCollections } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
@@ -11,7 +12,7 @@ const maintenance = vi.hoisted(() => ({ wait: null as Promise<void> | null, ente
 vi.mock('../../lib/core/sync/nodeVersionPayloadCollector', async importOriginal => {
   const actual = await importOriginal<typeof import('../../lib/core/sync/nodeVersionPayloadCollector')>();
   return { ...actual, collectNodeVersionPayloads: async (...args: Parameters<typeof actual.collectNodeVersionPayloads>) => {
-    if (args[2] === 32) {
+    if (args[2] === Number.MAX_SAFE_INTEGER) {
       maintenance.entered = true;
       await maintenance.wait;
     }
@@ -41,14 +42,17 @@ it('announces committed input before retained-body maintenance finishes', async 
   const unsubscribe = subscribeCompanionHighValueMutation(() => {
     observed.push(library!.database.prepare('SELECT content FROM nodes WHERE id = ?').get('topic'));
   });
-  const saving = saveCompanionContentEdit({ nodeId: 'topic', content: 'Committed input',
+  // The save settles before retained-body maintenance starts; the release runs as its own later write.
+  await saveCompanionContentEdit({ nodeId: 'topic', content: 'Committed input',
     versionId: 'edited', baseVersionId: 'base', updatedAt: '2026-10-17T00:00:00Z' });
+  expect(observed).toEqual([{ content: 'Committed input' }]);
+  const settling = settleCompanionNodeVersionCollections();
   try {
     await vi.waitFor(() => expect(maintenance.entered).toBe(true));
     expect(observed).toEqual([{ content: 'Committed input' }]);
   } finally {
     release();
-    await saving;
+    await settling;
     unsubscribe();
   }
   expect(observed).toHaveLength(1);

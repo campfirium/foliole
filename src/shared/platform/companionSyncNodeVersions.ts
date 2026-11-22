@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
+import { applyLocalNodeVersionsWithDbPort } from '../../../lib/core/sync/localNodeVersionApply';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector';
 import { applySyncNodesWithDbPort } from '../../../lib/core/sync/syncNodeApplyExecutor';
 import type { SyncNodeApplyOperation } from '../../../lib/core/sync/syncNodeApplyRules';
@@ -109,11 +110,10 @@ export async function applyCompanionSyncNodeVersionsWithDbPort(
   nodes: NativeSyncNodeRecord[],
   operation: SyncNodeApplyOperation = 'remote_sync'
 ) {
-  const result = await applySyncNodesWithDbPort(port, nodes, {
-    enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true,
-    operation
-  });
+  // Versions this host just built go through the local write path; it keeps the remote apply chain for anything else.
+  const result = operation === 'local_mutation' || operation === 'local_restore'
+    ? await applyLocalNodeVersionsWithDbPort(port, nodes, operation)
+    : await applySyncNodesWithDbPort(port, nodes, { enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation });
   if (result.conflictNodes.length > 0) {
     throw new Error('shared_node_conflict_copy_not_migrated');
   }
