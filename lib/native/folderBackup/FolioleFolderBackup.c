@@ -12,6 +12,7 @@ static void folioleRsyncCleaned(struct SQLiteRsync *endpoint);
 static void folioleRsyncError(struct SQLiteRsync *endpoint, const char *message);
 static void folioleRsyncTargetStarting(struct SQLiteRsync *endpoint, unsigned int pages);
 static void folioleRsyncValidate(struct SQLiteRsync *endpoint);
+static void folioleRsyncKeepPages(struct SQLiteRsync *endpoint);
 static int folioleRsyncOpenSource(struct SQLiteRsync *endpoint);
 static void folioleRsyncTransferred(struct SQLiteRsync *endpoint);
 #include "foliole_sqlite_rsync.inc"
@@ -80,6 +81,18 @@ static void folioleRsyncValidate(SQLiteRsync *endpoint) {
     if ((!expected || strcmp(observed, expected)) && (!pending || strcmp(observed, pending))) {
         reportError(endpoint, "Target content differs from the retained backup identity");
     }
+}
+
+/* The replica receives raw source pages. With full auto-vacuum the target engine
+ * would relocate them at COMMIT using pointer maps the source may not have (a
+ * restored or older library, or a new target under the Apple engine default).
+ * Incremental mode stays in the same auto-vacuum family and never vacuums at
+ * COMMIT. The change only touches page 1 inside this transaction, so the hash
+ * exchange resends the source's page 1 and the committed target matches it. */
+static void folioleRsyncKeepPages(SQLiteRsync *endpoint) {
+    unsigned int mode = 0;
+    if (runSqlReturnUInt(endpoint, &mode, "PRAGMA replica.auto_vacuum")) return;
+    if (mode == 1) runSql(endpoint, "PRAGMA replica.auto_vacuum=INCREMENTAL");
 }
 
 static void folioleRsyncCommitted(SQLiteRsync *endpoint) {

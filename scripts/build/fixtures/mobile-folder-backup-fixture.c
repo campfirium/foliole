@@ -189,6 +189,7 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "sequence")) sequence(&fixture, target);
     else if (!strcmp(argv[1], "foreign")) fixture_ownership(&fixture, target, 0);
     else if (!strcmp(argv[1], "unknown")) fixture_ownership(&fixture, target, 1);
+    else if (!strcmp(argv[1], "autovacuum")) fixture_autovacuum(&fixture, target);
     else if (!strcmp(argv[1], "cancel")) cancellation(&fixture, target);
     else if (!strcmp(argv[1], "io-error")) ioFailure(&fixture, target, 1);
     else if (!strcmp(argv[1], "full-error")) ioFailure(&fixture, target, 2);

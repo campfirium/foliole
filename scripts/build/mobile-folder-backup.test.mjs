@@ -24,6 +24,7 @@ describe.runIf(process.platform === 'darwin')('native single-engine differential
       'scripts/build/fixtures/mobile-folder-backup-fixture.c',
       'scripts/build/fixtures/mobile-folder-backup-io.c',
       'scripts/build/fixtures/mobile-folder-backup-ownership.c',
+      'scripts/build/fixtures/mobile-folder-backup-autovacuum.c',
       '-F', framework, '-framework', 'SQLCipher', `-Wl,-rpath,${framework}`, '-o', binary]);
   }, 180_000);
   afterAll(() => { if (root) rmSync(root, { recursive: true, force: true }); });
@@ -43,6 +44,9 @@ describe.runIf(process.platform === 'darwin')('native single-engine differential
     expect(execFileSync('python3', ['-c',
       'import sqlite3,sys;d=sqlite3.connect(sys.argv[1]);assert d.execute("PRAGMA integrity_check").fetchone()==("ok",);assert d.execute("SELECT count(*) FROM events").fetchone()==(64,);print("standard SQLite passed")',
       path.join(folder, 'target.db')], { encoding: 'utf8' })).toContain('standard SQLite passed');
+  });
+  it('copies sources whose auto-vacuum mode differs from the engine default or the previous backup', () => {
+    expect(JSON.parse(run('autovacuum', directory('autovacuum')))).toMatchObject({ passed: true });
   });
   it('retains the old target on cancellation, retries and preserves an already committed outcome', () => {
     expect(JSON.parse(run('cancel', directory('cancel')))).toMatchObject({ passed: true,

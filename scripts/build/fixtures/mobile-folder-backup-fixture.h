@@ -23,6 +23,7 @@ FolioleBackupResult fixture_copy(Fixture *fixture, const char *target);
 void fixture_initialize(Fixture *fixture);
 void fixture_successful_copy(Fixture *fixture, const char *target);
 void fixture_ownership(Fixture *fixture, const char *target, int unknown);
+void fixture_autovacuum(Fixture *fixture, const char *target);
 
 static void require(int condition, const char *message) {
     if (!condition) { fprintf(stderr, "%s\n", message); exit(1); }

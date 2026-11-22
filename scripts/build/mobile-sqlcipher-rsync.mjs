@@ -32,6 +32,7 @@ export function prepareNativeRsync(core) {
     + '        runSql(p, "BEGIN IMMEDIATE");');
   replace('        if( p->iProtocol<2 || nRPage<=100 ){',
     '        folioleRsyncValidate(p);\n        if( p->nErr ) break;\n'
+    + '        folioleRsyncKeepPages(p);\n        if( p->nErr ) break;\n'
     + '        if( p->iProtocol<2 || nRPage<=100 ){');
   replace('if( pgno==1 &&  eJMode==2 && buf[18]==1 ){',
     'if( pgno==1 && eJMode==1 ) buf[18] = buf[19] = 1;\n'
