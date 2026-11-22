@@ -1,7 +1,7 @@
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { removeDeletedNodeImageRegions, removeImageClozeRegion } from '../../../../../lib/core/nodes/imageRegionRemoval';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
+import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { pushEditorOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
 import { findLiveImageClozeChildNodeIds } from '../../../../features/image-cloze/model/imageClozeDeleteTargets';
 import { canCreateSelectionAnnotation } from '../../../selectionAnnotationEligibility';
@@ -52,7 +52,7 @@ export function deleteCompanionImageCloze(request: Request) {
       beforeVersionId: node.currentVersionId!, afterVersionId: versions.find(version => version.object_id === node.id)!.version_id!,
       review: await readCompanionHistoryReview(tx, node.id) })));
     assertScope();
-    const applied = await applySyncNodesWithDbPort(tx, [...versions, ...(parentVersion ? [parentVersion] : [])], { operation: 'local_mutation', enqueueSearchInvalidations: false });
+    const applied = await applyLocalNodeVersionsWithDbPort(tx, [...versions, ...(parentVersion ? [parentVersion] : [])], 'local_mutation');
     if (applied.appliedIds.length !== versions.length + Number(Boolean(parentVersion))) throw new Error('image_cloze_delete_not_saved');
     if (annotations.length) await writeCompanionEditHistory(tx, history, pushEditorOperationEntry(history, { nodeId: parent.id, type: 'annotation.delete', title: 'Delete Annotation', canonical: 'confirmed', annotations }));
     return parentVersion?.version_id ?? parent.currentVersionId ?? null;

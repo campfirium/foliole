@@ -2,7 +2,7 @@ import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/w
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { createInitialNewItemReviewProfile } from '../../../../../lib/core/review/newItemReviewSlots';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
+import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { parseAssetMarkdownUrl } from '../../../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
 import { collectImageMatches } from '../../../../features/editor/model/markdownImageMatches';
@@ -90,7 +90,7 @@ export async function saveCompanionImageCloze(request: CompanionImageClozeReques
     };
     assertNodeTextForSave(node);
     const version = await toWorkspaceNativeNodeVersion(node, await iosCompanionHostName(tx));
-    const applied = await applySyncNodesWithDbPort(tx, [version], { operation: 'local_mutation', enqueueSearchInvalidations: false });
+    const applied = await applyLocalNodeVersionsWithDbPort(tx, [version], 'local_mutation');
     if (!applied.appliedIds.includes(node.id)) throw new Error('image_cloze_not_saved');
     await saveIosReviewWithDb(tx, { node_id: node.id, review_json: JSON.stringify(review) });
     await recordCompanionAnnotationHistory(tx, { documentId: parent.id, before: null, after: { ...node, currentVersionId: version.version_id } });

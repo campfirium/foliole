@@ -3,7 +3,7 @@ import { parseNodeResourceReferences, serializeNodeResourceReferences, upsertNod
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { RecoverableImageArticle } from '../../../../../lib/core/import/articleImageRecovery';
 import { resolveNodeOpeningText } from '../../../../../lib/core/nodes/nodeOpeningPreview';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
+import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
 import {
@@ -29,7 +29,7 @@ export function commitCompanionImageArticle(nodeId: string, before: RecoverableI
       resourceReferences: resource ? parseNodeResourceReferences(upsertNodeResourceReference(serializeNodeResourceReferences(node.resourceReferences ?? []), resource)) : node.resourceReferences ?? [],
       openingText: resolveNodeOpeningText(after.content, node.title), updatedAt: new Date().toISOString()
     }, await iosCompanionHostName(db));
-    const result = await applySyncNodesWithDbPort(db, [version], { operation: 'local_mutation', enqueueSearchInvalidations: false });
+    const result = await applyLocalNodeVersionsWithDbPort(db, [version], 'local_mutation');
     return result.appliedIds.includes(nodeId);
   }, { kind: 'business' }), { kind: 'full' });
 }

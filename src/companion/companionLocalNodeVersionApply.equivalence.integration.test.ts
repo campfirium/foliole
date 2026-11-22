@@ -14,6 +14,8 @@ import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companion
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
+import { changedCompanionRows, dumpCompanionTables } from './companionLocalNodeVersionApply.equivalence.testSupport';
+
 // T835: a local edit stored through the local write path leaves the database exactly as the remote apply chain did.
 const path = vi.hoisted(() => ({ legacy: false, uuid: 0, remoteApplies: 0 }));
 
@@ -85,7 +87,7 @@ async function run(legacy: boolean, commands: Step[]) {
   await mutateCompanionWorkspace({ type: 'delete', nodeId: 'gone' });
   await refreshCompanionWorkspaceAfterMutation(null);
   await settleCompanionNodeVersionCollections();
-  const before = dump(library.database);
+  const before = dumpCompanionTables(library.database);
   path.legacy = legacy;
   path.remoteApplies = 0;
   for (const command of commands) {
@@ -94,24 +96,7 @@ async function run(legacy: boolean, commands: Step[]) {
   }
   await settleCompanionNodeVersionCollections();
   // The fixture stamps its own rows with the real clock, so only what the commands changed is compared.
-  const after = dump(library.database);
-  return Object.fromEntries(Object.keys(after).map(table => {
-    const was = new Set(before[table] ?? []);
-    const now = new Set(after[table]);
-    return [table, { added: after[table]!.filter(row => !was.has(row)), removed: [...was].filter(row => !now.has(row)) }];
-  }));
-}
-
-function dump(database: Awaited<ReturnType<typeof createSearchLibrary>>['database']) {
-  const tables = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-    .all() as { name: string }[];
-  return Object.fromEntries(tables.map(({ name }) => {
-    const rows = database.prepare(`SELECT * FROM "${name}"`).all() as Record<string, unknown>[];
-    // Folder backup revisions and the library epoch are random; article registrations use SQLite's own clock.
-    return [name, rows.map(row => JSON.stringify(row, (key, value: unknown) =>
-      key === 'registered_at' || key.endsWith('_epoch') ? null : row.key === 'folder_backup_source_revision' && key === 'value' ? 'revision'
-        : value instanceof Uint8Array || Buffer.isBuffer(value) ? Buffer.from(value as Uint8Array).toString('base64') : value)).sort()];
-  }));
+  return changedCompanionRows(before, dumpCompanionTables(library.database));
 }
 
 const SCENARIOS: Record<string, Step[]> = {

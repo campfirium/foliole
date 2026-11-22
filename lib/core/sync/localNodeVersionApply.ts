@@ -1,4 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { initializeReceivedReviewSchedule } from '../database/initialReviewSchedule.js';
+import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
 
 import type { DbPort } from './dbPort.js';
 import { writeDbStatements, type DbStatement } from './dbStatements.js';
@@ -64,8 +66,7 @@ export type LocalNodeVersionApplyResult = ApplySyncNodesWithDbPortResult & {
 };
 
 function eligible(record: NativeSyncNodeRecord) {
-  return !record.is_tombstone && Boolean(record.version_id && record.host_name && record.version_created_at)
-    && record.snapshot.initial_review_due === undefined;
+  return !record.is_tombstone && Boolean(record.version_id && record.host_name && record.version_created_at);
 }
 
 function applied(ids: string[]): ApplySyncNodesWithDbPortResult {
@@ -120,6 +121,12 @@ export async function applyLocalNodeVersionsWithDbPort(port: DbPort, records: Na
       statements.push(appliedNodeSyncStateStatement(record, { baseContentHash, syncDirty: 1 }));
     }
     await writeDbStatements(tx, statements);
+    // An Item's initial review schedule travels with its version and is initialized as the remote apply chain does.
+    for (const record of ordered) {
+      if (await initializeReceivedReviewSchedule(tx, record.object_id, record.snapshot.initial_review_due)) {
+        await recomputeNodeReviewWithDb(tx, record.object_id);
+      }
+    }
     const batch = new Set(ordered.map(record => record.object_id));
     for (const record of ordered) {
       const content = record.body_text ?? record.snapshot.content;

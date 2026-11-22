@@ -1,8 +1,8 @@
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
+import { loadCurrentSyncNodeRecordsInOneRead } from '../../../../../lib/core/sync/syncNodeGraph';
 import { invalidateEditorOperationSession } from '../../../../features/editor/model/editorOperationHistory';
 import { getImageClozeLocator, listImageClozePresentationRegions } from '../../../../features/image-cloze/model/imageCloze';
 import { findLiveImageClozeChildNodeIds } from '../../../../features/image-cloze/model/imageClozeDeleteTargets';
@@ -16,7 +16,7 @@ import type { CompanionImageClozeRequest } from './companionImageCloze';
 
 export async function applyCompanionImageClozeRegionEdits(db: DbPort, request: CompanionImageClozeRequest) {
   const parent = await loadCompanionWorkspaceNodeFromDb(db, request.parentNodeId);
-  const version = await loadCurrentSyncNodeRecord(db, request.parentNodeId);
+  const version = (await loadCurrentSyncNodeRecordsInOneRead(db, [request.parentNodeId])).get(request.parentNodeId);
   if (!parent || parent.deletedAt || !canCreateSelectionAnnotation(parent) || parent.content !== request.expectedContent) throw new Error('image_cloze_source_changed');
   const edits = request.edits ?? [];
   const changed = new Map<string, WorkspaceNodeSnapshot>();
@@ -48,7 +48,7 @@ export async function applyCompanionImageClozeRegionEdits(db: DbPort, request: C
   if (nodes.length) {
     const host = await iosCompanionHostName(db);
     const versions = await Promise.all(nodes.map(node => toWorkspaceNativeNodeVersion({ ...node, updatedAt: new Date().toISOString() }, host)));
-    const result = await applySyncNodesWithDbPort(db, versions, { operation: 'local_mutation', enqueueSearchInvalidations: false });
+    const result = await applyLocalNodeVersionsWithDbPort(db, versions, 'local_mutation');
     if (result.appliedIds.length !== versions.length) throw new Error('image_cloze_edit_not_saved');
     const history = await readCompanionEditHistoryFromDb(db);
     await writeCompanionEditHistory(db, history, invalidateEditorOperationSession(history, { nodeId: parent.id, reason: 'external-content-change' }));
