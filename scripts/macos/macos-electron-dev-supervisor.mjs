@@ -14,6 +14,7 @@ import {
 } from '../desktop/electron-dev-control-state.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
 import { requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
+import { verifyMacosElectronDevCdpOwnership } from './macos-electron-dev-cdp.mjs';
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
 import {
@@ -59,7 +60,7 @@ async function waitForSessionReady(paths, bootSession, timeoutMs, closed) {
   } finally { controller.abort(); }
 }
 
-async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs }) {
+async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs, verifyCdpPort }) {
   const logger = await createMacosElectronDevLogger(paths.dailyLogFile);
   const compile = createCompileRunner({ env, logger, paths });
   let active = null;
@@ -136,7 +137,18 @@ async function runSupervisorSession({ env, paths, registerStop, startupTimeoutMs
       };
       await writeElectronDevClientState(paths, clientState);
       logger.event('shell_started', `pid=${active.child.pid} session=${bootSession}`);
-      await waitForSessionReady(paths, bootSession, startupTimeoutMs, active.closed);
+      const readySnapshot = await waitForSessionReady(paths, bootSession, startupTimeoutMs, active.closed);
+      const cdpPort = env.FOLIOLE_REMOTE_DEBUGGING_PORT?.trim();
+      if (cdpPort) {
+        const runtimePid = readySnapshot.ready.appReady.pid;
+        try {
+          await verifyCdpPort({ port: Number(cdpPort), runtimePid });
+        } catch (error) {
+          logger.event('cdp_ownership_failed', `port=${cdpPort} runtime_pid=${runtimePid}`);
+          throw error;
+        }
+        logger.event('cdp_ownership_verified', `port=${cdpPort} runtime_pid=${runtimePid}`);
+      }
       if (clientState.lastControl?.action === 'full-restart') {
         await persistClientState({
           lastControl: { ...clientState.lastControl, status: 'completed' }
@@ -193,7 +205,8 @@ export async function runMacosElectronDevSupervisor(options = {}) {
         env: { ...gateEnv, ...dailyEnv },
         paths,
         registerStop: (handler) => { requestStop = handler; },
-        startupTimeoutMs: options.startupTimeoutMs ?? 60000
+        startupTimeoutMs: options.startupTimeoutMs ?? 60000,
+        verifyCdpPort: options.verifyCdpPort ?? verifyMacosElectronDevCdpOwnership
       });
       return sessionDone;
     },
