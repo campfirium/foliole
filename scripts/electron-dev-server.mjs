@@ -1,5 +1,6 @@
 /* global console */
 
+import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { URL } from 'node:url';
 
@@ -11,6 +12,21 @@ export async function isViteServerReady(viteUrl, fetchImpl = globalThis.fetch) {
     }
     const clientResponse = await fetchImpl(resolveViteResourceUrl(viteUrl, '/@vite/client'), { method: 'GET' });
     return clientResponse.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A ready server on the port may belong to another checkout (a preview or acceptance worktree, another session).
+ * Vite serves `/@fs` only under its own root, so this checkout's package.json answers only from its own server;
+ * reusing any other would load a different, possibly stale, renderer into this DEV.
+ */
+export async function isViteServerForRoot(viteUrl, root, fetchImpl = globalThis.fetch) {
+  try {
+    const probe = `/@fs${root.split(path.sep).join('/').replace(/^\/*/, '/')}/package.json?raw`;
+    const response = await fetchImpl(resolveViteResourceUrl(viteUrl, probe), { method: 'GET' });
+    return response.ok;
   } catch {
     return false;
   }

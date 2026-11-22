@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
 
-const { appendDiagnosticLog } = vi.hoisted(() => ({ appendDiagnosticLog: vi.fn(() => Promise.resolve()) }));
+const { appendDiagnosticLog } = vi.hoisted(() => ({ appendDiagnosticLog: vi.fn((_record: unknown) => Promise.resolve()) }));
 vi.mock('./diagnosticLog.js', () => ({ appendDiagnosticLog }));
 
 import {
@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 function loggedEvents() {
-  return appendDiagnosticLog.mock.calls.map(([record]) => record as { event: string; payload: Record<string, unknown> });
+  return appendDiagnosticLog.mock.calls.map(([record]) => record as unknown as { event: string; payload: Record<string, unknown> });
 }
 
 it('keeps calls, failures, total and longest time per command within the hour', () => {

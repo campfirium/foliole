@@ -4,10 +4,26 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   VITE_RENDERER_PREWARM_PATHS,
+  isViteServerForRoot,
   isViteServerReady,
   prewarmViteRendererEntries,
   waitForPrewarmStartupBudget
 } from './electron-dev-server.mjs';
+
+describe('isViteServerForRoot', () => {
+  it('asks the server for this checkout through its root-restricted file route', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    await expect(isViteServerForRoot('http://127.0.0.1:4600', '/repo/Foliole', fetchMock)).resolves.toBe(true);
+    expect(String(fetchMock.mock.calls[0][0])).toBe('http://127.0.0.1:4600/@fs/repo/Foliole/package.json?raw');
+  });
+
+  it('rejects a server rooted in another checkout or one that cannot answer', async () => {
+    await expect(isViteServerForRoot('http://127.0.0.1:4600', '/repo/Foliole',
+      vi.fn().mockResolvedValue({ ok: false, status: 403 }))).resolves.toBe(false);
+    await expect(isViteServerForRoot('http://127.0.0.1:4600', '/repo/Foliole',
+      vi.fn().mockRejectedValue(new Error('connect failed')))).resolves.toBe(false);
+  });
+});
 
 describe('isViteServerReady', () => {
   it('returns true when server responds with ok', async () => {

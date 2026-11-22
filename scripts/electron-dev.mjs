@@ -8,6 +8,7 @@ import process from 'node:process';
 import { createElectronLaunchEnv } from './electron-dev-env.mjs';
 import { createElectronDevChildLifecycle } from './desktop/electron-dev-child-lifecycle.mjs';
 import {
+  isViteServerForRoot,
   isViteServerReady,
   prewarmViteRendererEntries,
   waitForPrewarmStartupBudget
@@ -142,6 +143,10 @@ async function startViteWithPortFallback() {
     if (await isViteServerReady(viteUrl)) {
       if (strictPort) throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
       if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_FORCE_OWN_VITE')) continue;
+      if (!(await isViteServerForRoot(viteUrl, process.cwd()))) {
+        console.info(`[electron-dev] vite on ${viteUrl} serves another checkout; trying the next port`);
+        continue;
+      }
       return { viteUrl, viteProc: null };
     }
     if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION')) {

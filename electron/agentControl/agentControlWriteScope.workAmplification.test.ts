@@ -53,7 +53,7 @@ async function post(endpoint: string, route: string, body: Record<string, unknow
     method: 'POST'
   });
   expect(response.status).toBe(200);
-  return JSON.parse(await response.text()) as Record<string, { id: string; updated_at: string } & Record<string, unknown>> & { folder_id: string };
+  return JSON.parse(await response.text()) as { material: { id: string; updated_at: string } & Record<string, unknown>; folder_id: string };
 }
 
 async function scopesForAgentWrites(unrelated: number) {
