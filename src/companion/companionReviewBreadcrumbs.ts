@@ -18,12 +18,17 @@ export function buildReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, c
   }
 
   const currentNode = snapshot.nodesById[currentNodeId];
-  return buildBreadcrumbDisplayPath(currentNodeId, snapshot.nodesById).map((item) => ({
-    id: item.id,
-    label: currentNode?.kind === 'item' && item.id === currentNode.parentNodeId
-      ? '...' : compactBreadcrumbTitle(resolveNodeDisplayTitle(locale, item.id, snapshot.nodesById[item.id]?.title ?? item.title)),
-    targetNodeId: item.targetNodeId
-  }));
+  return buildBreadcrumbDisplayPath(currentNodeId, snapshot.nodesById, { includeCurrent: true }).map((item) => {
+    const title = resolveNodeDisplayTitle(locale, item.id, snapshot.nodesById[item.id]?.title ?? item.title);
+    if (item.isCurrent) {
+      return { id: item.id, isCurrent: true, label: title.trim() || item.title, targetNodeId: item.targetNodeId };
+    }
+    return {
+      id: item.id,
+      label: currentNode?.kind === 'item' && item.id === currentNode.parentNodeId ? '...' : compactBreadcrumbTitle(title),
+      targetNodeId: item.targetNodeId
+    };
+  });
 }
 
 export function useReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, currentNodeId: string | null) {

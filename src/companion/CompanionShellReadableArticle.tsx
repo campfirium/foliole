@@ -109,7 +109,7 @@ function FlowFooter({ surface }: { surface: Surface }) {
   );
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
+export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; onSelectBreadcrumbNode?: ((nodeId: string) => void) | undefined; surface: Surface; workspaceSync: WorkspaceSync }) {
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const current = props.surface.effectiveReviewSession.currentCard;
   const flowTopicId = props.flow && current?.itemKind === 'reading' && isAvailableNativeCompanionRuntime()
@@ -118,10 +118,11 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
     ? findNextSequentialReadingTopic({ ...snapshot, currentNodeId: flowTopicId }) : null, [snapshot, flowTopicId]);
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
     props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null
-      : props.surface.isFlowBrowsing ? props.surface.selectedBrowseNodeId : null);
+      : props.surface.readableArticle?.nodeId ?? props.surface.selectedBrowseNodeId);
   const navigation = useCompanionReadingNavigation(props.surface.readingActivity,
     !props.flow && props.surface.readableArticle && canContinueToNext(props.surface.readableArticle) ? props.navigation : undefined);
-  const header = props.flow || props.surface.isFlowBrowsing ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null;
+  const header = props.flow || props.surface.isFlowBrowsing || breadcrumbItems.length > 0
+    ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.onSelectBreadcrumbNode ?? props.surface.handleSelectBrowseNode} /> : null;
   const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
   if (!props.surface.readableArticle) return <CompanionReviewLoading header={header} footer={footer} />;
   const activity = props.surface.readingActivity;

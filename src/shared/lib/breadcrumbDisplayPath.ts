@@ -9,6 +9,7 @@ export interface BreadcrumbDisplayPathNode {
 
 export interface BreadcrumbDisplayPathItem {
   id: string;
+  isCurrent?: boolean;
   targetNodeId: string;
   title: string;
 }
@@ -96,7 +97,7 @@ function resolveDisplayTitle(
 export function buildBreadcrumbDisplayPath(
   nodeId: string | null,
   nodesById: Record<string, BreadcrumbDisplayPathNode | undefined>,
-  options: { untitledLabel?: string } = {}
+  options: { includeCurrent?: boolean; untitledLabel?: string } = {}
 ): BreadcrumbDisplayPathItem[] {
   const untitledLabel = options.untitledLabel ?? 'Untitled';
   const fullPath = collectPath(nodeId, nodesById);
@@ -104,9 +105,17 @@ export function buildBreadcrumbDisplayPath(
   const articleIndex = findArticleIndex(ancestorPath, nodesById);
   const articleNodeId = articleIndex >= 0 ? ancestorPath[articleIndex]?.id ?? null : null;
 
-  return ancestorPath.map((node, index) => ({
+  const ancestors = ancestorPath.map((node, index) => ({
     id: node.id,
     targetNodeId: resolveTargetNodeId(node, index > articleIndex, articleNodeId),
     title: resolveDisplayTitle(node, articleIndex >= 0 && index > articleIndex, untitledLabel)
   }));
+  const currentNode = fullPath.at(-1);
+  if (!options.includeCurrent || !currentNode || currentNode.id !== nodeId) {
+    return ancestors;
+  }
+  return [
+    ...ancestors,
+    { id: currentNode.id, isCurrent: true, targetNodeId: currentNode.id, title: normalizeTitle(currentNode.title, untitledLabel) }
+  ];
 }

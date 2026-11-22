@@ -29,7 +29,7 @@ export function AppBreadcrumb({
   const t = useTranslation();
   const resolvedAriaLabel = ariaLabel ?? t('shared.breadcrumb.aria');
   return (
-    <nav aria-label={resolvedAriaLabel} className={cn('block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap', className)}>
+    <nav aria-label={resolvedAriaLabel} className={cn('flex min-w-0 items-baseline overflow-hidden whitespace-nowrap', className)}>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         const isCurrent = Boolean(item.isCurrent);
@@ -38,7 +38,7 @@ export function AppBreadcrumb({
           return (
             <button
               aria-label={t('shared.breadcrumb.expand')}
-              className="inline-block max-w-none border-0 bg-transparent p-0 text-ui-md font-normal leading-[1.25] text-foreground/45 hover:text-foreground/65"
+              className="inline-block max-w-none shrink-0 border-0 bg-transparent p-0 text-ui-md font-normal leading-[1.25] text-foreground/45 hover:text-foreground/65"
               key={item.id}
               onClick={() => onExpandEllipsis?.(item.id)}
               type="button"
@@ -49,17 +49,17 @@ export function AppBreadcrumb({
         }
 
         return (
-          <span className="inline" key={item.id}>
+          <span className={cn('inline-flex min-w-0 items-baseline', isCurrent ? 'shrink-0' : 'shrink')} key={item.id}>
             <button
               aria-current={isCurrent ? 'page' : undefined}
-              className="inline-block max-w-[18ch] overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-left align-baseline text-ui-md font-normal leading-[1.25] text-foreground/45 text-ellipsis hover:text-foreground/65 aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-foreground/45"
+              className="inline-block min-w-0 max-w-[18ch] overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-left align-baseline text-ui-md font-normal leading-[1.25] text-foreground/45 text-ellipsis hover:text-foreground/65 aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-foreground/45"
               onClick={() => onSelect(item.id)}
               type="button"
             >
               {item.label}
             </button>
             {!isLast ? (
-              <span aria-hidden="true" className="inline-flex select-none items-center px-1 text-ui-md font-normal leading-[1.25] text-foreground/30">
+              <span aria-hidden="true" className="inline-flex shrink-0 select-none items-center px-1 text-ui-md font-normal leading-[1.25] text-foreground/30">
                 <span className="relative top-[-0.5px]">/</span>
               </span>
             ) : null}

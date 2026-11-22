@@ -14,10 +14,12 @@ interface NodeBreadcrumbsProps {
 export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeBreadcrumbsProps) {
   const { locale, t } = useLocalization();
   const sourceItems = buildBreadcrumbDisplayPath(activeNodeId, nodesById, {
+    includeCurrent: true,
     untitledLabel: t('desktop.search.context.untitled')
   });
   const items = sourceItems.map((item) => ({
     id: item.id,
+    ...(item.isCurrent ? { isCurrent: true } : {}),
     label: resolveNodeDisplayTitle(locale, item.id, item.title)
   }));
 
@@ -31,6 +33,9 @@ export function NodeBreadcrumbs({ activeNodeId, nodesById, onSelectNode }: NodeB
       items={items}
       onSelect={(id) => {
         const selectedItem = sourceItems.find((item) => item.id === id);
+        if (selectedItem?.isCurrent) {
+          return;
+        }
         onSelectNode(selectedItem?.targetNodeId ?? id);
       }}
     />

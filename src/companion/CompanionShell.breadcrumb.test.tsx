@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -100,12 +100,24 @@ async function renderBreadcrumbShell(surface: Omit<ReturnType<typeof createItemR
 }
 
 describe('CompanionShell review breadcrumb', () => {
-  it('stops at the article topic under the folder instead of showing the nested review topic title', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+  it('ends the compact ancestor path with the current nested topic as a non-clickable level', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     await renderBreadcrumbShell();
 
-    expect(screen.getByText('Inbo')).toBeInTheDocument();
-    expect(screen.getByText('Topi')).toBeInTheDocument();
-    expect(screen.queryByText('Inner review topic')).not.toBeInTheDocument();
+    const breadcrumb = screen.getByRole('navigation', { name: 'Review breadcrumb' });
+    expect(within(breadcrumb).getByRole('button', { name: 'Inbo' })).toBeInTheDocument();
+    expect(within(breadcrumb).getByRole('button', { name: 'Topi' })).toBeInTheDocument();
+    const current = within(breadcrumb).getByText('Inner review topic');
+    expect(current).toHaveAttribute('aria-current', 'page');
+    expect(within(breadcrumb).queryByRole('button', { name: 'Inner review topic' })).not.toBeInTheDocument();
+  });
+
+  it('shows the same path above an article opened from normal Browse', async () => {
+    const { surface } = await renderBreadcrumbShell({ ...createItemReviewSurface(), activeAction: 'recent', selectedBrowseNodeId: 'topic-2' });
+
+    const breadcrumb = screen.getByRole('navigation', { name: 'Review breadcrumb' });
+    expect(within(breadcrumb).getByText('Inner review topic')).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(within(breadcrumb).getByRole('button', { name: 'Inbo' }));
+    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
   });
 
   it('routes folder breadcrumbs to the folder browse surface target', async () => {

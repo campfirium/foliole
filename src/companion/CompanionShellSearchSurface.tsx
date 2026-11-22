@@ -39,6 +39,7 @@ export function renderCompanionShellSearchSurface(props: {
   onOpenExternalDocument(document: CompanionExternalDocumentSearchResult, query: string): void;
   onOpenPdf(result: CompanionPdfPageTextSearchResult): void;
   onOpenTopic(result: CompanionTopicSearchResult, query: string): void;
+  onSelectBreadcrumbNode?: ((nodeId: string) => void) | undefined;
   surface: Surface;
   workspaceSync: WorkspaceSync;
 }) {
@@ -62,7 +63,8 @@ export function renderCompanionShellSearchSurface(props: {
         />
       ) : null}
       {props.isTopicOpen ? (
-        <CompanionShellReadableArticle searchMatch={props.searchMatch} onExit={props.onExitTopic} surface={props.surface} workspaceSync={props.workspaceSync} />
+        <CompanionShellReadableArticle searchMatch={props.searchMatch} onExit={props.onExitTopic} onSelectBreadcrumbNode={props.onSelectBreadcrumbNode}
+          surface={props.surface} workspaceSync={props.workspaceSync} />
       ) : null}
     </>
   );

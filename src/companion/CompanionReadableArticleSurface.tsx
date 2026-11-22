@@ -245,7 +245,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={{ ...props, onExit }} model={model} readingTypography={readingTypography} />
-      {props.flow && (!bounded || props.header) ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : props.header}
+      {props.header || (props.flow && !bounded) ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : null}
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}
