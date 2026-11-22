@@ -11,6 +11,7 @@ import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
 import { mergeCompanionNodeViews } from './companionNodeViewProjection.js';
+import { reportCompanionWorkspaceRefreshDegradation } from './companionWorkspaceRefreshDegradation.js';
 import { companionWorkspaceSnapshots, prepareCompanionWorkspaceIndex, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { timeCompanionActivity } from './runtime/companionActivityTiming.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
@@ -52,6 +53,9 @@ async function readWorkspaceSnapshot(input: { current: WorkspaceSnapshot | null;
         orderedNodeIds = scoped.nodeOrder;
       }
       if (!scoped) markWholeLibraryWork('full-refresh');
+      // A structural scope without a metadata or Trash proof is a sync round's, which rereads by design.
+      if (!scoped && input.current && input.scope.kind === 'nodes'
+        && (input.scope.metadata || input.scope.trash || !input.scope.structure)) reportCompanionWorkspaceRefreshDegradation('unproven-merge');
       const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
       return next && attachOpenCompanionVirtualFolderResults(db, next);
     });

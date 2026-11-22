@@ -22,7 +22,8 @@ async function restoreAndRefresh(
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) throw new Error('This topic or folder cannot be restored on this device.');
-    attempt.refresh = () => workspaceSync.refreshAfterMutation(result.snapshot);
+    const preview = result.published ? undefined : result.snapshot;
+    attempt.refresh = () => workspaceSync.refreshAfterMutation(preview);
   }
   if (scope !== getCompanionReadingScope()) throw new Error('companion_restore_library_changed');
   try { await attempt.refresh(); }

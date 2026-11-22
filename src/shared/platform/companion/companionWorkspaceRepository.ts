@@ -2,6 +2,7 @@ import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceS
 import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from '../companionRuntimeCapabilities';
 import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncState';
 
+import { reportCompanionWorkspaceRefreshDegradation } from './companionWorkspaceRefreshDegradation';
 import { refreshCompanionWorkspaceSnapshot } from './companionWorkspaceSnapshotRefresh';
 
 // Database mutations have already committed; only the database-less Web shell stores a supplied projection.
@@ -9,6 +10,8 @@ export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: W
   if (hasCompanionLocalDatabase(getCompanionRuntimeCapability())) {
     // A read-only preflight consumes committed scopes without inventing a mutation.
     // Supplied mutation projections still require a complete native read unless scoped.
+    // `null` asks for a reread outright; only a projected snapshot is a write that could have named its nodes.
+    if (previewSnapshot && !contentNodeId) reportCompanionWorkspaceRefreshDegradation('preview');
     const snapshot = await refreshCompanionWorkspaceSnapshot(contentNodeId
       ? { kind: 'nodes', nodeIds: [contentNodeId] }
       : previewSnapshot === undefined ? undefined : { kind: 'full' });

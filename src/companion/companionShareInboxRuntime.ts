@@ -11,7 +11,7 @@ import { persistCompanionCapturedText } from './companionCaptureTextActions';
 interface ShareInboxWorkspace {
   bootstrapState: { device_id: string };
   state: { workspace_snapshot: WorkspaceSnapshot | null };
-  refreshAfterMutation(snapshot: WorkspaceSnapshot): Promise<unknown>;
+  refreshAfterMutation(snapshot?: WorkspaceSnapshot): Promise<unknown>;
 }
 
 function stableShareNodeId(deliveryId: string) {
@@ -41,7 +41,8 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
       versionId: stableShareVersionId(item.delivery_id)
     });
     snapshot = result.snapshot;
-    await workspace.refreshAfterMutation(snapshot);
+    // A native delivery published its topic, so the refresh merges it instead of rereading the library.
+    await workspace.refreshAfterMutation(result.published ? undefined : snapshot);
     await acknowledgeCompanionShare(item.delivery_id);
   }
 }

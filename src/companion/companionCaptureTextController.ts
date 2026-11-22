@@ -25,10 +25,12 @@ export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWo
         ...(parentNodeId === undefined ? {} : { parentNodeId }),
         text
       });
+      // A native write already published the new topic; handing the refresh its preview would reread the library.
+      const preview = result.published ? undefined : result.snapshot;
       try {
-        await workspaceSync.refreshAfterMutation(result.snapshot);
+        await workspaceSync.refreshAfterMutation(preview);
       } catch {
-        return { nodeId: result.nodeId, retryRefresh: () => workspaceSync.refreshAfterMutation(result.snapshot) };
+        return { nodeId: result.nodeId, retryRefresh: () => workspaceSync.refreshAfterMutation(preview) };
       }
       return { nodeId: result.nodeId };
     } catch (error) {

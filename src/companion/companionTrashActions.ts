@@ -128,6 +128,8 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
   };
   return {
     nodeId: targetNodeId,
+    // A native restore published the nodes it changed, so the refresh merges them instead of rereading the library.
+    ...(isAvailableNativeCompanionRuntime() ? { published: true as const } : {}),
     snapshot: {
       ...snapshot,
       activeNodeId: targetNodeId,
@@ -147,6 +149,6 @@ async function persistRestoredNodes(restored: Awaited<ReturnType<typeof buildRes
       return patched;
     }));
     await commitCompanionNodeHistoryWithDb(db, versions, 'Restore', 'local_restore', subtreeIds);
-  });
+  }, { kind: 'nodes', nodeIds: restored.map(entry => entry.node.id), structure: true, metadata: true });
   else await applyCompanionTrashRestoreNodeVersions(restored.map(entry => entry.version));
 }

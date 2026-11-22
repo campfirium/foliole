@@ -39,5 +39,5 @@ export async function persistCompanionShareDelivery(record: NativeSyncNodeRecord
     // and ordinary version collection can remove the original version identity.
     await tx.run(`INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO NOTHING`, [key, fingerprint, record.updated_at]);
-  });
+  }, { kind: 'nodes', nodeIds: [record.object_id], structure: true, metadata: true });
 }

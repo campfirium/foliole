@@ -108,16 +108,19 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
 
 export async function persistCompanionCapturedText(args: PersistCompanionCapturedTextArgs) {
   const draft = await buildCaptureTextDraft(args);
+  const native = isAvailableNativeCompanionRuntime();
   if (!draft.persisted) {
-    if (isAvailableNativeCompanionRuntime()) await runCompanionHistoryMutation(async db => {
+    if (native) await runCompanionHistoryMutation(async db => {
       await assertCaptureParentAvailable(db, draft.node.parentNodeId!);
       return commitCompanionNodeHistoryWithDb(db, [draft.nodeVersion], 'Create topic', 'local_mutation', [draft.node.id]);
-    });
+    }, { kind: 'nodes', nodeIds: [draft.node.id], structure: true, metadata: true });
     else await applyCompanionLocalNodeVersions([draft.nodeVersion]);
   }
+  // A native write published the new topic, so the refresh merges it instead of rereading the library for the preview.
   return {
     nodeId: draft.node.id,
-    snapshot: draft.snapshot
+    snapshot: draft.snapshot,
+    ...(native ? { published: true as const } : {})
   };
 }
 

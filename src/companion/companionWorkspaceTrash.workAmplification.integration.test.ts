@@ -6,6 +6,7 @@ import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { sqlRecording } from '../../lib/core/diagnostics/sqlRecording';
 import { resolveCompanionDirectoryCounts } from '../shared/platform/companion/browse/companionDirectoryCounts';
+import { watchCompanionWorkspaceRefreshDegradations } from '../shared/platform/companion/companionWorkspaceRefreshDegradation.testSupport';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { collectCompanionBatchSubtree, moveCompanionBatchToTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
@@ -54,7 +55,9 @@ async function openLibrary(size: number) {
   await refreshCompanionWorkspaceAfterMutation();
   reads.fullSnapshots = 0;
   reads.orderDerivations = 0;
+  degradations.reset();
 }
+const degradations = watchCompanionWorkspaceRefreshDegradations();
 beforeEach(() => openLibrary(400));
 afterEach(async () => { await library.close(); });
 

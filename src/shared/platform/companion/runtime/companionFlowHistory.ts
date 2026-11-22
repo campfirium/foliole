@@ -116,8 +116,12 @@ function nodeHistoryRefreshScope(entry: Extract<CompanionWorkspaceHistoryEntry, 
     ...(readingNodeIds.length ? { readingNodeIds } : {}) };
 }
 
+/**
+ * Every write names what it changed. A whole-library refresh is a choice the caller states with `{ kind: 'full' }`,
+ * never a default, because the refresh after the write runs before the list shows it and grows with the library.
+ */
 export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
-  refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope) = { kind: 'full' },
+  refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope),
   onCommitted?: (result: T) => void, timing?: FlowTiming) {
   const owner = getIosCompanionDatabaseOwner();
   const scope = getCompanionReadingScope();
