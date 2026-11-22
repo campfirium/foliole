@@ -214,7 +214,8 @@ describe('shared companion delivery migration', () => {
 describe('shared companion database lifecycle guardrails', () => {
   it('repairs current schema idempotently and rolls back a failed upgrade before version commit', async () => {
     const { port, sqlite } = fixture(18);
-    sqlite.exec('ALTER TABLE nodes DROP COLUMN import_source_fingerprint');
+    sqlite.exec(`DROP INDEX IF EXISTS idx_nodes_import_fingerprints;
+      ALTER TABLE nodes DROP COLUMN import_source_fingerprint`);
     await expect(bootstrap(port, {
       beforeVersionCommit: () => { throw new Error('injected migration fault'); }
     })).rejects.toThrow('injected migration fault');
