@@ -23,12 +23,14 @@ export function CompanionBackupLocationDialog({ open, label, working, onOpenChan
 }
 
 /** Opens when the chosen folder holds a backup this library does not own; replacing it needs the user's word. */
-export function CompanionBackupReplacePrompt({ error, onReplace, onChooseOther }: {
-  error: string | null; onReplace(): void; onChooseOther(): void;
+export function CompanionBackupReplacePrompt({ error, reopen = 0, onReplace, onChooseOther }: {
+  error: string | null; reopen?: number; onReplace(): void; onChooseOther(): void;
 }) {
   const t = useTranslation();
   const [open, setOpen] = useState(false);
+  // A new error, or the row's "Replace…" after a cancel (reopen counts up), asks again.
   useEffect(() => { if (isCompanionFolderBackupOtherBackup(error)) setOpen(true); }, [error]);
+  useEffect(() => { if (reopen > 0) setOpen(true); }, [reopen]);
   const choose = (next: () => void) => () => { setOpen(false); next(); };
   return <AppDialog open={open} onOpenChange={setOpen}>
     <AppDialogPortal><SettingsTouchSheetOverlay /><SettingsTouchSheet>

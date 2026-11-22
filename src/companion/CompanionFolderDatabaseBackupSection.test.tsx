@@ -185,9 +185,15 @@ it('offers to replace a backup this library does not own instead of only asking 
   fixture.request.mockResolvedValueOnce({ state: { ...fixture.state, phase: 'saved', errorMessage: null, pendingItems: 0 } });
   const view = render(<CompanionFolderDatabaseBackupSection />);
   fireEvent.click(await screen.findByRole('button', { name: 'Back up now' }));
-  expect(await screen.findByText('This folder has another backup')).toBeInTheDocument();
+  expect(await screen.findByRole('dialog')).toHaveTextContent('This folder has another backup');
   expect(fixture.request).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByTestId('companion-backup-replace'));
+  // Cancelling keeps a plain explanation, not the native message, and the row asks again.
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('This folder has another backup'));
+  expect(screen.queryByText(/unrecognized backup file/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId('companion-database-backup'));
+  expect(fixture.request).toHaveBeenCalledTimes(1);
+  fireEvent.click(await screen.findByTestId('companion-backup-replace'));
   await waitFor(() => expect(fixture.request).toHaveBeenLastCalledWith(false, { replaceExisting: true }));
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('All backed up'));
   view.unmount();

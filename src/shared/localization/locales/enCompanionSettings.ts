@@ -178,6 +178,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.backupReplaceTitle': 'This folder has another backup',
   'companion.settings.storage.backupReplaceDescription': 'It is not a backup of the library on this phone, for example the backup of a library a restore replaced. Replace it with a backup of the current library?',
   'companion.settings.storage.backupReplaceConfirm': 'Replace',
+  'companion.settings.storage.backupReplaceAgain': 'Replace…',
   'companion.settings.storage.backupReplaceOther': 'Choose another folder…',
   'companion.settings.storage.revertDelete': 'Delete…',
   'companion.settings.storage.revertDeleteTitle': 'Delete the previous library?',

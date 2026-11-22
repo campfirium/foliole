@@ -178,6 +178,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.backupReplaceTitle': '这个文件夹里已有另一份备份',
   'companion.settings.storage.backupReplaceDescription': '它不是这台手机当前资料库的备份，比如恢复前那份资料库的备份。要替换成当前资料库的备份吗？',
   'companion.settings.storage.backupReplaceConfirm': '替换',
+  'companion.settings.storage.backupReplaceAgain': '替换…',
   'companion.settings.storage.backupReplaceOther': '选择其他文件夹…',
   'companion.settings.storage.revertDelete': '删除…',
   'companion.settings.storage.revertDeleteTitle': '要删除上一份资料库吗？',

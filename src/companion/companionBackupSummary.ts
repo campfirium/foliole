@@ -1,10 +1,11 @@
 import type { CompanionFolderBackupState } from '../../lib/platform/companionFolderBackupContract';
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
-import { isCompanionFolderBackupDirectoryFailure } from '../shared/platform/companion/folderBackup/companionFolderBackupDirectoryFailure';
+import { isCompanionFolderBackupDirectoryFailure, isCompanionFolderBackupOtherBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupDirectoryFailure';
 
 export function companionBackupSummary(state: CompanionFolderBackupState | null, automatic: boolean | null,
   error: string | null, t: ReturnType<typeof useTranslation>) {
   const failure = error || state?.errorMessage;
+  if (isCompanionFolderBackupOtherBackup(failure)) return t('companion.settings.storage.backupReplaceTitle');
   if (failure) return t('companion.settings.storage.backupFailedReason', { reason: failure });
   if (state?.phase === 'failed') return t('companion.settings.storage.backupFailed');
   if (!state) return t('companion.settings.storage.backupLoading');
