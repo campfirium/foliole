@@ -1,9 +1,11 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
+import { resolveNextDayStart } from '../review/reviewDayBoundary.js';
 import type { DbPort } from '../sync/dbPort.js';
 
+import { deriveCycleReadiness } from './cycleFlowReadiness.js';
 import { cycleReadyNodeIds } from './cycleFlowSelection.js';
-import type { DailyFlowSettings } from './dailyFlowContract.js';
-import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
+import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
+import { dailyFlowSettingsForInstant, isFlowWindowUnexpired } from './dailyFlowDayWindow.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
@@ -11,6 +13,19 @@ import type { CycleStored, DailyFlowStore } from './dailyFlowStore.js';
 import type { DailyFlowView, DailyFlowViewArgs, DailyFlowViewResult } from './dailyFlowViewContract.js';
 import { matchesDivePhase } from './diveCycleFlow.js';
 import { readDiveUnreadRound } from './diveUnreadTopics.js';
+
+/**
+ * The first instant after `now` at which time alone can change this view: a waiting row becomes doable or the day ends.
+ * Until then the same stored rows and learning give the same view, so a reader need not ask again.
+ */
+function nextFlowChangeAt(now: string, settings: DailyFlowSettings, snapshot?: DailyFlowLearningSnapshot, ids: readonly string[] = []) {
+  let next = settings.dayWindow && isFlowWindowUnexpired(settings.dayWindow, now) ? Date.parse(settings.dayWindow.end)
+    : resolveNextDayStart(new Date(now), settings.newDayStartsAtHour).getTime();
+  if (snapshot) for (const readiness of deriveCycleReadiness(snapshot, ids, now, settings).values()) {
+    if (readiness.ready_at_ms !== null && readiness.ready_at_ms < next) next = readiness.ready_at_ms;
+  }
+  return new Date(next).toISOString();
+}
 
 export function readDailyFlowView(db: DbPort, args: DailyFlowViewArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowViewResult> {
@@ -43,7 +58,7 @@ export async function readStoredDailyFlowView(store: DailyFlowStore, args: Daily
     return { status: 'ready', scope: settings.scope ?? '', dayKey: stored.day_key, revision: stored.revision,
       now: args.now, mode: args.mode, currentNodeId, nodeIds: ordered, complete: args.includeEntries,
       modeAvailability: { recommended: available('recommended'), 'review-first': available('review-first'),
-        'reading-only': available('reading-only') },
+        'reading-only': available('reading-only') }, nextChangeAt: nextFlowChangeAt(args.now, settings, snapshot, ids),
       canContinueReading: Boolean(!stored.session.currentNodeId && target && target === stored.session.continueNodeId &&
         (stored.session.reviewedItemCount ?? 0) > 0 && args.mode !== 'review-first' && ids.includes(target) && ready['reading-only'].has(target)) };
 }
@@ -60,6 +75,7 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
       now: args.now, mode: 'reading-only', currentNodeId: current,
       nodeIds: args.includeEntries ? entries : null, complete: args.includeEntries,
       modeAvailability: { recommended: false, 'review-first': false, 'reading-only': entries.length > 0 },
+      nextChangeAt: nextFlowChangeAt(args.now, settings),
       canContinueReading: false };
   }
   const revisit = new Set(dive.revisitIds);
@@ -76,5 +92,6 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
   return { status: 'ready', scope: settings.scope ?? '', dayKey: stored.day_key, revision: stored.revision,
     now: args.now, mode, currentNodeId: current, nodeIds, complete: args.includeEntries,
     modeAvailability: { recommended: available('recommended'), 'review-first': available('review-first'),
-      'reading-only': available('reading-only') }, canContinueReading: false };
+      'reading-only': available('reading-only') }, nextChangeAt: nextFlowChangeAt(args.now, settings, snapshot, rows.map(row => row.node_id)),
+    canContinueReading: false };
 }

@@ -24,5 +24,7 @@ export type DailyFlowView = {
   status: 'ready'; scope: string; dayKey: string; revision: number; now: string; mode: ReviewSessionMode;
   currentNodeId: string | null; nodeIds: string[] | null; complete: boolean;
   modeAvailability: Record<ReviewSessionMode, boolean>; canContinueReading: boolean;
+  /** When time alone can next change this view; absent leaves only the reader's longest wait. */
+  nextChangeAt?: string;
 };
 export type DailyFlowViewResult = DailyFlowView | { status: 'needs-preparation' };

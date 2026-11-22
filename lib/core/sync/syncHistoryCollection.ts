@@ -15,10 +15,10 @@ const BATCH = 200;
 
 type Write = <T>(write: (db: DbPort) => Promise<T>) => Promise<T>;
 
-async function reclaimBatch(db: DbPort, groupId: string) {
+async function reclaimBatch(db: DbPort, groupId: string, settledHorizon: string | undefined) {
   if (await syncGroupLocalPublicationBlockReason(db)) return null;
   const horizon = await loadSyncGroupHistoryHorizon(db, groupId);
-  if (!horizon) return null;
+  if (!horizon || horizon === settledHorizon) return null;
   const versions = (await db.query<{ version_id: string }>(RECLAIMABLE_HISTORY_SQL, [horizon, BATCH]))
     .map(row => row.version_id);
   if (versions.length) for (const sql of reclaimHistoryStatements(versions)) await db.run(sql, versions);
@@ -26,7 +26,7 @@ async function reclaimBatch(db: DbPort, groupId: string) {
     .map(row => row.node_id);
   if (tombstones.length) for (const sql of reclaimTombstoneStatements(tombstones)) await db.run(sql, tombstones);
   const marks = await reclaimStateTombstones(db, horizon);
-  return { versions: versions.length, tombstones: tombstones.length + marks };
+  return { versions: versions.length, tombstones: tombstones.length + marks, horizon };
 }
 
 async function reclaimStateTombstones(db: DbPort, horizon: string) {
@@ -40,16 +40,27 @@ async function reclaimStateTombstones(db: DbPort, horizon: string) {
 }
 
 /**
+ * Group lines a caller has already drained, keyed by its own choice of group and library.
+ * The whole-table scan finds nothing new until the line moves, so an unmoved line is not scanned again;
+ * history released under an unmoved line waits for the next line, which is only a storage delay.
+ */
+export type SettledSyncHistoryHorizons = Map<string, string>;
+
+/**
  * After a completed round: drop history and deletions that every active member already owns.
  * Nothing is coordinated with peers; history no longer takes part in comparison.
  */
-export async function collectSyncGroupHistory(write: Write, groupId: string) {
+export async function collectSyncGroupHistory(write: Write, groupId: string,
+  settled?: { horizons: SettledSyncHistoryHorizons; key: string }) {
   const total = { versions: 0, tombstones: 0 };
   for (;;) {
-    const batch = await write(db => db.transaction(tx => reclaimBatch(tx, groupId)));
+    const batch = await write(db => db.transaction(tx => reclaimBatch(tx, groupId, settled?.horizons.get(settled.key))));
     if (!batch) return total;
     total.versions += batch.versions;
     total.tombstones += batch.tombstones;
-    if (batch.versions < BATCH && batch.tombstones < BATCH) return total;
+    if (batch.versions < BATCH && batch.tombstones < BATCH) {
+      settled?.horizons.set(settled.key, batch.horizon);
+      return total;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ReviewSessionState } from '../../store/workspaceStore';
@@ -6,6 +6,13 @@ import type { ReviewSessionState } from '../../store/workspaceStore';
 import { buildLayoutProps, countCreatedNodesDuringSession } from './layoutPropsBuilder';
 import { createNode, reviewGateLayoutArgs } from './layoutPropsBuilder.reviewSummary.testSupport';
 import type { BuildLayoutPropsArgs } from './layoutPropsBuilderTypes';
+
+afterEach(() => { vi.useRealTimers(); });
+// The clock prop may lag behind; an action records the time at which it runs.
+function runActionsAt(nowIso: string) {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(nowIso));
+}
 
 it('counts created items and topics inside the completed review session window', () => {
   const reviewSession: ReviewSessionState = {
@@ -74,8 +81,9 @@ it('does not enter review mode from the explicit exit action', () => {
   expect(startReviewSession).not.toHaveBeenCalled();
 });
 
-it('changes review session mode with the controller clock', () => {
+it('changes review session mode at the time of the action', () => {
   const nowIso = '2026-06-21T12:00:00.000Z';
+  runActionsAt(nowIso);
   const setReviewSessionMode = vi.fn();
   const props = buildLayoutProps({
     ...reviewGateLayoutArgs,
@@ -94,6 +102,7 @@ it('changes review session mode with the controller clock', () => {
 
 it('continues queue-clear reading through the current Flow checkpoint', async () => {
   const nowIso = '2026-06-21T12:00:00.000Z';
+  runActionsAt(nowIso);
   const onOpenNotesView = vi.fn();
   const onSelectNode = vi.fn();
   const continueReviewSessionReading = vi.fn(() => true);
@@ -180,6 +189,7 @@ it('exits Flow in place without restoring the browse list or selecting another d
 });
 
 it.each([true, false])('keeps daily continuation under the save owner when navigation returns %s', async saved => {
+  runActionsAt(reviewGateLayoutArgs.nowIso);
   const onSelectNode = vi.fn();
   const onOpenNotesView = vi.fn();
   const exitReviewSession = vi.fn();

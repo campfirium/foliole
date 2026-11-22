@@ -1,11 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { installDemoRuntimeController, type DemoRuntimeController } from '../../shared/platform/runtime/demoRuntime';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import { useResumeReviewItem } from './useResumeReviewItem';
+
+// Actions read the current time when they run, so these tests fix the clock instead of passing a time.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z')); });
+afterEach(() => { vi.useRealTimers(); });
 
 function createFlowTopic(id: string, nextAt: string): Node {
   return {
@@ -82,7 +86,6 @@ function renderResumeHook(args: {
         trash: { closeTrashView: vi.fn() },
         virtualView: { closeVirtualView: vi.fn() }
       } as never,
-      nowIso: '2026-03-10T12:00:00.000Z',
       reviewSettings: { isReviewSchedulerSettingsReady: true, reviewSchedulerSettings: { pushQueue: {} } } as never,
       ws: {
         activeNodeId: args.activeNodeId,

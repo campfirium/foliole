@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
-import { getDemoRuntimeNowIso, subscribeDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/runtime/foliolePublishedNavigation';
 
 import {
@@ -13,6 +12,7 @@ import {
 } from './appControllerNavigationReadingPosition';
 import { flushVisibleReadingJump, useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { useWorkspaceSelectors } from './appWorkspaceSelectors';
+import { getDailyFlowClockNow, subscribeDailyFlowClock } from './dailyFlowClock';
 import { useAppRuntime } from './useAppRuntime';
 import { useEditorContextCommands } from './useEditorContextCommands';
 import { useListResizer } from './useListResizer';
@@ -28,18 +28,12 @@ export { useWorkspaceSelectors };
 
 type WorkspaceControllerStateInput = ReturnType<typeof useWorkspaceSelectors>;
 
-export function useNowIso(tickMs = 15_000) {
-  const [nowIso, setNowIso] = useState(() => getDemoRuntimeNowIso());
-  useEffect(() => {
-    const updateNow = () => setNowIso(getDemoRuntimeNowIso());
-    const timer = window.setInterval(updateNow, tickMs);
-    const unsubscribeDemoRuntime = subscribeDemoRuntimeState(updateNow);
-    return () => {
-      window.clearInterval(timer);
-      unsubscribeDemoRuntime();
-    };
-  }, [tickMs]);
-  return nowIso;
+/**
+ * The workspace's Flow clock: it moves when a Flow view's availability can next change, not on a fixed tick.
+ * Actions that record a time read the current time themselves.
+ */
+export function useNowIso() {
+  return useSyncExternalStore(subscribeDailyFlowClock, getDailyFlowClockNow);
 }
 
 function useWorkspaceReadingProgressPersistence(args: {

@@ -7,6 +7,7 @@ import { getBrowserDailyFlowRuntime } from '../../shared/platform/runtime/dailyF
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useDailyFlowNodeInput } from './useDailyFlowNodeInput';
+import { useStableIdList } from './useDailyFlowView';
 
 export function useDailyFlowFuture(now: string, enabled: boolean, includeEntries: boolean, mode?: ReviewSessionMode) {
   const scope = useWorkspaceStore(state => state.libraryScope);
@@ -17,8 +18,8 @@ export function useDailyFlowFuture(now: string, enabled: boolean, includeEntries
   const settings = getCurrentReviewSchedulerSettings();
   const learningNodes = useDailyFlowNodeInput(nodes);
   const context = useMemo(() => ({}), [scope, mode, currentMode, now, enabled, includeEntries, settings]);
-  const orderKey = JSON.stringify(order);
-  const trashKey = JSON.stringify(trashed);
+  const orderKey = useStableIdList(order);
+  const trashKey = useStableIdList(trashed);
   const request = useMemo(() => ({}), [context, learningNodes, orderKey, trashKey]);
   const [result, setResult] = useState<{ request: object; context: object; view?: DailyFlowFutureView; error?: string } | null>(null);
   useEffect(() => {

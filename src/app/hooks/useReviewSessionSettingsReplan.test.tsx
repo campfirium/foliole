@@ -1,7 +1,11 @@
 import { renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { useReviewSessionSettingsReplan } from './useReviewSessionSettingsReplan';
+
+// Actions read the current time when they run, so these tests fix the clock instead of passing a time.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z')); });
+afterEach(() => { vi.useRealTimers(); });
 
 it('replans the active review session after review settings change', () => {
   const setReviewSessionMode = vi.fn();
@@ -10,7 +14,6 @@ it('replans the active review session after review settings change', () => {
       useReviewSessionSettingsReplan({
         currentNodeId: props.currentNodeId,
         isReviewSchedulerSettingsReady: props.ready ?? true,
-        nowIso: '2026-03-10T12:00:00.000Z',
         reviewSchedulerSettingsSignature: props.signature,
         reviewSessionMode: 'recommended',
         setReviewSessionMode
@@ -32,7 +35,6 @@ it('does not replan idle review sessions when settings change', () => {
       useReviewSessionSettingsReplan({
         currentNodeId: props.currentNodeId,
         isReviewSchedulerSettingsReady: true,
-        nowIso: '2026-03-10T12:00:00.000Z',
         reviewSchedulerSettingsSignature: props.signature,
         reviewSessionMode: 'recommended',
         setReviewSessionMode
@@ -52,7 +54,6 @@ it('waits for review scheduler settings ready before replanning a restored sessi
       useReviewSessionSettingsReplan({
         currentNodeId: 'qa-1',
         isReviewSchedulerSettingsReady: props.ready,
-        nowIso: '2026-03-10T12:00:00.000Z',
         reviewSchedulerSettingsSignature: props.signature,
         reviewSessionMode: 'recommended',
         setReviewSessionMode

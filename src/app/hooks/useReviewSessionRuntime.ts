@@ -7,7 +7,6 @@ import { useReviewSessionSettingsReplan } from './useReviewSessionSettingsReplan
 
 export function useReviewSessionRuntime(args: {
   isStudyMode: boolean;
-  nowIso: string;
   reviewSettings: BuildLayoutPropsArgs['reviewSettings'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -23,7 +22,6 @@ export function useReviewSessionRuntime(args: {
   useReviewSessionSettingsReplan({
     currentNodeId: args.ws.reviewSession.currentNodeId,
     isReviewSchedulerSettingsReady: args.reviewSettings.isReviewSchedulerSettingsReady,
-    nowIso: args.nowIso,
     reviewSchedulerSettingsSignature,
     reviewSessionMode: args.ws.reviewSessionMode,
     setReviewSessionMode: args.ws.setReviewSessionMode

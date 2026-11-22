@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh';
 import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
@@ -8,12 +8,26 @@ import { logRuntimeError } from '../../shared/platform/runtimeLogging';
 import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
 import type { WorkspaceState } from '../../store/workspaceStoreTypes';
 
+import { requestDailyFlowClockWake } from './dailyFlowClock';
 import { useDailyFlowNodeInput } from './useDailyFlowNodeInput';
 
 type ViewContext = Pick<WorkspaceState, 'reviewSession' | 'reviewSessionMode' | 'nodesById'> & {
   trashedNodeIds?: string[] | undefined; nodeOrder?: string[] | undefined;
   libraryScope?: string | undefined; now: string; includeEntries: boolean; enabled: boolean; followDive?: boolean;
 };
+
+/**
+ * Keeps the previous list while a new one holds the same ids, so membership costs a comparison only when the
+ * store hands over a different array, never a serialization on every render.
+ */
+export function useStableIdList(list: readonly string[] | undefined) {
+  const kept = useRef(list);
+  const previous = kept.current;
+  if (previous !== list && !(previous && list && previous.length === list.length && previous.every((id, index) => id === list[index]))) {
+    kept.current = list;
+  }
+  return kept.current;
+}
 
 export function useDailyFlowView(args: ViewContext) {
   const ownsSession = Boolean(args.reviewSession.daily);
@@ -39,8 +53,9 @@ export function useDailyFlowView(args: ViewContext) {
   // Node updates refresh the read without withdrawing a valid view in this context.
   const context = useMemo(() => ({}), [args.libraryScope, args.reviewSession, args.reviewSessionMode,
     args.now, args.includeEntries, args.enabled, args.followDive]);
-  const membership = JSON.stringify([args.nodeOrder, args.trashedNodeIds]);
-  const request = useMemo(() => ({}), [context, learningNodes, membership, refresh]);
+  const nodeOrder = useStableIdList(args.nodeOrder);
+  const trashedNodeIds = useStableIdList(args.trashedNodeIds);
+  const request = useMemo(() => ({}), [context, learningNodes, nodeOrder, trashedNodeIds, refresh]);
   const [result, setResult] = useState<{ request: object; context: object; view?: DailyFlowView; nodes?: Record<string, Node>;
     error?: string } | null>(null);
   useEffect(() => {
@@ -55,6 +70,7 @@ export function useDailyFlowView(args: ViewContext) {
         stopped: Boolean(dive.stop) } } : {}) },
     args.reviewSession, args.nodesById).then(({ view, nodes }) => {
       if (args.libraryScope && args.libraryScope !== view.scope) return;
+      if (live) requestDailyFlowClockWake(args.now, view.nextChangeAt);
       if (live) setResult({ request, context, view, ...(nodes ? { nodes: nodes as Record<string, Node> } : {}) });
     }).catch(error => {
       logRuntimeError('could not read daily Flow', { area: 'persistence', action: 'read_daily_flow_view', error });

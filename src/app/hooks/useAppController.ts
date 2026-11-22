@@ -196,7 +196,7 @@ export function useAppController(args: AppControllerOptions): AppControllerResul
     !controller.virtualView.isVirtualViewOpen;
   useReadingResumeOffer(canOfferReadingResume ? ws.activeNodeId : null, controller.runtime);
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
-  const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
+  const reviewPreview = useReviewSessionRuntime({ isStudyMode, reviewSettings, ws });
   useControllerStartupEffects({ controller, isReviewSchedulerSettingsReady: reviewSettings.isReviewSchedulerSettingsReady, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
   useControllerReviewCompletionNotice({ exitStudyMode, isStudyMode, reviewSession: ws.reviewSession });
   const reviewEditing = useControllerReviewEditingState({

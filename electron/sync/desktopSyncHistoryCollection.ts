@@ -1,13 +1,19 @@
 import { recordCompletedSyncGroupRound } from '../../lib/core/sync/syncGroupCoverageStore.js';
-import { collectSyncGroupHistory } from '../../lib/core/sync/syncHistoryCollection.js';
+import { collectSyncGroupHistory, type SettledSyncHistoryHorizons } from '../../lib/core/sync/syncHistoryCollection.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
-async function currentHost() {
-  return createDesktopRequestSyncDatabaseHost(await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath));
+const settledHorizons: SettledSyncHistoryHorizons = new Map();
+
+async function currentDatabasePath() {
+  return runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath);
+}
+
+async function currentHost(dbPath?: string) {
+  return createDesktopRequestSyncDatabaseHost(dbPath ?? await currentDatabasePath());
 }
 
 /** A lost coverage record only delays the group line; it never fails the round it describes. */
@@ -21,11 +27,16 @@ export async function recordDesktopCompletedSyncRound(peer: DesktopSyncGroupPeer
   }
 }
 
-/** Reclaiming history never fails the round that made it reclaimable; the next round retries. */
+/**
+ * Reclaiming history never fails the round that made it reclaimable; the next round retries.
+ * A round both before and after its exchange asks; only a group line not yet drained in this library is scanned.
+ */
 export async function collectDesktopSyncHistory(groupId: string) {
   try {
-    const host = await currentHost();
-    const collected = await collectSyncGroupHistory(write => host.write(write), groupId);
+    const dbPath = await currentDatabasePath();
+    const host = await currentHost(dbPath);
+    const collected = await collectSyncGroupHistory(write => host.write(write), groupId,
+      { horizons: settledHorizons, key: `${dbPath}\u0000${groupId}` });
     if (collected.versions || collected.tombstones) appendMainProcessDiagnosticLog('sync_history_collected', collected);
   } catch (error) {
     appendMainProcessDiagnosticLog('sync_history_collection_failed', { error });

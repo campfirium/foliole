@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
@@ -8,6 +8,10 @@ import { RESUME_REVIEW_UNAVAILABLE_NOTICE, useResumeReviewItem } from './useResu
 
 vi.mock('../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
+
+// Actions read the current time when they run, so these tests fix the clock instead of passing a time.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z')); });
+afterEach(() => { vi.useRealTimers(); });
 
 function setup(receipt: string | false, ready = true) {
   const resumeReviewSession = vi.fn().mockResolvedValue(receipt);
@@ -18,7 +22,6 @@ function setup(receipt: string | false, ready = true) {
     trash: { closeTrashView: vi.fn() }, virtualView: { closeVirtualView: vi.fn() }
   };
   const { result } = renderHook(() => useResumeReviewItem({ controller: controller as never,
-    nowIso: '2026-03-10T12:00:00.000Z',
     reviewSettings: { isReviewSchedulerSettingsReady: ready, reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS } as never,
     ws: { reviewSessionMode: 'recommended', activeNodeId: 'stale-request', resumeReviewSession, nodeOrder: [], nodesById: {},
       reviewSession: { currentNodeId: 'stale-current', queueNodeIds: [] }, trashedNodeIds: [] } as never }));
