@@ -20,6 +20,7 @@ export async function metadataOwner(entries: Array<[string, string]> = []) {
     isDBOpen: vi.fn(async () => ({ result: true })),
     open: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string, values: unknown[] = []) => {
+      if (sql === 'SELECT total_changes() AS changes') return { values: [{ changes: 0 }] };
       if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
       if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'wal' }] };
       if (sql === 'PRAGMA user_version') return { values: [{ user_version: COMPANION_DATABASE_VERSION }] };
