@@ -59,6 +59,33 @@ it('copies a small diagnostic report without embedding full logs or crash dumps'
   expect(result.report_text).not.toContain('minidump');
 });
 
+it('lists slow and hot operations apart from the errors, with counts but no payload text', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-bundle-perf-'));
+  roots.push(root);
+  const logsDir = path.join(root, 'logs');
+  await fs.mkdir(logsDir, { recursive: true });
+  await fs.writeFile(path.join(logsDir, 'runtime-2026-11-22.ndjson'), [
+    JSON.stringify({ event: 'native_command_hot', level: 'info', occurred_at: '2026-11-22T10:00:00.000Z',
+      source: 'electron.main', payload: { command: 'load_daily_flow_view', calls: 2400, totalMs: 90000, maxMs: 80,
+        title: 'Secret title' } }),
+    JSON.stringify({ event: 'renderer_long_tasks', level: 'info', occurred_at: '2026-11-22T10:00:00.000Z',
+      source: 'renderer.native', payload: { count: 30, totalMs: 2400, maxMs: 80 } }),
+    JSON.stringify({ event: 'routine', level: 'info', occurred_at: '2026-11-22T10:00:01.000Z', source: 'test' })
+  ].join('\n'), 'utf8');
+
+  const { report_text: report } = await copyDiagnosticReport({
+    app: { getPath: (name: string) => ({ crashDumps: path.join(root, 'crash'), logs: logsDir })[name] as string,
+      getVersion: () => '0.1.0' }
+  });
+
+  const section = report.split('Slow and hot operations')[1]!.split('Native command load')[0]!;
+  expect(section).toContain('native_command_hot {"calls":2400,"command":"load_daily_flow_view","maxMs":80,"totalMs":90000}');
+  expect(section).toContain('renderer_long_tasks {"count":30,"maxMs":80,"totalMs":2400}');
+  expect(section).not.toContain('routine');
+  expect(report).not.toContain('Secret title');
+  expect(report.split('Recent errors and warnings:')[1]!.split('Slow and hot')[0]).not.toContain('native_command_hot');
+});
+
 it('shows safe operation failure details without embedding sensitive payload fields', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-operation-'));
   roots.push(root);

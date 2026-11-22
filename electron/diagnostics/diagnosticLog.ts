@@ -8,6 +8,7 @@ import { appendBoundedLogLine } from './boundedLogLine.js';
 import { isDesktopDebugProbeEnabled } from './desktopDebugTrace.js';
 import { recordDesktopSupportEvent } from './desktopSupportLog.js';
 import { redactDiagnosticPayload } from './diagnosticRedactor.js';
+import { PERFORMANCE_RECORD_EVENTS } from './performanceRecordEvents.js';
 
 const DEFAULT_RETENTION_DAYS = 7;
 const MAX_DAILY_LOG_BYTES = 1024 * 1024;
@@ -66,7 +67,8 @@ async function pruneExpiredLogs(logDir: string, retentionDays: number, now: Date
 
 function shouldPersistRuntimeLog(record: DiagnosticLogRecord) {
   return record.level === 'error' || record.level === 'warn' || isDesktopDebugProbeEnabled()
-    || (record.source === 'electron.agentControl' && record.event === 'agent_control_api_call');
+    || (record.source === 'electron.agentControl' && record.event === 'agent_control_api_call')
+    || PERFORMANCE_RECORD_EVENTS.has(record.event);
 }
 
 export function parseDiagnosticLogPayload(value: unknown): DiagnosticLogRecord {

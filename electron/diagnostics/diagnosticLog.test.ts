@@ -32,8 +32,11 @@ it('keeps routine details off the daily log while retaining faults and the Agent
     await appendDiagnosticLog({ ...base, event: 'fault', level: 'warn' }, now);
     await appendDiagnosticLog({ ...base, event: 'failure', level: 'error' }, now);
     await appendDiagnosticLog({ ...base, event: 'agent_control_api_call', level: 'info', source: 'electron.agentControl' }, now);
+    await appendDiagnosticLog({ ...base, event: 'native_command_slow', level: 'info' }, now);
+    await appendDiagnosticLog({ ...base, event: 'renderer_long_tasks', level: 'info', source: 'renderer.native' }, now);
     const records = fs.readFileSync(path.join(logDir, 'runtime-2026-04-22.ndjson'), 'utf8').trim().split('\n');
-    expect(records.map(line => JSON.parse(line).event)).toEqual(['fault', 'failure', 'agent_control_api_call']);
+    expect(records.map(line => JSON.parse(line).event))
+      .toEqual(['fault', 'failure', 'agent_control_api_call', 'native_command_slow', 'renderer_long_tasks']);
   } finally {
     fs.rmSync(logDir, { recursive: true, force: true });
   }

@@ -10,6 +10,8 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { summarizeRuntimeErrors } from './diagnosticErrorSummary.js';
 import { redactExportedDiagnosticText } from './diagnosticExportRedactor.js';
 import { redactDiagnosticValue } from './diagnosticRedactor.js';
+import { formatNativeCommandLoad } from './nativeCommandLoad.js';
+import { PERFORMANCE_RECORD_EVENTS } from './performanceRecordEvents.js';
 
 interface FileSummary {
   name: string;
@@ -39,10 +41,13 @@ const MAX_BOOT_EVENTS = 8;
 const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
   'action',
+  'calls',
   'code',
+  'count',
   'command',
   'durationMs',
   'lastObservedBlocker',
+  'maxMs',
   'message',
   'moduleLabel',
   'name',
@@ -129,6 +134,20 @@ async function collectRecentRuntimeErrors(logsDir: string) {
   return summarizeRuntimeErrors(records);
 }
 
+const MAX_PERFORMANCE_RECORDS = 16;
+
+async function collectRecentPerformanceRecords(logsDir: string) {
+  const files = (await listFiles(logsDir))
+    .filter((file) => /^runtime-\d{4}-\d{2}-\d{2}\.ndjson$/u.test(file.name))
+    .sort((left, right) => right.name.localeCompare(left.name))
+    .slice(0, 3)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const records = (await Promise.all(files.map(async (file) => parseNdjsonTail(await readTail(path.join(logsDir, file.name)))
+    .filter((record) => PERFORMANCE_RECORD_EVENTS.has(record.event ?? ''))
+    .map((record) => ({ ...formatRecord(record), file: file.name }))))).flat();
+  return records.slice(-MAX_PERFORMANCE_RECORDS);
+}
+
 async function collectRecentBootEvents(logsDir: string) {
   const bootLogPath = path.join(logsDir, 'windows', 'native-boot-events.ndjson');
   if (!(await pathExists(bootLogPath))) return { events: [], summary: null as FileSummary | null };
@@ -191,8 +210,9 @@ export async function copyDiagnosticReport(args: {
     return { report_text: text, status: 'generated' };
   }
   const crashDumpsDir = args.app.getPath('crashDumps');
-  const [recentErrors, boot, crashFiles, logFiles] = await Promise.all([
+  const [recentErrors, performanceRecords, boot, crashFiles, logFiles] = await Promise.all([
     collectRecentRuntimeErrors(logsDir),
+    collectRecentPerformanceRecords(logsDir),
     collectRecentBootEvents(logsDir),
     listFiles(crashDumpsDir),
     listFiles(logsDir)
@@ -213,6 +233,14 @@ export async function copyDiagnosticReport(args: {
     recentErrors.length > 0
       ? recentErrors.join('\n')
       : '- None found in recent runtime log tails.',
+    '',
+    'Slow and hot operations (recent logs; command times are wall time including queue waits):',
+    performanceRecords.length > 0
+      ? performanceRecords.map(formatRecordLine).join('\n')
+      : '- None found in recent runtime log tails.',
+    '',
+    'Native command load this session (per hour, most expensive first):',
+    formatNativeCommandLoad(),
     '',
     'Startup summary:',
     boot.summary

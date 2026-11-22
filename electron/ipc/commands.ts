@@ -5,6 +5,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import { recordNativeCommandFailure } from '../diagnostics/nativeCommandFailureLog.js';
+import { recordNativeCommandTiming } from '../diagnostics/nativeCommandLoad.js';
 
 import { handleAssistantCommand } from './assistantCommands.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
@@ -38,9 +39,13 @@ function resolveTargetWindow(context?: InvokeContext) {
 }
 
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  const startedAt = performance.now();
   try {
-    return await dispatchInvokeRequest(request, context);
+    const result = await dispatchInvokeRequest(request, context);
+    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'done');
+    return result;
   } catch (error) {
+    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'failed');
     await recordNativeCommandFailure(String(request.command), error);
     throw error;
   }

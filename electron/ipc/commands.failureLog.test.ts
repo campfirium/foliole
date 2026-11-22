@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetNativeCommandFailureLogForTests } from '../diagnostics/nativeCommandFailureLog.js';
+import { readNativeCommandLoad, resetNativeCommandLoadForTests } from '../diagnostics/nativeCommandLoad.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -25,6 +26,7 @@ beforeEach(() => {
   appendDiagnosticLog.mockClear();
   handleWindowAndUtilityCommand.mockReset();
   resetNativeCommandFailureLogForTests();
+  resetNativeCommandLoadForTests();
 });
 
 it('records a failed native command with its error and still rejects the caller', async () => {
@@ -58,4 +60,13 @@ it('records a repeating identical failure once per minute so it cannot flood the
   }
 
   expect(appendDiagnosticLog).toHaveBeenCalledTimes(1);
+});
+
+it('times every native command at the IPC boundary, completed or failed', async () => {
+  handleWindowAndUtilityCommand.mockResolvedValueOnce(null).mockRejectedValueOnce(new Error('offline'));
+
+  await handleInvokeRequest({ command });
+  await expect(handleInvokeRequest({ command })).rejects.toThrow('offline');
+
+  expect(readNativeCommandLoad()[0]!.top).toEqual([expect.objectContaining({ command, calls: 2, failures: 1 })]);
 });
