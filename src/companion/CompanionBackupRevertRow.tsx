@@ -9,14 +9,11 @@ import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../shared/ui/Sett
 
 import { companionBackupRestoreMessage } from './companionBackupRestoreMessage';
 import { failCompanionLibrarySwitch } from './companionLibrarySwitch';
+import { formatCompanionLibrarySize, readCompanionPreviousLibrary, type CompanionPreviousLibrary } from './companionPreviousLibrary';
 import { formatCompanionTopicDate } from './CompanionRecentArticleList';
 import { companionLibrarySwapContext, reloadCompanionApp } from './useCompanionBackupRestore';
 
 type RevertStep = { step: 'closed' | 'confirm' | 'reverting' | 'deleteConfirm' | 'deleting' } | { step: 'failed'; error: string };
-
-function megabytes(bytes: number) {
-  return `${Math.max(1, Math.ceil(bytes / (1024 * 1024)))} MB`;
-}
 
 function DeleteSheetBody({ view, size, date, onDelete }: { view: RevertStep; size: string; date: string; onDelete(): void }) {
   const { t } = useLocalization();
@@ -56,12 +53,10 @@ function RevertSheetBody({ view, onRevert }: { view: RevertStep; onRevert(): voi
 
 /** The library a restore set aside on this phone: null while none is kept. */
 function usePreviousLibrary() {
-  const [previous, setPrevious] = useState<{ savedAt: string; bytes: number } | null>(null);
+  const [previous, setPrevious] = useState<CompanionPreviousLibrary | null>(null);
   useEffect(() => {
     let active = true;
-    void getCompanionBackupRestorePort().previous()
-      .then(value => { if (active && value.exists) setPrevious({ savedAt: value.savedAt ?? '', bytes: value.bytes ?? 0 }); })
-      .catch(() => undefined);
+    void readCompanionPreviousLibrary().then(value => { if (active) setPrevious(value); });
     return () => { active = false; };
   }, []);
   return { previous, forget: () => setPrevious(null) };
@@ -113,7 +108,7 @@ export function CompanionBackupRevertRow() {
           {view.step === 'confirm' || view.step === 'deleteConfirm'
             ? <button type="button" onClick={() => setView({ step: 'closed' })}>{t('common.cancel')}</button> : null}
         </div>
-        {deleting ? <DeleteSheetBody view={view} size={megabytes(previous.bytes)} date={date} onDelete={() => void remove()} />
+        {deleting ? <DeleteSheetBody view={view} size={formatCompanionLibrarySize(previous.bytes)} date={date} onDelete={() => void remove()} />
           : <RevertSheetBody view={view} onRevert={() => void revert()} />}
       </SettingsTouchSheet></AppDialogPortal>
     </AppDialog>

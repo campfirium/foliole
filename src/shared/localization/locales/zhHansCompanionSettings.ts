@@ -163,7 +163,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.restoreReplace': '替换这台手机上的资料库',
   'companion.settings.storage.restoreConfirmTitle': '要替换这台手机上的资料库吗？',
   'companion.settings.storage.restoreConfirmDescription': '这台手机上现有的资料库会被移到一旁保存，不会删除，之后可以还原。这台手机保持自己的设备身份，在加入同步组之前不会同步。完成后 Foliole 会重新打开。',
-  'companion.settings.storage.restoreConfirmPrevious': '上次恢复时移到一旁的资料库会被现在这份替代。',
+  'companion.settings.storage.restoreConfirmPrevious': '{date} 留下的上一份资料库（约 {size}）会被删除，之后无法再还原。',
   'companion.settings.storage.restoreReplaceConfirm': '替换',
   'companion.settings.storage.restoreReplacing': '正在替换资料库…',
   'companion.settings.storage.restoreReopen': '重新打开 Foliole',

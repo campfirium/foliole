@@ -19,13 +19,14 @@ import {
 
 import { companionBackupRestoreMessage } from './companionBackupRestoreMessage';
 import { closeForCompanionLibrarySwitch, failCompanionLibrarySwitch } from './companionLibrarySwitch';
+import { readCompanionPreviousLibrary, type CompanionPreviousLibrary } from './companionPreviousLibrary';
 
 export type CompanionBackupRestoreView =
   | { step: 'closed' }
   | { step: 'choose'; error: string | null }
   | { step: 'reading'; files: number }
   | { step: 'ready'; summary: CompanionBackupRestoreSummary }
-  | { step: 'confirm'; summary: CompanionBackupRestoreSummary; replacesPrevious: boolean }
+  | { step: 'confirm'; summary: CompanionBackupRestoreSummary; previous: CompanionPreviousLibrary | null }
   | { step: 'replacing' }
   | { step: 'failed'; error: string };
 
@@ -63,8 +64,7 @@ export function useCompanionBackupRestore() {
   }, [t]);
 
   const requestReplace = useCallback(async (summary: CompanionBackupRestoreSummary) => {
-    const previous = await getCompanionBackupRestorePort().previous().catch(() => ({ exists: false }));
-    setView({ step: 'confirm', summary, replacesPrevious: previous.exists });
+    setView({ step: 'confirm', summary, previous: await readCompanionPreviousLibrary() });
   }, []);
 
   const replace = useCallback(async () => {

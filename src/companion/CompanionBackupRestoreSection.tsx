@@ -6,6 +6,7 @@ import { AppDialog, AppDialogPortal, AppDialogTitle } from '../shared/ui/Dialog'
 import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../shared/ui/SettingsTouchSheet';
 
 import { CompanionBackupRevertRow } from './CompanionBackupRevertRow';
+import { formatCompanionLibrarySize, type CompanionPreviousLibrary } from './companionPreviousLibrary';
 import { formatCompanionTopicDate } from './CompanionRecentArticleList';
 import { useCompanionBackupRestore, type CompanionBackupRestoreView } from './useCompanionBackupRestore';
 
@@ -36,6 +37,14 @@ function RestoreSummary({ summary }: { summary: CompanionBackupRestoreSummary })
 
 type Restore = ReturnType<typeof useCompanionBackupRestore>;
 
+/** Names the set-aside library the next swap deletes, so the user confirms with its date and size in view. */
+export function CompanionPreviousLibraryWarning({ previous }: { previous: CompanionPreviousLibrary }) {
+  const { locale, t } = useLocalization();
+  const date = previous.savedAt ? formatCompanionTopicDate(previous.savedAt, locale) : '';
+  return <p className="mt-3" data-settings-sheet-caption role="alert" data-testid="companion-restore-previous-warning">
+    {t('companion.settings.storage.restoreConfirmPrevious', { date, size: formatCompanionLibrarySize(previous.bytes) })}</p>;
+}
+
 function ReplaceSteps({ view, restore }: { view: CompanionBackupRestoreView; restore: Restore }) {
   const { t } = useLocalization();
   if (view.step === 'ready') {
@@ -48,8 +57,7 @@ function ReplaceSteps({ view, restore }: { view: CompanionBackupRestoreView; res
   if (view.step === 'confirm') {
     return <>
       <p data-settings-sheet-location>{t('companion.settings.storage.restoreConfirmDescription')}</p>
-      {view.replacesPrevious ? <p className="mt-3" data-settings-sheet-caption role="alert">
-        {t('companion.settings.storage.restoreConfirmPrevious')}</p> : null}
+      {view.previous ? <CompanionPreviousLibraryWarning previous={view.previous} /> : null}
       <button type="button" data-settings-sheet-primary data-testid="companion-restore-confirm"
         onClick={() => void restore.replace()}>{t('companion.settings.storage.restoreReplaceConfirm')}</button>
     </>;

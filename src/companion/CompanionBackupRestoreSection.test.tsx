@@ -9,7 +9,7 @@ const fixture = vi.hoisted(() => ({
   discard: vi.fn(async () => undefined),
   port: {
     cancel: vi.fn(async () => undefined),
-    previous: vi.fn(async () => ({ exists: true, savedAt: '2026-11-01T00:00:00Z' })),
+    previous: vi.fn(async () => ({ exists: true, savedAt: '2026-11-01T00:00:00Z', bytes: 5 * 1024 * 1024 })),
     addListener: vi.fn(async () => ({ remove: async () => undefined }))
   }
 }));
@@ -93,7 +93,7 @@ it('asks before replacing, says the current library is set aside, then replaces 
   fixture.commit.mockReturnValueOnce(new Promise(() => undefined));
   await openSummary();
   expect(await screen.findByText(/set aside, not deleted/)).toBeInTheDocument();
-  expect(screen.getByRole('alert')).toHaveTextContent('The library set aside by your last restore will be replaced');
+  expect(screen.getByTestId('companion-restore-previous-warning')).toHaveTextContent(/set aside on .+ \(about 5 MB\) will be deleted/);
   expect(fixture.commit).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

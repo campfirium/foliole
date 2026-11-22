@@ -153,7 +153,7 @@
   "companion.settings.storage.restoreReplace": "取代這支手機上的資料庫",
   "companion.settings.storage.restoreConfirmTitle": "要取代這支手機上的資料庫嗎？",
   "companion.settings.storage.restoreConfirmDescription": "這支手機上現有的資料庫會被移到一旁保存，不會刪除，之後可以還原。這支手機保持自己的裝置身分，在加入同步群組之前不會同步。完成後 Foliole 會重新開啟。",
-  "companion.settings.storage.restoreConfirmPrevious": "上次還原時移到一旁的資料庫會被現在這份取代。",
+  "companion.settings.storage.restoreConfirmPrevious": "{date} 留下的上一份資料庫（約 {size}）會被刪除，之後無法再還原。",
   "companion.settings.storage.restoreReplaceConfirm": "取代",
   "companion.settings.storage.restoreReplacing": "正在取代資料庫…",
   "companion.settings.storage.restoreReopen": "重新開啟 Foliole",
