@@ -37,7 +37,7 @@ const shelvedTopic = {
   shelvedAt: '2026-05-01T00:00:00.000Z'
 };
 const trashedTopic = createWorkspaceContentNode({ id: 'trashed-topic', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Trashed' });
-const library: Record<string, Node> = {
+const library = {
   [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
   [VIRTUAL_ROOT_NODE_ID]: createWorkspaceContentNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
   'shelved-topic': shelvedTopic,
