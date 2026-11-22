@@ -25,6 +25,9 @@ export const TASK_OWNED_ARTIFACT_CATEGORIES = new Set([
   'a5-single-principal-sync-group',
   'macos-a5-formal'
 ]);
+// Categories whose producers refresh each run through withArtifactRun; only these are safe to age
+// without a person reviewing the candidates (other second-level folders are task rounds).
+export const REGISTERED_ARTIFACT_CATEGORIES = Object.freeze(['journey-readiness', 'ios-bridge-acceptance']);
 
 function resolveAllowedRoot(rootArg) {
   const rootDir = resolve(rootArg ?? repoRoot);
@@ -57,10 +60,11 @@ function listEntries(rootDir, relativeRoot) {
   });
 }
 
-function artifactCandidates(rootDir, nowMs) {
+function artifactCandidates(rootDir, nowMs, categories) {
   const cutoffMs = nowMs - ARTIFACT_RETENTION_DAYS * DAY_MS;
   return listEntries(rootDir, ARTIFACT_ROOT).flatMap((category) => {
     if (TASK_OWNED_ARTIFACT_CATEGORIES.has(category.name)) return [];
+    if (categories && !categories.includes(category.name)) return [];
     if (!lstatSync(category.path).isDirectory() || lstatSync(category.path).isSymbolicLink()) {
       return [];
     }
@@ -142,6 +146,7 @@ export function refreshCacheEntry({ entryName, nowMs = Date.now(), rootDir = rep
 
 export function runRetention({
   apply = false,
+  categories,
   maxCacheBytes = CACHE_MAX_BYTES,
   nowMs = Date.now(),
   removeEntry = (path) => rmSync(path, { force: true, recursive: true }),
@@ -152,7 +157,7 @@ export function runRetention({
     throw new Error('scope must be all, artifact, or cache');
   }
   const entries = [
-    ...(scope === 'all' || scope === 'artifact' ? artifactCandidates(rootDir, nowMs) : []),
+    ...(scope === 'all' || scope === 'artifact' ? artifactCandidates(rootDir, nowMs, categories) : []),
     ...(scope === 'all' || scope === 'cache' ? cacheCandidates(rootDir, nowMs, maxCacheBytes) : [])
   ];
   const outcome = apply ? removeCandidates(entries, removeEntry) : { deletedCount: 0, failures: [] };

@@ -17,9 +17,12 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { IOS_ACCEPTANCE_ARTIFACT_ENTRY } from '../ios/ios-local-storage.mjs';
+
 import {
   ARTIFACT_ROOT,
   CACHE_ROOT,
+  REGISTERED_ARTIFACT_CATEGORIES,
   refreshCacheEntry,
   runRetention
 } from './local-artifact-cache-retention.mjs';
@@ -143,5 +146,21 @@ describe('local artifact and cache retention', () => {
     const retried = runRetention({ apply: true, nowMs, rootDir: root, scope: 'artifact' });
     expect(retried).toMatchObject({ deletedCount: 1, ok: true });
     expect(existsSync(first)).toBe(false);
+  }));
+
+  it('ages only registered categories when asked and can skip the cache size cap', () => withFixture((root) => {
+    const registered = makeEntry(root, `${ARTIFACT_ROOT}/journey-readiness`, 'old-run', 2, 2);
+    const taskRound = makeEntry(root, `${ARTIFACT_ROOT}/T900`, 'round-1', 2, 2);
+    const usedCache = makeEntry(root, CACHE_ROOT, 'toolchain', 64, 1);
+
+    const result = runRetention({
+      apply: true, categories: REGISTERED_ARTIFACT_CATEGORIES, maxCacheBytes: Infinity, nowMs, rootDir: root
+    });
+
+    expect(result.entries.map((entry) => entry.path)).toEqual([registered]);
+    expect(existsSync(registered)).toBe(false);
+    expect(existsSync(taskRound)).toBe(true);
+    expect(existsSync(usedCache)).toBe(true);
+    expect(REGISTERED_ARTIFACT_CATEGORIES).toContain(IOS_ACCEPTANCE_ARTIFACT_ENTRY);
   }));
 });

@@ -130,6 +130,55 @@ describe('cleanup-local-artifacts', () => {
     }
   });
 
+  it('keeps old directories that still receive writes inside, hidden directories and the quarantine', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-nested-write-'));
+    try {
+      const active = join(root, '.tmp', 'npm-cache');
+      const idle = join(root, '.tmp', 'old-run');
+      const hidden = join(root, '.tmp', '.claude');
+      const quarantine = join(root, '.tmp', 'cleanup-quarantine', '20260101');
+      for (const directory of [join(active, 'nested'), idle, hidden, quarantine]) {
+        mkdirSync(directory, { recursive: true });
+      }
+      touch(join(active, 'nested', 'fresh.tgz'), recentTime);
+      utimesSync(join(active, 'nested'), oldTime, oldTime);
+      utimesSync(active, oldTime, oldTime);
+      touch(join(idle, 'run.log'), oldTime);
+      utimesSync(idle, oldTime, oldTime);
+      touch(join(hidden, 'state.json'), oldTime);
+      utimesSync(hidden, oldTime, oldTime);
+      touch(join(quarantine, 'moved.bin'), oldTime);
+      utimesSync(quarantine, oldTime, oldTime);
+      utimesSync(join(root, '.tmp', 'cleanup-quarantine'), oldTime, oldTime);
+
+      const result = runCleanup({ apply: true, days: 7, dryRun: false, nowMs, rootDir: root });
+
+      expect(result.entries.map((entry) => entry.path)).toEqual([idle]);
+      expect(existsSync(join(active, 'nested', 'fresh.tgz'))).toBe(true);
+      expect(existsSync(join(hidden, 'state.json'))).toBe(true);
+      expect(existsSync(join(quarantine, 'moved.bin'))).toBe(true);
+      expect(existsSync(idle)).toBe(false);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it('limits collection to the requested roots', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-roots-'));
+    try {
+      mkdirSync(join(root, '.tmp'), { recursive: true });
+      mkdirSync(join(root, 'release'), { recursive: true });
+      touch(join(root, '.tmp', 'old.log'), oldTime);
+      touch(join(root, 'release', 'old-installer.exe'), oldTime);
+
+      const result = runCleanup({ apply: false, days: 7, dryRun: true, nowMs, rootDir: root, roots: ['.tmp'] });
+
+      expect(result.entries.map((entry) => entry.path)).toEqual([join(root, '.tmp', 'old.log')]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it('rejects arbitrary cleanup roots from the CLI', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-cleanup-rejected-root-'));
     try {

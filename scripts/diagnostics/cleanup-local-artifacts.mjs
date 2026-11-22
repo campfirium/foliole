@@ -19,7 +19,11 @@ export const CLEANUP_ROOTS = [
   'trees'
 ];
 const PROTECTED_ROOTS = new Set([
+  '.tmp/agent-control',
   '.tmp/artifacts',
+  '.tmp/claude-github-handoff',
+  '.tmp/cleanup-quarantine',
+  '.tmp/github-desktop-handoff-monitor',
   '.tmp/desktop-runtime',
   '.tmp/macos-desktop-daily-debug',
   '.tmp/macos-desktop-reset-preview',
@@ -28,7 +32,27 @@ const PROTECTED_ROOTS = new Set([
 
 function isProtectedEntry(rootName, entryName, entryPath) {
   return PROTECTED_ROOTS.has(`${rootName}/${entryName}`)
-    || existsSync(resolve(entryPath, '.git'));
+    || existsSync(resolve(entryPath, '.git'))
+    || (entryName.startsWith('.') && lstatSync(entryPath).isDirectory());
+}
+
+// A directory counts as written when anything inside it was, not only when its own entry list changed.
+// The walk stops once a write newer than stopAfterMs is found, since that already decides the entry.
+export function newestWriteMs(path, stopAfterMs = Infinity) {
+  const stats = lstatSync(path);
+  let newest = stats.mtimeMs;
+  if (!stats.isDirectory() || newest > stopAfterMs) return newest;
+  let entries;
+  try {
+    entries = readdirSync(path, { withFileTypes: true });
+  } catch {
+    return Infinity; // unreadable content is never treated as idle
+  }
+  for (const entry of entries) {
+    newest = Math.max(newest, newestWriteMs(resolve(path, entry.name), stopAfterMs));
+    if (newest > stopAfterMs) break;
+  }
+  return newest;
 }
 
 function resolveAllowedRoot(rootArg) {
@@ -68,10 +92,10 @@ function directorySizeBytes(path) {
   return total;
 }
 
-function collectEntries(rootDir, nowMs, days) {
+function collectEntries(rootDir, nowMs, days, roots) {
   const cutoffMs = nowMs - days * DAY_MS;
   const results = [];
-  for (const rootName of CLEANUP_ROOTS) {
+  for (const rootName of roots) {
     const rootPath = resolve(rootDir, rootName);
     if (!existsSync(rootPath)) {
       continue;
@@ -79,13 +103,13 @@ function collectEntries(rootDir, nowMs, days) {
     for (const entry of readdirSync(rootPath, { withFileTypes: true })) {
       const entryPath = resolve(rootPath, entry.name);
       if (isProtectedEntry(rootName, entry.name, entryPath)) continue;
-      const stats = lstatSync(entryPath);
-      if (stats.mtimeMs <= cutoffMs) {
+      const mtimeMs = newestWriteMs(entryPath, cutoffMs);
+      if (mtimeMs <= cutoffMs) {
         results.push({
-          mtimeMs: stats.mtimeMs,
+          mtimeMs,
           path: entryPath,
           rootName,
-          sizeBytes: entry.isDirectory() ? directorySizeBytes(entryPath) : stats.size
+          sizeBytes: entry.isDirectory() ? directorySizeBytes(entryPath) : lstatSync(entryPath).size
         });
       }
     }
@@ -93,8 +117,8 @@ function collectEntries(rootDir, nowMs, days) {
   return results.sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function removeEmptyChildren(rootDir) {
-  for (const rootName of CLEANUP_ROOTS) {
+function removeEmptyChildren(rootDir, roots) {
+  for (const rootName of roots) {
     const rootPath = resolve(rootDir, rootName);
     if (!existsSync(rootPath)) {
       continue;
@@ -129,15 +153,16 @@ export function runCleanup({
   days,
   dryRun,
   nowMs = Date.now(),
-  rootDir = repoRoot
+  rootDir = repoRoot,
+  roots = CLEANUP_ROOTS
 }) {
-  const entries = collectEntries(rootDir, nowMs, days);
+  const entries = collectEntries(rootDir, nowMs, days, roots);
   const totalBytes = entries.reduce((sum, entry) => sum + entry.sizeBytes, 0);
   if (apply) {
     for (const entry of entries) {
       rmSync(entry.path, { force: true, recursive: true });
     }
-    removeEmptyChildren(rootDir);
+    removeEmptyChildren(rootDir, roots);
   }
   return {
     days,
