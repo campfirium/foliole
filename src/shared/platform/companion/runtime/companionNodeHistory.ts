@@ -72,9 +72,10 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
 }
 
 /**
- * Releasing superseded bodies does not change what the edit shows, so it waits until the edit's refresh and form have
- * settled and then runs as one write for every node edited meanwhile. An interrupted release only keeps an older body
- * until the node's next write or sync collects it.
+ * Releasing superseded bodies does not change what the edit shows, so it waits until editing has paused (every edit
+ * restarts the wait, up to a limit so continuous editing still releases) and then runs as one write for every node
+ * edited meanwhile; a release that fires during the next edit would hold up that edit's refresh. An interrupted
+ * release only keeps an older body until the node's next write or sync collects it.
  */
 export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[]) {
   // A release belongs to the library that was edited; switching libraries leaves the rest to that library's next write.
@@ -84,11 +85,17 @@ export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[
   if (collectionOwner !== owner) pendingCollectionIds.clear();
   collectionOwner = owner;
   for (const id of nodeIds) pendingCollectionIds.add(id);
-  if (!pendingCollectionIds.size || collectionTimer) return;
-  collectionTimer = setTimeout(() => { void runPendingCollections(); }, COLLECTION_DELAY_MS);
+  if (!pendingCollectionIds.size) return;
+  const now = Date.now();
+  if (!collectionTimer) firstPendingAt = now;
+  else clearTimeout(collectionTimer);
+  const delay = Math.max(0, Math.min(COLLECTION_DELAY_MS, firstPendingAt + COLLECTION_MAX_WAIT_MS - now));
+  collectionTimer = setTimeout(() => { void runPendingCollections(); }, delay);
 }
 
 const COLLECTION_DELAY_MS = 1500;
+const COLLECTION_MAX_WAIT_MS = 10_000;
+let firstPendingAt = 0;
 const pendingCollectionIds = new Set<string>();
 let collectionTimer: ReturnType<typeof setTimeout> | null = null;
 let runningCollection: Promise<void> | null = null;
