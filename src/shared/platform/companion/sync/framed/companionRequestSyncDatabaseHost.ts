@@ -71,5 +71,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
     }
   }
 
-  return { ...host, withDeferredNodePriorities };
+  // Identifies this opened library; a reset or replaced library opens a new generation.
+  const libraryGeneration = `${databasePath}\u0000${generation}`;
+  return { ...host, libraryGeneration, withDeferredNodePriorities };
 }
