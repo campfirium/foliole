@@ -1,4 +1,5 @@
 import type { DesktopSyncDiagnosticsPayload } from './desktopSyncDiagnosticsContract.js';
+import type { FolderListSortMemoryPayload } from './folderListSortMemoryContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { DesktopSyncGroupOverviewPayload } from './nativeCompanionSyncContract.js';
 import type {
@@ -25,6 +26,14 @@ export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.saveSystemEntryDisplayNames]: {
     args: { payload: SystemEntryDisplayNamesPayload };
     result: SystemEntryDisplayNamesPayload;
+  };
+  [NATIVE_COMMANDS.loadFolderListSortMemory]: {
+    args: undefined;
+    result: FolderListSortMemoryPayload;
+  };
+  [NATIVE_COMMANDS.saveFolderListSortMemory]: {
+    args: { payload: FolderListSortMemoryPayload };
+    result: FolderListSortMemoryPayload;
   };
   [NATIVE_COMMANDS.loadSyncIndex]: {
     args: undefined;

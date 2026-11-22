@@ -1,4 +1,5 @@
 import { NATIVE_ARTICLE_TARGET_COMMANDS } from './articleTarget.js';
+import { NATIVE_FOLDER_LIST_SORT_COMMANDS } from './folderListSortMemoryContract.js';
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
@@ -252,8 +253,7 @@ export const NATIVE_COMMANDS = {
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',
   deleteNodesPermanently: 'delete_nodes_permanently',
-  ...NATIVE_DAILY_FLOW_COMMANDS,
-  ...NATIVE_REMINDER_COMMANDS,
+  ...NATIVE_DAILY_FLOW_COMMANDS, ...NATIVE_REMINDER_COMMANDS, ...NATIVE_FOLDER_LIST_SORT_COMMANDS,
   applyReviewGrade: 'apply_review_grade'
 } as const;
 

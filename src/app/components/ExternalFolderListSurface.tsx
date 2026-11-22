@@ -1,3 +1,4 @@
+import { externalFolderListSortId } from '../../../lib/platform/folderListSortMemoryContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
@@ -99,6 +100,10 @@ export function ExternalFolderListSurface(args: {
           nodesById={args.documentNodesById}
           onSelectNode={handleSelectDocument}
           regionLabel={t('desktop.externalLibrary.folderListView')}
+          sortMemoryId={externalFolderListSortId(
+            args.activeFolderId,
+            args.selection.kind === 'directory' ? args.selection.directoryPath : null
+          )}
         />
       </section>
     </PanelScaleSurface>

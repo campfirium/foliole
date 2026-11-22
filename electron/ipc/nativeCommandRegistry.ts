@@ -6,6 +6,7 @@ import { NATIVE_ARTICLE_TARGET_COMMAND_REGISTRY } from './nativeArticleTargetCom
 import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
 import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js';
 import { NATIVE_DIVE_COMMAND_REGISTRY } from './nativeDiveCommandRegistry.js';
+import { NATIVE_FOLDER_LIST_SORT_COMMAND_REGISTRY } from './nativeFolderListSortCommandRegistry.js';
 import { NATIVE_IMPORT_FILE_COMMAND_REGISTRY } from './nativeImportFileCommandRegistry.js';
 import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
@@ -212,7 +213,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadSyncNodeConflicts, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.applySyncNodes, route: 'storage', capability: 'syncMutation' },
   { command: NATIVE_COMMANDS.recordSyncNodeConflicts, route: 'storage', capability: 'syncMutation' },
-  ...NATIVE_DIVE_COMMAND_REGISTRY,
+  ...NATIVE_DIVE_COMMAND_REGISTRY, ...NATIVE_FOLDER_LIST_SORT_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.loadAppSettingsState, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadSystemColorMode, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveAppSettingsState, route: 'storage', capability: 'settingsMutation' },

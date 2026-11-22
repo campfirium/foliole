@@ -3,6 +3,7 @@ import { shell, type BrowserWindow } from 'electron';
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
+import { loadFolderListSortMemory, saveFolderListSortMemory } from '../database/folderListSortMemory.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { ensureSearchAliasFile, searchAliasMirrorStatus, startSearchAliasMirror } from '../database/searchAliasMirror.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
@@ -116,6 +117,8 @@ async function handleAppSettingsCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadSystemEntryDisplayNames) return loadSystemEntryDisplayNames();
   if (command === NATIVE_COMMANDS.saveSystemEntryDisplayNames)
     return saveSystemEntryDisplayNames(args.payload);
+  if (command === NATIVE_COMMANDS.loadFolderListSortMemory) return loadFolderListSortMemory();
+  if (command === NATIVE_COMMANDS.saveFolderListSortMemory) return saveFolderListSortMemory(args.payload);
   if (command !== NATIVE_COMMANDS.saveAppSettingsState) return undefined;
   await saveAppSettingsState(readSettingsObject(args.settings));
   refreshGlobalClipShortcutFromSettings();

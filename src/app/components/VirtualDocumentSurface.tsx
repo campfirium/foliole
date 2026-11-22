@@ -134,6 +134,7 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
       searchPlaceholder={t('desktop.virtualSearch.placeholder')}
       searchReadOnly
       searchQuery={query}
+      sortMemoryId={props.activeNode.id}
     />
   );
 }
@@ -165,6 +166,7 @@ export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurface
       onSelectNodePath={props.onSelectNodePath}
       regionLabel={isShelved ? t('desktop.virtualSearch.shelved.region') : t('desktop.virtualSearch.removed.region')}
       searchDescription={isShelved ? t('desktop.virtualSearch.shelved.description') : t('desktop.virtualSearch.removed.description')}
+      sortMemoryId={props.activeVirtualNodeId}
     />
   );
 }

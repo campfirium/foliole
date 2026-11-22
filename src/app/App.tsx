@@ -21,12 +21,12 @@ import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsOverlay';
 import { useAppBackgroundEffects } from './hooks/useAppBackgroundEffects';
 import { useAppController } from './hooks/useAppController';
-import { useSystemEntryDisplayNamesHydration } from './hooks/useSystemEntryDisplayNamesHydration';
+import { useLibrarySettingsHydration } from './hooks/useLibrarySettingsHydration';
 import { useWorkspaceContentChangedRefresh, useWorkspaceSyncAppliedRefresh } from './hooks/useWorkspaceSyncAppliedRefresh';
 import { ensureWorkspaceRuntimeHydrated } from './workspaceRuntimeHydration';
 
 function AppContent() {
-  useSystemEntryDisplayNamesHydration();
+  useLibrarySettingsHydration();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isHelpSearchOpen, setIsHelpSearchOpen] = useState(false);
   const [searchPreviewResult, setSearchPreviewResult] = useState<WorkspaceSearchResult | null>(null);

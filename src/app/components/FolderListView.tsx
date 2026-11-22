@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useRef } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
+  resolveDefaultFolderListSortDirection,
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
@@ -19,6 +20,7 @@ import type { FolderListItemLayout } from './FolderListViewItem';
 import { FolderListViewLayout } from './FolderListViewLayout';
 import { useFolderListSelection } from './useFolderListSelection';
 import { useFolderListViewState } from './useFolderListViewState';
+import { useRememberedFolderListSort } from './useRememberedFolderListSort';
 import { WorkspaceTopicTreeCurrentViewActions } from './WorkspaceTopicTreeCurrentViewActions';
 
 interface FolderListViewProps {
@@ -53,6 +55,8 @@ interface FolderListViewProps {
   sortDirection?: FolderListSortDirection;
   sortKey?: FolderListSortKey;
   sortOptions?: { key: FolderListSortKey; label: string }[];
+  /** Keeps this list's own sort choice when the caller does not control the sort; omit for transient lists. */
+  sortMemoryId?: string | undefined;
   trashedNodeIds?: string[];
 }
 
@@ -118,21 +122,27 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   const manualChildOrder = resolveFolderManualChildOrder(props);
   // A new array here re-sorted the whole folder on every render in manual order.
   const listedNodeIds = useMemo(() => listedNodes.map((node) => node.id), [listedNodes]);
+  const defaultSortKey: FolderListSortKey = manualChildOrder?.length
+    ? 'manual'
+    : props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY;
+  const usesSortMemory = props.sortKey === undefined && Boolean(props.sortMemoryId);
+  const rememberedSort = useRememberedFolderListSort(usesSortMemory ? props.sortMemoryId : null, {
+    direction: resolveDefaultFolderListSortDirection(defaultSortKey),
+    key: defaultSortKey
+  });
   const state = useFolderListViewState({
     controlledSearchQuery: props.searchQuery,
-    controlledSortDirection: props.sortDirection,
-    controlledSortKey: props.sortKey,
-    defaultSortKey: manualChildOrder?.length
-      ? 'manual'
-      : props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
+    controlledSortDirection: usesSortMemory ? rememberedSort.direction : props.sortDirection,
+    controlledSortKey: usesSortMemory ? rememberedSort.key : props.sortKey,
+    defaultSortKey,
     filterSearchResults: props.filterSearchResults,
     listedNodes,
     nodeOpenStateById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
     manualChildOrder: props.sortKey === 'manual' ? listedNodeIds : manualChildOrder,
     onChangeSearchQuery: props.onChangeSearchQuery,
-    onChangeSortDirection: props.onChangeSortDirection,
-    onChangeSortKey: props.onChangeSortKey
+    onChangeSortDirection: usesSortMemory ? rememberedSort.setDirection : props.onChangeSortDirection,
+    onChangeSortKey: usesSortMemory ? rememberedSort.setKey : props.onChangeSortKey
   });
 
   return {

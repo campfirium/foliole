@@ -14,7 +14,8 @@ const groups: readonly SettingPolicyGroup[] = [
   { scope: 'user_space', recovery: 'saved', keys: [
     'readwise_active_host', 'readwise_remote_source', 'readwise_source_mode',
     'readwise_source_mode_conflict', 'readwise_source_cutover', 'readwise_source_cutover_v2',
-    'review_scheduler_settings', 'search_aliases_document', 'system_entry_display_names'
+    'review_scheduler_settings', 'search_aliases_document', 'system_entry_display_names',
+    'folder_list_sort_memory'
   ] },
   { scope: 'host', recovery: 'saved', keys: [
     'app_settings', 'backup_settings', 'import_manager_settings', 'library_path_settings',

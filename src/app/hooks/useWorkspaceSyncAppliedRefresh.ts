@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 
+import { FOLDER_LIST_SORT_MEMORY_SETTING_KEY } from '../../../lib/platform/folderListSortMemoryContract';
 import { refreshReviewTrainingParameters } from '../../features/review/model/reviewTrainingSession';
+import { hydrateFolderListSortMemory } from '../../shared/platform/desktop/folderListSortMemoryStore';
 import { hydrateRuntimeSystemEntryDisplayNames } from '../../shared/platform/desktop/systemEntryDisplayNamesRuntimeRepository';
 import {
   onWorkspaceContentChanged,
@@ -42,6 +44,9 @@ export function useWorkspaceSyncAppliedRefresh() {
           requestWorkspaceSyncRefresh(payload.workspaceScope, payload.libraryScope);
         } else if (syncAppliedChangesWorkspace(payload)) requestWorkspaceStateRefresh('sync-applied');
         void hydrateRuntimeSystemEntryDisplayNames().catch(() => undefined);
+        if (payload.appliedObjectIds.some(id => id.endsWith(`:${FOLDER_LIST_SORT_MEMORY_SETTING_KEY}`))) {
+          void hydrateFolderListSortMemory({ demo: false }).catch(() => undefined);
+        }
       }
     }).then((nextUnlisten) => {
       if (disposed) {

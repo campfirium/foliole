@@ -39,6 +39,7 @@ export function DiveDocumentSurface({ dive, workspace }: {
           nodes={nodes}
           nodesById={nodesById}
           onSelectNode={workspace.onSelectNode}
+          sortMemoryId={id}
         />
       </div>
     </PanelScaleSurface>
