@@ -1,11 +1,11 @@
-import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
-import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
-import type { PdfReaderSessionReport } from '../../../../features/pdf/model/pdfReaderSession';
-import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot.js';
+import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh.js';
+import type { PdfReaderSessionReport } from '../../../../features/pdf/model/pdfReaderSession.js';
+import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore.js';
 
-import { companionActivityKinds, pendingCompanionActivityTimings, subscribeCompanionActivityTimings } from './companionActivityTiming';
-import { attachmentTimingKinds, pendingCompanionAttachmentTimings, subscribeCompanionAttachmentTimings } from './companionAttachmentTiming';
-import { countWholeLibraryWork } from './companionWholeLibraryWork';
+import { companionActivityKinds, pendingCompanionActivityTimings, subscribeCompanionActivityTimings } from './companionActivityTiming.js';
+import { attachmentTimingKinds, pendingCompanionAttachmentTimings, subscribeCompanionAttachmentTimings } from './companionAttachmentTiming.js';
+import { countWholeLibraryWork } from './companionWholeLibraryWork.js';
 
 const mutationKinds = ['trash', 'structure', 'content', 'review', 'reading', 'state', 'full'] as const;
 export const slowOperationNames = [

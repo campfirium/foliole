@@ -1,7 +1,7 @@
 import type { WorkspaceRefreshScope } from '../../../../../../lib/core/database/workspaceSnapshotRefresh.js';
 import { timeFlow, timeFlowQueue, type FlowTiming } from '../../../../../../lib/core/flow/flowTiming.js';
 import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
-import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
+import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { registerCompanionWorkspaceRefresh, updateCommittedCompanionWorkspace } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
 import { recordCompanionMutationTiming } from '../../runtime/companionSlowOperations.js';
