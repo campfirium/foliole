@@ -40,7 +40,7 @@ export function renderNodeTreeRowContent(props: {
       <span className="flex min-w-0 w-full items-center gap-[0.3125rem] overflow-hidden [font-size:var(--navigation-title-font-size)] [line-height:var(--navigation-title-line-height)]">
         {props.showIcon ? <NodeTreeRowIcon kind={props.nodeIconKind} state={props.nodeIconState} /> : null}
         {renderLabelCluster({ label: props.label, rename: props.rename, ...definedProps({ labelTooltipText: props.labelTooltipText, trailingLabelContent: props.trailingLabelContent }) })}
-        <span aria-hidden="true" className="node-tree-row-text ml-auto w-[44px] flex-none truncate text-right tabular-nums text-foreground/48 [font-size:var(--navigation-meta-font-size)] [line-height:var(--navigation-meta-line-height)]">
+        <span aria-hidden="true" className="node-tree-row-text ml-auto min-w-[2ch] flex-none text-right tabular-nums text-foreground/48 [font-size:var(--navigation-meta-font-size)] [line-height:var(--navigation-meta-line-height)]">
           {props.descendantCount > 0 ? props.descendantCount : null}
         </span>
       </span>
