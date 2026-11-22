@@ -4,6 +4,10 @@
   --folder-column-content-gap: clamp(2px, 2cqi, 0.5rem);
   --folder-column-edge: 24px;
   --folder-column-scroll-inset: 4px;
+  /* Width reserved by `scrollbar-gutter: stable` for the thin scrollbar. */
+  --folder-column-scrollbar-gutter: 11px;
+  /* Lucide glyphs sit ~1.5px inside a 16px icon box; counts end at the glyph edge, not the box edge. */
+  --folder-column-icon-inset: 1.5px;
   --folder-column-row-start: calc(var(--folder-column-edge) - var(--folder-column-scroll-inset) - 6px);
 }
 
@@ -23,7 +27,11 @@
 }
 
 .workspace-folder-column .node-tree-row-content .node-tree-row-text[aria-hidden="true"] {
-  margin-inline-end: calc(var(--folder-column-edge) - var(--folder-column-scroll-inset) - 0.4rem);
+  /* End counts on the same right edge as the header icons, which sit --folder-column-edge from the column edge. */
+  margin-inline-end: calc(
+    var(--folder-column-edge) + var(--folder-column-icon-inset) - var(--folder-column-scroll-inset) -
+      var(--folder-column-scrollbar-gutter) - 0.4rem
+  );
 }
 
 .workspace-folder-column #node-treeitem-special-trash:has(+ [data-node-row-action]:not(:empty)) {
