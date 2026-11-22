@@ -11,6 +11,7 @@ import {
 } from '../../../../shared/ui';
 import {
   libraryMergeErrorKind,
+  libraryMergeSourceIsArchive,
   libraryMergeSourceName,
   mergeLibrary,
   pickLibraryMergeAttachments,
@@ -75,7 +76,7 @@ function statusText(t: ReturnType<typeof useTranslation>, status: MergeStatus) {
   });
 }
 
-/** Merges another desktop library or backup into the open one. */
+/** Merges another desktop library or backup, or a phone backup, into the open one. */
 export function LibraryMergeSection(props: { isDesktopRuntime: boolean }) {
   const t = useTranslation();
   const merge = useLibraryMerge();
@@ -83,6 +84,7 @@ export function LibraryMergeSection(props: { isDesktopRuntime: boolean }) {
   const sourceLine = merge.source
     ? t('settings.backups.merge.source', { name: libraryMergeSourceName(merge.source.sourcePath) })
     : t('settings.backups.merge.noSource');
+  const isArchive = merge.source ? libraryMergeSourceIsArchive(merge.source.sourcePath) : false;
   return (
     <SettingsSection ariaLabel={t('settings.backups.merge.sectionAria')} title={t('settings.backups.merge.title')}>
       <SettingsRow
@@ -98,15 +100,18 @@ export function LibraryMergeSection(props: { isDesktopRuntime: boolean }) {
       </SettingsRow>
       {merge.source ? (
         <SettingsRow
-          description={merge.source.attachmentsDirectory
-            ? t('settings.backups.merge.attachments', { path: merge.source.attachmentsDirectory })
-            : t('settings.backups.merge.attachmentsNone')}
+          description={isArchive ? t('settings.backups.merge.attachmentsInArchive')
+            : merge.source.attachmentsDirectory
+              ? t('settings.backups.merge.attachments', { path: merge.source.attachmentsDirectory })
+              : t('settings.backups.merge.attachmentsNone')}
           title={t('settings.backups.merge.attachmentsTitle')}
         >
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={merge.isMerging} onClick={merge.chooseAttachments}>
-              {t('settings.backups.merge.chooseAttachments')}
-            </SettingsButton>
+            {isArchive ? null : (
+              <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={merge.isMerging} onClick={merge.chooseAttachments}>
+                {t('settings.backups.merge.chooseAttachments')}
+              </SettingsButton>
+            )}
             <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={merge.isMerging} loading={merge.isMerging} loadingLabel={t('settings.backups.merge.running')} onClick={merge.merge}>
               {t('settings.backups.merge.run')}
             </SettingsButton>

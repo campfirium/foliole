@@ -6,6 +6,7 @@ import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 
 import Database from 'better-sqlite3';
 
+import { bootstrapCompanionDatabase, CompanionDatabaseBlockedError } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { NodeAnchorLinkPayload, NodeImageRegionGroupPayload, UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutationPayloads.js';
@@ -21,6 +22,8 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { createDatabaseRestoreArtifacts } from '../database/databaseRestoreArtifacts.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { verifySqliteDatabaseFileOffMainThread } from '../database/sqliteFileOffMainThread.js';
+
+import { stageMobileLibrarySource } from './mobileLibraryMergeSource.js';
 
 export interface DesktopLibraryMergeResult extends Omit<LibraryMergeReport, 'attachmentKeys'> {
   attachmentsCopied: number;
@@ -133,16 +136,34 @@ async function copyAttachments(keys: readonly string[], directory: string | null
   return { copied, missing };
 }
 
-function assertDesktopLibrary(sqlite: Database.Database) {
-  const tables = new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[])
+function sourceTables(sqlite: Database.Database) {
+  return new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[])
     .map(row => row.name));
-  if (tables.has('companion_meta')) throw new Error('library_merge_mobile_source_unsupported');
+}
+
+/** Brings the private copy to the current schema: a phone library through its own migrations, a desktop one through the desktop's. */
+async function migrateSource(sqlite: Database.Database, now: string) {
+  const tables = sourceTables(sqlite);
   if (!tables.has('nodes') || !tables.has('review_log')) throw new Error('library_merge_source_not_library');
+  if (!tables.has('companion_meta')) {
+    initializeDatabaseSchema(sqlite);
+    return;
+  }
+  const meta = sqlite.prepare("SELECT value FROM companion_meta WHERE key IN ('host_name', 'device_id') ORDER BY key DESC")
+    .all() as { value: string }[];
+  try {
+    // The copy keeps its own host name, so its per-device state stays where it was.
+    await bootstrapCompanionDatabase(createBetterSqliteDbPort(sqlite), {
+      allowCreate: false, expectedHostName: meta.find(row => row.value?.trim())?.value ?? 'phone', now });
+  } catch (error) {
+    if (!(error instanceof CompanionDatabaseBlockedError)) throw error;
+    throw new Error(error.reason === 'newer-version' ? 'library_merge_source_newer' : 'library_merge_source_not_library', { cause: error });
+  }
 }
 
 /**
- * Merges a desktop library database or backup into the open library. The source is copied and brought to the
- * current schema in a temporary file; the original file is only read.
+ * Merges another library into the open one: a desktop library or `.db.gz` backup, or a phone backup as a zip or a
+ * backup folder. The source is copied and brought to the current schema in a temporary file; the original is only read.
  */
 export async function mergeDesktopLibrary(input: {
   sourcePath: string; attachmentsDirectory: string | null; folderTitle: string; now?: string; batchSize?: number;
@@ -150,23 +171,27 @@ export async function mergeDesktopLibrary(input: {
   const now = input.now ?? new Date().toISOString();
   const connection = openDatabaseConnection();
   if (path.resolve(input.sourcePath) === path.resolve(connection.dbPath)) throw new Error('library_merge_source_is_current');
-  const fingerprint = await hashFile(input.sourcePath);
+  const workDirectory = path.dirname(connection.dbPath);
+  const mobile = await stageMobileLibrarySource(input.sourcePath, workDirectory, input.attachmentsDirectory);
   const artifacts = createDatabaseRestoreArtifacts();
   try {
-    const databasePath = await snapshotBackupRestoreSource(artifacts, input.sourcePath, path.dirname(connection.dbPath));
+    const fingerprint = await hashFile(mobile?.databasePath ?? input.sourcePath);
+    const databasePath = await snapshotBackupRestoreSource(artifacts, mobile?.databasePath ?? input.sourcePath, workDirectory);
     await verifySqliteDatabaseFileOffMainThread(databasePath);
     const sqlite = new Database(databasePath, { fileMustExist: true });
     try {
-      assertDesktopLibrary(sqlite);
-      initializeDatabaseSchema(sqlite);
+      await migrateSource(sqlite, now);
       const host = desktopHost(fingerprint, input.folderTitle, now);
       const report = await runLibraryMerge({ source: createBetterSqliteDbPort(sqlite), now,
         target: ownedPort(createBetterSqliteDbPort(connection.sqlite)), host,
         ...(input.batchSize ? { batchSize: input.batchSize } : {}) });
-      const attachments = await copyAttachments(report.attachmentKeys, input.attachmentsDirectory);
+      const attachments = await copyAttachments(report.attachmentKeys, mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory);
       return { added: report.added, alternatives: report.alternatives, unchanged: report.unchanged,
         skippedDeleted: report.skippedDeleted, reviewsAdded: report.reviewsAdded, attachmentsCopied: attachments.copied, attachmentsMissing: attachments.missing,
         folderId: host.folderId() };
     } finally { sqlite.close(); }
-  } finally { await artifacts.finishTemporary(); }
+  } finally {
+    await artifacts.finishTemporary();
+    await mobile?.dispose();
+  }
 }

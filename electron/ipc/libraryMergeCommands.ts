@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { dialog, type BrowserWindow, type OpenDialogOptions } from 'electron';
 
+import { COMPANION_FOLDER_BACKUP_FILES } from '../../lib/platform/companionFolderBackupContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeLibraryMergeResult, NativeLibraryMergeSource } from '../../lib/platform/nativeLibraryMergeContract.js';
 import { mergeDesktopLibrary } from '../import/desktopLibraryMerge.js';
@@ -15,15 +16,21 @@ async function showOpenDialog(window: BrowserWindow | null, options: OpenDialogO
   return selection.canceled ? null : selection.filePaths[0] ?? null;
 }
 
-/** A library keeps its database in `Data` and its backups in `Backups`; both sit next to its `Assets` folder. */
+/**
+ * A desktop library keeps its database in `Data` and its backups in `Backups`, both next to its `Assets` folder; a
+ * phone backup folder keeps `Attachments` next to `Foliole.sqlite`, and a phone backup zip carries its own.
+ */
 export function guessLibraryMergeAttachments(sourcePath: string) {
-  const candidate = path.join(path.dirname(path.dirname(sourcePath)), 'Assets');
+  if (/\.zip$/i.test(sourcePath)) return null;
+  const candidate = path.basename(sourcePath) === COMPANION_FOLDER_BACKUP_FILES.databaseFileName
+    ? path.join(path.dirname(sourcePath), 'Attachments')
+    : path.join(path.dirname(path.dirname(sourcePath)), 'Assets');
   return existsSync(candidate) ? candidate : null;
 }
 
 async function pickSource(window: BrowserWindow | null): Promise<NativeLibraryMergeSource | null> {
   const sourcePath = await showOpenDialog(window, {
-    filters: [{ extensions: ['db', 'gz', 'sqlite'], name: 'Foliole library' }],
+    filters: [{ extensions: ['db', 'gz', 'sqlite', 'zip'], name: 'Foliole library' }],
     properties: ['openFile']
   });
   return sourcePath ? { sourcePath, attachmentsDirectory: guessLibraryMergeAttachments(sourcePath) } : null;

@@ -39,12 +39,27 @@ it('merges the chosen library with the chosen attachments folder and reports wha
     attachmentsDirectory: '/old/Assets', folderTitle: expect.stringMatching(/^Merged library · foliole-2026\.db\.gz · \d{4}-\d{2}-\d{2}$/) });
 });
 
-it('names a phone backup in plain words instead of showing the error code', async () => {
-  vi.mocked(mergeLibraryInRuntime).mockRejectedValue(new Error("Error invoking remote method: library_merge_mobile_source_unsupported"));
+it('takes a phone backup zip with the attachments inside it', async () => {
+  vi.mocked(pickLibraryMergeSourceInRuntime).mockResolvedValue({ sourcePath: '/Downloads/phone-backup.zip', attachmentsDirectory: null });
+  vi.mocked(mergeLibraryInRuntime).mockResolvedValue({ added: 1, alternatives: 0, unchanged: 0, skippedDeleted: 0,
+    reviewsAdded: 2, attachmentsCopied: 1, attachmentsMissing: 0, folderId: 'folder' });
+  renderWithLocalization(<LibraryMergeSection isDesktopRuntime />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose library' }));
+  expect(await screen.findByText('Attachments are taken from inside the phone backup.')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Choose folder' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+
+  expect(await screen.findByText(/Added 1 notes/)).toBeTruthy();
+  expect(mergeLibraryInRuntime).toHaveBeenCalledWith(expect.objectContaining({ sourcePath: '/Downloads/phone-backup.zip', attachmentsDirectory: null }));
+});
+
+it('names an unreadable phone backup in plain words instead of showing the error code', async () => {
+  vi.mocked(mergeLibraryInRuntime).mockRejectedValue(new Error("Error invoking remote method: library_merge_archive_invalid"));
   renderWithLocalization(<LibraryMergeSection isDesktopRuntime />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose library' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Merge' }));
 
-  await waitFor(() => expect(screen.getByText('Merge stopped. Phone backups cannot be merged yet.')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Merge stopped. This zip is not a readable phone backup.')).toBeTruthy());
 });

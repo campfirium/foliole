@@ -8,10 +8,11 @@ import {
 export type LibraryMergeSource = NativeLibraryMergeSource;
 export type LibraryMergeResult = NativeLibraryMergeResult;
 
-export type LibraryMergeErrorKind = 'mobile' | 'current' | 'notLibrary' | 'other';
+export type LibraryMergeErrorKind = 'archive' | 'newer' | 'current' | 'notLibrary' | 'other';
 
 const ERROR_KINDS: Array<[string, LibraryMergeErrorKind]> = [
-  ['library_merge_mobile_source_unsupported', 'mobile'],
+  ['library_merge_archive_invalid', 'archive'],
+  ['library_merge_source_newer', 'newer'],
   ['library_merge_source_is_current', 'current'],
   ['library_merge_source_not_library', 'notLibrary']
 ];
@@ -22,6 +23,11 @@ export function libraryMergeErrorKind(message: string): LibraryMergeErrorKind {
 
 export function libraryMergeSourceName(sourcePath: string) {
   return sourcePath.split(/[\\/]/).pop() || sourcePath;
+}
+
+/** A phone backup zip carries its own attachments, so there is no folder to choose. */
+export function libraryMergeSourceIsArchive(sourcePath: string) {
+  return /\.zip$/i.test(sourcePath);
 }
 
 export async function pickLibraryMergeSource(): Promise<LibraryMergeSource | null> {
