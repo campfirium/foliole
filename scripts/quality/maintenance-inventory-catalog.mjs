@@ -80,6 +80,12 @@ export const MECHANISM_GUARDS = [
     count: { file: 'src/companion/companionActionSqlStatements.budget.integration.test.ts', pattern: /overBudget: \{ wa: /gu, label: '超预算动作' }
   },
   {
+    label: '桌面写入 SQL 语句数预算',
+    files: ['electron/ipc/storageCommandSqlBudget.writes.test.ts', 'scripts/quality/quality-critical-test-routes-desktop-statements.mjs'],
+    wiring: 'test',
+    count: { file: 'electron/ipc/storageCommandSqlBudget.writes.test.ts', pattern: /overBudget: \{ wa: /gu, label: '超预算动作' }
+  },
+  {
     label: '必填写入类别（runWriter kind）',
     marker: { text: 'CompanionWriteKind', pathspec: 'src/' },
     wiring: 'runtime'

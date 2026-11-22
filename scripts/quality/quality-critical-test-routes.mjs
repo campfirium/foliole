@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { DATABASE_RESTORE_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-database-restore.mjs';
+import { DESKTOP_STATEMENT_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-desktop-statements.mjs';
 import { IMPORT_SETTINGS_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-import-settings.mjs';
 import { PHONE_STATEMENT_CRITICAL_TEST_ROUTES } from './quality-critical-test-routes-phone-statements.mjs';
 
@@ -124,6 +125,7 @@ export const CRITICAL_TEST_ROUTES = [
   ...DATABASE_RESTORE_CRITICAL_TEST_ROUTES,
   ...IMPORT_SETTINGS_CRITICAL_TEST_ROUTES,
   ...PHONE_STATEMENT_CRITICAL_TEST_ROUTES,
+  ...DESKTOP_STATEMENT_CRITICAL_TEST_ROUTES,
   {
     triggers: [
       /^src\/features\/settings\/components\/sections\/SettingsDocumentMenuSection\.tsx$/u

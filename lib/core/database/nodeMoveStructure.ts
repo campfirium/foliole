@@ -32,23 +32,37 @@ export function readMoveParentOrder(driver: DatabaseDriver, parentNodeId: string
   });
 }
 
-function requireMoveNode(driver: DatabaseDriver, id: string) {
-  const node = driver.queryOne<MoveStructureNode & { virtual_filter: string | null }>(
-    'SELECT id, parent_id, kind, deleted_at, updated_at, virtual_filter FROM nodes WHERE id = ?', [id]);
-  if (!node || node.deleted_at) throw new Error('move_node_unavailable');
-  return node;
+type MoveNodeRow = MoveStructureNode & { virtual_filter: string | null };
+
+// Every moved node and destination parent with all their ancestors, read in one statement.
+const MOVE_NODES_WITH_ANCESTORS_SQL = `WITH RECURSIVE chain(id) AS (
+    SELECT value FROM json_each(?)
+    UNION SELECT n.parent_id FROM nodes n JOIN chain c ON n.id = c.id WHERE n.parent_id IS NOT NULL
+  ) SELECT id, parent_id, kind, deleted_at, updated_at, virtual_filter FROM nodes WHERE id IN (SELECT id FROM chain)`;
+
+function loadMoveNodes(driver: DatabaseDriver, input: NativeMoveNodesArgs) {
+  const seeds = new Set(input.nodes.flatMap((patch) => patch.parentNodeId ? [patch.nodeId, patch.parentNodeId] : [patch.nodeId]));
+  const rows = driver.queryAll<MoveNodeRow>(MOVE_NODES_WITH_ANCESTORS_SQL, [JSON.stringify([...seeds])]);
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return (id: string) => {
+    const node = byId.get(id) ?? driver.queryOne<MoveNodeRow>(
+      'SELECT id, parent_id, kind, deleted_at, updated_at, virtual_filter FROM nodes WHERE id = ?', [id]);
+    if (!node || node.deleted_at) throw new Error('move_node_unavailable');
+    return node;
+  };
 }
 
 export function validateMoveStructure(driver: DatabaseDriver, input: NativeMoveNodesArgs) {
   if (!input.nodes.length || new Set(input.nodes.map((node) => node.nodeId)).size !== input.nodes.length) {
     throw new Error('invalid_move_roots');
   }
+  for (const patch of input.nodes) ensureSpecialRootNodesForInput(driver, patch);
+  const requireMoveNode = loadMoveNodes(driver, input);
   const roots = input.nodes.map((patch) => {
-    ensureSpecialRootNodesForInput(driver, patch);
-    const node = requireMoveNode(driver, patch.nodeId);
+    const node = requireMoveNode(patch.nodeId);
     if ([HOME_NODE_ID, INBOX_NODE_ID, TRASH_NODE_ID, VIRTUAL_ROOT_NODE_ID].includes(node.id) ||
         node.parent_id !== patch.expectedParentNodeId) throw new Error('move_structure_conflict');
-    const parent = patch.parentNodeId ? requireMoveNode(driver, patch.parentNodeId) : null;
+    const parent = patch.parentNodeId ? requireMoveNode(patch.parentNodeId) : null;
     if (parent?.id === HOME_NODE_ID || parent?.id === TRASH_NODE_ID ||
         (patch.parentNodeId !== node.parent_id && (parent?.virtual_filter ||
           (node.virtual_filter && patch.parentNodeId !== VIRTUAL_ROOT_NODE_ID))) ||
@@ -62,7 +76,7 @@ export function validateMoveStructure(driver: DatabaseDriver, input: NativeMoveN
       visited.add(ancestor.id);
       const proposed = input.nodes.find((root) => root.nodeId === ancestor!.id);
       const parentId = proposed ? proposed.parentNodeId : ancestor.parent_id;
-      ancestor = parentId ? requireMoveNode(driver, parentId) : null;
+      ancestor = parentId ? requireMoveNode(parentId) : null;
     }
     return node;
   });

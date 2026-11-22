@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 export type SqlStatementMethod = 'all' | 'exec' | 'get' | 'iterate' | 'run';
 
 export interface SqlStatementRecord {
+  callers?: string[];
   method: SqlStatementMethod;
   rows: number;
   sql: string;
@@ -30,11 +31,23 @@ function normalizeSql(sql: string) {
   return sql.replace(/\s+/g, ' ').trim();
 }
 
+const CALLER_FRAMES = 4;
+const WRAPPER_FRAMES = /sqlStatementMeter\.testSupport|node_modules|guardedBetterSqliteDatabase|sqlRecording|betterSqlite3Driver|betterSqliteDbPort|database\/transaction\.ts/;
+
+/** With FOLIOLE_SQL_STATEMENT_CALLERS=1 each record keeps its nearest project call sites, for budget reports. */
+function callers() {
+  if (process.env.FOLIOLE_SQL_STATEMENT_CALLERS !== '1') return undefined;
+  return (new Error().stack ?? '').split('\n').slice(1)
+    .filter(line => !WRAPPER_FRAMES.test(line) && line.includes('/Foliole'))
+    .slice(0, CALLER_FRAMES).map(line => line.trim().replace(/^at /, '').replace(/\(?\/.*?\/Foliole[^/]*\//, '('));
+}
+
 function record(method: SqlStatementMethod, source: unknown, rows: number) {
   if (!activeRecords || typeof source !== 'string') return;
   const sql = normalizeSql(source);
   if (TRANSACTION_CONTROL.test(sql)) return;
-  activeRecords.push({ method, rows, sql });
+  const at = callers();
+  activeRecords.push({ method, rows, sql, ...(at ? { callers: at } : {}) });
 }
 
 function countIteratedRows(iterator: IterableIterator<unknown>, source: unknown) {

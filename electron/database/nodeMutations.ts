@@ -23,7 +23,7 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { deletePermanentDeleteChunk, finishPermanentDelete, preparePermanentDelete } from './nodePermanentDeleteChunks.js';
-import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersions, flushNodeSyncVersionWithDriver } from './nodeSyncVersions.js';
 import {
   clearNodeSourceDisposition,
   recordNodeSourceDisposition
@@ -73,9 +73,9 @@ export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
   softDeleteNodesDeferringSyncVersions(input);
-  for (const nodeId of input.nodeIds) {
-    flushNodeSyncVersion(nodeId, input.deletedAt);
-  }
+  const { driver } = openDatabaseConnection();
+  const hostName = loadOrCreateDesktopHostName(input.deletedAt);
+  for (const nodeId of input.nodeIds) flushNodeSyncVersionWithDriver(driver, nodeId, hostName, input.deletedAt);
 }
 
 /** Commits the deletion and leaves the deleted nodes dirty for a later version flush. */
@@ -84,19 +84,17 @@ export function softDeleteNodesDeferringSyncVersions(input: SoftDeleteNodesInput
   const connection = openDatabaseConnection();
   const hostName = loadOrCreateDesktopHostName(input.deletedAt);
   for (const nodeId of input.nodeIds) {
-    flushNodeSyncVersion(nodeId, input.deletedAt);
+    flushNodeSyncVersionWithDriver(connection.driver, nodeId, hostName, input.deletedAt);
   }
   withTransaction(connection.driver, () => {
     softDeleteNodesViaDriver(connection.driver, input);
-    for (const nodeId of input.nodeIds) {
-      recordNodeSourceDisposition(nodeId, 'soft_deleted', input.deletedAt);
-      connection.driver.execute(
-        `UPDATE nodes
-         SET last_modified_by_host_name = ?, sync_dirty = 1
-         WHERE id = ?`,
-        [hostName, nodeId]
-      );
-    }
+    for (const nodeId of input.nodeIds) recordNodeSourceDisposition(nodeId, 'soft_deleted', input.deletedAt);
+    connection.driver.execute(
+      `UPDATE nodes
+       SET last_modified_by_host_name = ?, sync_dirty = 1
+       WHERE id IN (SELECT value FROM json_each(?))`,
+      [hostName, JSON.stringify(input.nodeIds)]
+    );
   });
 }
 
@@ -106,13 +104,13 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
     const result = restoreNodesViaDriver(connection.driver, input);
-    for (const nodeId of result.restoredNodeIds) {
-      clearNodeSourceDisposition(nodeId);
+    for (const nodeId of result.restoredNodeIds) clearNodeSourceDisposition(nodeId);
+    if (result.restoredNodeIds.length) {
       connection.driver.execute(
         `UPDATE nodes
          SET last_modified_by_host_name = ?, sync_dirty = 1
-         WHERE id = ?`,
-        [hostName, nodeId]
+         WHERE id IN (SELECT value FROM json_each(?))`,
+        [hostName, JSON.stringify(result.restoredNodeIds)]
       );
     }
     return result;

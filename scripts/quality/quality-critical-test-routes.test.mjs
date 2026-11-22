@@ -199,6 +199,19 @@ describe('quality critical test routes', () => {
     ], existing)).toEqual([]);
   });
 
+  it('routes desktop write chains to the desktop statement budget and leaves their tests alone', () => {
+    const budget = 'electron/ipc/storageCommandSqlBudget.writes.test.ts';
+    for (const file of ['electron/mirror/mirrorNodeMove.ts', 'lib/core/database/nodeMoveStructure.ts',
+      'electron/database/nodeVersionedMutations.ts', 'electron/database/nodeSyncVersions.ts',
+      'electron/ipc/storageLocalContentEditCommand.ts', 'lib/core/sync/localContentEdit.ts']) {
+      expect(resolveCriticalTestFiles([file], existing)).toContain(budget);
+    }
+    for (const file of ['electron/database/nodeMutations.test.ts', 'electron/mirror/mirrorTopicMove.test.ts',
+      'src/app/components/DocumentPanelHeader.tsx']) {
+      expect(resolveCriticalTestFiles([file], existing)).not.toContain(budget);
+    }
+  });
+
   it('routes phone write chains to the phone statement budget and leaves their tests alone', () => {
     const budget = ['src/companion/companionActionSqlStatements.budget.integration.test.ts'];
     for (const file of ['lib/core/sync/syncNodeApplyExecutor.ts', 'lib/core/flow/dailyFlowService.ts',

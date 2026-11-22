@@ -6,6 +6,7 @@ import { syncStoredSourceSearchIndexForTargets } from './storedSourceSearchBodyI
 import type { StoredSourceInvalidationType } from './storedSourceSearchInvalidations.js';
 import { syncPdfSearchIndexForAttachmentIds, syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 import {
+  advanceAndQueueWorkspaceSearchSourceRevision,
   advanceWorkspaceSearchSourceRevision,
   markWorkspaceSearchSourceIndexedIfSettled,
   markWorkspaceSearchSourceRevisionQueued
@@ -82,10 +83,11 @@ export function enqueueSearchIndexInvalidations(
       insert.run([nodeId, timestamp, timestamp]);
     }
   });
-  if (options.advanceSourceRevision !== false) {
+  if (options.advanceSourceRevision !== false && options.markSourceRevisionQueued !== false) {
+    advanceAndQueueWorkspaceSearchSourceRevision(driver);
+  } else if (options.advanceSourceRevision !== false) {
     advanceWorkspaceSearchSourceRevision(driver);
-  }
-  if (options.markSourceRevisionQueued !== false) {
+  } else if (options.markSourceRevisionQueued !== false) {
     markWorkspaceSearchSourceRevisionQueued(driver);
   }
   if (options.requestProcessing !== false) requestSearchIndexInvalidationProcessing();

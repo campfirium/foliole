@@ -37,10 +37,17 @@ function readDirtyNodeIds(driver: DatabaseDriver, limit = -1) {
   ).map((row) => row.id);
 }
 
+/** Versions `nodeIds` with one host name read for the whole set. */
+function flushNodeSyncVersionsWithDriver(driver: DatabaseDriver, nodeIds: readonly string[], now: string) {
+  if (!nodeIds.length) return;
+  const hostName = loadOrCreateDesktopHostName(now);
+  for (const nodeId of nodeIds) flushNodeSyncVersionWithDriver(driver, nodeId, hostName, now);
+}
+
 export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
   const nodeIds = readDirtyNodeIds(driver);
-  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now);
+  flushNodeSyncVersionsWithDriver(driver, nodeIds, now);
   return [...new Set([...nodeIds, ...backfillMissingNodeSyncState(driver)])];
 }
 
@@ -49,7 +56,7 @@ export function flushDirtyNodeSyncVersionBatch(limit: number, now = new Date().t
   const driver = openDatabaseConnection().driver;
   return withTransaction(driver, () => {
     const nodeIds = readDirtyNodeIds(driver, limit);
-    for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now);
+    flushNodeSyncVersionsWithDriver(driver, nodeIds, now);
     return nodeIds;
   });
 }
@@ -68,5 +75,5 @@ export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString
      ORDER BY n.updated_at ASC, n.id ASC`,
     [VIRTUAL_ROOT_NODE_ID]
   ).map((row) => row.id);
-  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now);
+  flushNodeSyncVersionsWithDriver(driver, nodeIds, now);
 }

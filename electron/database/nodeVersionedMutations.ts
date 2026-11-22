@@ -97,19 +97,16 @@ export function upsertVersionedNodeContentWithAnchors(
       ...contentChange.affectedChildIds,
       ...affectedAnchors.map((anchor) => anchor.nodeId)
     ])];
-    for (const nodeId of anchorIds) {
-      driver.execute(
-        `UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
-        [hostName, nodeId]
-      );
-      flushVersion(driver, nodeId, hostName, parent.updatedAt);
-    }
+    if (!anchorIds.length) return [];
+    const ids = JSON.stringify(anchorIds);
+    driver.execute(`UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1
+      WHERE id IN (SELECT value FROM json_each(?))`, [hostName, ids]);
+    for (const nodeId of anchorIds) flushVersion(driver, nodeId, hostName, parent.updatedAt);
+    const rows = new Map(driver.queryAll<{ id: string; anchor_link: string | null; image_regions: string | null; updated_at: string }>(
+      'SELECT id, anchor_link, image_regions, updated_at FROM nodes WHERE id IN (SELECT value FROM json_each(?))', [ids]
+    ).map((row) => [row.id, row]));
     return anchorIds.flatMap((nodeId) => {
-      const row = driver.queryOne<{
-        anchor_link: string | null;
-        image_regions: string | null;
-        updated_at: string;
-      }>('SELECT anchor_link, image_regions, updated_at FROM nodes WHERE id = ?', [nodeId]);
+      const row = rows.get(nodeId);
       const anchorLink = parseStoredAnchorLink(row?.anchor_link ?? null);
       if (!row || !anchorLink) return [];
       return [{

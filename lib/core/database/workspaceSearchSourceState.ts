@@ -13,6 +13,10 @@ interface SettingRow {
   value: string;
 }
 
+interface KeyedSettingRow extends SettingRow {
+  key: string;
+}
+
 interface SearchMetadataRow {
   [column: string]: unknown;
   value_json: string;
@@ -33,10 +37,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function readSetting(driver: DatabaseDriver, key: string) {
-  return driver.queryOne<SettingRow>('SELECT value FROM settings WHERE key = ?', [key])?.value ?? null;
-}
-
 function writeSetting(driver: DatabaseDriver, key: string, value: string, updatedAt: string) {
   driver.execute(
     `INSERT INTO settings (key, value, updated_at)
@@ -51,10 +51,20 @@ function parseRevision(value: string | null) {
   return Number.isSafeInteger(revision) && revision >= 0 ? revision : null;
 }
 
+/** The three source settings in one read; every search invalidation of every write passes through here. */
+function readSourceSettings(driver: DatabaseDriver) {
+  const rows = driver.queryAll<KeyedSettingRow>('SELECT key, value FROM settings WHERE key IN (?, ?, ?)',
+    [WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY, WORKSPACE_SEARCH_QUEUED_REVISION_KEY, WORKSPACE_SEARCH_SOURCE_REVISION_KEY]);
+  const value = (key: string) => rows.find((row) => row.key === key)?.value ?? null;
+  return {
+    storedIdentity: value(WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY)?.trim() || null,
+    storedQueuedRevision: parseRevision(value(WORKSPACE_SEARCH_QUEUED_REVISION_KEY)),
+    storedRevision: parseRevision(value(WORKSPACE_SEARCH_SOURCE_REVISION_KEY))
+  };
+}
+
 export function ensureWorkspaceSearchSourceState(driver: DatabaseDriver): WorkspaceSearchSourceState {
-  const storedIdentity = readSetting(driver, WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY)?.trim() || null;
-  const storedQueuedRevision = parseRevision(readSetting(driver, WORKSPACE_SEARCH_QUEUED_REVISION_KEY));
-  const storedRevision = parseRevision(readSetting(driver, WORKSPACE_SEARCH_SOURCE_REVISION_KEY));
+  const { storedIdentity, storedQueuedRevision, storedRevision } = readSourceSettings(driver);
   if (storedIdentity && storedQueuedRevision !== null && storedRevision !== null) {
     return { identity: storedIdentity, queuedRevision: storedQueuedRevision, revision: storedRevision };
   }
@@ -71,9 +81,7 @@ export function ensureWorkspaceSearchSourceState(driver: DatabaseDriver): Worksp
 }
 
 export function readWorkspaceSearchSourceState(driver: DatabaseDriver) {
-  const identity = readSetting(driver, WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY)?.trim() || null;
-  const queuedRevision = parseRevision(readSetting(driver, WORKSPACE_SEARCH_QUEUED_REVISION_KEY));
-  const revision = parseRevision(readSetting(driver, WORKSPACE_SEARCH_SOURCE_REVISION_KEY));
+  const { storedIdentity: identity, storedQueuedRevision: queuedRevision, storedRevision: revision } = readSourceSettings(driver);
   return identity && queuedRevision !== null && revision !== null ? { identity, queuedRevision, revision } : null;
 }
 
@@ -82,6 +90,20 @@ export function advanceWorkspaceSearchSourceRevision(driver: DatabaseDriver) {
   const next = { ...current, revision: current.revision + 1 };
   writeSetting(driver, WORKSPACE_SEARCH_SOURCE_REVISION_KEY, String(next.revision), nowIso());
   return next;
+}
+
+/** `advanceWorkspaceSearchSourceRevision` then `markWorkspaceSearchSourceRevisionQueued`, in one read and one write. */
+export function advanceAndQueueWorkspaceSearchSourceRevision(driver: DatabaseDriver) {
+  const current = ensureWorkspaceSearchSourceState(driver);
+  const revision = String(current.revision + 1);
+  const updatedAt = nowIso();
+  driver.execute(
+    `INSERT INTO settings (key, value, updated_at)
+     VALUES (?, ?, ?), (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [WORKSPACE_SEARCH_SOURCE_REVISION_KEY, revision, updatedAt, WORKSPACE_SEARCH_QUEUED_REVISION_KEY, revision, updatedAt]
+  );
+  return { ...current, revision: current.revision + 1, queuedRevision: current.revision + 1 };
 }
 
 export function markWorkspaceSearchSourceRevisionQueued(driver: DatabaseDriver) {

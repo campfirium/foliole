@@ -32,6 +32,8 @@ const controlledElectronSqliteTests = [
   'lib/core/database/companionTopicSearchDefinitions.test.ts',
   'electron/database/sqlStatementMeter.test.ts',
   'electron/ipc/storageCommandSqlBudget.test.ts',
+  'electron/ipc/storageCommandSqlBudget.writes.test.ts',
+  'electron/mirror/mirrorArticleResolver.subtrees.test.ts',
   'lib/core/database/nodeBacklinks.test.ts',
   'src/shared/platform/companion/runtime/companionAttachmentMaintenance.test.ts',
   'src/shared/platform/companion/runtime/companionAttachmentReferenceSnapshot.test.ts',
