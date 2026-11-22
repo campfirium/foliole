@@ -8,7 +8,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createMacosA5ExecutionContext } from './macos-a5-execution-context.mjs';
 import {
-  acquireMacosA5DeviceLease, releaseMacosA5DeviceLease
+  acquireMacosA5DeviceLease, leaseWaitMsFromEnv, releaseMacosA5DeviceLease
 } from './macos-a5-run-lease.mjs';
 
 const roots = [];
@@ -42,7 +42,7 @@ it('rejects a concurrent live owner without waiting or replacing it', () => {
   });
 
   expect(() => acquireMacosA5DeviceLease(second, 'readonly-lifecycle', {
-    execute, pid: 202, processToken: 'token-b'
+    execute, pid: 202, processToken: 'token-b', waitMs: 0
   })).toThrow(/already owned by run 11111111/u);
 
   releaseMacosA5DeviceLease(lease);
@@ -102,4 +102,56 @@ it('fails closed when the previous process identity cannot be inspected', () => 
   expect(() => acquireMacosA5DeviceLease(second, 'mutation', {
     execute: unavailable, pid: 808, processToken: 'token-new'
   })).toThrow('ps unavailable');
+});
+
+it('queues behind a live owner when waiting is enabled and acquires once it exits', () => {
+  const first = context('66666666-6666-6666-6666-666666666666');
+  const second = { ...first, runId: '77777777-7777-7777-7777-777777777777' };
+  const tokens = new Map([[601, 'token-first'], [602, 'token-second']]);
+  const execute = processLookup(tokens);
+  const held = acquireMacosA5DeviceLease(first, 'mutation', {
+    execute, pid: 601, processToken: 'token-first', waitMs: 0
+  });
+  let clock = 0;
+  const sleeps = [];
+  const lines = [];
+  const sleep = (ms) => {
+    sleeps.push(ms);
+    clock += ms;
+    if (sleeps.length === 2) releaseMacosA5DeviceLease(held);
+  };
+
+  const lease = acquireMacosA5DeviceLease(second, 'mutation', {
+    execute, pid: 602, processToken: 'token-second', waitMs: 60_000, pollMs: 10_000,
+    sleep, now: () => clock, log: (line) => lines.push(line)
+  });
+
+  expect(lease.owner.runId).toBe(second.runId);
+  expect(sleeps).toEqual([10_000, 10_000]);
+  expect(lines).toHaveLength(1);
+  expect(lines[0]).toMatch(/waiting up to 60s for run 66666666/u);
+  releaseMacosA5DeviceLease(lease);
+});
+
+it('stops waiting at the deadline with the original ownership error', () => {
+  const first = context('88888888-8888-8888-8888-888888888888');
+  const second = { ...first, runId: '99999999-9999-9999-9999-999999999999' };
+  const execute = processLookup(new Map([[801, 'token-a'], [802, 'token-b']]));
+  const held = acquireMacosA5DeviceLease(first, 'mutation', {
+    execute, pid: 801, processToken: 'token-a', waitMs: 0
+  });
+  let clock = 0;
+
+  expect(() => acquireMacosA5DeviceLease(second, 'mutation', {
+    execute, pid: 802, processToken: 'token-b', waitMs: 25_000, pollMs: 10_000,
+    sleep: (ms) => { clock += ms; }, now: () => clock, log: () => {}
+  })).toThrow(/already owned by run 88888888/u);
+  expect(clock).toBe(25_000);
+  releaseMacosA5DeviceLease(held);
+});
+
+it('reads the opt-in wait from the environment and rejects invalid values', () => {
+  expect(leaseWaitMsFromEnv({})).toBe(0);
+  expect(leaseWaitMsFromEnv({ FOLIOLE_A5_LEASE_WAIT_SECONDS: '1200' })).toBe(1_200_000);
+  expect(() => leaseWaitMsFromEnv({ FOLIOLE_A5_LEASE_WAIT_SECONDS: 'soon' })).toThrow(/non-negative/u);
 });

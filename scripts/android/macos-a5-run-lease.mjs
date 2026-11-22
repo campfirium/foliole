@@ -65,24 +65,62 @@ function acquireDirectory(paths, fsApi) {
   fsApi.mkdirSync(paths.leasePath);
 }
 
-export function acquireMacosA5DeviceLease(context, mode, {
-  execute = execFileSync, fsApi = fs, pid = process.pid,
-  processToken = processStartToken(process.pid, execute)
-} = {}) {
-  if (!processToken) throw new Error('Unable to identify the Mac A5 controller process.');
-  const paths = leasePaths(context);
+export function leaseWaitMsFromEnv(env = process.env) {
+  const raw = env.FOLIOLE_A5_LEASE_WAIT_SECONDS;
+  if (raw === undefined || raw === '') return 0;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new Error(`FOLIOLE_A5_LEASE_WAIT_SECONDS must be a non-negative number: ${raw}`);
+  }
+  return Math.round(seconds * 1000);
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function claimDirectory(paths, fsApi, execute) {
   try {
     acquireDirectory(paths, fsApi);
+    return null;
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
     const previous = readOwner(paths.ownerPath, fsApi);
-    if (isProcessIdentityActive(previous, execute)) {
-      throw new Error(
-        `Fixed A5 is already owned by run ${previous.runId} (${previous.action}).`, { cause: error }
-      );
-    }
+    if (isProcessIdentityActive(previous, execute)) return { error, previous };
     removeOwnedLease(paths, previous, fsApi);
     acquireDirectory(paths, fsApi);
+    return null;
+  }
+}
+
+// Waiting is opt-in (FOLIOLE_A5_LEASE_WAIT_SECONDS or waitMs) so unattended
+// acceptance runs queue behind another live run instead of failing the round.
+export function acquireMacosA5DeviceLease(context, mode, {
+  execute = execFileSync, fsApi = fs, pid = process.pid,
+  processToken = processStartToken(process.pid, execute),
+  waitMs = leaseWaitMsFromEnv(), pollMs = 10_000, sleep = sleepSync, now = Date.now,
+  log = (line) => process.stderr.write(`${line}\n`)
+} = {}) {
+  if (!processToken) throw new Error('Unable to identify the Mac A5 controller process.');
+  const paths = leasePaths(context);
+  const deadline = now() + waitMs;
+  let announced = null;
+  for (;;) {
+    const busy = claimDirectory(paths, fsApi, execute);
+    if (!busy) break;
+    const remaining = deadline - now();
+    if (remaining <= 0) {
+      throw new Error(
+        `Fixed A5 is already owned by run ${busy.previous.runId} (${busy.previous.action}).`,
+        { cause: busy.error }
+      );
+    }
+    if (announced !== busy.previous.runId) {
+      announced = busy.previous.runId;
+      log(`[a5-lease] waiting up to ${Math.ceil(remaining / 1000)}s for run `
+        + `${busy.previous.runId} (${busy.previous.action}) to release the fixed device`);
+    }
+    sleep(Math.min(pollMs, remaining));
   }
   const owner = {
     acquiredAt: new Date().toISOString(), action: context.action,
