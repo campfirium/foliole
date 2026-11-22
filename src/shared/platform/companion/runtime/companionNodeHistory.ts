@@ -6,12 +6,14 @@ import { openCycleFlow } from '../../../../../lib/core/flow/cycleFlowOpen';
 import { dailyFlowSettingsForInstant } from '../../../../../lib/core/flow/dailyFlowDayWindow';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { applyLocalNodeVersionsWithDbPort } from '../../../../../lib/core/sync/localNodeVersionApply';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
 import { topicTextSnapshotHash } from '../../../../../lib/core/sync/topicTextSnapshotHash';
 import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
 import { resolveWorkspaceMetadataHistory, workspaceNodeMetadata, type WorkspaceRelatedReading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
+import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { createCompanionUuid } from '../../companionUuid';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
@@ -20,11 +22,13 @@ import { appendCompanionFlowHistory, companionFlowHistoryKey } from './companion
 import { writeCompanionHistoryReadings } from './companionHistoryLearning';
 import { recordCompanionHistoryOrders, validateCompanionHistoryOrders } from './companionHistoryOrder';
 import { loadCompanionWriteNodes } from './companionWriteNodes';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: NativeSyncNodeRecord[],
   title: string, operation: 'local_mutation' | 'local_restore' = 'local_mutation', subtreeNodeIds: string[] | null = null, relatedReadings: WorkspaceRelatedReading[] = [],
-  sessions: Pick<WorkspaceNodeMetadataHistoryEntry, 'beforeSession' | 'afterSession'> = { beforeSession: null, afterSession: null }) {
+  sessions: Pick<WorkspaceNodeMetadataHistoryEntry, 'beforeSession' | 'afterSession'> = { beforeSession: null, afterSession: null },
+  hostName?: string) {
   if (!records.length) return;
   const daily = sessions.beforeSession?.cycle ? await readDailyFlow(db) : null;
   const now = records[0]!.snapshot.updated_at;
@@ -37,9 +41,7 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   }
   const parents = records.flatMap((record, i) => before[i] && before[i]!.parentNodeId !== record.snapshot.parent_id
     ? [before[i]!.parentNodeId, record.snapshot.parent_id] : []);
-  const result = await applySyncNodesWithDbPort(db, records, {
-    enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation
-  });
+  const result = await applyLocalNodeVersionsWithDbPort(db, records, operation);
   if (result.conflictNodes.length || records.some(record => !result.appliedIds.includes(record.object_id))) {
     throw new Error('workspace_mutation_not_applied');
   }
@@ -57,8 +59,55 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
         after: workspaceNodeMetadata(node, priorityChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
     })
   };
-  for (const node of records) await collectNodeVersionPayloads(db, node.object_id, Number.MAX_SAFE_INTEGER);
-  await appendCompanionFlowHistory(db, companionFlowHistoryKey(await iosCompanionHostName(db)), entry);
+  await appendCompanionFlowHistory(db, companionFlowHistoryKey(hostName ?? await iosCompanionHostName(db)), entry);
+  scheduleCompanionNodeVersionCollection(records.map(record => record.object_id));
+}
+
+/**
+ * Releasing superseded bodies does not change what the edit shows, so it waits until the edit's refresh and form have
+ * settled and then runs as one write for every node edited meanwhile. An interrupted release only keeps an older body
+ * until the node's next write or sync collects it.
+ */
+export function scheduleCompanionNodeVersionCollection(nodeIds: readonly string[]) {
+  // A release belongs to the library that was edited; switching libraries leaves the rest to that library's next write.
+  const owner = getIosCompanionDatabaseOwner();
+  if (collectionOwner !== owner) pendingCollectionIds.clear();
+  collectionOwner = owner;
+  for (const id of nodeIds) pendingCollectionIds.add(id);
+  if (!pendingCollectionIds.size || collectionTimer) return;
+  collectionTimer = setTimeout(() => { void runPendingCollections(); }, COLLECTION_DELAY_MS);
+}
+
+const COLLECTION_DELAY_MS = 1500;
+const pendingCollectionIds = new Set<string>();
+let collectionTimer: ReturnType<typeof setTimeout> | null = null;
+let runningCollection: Promise<void> | null = null;
+let collectionOwner: ReturnType<typeof getIosCompanionDatabaseOwner> | null = null;
+
+function runPendingCollections() {
+  if (collectionTimer) clearTimeout(collectionTimer);
+  collectionTimer = null;
+  const ids = [...pendingCollectionIds];
+  const owner = collectionOwner;
+  pendingCollectionIds.clear();
+  if (!ids.length || !owner) return runningCollection ?? Promise.resolve();
+  const previous = runningCollection ?? Promise.resolve();
+  const collection = previous.then(() => runCompanionSyncWriterTask(async () => {
+    if (owner !== getIosCompanionDatabaseOwner()) return;
+    await owner.runWriter(async db => {
+      for (const id of ids) await collectNodeVersionPayloads(db, id, Number.MAX_SAFE_INTEGER);
+    }, { kind: 'business' });
+  })).then(() => undefined, (error: unknown) => {
+    console.warn('[node-version-retention] local collection failed', error);
+  });
+  runningCollection = collection;
+  void collection.finally(() => { if (runningCollection === collection) runningCollection = null; });
+  return collection;
+}
+
+/** Runs every scheduled body release now; tests compare stored history after it. */
+export async function settleCompanionNodeVersionCollections() {
+  await runPendingCollections();
 }
 
 export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: WorkspaceNodeMetadataHistoryEntry, mode: 'undo' | 'redo') {

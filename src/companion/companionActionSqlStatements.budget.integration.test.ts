@@ -120,42 +120,42 @@ const workspace = (write: () => Promise<unknown>, prepare?: () => Promise<() => 
 };
 
 const ACTIONS: Record<string, Action> = {
-  rename: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 51, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'rename', nodeId: 'a', title: 'Renamed' })) },
-  move: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 53, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' })) },
-  'folder move': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 45, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'other', parentNodeId: 'folder' })) },
-  'batch move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 81, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  rename: { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'rename', nodeId: 'a', title: 'Renamed' })) },
+  move: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 24, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'a', parentNodeId: 'other' })) },
+  'folder move': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 24, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'move', nodeId: 'other', parentNodeId: 'folder' })) },
+  'batch move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 31, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['a', 'b']);
     return () => moveCompanionBatch(versions, 'other');
   }) },
-  create: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 41, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' })) },
-  'move to Trash': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 50, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'delete', nodeId: 'b' })) },
-  'batch move to Trash': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 77, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  create: { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create', nodeId: 'new', kind: 'topic', parentNodeId: 'folder', title: 'new' })) },
+  'move to Trash': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 24, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'delete', nodeId: 'b' })) },
+  'batch move to Trash': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 30, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['b', 'c']);
     return () => moveCompanionBatchToTrash(versions);
   }) },
-  restore: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 51, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'restore', nodeId: 'gone' })) },
-  'batch restore': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 51, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
+  restore: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 26, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'restore', nodeId: 'gone' })) },
+  'batch restore': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 26, refresh: 6 }, run: workspace(() => Promise.resolve(), async () => {
     const versions = await currentVersions(['gone']);
     return () => restoreCompanionBatchFromTrash(versions);
   }) },
-  shelve: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 51, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'shelve', nodeId: 'b' })) },
-  unshelve: { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 50, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'unshelve', nodeId: 'shelved' })) },
-  priority: { budget: { write: 15, refresh: 6 }, overBudget: { wa: 'WA-057', write: 48, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 })) },
+  shelve: { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'shelve', nodeId: 'b' })) },
+  unshelve: { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'unshelve', nodeId: 'shelved' })) },
+  priority: { budget: { write: 15, refresh: 6 }, overBudget: { wa: 'WA-057', write: 17, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'b', priority: 3 })) },
   'undo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 52, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('undo')) },
-  'redo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 52, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('redo')) },
-  'Dive creation': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 38, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' })) },
-  'Virtual folder creation': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 39, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' })) },
-  'Dive source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 35, refresh: 6 }, run: workspace(() => addCompanionDiveSource('dive', 'c')) },
-  'Dive source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => removeCompanionDiveSources('dive', ['b'])) },
-  'Virtual folder source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 35, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'a', 'add')) },
-  'Virtual folder source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 34, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'c', 'remove')) },
+  'redo move': { budget: { write: 25, refresh: 6 }, overBudget: { wa: 'WA-057', write: 49, refresh: 6 }, run: workspace(() => Promise.resolve(), replayMove('redo')) },
+  'Dive creation': { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-dive', nodeId: 'dive-new', title: 'new', sourceId: 'a' })) },
+  'Virtual folder creation': { budget: { write: 20, refresh: 6 }, run: workspace(() => mutateCompanionWorkspace({ type: 'create-index', nodeId: 'index-new', title: 'new' })) },
+  'Dive source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 33, refresh: 6 }, run: workspace(() => addCompanionDiveSource('dive', 'c')) },
+  'Dive source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 32, refresh: 6 }, run: workspace(() => removeCompanionDiveSources('dive', ['b'])) },
+  'Virtual folder source addition': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 33, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'a', 'add')) },
+  'Virtual folder source removal': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 32, refresh: 6 }, run: workspace(() => changeCompanionIndexSource('index', 'c', 'remove')) },
   'Dive to Virtual folder conversion': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 41, refresh: 6 }, run: workspace(() => convertCompanionDiveDirectory('dive', 'index', JSON.stringify(DIVE_NODE_FILTER))) },
   'Virtual folder to Dive conversion': { budget: { write: 20, refresh: 6 }, overBudget: { wa: 'WA-057', write: 38, refresh: 6 }, run: workspace(() => convertCompanionDiveDirectory('index', 'dive', JSON.stringify(createManualVirtualNodeFilter()))) },
   'reading progress': { budget: { write: 10, refresh: 3 }, run: workspace(() => saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading: {
     intervalDurationMs: 1, intervalGrowthFactor: 2, lastHandledAt: '2026-11-21T00:00:00.000Z', nextAt: '2026-11-22T00:00:00.000Z',
     priority: 5, readingPosition: 3, repetitionCount: 1, state: 'active' } })) },
   'scroll position': { budget: { write: 8, refresh: 2 }, run: workspace(() => saveCompanionSyncNodeViewState({ nodeId: 'a', scrollTop: 120 })) },
-  'body save': { budget: { write: 30, refresh: 8 }, overBudget: { wa: 'WA-057', write: 78, refresh: 8 }, run: async () => {
+  'body save': { budget: { write: 30, refresh: 8 }, overBudget: { wa: 'WA-057', write: 76, refresh: 8 }, run: async () => {
     await openWorkspace();
     const source = await readCompanionContentSource('a', 'editor');
     phase = 'write';
@@ -163,7 +163,7 @@ const ACTIONS: Record<string, Action> = {
       content: 'Edited on the phone', updatedAt: '2026-11-21T00:00:01.000Z' });
     return { refresh: () => refreshCompanionWorkspaceAfterMutation(undefined, 'a') };
   } },
-  grade: { budget: { write: 25, refresh: 3 }, overBudget: { wa: 'WA-057', write: 41, refresh: 3 }, run: async () => {
+  grade: { budget: { write: 25, refresh: 3 }, overBudget: { wa: 'WA-057', write: 39, refresh: 3 }, run: async () => {
     const session = await openReviewFlow('review-first');
     const snapshot = await workspaceSnapshot();
     phase = 'write';
@@ -171,7 +171,7 @@ const ACTIONS: Record<string, Action> = {
       history: { key: 'flow_history:daily', mode: 'review-first', session } });
     return { refresh: () => refreshCompanionWorkspaceAfterMutation() };
   } },
-  'topic Read': { budget: { write: 25, refresh: 3 }, overBudget: { wa: 'WA-057', write: 33, refresh: 3 }, run: async () => {
+  'topic Read': { budget: { write: 25, refresh: 3 }, overBudget: { wa: 'WA-057', write: 31, refresh: 3 }, run: async () => {
     const session = await openReviewFlow('reading-only');
     const snapshot = await workspaceSnapshot();
     phase = 'write';

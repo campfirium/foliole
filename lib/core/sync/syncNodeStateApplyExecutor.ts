@@ -2,19 +2,28 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort } from './dbPort.js';
+import type { DbStatement } from './dbStatements.js';
 
 export interface AppliedNodeSyncStateOptions {
   baseContentHash?: string | null;
   syncDirty?: number;
 }
 
+type AppliedNodeSyncStateRecord = Pick<NativeSyncNodeRecord, 'object_id' | 'version_id' | 'content_hash' | 'host_name' | 'updated_at' | 'snapshot'>;
+
 export async function upsertAppliedNodeSyncState(
   port: DbPort,
-  record: Pick<NativeSyncNodeRecord, 'object_id' | 'version_id' | 'content_hash' | 'host_name' | 'updated_at' | 'snapshot'>,
+  record: AppliedNodeSyncStateRecord,
   options: AppliedNodeSyncStateOptions = {}
 ) {
+  const statement = appliedNodeSyncStateStatement(record, options);
+  return await port.run(statement.sql, statement.params);
+}
+
+/** The node's sync state after `record` becomes current, as one statement. */
+export function appliedNodeSyncStateStatement(record: AppliedNodeSyncStateRecord, options: AppliedNodeSyncStateOptions = {}): DbStatement {
   const syncDirty = options.syncDirty ?? 0;
-  return await port.run(
+  return { sql:
     `INSERT INTO sync_object_state (
        object_type,
        object_id,
@@ -53,7 +62,7 @@ export async function upsertAppliedNodeSyncState(
        OR sync_object_state.updated_at IS NOT excluded.updated_at
        OR sync_object_state.deleted_at IS NOT excluded.deleted_at
        OR sync_object_state.sync_dirty IS NOT excluded.sync_dirty`,
-    [
+  params: [
       record.object_id,
       record.version_id,
       record.content_hash ?? '',
@@ -62,6 +71,5 @@ export async function upsertAppliedNodeSyncState(
       record.updated_at,
       record.snapshot.deleted_at,
       syncDirty
-    ]
-  );
+    ] };
 }

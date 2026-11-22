@@ -1,4 +1,5 @@
 import type { DbPort } from './dbPort.js';
+import type { DbStatement } from './dbStatements.js';
 import type { SyncNodeApplyOperation } from './syncNodeApplyRules.js';
 
 function isLocalMutation(operation?: SyncNodeApplyOperation) {
@@ -16,9 +17,15 @@ export async function loadAppliedNodeMutationState(db: DbPort, nodeId: string, o
   return { baseContentHash, syncDirty: 1 };
 }
 
+/** Marks a version as created on this host and advances the local proof revision. */
+export function localOriginStatements(versionId: string | null): DbStatement[] {
+  if (!versionId) return [];
+  return [{ sql: 'INSERT OR IGNORE INTO node_version_local_origins (version_id) VALUES (?)', params: [versionId] },
+    { sql: 'UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1' }];
+}
+
 export async function recordAppliedNodeLocalOrigin(db: DbPort, versionId: string | null,
   operation?: SyncNodeApplyOperation) {
-  if (!isLocalMutation(operation) || !versionId) return;
-  await db.run('INSERT OR IGNORE INTO node_version_local_origins (version_id) VALUES (?)', [versionId]);
-  await db.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
+  if (!isLocalMutation(operation)) return;
+  for (const statement of localOriginStatements(versionId)) await db.run(statement.sql, statement.params);
 }

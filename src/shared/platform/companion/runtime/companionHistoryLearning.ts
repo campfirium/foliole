@@ -9,6 +9,7 @@ import { saveIosReadingWithDb } from './iosCompanionActiveDatabaseWrites';
 import { iosCompanionContentHash, iosCompanionHostName, markIosCompanionMutation } from './iosCompanionMutationState';
 
 export async function writeCompanionHistoryReadings(db: DbPort, changes: WorkspaceRelatedReading[], mode: 'undo' | 'redo') {
+  if (!changes.length) return;
   const host = await iosCompanionHostName(db);
   for (const change of changes) {
     const node = await loadCompanionWorkspaceNodeFromDb(db, change.nodeId, host);
