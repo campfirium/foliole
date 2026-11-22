@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore';
 
@@ -12,7 +13,7 @@ it('rereads the library when a group membership changes, not on the next edit', 
   const baseline = { nodesById: {} } as never;
   companionWorkspaceSnapshots.reset(baseline);
   const scopes: WorkspaceRefreshScope[] = [];
-  const read = async ({ current, scope }: { current: never; scope: WorkspaceRefreshScope }) => { scopes.push(scope); return current; };
+  const read = async ({ current, scope }: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) => { scopes.push(scope); return current; };
   let applied: Promise<void> | undefined;
   const unsubscribe = subscribeCompanionSyncApplied(() => { applied = companionWorkspaceSnapshots.refresh(read); });
   const revision = getCompanionSyncMutationRevision();
