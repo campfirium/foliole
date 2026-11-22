@@ -55,9 +55,11 @@ async function migrateImageNodes(image: VerifiedMigrationImage, owners: ImageOwn
     await context.yieldIfNeeded();
     await withLibrary(databasePath, context, () => {
       try {
-        if (migrateImageAddressInNode(openDatabaseConnection().driver, id, image, loadOrCreateDesktopHostName())) {
+        const changedIds = migrateImageAddressInNode(openDatabaseConnection().driver, id, image, loadOrCreateDesktopHostName());
+        if (changedIds) {
           changed++;
-          notifyWorkspaceContentChanged();
+          // One Node's image address and its re-anchored children changed; reread just those, not the whole library.
+          notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: changedIds } });
         }
       } catch (error) {
         deferred++;

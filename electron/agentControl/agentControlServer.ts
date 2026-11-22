@@ -19,6 +19,7 @@ import {
   type AgentControlServerStatus,
   type AgentControlSessionDescriptor
 } from './agentControlTypes.js';
+import type { AgentControlWriteNotifier } from './agentControlWriteNotifications.js';
 
 export const AGENT_CONTROL_HTTP_LIMITS = {
   headersTimeout: 10_000,
@@ -39,10 +40,11 @@ let activeStatus: AgentControlServerStatus = {
   state: 'stopped'
 };
 
-export function createAgentControlHttpServer(options: { appVersion: string; auditSink: AgentControlAuditSink; notifyWorkspaceContentChanged?: () => void; runtimeIdentity?: AgentControlRuntimeIdentity; token: string }) {
+export function createAgentControlHttpServer(options: { appVersion: string; auditSink: AgentControlAuditSink; notifyWorkspaceContentChanged?: AgentControlWriteNotifier; runtimeIdentity?: AgentControlRuntimeIdentity; token: string }) {
   const server = http.createServer(createAgentControlRequestHandler({
     ...options,
-    notifyWorkspaceContentChanged: options.notifyWorkspaceContentChanged ?? notifyWorkspaceContentChanged,
+    notifyWorkspaceContentChanged: options.notifyWorkspaceContentChanged
+      ?? (workspaceScope => notifyWorkspaceContentChanged(null, { workspaceScope })),
     runtimeIdentity: options.runtimeIdentity ?? createFallbackRuntimeIdentity()
   }));
   server.headersTimeout = AGENT_CONTROL_HTTP_LIMITS.headersTimeout;

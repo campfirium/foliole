@@ -19,11 +19,12 @@ import {
   AGENT_CONTROL_PROTOCOL_VERSION
 } from './agentControlTypes.js';
 import type { AgentControlRuntimeIdentity } from './agentControlTypes.js';
+import type { AgentControlWriteNotifier } from './agentControlWriteNotifications.js';
 
 export interface AgentControlRequestHandlerOptions {
   appVersion: string;
   auditSink: AgentControlAuditSink;
-  notifyWorkspaceContentChanged?: () => void;
+  notifyWorkspaceContentChanged?: AgentControlWriteNotifier;
   runtimeIdentity: AgentControlRuntimeIdentity;
   token: string;
 }

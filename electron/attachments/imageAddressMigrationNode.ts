@@ -55,8 +55,9 @@ function versionChanges(driver: DatabaseDriver, ids: string[], hostName: string,
   }
 }
 
+/** Returns the Node and the anchored children it rewrote, or false when nothing needed repair. */
 export function migrateImageAddressInNode(driver: DatabaseDriver, nodeId: string,
-  image: VerifiedMigrationImage, hostName: string, now = new Date().toISOString()) {
+  image: VerifiedMigrationImage, hostName: string, now = new Date().toISOString()): string[] | false {
   return driver.transaction(() => {
     const row = driver.queryOne<{ resource_references: string | null; image_sources: string | null }>(
       'SELECT resource_references, image_sources FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
@@ -78,7 +79,8 @@ export function migrateImageAddressInNode(driver: DatabaseDriver, nodeId: string
     }
     driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ?, updated_at = ? WHERE id = ?',
       [references, remapSources(row.image_sources, keys, image.storageKey), now, nodeId]);
-    versionChanges(driver, [nodeId, ...change.affectedChildIds], hostName, now);
-    return true;
+    const changedIds = [nodeId, ...change.affectedChildIds];
+    versionChanges(driver, changedIds, hostName, now);
+    return changedIds;
   });
 }

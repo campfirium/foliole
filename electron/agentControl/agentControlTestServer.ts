@@ -3,10 +3,11 @@ import type { AddressInfo } from 'node:net';
 
 import { createAgentControlHttpServer } from './agentControlServer.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
+import type { AgentControlWriteNotifier } from './agentControlWriteNotifications.js';
 
 export async function startAgentControlTestServer(
   auditEvents: AgentControlAuditEvent[] = [],
-  notifyWorkspaceContentChanged?: () => void
+  notifyWorkspaceContentChanged?: AgentControlWriteNotifier
 ) {
   const server = createAgentControlHttpServer({
     appVersion: '0.1.0-test',

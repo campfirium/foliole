@@ -54,7 +54,10 @@ export async function handleReadwiseBookActionCommand(
   }
   if (request.command === NATIVE_COMMANDS.getReadwisePdfOriginal) {
     const result = await getReadwisePdfOriginal(nodeId());
-    if (result.status === 'completed') notifyWorkspaceContentChanged();
+    // The original PDF attaches to this one Book; EPUB, resync and reset can rebuild its highlights, so stay full.
+    if (result.status === 'completed') {
+      notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: [result.node_id], structure: true } });
+    }
     return result;
   }
   if (request.command === NATIVE_COMMANDS.resetReadwiseBookImport) {

@@ -1,5 +1,6 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 import { applyDailyFlowSyncFact, dailyFlowFactApplyStatus } from '../flow/dailyFlowSyncApply.js';
 
 import type { DailyFlowTableFiles } from './dailyFlowTableFiles.js';
@@ -15,6 +16,9 @@ export async function applyDailyFlowTable(db: DbPort, files: DailyFlowTableFiles
   if (sourceStateHash && bytesToHex(table.headers.get(requestedId)!.contentHash) !== bytesToHex(sourceStateHash)) {
     throw new Error('daily_flow_table_source_hash_invalid');
   }
+  const reviewNodeIds = new Set<string>();
+  const readingNodeIds = new Set<string>();
+  let applied = false;
   for (const fact of table.facts) {
     const header = table.headers.get(fact.id)!;
     const record = { object_type: 'daily_flow' as const, object_id: fact.id, payload_json: JSON.stringify(fact),
@@ -22,7 +26,23 @@ export async function applyDailyFlowTable(db: DbPort, files: DailyFlowTableFiles
     if (await dailyFlowFactApplyStatus(db, record) === 'apply') {
       await applyDailyFlowSyncFact(db, record);
       await upsertAppliedSyncObjectState(db, record);
+      applied = true;
+      if (fact.nodeId) reviewNodeIds.add(fact.nodeId);
+      for (const reading of fact.readings ?? []) readingNodeIds.add(reading.nodeId);
     }
   }
-  return { generatedChanges: false, workspaceScope: { kind: 'full' as const } };
+  return { generatedChanges: false, workspaceScope: dailyFlowWorkspaceScope(applied, reviewNodeIds, readingNodeIds) };
+}
+
+/**
+ * Facts change only the Flow tables. Naming the nodes they touched lets the receiver reread just those, which
+ * still hands it a new node map so an open Flow reopens; a table whose facts were all present changes nothing.
+ */
+function dailyFlowWorkspaceScope(applied: boolean, reviewNodeIds: ReadonlySet<string>,
+  readingNodeIds: ReadonlySet<string>): WorkspaceRefreshScope {
+  if (!applied) return { kind: 'nodes', nodeIds: [] };
+  if (!reviewNodeIds.size && !readingNodeIds.size) return { kind: 'full' };
+  return { kind: 'nodes', nodeIds: [],
+    ...(reviewNodeIds.size ? { reviewNodeIds: [...reviewNodeIds] } : {}),
+    ...(readingNodeIds.size ? { readingNodeIds: [...readingNodeIds] } : {}) };
 }

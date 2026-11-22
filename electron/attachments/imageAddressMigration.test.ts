@@ -6,6 +6,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: migrationFixture.appDataDir, app_config_dir: path.join(migrationFixture.root, 'config'),
@@ -21,7 +22,10 @@ import { migrationContext, migrationFixture, initializeMigrationFixture,
   imageBytes, oldKey, newKey, migrationNode, seedMigrationNode, registerMigrationReceiver } from './imageAddressMigrationTestSupport.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
 
-beforeEach(initializeMigrationFixture);
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await initializeMigrationFixture();
+});
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(migrationFixture.root, { recursive: true, force: true });
@@ -45,6 +49,7 @@ it('repairs verified images and references, preserves originals and text example
   expect(current.current_version_id).not.toBe(originalVersion);
   expect(migrationNode('child').current_version_id).not.toBe(childVersion);
   expect(JSON.parse(migrationNode('child').anchor_link).locator.from).toBe(current.content.indexOf('Target sentence.'));
+  expect(vi.mocked(notifyWorkspaceContentChanged).mock.calls).toEqual([[null, { workspaceScope: { kind: 'nodes', nodeIds: ['article', 'child'] } }]]);
   expect((await resolveAttachmentFile(newKey, migrationFixture.assetsDir)).status).toBe('ready');
   expect(await fs.readFile(path.join(migrationFixture.assetsDir, oldKey))).toEqual(imageBytes);
   const driver = openDatabaseConnection().driver;
@@ -75,7 +80,9 @@ it('repairs every live owner of a wrong alias and leaves deleted and unrelated n
     expect(JSON.parse(migrationNode(id).resource_references)).toEqual([{ storage_key: newKey, role: 'image', original_name: 'Original.jpg' }]);
   }
   expect(migrationNode('deleted').content).toBe(`![image](asset://${oldKey})`);
-  expect(migrationNode('deleted').current_version_id).toBe(deletedVersion);
+  expect(migrationNode('deleted').current_version_id).toBe(deletedVersion);  // WA-061: each repaired Node used to send a whole-library refresh; now it names only that Node.
+  expect(vi.mocked(notifyWorkspaceContentChanged).mock.calls).toEqual(['article', 'second'].map(id =>
+    [null, { workspaceScope: { kind: 'nodes', nodeIds: [id] } }]));
 });
 
 it('repairs a missing wrong alias using the correct file and handles reference-style images and source maps', async () => {

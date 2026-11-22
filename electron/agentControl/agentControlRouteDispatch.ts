@@ -28,7 +28,12 @@ import {
   handleVirtualFolderRestore,
   handleVirtualFolderUpdate
 } from './agentControlVirtualFolderLifecycleHandlers.js';
-import { isMaterialWritePath, isVirtualFolderWritePath, notifyAfterSuccessfulWrite } from './agentControlWriteNotifications.js';
+import {
+  captureAgentControlResponseJson,
+  isMaterialWritePath,
+  isVirtualFolderWritePath,
+  notifyAfterSuccessfulWrite
+} from './agentControlWriteNotifications.js';
 
 export async function handleAgentControlMaterialRoute(
   request: http.IncomingMessage,
@@ -38,9 +43,10 @@ export async function handleAgentControlMaterialRoute(
 ) {
   const handler = MATERIAL_ROUTES[pathname];
   if (request.method !== 'POST' || !handler) return false;
+  const payload = captureAgentControlResponseJson(response);
   const notify = await handler(request, response, options);
   if (notify !== false && isMaterialWritePath(pathname)) {
-    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged, pathname, payload());
   }
   return true;
 }
@@ -53,8 +59,11 @@ export async function handleAgentControlVirtualFolderRoute(
 ) {
   const handler = VIRTUAL_FOLDER_ROUTES[pathname];
   if (request.method !== 'POST' || !handler) return false;
+  const payload = captureAgentControlResponseJson(response);
   await handler(request, response, options);
-  if (isVirtualFolderWritePath(pathname)) notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+  if (isVirtualFolderWritePath(pathname)) {
+    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged, pathname, payload());
+  }
   return true;
 }
 

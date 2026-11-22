@@ -2,8 +2,16 @@ import { useEffect, useRef } from 'react';
 
 import { onGlobalCaptureNavigate } from '../../shared/platform/runtimeShellEvents';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
-import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
+import { refreshWorkspaceState, refreshWorkspaceStateWithScope } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+/** A capture adds one Node; read it and the list it joined rather than the whole library. */
+function refreshCapturedNode(nodeId: string) {
+  const libraryScope = useWorkspaceStore.getState().libraryScope;
+  if (!libraryScope) return refreshWorkspaceState('global-capture-navigation');
+  return refreshWorkspaceStateWithScope({ kind: 'nodes', nodeIds: [nodeId], structure: true }, libraryScope,
+    'global-capture-navigation');
+}
 
 export function useGlobalCaptureNavigation(onSelectNode: (nodeId: string) => Promise<void> | void) {
   const onSelectNodeRef = useRef(onSelectNode);
@@ -15,7 +23,7 @@ export function useGlobalCaptureNavigation(onSelectNode: (nodeId: string) => Pro
     let isDisposed = false;
     let unlisten: (() => void) | null = null;
     void onGlobalCaptureNavigate(({ nodeId }) => {
-      void refreshWorkspaceState('global-capture-navigation').catch(() => undefined).then(async () => {
+      void refreshCapturedNode(nodeId).catch(() => undefined).then(async () => {
         if (isDisposed) {
           return;
         }

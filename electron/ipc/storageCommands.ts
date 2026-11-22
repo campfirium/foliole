@@ -1,5 +1,6 @@
 import { type WebContents } from 'electron';
 
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
@@ -39,6 +40,11 @@ import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './sto
 import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 import { handleSyncMutationCommand } from './storageSyncCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
+
+/** These writes change one Node, or a source Node and the highlights under it; the refresh reads that subtree. */
+function nodeSubtreeScope(nodeId: string): WorkspaceRefreshScope {
+  return { kind: 'nodes', nodeIds: [nodeId], structure: true };
+}
 
 export async function handleStorageCommand(
   command: string,
@@ -160,7 +166,7 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.mergeReadwiseTopicHighlights) {
     const result = await mergeReadwiseTopicHighlights(asString(args.node_id, 'node_id'), window);
     if (result.status === 'merged') {
-      notifyWorkspaceContentChanged();
+      notifyWorkspaceContentChanged(null, { workspaceScope: nodeSubtreeScope(result.node_id) });
     }
     return result;
   }
@@ -177,7 +183,7 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.importIncomingUpdateAsNew) {
     const result = importPendingIncomingUpdateAsNewTopic(asString(args.incoming_update_id, 'incoming_update_id'));
     if (result.status === 'imported_as_new' && result.node_id) {
-      notifyWorkspaceContentChanged(window);
+      notifyWorkspaceContentChanged(window, { workspaceScope: nodeSubtreeScope(result.node_id) });
     }
     notifyManagedInboxUpdated(result.incoming_update_id);
     return result;
@@ -192,14 +198,14 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.restoreRemovedSource) {
     const result = await restoreRemovedSource(asString(args.rule_id, 'rule_id'), asString(args.source_path, 'source_path'));
     if (result.status === 'restored' && result.node_id) {
-      notifyWorkspaceContentChanged();
+      notifyWorkspaceContentChanged(null, { workspaceScope: nodeSubtreeScope(result.node_id) });
     }
     return result;
   }
   if (command === NATIVE_COMMANDS.devReimportCurrentTopicSource) {
     const result = await reimportCurrentTopicSource(asString(args.node_id, 'node_id'));
     if (result.status === 'reimported' && result.node_id) {
-      notifyWorkspaceContentChanged(null, { refreshingWindow: window ?? null });
+      notifyWorkspaceContentChanged(null, { refreshingWindow: window ?? null, workspaceScope: nodeSubtreeScope(result.node_id) });
     }
     return result;
   }
@@ -214,7 +220,9 @@ function handleAcceptIncomingUpdate(
     content: asString(args.content, 'content'),
     id: asString(args.incoming_update_id, 'incoming_update_id')
   });
-  if (result.status === 'accepted' && result.node_id) notifyWorkspaceContentChanged(window);
+  if (result.status === 'accepted' && result.node_id) {
+    notifyWorkspaceContentChanged(window, { workspaceScope: nodeSubtreeScope(result.node_id) });
+  }
   notifyManagedInboxUpdated(result.incoming_update_id);
   return result;
 }
@@ -226,12 +234,12 @@ async function handleTextAlternativeMutation(
 ) {
   if (command === NATIVE_COMMANDS.promoteNodeTextAlternative) {
     const result = await promoteNodeTextAlternative(asString(args.node_id, 'node_id'), asString(args.alternative_id, 'alternative_id'));
-    if (result.status === 'promoted') notifyWorkspaceContentChanged();
+    if (result.status === 'promoted') notifyWorkspaceContentChanged(null, { workspaceScope: nodeSubtreeScope(result.node_id) });
     return result;
   }
   if (command === NATIVE_COMMANDS.dismissNodeTextAlternative) {
     const result = await dismissNodeTextAlternative(asString(args.node_id, 'node_id'), asString(args.alternative_id, 'alternative_id'));
-    if (result.status === 'dismissed') notifyWorkspaceContentChanged(window);
+    if (result.status === 'dismissed') notifyWorkspaceContentChanged(window, { workspaceScope: nodeSubtreeScope(result.node_id) });
     return result;
   }
   return undefined;
