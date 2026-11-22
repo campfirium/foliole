@@ -32,6 +32,11 @@ let package = Package(
             ],
             sources: [
                 "FolioleCompanionAppDataFiles.swift",
+                "FolioleBackupRestoreArchiveLayout.swift",
+                "FolioleBackupRestoreSources.swift",
+                "FolioleBackupRestoreStaging.swift",
+                "FolioleBackupRestoreSwap.swift",
+                "FolioleBackupRestoreZipReader.swift",
                 "FolioleCompanionCanonicalAttachmentKey.swift",
                 "FolioleAttachmentBlockStorage.swift",
                 "FolioleAttachmentTrashMove.swift",

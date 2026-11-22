@@ -8,6 +8,8 @@ final class FolioleBridgeViewController: CAPBridgeViewController {
     private var framedLifecycle: FolioleFramedSyncWebViewLifecycle?
 
     override func capacitorDidLoad() {
+        // Registered first so an interrupted library swap finishes before anything touches the library.
+        bridge?.registerPluginInstance(FolioleCompanionBackupRestorePlugin())
         bridge?.registerPluginInstance(FolioleCompanionBootstrapPlugin())
         bridge?.registerPluginInstance(FolioleCompanionFolderBackupPlugin())
         let sync = FolioleCompanionSyncPlugin()

@@ -13,6 +13,13 @@
 		487150C8D49787AC334C676C /* FolioleFolderBackupOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */; };
 		3028EDEBDAD9E64F3A316EE8 /* FolioleFolderBackupDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */; };
 		6EA18670BA4C1EB0A6C72A9C /* FolioleFolderBackupPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */; };
+		7427B5000000000000000002 /* FolioleBackupRestoreArchiveLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5000000000000000001 /* FolioleBackupRestoreArchiveLayout.swift */; };
+		7427B5010000000000000002 /* FolioleBackupRestoreZipReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5010000000000000001 /* FolioleBackupRestoreZipReader.swift */; };
+		7427B5020000000000000002 /* FolioleBackupRestoreStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5020000000000000001 /* FolioleBackupRestoreStaging.swift */; };
+		7427B5030000000000000002 /* FolioleBackupRestoreSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5030000000000000001 /* FolioleBackupRestoreSources.swift */; };
+		7427B5040000000000000002 /* FolioleBackupRestoreSwap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5040000000000000001 /* FolioleBackupRestoreSwap.swift */; };
+		7427B5050000000000000002 /* FolioleBackupRestorePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5050000000000000001 /* FolioleBackupRestorePicker.swift */; };
+		7427B5060000000000000002 /* FolioleCompanionBackupRestorePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7427B5060000000000000001 /* FolioleCompanionBackupRestorePlugin.swift */; };
 		D631800A5CF4912970F79A66 /* FolioleCompanionFolderBackupPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */; };
 		688100000000000000000003 /* FolioleCompanionAppDataFiles.swift in Share Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
@@ -163,6 +170,13 @@
 		F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupOperation.swift; sourceTree = "<group>"; };
 		AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupDirectory.swift; sourceTree = "<group>"; };
 		413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupPicker.swift; sourceTree = "<group>"; };
+		7427B5000000000000000001 /* FolioleBackupRestoreArchiveLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestoreArchiveLayout.swift; sourceTree = "<group>"; };
+		7427B5010000000000000001 /* FolioleBackupRestoreZipReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestoreZipReader.swift; sourceTree = "<group>"; };
+		7427B5020000000000000001 /* FolioleBackupRestoreStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestoreStaging.swift; sourceTree = "<group>"; };
+		7427B5030000000000000001 /* FolioleBackupRestoreSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestoreSources.swift; sourceTree = "<group>"; };
+		7427B5040000000000000001 /* FolioleBackupRestoreSwap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestoreSwap.swift; sourceTree = "<group>"; };
+		7427B5050000000000000001 /* FolioleBackupRestorePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBackupRestorePicker.swift; sourceTree = "<group>"; };
+		7427B5060000000000000001 /* FolioleCompanionBackupRestorePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBackupRestorePlugin.swift; sourceTree = "<group>"; };
 		515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFolderBackupPlugin.swift; sourceTree = "<group>"; };
 		688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAppDataFiles.swift; sourceTree = "<group>"; };
 		50F100981FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalClozeRecoveryUITests.swift; sourceTree = "<group>"; };
@@ -345,6 +359,13 @@
 				F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */,
 				AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */,
 				413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */,
+				7427B5000000000000000001 /* FolioleBackupRestoreArchiveLayout.swift */,
+				7427B5010000000000000001 /* FolioleBackupRestoreZipReader.swift */,
+				7427B5020000000000000001 /* FolioleBackupRestoreStaging.swift */,
+				7427B5030000000000000001 /* FolioleBackupRestoreSources.swift */,
+				7427B5040000000000000001 /* FolioleBackupRestoreSwap.swift */,
+				7427B5050000000000000001 /* FolioleBackupRestorePicker.swift */,
+				7427B5060000000000000001 /* FolioleCompanionBackupRestorePlugin.swift */,
 				515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */,
 				221A00000000000000000002 /* FolioleShareInboxQueue.swift */,
 				221A00000000000000000003 /* FolioleCompanionShareInboxPlugin.swift */,
@@ -658,6 +679,13 @@
 				487150C8D49787AC334C676C /* FolioleFolderBackupOperation.swift in Sources */,
 				3028EDEBDAD9E64F3A316EE8 /* FolioleFolderBackupDirectory.swift in Sources */,
 				6EA18670BA4C1EB0A6C72A9C /* FolioleFolderBackupPicker.swift in Sources */,
+				7427B5000000000000000002 /* FolioleBackupRestoreArchiveLayout.swift in Sources */,
+				7427B5010000000000000002 /* FolioleBackupRestoreZipReader.swift in Sources */,
+				7427B5020000000000000002 /* FolioleBackupRestoreStaging.swift in Sources */,
+				7427B5030000000000000002 /* FolioleBackupRestoreSources.swift in Sources */,
+				7427B5040000000000000002 /* FolioleBackupRestoreSwap.swift in Sources */,
+				7427B5050000000000000002 /* FolioleBackupRestorePicker.swift in Sources */,
+				7427B5060000000000000002 /* FolioleCompanionBackupRestorePlugin.swift in Sources */,
 				D631800A5CF4912970F79A66 /* FolioleCompanionFolderBackupPlugin.swift in Sources */,
 				221B00000000000000000003 /* FolioleShareInboxQueue.swift in App Sources */,
 				221B00000000000000000004 /* FolioleCompanionShareInboxPlugin.swift in Sources */,
