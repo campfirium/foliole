@@ -108,8 +108,12 @@ async function readScopedMetadata(db: DbPort, current: WorkspaceSnapshot, scope:
   const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
   // Children keep their projection unless a named node appears, disappears or changes visibility; a move or a
   // rename keeps them as they are, so only the named nodes are read and the cost does not grow with the subtree.
-  let { nodes, expected } = await loadScopedNodes(db, current, roots, true);
-  if (changesChildVisibility(current, nodes)) ({ nodes, expected } = await loadScopedNodes(db, current, roots));
+  // A named node hidden in the baseline (a restore) is bound to change visibility, so its children are read at once.
+  const exact = !hiddenInBaseline(current, roots);
+  let { nodes, expected } = await loadScopedNodes(db, current, roots, exact);
+  if (exact && changesChildVisibility(current, nodes)) {
+    ({ nodes, expected } = await loadScopedNodes(db, current, roots));
+  }
   if (!canMergeWorkspaceMetadataProjection(current, nodes, expected, reviewed, reading)) return null;
   // A node created on this phone has no Readwise source.
   for (const [id, node] of Object.entries(nodes)) if (!current.nodesById[id]) nodes[id] = { ...node, readwiseRemoteLifecycle: null };
@@ -123,6 +127,12 @@ async function readScopedMetadata(db: DbPort, current: WorkspaceSnapshot, scope:
   const next = normalizeWorkspaceSnapshot({ ...merged, nodeOrder, trashedNodeIds: merged.trashedNodeIds.filter(id => !named.has(id)),
     trashedNodeDeletedAtById: Object.fromEntries(Object.entries(merged.trashedNodeDeletedAtById ?? {}).filter(([id]) => !named.has(id))) });
   return mergeCompanionLocalState(db, await mergeCompanionNodeViews(db, next, Object.keys(nodes)), scope);
+}
+
+/** Whether a named node exists in the baseline but is in Trash or outside the visible order. */
+function hiddenInBaseline(current: WorkspaceSnapshot, roots: ReadonlySet<string>) {
+  const visible = new Set(current.nodeOrder);
+  return [...roots].some(id => current.nodesById[id] && (current.nodesById[id]!.deletedAt || !visible.has(id)));
 }
 
 /** Whether a named node's children may project differently: Trash state or visibility of an existing node changed. */
