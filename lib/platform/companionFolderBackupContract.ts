@@ -37,7 +37,9 @@ export interface CompanionFolderBackupPort {
   addListener(event: 'backupStateChanged', listener: (event: {
     state: CompanionFolderBackupState; result?: CompanionFolderDatabaseBackupResult;
   }) => void): Promise<{ remove(): Promise<void> }>;
-  openSource(input: { sourceEpoch: string; databasePath: string }): Promise<void>;
+  /** `reclaim` marks the first owner of a newly loaded page: native ends a round left by an earlier page as
+   * interrupted (waiting for its running operation to stop) instead of refusing the new owner. */
+  openSource(input: { sourceEpoch: string; databasePath: string; reclaim?: boolean }): Promise<void>;
   closeSource(input: { sourceEpoch: string }): Promise<void>;
   getState(): Promise<CompanionFolderBackupState>;
   clearDirectory(): Promise<CompanionFolderBackupState>;

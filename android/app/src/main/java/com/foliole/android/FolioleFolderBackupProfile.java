@@ -30,7 +30,7 @@ final class FolioleFolderBackupProfile {
         String phase = profile == null ? "idle" : profile.optString("phase", "idle");
         if (phase.equals("working")) {
             phase = "pending";
-            status(phase, "Backup interrupted. Use Back up now to retry.");
+            status(phase, FolioleFolderBackupRound.INTERRUPTED);
         }
         return phase;
     }

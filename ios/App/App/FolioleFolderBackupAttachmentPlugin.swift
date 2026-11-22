@@ -62,15 +62,13 @@ extension FolioleCompanionFolderBackupPlugin {
         DispatchQueue.main.async {
             do {
                 guard let session = self.session, session.operation.requestID == call.getString("requestId"),
-                      self.source?.epoch == session.operation.epoch else { throw backupError("Backup request changed.") }
+                      self.round.epoch == session.operation.epoch else { throw backupError("Backup request changed.") }
                 let pending = call.getInt("pending")
                 let copied = call.getInt("copied") ?? 0
                 guard copied >= 0, pending == nil || pending! >= 0 else { throw backupError("Invalid attachment result.") }
                 let error = call.getString("errorMessage")
                 try self.store.update(id: session.profile) { $0.attachmentFilesPending = pending; $0.attachmentError = error }
-                self.phase = error != nil ? "failed" : pending == 0 ? "saved" : "pending"
-                self.errorMessage = error
-                self.roundRequest = nil
+                self.round.finished(failure: error, pending: pending)
                 var state = try self.state()
                 state["attachmentFilesCopied"] = copied
                 self.notifyListeners("backupStateChanged", data: ["state": state])
@@ -83,7 +81,7 @@ extension FolioleCompanionFolderBackupPlugin {
                                 execute: @escaping (URL, FolioleFolderBackupProfile, FolioleFolderBackupOperation) throws -> JSObject) {
         DispatchQueue.main.async {
             guard let session = self.session, session.operation.requestID == call.getString("requestId"),
-                  session.operation.epoch == call.getString("sourceEpoch"), self.source?.epoch == session.operation.epoch else {
+                  session.operation.epoch == call.getString("sourceEpoch"), self.round.epoch == session.operation.epoch else {
                 call.reject("Backup database owner or request changed."); return
             }
             self.queue.async {

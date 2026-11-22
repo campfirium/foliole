@@ -18,14 +18,17 @@ extension FolioleCompanionFolderBackupPlugin: UIDocumentPickerDelegate {
         guard let call = pickerCall else { return }
         pickerCall = nil
         operation = nil
+        round.pickerCancelled(call.getString("requestId") ?? "")
         do { call.resolve(try response(call, cancelled: true)) } catch { call.reject(error.localizedDescription) }
+        notifyState()
+        resumeWaitingOpen()
     }
 
     public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let call = pickerCall else { return }
         pickerCall = nil
         do {
-            guard let directory = urls.first, let operation, source?.epoch == operation.epoch else {
+            guard let directory = urls.first, let operation, round.epoch == operation.epoch else {
                 throw backupError("Database owner is closed.")
             }
             try operation.checkActive()
@@ -39,6 +42,12 @@ extension FolioleCompanionFolderBackupPlugin: UIDocumentPickerDelegate {
                 try store.save(FolioleFolderBackupProfile(bookmark: bookmark, label: directory.lastPathComponent))
             } else if var old { old.bookmark = bookmark; try store.save(old) }
             start(call)
-        } catch { operation = nil; call.reject(error.localizedDescription) }
+        } catch {
+            operation = nil
+            round.databaseFailed(call.getString("requestId") ?? "", message: error.localizedDescription)
+            notifyState()
+            call.reject(error.localizedDescription)
+            resumeWaitingOpen()
+        }
     }
 }

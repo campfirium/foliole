@@ -1,5 +1,9 @@
 import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
 
+/** Native registrations outlive a page reload; until this page has registered an owner, whatever native still
+ * holds belongs to a page that is gone. */
+let pageRegistered = false;
+
 /** Register only the owner's identity. Native backup reads use the same engine
  * independently of the interactive snapshot lease and renderer writer queue. */
 export class CompanionFolderBackupSource {
@@ -10,7 +14,8 @@ export class CompanionFolderBackupSource {
     if (this.closing) throw new Error('folder_backup_source_closed');
     if (!this.session) {
       const epoch = crypto.randomUUID();
-      this.session = { epoch, path, port, ready: port.openSource({ sourceEpoch: epoch, databasePath: path }) };
+      const ready = port.openSource({ sourceEpoch: epoch, databasePath: path, reclaim: !pageRegistered });
+      this.session = { epoch, path, port, ready: ready.then(() => { pageRegistered = true; }) };
     }
     const session = this.session;
     if (session.path !== path || session.port !== port) throw new Error('folder_backup_source_changed');
