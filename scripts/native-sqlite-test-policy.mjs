@@ -274,7 +274,11 @@ const controlledElectronSqliteTests = [
   'src/companion/companionReadingPositionReopen.integration.test.tsx',
   'src/shared/platform/companion/folderBackup/companionAutomaticFolderBackupCoalescing.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionAttachmentPdfTextPresence.integration.test.ts',
-  'src/test/companionSandbox.integration.test.ts'
+  'src/test/companionSandbox.integration.test.ts',
+  'electron/import/desktopLibraryMerge.integration.test.ts',
+  'electron/import/mobileLibraryMerge.integration.test.ts',
+  'electron/sync/desktopFolderListSortSync.integration.test.ts',
+  'electron/sync/libraryMergeSync.integration.test.ts'
 ];
 
 const ordinaryNodeSqliteTextOnlyTests = [
