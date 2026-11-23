@@ -172,7 +172,21 @@ cleanup still owed by its owner.
 
 | Proposal | Reviewed head | Target | Adoption | Local evidence | Required QA |
 | --- | --- | --- | --- | --- | --- |
-| [#304](https://github.com/campfirium/foliole/pull/304) (`app/renovate`, base `dev`) | `73774ff541cfbe9895c3f6184a52192dd4ca5882` | react-pdf 11.1.0 with the matching direct pdfjs-dist 6.5.438 (React-PDF now pins 6.5.438, clearing the #222 and #191 deferrals) | commit 008575 | PDF worker, text extraction, Readwise match, viewer, builder-config and dependabot-contract tests; Electron canvas runtime test | full (desktop PDF viewer and dependency hardening; mobile PDF reading) |
+
+### Completed November 23 centralized batch
+
+[PR #304](https://github.com/campfirium/foliole/pull/304) proposed React-PDF
+11.1.0 from verified Renovate head `73774ff5`. Commit `c7130f5bf` adopted it
+with matching direct PDF.js 6.5.438, resolving the #222 and #191 deferrals.
+Local coverage included the PDF worker, text extraction, Readwise matching,
+the viewer and Electron canvas. Dependency hardening passed in
+[full review run 45162196990](https://github.com/campfirium/foliole/actions/runs/45162196990/attempts/3).
+Both iOS jobs passed after targeted reruns. The remaining desktop navigation
+assertion failed on Ubuntu and Windows. The test-only fix `35dd39577` was
+accepted through local repair with three passing Electron test runs.
+Integration at `07ce2ddbd` passed 16 affected tests and reached remote
+`dev`. The QA workspace was released, `preview` advanced to `35dd39577`,
+and PR #304 is closed with its source ref absent.
 
 ### Completed November 22 centralized batch
 
