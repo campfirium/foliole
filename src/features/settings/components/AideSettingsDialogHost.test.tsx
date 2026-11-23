@@ -133,23 +133,26 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
   act(() => requestAideSettingsDialogOpen());
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'AI permissions' }));
-  const read = await within(dialog).findByRole('region', { name: 'Allow AI to read' });
+  const read = await within(dialog).findByRole('region', { name: 'Read permissions' });
   const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
   expect(budget).toHaveValue(20000);
   expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
-    'Keep reading', 'Find in the current material', 'Find in the library', 'Trace back to the original', 'Read PDF pages'
+    'Read other parts of a material', 'Read text from a PDF page', 'Locate the original text',
+    'Find in the current material', 'Find in the library'
   ]);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
 
-  const write = within(dialog).getByRole('region', { name: 'Allow AI to modify' });
+  const write = within(dialog).getByRole('region', { name: 'Edit permissions' });
   expect(within(write).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
-    'Ask before changing', 'Create excerpts', 'Create materials and Items', 'Edit content', 'Move and reorder', 'Move to trash', 'Manage indexes', 'Manage Dives'
+    'Confirm before making changes', 'Create folders, topics, and Items', 'Create excerpts', 'Edit content',
+    'Move and reorder', 'Manage indexes', 'Manage Dives', 'Move to and restore from trash'
   ]);
 
-  expect(within(write).getByRole('switch', { name: 'Ask before changing' })).toBeChecked();
-  fireEvent.click(within(write).getByRole('switch', { name: 'Ask before changing' }));
+  const confirmBeforeChanges = within(write).getByRole('switch', { name: 'Confirm before making changes' });
+  expect(confirmBeforeChanges).toBeChecked();
+  fireEvent.click(confirmBeforeChanges);
   fireEvent.click(within(write).getByRole('switch', { name: 'Manage Dives' }));
-  fireEvent.click(within(read).getByRole('switch', { name: 'Read PDF pages' }));
+  fireEvent.click(within(read).getByRole('switch', { name: 'Read text from a PDF page' }));
   fireEvent.change(budget, { target: { value: '8' } });
   expect(budget).toHaveValue(8);
   fireEvent.blur(budget);

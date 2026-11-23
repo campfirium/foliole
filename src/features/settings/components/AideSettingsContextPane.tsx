@@ -24,7 +24,7 @@ export function AideSettingsContextPane() {
       description={t('settings.aideDialog.context.description')}
       onReset={isDefault ? undefined : () => { update(createDefaultAideAttachedContextSettings()); flush(); }}
       resetLabel={t('settings.aideDialog.context.reset')}
-      showDescription={false}
+      descriptionPosition="hidden"
     >
       <div className="grid grid-cols-2 items-stretch gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
         <SettingsSection

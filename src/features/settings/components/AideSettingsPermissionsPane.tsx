@@ -3,12 +3,12 @@ import { useState, type ReactNode } from 'react';
 import {
   AIDE_READ_BUDGET_MAX,
   AIDE_READ_BUDGET_MIN,
-  AIDE_READ_TOOL_KEYS,
-  AIDE_WRITE_TOOL_KEYS,
   createDefaultAideToolPermissionSettings,
   isDefaultAideToolPermissions,
   normalizeAideReadBudget,
-  type AideToolPermissionSettings
+  type AideReadToolKey,
+  type AideToolPermissionSettings,
+  type AideWriteToolKey
 } from '../../../../lib/core/assistant/aideToolPermissionSettings';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../../shared/localization/translations';
@@ -22,6 +22,14 @@ import { useAideToolPermissionSettings } from '../model/useAideToolPermissionSet
 
 import { AideSettingsPaneFrame } from './AideSettingsPaneFrame';
 
+const READ_PERMISSION_ORDER: readonly AideReadToolKey[] = [
+  'continueReading', 'readPdfPage', 'traceSource', 'searchCurrent', 'searchLibrary'
+];
+
+const WRITE_PERMISSION_ORDER: readonly AideWriteToolKey[] = [
+  'createMaterial', 'createExcerpt', 'editContent', 'moveAndOrder', 'manageIndexes', 'manageDives', 'trash'
+];
+
 export function AideSettingsPermissionsPane() {
   const t = useTranslation();
   const { flush, saveFailed, settings, update } = useAideToolPermissionSettings();
@@ -32,13 +40,13 @@ export function AideSettingsPermissionsPane() {
   return (
     <AideSettingsPaneFrame
       description={t('settings.aideDialog.permissions.description')}
+      descriptionPosition="bottom"
       onReset={isDefaultAideToolPermissions(settings) ? undefined : reset}
       resetLabel={t('settings.aideDialog.permissions.reset')}
     >
       <div className="grid grid-cols-2 items-start gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
         <SettingsSection
           ariaLabel={t('settings.aideDialog.permissions.read.title')}
-          description={t('settings.aideDialog.permissions.read.description')}
           title={t('settings.aideDialog.permissions.read.title')}
         >
           <AideReadPermissionRows onChange={update} onCommit={flush} settings={settings} />
@@ -50,7 +58,6 @@ export function AideSettingsPermissionsPane() {
           ariaLabel={t('settings.aideDialog.permissions.write.title')}
           // Side by side with the read section, so it starts level with it; stacked, it keeps its divider.
           className="min-[1080px]:pt-0 min-[1080px]:before:hidden"
-          description={t('settings.aideDialog.permissions.write.description')}
           title={t('settings.aideDialog.permissions.write.title')}
         >
           <AidePermissionRow
@@ -65,7 +72,7 @@ export function AideSettingsPermissionsPane() {
           </AidePermissionRow>
           <AidePermissionSwitches
             group="write"
-            keys={AIDE_WRITE_TOOL_KEYS}
+            keys={WRITE_PERMISSION_ORDER}
             onChange={(write) => update({ ...settings, write })}
             values={settings.write}
           />
@@ -110,7 +117,7 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
       </AidePermissionRow>
       <AidePermissionSwitches
         group="read"
-        keys={AIDE_READ_TOOL_KEYS}
+        keys={READ_PERMISSION_ORDER}
         onChange={(read) => onChange({ ...settings, read })}
         values={settings.read}
       />
