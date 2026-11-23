@@ -4,7 +4,7 @@ export const EN_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS = {
   'settings.aideDialog.permissions.reset': 'Restore defaults',
   'settings.aideDialog.permissions.read.title': 'Allow AI to read',
   'settings.aideDialog.permissions.read.description': 'The AI can read more material when it needs to, and cites where it read it.',
-  'settings.aideDialog.permissions.readBudget.title': 'Max read per reply (tokens)',
+  'settings.aideDialog.permissions.readBudget.title': 'Max read per reply',
   'settings.aideDialog.permissions.readBudget.description': 'Limits how much the AI reads for one reply',
   'settings.aideDialog.permissions.tool.continueReading.title': 'Keep reading',
   'settings.aideDialog.permissions.tool.continueReading.description': 'Read other parts of a material when needed',

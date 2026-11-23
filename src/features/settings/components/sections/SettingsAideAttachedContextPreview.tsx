@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import {
   allocateAideAttachedContext,
@@ -6,7 +6,8 @@ import {
   type AideContextUnit
 } from '../../../../../lib/core/assistant/aideAttachedContextAllocation';
 import { buildAideAttachedContextCandidates } from '../../../../../lib/core/assistant/aideAttachedContextCandidates';
-import type { AideAttachedContextSettings } from '../../../../../lib/core/assistant/aideAttachedContextSettings';
+import type { AideAttachedContextItemKey, AideAttachedContextSettings } from '../../../../../lib/core/assistant/aideAttachedContextSettings';
+import { cn } from '../../../../shared/lib/utils';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
@@ -37,27 +38,47 @@ const LABEL_KEYS: Record<string, string> = {
   'Source excerpt': 'sourceExcerpt'
 };
 
-export function SettingsAideAttachedContextPreview({ settings }: { settings: AideAttachedContextSettings }) {
+export function SettingsAideAttachedContextPreview({ active, settings }: {
+  active: { key: AideAttachedContextItemKey; rowTop: number } | null;
+  settings: AideAttachedContextSettings;
+}) {
   const t = useTranslation();
   const items = useMemo(() => allocateAideAttachedContext(EXAMPLE_CANDIDATES, settings), [settings]);
+  const scroller = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const pane = scroller.current;
+    const segment = active ? pane?.querySelector<HTMLElement>(`[data-preview-item="${active.key}"]`) : null;
+    if (!pane || !segment || !active) return;
+    // Line the highlighted segment up with the hovered row, but never tuck it under the sticky header.
+    const rowOffset = active.rowTop - pane.getBoundingClientRect().top;
+    const headerHeight = header.current?.offsetHeight ?? 0;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    pane.scrollTo?.({ behavior: reduceMotion ? 'auto' : 'smooth', top: Math.max(0, segment.offsetTop - Math.max(rowOffset, headerHeight + 4)) });
+  }, [active]);
   return (
     <section
       aria-label={t('settings.aideDialog.context.preview.title')}
-      className="relative min-h-[240px] overflow-hidden rounded-lg border border-foreground/12 bg-background"
+      className="relative min-h-[240px] overflow-hidden rounded-lg border border-foreground/12 bg-canvas"
     >
-      <div className="absolute inset-0 overflow-auto overscroll-contain">
-        <header className="sticky top-0 z-[1] border-b border-settings-divider/70 bg-background px-[18px] pb-2.5 pt-3">
+      <div className="absolute inset-0 overflow-auto overscroll-contain" ref={scroller}>
+        <header className="sticky top-0 z-[1] border-b border-settings-divider/70 bg-canvas px-[18px] pb-2.5 pt-3" ref={header}>
           <h3 className="m-0 text-ui-md font-semibold leading-5 text-foreground">{t('settings.aideDialog.context.preview.title')}</h3>
           <p className="m-0 text-ui-sm leading-[18px] text-foreground/50">
             {t('settings.aideDialog.context.preview.caption', { title: AIDE_CONTEXT_EXAMPLE_TITLE })}
           </p>
         </header>
-        <div className="pb-6 pt-1.5">
-          <PreviewLabel>{t('settings.aideDialog.context.preview.question')}</PreviewLabel>
-          <p className="mx-[18px] mb-3 mt-0 text-ui-md leading-[22px]" lang="en">{AIDE_CONTEXT_EXAMPLE_QUESTION}</p>
-          <PreviewLabel>{t('settings.aideDialog.context.preview.attached')}</PreviewLabel>
+        {/* Bottom padding lets the last segments scroll level with their rows. */}
+        <div className="relative pb-[50%] pt-1.5">
+          <p
+            aria-label={t('settings.aideDialog.context.preview.question')}
+            className="mx-[18px] mb-1.5 mt-2 rounded-[10px] bg-settings-selected px-3.5 py-2.5 text-ui-md leading-[22px]"
+            lang="en"
+          >
+            {AIDE_CONTEXT_EXAMPLE_QUESTION}
+          </p>
           {items.length
-            ? items.map((item) => <PreviewSegment item={item} key={item.key} />)
+            ? items.map((item) => <PreviewSegment active={active?.key === item.key} item={item} key={item.key} />)
             : <p className="mx-[18px] text-ui-md text-foreground/50">{t('settings.aideDialog.context.preview.empty')}</p>}
         </div>
       </div>
@@ -65,14 +86,13 @@ export function SettingsAideAttachedContextPreview({ settings }: { settings: Aid
   );
 }
 
-function PreviewLabel({ children }: { children: string }) {
-  return <b className="mx-[18px] mb-1 mt-2 block text-ui-sm font-semibold leading-[18px] text-foreground/55">{children}</b>;
-}
-
-function PreviewSegment({ item }: { item: AideAllocatedContextItem }) {
+function PreviewSegment({ active, item }: { active: boolean; item: AideAllocatedContextItem }) {
   const t = useTranslation();
   return (
-    <div className="mx-1.5 border-t border-settings-divider/60 px-3 py-2.5 first-of-type:border-t-0" data-preview-item={item.key}>
+    <div
+      className={cn('mx-1.5 rounded-md border-t border-settings-divider/60 px-3 py-2.5 first-of-type:border-t-0', active && 'border-transparent bg-primary/10')}
+      data-preview-item={item.key}
+    >
       <div className="mb-0.5 text-ui-sm font-semibold leading-[18px] text-foreground/50">{t(aideContextItemTitleKey(item.key))}</div>
       {item.units.map((unit, index) => <PreviewUnit key={index} unit={unit} />)}
       {item.truncated ? <div className="mt-1 text-ui-sm text-foreground/45">{t('settings.aideDialog.context.preview.more')}</div> : null}

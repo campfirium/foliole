@@ -72,7 +72,7 @@ type AideSettingsPane = 'context' | 'models' | 'permissions';
 function AideSettingsModelsPane() {
   const t = useTranslation();
   return (
-    <AideSettingsPaneFrame description={t('settings.aideDialog.models.description')} title={t('settings.aideDialog.models.nav')}>
+    <AideSettingsPaneFrame description={t('settings.aideDialog.models.description')}>
       <SettingsSection ariaLabel={t('settings.models.section')} title={t('settings.models.section')}>
         <SettingsModelsSection />
       </SettingsSection>

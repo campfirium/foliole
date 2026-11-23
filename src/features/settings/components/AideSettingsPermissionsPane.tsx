@@ -38,7 +38,6 @@ export function AideSettingsPermissionsPane() {
       description={t('settings.aideDialog.permissions.description')}
       onReset={isDefaultAideToolPermissions(settings) ? undefined : reset}
       resetLabel={t('settings.aideDialog.permissions.reset')}
-      title={t('settings.aideDialog.permissions.nav')}
     >
       <div className="grid grid-cols-2 items-start gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
         <SettingsSection

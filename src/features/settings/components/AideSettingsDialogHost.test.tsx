@@ -58,7 +58,8 @@ it('opens on request with model connections and local conversation data', async 
   act(() => requestAideSettingsDialogOpen());
 
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
-  expect(within(dialog).getByRole('heading', { name: 'Models and conversations' })).toBeInTheDocument();
+  expect(within(dialog).getByRole('button', { name: 'Models and conversations' })).toHaveAttribute('aria-current', 'page');
+  expect(within(dialog).queryByRole('heading', { name: 'Models and conversations' })).toBeNull();
   expect(within(dialog).getByRole('navigation', { name: 'Aide settings sections' })).toBeInTheDocument();
   expect(await within(dialog).findByRole('table', { name: /model/i })).toBeInTheDocument();
   expect(await within(dialog).findByText('Local conversation data')).toBeInTheDocument();
@@ -97,14 +98,18 @@ function previewSections(dialog: HTMLElement) {
 
 it('shows attached content items with a preview built by the real allocation', async () => {
   const dialog = await openContextPane();
-  expect(within(dialog).getByRole('heading', { name: 'Attached content' })).toBeInTheDocument();
-  expect(within(dialog).getByRole('spinbutton', { name: 'Total budget (tokens)' })).toHaveValue(2100);
+  expect(within(dialog).getByRole('button', { name: 'Attached content' })).toHaveAttribute('aria-current', 'page');
+  expect(within(dialog).getByRole('spinbutton', { name: 'Total budget' })).toHaveValue(2100);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
-  const preview = within(dialog).getByRole('region', { name: 'Attached content preview' });
+  const preview = within(dialog).getByRole('region', { name: 'What the AI receives' });
   expect(within(preview).getByText(/More context isn’t always better/u)).toBeInTheDocument();
   expect(previewSections(dialog)).toEqual(['selection', 'metadata', 'surrounding', 'outline', 'location', 'annotations']);
   expect(within(preview).getByText('what matters')).toBeInTheDocument();
   expect(within(preview).getByText('User Guides / Foliole Aide')).toBeInTheDocument();
+
+  fireEvent.mouseEnter(dialog.querySelector('[data-attached-context-item="outline"]')!);
+  expect(dialog.querySelector('[data-preview-item="outline"]')?.className).toContain('bg-primary/10');
+  expect(dialog.querySelector('[data-preview-item="selection"]')?.className).not.toContain('bg-primary/10');
 });
 
 it('turns items off, reorders by keyboard, saves and restores defaults', async () => {
@@ -129,7 +134,7 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'AI permissions' }));
   const read = await within(dialog).findByRole('region', { name: 'Allow AI to read' });
-  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
+  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply' });
   expect(budget).toHaveValue(20000);
   expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
     'Keep reading', 'Find in the current material', 'Find in the library', 'Trace back to the original', 'Read PDF pages'

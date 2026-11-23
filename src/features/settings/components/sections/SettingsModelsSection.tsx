@@ -109,10 +109,12 @@ function ChatGptPlanRow(props: {
       <strong className="text-ui-sm font-medium">{label}</strong>
       <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
         <span className="text-ui-sm text-foreground/60">{t('settings.models.chatgpt.allowance')}</span>
-        <AppStatusBadge
-          label={t(`settings.models.chatgpt.status.${props.connection}`)}
-          tone={codexStatusTone(props.connection)}
-        />
+        {canConnect || canRetry ? (
+          <AppStatusBadge
+            label={t(`settings.models.chatgpt.status.${props.connection}`)}
+            tone={codexStatusTone(props.connection)}
+          />
+        ) : null}
       </div>
       <div>
         {canConnect ? (
@@ -130,6 +132,12 @@ function ChatGptPlanRow(props: {
             {t('settings.models.chatgpt.retry')}
           </SettingsButton>
         ) : null}
+        {canConnect || canRetry ? null : (
+          // Same shape as the custom rows' Test button so the connection column lines up; it is a status, not an action.
+          <span aria-live="polite" className={settingsButtonClassName('pointer-events-none w-full px-2')} role="status">
+            {t(`settings.models.chatgpt.status.${props.connection}`)}
+          </span>
+        )}
       </div>
     </div>
   );

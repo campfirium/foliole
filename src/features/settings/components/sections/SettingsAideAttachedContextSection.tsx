@@ -7,11 +7,16 @@ import {
   type AideAttachedContextItemSetting,
   type AideAttachedContextSettings
 } from '../../../../../lib/core/assistant/aideAttachedContextSettings';
+import { cn } from '../../../../shared/lib/utils';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../../../shared/localization/translations';
 import { AppSwitch, SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME, SettingsRow, settingsFieldClassName } from '../../../../shared/ui';
 
+type ActiveItem = { key: AideAttachedContextItemKey; rowTop: number } | null;
+
 type Props = {
+  activeKey: AideAttachedContextItemKey | null;
+  onActiveChange: (active: ActiveItem) => void;
   onChange: (settings: AideAttachedContextSettings) => void;
   onCommit: () => void;
   settings: AideAttachedContextSettings;
@@ -34,7 +39,7 @@ export function moveAideContextItem(items: AideAttachedContextItemSetting[], fro
   return next;
 }
 
-export function SettingsAideAttachedContextSection({ onChange, onCommit, settings }: Props) {
+export function SettingsAideAttachedContextSection({ activeKey, onActiveChange, onChange, onCommit, settings }: Props) {
   const t = useTranslation();
   const [dragged, setDragged] = useState<AideAttachedContextItemKey | null>(null);
   const setItems = (items: AideAttachedContextItemSetting[]) => onChange({ ...settings, items });
@@ -42,11 +47,17 @@ export function SettingsAideAttachedContextSection({ onChange, onCommit, setting
     setItems(settings.items.map((item) => (item.key === key ? { ...item, ...patch } : item)));
   const move = (from: number, to: number) => setItems(moveAideContextItem(settings.items, from, to));
   return (
-    <div>
-      <SettingsRow
-        description={t('settings.aideDialog.context.total.description')}
-        title={t('settings.aideDialog.context.total.title')}
-      >
+    <div onMouseLeave={() => onActiveChange(null)}>
+      {/* Spacers match the drag handle and the switch so the title and number line up with the item rows. */}
+      <SettingsRow>
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <span aria-hidden="true" className="size-6 shrink-0" />
+          <div className="min-w-0">
+            <h4 className="text-ui-lg font-normal text-foreground">{t('settings.aideDialog.context.total.title')}</h4>
+            <p className="mt-0.5 text-ui-md leading-6 text-foreground/64">{t('settings.aideDialog.context.total.description')}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
         <input
           aria-label={t('settings.aideDialog.context.total.title')}
           className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
@@ -59,9 +70,12 @@ export function SettingsAideAttachedContextSection({ onChange, onCommit, setting
           type="number"
           value={settings.totalBudget}
         />
+          <span aria-hidden="true" className="w-11 shrink-0" />
+        </div>
       </SettingsRow>
       {settings.items.map((item, index) => (
         <AttachedContextItemRow
+          active={activeKey === item.key}
           dragging={dragged === item.key}
           index={index}
           item={item}
@@ -74,6 +88,7 @@ export function SettingsAideAttachedContextSection({ onChange, onCommit, setting
             setDragged(null);
             move(from, index);
           }}
+          onActivate={(rowTop) => onActiveChange({ key: item.key, rowTop })}
           onMove={(offset) => move(index, index + offset)}
           onPatch={(patch) => patchItem(item.key, patch)}
         />
@@ -86,12 +101,14 @@ export function SettingsAideAttachedContextSection({ onChange, onCommit, setting
 }
 
 function AttachedContextItemRow(props: {
+  active: boolean;
   dragging: boolean;
   index: number;
   item: AideAttachedContextItemSetting;
   onCommit: () => void;
   onDragEnd: () => void;
   onDragStart: () => void;
+  onActivate: (rowTop: number) => void;
   onDrop: () => void;
   onMove: (offset: number) => void;
   onPatch: (patch: Partial<AideAttachedContextItemSetting>) => void;
@@ -101,8 +118,11 @@ function AttachedContextItemRow(props: {
   const label = t(aideContextItemTitleKey(item.key));
   return (
     <SettingsRow
-      className={props.dragging ? 'opacity-45' : ''}
+      className={cn('rounded-lg', props.active && 'bg-settings-selected', props.dragging && 'opacity-45')}
       data-attached-context-item={item.key}
+      onClick={(event) => props.onActivate(event.currentTarget.getBoundingClientRect().top)}
+      onFocus={(event) => props.onActivate(event.currentTarget.getBoundingClientRect().top)}
+      onMouseEnter={(event) => props.onActivate(event.currentTarget.getBoundingClientRect().top)}
       onDragOver={(event: DragEvent<HTMLDivElement>) => event.preventDefault()}
       onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); props.onDrop(); }}
     >

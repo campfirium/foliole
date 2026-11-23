@@ -6,7 +6,7 @@ export const ZH_HANS_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS: Partial<Record<Tran
   'settings.aideDialog.permissions.reset': '恢复默认',
   'settings.aideDialog.permissions.read.title': '允许 AI 读取',
   'settings.aideDialog.permissions.read.description': 'AI 可以按需读取更多材料，并注明出处。',
-  'settings.aideDialog.permissions.readBudget.title': '每次回答最多读取（token）',
+  'settings.aideDialog.permissions.readBudget.title': '每次回答最多读取',
   'settings.aideDialog.permissions.readBudget.description': '限制每次回答读取的内容总量',
   'settings.aideDialog.permissions.tool.continueReading.title': '继续读取',
   'settings.aideDialog.permissions.tool.continueReading.description': '按需读取材料的其他部分',
