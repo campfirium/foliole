@@ -28,6 +28,8 @@ test('parent and highlight child stay responsive with 3500 topics', async ({ des
     await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toHaveText('Alpha Beta Gamma');
     samples.push({ direction: 'parent', elapsedMs: Date.now() - started,
       flow: await desktopWindow.evaluate(() => window.__foliolePerformanceDebug?.getSnapshot?.().flow) });
+    const parentRow = desktopWindow.locator('[role="treeitem"][data-node-id="scale-parent"]');
+    if (await parentRow.getAttribute('aria-expanded') === 'false') await parentRow.press('ArrowRight');
     const childStarted = Date.now();
     await desktopWindow.locator('[role="treeitem"][data-node-id="scale-child"]').click();
     await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))

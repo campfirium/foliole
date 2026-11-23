@@ -95,9 +95,17 @@ test('keeps breadcrumb return correct after creating a normal text highlight fro
   await expectWorkspaceShell(desktopWindow);
   await seedParentOnlyWorkspace(desktopWindow);
 
-  await desktopWindow.evaluate(() => globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 6, 10) ?? false);
-  await desktopWindow.locator('.prompt-editor-host .cm-content').click({ button: 'right', position: { x: 120, y: 20 } });
-  await desktopWindow.getByRole('menuitem', { name: 'Highlight' }).click();
+  await expect.poll(() => desktopWindow.evaluate(() =>
+    globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 6, 10) ?? false
+  )).toBe(true);
+  await desktopWindow.locator('.prompt-editor-host .cm-content').evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    element.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true, button: 0, clientX: rect.left + 120, clientY: rect.top + 20
+    }));
+  });
+  await desktopWindow.locator('[data-annotation-toolbar="true"]')
+    .getByRole('button', { name: /^(Highlight|高亮)$/ }).click();
 
   await expect.poll(async () => {
     return desktopWindow.evaluate(() => {

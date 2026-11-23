@@ -136,10 +136,10 @@ function respondToProbe(response: import('node:http').ServerResponse, body: Loop
   sendSse(response, [
     { choices: [{ delta: { tool_calls: [{
       extra_content: { provider: { opaque_signature: 'probe-signature' } },
-      function: { arguments: '{', name: 'foliole_aide_tool_contract_probe' },
+      function: { arguments: '{"supported":', name: 'foliole_aide_tool_contract_probe' },
       id: 'probe-1', index: 0, type: 'function'
     }] } }] },
-    { choices: [{ delta: { tool_calls: [{ function: { arguments: '}' }, index: 0 }] }, finish_reason: 'stop' }] }
+    { choices: [{ delta: { tool_calls: [{ function: { arguments: 'true}' }, index: 0 }] }, finish_reason: 'stop' }] }
   ]);
 }
 
