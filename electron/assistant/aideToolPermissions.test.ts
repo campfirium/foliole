@@ -55,6 +55,9 @@ describe('Aide read places', () => {
     expect(fetcher).not.toHaveBeenCalled();
     const managing = createAideToolSession(normalizeAideToolPermissionSettings({ read: { trash: false } }), undefined, []);
     expect(await checkAideReadTarget(managing.readScope!, 'list_trash', {})).toBeNull();
+    expect(await checkAideReadTarget(closed.readScope!, 'read_external_document', { path: '/notes/a.md' })).toBeNull();
+    const noExternal = createAideToolSession(normalizeAideToolPermissionSettings({ read: { external: false } }), undefined, []);
+    expect(await checkAideReadTarget(noExternal.readScope!, 'read_external_document', { path: '/notes/a.md' })).toBe('outside_read_scope');
   });
 
   it('passes validated arguments to the local reader', async () => {

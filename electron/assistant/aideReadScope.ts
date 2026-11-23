@@ -71,6 +71,7 @@ export async function checkAideReadTarget(scope: AideReadScope, tool: string, bo
     const parentId = typeof body.parent_id === 'string' ? body.parent_id : null;
     return (parentId === null ? scope.scopes.home : await reachesMaterial(scope, parentId)) ? null : 'outside_read_scope';
   }
+  if (tool === 'read_external_document') return scope.scopes.external ? null : 'outside_read_scope';
   if (tool === 'list_trash') return scope.scopes.trash || scope.manage.trash ? null : 'outside_read_scope';
   if (tool === 'list_virtual_folders') return scope.scopes.virtual || scope.manage.indexes ? null : 'outside_read_scope';
   if (tool === 'read_virtual_folder') {

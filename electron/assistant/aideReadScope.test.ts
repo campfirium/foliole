@@ -32,6 +32,7 @@ import { normalizeAideToolPermissionSettings } from '../../lib/core/assistant/ai
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { AGENT_CONTROL_CAPABILITIES, AGENT_CONTROL_PROTOCOL_VERSION } from '../agentControl/agentControlTypes.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeExternalSearchCacheDatabase, openExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 
 import { checkAideReadTarget, filterAideReadResult } from './aideReadScope.js';
 import { executeAideTool } from './aideToolExecutor.js';
@@ -46,6 +47,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
@@ -107,4 +109,17 @@ it('keeps listings and search results to the switched-on places', async () => {
     { id: 'book', kind: 'topic' }, { id: 'far', kind: 'topic' }, { id: 'ext-1', kind: 'external' }, { id: 'old', kind: 'removed' }
   ] });
   expect(found).toEqual({ count: 1, results: [{ id: 'book', kind: 'topic' }] });
+});
+
+it('reads an External document by its path in segments, only while External is on', async () => {
+  openExternalSearchCacheDatabase().prepare(`INSERT INTO external_search_documents (
+    absolute_path, folder_id, folder_path, relative_path, file_name, extension, size_bytes, modified_at, modified_ms, indexed_at, is_present, content
+  ) VALUES ('/notes/plan.md', 'f1', '/notes', 'plan.md', 'plan.md', 'md', 12, 'now', 0, 'now', 1, 'Plan of work')`).run();
+  const read = async (external: boolean) => {
+    const session = createAideToolSession(normalizeAideToolPermissionSettings({ read: { ...NO_PLACES, external } }), undefined, []);
+    const result = await executeAideTool({ arguments: { length: 4, path: '/notes/plan.md' }, tool: 'read_external_document' }, { descriptor, session });
+    return JSON.parse(result.contentItems[0]?.text ?? '{}') as Record<string, unknown>;
+  };
+  expect(await read(true)).toMatchObject({ document: { content: 'Plan', content_end: 4, path: '/notes/plan.md', relative_path: 'plan.md' } });
+  expect((await read(false)).error).toBe('outside_read_scope');
 });

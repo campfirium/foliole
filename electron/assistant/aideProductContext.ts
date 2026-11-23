@@ -1,5 +1,7 @@
+import type { AideToolPermissionSettings } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 import type { NativeAssistantWorkspaceContext } from '../../lib/platform/nativeAssistantContract.js';
 
+import { formatAidePermissionContext } from './aidePermissionPrompt.js';
 import { formatAideMaterialProjection } from './assistantMaterialProjection.js';
 import { formatAgentControlContext } from './codexAppServerAgentControlPrompt.js';
 
@@ -14,7 +16,8 @@ export const AIDE_PRODUCT_RULES = {
 
 export function formatAideProductContext(
   context: NativeAssistantWorkspaceContext,
-  provider: 'codex-app-server' | 'openai-compatible'
+  provider: 'codex-app-server' | 'openai-compatible',
+  permissions?: AideToolPermissionSettings
 ) {
   return [
     'Foliole Assistant context:',
@@ -23,6 +26,7 @@ export function formatAideProductContext(
     ...(context.schemaVersion ? [`- Context packet version: ${context.schemaVersion}.`] : []),
     ...formatAideMaterialProjection(context),
     ...formatAgentControlContext(context),
+    ...(context.agentControl?.state === 'running' ? formatAidePermissionContext(permissions) : []),
     ...(provider === 'codex-app-server' ? [
       '- Do not answer location questions from the process working directory unless the user explicitly asks about the development repository.'
     ] : []),
@@ -36,10 +40,10 @@ export function formatAideProductContext(
   ];
 }
 
-export function formatOpenAiCompatibleAideSystemPrompt(context: NativeAssistantWorkspaceContext) {
+export function formatOpenAiCompatibleAideSystemPrompt(context: NativeAssistantWorkspaceContext, permissions?: AideToolPermissionSettings) {
   return [
     ...Object.values(AIDE_PRODUCT_RULES).map((rule) => `- ${rule}`),
     '',
-    ...formatAideProductContext(context, 'openai-compatible')
+    ...formatAideProductContext(context, 'openai-compatible', permissions)
   ].join('\n');
 }

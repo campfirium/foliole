@@ -2,6 +2,7 @@ import { getAgentControlApiSessionDescriptor } from '../agentControl/agentContro
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
 import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
+import { AIDE_LOCAL_EXTERNAL_TOOLS } from './aideLocalExternalTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { checkAideReadTarget, filterAideReadResult, type AideReadScope } from './aideReadScope.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
@@ -71,7 +72,7 @@ export async function executeAideTool(
   return charge.ok ? outcome : readLimitReached(charge.remaining);
 }
 
-const LOCAL_TOOLS: Record<string, AideLocalToolHandler> = { ...AIDE_LOCAL_READ_TOOLS, ...AIDE_LOCAL_DIVE_TOOLS };
+const LOCAL_TOOLS: Record<string, AideLocalToolHandler> = { ...AIDE_LOCAL_READ_TOOLS, ...AIDE_LOCAL_DIVE_TOOLS, ...AIDE_LOCAL_EXTERNAL_TOOLS };
 
 async function executeLocal(
   tool: string,

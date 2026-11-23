@@ -107,11 +107,12 @@ export function sendFailure(
 export function composeAssistantTurnInput(
   message: string,
   context?: NativeAssistantWorkspaceContext,
-  attachedContext?: string
+  attachedContext?: string,
+  permissions?: import('../../lib/core/assistant/aideToolPermissionSettings.js').AideToolPermissionSettings
 ) {
   if (!context) return message;
   const lines = [
-    ...formatAideProductContext(context, 'codex-app-server'),
+    ...formatAideProductContext(context, 'codex-app-server', permissions),
     '',
     ...(attachedContext ? [attachedContext, ''] : []),
     'User message:',

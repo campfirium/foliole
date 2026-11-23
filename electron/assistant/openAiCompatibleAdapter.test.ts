@@ -90,7 +90,7 @@ function assertOpenAiCompatibleRequest(fetchMock: ReturnType<typeof vi.fn<typeof
   const body = JSON.parse(String(init?.body));
   expect(body).toMatchObject({ model: 'local-model', stream: true });
   expect(body.tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual([
-    'read_material', 'search_in_material', 'trace_source', 'read_pdf_page'
+    'read_material', 'search_in_material', 'trace_source', 'read_external_document', 'read_pdf_page'
   ]);
   expect(body.messages).toEqual([
     expect.objectContaining({ content: expect.stringContaining('Topic body'), role: 'system' }),

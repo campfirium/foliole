@@ -38,6 +38,7 @@ it('registers every enabled read and write tool', () => {
     'read_material',
     'search_in_material',
     'trace_source',
+    'read_external_document',
     'read_pdf_page',
     'search_materials',
     'update_material'

@@ -23,19 +23,19 @@ export function formatAgentControlContext(context: NativeAssistantWorkspaceConte
 }
 
 const ACTIONS = [
-  { capabilities: ['materials.search'], description: 'search Topics and Folders' },
+  { capabilities: ['materials.search'], description: 'search Topics, Folders and External documents, and read an External document' },
   { capabilities: ['materials.read'], description: 'read a Topic, Folder, or Item' },
-  { capabilities: ['materials.listChildren'], description: 'list Folder contents' },
-  { capabilities: ['materials.listTrash'], description: 'find restorable materials in the trash' },
+  { capabilities: ['materials.listChildren'], description: 'list Folder contents and Home' },
+  { capabilities: ['materials.listTrash'], description: 'find restorable materials in Trash' },
   { capabilities: ['materials.createTextExcerpt'], description: 'create an anchored excerpt from a Topic' },
-  { capabilities: ['virtualFolders.list', 'virtualFolders.read'], description: 'list or read virtual Folders' },
+  { capabilities: ['virtualFolders.list', 'virtualFolders.read'], description: 'list Dives, and list or read Virtual indexes' },
   { capabilities: ['materials.create'], description: 'create a Topic, Folder, or explicitly requested question-answer Item' },
   { capabilities: ['materials.update'], description: 'update a Topic or Item' },
   { capabilities: ['materials.move', 'materials.reorder'], description: 'move or reorder Topics, Folders, and Items' },
   { capabilities: ['materials.deleteSoft', 'materials.restore'], description: 'move materials to trash or restore them' },
-  { capabilities: ['virtualFolders.create', 'virtualFolders.update'], description: 'create or rename virtual Folders' },
-  { capabilities: ['virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder'], description: 'change virtual Folder contents' },
-  { capabilities: ['virtualFolders.deleteSoft', 'virtualFolders.restore'], description: 'move virtual Folders to trash or restore them' },
+  { capabilities: ['virtualFolders.create', 'virtualFolders.update'], description: 'create or rename Virtual indexes and Dives' },
+  { capabilities: ['virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder'], description: 'change what Virtual indexes and Dives list' },
+  { capabilities: ['virtualFolders.deleteSoft', 'virtualFolders.restore'], description: 'move Virtual indexes to Trash or restore them' },
 ];
 
 const WRITE_CAPABILITIES = [

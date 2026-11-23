@@ -92,6 +92,7 @@ async function createMessages(input: {
   history: NativeAssistantThreadMessageRecord[];
   images: StoredAssistantImage[];
   message: string;
+  toolSession?: import('./aideToolSession.js').AideToolSession;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }, context: NativeAssistantWorkspaceContext) {
   const currentContent = [
@@ -103,7 +104,7 @@ async function createMessages(input: {
   ];
   return [
     {
-      content: appendAideCustomInstructions(formatOpenAiCompatibleAideSystemPrompt(context), input.customInstructions),
+      content: appendAideCustomInstructions(formatOpenAiCompatibleAideSystemPrompt(context, input.toolSession?.permissions), input.customInstructions),
       role: 'system'
     },
     ...selectRecentOpenAiCompatibleHistory(input.history.map((message) => (message.role === 'user'

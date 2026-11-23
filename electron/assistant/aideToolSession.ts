@@ -22,6 +22,8 @@ export interface AideToolSession {
   /** Present only when "ask before changing" is on. */
   confirmWrites?: AideWriteApprover;
   disabledTools: ReadonlySet<string>;
+  /** The AI permission settings in force, shown to the model so it can say what it may read or change. */
+  permissions?: AideToolPermissionSettings;
   readBudget: number;
   /** Present when the reply knows its current materials; without it reads are not limited by place. */
   readScope?: AideReadScope;
@@ -38,6 +40,7 @@ export function createAideToolSession(
     // With nobody to ask, an "ask first" reply cannot make changes at all.
     ...(settings.askBeforeWrite ? { confirmWrites: approver ?? (async () => false) } : {}),
     disabledTools: new Set(listAideDisabledToolNames(settings)),
+    permissions: settings,
     readBudget: settings.readBudget,
     ...(currentMaterialIds ? { readScope: {
       currentIds: currentMaterialIds,

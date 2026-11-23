@@ -46,6 +46,6 @@ export function createTurnState(
     timeout: setTimeout(onTimeout, args.timeoutMs),
     timeoutMs: args.timeoutMs,
     ...(args.toolSession ? { toolSession: args.toolSession } : {}),
-    userMessage: composeAssistantTurnInput(args.message, args.workspaceContext, args.attachedContext)
+    userMessage: composeAssistantTurnInput(args.message, args.workspaceContext, args.attachedContext, args.toolSession?.permissions)
   };
 }
