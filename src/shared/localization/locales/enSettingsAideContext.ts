@@ -14,7 +14,7 @@ export const EN_SETTINGS_AIDE_CONTEXT_TRANSLATIONS = {
   'settings.aideDialog.context.item.outline.title': 'Chapter structure',
   'settings.aideDialog.context.item.outline.description': 'The current chapter and nearby chapters',
   'settings.aideDialog.context.item.location.title': 'Path and membership',
-  'settings.aideDialog.context.item.location.description': 'Folder path, indexes and Dives',
+  'settings.aideDialog.context.item.location.description': 'Folder path, Virtual, and Dives',
   'settings.aideDialog.context.item.annotations.title': 'Related notes',
   'settings.aideDialog.context.item.annotations.description': 'Notes, excerpts and Items above and below it',
   'settings.aideDialog.context.limit.aria': '{label} budget',
@@ -42,6 +42,6 @@ export const EN_SETTINGS_AIDE_CONTEXT_TRANSLATIONS = {
   'settings.aideDialog.context.preview.label.sourceExcerpt': 'Source excerpt',
   'settings.aideDialog.context.preview.label.currentText': 'Current text',
   'settings.aideDialog.context.preview.label.folder': 'Folder',
-  'settings.aideDialog.context.preview.label.indexes': 'Indexes',
+  'settings.aideDialog.context.preview.label.indexes': 'Virtual',
   'settings.aideDialog.context.preview.label.dives': 'Dives'
 } as const;

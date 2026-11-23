@@ -6,6 +6,7 @@ import { normalizeAideToolPermissionSettings } from '../../lib/core/assistant/ai
 import { AGENT_CONTROL_PROTOCOL_VERSION, type AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
 import type { AideLocalToolHandler } from './aideLocalReadTools.js';
+import { checkAideReadTarget } from './aideReadScope.js';
 import { executeAideTool } from './aideToolExecutor.js';
 import { createAideToolSession } from './aideToolSession.js';
 import { createFolioleDynamicTools } from './codexAppServerDynamicTools.js';
@@ -33,29 +34,27 @@ function readText(result: Awaited<ReturnType<typeof executeAideTool>>) {
   return JSON.parse(result.contentItems[0]?.text ?? '{}') as Record<string, unknown>;
 }
 
-describe('Aide read switches', () => {
-  it('does not offer a tool that is switched off in either model channel', () => {
-    const { disabledTools } = session({ continueReading: false, searchLibrary: false });
+describe('Aide read places', () => {
+  it('offers every read tool in either model channel whatever places are switched off', () => {
+    const { disabledTools } = session({ current: false, home: false, trash: false });
     const [namespace] = createFolioleDynamicTools(descriptor.capabilities, disabledTools);
     const codexNames = namespace?.tools.map((tool) => tool.name) ?? [];
     const byokNames = createChatCompletionsAideTools(descriptor.capabilities, disabledTools).map((tool) => tool.function.name);
     for (const names of [codexNames, byokNames]) {
-      expect(names).not.toContain('read_material');
-      expect(names).not.toContain('search_materials');
-      expect(names).toEqual(expect.arrayContaining(['search_in_material', 'trace_source', 'read_pdf_page', 'update_material']));
+      expect(names).toEqual(expect.arrayContaining(['read_material', 'search_materials', 'search_in_material', 'trace_source', 'read_pdf_page']));
     }
   });
 
-  it('rejects a call to a switched-off tool even when the model still knows it', async () => {
+  it('refuses to list a place that is switched off, unless managing it needs the list', async () => {
     const fetcher = vi.fn<typeof fetch>();
-    const localTools = localRead('body');
-    const toolSession = session({ continueReading: false, searchLibrary: false });
-    const local = await executeAideTool({ arguments: { id: 'topic-1' }, tool: 'read_material' }, { descriptor, localTools, session: toolSession });
-    const remote = await executeAideTool({ arguments: { query: 'memo' }, tool: 'search_materials' }, { descriptor, fetcher, session: toolSession });
-    expect(readText(local)).toEqual({ error: 'tool_disabled' });
-    expect(readText(remote)).toEqual({ error: 'tool_disabled' });
-    expect(localTools.read_material).not.toHaveBeenCalled();
+    const closed = createAideToolSession(normalizeAideToolPermissionSettings({ read: { trash: false }, write: { trash: false } }), undefined, []);
+    const refused = await executeAideTool({ arguments: {}, tool: 'list_trash' }, {
+      descriptor: { ...descriptor, capabilities: [...descriptor.capabilities, 'materials.listTrash'] }, fetcher, session: closed
+    });
+    expect(readText(refused).error).toBe('outside_read_scope');
     expect(fetcher).not.toHaveBeenCalled();
+    const managing = createAideToolSession(normalizeAideToolPermissionSettings({ read: { trash: false } }), undefined, []);
+    expect(await checkAideReadTarget(managing.readScope!, 'list_trash', {})).toBeNull();
   });
 
   it('passes validated arguments to the local reader', async () => {

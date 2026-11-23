@@ -10,7 +10,7 @@ import type {
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
-import { readAideLinkedMaterialIds } from '../assistant/aideReadScope.js';
+import { readAideCurrentMaterialIds } from '../assistant/aideReadScope.js';
 import { createAideToolSession } from '../assistant/aideToolSession.js';
 import { cancelAideWriteApprovals, requestAideWriteApproval, resolveAideWriteApproval } from '../assistant/aideWriteApprovals.js';
 import { describeAideWriteRequests } from '../assistant/aideWriteChangeDescriptions.js';
@@ -160,7 +160,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     message,
     provider,
     ...(sender ? { sender } : {}),
-    toolSession: await createTurnToolSession(clientTurnId, provider, sender, readAideLinkedMaterialIds(workspaceContext)),
+    toolSession: await createTurnToolSession(clientTurnId, provider, sender, readAideCurrentMaterialIds(workspaceContext)),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AIDE_READ_BUDGET_MAX,
+  AIDE_READ_SCOPE_KEYS,
   createDefaultAideToolPermissionSettings,
   isDefaultAideToolPermissions,
   listAideDisabledToolNames,
@@ -21,29 +22,28 @@ describe('Aide tool permission settings', () => {
 
   it('keeps known switches, fills missing ones and clamps the budget', () => {
     const settings = normalizeAideToolPermissionSettings({
-      read: { readPdfPage: false, searchLibrary: 'no', unknown: false },
+      read: { home: 'no', readPdfPage: false, trash: false },
       readBudget: 10_000_000
     });
-    expect(settings.read).toMatchObject({ readPdfPage: false, searchLibrary: true });
+    expect(settings.read).toEqual({
+      baseTopic: true, current: true, dives: true, external: true, folder: true, home: true, trash: false, virtual: true
+    });
     expect(settings.readBudget).toBe(AIDE_READ_BUDGET_MAX);
-    expect(listAideDisabledToolNames(settings)).toEqual(['read_pdf_page']);
     expect(isDefaultAideToolPermissions(settings)).toBe(false);
   });
 
-  it('maps each switch to its tool', () => {
+  it('leaves every read tool on offer, since read switches name places rather than tools', () => {
     const settings = normalizeAideToolPermissionSettings({
-      read: { continueReading: false, searchCurrent: false, searchLibrary: false, traceSource: false }
+      read: Object.fromEntries(AIDE_READ_SCOPE_KEYS.map((key) => [key, false]))
     });
-    expect(listAideDisabledToolNames(settings)).toEqual([
-      'read_material', 'search_in_material', 'search_materials', 'trace_source'
-    ]);
+    expect(listAideDisabledToolNames(settings)).toEqual([]);
   });
 
   it('maps each modify switch to its group of tools, restoring from trash with moving there', () => {
     const settings = normalizeAideToolPermissionSettings({ write: { manageDives: false, trash: false } });
     expect(listAideDisabledToolNames(settings)).toEqual([
       'delete_material', 'restore_material',
-      'list_dives', 'create_dive', 'rename_dive', 'add_dive_sources', 'remove_dive_sources'
+      'create_dive', 'rename_dive', 'add_dive_sources', 'remove_dive_sources'
     ]);
     expect(isDefaultAideToolPermissions(settings)).toBe(false);
     expect(normalizeAideToolPermissionSettings({ read: {} }).write.editContent).toBe(true);

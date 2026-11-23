@@ -3,10 +3,10 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import {
   AIDE_READ_BUDGET_MAX,
   AIDE_READ_BUDGET_MIN,
+  AIDE_READ_SCOPE_KEYS,
   createDefaultAideToolPermissionSettings,
   isDefaultAideToolPermissions,
   normalizeAideReadBudget,
-  type AideReadToolKey,
   type AideToolPermissionSettings,
   type AideWriteToolKey
 } from '../../../../lib/core/assistant/aideToolPermissionSettings';
@@ -22,17 +22,13 @@ import { useAideToolPermissionSettings } from '../model/useAideToolPermissionSet
 
 import { AideSettingsPaneFrame } from './AideSettingsPaneFrame';
 
-const READ_PERMISSION_ORDER: readonly AideReadToolKey[] = [
-  'continueReading', 'readPdfPage', 'traceSource', 'searchCurrent', 'searchLibrary'
-];
-
 const WRITE_PERMISSION_ORDER: readonly AideWriteToolKey[] = [
   'createMaterial', 'createExcerpt', 'editContent', 'moveAndOrder', 'manageIndexes', 'manageDives', 'trash'
 ];
 
 // Each column spans one track for its heading, one for its first setting, and one per switch below it.
 const PERMISSION_GRID_TRACKS = {
-  '--read-track-count': READ_PERMISSION_ORDER.length + 2,
+  '--read-track-count': AIDE_READ_SCOPE_KEYS.length + 2,
   '--write-track-count': WRITE_PERMISSION_ORDER.length + 2
 } as CSSProperties;
 const PERMISSION_COLUMN = `min-[1080px]:row-start-1 min-[1080px]:mb-0 min-[1080px]:grid min-[1080px]:min-w-0 min-[1080px]:grid-rows-subgrid
@@ -69,10 +65,7 @@ export function AideSettingsPermissionsPane() {
           className={`${PERMISSION_COLUMN} min-[1080px]:col-start-2 min-[1080px]:row-span-[var(--write-track-count)] min-[1080px]:pt-0 min-[1080px]:before:hidden`}
           title={t('settings.aideDialog.permissions.write.title')}
         >
-          <AidePermissionRow
-            description={t('settings.aideDialog.permissions.askBeforeWrite.description')}
-            title={t('settings.aideDialog.permissions.askBeforeWrite.title')}
-          >
+          <AidePermissionRow title={t('settings.aideDialog.permissions.askBeforeWrite.title')}>
             <AppSwitch
               aria-label={t('settings.aideDialog.permissions.askBeforeWrite.title')}
               checked={settings.askBeforeWrite}
@@ -109,13 +102,10 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
   };
   return (
     <>
-      <AidePermissionRow
-        description={t('settings.aideDialog.permissions.readBudget.description')}
-        title={t('settings.aideDialog.permissions.readBudget.title')}
-      >
+      <AidePermissionRow title={t('settings.aideDialog.permissions.readBudget.title')}>
         <input
           aria-label={t('settings.aideDialog.permissions.readBudget.title')}
-          className={settingsFieldClassName('w-28 tabular-nums')}
+          className={settingsFieldClassName('w-20 text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none')}
           inputMode="numeric"
           max={AIDE_READ_BUDGET_MAX}
           min={AIDE_READ_BUDGET_MIN}
@@ -129,7 +119,7 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
       </AidePermissionRow>
       <AidePermissionSwitches
         group="read"
-        keys={READ_PERMISSION_ORDER}
+        keys={AIDE_READ_SCOPE_KEYS}
         onChange={(read) => onChange({ ...settings, read })}
         values={settings.read}
       />
@@ -145,10 +135,9 @@ function AidePermissionSwitches<K extends string>({ group, keys, onChange, value
 }) {
   const t = useTranslation();
   return keys.map((key) => {
-    const prefix = `settings.aideDialog.permissions.${group === 'read' ? 'tool' : 'write'}.${key}`;
-    const title = t(`${prefix}.title` as TranslationKey);
+    const title = t(`settings.aideDialog.permissions.${group}.${key}.title` as TranslationKey);
     return (
-      <AidePermissionRow description={t(`${prefix}.description` as TranslationKey)} key={key} title={title}>
+      <AidePermissionRow key={key} title={title}>
         <AppSwitch
           aria-label={title}
           checked={values[key]}
@@ -159,9 +148,10 @@ function AidePermissionSwitches<K extends string>({ group, keys, onChange, value
   });
 }
 
-function AidePermissionRow({ children, description, title }: { children: ReactNode; description: string; title: string }) {
+// Permission rows are one line each: the label says what the switch reaches.
+function AidePermissionRow({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <SettingsRow description={description || <span aria-hidden="true">{'\u00A0'}</span>} title={title}>
+    <SettingsRow className="!min-h-[54px] !items-center !py-0" title={title}>
       {children}
     </SettingsRow>
   );

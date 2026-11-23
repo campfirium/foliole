@@ -128,38 +128,37 @@ it('turns items off, reorders by keyboard, saves and restores defaults', async (
   expect(assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0]).toEqual(createDefaultAideAttachedContextSettings());
 });
 
-it('switches AI read and modify tools and the per-reply read limit, saves them and restores defaults', async () => {
+it('switches AI read places and modify tools and the per-reply read limit, saves them and restores defaults', async () => {
   renderWithLocalization(<AideSettingsDialogHost />);
   act(() => requestAideSettingsDialogOpen());
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'AI permissions' }));
   const read = await within(dialog).findByRole('region', { name: 'Read permissions' });
-  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
+  const budget = within(read).getByRole('spinbutton', { name: 'Read limit per reply (tokens)' });
   expect(budget).toHaveValue(20000);
   expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
-    'Read other parts of a material', 'Read text from a PDF page', 'Get base topic details for derived material',
-    'Find in the current material', 'Find in the library'
+    'Current material', 'Its base topic and derived materials', 'Folders', 'Home', 'Virtual', 'Dives', 'External', 'Trash'
   ]);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
 
   const write = within(dialog).getByRole('region', { name: 'Edit permissions' });
   expect(within(write).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
     'Confirm before making changes', 'Create folders, topics, and Items', 'Create excerpts', 'Edit content',
-    'Move and reorder', 'Manage indexes', 'Manage Dives', 'Move to and restore from trash'
+    'Move & reorder', 'Manage Virtual', 'Manage Dives', 'Move to and restore from trash'
   ]);
 
   const confirmBeforeChanges = within(write).getByRole('switch', { name: 'Confirm before making changes' });
   expect(confirmBeforeChanges).toBeChecked();
   fireEvent.click(confirmBeforeChanges);
   fireEvent.click(within(write).getByRole('switch', { name: 'Manage Dives' }));
-  fireEvent.click(within(read).getByRole('switch', { name: 'Read text from a PDF page' }));
+  fireEvent.click(within(read).getByRole('switch', { name: 'Trash' }));
   fireEvent.change(budget, { target: { value: '8' } });
   expect(budget).toHaveValue(8);
   fireEvent.blur(budget);
   expect(budget).toHaveValue(1000);
   await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions).toHaveBeenCalled());
   expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0]).toMatchObject({
-    askBeforeWrite: false, read: { readPdfPage: false, traceSource: true }, readBudget: 1000, write: { editContent: true, manageDives: false }
+    askBeforeWrite: false, read: { current: true, trash: false }, readBudget: 1000, write: { editContent: true, manageDives: false }
   });
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));

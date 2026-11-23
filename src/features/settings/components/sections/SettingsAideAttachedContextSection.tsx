@@ -93,9 +93,6 @@ export function SettingsAideAttachedContextSection({ activeKey, onActiveChange, 
           onPatch={(patch) => patchItem(item.key, patch)}
         />
       ))}
-      <p className="mx-settings-panel-x mt-3 border-t border-settings-divider/70 pt-3 text-ui-sm leading-5 text-foreground/55">
-        {t('settings.aideDialog.context.note')}
-      </p>
     </div>
   );
 }

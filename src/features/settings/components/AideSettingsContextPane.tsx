@@ -26,9 +26,11 @@ export function AideSettingsContextPane() {
       resetLabel={t('settings.aideDialog.context.reset')}
       descriptionPosition="hidden"
     >
-      <div className="grid grid-cols-2 items-stretch gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
+      {/* The settings set the height; the preview takes a narrower column beside them and scrolls within it. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,36%)] items-stretch gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
         <SettingsSection
           ariaLabel={t('settings.aideDialog.context.section')}
+          className="min-w-0 min-[1080px]:mb-0 min-[1080px]:[&_[data-settings-row]]:!items-center min-[1080px]:[&_[data-settings-row]]:!py-1.5"
           description={t('settings.aideDialog.context.description')}
           title={t('settings.aideDialog.context.section')}
         >
@@ -45,6 +47,9 @@ export function AideSettingsContextPane() {
         </SettingsSection>
         <SettingsAideAttachedContextPreview active={active} settings={settings} />
       </div>
+      <p className="mx-settings-panel-x mt-6 max-w-[520px] border-t border-settings-divider/70 pt-3 text-ui-sm leading-5 text-foreground/55">
+        {t('settings.aideDialog.context.note')}
+      </p>
     </AideSettingsPaneFrame>
   );
 }

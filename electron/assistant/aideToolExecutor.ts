@@ -3,7 +3,7 @@ import type { AgentControlSessionDescriptor } from '../agentControl/agentControl
 
 import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
-import { AIDE_SCOPED_READ_TOOLS, isAideMaterialInReach } from './aideReadScope.js';
+import { checkAideReadTarget, filterAideReadResult, type AideReadScope } from './aideReadScope.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
 import {
@@ -56,18 +56,17 @@ export async function executeAideTool(
   }
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
-  if (AIDE_SCOPED_READ_TOOLS.has(request.tool) && options.session?.readScope
-    && !await isAideMaterialInReach(options.session.readScope, String(body.id))) {
-    return outsideReadScope();
-  }
+  const readScope = definition.mutates ? undefined : options.session?.readScope;
+  if (readScope && await checkAideReadTarget(readScope, request.tool, body)) return outsideReadScope();
   if (definition.mutates && !(options.writeApproval
     ?? await confirmAideWrites(options.session, [{ arguments: body, tool: request.tool }], options.signal))) {
     return writeDeclined();
   }
-  const outcome = definition.local
+  const raw = definition.local
     ? await executeLocal(request.tool, definition.mutates, body, options)
     : await executeRemote(definition, body, descriptor, options);
-  if (definition.mutates || !outcome.success) return outcome;
+  if (definition.mutates || !raw.success) return raw;
+  const outcome = readScope ? await filterReadResult(readScope, request.tool, raw) : raw;
   const charge = chargeAideReadResult(options.session, outcome.contentItems[0]?.text ?? '');
   return charge.ok ? outcome : readLimitReached(charge.remaining);
 }
@@ -131,8 +130,18 @@ function readLimitReached(remaining: number) {
 function outsideReadScope() {
   return result({
     error: 'outside_read_scope',
-    message: 'This material is not linked to the conversation and the AI permissions do not reach it. Answer from what you can read, or ask the person to link it.'
+    message: 'The AI permissions do not let you read this place. Answer from what you can read, or ask the person to change the AI permissions.'
   }, false);
+}
+
+async function filterReadResult(scope: AideReadScope, tool: string, outcome: AideToolCallResult) {
+  try {
+    const payload = JSON.parse(outcome.contentItems[0]?.text ?? 'null') as unknown;
+    const filtered = await filterAideReadResult(scope, tool, payload);
+    return filtered === payload ? outcome : result(filtered, true);
+  } catch {
+    return outcome;
+  }
 }
 
 function writeDeclined() {

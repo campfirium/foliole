@@ -1,21 +1,16 @@
-export const AIDE_READ_TOOL_KEYS = [
-  'continueReading',
-  'searchCurrent',
-  'searchLibrary',
-  'traceSource',
-  'readPdfPage'
+// Read switches name where Aide may find and read material, not which tool it uses.
+export const AIDE_READ_SCOPE_KEYS = [
+  'current',
+  'baseTopic',
+  'folder',
+  'home',
+  'virtual',
+  'dives',
+  'external',
+  'trash'
 ] as const;
 
-export type AideReadToolKey = typeof AIDE_READ_TOOL_KEYS[number];
-
-// Each read switch governs exactly one Aide tool.
-export const AIDE_READ_TOOL_NAMES: Record<AideReadToolKey, string> = {
-  continueReading: 'read_material',
-  readPdfPage: 'read_pdf_page',
-  searchCurrent: 'search_in_material',
-  searchLibrary: 'search_materials',
-  traceSource: 'trace_source'
-};
+export type AideReadScopeKey = typeof AIDE_READ_SCOPE_KEYS[number];
 
 export const AIDE_WRITE_TOOL_KEYS = [
   'createExcerpt',
@@ -34,7 +29,7 @@ export const AIDE_WRITE_TOOL_NAMES: Record<AideWriteToolKey, readonly string[]> 
   createExcerpt: ['create_text_excerpt'],
   createMaterial: ['create_material'],
   editContent: ['update_material'],
-  manageDives: ['list_dives', 'create_dive', 'rename_dive', 'add_dive_sources', 'remove_dive_sources'],
+  manageDives: ['create_dive', 'rename_dive', 'add_dive_sources', 'remove_dive_sources'],
   manageIndexes: [
     'create_virtual_folder', 'add_virtual_folder_items', 'remove_virtual_folder_items',
     'reorder_virtual_folder_items', 'update_virtual_folder', 'delete_virtual_folder', 'restore_virtual_folder'
@@ -46,7 +41,7 @@ export const AIDE_WRITE_TOOL_NAMES: Record<AideWriteToolKey, readonly string[]> 
 export interface AideToolPermissionSettings {
   /** Every change waits for the person to allow it in the conversation. */
   askBeforeWrite: boolean;
-  read: Record<AideReadToolKey, boolean>;
+  read: Record<AideReadScopeKey, boolean>;
   readBudget: number;
   write: Record<AideWriteToolKey, boolean>;
 }
@@ -62,7 +57,7 @@ function allOn<K extends string>(keys: readonly K[]) {
 export function createDefaultAideToolPermissionSettings(): AideToolPermissionSettings {
   return {
     askBeforeWrite: true,
-    read: allOn(AIDE_READ_TOOL_KEYS),
+    read: allOn(AIDE_READ_SCOPE_KEYS),
     readBudget: AIDE_READ_BUDGET_DEFAULT,
     write: allOn(AIDE_WRITE_TOOL_KEYS)
   };
@@ -80,7 +75,7 @@ export function normalizeAideToolPermissionSettings(value: unknown): AideToolPer
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   return {
     askBeforeWrite: typeof record.askBeforeWrite === 'boolean' ? record.askBeforeWrite : true,
-    read: readSwitches(record.read, AIDE_READ_TOOL_KEYS),
+    read: readSwitches(record.read, AIDE_READ_SCOPE_KEYS),
     readBudget: normalizeAideReadBudget(record.readBudget),
     write: readSwitches(record.write, AIDE_WRITE_TOOL_KEYS)
   };
@@ -95,13 +90,12 @@ export function isDefaultAideToolPermissions(settings: AideToolPermissionSetting
   const defaults = createDefaultAideToolPermissionSettings();
   return settings.readBudget === defaults.readBudget
     && settings.askBeforeWrite === defaults.askBeforeWrite
-    && AIDE_READ_TOOL_KEYS.every((key) => settings.read[key] === defaults.read[key])
+    && AIDE_READ_SCOPE_KEYS.every((key) => settings.read[key] === defaults.read[key])
     && AIDE_WRITE_TOOL_KEYS.every((key) => settings.write[key] === defaults.write[key]);
 }
 
 export function listAideDisabledToolNames(settings: AideToolPermissionSettings): string[] {
   return [
-    ...AIDE_READ_TOOL_KEYS.filter((key) => !settings.read[key]).map((key) => AIDE_READ_TOOL_NAMES[key]),
     ...AIDE_WRITE_TOOL_KEYS.filter((key) => !settings.write[key]).flatMap((key) => AIDE_WRITE_TOOL_NAMES[key])
   ];
 }

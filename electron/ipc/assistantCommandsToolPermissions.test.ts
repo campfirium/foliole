@@ -103,10 +103,10 @@ function payload(result: Awaited<ReturnType<typeof AIDE_LOCAL_READ_TOOLS[string]
 
 it('saves the AI permission settings per device and hands the next reply its switches and budget', async () => {
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSaveToolPermissions, {
-    settings: { read: { readPdfPage: false, traceSource: false }, readBudget: 5_000 }
+    settings: { read: { home: false, trash: false }, readBudget: 5_000 }
   });
   const loaded = await handleAssistantCommand(NATIVE_COMMANDS.assistantLoadToolPermissions, {});
-  expect(loaded).toMatchObject({ read: { readPdfPage: false, searchLibrary: true, traceSource: false }, readBudget: 5_000 });
+  expect(loaded).toMatchObject({ read: { current: true, home: false, trash: false }, readBudget: 5_000 });
 
   adapterSendMessage.mockResolvedValue({ message: { text: 'ok', threadId: 'thread-1', turnId: 'turn-1' }, provider: 'codex-app-server', state: 'ready' });
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
@@ -115,8 +115,8 @@ it('saves the AI permission settings per device and hands the next reply its swi
     provider: 'codex-app-server'
   });
   const session = adapterSendMessage.mock.calls[0]?.[0]?.toolSession;
-  expect([...session.disabledTools].sort()).toEqual(['read_pdf_page', 'trace_source']);
-  expect(session).toMatchObject({ readBudget: 5_000, readUsed: 0 });
+  expect([...session.disabledTools]).toEqual([]);
+  expect(session).toMatchObject({ readBudget: 5_000, readScope: { currentIds: [], scopes: { current: true, home: false, trash: false } }, readUsed: 0 });
 });
 
 it('reads a long material in segments whose positions continue where the last one stopped', async () => {
@@ -167,27 +167,6 @@ const descriptor = {
   started_at: 'now',
   token: 'secret'
 };
-
-async function readInScope(id: string, linked: string[], read: Record<string, boolean>) {
-  const session = createAideToolSession(normalizeAideToolPermissionSettings({ read }), undefined, linked);
-  const result = await executeAideTool({ arguments: { id }, tool: 'read_material' }, { descriptor, session });
-  return (JSON.parse(result.contentItems[0]?.text ?? '{}') as { error?: string }).error ?? 'read';
-}
-
-it('reads only linked materials, their whole Base Topic when allowed, and anything once library search is on', async () => {
-  seedBookWithExcerpts();
-  const { sqlite } = openDatabaseConnection();
-  sqlite.prepare(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
-    VALUES ('other', 'folder', 'topic', 'Another book', 'Other text', 'now', 'now')`).run();
-  const narrow = { searchLibrary: false, traceSource: false };
-  expect(await readInScope('highlight', ['highlight'], narrow)).toBe('read');
-  expect(await readInScope('book', ['highlight'], narrow)).toBe('outside_read_scope');
-  const family = { searchLibrary: false, traceSource: true };
-  expect(await readInScope('book', ['highlight'], family)).toBe('read');
-  expect(await readInScope('excerpt', ['highlight'], family)).toBe('read');
-  expect(await readInScope('other', ['highlight'], family)).toBe('outside_read_scope');
-  expect(await readInScope('other', ['highlight'], { searchLibrary: true, traceSource: false })).toBe('read');
-});
 
 async function callDiveTool(tool: string, args: Record<string, unknown>, write: Record<string, boolean> = {}) {
   const session = createAideToolSession(normalizeAideToolPermissionSettings({ askBeforeWrite: false, write }));
