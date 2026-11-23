@@ -1,7 +1,7 @@
 export const EN_SETTINGS_AIDE_CONTEXT_TRANSLATIONS = {
   'settings.aideDialog.context.nav': 'Attached content',
   'settings.aideDialog.context.description': 'When you link material to a conversation, Aide attaches the content below to your next message. Turning an item off only stops attaching it; the AI can still read it if its permissions allow.',
-  'settings.aideDialog.context.reset': 'Restore defaults',
+  'settings.aideDialog.context.reset': 'Restore attached content defaults',
   'settings.aideDialog.context.section': 'Content attached for linked material',
   'settings.aideDialog.context.total.title': 'Total budget (tokens)',
   'settings.aideDialog.context.total.description': 'Counted separately for each linked material',

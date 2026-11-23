@@ -4,8 +4,6 @@ import {
   AIDE_READ_BUDGET_MAX,
   AIDE_READ_BUDGET_MIN,
   AIDE_READ_SCOPE_KEYS,
-  createDefaultAideToolPermissionSettings,
-  isDefaultAideToolPermissions,
   normalizeAideReadBudget,
   type AideToolPermissionSettings,
   type AideWriteToolKey
@@ -38,16 +36,10 @@ const PERMISSION_COLUMN = `min-[1080px]:row-start-1 min-[1080px]:mb-0 min-[1080p
 export function AideSettingsPermissionsPane() {
   const t = useTranslation();
   const { flush, saveFailed, settings, update } = useAideToolPermissionSettings();
-  const reset = () => {
-    update(createDefaultAideToolPermissionSettings());
-    flush();
-  };
   return (
     <AideSettingsPaneFrame
       description={t('settings.aideDialog.permissions.description')}
       descriptionPosition="bottom"
-      onReset={isDefaultAideToolPermissions(settings) ? undefined : reset}
-      resetLabel={t('settings.aideDialog.permissions.reset')}
     >
       <div
         className="grid grid-cols-1 gap-5 pl-5 pr-5 min-[1080px]:grid-cols-2 min-[1080px]:gap-y-0 min-[1080px]:pl-0"

@@ -112,8 +112,13 @@ it('shows attached content items with a preview built by the real allocation', a
   expect(dialog.querySelector('[data-preview-item="selection"]')?.className).not.toContain('bg-primary/10');
 });
 
-it('turns items off, reorders by keyboard, saves and restores defaults', async () => {
+it('restores all attached content settings from the section header', async () => {
   const dialog = await openContextPane();
+  const section = within(dialog).getByRole('region', { name: 'Content attached for linked material' });
+  const reset = within(section).getByRole('button', { name: 'Restore attached content defaults' });
+  expect(reset).toBeDisabled();
+  const budget = within(section).getByRole('spinbutton', { name: 'Total budget (tokens)' });
+  fireEvent.change(budget, { target: { value: '1800' } });
   fireEvent.click(within(dialog).getByRole('switch', { name: 'Attach Path and membership' }));
   await waitFor(() => expect(previewSections(dialog)).not.toContain('location'));
   fireEvent.keyDown(within(dialog).getByRole('button', { name: /^Reorder Related notes/u }), { key: 'ArrowUp' });
@@ -123,12 +128,17 @@ it('turns items off, reorders by keyboard, saves and restores defaults', async (
   const saved = assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0];
   expect(saved.items.find((item: { key: string }) => item.key === 'location')).toMatchObject({ enabled: false });
 
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));
-  await waitFor(() => expect(previewSections(dialog)).toContain('location'));
-  expect(assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0]).toEqual(createDefaultAideAttachedContextSettings());
+  expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).not.toBeInTheDocument();
+  expect(reset).toBeEnabled();
+  await act(async () => { fireEvent.click(reset); });
+  expect(reset).toBeDisabled();
+  expect(budget).toHaveValue(2100);
+  expect(previewSections(dialog)).toContain('location');
+  expect(assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0])
+    .toEqual(createDefaultAideAttachedContextSettings());
 });
 
-it('switches AI read places and modify tools and the per-reply read limit, saves them and restores defaults', async () => {
+it('saves individual AI permission changes without offering a bulk reset', async () => {
   renderWithLocalization(<AideSettingsDialogHost />);
   act(() => requestAideSettingsDialogOpen());
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
@@ -161,8 +171,5 @@ it('switches AI read places and modify tools and the per-reply read limit, saves
     askBeforeWrite: false, read: { current: true, trash: false }, readBudget: 1000, write: { editContent: true, manageDives: false }
   });
 
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));
-  await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0])
-    .toEqual(createDefaultAideToolPermissionSettings()));
-  expect(budget).toHaveValue(20000);
+  expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).not.toBeInTheDocument();
 });

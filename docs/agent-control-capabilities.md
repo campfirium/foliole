@@ -36,6 +36,8 @@ Each desktop library keeps one migration JSON with a record for each selected XM
 
 Aide history shows material links for desktop conversation navigation. The linked material titles and IDs are included in Aide turn context. A linked material open at send time becomes the active material. Aide reads bodies through existing material permissions. Desktop users can remove manually linked materials from a draft or saved conversation. Future turns use the updated links and retain the conversation’s opening material. Agent Control has no conversation-link routes.
 
+Desktop Aide settings provide individual controls for permissions and attached content. The Attached content section heading offers a reset for that section. These preferences stay on the device and are managed in the app.
+
 Clicking an unresolved title-based wiki link in the desktop editor creates and opens a Topic in Inbox. This is an editor interaction. Agent Control clients can create the same Topic with its title and the Inbox parent ID.
 
 Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.

@@ -3,7 +3,6 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.aideDialog.permissions.nav': 'AI 权限',
   'settings.aideDialog.permissions.description': '权限变更从下一条消息起生效。',
-  'settings.aideDialog.permissions.reset': '恢复默认',
   'settings.aideDialog.permissions.read.title': '读取权限',
   'settings.aideDialog.permissions.readBudget.title': '每次回答的读取上限（token）',
   'settings.aideDialog.permissions.read.current.title': '当前材料',

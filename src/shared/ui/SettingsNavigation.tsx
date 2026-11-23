@@ -9,7 +9,7 @@ import { settingsSidebarBadgeClassName, settingsSidebarItemClassName } from './S
 import { cn } from '@/shared/lib/utils';
 
 interface SettingsNavigationProps {
-  alignTitleWithItems?: boolean;
+  alignTitleWithIcons?: boolean;
   ariaLabel: string;
   children: ReactNode;
   footer?: ReactNode;
@@ -17,7 +17,7 @@ interface SettingsNavigationProps {
   title: ReactNode;
 }
 
-export function SettingsNavigation({ alignTitleWithItems, ariaLabel, children, footer, navigationLabel, title }: SettingsNavigationProps) {
+export function SettingsNavigation({ alignTitleWithIcons, ariaLabel, children, footer, navigationLabel, title }: SettingsNavigationProps) {
   return (
     <AppPanel
       as="aside"
@@ -28,12 +28,12 @@ export function SettingsNavigation({ alignTitleWithItems, ariaLabel, children, f
       )}
       className="border-r border-settings-divider"
       headerClassName={cn('h-settings-navigation-header min-h-0 border-b border-settings-divider/55 py-0',
-        alignTitleWithItems ? 'px-4' : 'px-5')}
+        alignTitleWithIcons ? 'px-4' : 'px-5')}
       scrollBody
       surfaceClassName="bg-settings-sidebar"
-      title={alignTitleWithItems ? (
-        // Match the row border, padding, icon width and gap inside the navigation inset.
-        <div className="pl-[calc(var(--spacing)*9+1px)]">{title}</div>
+      title={alignTitleWithIcons ? (
+        // Match the row border and padding inside the navigation inset.
+        <div className="pl-[calc(var(--spacing)*3+1px)]">{title}</div>
       ) : title}
     >
       <nav aria-label={navigationLabel} className={cn('flex w-full flex-col items-stretch gap-4', footer && 'min-h-full')}>

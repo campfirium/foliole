@@ -3,7 +3,7 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_AIDE_CONTEXT_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.aideDialog.context.nav': '附带内容',
   'settings.aideDialog.context.description': '关联材料后，Aide 会在下一条消息中自动附带以下内容。关掉某一项只是不自动附带，AI 仍可按权限自己去读。',
-  'settings.aideDialog.context.reset': '恢复默认',
+  'settings.aideDialog.context.reset': '恢复附带内容默认设置',
   'settings.aideDialog.context.section': '关联材料的附带内容',
   'settings.aideDialog.context.total.title': '总额度（token）',
   'settings.aideDialog.context.total.description': '每份关联材料单独计算',

@@ -1,3 +1,4 @@
+import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -6,7 +7,7 @@ import {
   isDefaultAideAttachedContextSettings
 } from '../../../../lib/core/assistant/aideAttachedContextSettings';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { SettingsSection } from '../../../shared/ui';
+import { AppIconButton, SettingsSection, settingsResetButtonClassName } from '../../../shared/ui';
 import { useAideAttachedContextSettings } from '../model/useAideAttachedContextSettings';
 
 import { AideSettingsPaneFrame } from './AideSettingsPaneFrame';
@@ -16,14 +17,12 @@ import { SettingsAideAttachedContextSection } from './sections/SettingsAideAttac
 export function AideSettingsContextPane() {
   const t = useTranslation();
   const { flush, saveFailed, settings, update } = useAideAttachedContextSettings();
-  const isDefault = isDefaultAideAttachedContextSettings(settings);
+  const resetLabel = t('settings.aideDialog.context.reset');
   // The item under the pointer or keyboard focus; its preview segment is highlighted and scrolled level with the row.
   const [active, setActive] = useState<{ key: AideAttachedContextItemKey; rowTop: number } | null>(null);
   return (
     <AideSettingsPaneFrame
       description={t('settings.aideDialog.context.description')}
-      onReset={isDefault ? undefined : () => { update(createDefaultAideAttachedContextSettings()); flush(); }}
-      resetLabel={t('settings.aideDialog.context.reset')}
       descriptionPosition="hidden"
     >
       {/* The settings set the height; the preview takes a narrower column beside them and scrolls within it. */}
@@ -33,6 +32,19 @@ export function AideSettingsContextPane() {
           className="min-w-0 min-[1080px]:mb-0 min-[1080px]:[&_[data-settings-row]]:!items-center min-[1080px]:[&_[data-settings-row]]:!py-1.5"
           description={t('settings.aideDialog.context.description')}
           title={t('settings.aideDialog.context.section')}
+          titleActions={
+            <AppIconButton
+              className={settingsResetButtonClassName()}
+              disabled={isDefaultAideAttachedContextSettings(settings)}
+              icon={<RotateCcw aria-hidden="true" size={16} />}
+              label={resetLabel}
+              onClick={() => {
+                update(createDefaultAideAttachedContextSettings());
+                flush();
+              }}
+              title={resetLabel}
+            />
+          }
         >
           <SettingsAideAttachedContextSection
             activeKey={active?.key ?? null}

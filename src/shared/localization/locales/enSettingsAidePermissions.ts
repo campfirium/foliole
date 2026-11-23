@@ -1,7 +1,6 @@
 export const EN_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS = {
   'settings.aideDialog.permissions.nav': 'AI permissions',
   'settings.aideDialog.permissions.description': 'Permission changes apply from your next message.',
-  'settings.aideDialog.permissions.reset': 'Restore defaults',
   'settings.aideDialog.permissions.read.title': 'Read permissions',
   'settings.aideDialog.permissions.readBudget.title': 'Read limit per reply (tokens)',
   'settings.aideDialog.permissions.read.current.title': 'Current material',

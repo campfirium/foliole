@@ -40,6 +40,7 @@ export function AideSettingsDialogHost() {
           className={settingsDialogSurfaceClassName(settingsDialogGrid)}
         >
           <SettingsNavigation
+            alignTitleWithIcons
             ariaLabel={t('settings.aideDialog.title')}
             navigationLabel={t('settings.aideDialog.navigation')}
             title={<AppDialogTitle className="text-settings-brand font-semibold leading-5">{t('settings.aideDialog.title')}</AppDialogTitle>}
