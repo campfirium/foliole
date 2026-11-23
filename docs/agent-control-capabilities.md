@@ -38,6 +38,8 @@ Aide history shows material links for desktop conversation navigation. The linke
 
 Desktop Aide settings provide individual controls for permissions and attached content. The Attached content section heading offers a reset for that section. These preferences stay on the device and are managed in the app.
 
+New conversation opens an empty Aide composer on desktop. The conversation is created when the first message is sent. This composer action stays in the desktop UI.
+
 Clicking an unresolved title-based wiki link in the desktop editor creates and opens a Topic in Inbox. This is an editor interaction. Agent Control clients can create the same Topic with its title and the Inbox parent ID.
 
 Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 
 import { inspectorListMetaClassName } from '../../shared/ui';
@@ -10,6 +10,7 @@ import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelMode
 interface AssistantConversationProps {
   activeMessages: AssistantMessage[];
   attachImageLabel?: string;
+  focusRequest?: number | null;
   inputLabel: string;
   imageErrorText?: string | null;
   images?: import('../../../lib/platform/nativeAssistantImageContract').NativeAssistantImageDraft[];
@@ -41,6 +42,9 @@ interface AssistantConversationProps {
 
 export function WorkspaceRightSidebarAssistantConversation(props: AssistantConversationProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (props.focusRequest != null) inputRef.current?.focus();
+  }, [props.focusRequest]);
   const editMessage = (message: AssistantMessage) => {
     props.onEditMessage(message);
     inputRef.current?.focus();

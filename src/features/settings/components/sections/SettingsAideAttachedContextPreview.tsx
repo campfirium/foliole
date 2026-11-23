@@ -12,7 +12,6 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
   AIDE_CONTEXT_EXAMPLE_QUESTION,
-  AIDE_CONTEXT_EXAMPLE_TITLE,
   createAideContextExampleSnapshot
 } from '../../model/aideAttachedContextExample';
 
@@ -64,9 +63,6 @@ export function SettingsAideAttachedContextPreview({ active, settings }: {
       <div className="absolute inset-0 overflow-auto overscroll-contain" ref={scroller}>
         <header className="sticky top-0 z-[1] border-b border-settings-divider/70 bg-canvas px-[18px] pb-2.5 pt-3" ref={header}>
           <h3 className="m-0 text-ui-md font-semibold leading-5 text-foreground">{t('settings.aideDialog.context.preview.title')}</h3>
-          <p className="m-0 text-ui-sm leading-[18px] text-foreground/50">
-            {t('settings.aideDialog.context.preview.caption', { title: AIDE_CONTEXT_EXAMPLE_TITLE })}
-          </p>
         </header>
         {/* Bottom padding lets the last segments scroll level with their rows. */}
         <div className="relative pb-[50%] pt-1.5">

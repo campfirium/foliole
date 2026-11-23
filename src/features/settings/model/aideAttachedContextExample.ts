@@ -3,7 +3,7 @@ import type { AideContextNode } from '../../../../lib/core/assistant/aideAttache
 
 // Fixed English example for the attached-content preview. The preview runs it through the same
 // candidate builder and allocation function that real sending uses.
-export const AIDE_CONTEXT_EXAMPLE_TITLE = 'Why does Aide have so many context settings?';
+const AIDE_CONTEXT_EXAMPLE_TITLE = 'Why does Aide have so many context settings?';
 export const AIDE_CONTEXT_EXAMPLE_QUESTION = 'How do I decide which context to keep and which to leave out?';
 
 const ARTICLE = `---

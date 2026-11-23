@@ -101,7 +101,7 @@ it('shows attached content items with a preview built by the real allocation', a
   expect(within(dialog).getByRole('button', { name: 'Attached content' })).toHaveAttribute('aria-current', 'page');
   expect(within(dialog).getByRole('spinbutton', { name: 'Total budget (tokens)' })).toHaveValue(2100);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
-  const preview = within(dialog).getByRole('region', { name: 'Attached content preview' });
+  const preview = within(dialog).getByRole('region', { name: 'Attached content example' });
   expect(within(preview).getByText(/More context isn’t always better/u)).toBeInTheDocument();
   expect(previewSections(dialog)).toEqual(['selection', 'metadata', 'surrounding', 'outline', 'location', 'annotations']);
   expect(within(preview).getByText('what matters')).toBeInTheDocument();

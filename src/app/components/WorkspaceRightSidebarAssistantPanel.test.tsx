@@ -157,7 +157,7 @@ it('starts a new thread after clearing the selected history thread', async () =>
     message: { text: 'Fresh answer', threadId: 'thread-new', turnId: 'turn-3' },
     provider: 'codex-app-server',
     state: 'ready',
-    threadIndex: createThread({ providerThreadId: 'thread-new', title: 'Fresh prompt' })
+    threadIndex: createThread({ providerThreadId: 'thread-new', preview: 'Fresh prompt', title: 'Fresh prompt' })
   });
 
   renderWithLocalization(
@@ -167,8 +167,15 @@ it('starts a new thread after clearing the selected history thread', async () =>
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(await screen.findByRole('button', { name: 'New' }));
-  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
+  fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Foliole Aide message' }), { target: { value: 'Old draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'New' }));
+  expect(screen.getByRole('heading', { name: 'New conversation' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /original prompt/i })).not.toBeInTheDocument();
+  const composer = screen.getByRole('textbox', { name: 'Foliole Aide message' });
+  expect(composer).toHaveValue('');
+  expect(composer).toHaveFocus();
+  fireEvent.change(composer, {
     target: { value: 'Fresh prompt' }
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
@@ -190,6 +197,8 @@ it('starts a new thread after clearing the selected history thread', async () =>
     })
   );
   expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
+  expect(screen.getByRole('button', { name: /original prompt/i })).toBeInTheDocument();
 });
 
 it('updates the pending assistant response from turn delta events', async () => {

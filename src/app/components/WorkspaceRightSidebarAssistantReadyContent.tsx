@@ -10,19 +10,15 @@ import {
 
 import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspaceRightSidebarAssistantPanelController';
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
-import { createAssistantContinuationEvent } from './workspaceRightSidebarAssistantContinuation';
-import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
+import { AssistantConversationView } from './WorkspaceRightSidebarAssistantConversationView';
 import { AssistantPanelToolbar } from './WorkspaceRightSidebarAssistantHeaders';
 import {
   resolveAssistantImageError,
-  resolveAssistantConversationTitle,
-  resolveAssistantThreadLoadStatusLabel,
-  resolveAssistantThreadPreviewLabel
+  resolveAssistantConversationTitle
 } from './workspaceRightSidebarAssistantLabels';
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 import { AssistantProviderAndModelControls } from './WorkspaceRightSidebarAssistantProviderControl';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
-import { WorkspaceRightSidebarAssistantWriteApproval } from './WorkspaceRightSidebarAssistantWriteApproval';
 
 export function FolioleAideReadyContent(props: {
   activeNodeId: string | null;
@@ -32,83 +28,39 @@ export function FolioleAideReadyContent(props: {
 }) {
   const t = useTranslation();
   const [showHistory, setShowHistory] = useState(true);
-  const conversationOpen = isConversationOpen(props.controller);
+  const [newConversationRequest, setNewConversationRequest] = useState<number | null>(null);
+  const conversationOpen = newConversationRequest !== null || isConversationOpen(props.controller);
+  const closeConversation = () => {
+    props.controller.handleNewThread();
+    setNewConversationRequest(null);
+  };
   return (
     <>
       <AssistantPanelToolbar
         conversationTitle={conversationOpen ? resolveAssistantConversationTitle(props.controller, t) : null}
         historyVisible={!conversationOpen && showHistory}
-        onBack={props.controller.handleNewThread}
-        onNewThread={props.controller.handleNewThread}
+        newThreadDisabled={props.controller.sending}
+        onBack={closeConversation}
+        onNewThread={() => {
+          props.controller.handleNewThread();
+          setNewConversationRequest((current) => (current ?? 0) + 1);
+        }}
         onShowHistory={() => {
           if (conversationOpen) {
-            props.controller.handleNewThread();
+            closeConversation();
             setShowHistory(true);
           } else {
             setShowHistory((current) => !current);
           }
         }}
       />
-      {conversationOpen ? <AssistantConversationView {...props} /> : (
-      <AssistantHomeView
-        {...props}
-        historyVisible={showHistory}
-      />
-      )}
-    </>
-  );
-}
-
-function AssistantConversationView(props: {
-  activeNodeId: string | null;
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
-  nodesById: Record<string, Node>;
-  trashedNodeIds?: readonly string[] | undefined;
-}) {
-  const t = useTranslation();
-  const continuation = createAssistantContinuationEvent({
-    messages: props.controller.activeMessages,
-    onSelectRecord: props.controller.handleSelectRecord,
-    records: props.controller.records,
-    selectedRecord: props.controller.selectedRecord,
-    t
-  });
-  return (
-    <>
-      {props.controller.selectedThreadNotice ? (
-        <p className={`${inspectorListInsetPaddingClassName} py-2 ${inspectorListMetaClassName}`}>
-          {props.controller.selectedThreadNotice}
-        </p>
-      ) : null}
-      <WorkspaceRightSidebarAssistantConversation
-        activeMessages={props.controller.activeMessages}
-        materialTags={<AssistantMaterialTags {...props} />}
-        {...(props.controller.writeApproval.approval ? {
-          writeApproval: <WorkspaceRightSidebarAssistantWriteApproval
-            approval={props.controller.writeApproval.approval}
-            onResolve={props.controller.writeApproval.resolve}
-          />
-        } : {})}
-        attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
-        inputLabel={t('desktop.rightPanel.assistant.input')}
-        imageErrorText={resolveAssistantImageError(props.controller, t)}
-        images={props.controller.imageDrafts}
-        messageText={props.controller.messageText}
-        modelControl={<AssistantProviderAndModelControls controller={props.controller} />}
-        onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
-        onEditMessage={props.controller.editMessage}
-        onMessageTextChange={props.controller.setMessageText}
-        onRemoveImage={props.controller.removeImage}
-        onSubmit={props.controller.handleSubmit}
-        placeholder={t('desktop.rightPanel.assistant.placeholder')}
-        pendingLabel={t('desktop.rightPanel.assistant.pending')}
-        removeImageLabel={t('desktop.rightPanel.assistant.removeImage')}
-        sendLabel={t('desktop.rightPanel.assistant.send')}
-        sending={props.controller.sending}
-        statusLabel={resolveAssistantThreadLoadStatusLabel(props.controller, t)}
-        transitionEvent={continuation}
-        threadPreviewLabel={resolveAssistantThreadPreviewLabel(props.controller, t)}
-      />
+      {conversationOpen ? (
+        <AssistantConversationView
+          controller={props.controller}
+          focusRequest={newConversationRequest}
+          materialTags={<AssistantMaterialTags {...props} />}
+        />
+      ) : <AssistantHomeView {...props} historyVisible={showHistory} />}
     </>
   );
 }

@@ -1,8 +1,8 @@
-import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { ElectronApplication } from '@playwright/test';
 
+import { openAssistantPanel } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
 
 const screenshotPath = path.join(
@@ -25,17 +25,24 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await desktopWindow.reload();
   await installAssistantIpcMock(desktopApp, true);
   await openAssistantPanel(desktopWindow);
-
+  const newButton = desktopWindow.getByRole('button', { name: /^(New|新建)$/ });
+  const composer = desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/);
+  await newButton.click();
+  await expect(desktopWindow.getByRole('heading', { name: /^(New conversation|新会话)$/ })).toBeVisible();
+  await expect(composer).toBeFocused();
+  await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]')
+    .screenshot({ path: testInfo.outputPath('aide-new-conversation.png') });
   const sendButton = desktopWindow.getByRole('button', { name: /^(Send|发送)$/ });
   const sendIcon = sendButton.locator('svg');
   const idleIcon = await sendIcon.innerHTML();
-  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Explain this topic');
+  await composer.fill('Explain this topic');
   await sendButton.click();
 
   const messageScroll = desktopWindow.getByTestId('assistant-message-scroll');
   const waitingStatus = messageScroll.getByRole('status');
   await expect(waitingStatus).toContainText(/Thinking|正在思考/);
   await expect(sendButton).toBeDisabled();
+  await expect(newButton).toBeDisabled();
   expect(await sendIcon.innerHTML()).toBe(idleIcon);
   const waitingScreenshotPath = testInfo.outputPath('assistant-waiting.png');
   await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]')
@@ -62,7 +69,6 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   expect(await messageScroll.evaluate((element) => element.scrollWidth - element.clientWidth))
     .toBeLessThanOrEqual(1);
 
-  await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]').screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-message-layout', {
     contentType: 'image/png',
@@ -119,18 +125,6 @@ test('Aide exposes a return-to-latest control after reading earlier content', as
   await returnButton.click();
   await expect(returnButton).toBeHidden();
 });
-
-async function openAssistantPanel(page: Page) {
-  const directButton = page.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
-  const moreButton = page.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ });
-  await expect(directButton.first().or(moreButton)).toBeVisible();
-  if (await directButton.count()) {
-    await directButton.first().click();
-    return;
-  }
-  await moreButton.click();
-  await page.getByRole('menuitem', { name: /Foliole Aide/ }).click();
-}
 
 async function installAssistantIpcMock(electronApp: ElectronApplication, holdReply = false) {
   const response = createAssistantResponse();

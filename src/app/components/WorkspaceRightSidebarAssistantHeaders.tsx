@@ -10,6 +10,7 @@ import {
 export function AssistantPanelToolbar(props: {
   conversationTitle: string | null;
   historyVisible: boolean;
+  newThreadDisabled?: boolean;
   onBack: () => void;
   onShowHistory: () => void;
   onNewThread: () => void;
@@ -36,15 +37,16 @@ export function AssistantPanelToolbar(props: {
         <div className="flex items-center gap-1">
           <AppIconButton
             aria-pressed={props.historyVisible}
-            className={props.historyVisible ? 'bg-foreground/[0.06] text-foreground' : undefined}
             icon={<History aria-hidden className="size-4" strokeWidth={1.8} />}
             label={t('desktop.rightPanel.assistant.history')}
             onClick={props.onShowHistory}
           />
           <AppIconButton
+            disabled={props.newThreadDisabled}
             icon={<PenLine aria-hidden className="size-4" strokeWidth={1.8} />}
             label={t('desktop.rightPanel.assistant.newThread')}
             onClick={props.onNewThread}
+            title={t('desktop.rightPanel.assistant.newConversation')}
           />
           <AppIconButton
             icon={<Settings aria-hidden className="size-4" strokeWidth={1.8} />}
