@@ -21,6 +21,8 @@ const TOPOLOGIES = {
   't7-release': {
     nodes: [
       ['release_context', ['Resolve release identity']],
+      ['quality_reuse', ['quality_reuse', 'Reuse passed QA full chain']],
+      ['reuse_windows_acceptance', ['reuse_windows_acceptance', 'Windows acceptance for reused QA']],
       ['t6_quality', ['t6_quality', 'Full chain']],
       ['release_candidate', ['release_candidate', 'Release candidate quality']],
       ['macos_package', ['macos_package', 'macOS package']],
@@ -29,7 +31,9 @@ const TOPOLOGIES = {
       ['assemble_draft', ['Assemble release draft']]
     ],
     edges: [
-      ['release_context', 't6_quality'], ['t6_quality', 'release_candidate'],
+      ['release_context', 'quality_reuse'], ['quality_reuse', 't6_quality'],
+      ['quality_reuse', 'reuse_windows_acceptance'], ['reuse_windows_acceptance', 'release_candidate'],
+      ['t6_quality', 'release_candidate'],
       ['release_candidate', 'macos_package'], ['release_candidate', 'windows_package'],
       ['release_candidate', 'linux_package'], ['macos_package', 'assemble_draft'],
       ['windows_package', 'assemble_draft'], ['linux_package', 'assemble_draft']

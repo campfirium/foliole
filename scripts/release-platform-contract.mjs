@@ -108,8 +108,21 @@ export function validateReleaseIntent(intent, registry, packageVersion) {
     id, requireString(basis[id], `release intent scopeBasis.${id}`)
   ]));
   const syncCompatibility = validateSyncCompatibility(intent.syncCompatibility, selectedPlatforms, registry);
+  const qualityBaseline = validateQualityBaseline(intent.qualityBaseline);
   return { schemaVersion: 1, version, publicationMode, selectedPlatforms, scopeBasis,
-    ...(syncCompatibility ? { syncCompatibility } : {}) };
+    ...(syncCompatibility ? { syncCompatibility } : {}), ...(qualityBaseline ? { qualityBaseline } : {}) };
+}
+
+// Optional: the hosted QA full pass this candidate was frozen from (see release-quality-reuse.mjs).
+function validateQualityBaseline(value) {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).sort().join(',') !== 'runId,sha'
+    || typeof value.runId !== 'string' || !/^\d+$/u.test(value.runId)
+    || typeof value.sha !== 'string' || !/^[0-9a-f]{40}$/u.test(value.sha)) {
+    throw new Error('release intent qualityBaseline must be { runId, sha } with a numeric run ID and a full commit SHA.');
+  }
+  return { runId: value.runId, sha: value.sha };
 }
 
 function validateSyncCompatibility(value, selectedPlatforms, registry) {

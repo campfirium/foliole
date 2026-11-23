@@ -75,3 +75,18 @@ it('uses the real CLI to write a Windows-only intent and rejects missing or dupl
     expect(() => parseReleaseIntentArgs(args)).toThrow();
   }
 });
+
+it('keeps a valid QA baseline in the release identity and rejects any other shape', async () => {
+  const intent = await prepareDefaultReleaseIntent(fixture(), { platforms: ['windows'], compatibility: compatible });
+  const resolve = qualityBaseline => resolveReleasePlatformIdentity({
+    registry, intent: { ...intent, qualityBaseline }, packageVersion: '0.7.18', sha: 'a'.repeat(40) });
+  const baseline = { runId: '45000584817', sha: 'b'.repeat(40) };
+  expect(resolve(baseline).intent.qualityBaseline).toEqual(baseline);
+  expect(resolve(baseline).digest).not.toBe(resolve(undefined).digest);
+  expect(resolve(undefined).intent).not.toHaveProperty('qualityBaseline');
+  for (const invalid of [null, 'b'.repeat(40), { runId: 45000584817, sha: 'b'.repeat(40) },
+    { runId: 'latest', sha: 'b'.repeat(40) }, { runId: '1', sha: 'B'.repeat(40) },
+    { runId: '1', sha: 'b'.repeat(40), lane: 'dev-remote' }]) {
+    expect(() => resolve(invalid)).toThrow('qualityBaseline');
+  }
+});

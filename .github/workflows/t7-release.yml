@@ -85,10 +85,73 @@ jobs:
       target_sha: ${{ needs.release_context.outputs.target_sha }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 
-  t6_quality:
-    name: Full chain
+  quality_reuse:
+    name: Reuse passed QA full chain
     if: github.event_name == 'push' || inputs.stage == 'full'
     needs: release_context
+    runs-on: ubuntu-latest
+    permissions: { actions: read, contents: read }
+    outputs:
+      accepted_sha: ${{ steps.decide.outputs.accepted_sha }}
+      localization_changed: ${{ steps.decide.outputs.localization_changed }}
+      reason: ${{ steps.decide.outputs.reason }}
+      reuse: ${{ steps.decide.outputs.reuse }}
+    steps:
+      - name: Check out release candidate history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release_context.outputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.0
+      - name: Decide whether the QA baseline covers this candidate
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
+        run: node scripts/quality/release-quality-reuse.mjs
+
+  reuse_windows_acceptance:
+    name: Windows acceptance for reused QA
+    if: ${{ !cancelled() && needs.quality_reuse.outputs.reuse == 'true' }}
+    needs: [release_context, quality_reuse]
+    permissions: { contents: read, actions: read }
+    uses: ./.github/workflows/t6-hosted-quality.yml
+    with:
+      execution_lane: release-t7-recheck
+      stages: t6-windows-acceptance
+      target_sha: ${{ needs.release_context.outputs.target_sha }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+
+  reuse_localization:
+    name: Localization check for reused QA
+    if: ${{ !cancelled() && needs.quality_reuse.outputs.reuse == 'true' && needs.quality_reuse.outputs.localization_changed == 'true' }}
+    needs: [release_context, quality_reuse]
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release_context.outputs.target_sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.0
+          cache: npm
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Check interface translations
+        run: node scripts/localization/check-locales.mjs
+
+  t6_quality:
+    name: Full chain
+    if: ${{ !cancelled() && needs.release_context.result == 'success' && (github.event_name == 'push' || inputs.stage == 'full') && needs.quality_reuse.outputs.reuse != 'true' }}
+    needs: [release_context, quality_reuse]
     permissions:
       actions: read
       contents: read
@@ -100,14 +163,18 @@ jobs:
 
   release_candidate:
     name: Release candidate quality
-    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.t6_quality.result == 'success') || inputs.stage == 'release-candidate') }}
-    needs: [release_context, t6_quality]
+    if: >-
+      ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && (needs.t6_quality.result == 'success'
+        || (needs.quality_reuse.outputs.reuse == 'true' && needs.reuse_windows_acceptance.result == 'success'
+          && (needs.reuse_localization.result == 'success' || (needs.quality_reuse.outputs.localization_changed != 'true' && needs.reuse_localization.result == 'skipped')))))
+        || inputs.stage == 'release-candidate') }}
+    needs: [release_context, quality_reuse, t6_quality, reuse_windows_acceptance, reuse_localization]
     permissions:
       contents: read
     uses: ./.github/workflows/release-candidate-quality.yml
     with:
       execution_lane: release-t7
-      target_sha: ${{ inputs.stage == 'release-candidate' && needs.release_context.outputs.target_sha || needs.t6_quality.outputs.accepted_sha }}
+      target_sha: ${{ inputs.stage == 'release-candidate' && needs.release_context.outputs.target_sha || needs.t6_quality.outputs.accepted_sha || needs.quality_reuse.outputs.accepted_sha }}
       target_version: ${{ needs.release_context.outputs.target_version }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 
@@ -237,7 +304,7 @@ jobs:
 
   timing_summary:
     if: ${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}
-    needs: [release_context, t6_quality, release_candidate, macos_package, windows_package, linux_package, ios_package, android_package, assemble_draft]
+    needs: [release_context, quality_reuse, t6_quality, reuse_windows_acceptance, reuse_localization, release_candidate, macos_package, windows_package, linux_package, ios_package, android_package, assemble_draft]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:

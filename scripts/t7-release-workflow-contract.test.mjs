@@ -85,7 +85,9 @@ describe('T7 release workflow contract', () => {
     expect(preempt).toContain('gh run cancel');
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
-    expect(jobs.release_candidate.needs).toEqual(['release_context', 't6_quality']);
+    expect(jobs.release_candidate.needs).toEqual(
+      ['release_context', 'quality_reuse', 't6_quality', 'reuse_windows_acceptance', 'reuse_localization']);
+    expect(jobs.release_candidate.if).toContain("needs.t6_quality.result == 'success'");
     expect(jobs.release_candidate.with.target_sha).toContain('needs.t6_quality.outputs.accepted_sha');
     expect(jobs.release_candidate.with.target_sha).toContain('needs.release_context.outputs.target_sha');
     expect(jobs.macos_package.needs).toEqual(['release_context', 'release_candidate']);
@@ -111,6 +113,38 @@ describe('T7 release workflow contract', () => {
     expect(jobs.assemble_draft.uses).toBe('./.github/workflows/release-assembly.yml');
     expect(jobs.assemble_draft.with.target_sha)
       .toBe('${{ needs.release_context.outputs.target_sha }}');
+  });
+
+  it('reuses a passed QA full chain only through the guarded release path', () => {
+    const jobs = workflow.jobs;
+    const reuse = jobs.quality_reuse;
+    expect(reuse.needs).toBe('release_context');
+    expect(reuse.if).toBe("github.event_name == 'push' || inputs.stage == 'full'");
+    expect(reuse.permissions).toEqual({ actions: 'read', contents: 'read' });
+    expect(reuse.steps.find(step => step.uses === 'actions/checkout@v4').with['fetch-depth']).toBe(0);
+    const decide = reuse.steps.find(step => step.id === 'decide');
+    expect(decide.run).toBe('node scripts/quality/release-quality-reuse.mjs');
+    expect(decide.env.TARGET_SHA).toBe('${{ needs.release_context.outputs.target_sha }}');
+    // The full chain is the fallback for every outcome except an explicit reuse decision.
+    expect(jobs.t6_quality.needs).toEqual(['release_context', 'quality_reuse']);
+    expect(jobs.t6_quality.if).toContain('!cancelled()');
+    expect(jobs.t6_quality.if).toContain("needs.quality_reuse.outputs.reuse != 'true'");
+    // The release lane runs the one non-duplicated stage the QA full chain omits.
+    const windows = jobs.reuse_windows_acceptance;
+    expect(windows.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
+    expect(windows.with.stages).toBe('t6-windows-acceptance');
+    expect(windows.with.target_sha).toBe('${{ needs.release_context.outputs.target_sha }}');
+    expect(windows.if).toContain("needs.quality_reuse.outputs.reuse == 'true'");
+    const localization = jobs.reuse_localization;
+    expect(localization.if).toContain("needs.quality_reuse.outputs.localization_changed == 'true'");
+    expect(localization.steps.at(-1).run).toBe('node scripts/localization/check-locales.mjs');
+    const candidate = jobs.release_candidate.if;
+    expect(candidate).toContain("needs.quality_reuse.outputs.reuse == 'true' && needs.reuse_windows_acceptance.result == 'success'");
+    expect(candidate).toContain("needs.reuse_localization.result == 'success'");
+    expect(candidate).toContain("needs.quality_reuse.outputs.localization_changed != 'true' && needs.reuse_localization.result == 'skipped'");
+    expect(jobs.release_candidate.with.target_sha).toContain('needs.quality_reuse.outputs.accepted_sha');
+    expect(jobs.timing_summary.needs).toEqual(expect.arrayContaining(
+      ['quality_reuse', 'reuse_windows_acceptance', 'reuse_localization']));
   });
 
   it('routes each package stage alone and rebuilds selected producers for assembly', () => {
