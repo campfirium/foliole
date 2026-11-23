@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "抜粋を開く",
   "desktop.pdf.imageExcerpt.delete": "抜粋を削除",
   "desktop.pdf.imageExcerpt.failed": "抜粋を作成できませんでした。",
-  "desktop.pdf.imageExcerpt.retry": "再試行"
+  "desktop.pdf.imageExcerpt.retry": "再試行",
+  "desktop.pdf.zoom.expandWidth": "幅を自動的に拡張",
+  "desktop.pdf.zoom.expandWidthFailed": "幅の自動拡張を保存できませんでした"
 }

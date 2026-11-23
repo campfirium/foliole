@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "Данные поиска готовы для китайского, японского или корейского языков.",
   "settings.general.searchEnhancement.option.cjk": "Китайский, японский или корейский",
   "settings.general.searchEnhancement.option.wordBased": "Языки с интервалом между словами",
-  "settings.general.searchEnhancement.ready": "Данные поиска готовы для языков с интервалом между словами."
+  "settings.general.searchEnhancement.ready": "Данные поиска готовы для языков с интервалом между словами.",
+  "settings.about.cli.status.unavailable": "В этой сборке нет установщика CLI."
 }

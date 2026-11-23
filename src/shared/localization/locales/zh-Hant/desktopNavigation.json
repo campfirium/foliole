@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.unavailableTitle": "主題不可用",
   "desktop.rightPanel.highlights.count": "亮點({count})",
   "desktop.rightPanel.highlights.list": "文檔亮點",
-  "desktop.workspace.leaveFlowHere": "退出 Flow"
+  "desktop.workspace.leaveFlowHere": "退出 Flow",
+  "desktop.splitTopic.unavailable.item": "請開啟主題以進行拆分。目前是複習項目。",
+  "desktop.splitTopic.unavailable.linked": "請開啟來源主題以進行拆分。",
+  "desktop.splitTopic.unavailable.noTopic": "請開啟主題以進行拆分。",
+  "desktop.splitTopic.unavailable.readOnly": "此主題目前為唯讀。",
+  "desktop.splitTopic.unavailable.trash": "請先從垃圾桶還原此主題，再進行拆分。",
+  "desktop.rightPanel.assistant.settings": "Aide 設定"
 }

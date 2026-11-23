@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "발췌 열기",
   "desktop.pdf.imageExcerpt.delete": "발췌 삭제",
   "desktop.pdf.imageExcerpt.failed": "발췌을 만들지 못했습니다.",
-  "desktop.pdf.imageExcerpt.retry": "다시 시도"
+  "desktop.pdf.imageExcerpt.retry": "다시 시도",
+  "desktop.pdf.zoom.expandWidth": "너비 자동 확장",
+  "desktop.pdf.zoom.expandWidthFailed": "너비 자동 확장을 저장할 수 없습니다"
 }

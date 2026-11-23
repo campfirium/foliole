@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Открыть фрагмент",
   "desktop.pdf.imageExcerpt.delete": "Удалить фрагмент",
   "desktop.pdf.imageExcerpt.failed": "Не удалось создать фрагмент.",
-  "desktop.pdf.imageExcerpt.retry": "Повторить"
+  "desktop.pdf.imageExcerpt.retry": "Повторить",
+  "desktop.pdf.zoom.expandWidth": "Автоматически расширять по ширине",
+  "desktop.pdf.zoom.expandWidthFailed": "Не удалось сохранить автоматическое расширение по ширине"
 }

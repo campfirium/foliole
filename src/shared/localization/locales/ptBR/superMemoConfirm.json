@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Importar um novo lote",
+  "desktop.superMemoDrafts.confirmExisting": "Atualizar um lote existente",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Usar a proporção salva para este lote",
+  "desktop.superMemoDrafts.confirmBlend": "{percent}% em direção ao Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Detalhes da conversão",
+  "desktop.superMemoDrafts.confirmExceptions": "Exceções de conversão",
+  "desktop.superMemoDrafts.confirmTotals": "{converted} a importar · {skipped} a ignorar",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Tópicos vazios a ignorar ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Cartões vazios a ignorar ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Cartões sem pergunta ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Cartões sem resposta ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Entradas não compatíveis a ignorar ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Entradas cujo histórico de revisão não pôde ser reproduzido ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Componentes de áudio a ignorar ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Nenhuma exceção de conversão encontrada.",
+  "desktop.superMemoDrafts.confirmTrash": "Selecionados para mover para a Lixeira ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Resultado da migração"
+}

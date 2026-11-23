@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Ausschnitt öffnen",
   "desktop.pdf.imageExcerpt.delete": "Ausschnitt löschen",
   "desktop.pdf.imageExcerpt.failed": "Der Ausschnitt konnte nicht erstellt werden.",
-  "desktop.pdf.imageExcerpt.retry": "Erneut versuchen"
+  "desktop.pdf.imageExcerpt.retry": "Erneut versuchen",
+  "desktop.pdf.zoom.expandWidth": "Breite automatisch erweitern",
+  "desktop.pdf.zoom.expandWidthFailed": "Die automatische Breitenerweiterung konnte nicht gespeichert werden"
 }

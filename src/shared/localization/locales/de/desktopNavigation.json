@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "HERVORHEBUNGEN({count})",
   "desktop.rightPanel.highlights.list": "Dokumenthervorhebungen",
   "desktop.workspace.leaveFlowHere": "Flow verlassen",
-  "desktop.rightPanel.flow.libraryScope": "Bibliothek"
+  "desktop.rightPanel.flow.libraryScope": "Bibliothek",
+  "desktop.splitTopic.unavailable.item": "Öffne ein Thema, um es zu teilen. Dies ist ein Wiederholungselement.",
+  "desktop.splitTopic.unavailable.linked": "Öffne das Quellthema, um es zu teilen.",
+  "desktop.splitTopic.unavailable.noTopic": "Öffne ein Thema, um es zu teilen.",
+  "desktop.splitTopic.unavailable.readOnly": "Dieses Thema ist derzeit schreibgeschützt.",
+  "desktop.splitTopic.unavailable.trash": "Stelle dieses Thema aus dem Papierkorb wieder her, bevor du es teilst.",
+  "desktop.rightPanel.assistant.settings": "Aide-Einstellungen"
 }

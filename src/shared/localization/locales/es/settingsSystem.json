@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "Actualiza todos los dispositivos de este Sync Group antes de cambiar estos nombres.",
   "settings.general.systemEntryNames.custom": "Usa el nombre personalizado guardado con esta biblioteca.",
   "settings.general.systemEntryNames.followsLanguage": "Sigue el idioma de la interfaz.",
-  "settings.general.systemEntryNames.inputAria": "Nombre personalizado para {name}"
+  "settings.general.systemEntryNames.inputAria": "Nombre personalizado para {name}",
+  "settings.general.quitOnClose.title": "Salir de Foliole al cerrar la ventana",
+  "settings.general.quitOnClose.description": "Al salir se pausan funciones en segundo plano como la captura global, los recordatorios y la sincronización hasta que vuelvas a abrir Foliole.",
+  "settings.general.quitOnClose.saveFailed": "No se pudo guardar la preferencia de cierre de ventana."
 }

@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "DESTAQUES({count})",
   "desktop.rightPanel.highlights.list": "Destaques do documento",
   "desktop.workspace.leaveFlowHere": "Sair do Flow",
-  "desktop.rightPanel.flow.libraryScope": "Biblioteca"
+  "desktop.rightPanel.flow.libraryScope": "Biblioteca",
+  "desktop.splitTopic.unavailable.item": "Abra um tópico para dividi-lo. Este é um item de revisão.",
+  "desktop.splitTopic.unavailable.linked": "Abra o tópico de origem para dividi-lo.",
+  "desktop.splitTopic.unavailable.noTopic": "Abra um tópico para dividi-lo.",
+  "desktop.splitTopic.unavailable.readOnly": "Este tópico está somente leitura no momento.",
+  "desktop.splitTopic.unavailable.trash": "Restaure este tópico da Lixeira antes de dividi-lo.",
+  "desktop.rightPanel.assistant.settings": "Configurações do Aide"
 }

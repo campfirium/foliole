@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole 보좌관",
   "settings.general.aide.aria": "Foliole 보좌관 보관 섹션",
   "settings.general.aide.row": "장치 데이터",
-  "settings.general.aide.description": "대화 및 지원 파일은 이 장치에 유지되며 Foliole 라이브러리 백업에는 포함되지 않습니다.",
+  "settings.general.aide.description": "대화는 라이브러리 백업과 별도로 이 기기에 저장됩니다.",
   "settings.general.aide.loading": "이 기기에 사용된 저장용량을 계산하는 중...",
   "settings.general.aide.size": "이 기기에 대한 {size}.",
   "settings.general.aide.sizePartial": "{size}이 계산되었습니다. 일부 파일을 측정할 수 없습니다.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "최근 복습에 더 높은 가중치를 주면 모델이 기억력 변화에 더 빨리 적응합니다. 단기 변동에도 더 민감해집니다.",
   "settings.review.training.penalties": "복습 간격 페널티",
   "settings.review.training.penaltiesDescription": "훈련 중 같은 날의 지나치게 짧은 복습 간격과 긴 간격의 급격한 증가에 페널티를 적용합니다. 기억해 낼 가능성의 예측 정확도가 약간 낮아질 수 있습니다.",
-  "settings.review.training.resetOption": "{label} 재설정"
+  "settings.review.training.resetOption": "{label} 재설정",
+  "settings.general.aide.empty": "로컬 대화 데이터 없음"
 }

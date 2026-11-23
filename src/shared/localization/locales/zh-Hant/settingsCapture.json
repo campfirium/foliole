@@ -10,5 +10,6 @@
   "settings.capture.position.title": "確認位置",
   "settings.capture.position.description": "選擇捕捉確認訊息在此 Mac 上的顯示位置。",
   "settings.capture.position.topRight": "右上",
-  "settings.capture.position.bottomRight": "右下角"
+  "settings.capture.position.bottomRight": "右下角",
+  "settings.capture.permission.checking": "正在檢查存取權限…"
 }

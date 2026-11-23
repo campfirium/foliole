@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "FAITS SAILLANTS({count})",
   "desktop.rightPanel.highlights.list": "Points saillants du document",
   "desktop.workspace.leaveFlowHere": "Quitter Flow",
-  "desktop.rightPanel.flow.libraryScope": "Bibliothèque"
+  "desktop.rightPanel.flow.libraryScope": "Bibliothèque",
+  "desktop.splitTopic.unavailable.item": "Ouvrez un sujet pour le diviser. Ceci est une carte de révision.",
+  "desktop.splitTopic.unavailable.linked": "Ouvrez le sujet source pour le diviser.",
+  "desktop.splitTopic.unavailable.noTopic": "Ouvrez un sujet pour le diviser.",
+  "desktop.splitTopic.unavailable.readOnly": "Ce sujet est actuellement en lecture seule.",
+  "desktop.splitTopic.unavailable.trash": "Restaurez ce sujet depuis la corbeille avant de le diviser.",
+  "desktop.rightPanel.assistant.settings": "Réglages d’Aide"
 }

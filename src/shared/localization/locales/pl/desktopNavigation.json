@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "NAJWAŻNIEJSZE({count})",
   "desktop.rightPanel.highlights.list": "Najważniejsze informacje w dokumencie",
   "desktop.workspace.leaveFlowHere": "Wyjdź z Flow",
-  "desktop.rightPanel.flow.libraryScope": "Biblioteka"
+  "desktop.rightPanel.flow.libraryScope": "Biblioteka",
+  "desktop.splitTopic.unavailable.item": "Otwórz temat, aby go podzielić. To jest element do powtórki.",
+  "desktop.splitTopic.unavailable.linked": "Otwórz temat źródłowy, aby go podzielić.",
+  "desktop.splitTopic.unavailable.noTopic": "Otwórz temat, aby go podzielić.",
+  "desktop.splitTopic.unavailable.readOnly": "Ten temat jest obecnie tylko do odczytu.",
+  "desktop.splitTopic.unavailable.trash": "Przywróć ten temat z Kosza, zanim go podzielisz.",
+  "desktop.rightPanel.assistant.settings": "Ustawienia Aide"
 }

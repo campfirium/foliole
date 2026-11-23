@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Ouvrir l’extrait",
   "desktop.pdf.imageExcerpt.delete": "Supprimer l’extrait",
   "desktop.pdf.imageExcerpt.failed": "Impossible de créer l’extrait.",
-  "desktop.pdf.imageExcerpt.retry": "Réessayer"
+  "desktop.pdf.imageExcerpt.retry": "Réessayer",
+  "desktop.pdf.zoom.expandWidth": "Élargir automatiquement la largeur",
+  "desktop.pdf.zoom.expandWidthFailed": "Impossible d’enregistrer l’élargissement automatique de la largeur"
 }

@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "開啟摘錄",
   "desktop.pdf.imageExcerpt.delete": "刪除摘錄",
   "desktop.pdf.imageExcerpt.failed": "無法建立摘錄。",
-  "desktop.pdf.imageExcerpt.retry": "重試"
+  "desktop.pdf.imageExcerpt.retry": "重試",
+  "desktop.pdf.zoom.expandWidth": "自動展開寬度",
+  "desktop.pdf.zoom.expandWidthFailed": "無法儲存自動展開寬度設定"
 }

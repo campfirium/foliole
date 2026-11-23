@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "ハイライト({count})",
   "desktop.rightPanel.highlights.list": "ドキュメントのハイライト",
   "desktop.workspace.leaveFlowHere": "Flow を終了",
-  "desktop.rightPanel.flow.libraryScope": "図書館"
+  "desktop.rightPanel.flow.libraryScope": "図書館",
+  "desktop.splitTopic.unavailable.item": "トピックを開いて分割してください。これは復習アイテムです。",
+  "desktop.splitTopic.unavailable.linked": "元のトピックを開いて分割してください。",
+  "desktop.splitTopic.unavailable.noTopic": "トピックを開いて分割してください。",
+  "desktop.splitTopic.unavailable.readOnly": "このトピックは現在読み取り専用です。",
+  "desktop.splitTopic.unavailable.trash": "分割する前に、このトピックをゴミ箱から復元してください。",
+  "desktop.rightPanel.assistant.settings": "Aide の設定"
 }

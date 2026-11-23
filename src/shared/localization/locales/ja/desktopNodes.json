@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "ダイブを検索...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "利用可能なダイブはありません",
-  "desktop.nodeList.addToDive.noResults": "一致するダイブはありません"
+  "desktop.nodeList.addToDive.noResults": "一致するダイブはありません",
+  "desktop.nodeList.emptyTrashDialog.title": "ゴミ箱を空にしますか？",
+  "desktop.nodeList.emptyTrashDialog.description": "ゴミ箱内のすべてが完全に削除されます。この操作は元に戻せません。"
 }

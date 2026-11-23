@@ -224,5 +224,6 @@
   "desktop.document.readingResume.jump": "位置にジャンプ",
   "desktop.reviewActions.reading.laterDays": "一部を読み、{days} 日後に続きを読みたい（カスタム）。",
   "desktop.reviewActions.reading.laterOneDay": "一部を読み、1 日後に続きを読みたい（カスタム）。",
-  "desktop.reviewActions.reading.laterCustomBody": "指定した間隔後に再度表示されます。"
+  "desktop.reviewActions.reading.laterCustomBody": "指定した間隔後に再度表示されます。",
+  "desktop.palette.command.actionTips": "操作のヒント"
 }

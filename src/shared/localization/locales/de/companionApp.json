@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Companion-Bootstrap fehlgeschlagen",
   "companion.app.iosPrepared.eyebrow": "Foliole für iPhone",
   "companion.app.iosPrepared.message": "Der lokale Speicher ist bereit. Das Durchsuchen, Überprüfen und Synchronisieren von Themen ist in diesem Build nicht verfügbar.",
-  "companion.app.iosPrepared.title": "Dieses iPhone ist fertig"
+  "companion.app.iosPrepared.title": "Dieses iPhone ist fertig",
+  "companion.history.undoAction": "{action} rückgängig machen",
+  "companion.history.redoAction": "{action} wiederholen",
+  "companion.history.action.delete": "Löschen",
+  "companion.history.action.restore": "Wiederherstellen",
+  "companion.history.action.rename": "Umbenennen",
+  "companion.history.action.move": "Verschieben",
+  "companion.history.action.shelve": "Zurückstellen",
+  "companion.history.action.unshelve": "Zurückstellung aufheben",
+  "companion.history.action.priority": "Priorität",
+  "companion.history.action.create": "Neu",
+  "companion.history.action.import": "Importieren",
+  "companion.history.action.grade": "Bewerten",
+  "companion.history.action.dismiss": "Verwerfen",
+  "companion.app.switchingLibrary": "Bibliothek wird gewechselt…",
+  "companion.app.switchFailed": "Bibliothek konnte nicht gewechselt werden"
 }

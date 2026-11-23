@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "Os dados de pesquisa estão prontos para chinês, japonês ou coreano.",
   "settings.general.searchEnhancement.option.cjk": "Chinês, japonês ou coreano",
   "settings.general.searchEnhancement.option.wordBased": "Idiomas com espaçamento entre palavras",
-  "settings.general.searchEnhancement.ready": "Os dados de pesquisa estão prontos para idiomas com espaçamento entre palavras."
+  "settings.general.searchEnhancement.ready": "Os dados de pesquisa estão prontos para idiomas com espaçamento entre palavras.",
+  "settings.about.cli.status.unavailable": "Não foi possível encontrar as conexões do Codex para ChatGPT"
 }

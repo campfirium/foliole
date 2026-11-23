@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "L'amorçage du compagnon a échoué",
   "companion.app.iosPrepared.eyebrow": "Foliole pour iPhone",
   "companion.app.iosPrepared.message": "Le stockage local est prêt. La navigation, la révision et la synchronisation des sujets ne sont pas disponibles dans cette version.",
-  "companion.app.iosPrepared.title": "Cet iPhone est prêt"
+  "companion.app.iosPrepared.title": "Cet iPhone est prêt",
+  "companion.history.undoAction": "Annuler {action}",
+  "companion.history.redoAction": "Rétablir {action}",
+  "companion.history.action.delete": "Supprimer",
+  "companion.history.action.restore": "Restaurer",
+  "companion.history.action.rename": "Renommer",
+  "companion.history.action.move": "Déplacer",
+  "companion.history.action.shelve": "Mettre de côté",
+  "companion.history.action.unshelve": "Ne plus mettre de côté",
+  "companion.history.action.priority": "Priorité",
+  "companion.history.action.create": "Nouveau",
+  "companion.history.action.import": "Importer",
+  "companion.history.action.grade": "Note",
+  "companion.history.action.dismiss": "Ignorer",
+  "companion.app.switchingLibrary": "Changement de bibliothèque…",
+  "companion.app.switchFailed": "Impossible de changer de bibliothèque"
 }

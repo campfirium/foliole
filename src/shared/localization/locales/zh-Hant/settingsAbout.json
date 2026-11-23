@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "搜尋資料已準備好中文、日文或韓文。",
   "settings.general.searchEnhancement.option.cjk": "中文、日文或韓語",
   "settings.general.searchEnhancement.option.wordBased": "有字間距的語言",
-  "settings.general.searchEnhancement.ready": "搜尋資料已準備好用於具有字間距的語言。"
+  "settings.general.searchEnhancement.ready": "搜尋資料已準備好用於具有字間距的語言。",
+  "settings.about.cli.status.unavailable": "此版本沒有 CLI 安裝程式。"
 }

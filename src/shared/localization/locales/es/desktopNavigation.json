@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "DESTACADOS({count})",
   "desktop.rightPanel.highlights.list": "Documento destacado",
   "desktop.workspace.leaveFlowHere": "Salir de Flow",
-  "desktop.rightPanel.flow.libraryScope": "Biblioteca"
+  "desktop.rightPanel.flow.libraryScope": "Biblioteca",
+  "desktop.splitTopic.unavailable.item": "Abre un tema para dividirlo. Esto es un ítem de repaso.",
+  "desktop.splitTopic.unavailable.linked": "Abre el tema de origen para dividirlo.",
+  "desktop.splitTopic.unavailable.noTopic": "Abre un tema para dividirlo.",
+  "desktop.splitTopic.unavailable.readOnly": "Este tema es actualmente de solo lectura.",
+  "desktop.splitTopic.unavailable.trash": "Restaura este tema de la papelera antes de dividirlo.",
+  "desktop.rightPanel.assistant.settings": "Ajustes de Aide"
 }

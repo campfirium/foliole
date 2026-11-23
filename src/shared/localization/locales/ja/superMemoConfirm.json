@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "新しいバッチをインポート",
+  "desktop.superMemoDrafts.confirmExisting": "既存のバッチを更新",
+  "desktop.superMemoDrafts.confirmSavedBlend": "このバッチに保存された比率を使用",
+  "desktop.superMemoDrafts.confirmBlend": "Foliole に {percent}% 近づける",
+  "desktop.superMemoDrafts.conversionDetails": "変換の詳細",
+  "desktop.superMemoDrafts.confirmExceptions": "変換の例外",
+  "desktop.superMemoDrafts.confirmTotals": "インポート {converted} 件 · スキップ {skipped} 件",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "スキップする空のトピック ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "スキップする空のカード ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "問題文のないカード ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "答えのないカード ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "スキップするサポート対象外の項目 ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "復習履歴を再生できなかった項目 ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "スキップする音声コンポーネント ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "変換の例外は見つかりませんでした。",
+  "desktop.superMemoDrafts.confirmTrash": "ゴミ箱に移動するよう選択済み ({count})",
+  "desktop.superMemoDrafts.confirmResult": "移行の結果"
+}

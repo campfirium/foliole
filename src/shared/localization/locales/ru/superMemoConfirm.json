@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Импортировать новую партию",
+  "desktop.superMemoDrafts.confirmExisting": "Обновить существующую партию",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Использовать пропорцию, сохранённую для этой партии",
+  "desktop.superMemoDrafts.confirmBlend": "{percent}% в пользу Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Сведения о преобразовании",
+  "desktop.superMemoDrafts.confirmExceptions": "Исключения преобразования",
+  "desktop.superMemoDrafts.confirmTotals": "К импорту: {converted} · к пропуску: {skipped}",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Пустые темы к пропуску ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Пустые карточки к пропуску ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Карточки без вопроса ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Карточки без ответа ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Неподдерживаемые записи к пропуску ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Записи, историю повторений которых не удалось воспроизвести ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Аудиокомпоненты к пропуску ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Исключений преобразования не найдено.",
+  "desktop.superMemoDrafts.confirmTrash": "Выбрано для перемещения в корзину ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Результат миграции"
+}

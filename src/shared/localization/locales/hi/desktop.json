@@ -224,5 +224,6 @@
   "desktop.readwise.parser.tagKeyword.description": "टैग लाइन की शुरुआत, जैसे Tags:। सिर्फ़ शुरुआती चिह्न का टेक्स्ट डालें। उससे पहले के स्पेस या सूची चिह्न न डालें।",
   "desktop.readwise.parser.noteKeyword.title": "नोट लाइन का चिह्न",
   "desktop.readwise.parser.noteKeyword.description": "नोट लाइन की शुरुआत, जैसे Note:। सिर्फ़ चिह्न का टेक्स्ट डालें। उससे पहले के स्पेस या सूची चिह्न न डालें।",
-  "desktop.readwise.cancel": "रद्द करें"
+  "desktop.readwise.cancel": "रद्द करें",
+  "desktop.palette.command.actionTips": "कार्रवाई के सुझाव"
 }

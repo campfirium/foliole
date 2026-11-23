@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "Les données de recherche sont prêtes pour le chinois, le japonais ou le coréen.",
   "settings.general.searchEnhancement.option.cjk": "Chinois, japonais ou coréen",
   "settings.general.searchEnhancement.option.wordBased": "Langues avec espacement des mots",
-  "settings.general.searchEnhancement.ready": "Les données de recherche sont prêtes pour les langues avec espacement des mots."
+  "settings.general.searchEnhancement.ready": "Les données de recherche sont prêtes pour les langues avec espacement des mots.",
+  "settings.about.cli.status.unavailable": "Cette version n’a pas d’installateur CLI."
 }

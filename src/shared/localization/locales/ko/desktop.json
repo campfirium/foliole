@@ -224,5 +224,6 @@
   "desktop.document.readingResume.jump": "위치로 점프",
   "desktop.reviewActions.reading.laterDays": "일부를 읽었으며 {days}일 후에 이어 읽고 싶어요(사용자 지정).",
   "desktop.reviewActions.reading.laterOneDay": "일부를 읽었으며 1일 후에 이어 읽고 싶어요(사용자 지정).",
-  "desktop.reviewActions.reading.laterCustomBody": "지정된 간격 후에 다시 나타납니다."
+  "desktop.reviewActions.reading.laterCustomBody": "지정된 간격 후에 다시 나타납니다.",
+  "desktop.palette.command.actionTips": "동작 팁"
 }

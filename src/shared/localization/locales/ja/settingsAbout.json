@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "検索データは中国語、日本語、または韓国語に対応しています。",
   "settings.general.searchEnhancement.option.cjk": "中国語、日本語、または韓国語",
   "settings.general.searchEnhancement.option.wordBased": "単語間隔のある言語",
-  "settings.general.searchEnhancement.ready": "検索データは単語間隔のある言語に対応しています。"
+  "settings.general.searchEnhancement.ready": "検索データは単語間隔のある言語に対応しています。",
+  "settings.about.cli.status.unavailable": "このビルドには CLI インストーラーがありません。"
 }

@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "Макс",
   "desktop.rightPanel.assistant.model.effort.ultra": "Ультра",
   "desktop.rightPanel.assistant.model.speed": "Скорость",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "Связать текущий материал",
+  "desktop.rightPanel.assistant.materialTag.failed": "Не удалось обновить связь с материалом. Повторите попытку.",
+  "desktop.rightPanel.assistant.materialTag.remove": "Отвязать материал: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "Другие связанные материалы",
+  "desktop.rightPanel.assistant.materialTag.open": "Открыть материал: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "Этот материал",
+  "desktop.rightPanel.assistant.materialTag.library": "Вся библиотека"
 }

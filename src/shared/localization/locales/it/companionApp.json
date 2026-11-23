@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Bootstrap complementare non riuscito",
   "companion.app.iosPrepared.eyebrow": "Foliole per iPhone",
   "companion.app.iosPrepared.message": "L'archiviazione locale è pronta. L'esplorazione, la revisione e la sincronizzazione degli argomenti non sono disponibili in questa build.",
-  "companion.app.iosPrepared.title": "Questo iPhone è pronto"
+  "companion.app.iosPrepared.title": "Questo iPhone è pronto",
+  "companion.history.undoAction": "Annulla {action}",
+  "companion.history.redoAction": "Ripeti {action}",
+  "companion.history.action.delete": "Elimina",
+  "companion.history.action.restore": "Ripristina",
+  "companion.history.action.rename": "Rinomina",
+  "companion.history.action.move": "Sposta",
+  "companion.history.action.shelve": "Accantona",
+  "companion.history.action.unshelve": "Annulla accantonamento",
+  "companion.history.action.priority": "Priorità",
+  "companion.history.action.create": "Nuovo",
+  "companion.history.action.import": "Importa",
+  "companion.history.action.grade": "Valuta",
+  "companion.history.action.dismiss": "Ignora",
+  "companion.app.switchingLibrary": "Cambio libreria…",
+  "companion.app.switchFailed": "Impossibile cambiare libreria"
 }

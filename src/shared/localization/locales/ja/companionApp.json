@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "コンパニオンのブートストラップが失敗しました",
   "companion.app.iosPrepared.eyebrow": "Foliole (iPhone 用)",
   "companion.app.iosPrepared.message": "ローカル ストレージの準備ができました。このビルドでは、トピックの参照、レビュー、同期は利用できません。",
-  "companion.app.iosPrepared.title": "この iPhone は準備ができています"
+  "companion.app.iosPrepared.title": "この iPhone は準備ができています",
+  "companion.history.undoAction": "{action}を元に戻す",
+  "companion.history.redoAction": "{action}をやり直す",
+  "companion.history.action.delete": "削除",
+  "companion.history.action.restore": "復元",
+  "companion.history.action.rename": "名前変更",
+  "companion.history.action.move": "移動",
+  "companion.history.action.shelve": "保留",
+  "companion.history.action.unshelve": "保留を解除",
+  "companion.history.action.priority": "優先度",
+  "companion.history.action.create": "新規",
+  "companion.history.action.import": "インポート",
+  "companion.history.action.grade": "評価",
+  "companion.history.action.dismiss": "除外",
+  "companion.app.switchingLibrary": "ライブラリを切り替えています…",
+  "companion.app.switchFailed": "ライブラリを切り替えられませんでした"
 }

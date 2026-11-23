@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "Aktualisieren Sie alle Geräte in dieser Sync Group, bevor Sie diese Namen ändern.",
   "settings.general.systemEntryNames.custom": "Verwendet den in dieser Bibliothek gespeicherten benutzerdefinierten Namen.",
   "settings.general.systemEntryNames.followsLanguage": "Folgt der Oberflächensprache.",
-  "settings.general.systemEntryNames.inputAria": "Benutzerdefinierter Name für {name}"
+  "settings.general.systemEntryNames.inputAria": "Benutzerdefinierter Name für {name}",
+  "settings.general.quitOnClose.title": "Foliole beenden, wenn das Fenster geschlossen wird",
+  "settings.general.quitOnClose.description": "Durch das Beenden werden Hintergrundfunktionen wie globale Erfassung, Erinnerungen und Synchronisierung pausiert, bis du Foliole erneut öffnest.",
+  "settings.general.quitOnClose.saveFailed": "Die Einstellung zum Schließen des Fensters konnte nicht gespeichert werden."
 }

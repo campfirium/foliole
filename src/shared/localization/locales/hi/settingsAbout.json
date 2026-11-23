@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "चीनी, जापानी या कोरियाई के लिए खोज का डेटा तैयार है।",
   "settings.general.searchEnhancement.option.cjk": "चीनी, जापानी या कोरियाई",
   "settings.general.searchEnhancement.option.wordBased": "शब्दों के बीच स्पेस वाली भाषाएँ",
-  "settings.general.searchEnhancement.ready": "शब्दों के बीच स्पेस वाली भाषाओं के लिए खोज का डेटा तैयार है।"
+  "settings.general.searchEnhancement.ready": "शब्दों के बीच स्पेस वाली भाषाओं के लिए खोज का डेटा तैयार है।",
+  "settings.about.cli.status.unavailable": "इस बिल्ड में CLI इंस्टॉलर नहीं है।"
 }

@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "これらの名前を変更する前に、この Sync Group のすべてのデバイスを更新してください。",
   "settings.general.systemEntryNames.custom": "このライブラリに保存されたカスタム名を使用します。",
   "settings.general.systemEntryNames.followsLanguage": "インターフェイスの言語に従います。",
-  "settings.general.systemEntryNames.inputAria": "{name} のカスタム名"
+  "settings.general.systemEntryNames.inputAria": "{name} のカスタム名",
+  "settings.general.quitOnClose.title": "ウィンドウを閉じるときに Foliole を終了",
+  "settings.general.quitOnClose.description": "終了すると、グローバル キャプチャ、リマインダー、同期などのバックグラウンド機能は、Foliole を開き直すまで一時停止します。",
+  "settings.general.quitOnClose.saveFailed": "ウィンドウを閉じる際の設定を保存できませんでした。"
 }

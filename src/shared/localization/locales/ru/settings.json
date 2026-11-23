@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Помощник",
   "settings.general.aide.aria": "Foliole Секция хранения помощников",
   "settings.general.aide.row": "Данные устройства",
-  "settings.general.aide.description": "Разговоры и вспомогательные файлы остаются на этом устройстве и не включаются в резервные копии библиотеки Foliole.",
+  "settings.general.aide.description": "Разговоры хранятся на этом устройстве отдельно от резервных копий библиотеки.",
   "settings.general.aide.loading": "Подсчет объема памяти, используемой на этом устройстве...",
   "settings.general.aide.size": "{size} на этом устройстве.",
   "settings.general.aide.sizePartial": "{size} засчитано; некоторые файлы не удалось измерить.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Недавние повторения получают больший вес. Модель быстрее подстраивается под изменения памяти, но становится чувствительнее к кратковременным колебаниям.",
   "settings.review.training.penalties": "Штрафы за интервалы повторения",
   "settings.review.training.penaltiesDescription": "При обучении модель штрафуется за очень короткие интервалы повторения в тот же день и резкий рост длинных интервалов. Точность прогноза того, вспомните ли вы материал, может немного снизиться.",
-  "settings.review.training.resetOption": "Сброс {label}"
+  "settings.review.training.resetOption": "Сброс {label}",
+  "settings.general.aide.empty": "Нет локальных данных разговоров"
 }

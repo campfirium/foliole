@@ -29,5 +29,21 @@
   "feedback.error.failed": "フィードバックを送信できませんでした。あなたのテキストはまだここにあります。",
   "feedback.error.unavailable": "このビルドではフィードバックは利用できません。",
   "feedback.error.verification": "検証を読み込めませんでした。後でもう一度試してください。",
-  "feedback.errorSummary.label": "最近のエラー情報を添付（個人情報は除去済み）"
+  "feedback.errorSummary.label": "最近のエラー情報を添付（個人情報は除去済み）",
+  "supportLog.title": "ログ",
+  "supportLog.intro": "問題が発生したときに記録を開始すると、トラブルシューティングに役立ちます。",
+  "supportLog.desktopDescription": "アプリケーションのログを記録して、問題の特定に役立てます。",
+  "supportLog.startTooltip": "アプリケーションの実行中に詳細なログを記録します。",
+  "supportLog.open": "ログを開く",
+  "supportLog.elapsed": "記録時間",
+  "supportLog.desktopFailed": "ログ操作を完了できませんでした。もう一度お試しください。",
+  "supportLog.start": "記録を開始",
+  "supportLog.restart": "もう一度記録",
+  "supportLog.stop": "記録を停止",
+  "supportLog.recording": "記録中",
+  "supportLog.instructions": "問題を再現したら停止してください。記録は 5 分後に自動的に停止します。",
+  "supportLog.ready": "記録が終了しました。",
+  "supportLog.export": "ログをエクスポート",
+  "supportLog.exportFailed": "ログをエクスポートできませんでした。もう一度お試しください。",
+  "supportLog.privacy": "ログはこのデバイス上にのみ保存され、自動的にアップロードされることはありません。"
 }

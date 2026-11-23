@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "검색 데이터는 중국어, 일본어, 한국어로 준비되어 있습니다.",
   "settings.general.searchEnhancement.option.cjk": "중국어, 일본어, 한국어",
   "settings.general.searchEnhancement.option.wordBased": "단어 간격이 있는 언어",
-  "settings.general.searchEnhancement.ready": "단어 간격이 있는 언어에 대한 검색 데이터가 준비되어 있습니다."
+  "settings.general.searchEnhancement.ready": "단어 간격이 있는 언어에 대한 검색 데이터가 준비되어 있습니다.",
+  "settings.about.cli.status.unavailable": "이 빌드에는 CLI 설치 프로그램이 없습니다."
 }

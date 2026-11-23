@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "मोबाइल ऐप शुरू नहीं हो सका",
   "companion.app.iosPrepared.eyebrow": "iPhone के लिए Foliole",
   "companion.app.iosPrepared.message": "स्थानीय स्टोरेज तैयार है। इस बिल्ड में विषय ब्राउज़ करने, अभ्यास दोहराने और सिंक की सुविधाएँ उपलब्ध नहीं हैं।",
-  "companion.app.iosPrepared.title": "यह iPhone तैयार है"
+  "companion.app.iosPrepared.title": "यह iPhone तैयार है",
+  "companion.history.undoAction": "{action} पूर्ववत करें",
+  "companion.history.redoAction": "{action} फिर से करें",
+  "companion.history.action.delete": "मिटाएँ",
+  "companion.history.action.restore": "वापस लाएँ",
+  "companion.history.action.rename": "नाम बदलें",
+  "companion.history.action.move": "ले जाएँ",
+  "companion.history.action.shelve": "बाद के लिए रखें",
+  "companion.history.action.unshelve": "बाद के लिए रखा वापस लाएँ",
+  "companion.history.action.priority": "प्राथमिकता",
+  "companion.history.action.create": "नया",
+  "companion.history.action.import": "इंपोर्ट करें",
+  "companion.history.action.grade": "ग्रेड",
+  "companion.history.action.dismiss": "Dismiss करें",
+  "companion.app.switchingLibrary": "लाइब्रेरी बदली जा रही है…",
+  "companion.app.switchFailed": "लाइब्रेरी नहीं बदली जा सकी"
 }

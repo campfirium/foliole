@@ -10,5 +10,6 @@
   "settings.capture.position.title": "पुष्टि संदेश की जगह",
   "settings.capture.position.description": "चुनें कि इस Mac पर क्लिप पूरी होने का संदेश कहाँ दिखे।",
   "settings.capture.position.topRight": "ऊपर दाईं ओर",
-  "settings.capture.position.bottomRight": "नीचे दाईं ओर"
+  "settings.capture.position.bottomRight": "नीचे दाईं ओर",
+  "settings.capture.permission.checking": "पहुँच जाँची जा रही है…"
 }

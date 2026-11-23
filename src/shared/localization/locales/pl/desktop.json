@@ -224,5 +224,6 @@
   "desktop.document.readingResume.jump": "Skocz na pozycję",
   "desktop.reviewActions.reading.laterDays": "Część materiału jest już przeczytana. Chcesz wrócić do niego za {days} dni (własny odstęp).",
   "desktop.reviewActions.reading.laterOneDay": "Część materiału jest już przeczytana. Chcesz wrócić do niego za 1 dzień (własny odstęp).",
-  "desktop.reviewActions.reading.laterCustomBody": "Pojawia się ponownie po określonym czasie."
+  "desktop.reviewActions.reading.laterCustomBody": "Pojawia się ponownie po określonym czasie.",
+  "desktop.palette.command.actionTips": "Wskazówki do działań"
 }

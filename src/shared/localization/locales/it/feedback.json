@@ -29,5 +29,21 @@
   "feedback.error.failed": "Impossibile inviare il feedback. Il tuo testo è ancora qui.",
   "feedback.error.unavailable": "Il feedback non è disponibile in questa build.",
   "feedback.error.verification": "Impossibile caricare la verifica. Riprova più tardi.",
-  "feedback.errorSummary.label": "Allega i dettagli degli errori recenti (dati personali rimossi)"
+  "feedback.errorSummary.label": "Allega i dettagli degli errori recenti (dati personali rimossi)",
+  "supportLog.title": "Registri",
+  "supportLog.intro": "Avvia la registrazione quando riscontri un problema, per aiutare a risolverlo.",
+  "supportLog.desktopDescription": "Registra i log dell’applicazione per aiutare a individuare i problemi.",
+  "supportLog.startTooltip": "Acquisisci log dettagliati mentre l’applicazione è in esecuzione.",
+  "supportLog.open": "Apri il log",
+  "supportLog.elapsed": "Tempo di registrazione",
+  "supportLog.desktopFailed": "Impossibile completare l’azione sul log. Riprova.",
+  "supportLog.start": "Avvia registrazione",
+  "supportLog.restart": "Registra di nuovo",
+  "supportLog.stop": "Interrompi registrazione",
+  "supportLog.recording": "Registrazione in corso",
+  "supportLog.instructions": "Interrompi dopo aver riprodotto il problema. La registrazione si interrompe dopo 5 minuti.",
+  "supportLog.ready": "Registrazione terminata.",
+  "supportLog.export": "Esporta il log",
+  "supportLog.exportFailed": "Impossibile esportare il log. Riprova.",
+  "supportLog.privacy": "I log restano su questo dispositivo e non vengono mai caricati automaticamente."
 }

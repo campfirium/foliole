@@ -224,5 +224,6 @@
   "desktop.readwise.parser.noteKeyword.description": "註解行標記，例如 Note:。僅填充核心標記文本，而不填充前導空格或列表標記。",
   "desktop.readwise.cancel": "取消",
   "desktop.document.readingResume.available": "另一部裝置讀到了更後面。",
-  "desktop.document.readingResume.jump": "跳至該位置"
+  "desktop.document.readingResume.jump": "跳至該位置",
+  "desktop.palette.command.actionTips": "操作提示"
 }

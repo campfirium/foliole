@@ -29,5 +29,21 @@
   "feedback.error.failed": "Feedback konnte nicht gesendet werden. Dein Text ist noch da.",
   "feedback.error.unavailable": "Feedback ist in diesem Build nicht verfügbar.",
   "feedback.error.verification": "Verifizierung konnte nicht geladen werden. Versuchen Sie es später noch einmal.",
-  "feedback.errorSummary.label": "Letzte Fehlerdetails anhängen (persönliche Angaben entfernt)"
+  "feedback.errorSummary.label": "Letzte Fehlerdetails anhängen (persönliche Angaben entfernt)",
+  "supportLog.title": "Protokolle",
+  "supportLog.intro": "Starte die Aufzeichnung, wenn ein Problem auftritt, um die Fehlersuche zu unterstützen.",
+  "supportLog.desktopDescription": "Anwendungsprotokolle aufzeichnen, um Probleme zu erkennen.",
+  "supportLog.startTooltip": "Ausführliche Protokolle erfassen, solange die Anwendung läuft.",
+  "supportLog.open": "Protokoll öffnen",
+  "supportLog.elapsed": "Aufzeichnungsdauer",
+  "supportLog.desktopFailed": "Die Protokollaktion konnte nicht abgeschlossen werden. Versuche es erneut.",
+  "supportLog.start": "Aufzeichnung starten",
+  "supportLog.restart": "Erneut aufzeichnen",
+  "supportLog.stop": "Aufzeichnung beenden",
+  "supportLog.recording": "Aufzeichnung läuft",
+  "supportLog.instructions": "Beende die Aufzeichnung, nachdem du das Problem reproduziert hast. Die Aufzeichnung endet nach 5 Minuten.",
+  "supportLog.ready": "Aufzeichnung beendet.",
+  "supportLog.export": "Protokoll exportieren",
+  "supportLog.exportFailed": "Das Protokoll konnte nicht exportiert werden. Versuche es erneut.",
+  "supportLog.privacy": "Protokolle bleiben auf diesem Gerät und werden nie automatisch hochgeladen."
 }

@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "ГЛАВНОЕ({count})",
   "desktop.rightPanel.highlights.list": "Основные моменты документа",
   "desktop.workspace.leaveFlowHere": "Выйти из Flow",
-  "desktop.rightPanel.flow.libraryScope": "Библиотека"
+  "desktop.rightPanel.flow.libraryScope": "Библиотека",
+  "desktop.splitTopic.unavailable.item": "Откройте тему, чтобы разделить её. Это карточка повторения.",
+  "desktop.splitTopic.unavailable.linked": "Откройте исходную тему, чтобы разделить её.",
+  "desktop.splitTopic.unavailable.noTopic": "Откройте тему, чтобы разделить её.",
+  "desktop.splitTopic.unavailable.readOnly": "Эта тема сейчас доступна только для чтения.",
+  "desktop.splitTopic.unavailable.trash": "Восстановите эту тему из корзины, прежде чем разделять её.",
+  "desktop.rightPanel.assistant.settings": "Настройки Aide"
 }

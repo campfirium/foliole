@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "하이라이트({count})",
   "desktop.rightPanel.highlights.list": "문서 하이라이트",
   "desktop.workspace.leaveFlowHere": "Flow 나가기",
-  "desktop.rightPanel.flow.libraryScope": "도서관"
+  "desktop.rightPanel.flow.libraryScope": "도서관",
+  "desktop.splitTopic.unavailable.item": "분할하려면 주제를 여세요. 이것은 복습 아이템입니다.",
+  "desktop.splitTopic.unavailable.linked": "분할하려면 소스 주제를 여세요.",
+  "desktop.splitTopic.unavailable.noTopic": "분할하려면 주제를 여세요.",
+  "desktop.splitTopic.unavailable.readOnly": "이 주제는 현재 읽기 전용입니다.",
+  "desktop.splitTopic.unavailable.trash": "분할하기 전에 이 주제를 휴지통에서 복원하세요.",
+  "desktop.rightPanel.assistant.settings": "Aide 설정"
 }

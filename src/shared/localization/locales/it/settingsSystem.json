@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "Aggiorna tutti i dispositivi di questo Sync Group prima di modificare questi nomi.",
   "settings.general.systemEntryNames.custom": "Usa il nome personalizzato salvato con questa raccolta.",
   "settings.general.systemEntryNames.followsLanguage": "Segue la lingua dell’interfaccia.",
-  "settings.general.systemEntryNames.inputAria": "Nome personalizzato per {name}"
+  "settings.general.systemEntryNames.inputAria": "Nome personalizzato per {name}",
+  "settings.general.quitOnClose.title": "Chiudi Foliole alla chiusura della finestra",
+  "settings.general.quitOnClose.description": "La chiusura sospende funzioni in background come l’acquisizione globale, i promemoria e la sincronizzazione finché non riapri Foliole.",
+  "settings.general.quitOnClose.saveFailed": "Impossibile salvare la preferenza di chiusura della finestra."
 }

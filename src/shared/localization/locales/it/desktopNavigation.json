@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.count": "IN EVIDENZA({count})",
   "desktop.rightPanel.highlights.list": "Punti salienti del documento",
   "desktop.workspace.leaveFlowHere": "Esci da Flow",
-  "desktop.rightPanel.flow.libraryScope": "Biblioteca"
+  "desktop.rightPanel.flow.libraryScope": "Biblioteca",
+  "desktop.splitTopic.unavailable.item": "Apri un argomento per dividerlo. Questo è un elemento di revisione.",
+  "desktop.splitTopic.unavailable.linked": "Apri l’argomento di origine per dividerlo.",
+  "desktop.splitTopic.unavailable.noTopic": "Apri un argomento per dividerlo.",
+  "desktop.splitTopic.unavailable.readOnly": "Questo argomento è attualmente di sola lettura.",
+  "desktop.splitTopic.unavailable.trash": "Ripristina questo argomento dal Cestino prima di dividerlo.",
+  "desktop.rightPanel.assistant.settings": "Impostazioni di Aide"
 }

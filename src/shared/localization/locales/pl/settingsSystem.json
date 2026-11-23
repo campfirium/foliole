@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "Zaktualizuj wszystkie urządzenia w tej Sync Group przed zmianą tych nazw.",
   "settings.general.systemEntryNames.custom": "Używa niestandardowej nazwy zapisanej w tej bibliotece.",
   "settings.general.systemEntryNames.followsLanguage": "Używa języka interfejsu.",
-  "settings.general.systemEntryNames.inputAria": "Niestandardowa nazwa dla {name}"
+  "settings.general.systemEntryNames.inputAria": "Niestandardowa nazwa dla {name}",
+  "settings.general.quitOnClose.title": "Zamknij Foliole po zamknięciu okna",
+  "settings.general.quitOnClose.description": "Zamknięcie wstrzymuje funkcje działające w tle, takie jak przechwytywanie globalne, przypomnienia i synchronizacja, dopóki ponownie nie otworzysz Foliole.",
+  "settings.general.quitOnClose.saveFailed": "Nie udało się zapisać preferencji zamykania okna."
 }

@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Поиск погружений...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Нет доступных погружений",
-  "desktop.nodeList.addToDive.noResults": "Нет подходящих погружений"
+  "desktop.nodeList.addToDive.noResults": "Нет подходящих погружений",
+  "desktop.nodeList.emptyTrashDialog.title": "Очистить корзину?",
+  "desktop.nodeList.emptyTrashDialog.description": "Всё содержимое корзины будет удалено безвозвратно. Это нельзя отменить."
 }

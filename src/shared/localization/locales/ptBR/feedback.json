@@ -29,5 +29,21 @@
   "feedback.error.failed": "Não foi possível enviar o feedback. Seu texto ainda está aqui.",
   "feedback.error.unavailable": "O feedback não está disponível nesta compilação.",
   "feedback.error.verification": "A verificação não pôde ser carregada. Tente novamente mais tarde.",
-  "feedback.errorSummary.label": "Anexar detalhes de erros recentes (sem dados pessoais)"
+  "feedback.errorSummary.label": "Anexar detalhes de erros recentes (sem dados pessoais)",
+  "supportLog.title": "Registros",
+  "supportLog.intro": "Comece a gravar quando encontrar um problema para ajudar a diagnosticá-lo.",
+  "supportLog.desktopDescription": "Grave os registros do aplicativo para ajudar a identificar problemas.",
+  "supportLog.startTooltip": "Capture registros detalhados enquanto o aplicativo está em execução.",
+  "supportLog.open": "Abrir registro",
+  "supportLog.elapsed": "Tempo de gravação",
+  "supportLog.desktopFailed": "Não foi possível concluir a ação do registro. Tente novamente.",
+  "supportLog.start": "Iniciar gravação",
+  "supportLog.restart": "Gravar novamente",
+  "supportLog.stop": "Parar gravação",
+  "supportLog.recording": "Gravando",
+  "supportLog.instructions": "Pare depois de reproduzir o problema. A gravação para após 5 minutos.",
+  "supportLog.ready": "A gravação terminou.",
+  "supportLog.export": "Exportar registro",
+  "supportLog.exportFailed": "Não foi possível exportar o registro. Tente novamente.",
+  "supportLog.privacy": "Os registros ficam neste dispositivo e nunca são enviados automaticamente."
 }

@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Не удалось выполнить загрузку сопутствующего устройства.",
   "companion.app.iosPrepared.eyebrow": "Foliole для iPhone",
   "companion.app.iosPrepared.message": "Локальное хранилище готово. Просмотр тем, просмотр и синхронизация недоступны в этой сборке.",
-  "companion.app.iosPrepared.title": "Этот iPhone готов"
+  "companion.app.iosPrepared.title": "Этот iPhone готов",
+  "companion.history.undoAction": "Отменить: {action}",
+  "companion.history.redoAction": "Повторить: {action}",
+  "companion.history.action.delete": "Удалить",
+  "companion.history.action.restore": "Восстановить",
+  "companion.history.action.rename": "Переименовать",
+  "companion.history.action.move": "Переместить",
+  "companion.history.action.shelve": "Отложить",
+  "companion.history.action.unshelve": "Вернуть из отложенных",
+  "companion.history.action.priority": "Приоритет",
+  "companion.history.action.create": "Создать",
+  "companion.history.action.import": "Импортировать",
+  "companion.history.action.grade": "Оценка",
+  "companion.history.action.dismiss": "Закрыть",
+  "companion.app.switchingLibrary": "Переключение библиотеки…",
+  "companion.app.switchFailed": "Не удалось переключить библиотеку"
 }

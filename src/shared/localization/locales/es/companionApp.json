@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Falló el arranque complementario",
   "companion.app.iosPrepared.eyebrow": "Foliole para iPhone",
   "companion.app.iosPrepared.message": "El almacenamiento local está listo. La exploración, revisión y sincronización de temas no están disponibles en esta compilación.",
-  "companion.app.iosPrepared.title": "Este iPhone está listo"
+  "companion.app.iosPrepared.title": "Este iPhone está listo",
+  "companion.history.undoAction": "Deshacer {action}",
+  "companion.history.redoAction": "Rehacer {action}",
+  "companion.history.action.delete": "Eliminar",
+  "companion.history.action.restore": "Restaurar",
+  "companion.history.action.rename": "Renombrar",
+  "companion.history.action.move": "Mover",
+  "companion.history.action.shelve": "Aplazar",
+  "companion.history.action.unshelve": "Dejar de aplazar",
+  "companion.history.action.priority": "Prioridad",
+  "companion.history.action.create": "Nuevo",
+  "companion.history.action.import": "Importar",
+  "companion.history.action.grade": "Calificar",
+  "companion.history.action.dismiss": "Descartar",
+  "companion.app.switchingLibrary": "Cambiando de biblioteca…",
+  "companion.app.switchFailed": "No se pudo cambiar de biblioteca"
 }

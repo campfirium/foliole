@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Zaimportuj nową partię",
+  "desktop.superMemoDrafts.confirmExisting": "Zaktualizuj istniejącą partię",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Użyj proporcji zapisanej dla tej partii",
+  "desktop.superMemoDrafts.confirmBlend": "{percent}% w stronę Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Szczegóły konwersji",
+  "desktop.superMemoDrafts.confirmExceptions": "Wyjątki konwersji",
+  "desktop.superMemoDrafts.confirmTotals": "Do zaimportowania: {converted} · do pominięcia: {skipped}",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Puste tematy do pominięcia ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Puste karty do pominięcia ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Karty bez pytania ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Karty bez odpowiedzi ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Nieobsługiwane pozycje do pominięcia ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Pozycje, których historii powtórek nie można odtworzyć ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Składniki audio do pominięcia ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Nie znaleziono wyjątków konwersji.",
+  "desktop.superMemoDrafts.confirmTrash": "Wybrane do przeniesienia do Kosza ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Wynik migracji"
+}

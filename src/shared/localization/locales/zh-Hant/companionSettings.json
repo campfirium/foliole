@@ -175,5 +175,12 @@
   "companion.settings.storage.revertDeleteTitle": "要刪除上一份資料庫嗎？",
   "companion.settings.storage.revertDeleteDescription": "{date} 被取代下來的資料庫會被刪除，之後無法再還原。將釋放約 {size}，刪除後無法復原。",
   "companion.settings.storage.revertDeleteConfirm": "刪除",
-  "companion.settings.storage.revertDeleting": "正在刪除資料庫…"
+  "companion.settings.storage.revertDeleting": "正在刪除資料庫…",
+  "companion.settings.diagnostics.title": "診斷",
+  "companion.settings.devanagariSelection.label": "天城文標註邊界",
+  "companion.settings.devanagariSelection.annotation": "補齊連字",
+  "companion.settings.devanagariSelection.off": "關閉",
+  "companion.settings.about.changelog": "更新日誌",
+  "companion.settings.about.privacy": "隱私權政策",
+  "companion.settings.about.versionUnavailable": "無法取得已安裝的版本"
 }

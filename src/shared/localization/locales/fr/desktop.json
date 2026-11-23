@@ -224,5 +224,6 @@
   "desktop.document.readingResume.jump": "Aller à la position",
   "desktop.reviewActions.reading.laterDays": "Vous en avez lu une partie et souhaitez reprendre dans {days} jours (délai personnalisé).",
   "desktop.reviewActions.reading.laterOneDay": "Vous en avez lu une partie et souhaitez reprendre dans 1 jour (délai personnalisé).",
-  "desktop.reviewActions.reading.laterCustomBody": "Réapparaît après l'intervalle spécifié."
+  "desktop.reviewActions.reading.laterCustomBody": "Réapparaît après l'intervalle spécifié.",
+  "desktop.palette.command.actionTips": "Aide à l’action"
 }

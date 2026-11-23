@@ -10,5 +10,6 @@
   "settings.capture.position.title": "확인 위치",
   "settings.capture.position.description": "이 Mac에서 캡처 확인이 표시되는 위치를 선택하세요.",
   "settings.capture.position.topRight": "오른쪽 상단",
-  "settings.capture.position.bottomRight": "오른쪽 하단"
+  "settings.capture.position.bottomRight": "오른쪽 하단",
+  "settings.capture.permission.checking": "접근 확인 중…"
 }

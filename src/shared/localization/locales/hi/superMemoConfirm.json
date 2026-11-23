@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "नया बैच इंपोर्ट करें",
+  "desktop.superMemoDrafts.confirmExisting": "मौजूदा बैच अपडेट करें",
+  "desktop.superMemoDrafts.confirmSavedBlend": "इस बैच के लिए सहेजा गया अनुपात इस्तेमाल करें",
+  "desktop.superMemoDrafts.confirmBlend": "{percent}% Foliole की ओर",
+  "desktop.superMemoDrafts.conversionDetails": "बदलने का ब्योरा",
+  "desktop.superMemoDrafts.confirmExceptions": "बदलने के अपवाद",
+  "desktop.superMemoDrafts.confirmTotals": "{converted} इंपोर्ट होंगे · {skipped} छोड़े जाएँगे",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "छोड़े जाने वाले खाली विषय ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "छोड़े जाने वाले खाली कार्ड ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "बिना प्रश्न वाले कार्ड ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "बिना उत्तर वाले कार्ड ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "छोड़ी जाने वाली असमर्थित एंट्री ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "वे एंट्री जिनका दोहराई का इतिहास दोबारा नहीं चलाया जा सका ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "छोड़े जाने वाले ऑडियो कॉम्पोनेंट ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "बदलने का कोई अपवाद नहीं मिला।",
+  "desktop.superMemoDrafts.confirmTrash": "ट्रैश में डालने के लिए चुनी गईं ({count})",
+  "desktop.superMemoDrafts.confirmResult": "माइग्रेशन का नतीजा"
+}

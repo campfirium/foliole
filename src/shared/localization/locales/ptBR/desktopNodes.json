@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Pesquisar mergulhos...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Não há mergulhos disponíveis",
-  "desktop.nodeList.addToDive.noResults": "Nenhum mergulho correspondente"
+  "desktop.nodeList.addToDive.noResults": "Nenhum mergulho correspondente",
+  "desktop.nodeList.emptyTrashDialog.title": "Esvaziar a Lixeira?",
+  "desktop.nodeList.emptyTrashDialog.description": "Isso exclui permanentemente tudo o que está na Lixeira. Não é possível desfazer."
 }

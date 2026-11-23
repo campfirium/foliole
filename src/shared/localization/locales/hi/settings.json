@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Aide",
   "settings.general.aide.aria": "Foliole Aide",
   "settings.general.aide.row": "इस डिवाइस पर बातचीत का डेटा",
-  "settings.general.aide.description": "बातचीत इस डिवाइस पर सहेजी जाती है। उसका डेटा लाइब्रेरी के बैकअप में शामिल नहीं होता।",
+  "settings.general.aide.description": "बातचीत इस डिवाइस पर सहेजी जाती है, लाइब्रेरी बैकअप से अलग।",
   "settings.general.aide.loading": "इस डिवाइस पर इस्तेमाल हुई जगह गिनी जा रही है...",
   "settings.general.aide.size": "{size} इस्तेमाल हुआ",
   "settings.general.aide.sizePartial": "{size} गिना गया। कुछ फ़ाइलों का आकार नहीं गिना जा सका।",
@@ -242,5 +242,6 @@
   "settings.review.trainingHistoryLoading": "ट्रेनिंग का इतिहास लोड हो रहा है…",
   "settings.review.trainingHistoryFailed": "ट्रेनिंग का इतिहास लोड नहीं हो सका।",
   "settings.review.lastOptimization": "आखिरी सुधार: {time}",
-  "settings.review.optimizationFailed": "सुधार पूरा नहीं हो सका। फिर कोशिश करें।"
+  "settings.review.optimizationFailed": "सुधार पूरा नहीं हो सका। फिर कोशिश करें।",
+  "settings.general.aide.empty": "स्थानीय बातचीत का कोई डेटा नहीं"
 }

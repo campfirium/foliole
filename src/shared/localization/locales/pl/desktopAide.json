@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "Maks",
   "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
   "desktop.rightPanel.assistant.model.speed": "Prędkość",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "Połącz bieżący materiał",
+  "desktop.rightPanel.assistant.materialTag.failed": "Nie udało się zaktualizować powiązania materiału. Spróbuj ponownie.",
+  "desktop.rightPanel.assistant.materialTag.remove": "Odłącz materiał: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "Więcej powiązanych materiałów",
+  "desktop.rightPanel.assistant.materialTag.open": "Otwórz materiał: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "Ten materiał",
+  "desktop.rightPanel.assistant.materialTag.library": "Cała biblioteka"
 }

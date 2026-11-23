@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "Suchdaten sind für Chinesisch, Japanisch oder Koreanisch bereit.",
   "settings.general.searchEnhancement.option.cjk": "Chinesisch, Japanisch oder Koreanisch",
   "settings.general.searchEnhancement.option.wordBased": "Sprachen mit Wortabstand",
-  "settings.general.searchEnhancement.ready": "Suchdaten sind für Sprachen mit Wortabständen bereit."
+  "settings.general.searchEnhancement.ready": "Suchdaten sind für Sprachen mit Wortabständen bereit.",
+  "settings.about.cli.status.unavailable": "Auf diesem Build ist kein CLI-Installationsprogramm vorhanden."
 }

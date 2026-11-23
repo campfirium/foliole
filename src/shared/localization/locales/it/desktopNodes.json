@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Cerca immersioni...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Nessuna immersione disponibile",
-  "desktop.nodeList.addToDive.noResults": "Nessuna immersione corrispondente"
+  "desktop.nodeList.addToDive.noResults": "Nessuna immersione corrispondente",
+  "desktop.nodeList.emptyTrashDialog.title": "Svuotare il Cestino?",
+  "desktop.nodeList.emptyTrashDialog.description": "Questo elimina definitivamente tutto ciò che si trova nel Cestino. L’operazione non può essere annullata."
 }

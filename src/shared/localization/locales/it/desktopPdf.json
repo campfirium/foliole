@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Apri estratto",
   "desktop.pdf.imageExcerpt.delete": "Elimina estratto",
   "desktop.pdf.imageExcerpt.failed": "Impossibile creare l’estratto.",
-  "desktop.pdf.imageExcerpt.retry": "Riprova"
+  "desktop.pdf.imageExcerpt.retry": "Riprova",
+  "desktop.pdf.zoom.expandWidth": "Espandi automaticamente la larghezza",
+  "desktop.pdf.zoom.expandWidthFailed": "Impossibile salvare l’espansione automatica della larghezza"
 }

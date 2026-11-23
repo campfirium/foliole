@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "이 이름을 변경하기 전에 이 Sync Group의 모든 기기를 업데이트하세요.",
   "settings.general.systemEntryNames.custom": "이 라이브러리에 저장된 사용자 지정 이름을 사용합니다.",
   "settings.general.systemEntryNames.followsLanguage": "인터페이스 언어를 따릅니다.",
-  "settings.general.systemEntryNames.inputAria": "{name}의 사용자 지정 이름"
+  "settings.general.systemEntryNames.inputAria": "{name}의 사용자 지정 이름",
+  "settings.general.quitOnClose.title": "창을 닫을 때 Foliole 종료",
+  "settings.general.quitOnClose.description": "종료하면 다시 Foliole을 열 때까지 전역 캡처, 알림, 동기화 같은 백그라운드 기능이 일시 중지됩니다.",
+  "settings.general.quitOnClose.saveFailed": "창 닫기 설정을 저장할 수 없습니다."
 }

@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "I dati di ricerca sono pronti per cinese, giapponese o coreano.",
   "settings.general.searchEnhancement.option.cjk": "Cinese, giapponese o coreano",
   "settings.general.searchEnhancement.option.wordBased": "Lingue con spaziatura tra le parole",
-  "settings.general.searchEnhancement.ready": "I dati di ricerca sono pronti per le lingue con spaziatura tra le parole."
+  "settings.general.searchEnhancement.ready": "I dati di ricerca sono pronti per le lingue con spaziatura tra le parole.",
+  "settings.about.cli.status.unavailable": "Questa build non ha un programma di installazione della CLI."
 }

@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "다이빙 검색...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "이용 가능한 다이빙이 없습니다.",
-  "desktop.nodeList.addToDive.noResults": "일치하는 다이빙이 없습니다."
+  "desktop.nodeList.addToDive.noResults": "일치하는 다이빙이 없습니다.",
+  "desktop.nodeList.emptyTrashDialog.title": "휴지통을 비울까요?",
+  "desktop.nodeList.emptyTrashDialog.description": "휴지통의 모든 항목이 영구 삭제됩니다. 이 작업은 취소할 수 없습니다."
 }

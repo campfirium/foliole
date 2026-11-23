@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "맥스",
   "desktop.rightPanel.assistant.model.effort.ultra": "울트라",
   "desktop.rightPanel.assistant.model.speed": "속도",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "현재 자료 연결",
+  "desktop.rightPanel.assistant.materialTag.failed": "자료 연결을 업데이트할 수 없습니다. 다시 시도하세요.",
+  "desktop.rightPanel.assistant.materialTag.remove": "자료 연결 해제: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "연결된 자료 더 보기",
+  "desktop.rightPanel.assistant.materialTag.open": "자료 열기: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "이 자료",
+  "desktop.rightPanel.assistant.materialTag.library": "전체 라이브러리"
 }

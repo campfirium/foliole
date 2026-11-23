@@ -201,5 +201,11 @@
   "desktop.rightPanel.highlights.unavailableDescription": "चुना हुआ विषय अब उपलब्ध नहीं है।",
   "desktop.rightPanel.highlights.unavailableTitle": "विषय उपलब्ध नहीं है",
   "desktop.rightPanel.highlights.count": "हाइलाइट({count})",
-  "desktop.rightPanel.highlights.list": "दस्तावेज़ के हाइलाइट"
+  "desktop.rightPanel.highlights.list": "दस्तावेज़ के हाइलाइट",
+  "desktop.splitTopic.unavailable.item": "बाँटने के लिए कोई विषय खोलें। यह दोहराई का अभ्यास प्रश्न है।",
+  "desktop.splitTopic.unavailable.linked": "बाँटने के लिए स्रोत विषय खोलें।",
+  "desktop.splitTopic.unavailable.noTopic": "बाँटने के लिए कोई विषय खोलें।",
+  "desktop.splitTopic.unavailable.readOnly": "यह विषय अभी सिर्फ़ पढ़ने के लिए है।",
+  "desktop.splitTopic.unavailable.trash": "बाँटने से पहले इस विषय को ट्रैश से वापस लाएँ।",
+  "desktop.rightPanel.assistant.settings": "Aide की सेटिंग"
 }

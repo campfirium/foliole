@@ -29,5 +29,21 @@
   "feedback.error.failed": "Les commentaires n'ont pas pu être envoyés. Votre texte est toujours là.",
   "feedback.error.unavailable": "Les commentaires ne sont pas disponibles dans cette version.",
   "feedback.error.verification": "La vérification n'a pas pu être chargée. Réessayez plus tard.",
-  "feedback.errorSummary.label": "Joindre les détails des erreurs récentes (données personnelles retirées)"
+  "feedback.errorSummary.label": "Joindre les détails des erreurs récentes (données personnelles retirées)",
+  "supportLog.title": "Journaux",
+  "supportLog.intro": "Lancez l’enregistrement lorsque vous rencontrez un problème, pour aider à le diagnostiquer.",
+  "supportLog.desktopDescription": "Enregistrez les journaux de l’application pour aider à identifier les problèmes.",
+  "supportLog.startTooltip": "Capturez des journaux détaillés pendant l’exécution de l’application.",
+  "supportLog.open": "Ouvrir le journal",
+  "supportLog.elapsed": "Durée d’enregistrement",
+  "supportLog.desktopFailed": "Impossible d’effectuer l’action sur le journal. Réessayez.",
+  "supportLog.start": "Démarrer l’enregistrement",
+  "supportLog.restart": "Enregistrer à nouveau",
+  "supportLog.stop": "Arrêter l’enregistrement",
+  "supportLog.recording": "Enregistrement",
+  "supportLog.instructions": "Arrêtez après avoir reproduit le problème. L’enregistrement s’arrête au bout de 5 minutes.",
+  "supportLog.ready": "Enregistrement terminé.",
+  "supportLog.export": "Exporter le journal",
+  "supportLog.exportFailed": "Impossible d’exporter le journal. Réessayez.",
+  "supportLog.privacy": "Les journaux restent sur cet appareil et ne sont jamais envoyés automatiquement."
 }

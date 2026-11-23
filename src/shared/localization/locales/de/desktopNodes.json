@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Tauchgänge suchen...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Keine verfügbaren Tauchgänge",
-  "desktop.nodeList.addToDive.noResults": "Keine passenden Tauchgänge"
+  "desktop.nodeList.addToDive.noResults": "Keine passenden Tauchgänge",
+  "desktop.nodeList.emptyTrashDialog.title": "Papierkorb leeren?",
+  "desktop.nodeList.emptyTrashDialog.description": "Dadurch wird alles im Papierkorb endgültig gelöscht. Das kann nicht rückgängig gemacht werden."
 }

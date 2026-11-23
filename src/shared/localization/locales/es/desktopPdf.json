@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Abrir extracto",
   "desktop.pdf.imageExcerpt.delete": "Eliminar extracto",
   "desktop.pdf.imageExcerpt.failed": "No se pudo crear el extracto.",
-  "desktop.pdf.imageExcerpt.retry": "Reintentar"
+  "desktop.pdf.imageExcerpt.retry": "Reintentar",
+  "desktop.pdf.zoom.expandWidth": "Ampliar el ancho automáticamente",
+  "desktop.pdf.zoom.expandWidthFailed": "No se pudo guardar la ampliación automática del ancho"
 }

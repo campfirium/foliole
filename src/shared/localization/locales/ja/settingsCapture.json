@@ -10,5 +10,6 @@
   "settings.capture.position.title": "確認位置",
   "settings.capture.position.description": "この Mac 上でキャプチャ確認が表示される場所を選択します。",
   "settings.capture.position.topRight": "右上",
-  "settings.capture.position.bottomRight": "右下"
+  "settings.capture.position.bottomRight": "右下",
+  "settings.capture.permission.checking": "アクセスを確認しています…"
 }

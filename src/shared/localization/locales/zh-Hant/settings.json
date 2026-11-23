@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole 助手",
   "settings.general.aide.aria": "Foliole輔助儲存部分",
   "settings.general.aide.row": "設備數據",
-  "settings.general.aide.description": "對話和支援檔案保留在此裝置上，不包含在 Foliole 庫備份中。",
+  "settings.general.aide.description": "對話儲存在此裝置上，與資料庫備份分開。",
   "settings.general.aide.loading": "正在計算該設備上使用的儲存空間...",
   "settings.general.aide.size": "此裝置上的 {size}。",
   "settings.general.aide.sizePartial": "{size}已計數；某些檔案無法測量。",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "提高近期複習記錄的權重，讓模型更快適應記憶表現的變化，也更容易受到短期波動影響。",
   "settings.review.training.penalties": "複習間隔懲罰",
   "settings.review.training.penaltiesDescription": "訓練時對過短的同日複習間隔和驟增的長期複習間隔施加懲罰。回憶預測可能略不準確。",
-  "settings.review.training.resetOption": "重設{label}"
+  "settings.review.training.resetOption": "重設{label}",
+  "settings.general.aide.empty": "沒有本機對話資料"
 }

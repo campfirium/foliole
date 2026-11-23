@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "最大",
   "desktop.rightPanel.assistant.model.effort.ultra": "ウルトラ",
   "desktop.rightPanel.assistant.model.speed": "速度",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "現在の資料をリンク",
+  "desktop.rightPanel.assistant.materialTag.failed": "資料のリンクを更新できませんでした。もう一度お試しください。",
+  "desktop.rightPanel.assistant.materialTag.remove": "資料のリンクを解除: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "リンクされたその他の資料",
+  "desktop.rightPanel.assistant.materialTag.open": "資料を開く: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "この資料",
+  "desktop.rightPanel.assistant.materialTag.library": "ライブラリ全体"
 }

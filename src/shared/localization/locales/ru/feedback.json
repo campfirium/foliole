@@ -29,5 +29,21 @@
   "feedback.error.failed": "Не удалось отправить отзыв. Ваш текст все еще здесь.",
   "feedback.error.unavailable": "В этой сборке обратная связь недоступна.",
   "feedback.error.verification": "Не удалось загрузить проверку. Повторите попытку позже.",
-  "feedback.errorSummary.label": "Приложить сведения о недавних ошибках (без личных данных)"
+  "feedback.errorSummary.label": "Приложить сведения о недавних ошибках (без личных данных)",
+  "supportLog.title": "Журналы",
+  "supportLog.intro": "Начните запись, когда столкнётесь с проблемой, чтобы помочь её устранить.",
+  "supportLog.desktopDescription": "Записывайте журналы приложения, чтобы помочь выявить проблемы.",
+  "supportLog.startTooltip": "Записывать подробные журналы, пока приложение работает.",
+  "supportLog.open": "Открыть журнал",
+  "supportLog.elapsed": "Время записи",
+  "supportLog.desktopFailed": "Не удалось выполнить действие с журналом. Повторите попытку.",
+  "supportLog.start": "Начать запись",
+  "supportLog.restart": "Записать снова",
+  "supportLog.stop": "Остановить запись",
+  "supportLog.recording": "Идёт запись",
+  "supportLog.instructions": "Остановите запись после воспроизведения проблемы. Запись автоматически остановится через 5 минут.",
+  "supportLog.ready": "Запись завершена.",
+  "supportLog.export": "Экспортировать журнал",
+  "supportLog.exportFailed": "Не удалось экспортировать журнал. Повторите попытку.",
+  "supportLog.privacy": "Журналы остаются на этом устройстве и никогда не загружаются автоматически."
 }

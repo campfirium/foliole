@@ -10,5 +10,6 @@
   "settings.capture.position.title": "Stanowisko potwierdzenia",
   "settings.capture.position.description": "Wybierz, gdzie na tym Macu mają pojawiać się potwierdzenia przechwytywania.",
   "settings.capture.position.topRight": "U góry po prawej",
-  "settings.capture.position.bottomRight": "Prawy dolny róg"
+  "settings.capture.position.bottomRight": "Prawy dolny róg",
+  "settings.capture.permission.checking": "Sprawdzanie dostępu…"
 }

@@ -14,5 +14,18 @@
   "companion.app.iosPrepared.message": "本地儲存已準備就緒。此版本中不提供主題瀏覽、審閱和同步。",
   "companion.app.iosPrepared.title": "這款 iPhone 已準備就緒",
   "companion.app.switchingLibrary": "正在切換資料庫…",
-  "companion.app.switchFailed": "無法切換資料庫"
+  "companion.app.switchFailed": "無法切換資料庫",
+  "companion.history.undoAction": "復原{action}",
+  "companion.history.redoAction": "重做{action}",
+  "companion.history.action.delete": "刪除",
+  "companion.history.action.restore": "還原",
+  "companion.history.action.rename": "重新命名",
+  "companion.history.action.move": "移動",
+  "companion.history.action.shelve": "擱置",
+  "companion.history.action.unshelve": "取消擱置",
+  "companion.history.action.priority": "優先順序",
+  "companion.history.action.create": "新增",
+  "companion.history.action.import": "匯入",
+  "companion.history.action.grade": "評分",
+  "companion.history.action.dismiss": "移除"
 }

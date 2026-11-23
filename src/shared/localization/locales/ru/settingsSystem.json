@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "Обновите все устройства в этой Sync Group, прежде чем менять эти названия.",
   "settings.general.systemEntryNames.custom": "Используется пользовательское название, сохранённое в этой библиотеке.",
   "settings.general.systemEntryNames.followsLanguage": "Следует языку интерфейса.",
-  "settings.general.systemEntryNames.inputAria": "Пользовательское название для {name}"
+  "settings.general.systemEntryNames.inputAria": "Пользовательское название для {name}",
+  "settings.general.quitOnClose.title": "Завершать Foliole при закрытии окна",
+  "settings.general.quitOnClose.description": "Завершение работы приостанавливает фоновые функции, такие как глобальный захват, напоминания и синхронизация, пока вы снова не откроете Foliole.",
+  "settings.general.quitOnClose.saveFailed": "Не удалось сохранить настройку закрытия окна."
 }

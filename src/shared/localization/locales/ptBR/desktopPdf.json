@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Abrir trecho",
   "desktop.pdf.imageExcerpt.delete": "Excluir trecho",
   "desktop.pdf.imageExcerpt.failed": "Não foi possível criar o trecho.",
-  "desktop.pdf.imageExcerpt.retry": "Tentar novamente"
+  "desktop.pdf.imageExcerpt.retry": "Tentar novamente",
+  "desktop.pdf.zoom.expandWidth": "Expandir a largura automaticamente",
+  "desktop.pdf.zoom.expandWidthFailed": "Não foi possível salvar a expansão automática da largura"
 }

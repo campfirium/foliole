@@ -10,5 +10,6 @@
   "settings.capture.position.title": "Poste de confirmation",
   "settings.capture.position.description": "Choisissez où les confirmations de capture apparaissent sur ce Mac.",
   "settings.capture.position.topRight": "En haut à droite",
-  "settings.capture.position.bottomRight": "En bas à droite"
+  "settings.capture.position.bottomRight": "En bas à droite",
+  "settings.capture.permission.checking": "Vérification de l’accès…"
 }

@@ -10,5 +10,6 @@
   "settings.capture.position.title": "Bestätigungsposition",
   "settings.capture.position.description": "Wählen Sie aus, wo Aufnahmebestätigungen auf diesem Mac angezeigt werden.",
   "settings.capture.position.topRight": "Oben rechts",
-  "settings.capture.position.bottomRight": "Unten rechts"
+  "settings.capture.position.bottomRight": "Unten rechts",
+  "settings.capture.permission.checking": "Zugriff wird geprüft…"
 }

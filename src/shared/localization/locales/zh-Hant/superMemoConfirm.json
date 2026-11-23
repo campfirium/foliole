@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "匯入新批次",
+  "desktop.superMemoDrafts.confirmExisting": "更新現有批次",
+  "desktop.superMemoDrafts.confirmSavedBlend": "使用此批次儲存的比例",
+  "desktop.superMemoDrafts.confirmBlend": "向 Foliole 偏移 {percent}%",
+  "desktop.superMemoDrafts.conversionDetails": "轉換詳細資料",
+  "desktop.superMemoDrafts.confirmExceptions": "轉換例外",
+  "desktop.superMemoDrafts.confirmTotals": "將匯入 {converted} 項 · 將略過 {skipped} 項",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "要略過的空白主題（{count}）",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "要略過的空白卡片（{count}）",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "缺少問題的卡片（{count}）",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "缺少答案的卡片（{count}）",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "要略過的不支援項目（{count}）",
+  "desktop.superMemoDrafts.confirmHistory": "無法重播複習記錄的項目（{count}）",
+  "desktop.superMemoDrafts.confirmAudio": "要略過的音訊元件（{count}）",
+  "desktop.superMemoDrafts.confirmNoExceptions": "未發現轉換例外。",
+  "desktop.superMemoDrafts.confirmTrash": "已選取移到垃圾桶（{count}）",
+  "desktop.superMemoDrafts.confirmResult": "遷移結果"
+}

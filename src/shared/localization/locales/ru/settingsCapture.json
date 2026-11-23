@@ -10,5 +10,6 @@
   "settings.capture.position.title": "Позиция подтверждения",
   "settings.capture.position.description": "Выберите, где на этом Mac будут появляться подтверждения захвата.",
   "settings.capture.position.topRight": "Вверху справа",
-  "settings.capture.position.bottomRight": "Внизу справа"
+  "settings.capture.position.bottomRight": "Внизу справа",
+  "settings.capture.permission.checking": "Проверка доступа…"
 }

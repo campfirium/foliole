@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Importer un nouveau lot",
+  "desktop.superMemoDrafts.confirmExisting": "Mettre à jour un lot existant",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Utiliser la proportion enregistrée pour ce lot",
+  "desktop.superMemoDrafts.confirmBlend": "{percent} % vers Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Détails de la conversion",
+  "desktop.superMemoDrafts.confirmExceptions": "Exceptions de conversion",
+  "desktop.superMemoDrafts.confirmTotals": "{converted} à importer · {skipped} à ignorer",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Sujets vides à ignorer ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Cartes vides à ignorer ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Cartes sans question ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Cartes sans réponse ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Entrées non prises en charge à ignorer ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Entrées dont l’historique de révision n’a pas pu être rejoué ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Composants audio à ignorer ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Aucune exception de conversion trouvée.",
+  "desktop.superMemoDrafts.confirmTrash": "Sélectionnés pour la corbeille ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Résultat de la migration"
+}

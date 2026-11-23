@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Importa un nuovo batch",
+  "desktop.superMemoDrafts.confirmExisting": "Aggiorna un batch esistente",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Usa la proporzione salvata per questo batch",
+  "desktop.superMemoDrafts.confirmBlend": "{percent}% verso Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Dettagli della conversione",
+  "desktop.superMemoDrafts.confirmExceptions": "Eccezioni di conversione",
+  "desktop.superMemoDrafts.confirmTotals": "{converted} da importare · {skipped} da ignorare",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Argomenti vuoti da ignorare ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Schede vuote da ignorare ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Schede senza domanda ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Schede senza risposta ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Voci non supportate da ignorare ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Voci la cui cronologia di revisione non è stato possibile riprodurre ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Componenti audio da ignorare ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Nessuna eccezione di conversione trovata.",
+  "desktop.superMemoDrafts.confirmTrash": "Selezionati per lo spostamento nel Cestino ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Risultato della migrazione"
+}

@@ -1,0 +1,19 @@
+{
+  "desktop.superMemoDrafts.confirmNew": "Neuen Stapel importieren",
+  "desktop.superMemoDrafts.confirmExisting": "Vorhandenen Stapel aktualisieren",
+  "desktop.superMemoDrafts.confirmSavedBlend": "Für diesen Stapel gespeichertes Verhältnis verwenden",
+  "desktop.superMemoDrafts.confirmBlend": "{percent} % in Richtung Foliole",
+  "desktop.superMemoDrafts.conversionDetails": "Konvertierungsdetails",
+  "desktop.superMemoDrafts.confirmExceptions": "Konvertierungsausnahmen",
+  "desktop.superMemoDrafts.confirmTotals": "{converted} zu importieren · {skipped} zu überspringen",
+  "desktop.superMemoDrafts.confirmIssue.empty-topic": "Leere Themen zum Überspringen ({count})",
+  "desktop.superMemoDrafts.confirmIssue.empty-item": "Leere Karten zum Überspringen ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-question": "Karten ohne Frage ({count})",
+  "desktop.superMemoDrafts.confirmIssue.missing-answer": "Karten ohne Antwort ({count})",
+  "desktop.superMemoDrafts.confirmIssue.unsupported-type": "Nicht unterstützte Einträge zum Überspringen ({count})",
+  "desktop.superMemoDrafts.confirmHistory": "Einträge, deren Wiederholungsverlauf nicht wiedergegeben werden konnte ({count})",
+  "desktop.superMemoDrafts.confirmAudio": "Zu überspringende Audiokomponenten ({count})",
+  "desktop.superMemoDrafts.confirmNoExceptions": "Keine Konvertierungsausnahmen gefunden.",
+  "desktop.superMemoDrafts.confirmTrash": "Zum Verschieben in den Papierkorb ausgewählt ({count})",
+  "desktop.superMemoDrafts.confirmResult": "Migrationsergebnis"
+}

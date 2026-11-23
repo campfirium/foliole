@@ -27,7 +27,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.sourceMeta': 'Meta',
   'desktop.superMemoDrafts.adjustmentNote': '导入后可返回这里，预览同一批次的更新。',
   'desktop.superMemoDrafts.references': '来源信息',
-  'desktop.superMemoDrafts.referencesHelp': 'SuperMemo 的引用信息写入原文 Topic 的 Meta。摘录和卡片只在末尾保留与原文不同的字段。字段名留空则跳过。',
+  'desktop.superMemoDrafts.referencesHelp': 'SuperMemo 的引用信息写入原文 Topic 的 Foliole Meta。摘录和卡片只在末尾保留与原文不同的字段。字段名留空则跳过。',
   'desktop.superMemoDrafts.referenceSourceField': 'SuperMemo 字段',
   'desktop.superMemoDrafts.referenceSample': '示例原值',
   'desktop.superMemoDrafts.referenceTargetField': 'Foliole 字段',

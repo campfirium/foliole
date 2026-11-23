@@ -18,5 +18,8 @@
   "settings.general.systemEntryNames.upgradeRequired": "請先更新此 Sync Group 內的所有裝置，再修改這些名稱。",
   "settings.general.systemEntryNames.custom": "使用目前資料庫儲存的自訂名稱。",
   "settings.general.systemEntryNames.followsLanguage": "跟隨介面語言。",
-  "settings.general.systemEntryNames.inputAria": "{name} 的自訂名稱"
+  "settings.general.systemEntryNames.inputAria": "{name} 的自訂名稱",
+  "settings.general.quitOnClose.title": "關閉視窗時結束 Foliole",
+  "settings.general.quitOnClose.description": "結束後，全域擷取、提醒和同步等背景功能會暫停，直到你重新開啟 Foliole。",
+  "settings.general.quitOnClose.saveFailed": "無法儲存關閉視窗的偏好設定。"
 }

@@ -63,5 +63,7 @@
   "desktop.pdf.imageExcerpt.open": "Otwórz wyciąg",
   "desktop.pdf.imageExcerpt.delete": "Usuń wyciąg",
   "desktop.pdf.imageExcerpt.failed": "Nie udało się utworzyć wyciągu.",
-  "desktop.pdf.imageExcerpt.retry": "Spróbuj ponownie"
+  "desktop.pdf.imageExcerpt.retry": "Spróbuj ponownie",
+  "desktop.pdf.zoom.expandWidth": "Automatycznie rozszerzaj szerokość",
+  "desktop.pdf.zoom.expandWidthFailed": "Nie udało się zapisać automatycznego rozszerzania szerokości"
 }

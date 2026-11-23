@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Helfer",
   "settings.general.aide.aria": "Foliole Unterstützt den Speicherbereich",
   "settings.general.aide.row": "Gerätedaten",
-  "settings.general.aide.description": "Konversationen und unterstützende Dateien verbleiben auf diesem Gerät und sind nicht in Foliole Bibliothekssicherungen enthalten.",
+  "settings.general.aide.description": "Unterhaltungen werden auf diesem Gerät gespeichert, getrennt von den Bibliothekssicherungen.",
   "settings.general.aide.loading": "Der auf diesem Gerät verwendete Speicher wird berechnet...",
   "settings.general.aide.size": "{size} auf diesem Gerät.",
   "settings.general.aide.sizePartial": "{size} gezählt; Einige Dateien konnten nicht gemessen werden.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Neuere Wiederholungen erhalten mehr Gewicht. Das Modell passt sich dadurch schneller an Veränderungen der Gedächtnisleistung an und reagiert empfindlicher auf kurzfristige Schwankungen.",
   "settings.review.training.penalties": "Strafterme für Wiederholungsintervalle",
   "settings.review.training.penaltiesDescription": "Beim Training werden sehr kurze Wiederholungsintervalle am selben Tag und sprunghaft steigende längere Intervalle bestraft. Das kann die Genauigkeit der Erinnerungsvorhersage etwas verringern.",
-  "settings.review.training.resetOption": "{label} zurücksetzen"
+  "settings.review.training.resetOption": "{label} zurücksetzen",
+  "settings.general.aide.empty": "Keine lokalen Unterhaltungsdaten"
 }

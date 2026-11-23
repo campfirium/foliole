@@ -29,5 +29,21 @@
   "feedback.error.failed": "의견을 보낼 수 없습니다. 당신의 문자는 아직 여기에 있습니다.",
   "feedback.error.unavailable": "이 빌드에서는 피드백을 사용할 수 없습니다.",
   "feedback.error.verification": "인증을 로드할 수 없습니다. 나중에 다시 시도하세요.",
-  "feedback.errorSummary.label": "최근 오류 정보 첨부(개인 정보 제거됨)"
+  "feedback.errorSummary.label": "최근 오류 정보 첨부(개인 정보 제거됨)",
+  "supportLog.title": "로그",
+  "supportLog.intro": "문제가 발생하면 기록을 시작해 문제 해결에 도움을 주세요.",
+  "supportLog.desktopDescription": "문제를 파악하는 데 도움이 되도록 애플리케이션 로그를 기록합니다.",
+  "supportLog.startTooltip": "애플리케이션이 실행되는 동안 자세한 로그를 수집합니다.",
+  "supportLog.open": "로그 열기",
+  "supportLog.elapsed": "기록 시간",
+  "supportLog.desktopFailed": "로그 작업을 완료할 수 없습니다. 다시 시도하세요.",
+  "supportLog.start": "기록 시작",
+  "supportLog.restart": "다시 기록",
+  "supportLog.stop": "기록 중지",
+  "supportLog.recording": "기록 중",
+  "supportLog.instructions": "문제를 재현한 후 중지하세요. 5분 뒤에 기록이 자동으로 중지됩니다.",
+  "supportLog.ready": "기록이 종료되었습니다.",
+  "supportLog.export": "로그 내보내기",
+  "supportLog.exportFailed": "로그를 내보낼 수 없습니다. 다시 시도하세요.",
+  "supportLog.privacy": "로그는 이 기기에만 남으며 자동으로 업로드되지 않습니다."
 }

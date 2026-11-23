@@ -10,5 +10,6 @@
   "settings.capture.position.title": "Posizione di conferma",
   "settings.capture.position.description": "Scegli dove visualizzare le conferme di acquisizione su questo Mac.",
   "settings.capture.position.topRight": "In alto a destra",
-  "settings.capture.position.bottomRight": "In basso a destra"
+  "settings.capture.position.bottomRight": "In basso a destra",
+  "settings.capture.permission.checking": "Verifica dell’accesso…"
 }

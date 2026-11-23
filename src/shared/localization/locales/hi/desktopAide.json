@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "अधिकतम",
   "desktop.rightPanel.assistant.model.effort.ultra": "अति उच्च",
   "desktop.rightPanel.assistant.model.speed": "गति",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "डिफ़ॉल्ट"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "डिफ़ॉल्ट",
+  "desktop.rightPanel.assistant.materialTag.add": "मौजूदा सामग्री जोड़ें",
+  "desktop.rightPanel.assistant.materialTag.failed": "सामग्री का लिंक अपडेट नहीं हो सका। फिर कोशिश करें।",
+  "desktop.rightPanel.assistant.materialTag.remove": "सामग्री का लिंक हटाएँ: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "और जुड़ी सामग्री",
+  "desktop.rightPanel.assistant.materialTag.open": "सामग्री खोलें: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "यह सामग्री",
+  "desktop.rightPanel.assistant.materialTag.library": "पूरी लाइब्रेरी"
 }

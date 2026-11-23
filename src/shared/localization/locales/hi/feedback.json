@@ -29,5 +29,21 @@
   "feedback.error.failed": "फ़ीडबैक भेजा नहीं जा सका। आपका लिखा टेक्स्ट अभी मौजूद है।",
   "feedback.error.unavailable": "इस बिल्ड में फ़ीडबैक भेजने की सुविधा उपलब्ध नहीं है।",
   "feedback.error.verification": "सत्यापन लोड नहीं हो सका। बाद में फिर कोशिश करें।",
-  "feedback.errorSummary.label": "हाल की त्रुटियों का विवरण जोड़ें (व्यक्तिगत जानकारी हटाकर)"
+  "feedback.errorSummary.label": "हाल की त्रुटियों का विवरण जोड़ें (व्यक्तिगत जानकारी हटाकर)",
+  "supportLog.title": "लॉग",
+  "supportLog.intro": "कोई समस्या आए तो रिकॉर्डिंग शुरू करें, ताकि उसकी जाँच में मदद मिले।",
+  "supportLog.desktopDescription": "समस्या पहचानने में मदद के लिए ऐप के लॉग रिकॉर्ड करें।",
+  "supportLog.startTooltip": "ऐप चलते समय विस्तृत लॉग इकट्ठा करें।",
+  "supportLog.open": "लॉग खोलें",
+  "supportLog.elapsed": "रिकॉर्डिंग का समय",
+  "supportLog.desktopFailed": "लॉग की कार्रवाई पूरी नहीं हो सकी। फिर कोशिश करें।",
+  "supportLog.start": "रिकॉर्डिंग शुरू करें",
+  "supportLog.restart": "फिर से रिकॉर्ड करें",
+  "supportLog.stop": "रिकॉर्डिंग रोकें",
+  "supportLog.recording": "रिकॉर्ड हो रहा है",
+  "supportLog.instructions": "समस्या दोहराने के बाद रोकें। रिकॉर्डिंग 5 मिनट बाद अपने आप रुक जाती है।",
+  "supportLog.ready": "रिकॉर्डिंग पूरी हुई।",
+  "supportLog.export": "लॉग एक्सपोर्ट करें",
+  "supportLog.exportFailed": "लॉग एक्सपोर्ट नहीं हो सका। फिर कोशिश करें।",
+  "supportLog.privacy": "लॉग इसी डिवाइस पर रहते हैं और अपने आप कभी अपलोड नहीं होते।"
 }

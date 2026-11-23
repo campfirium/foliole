@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Aide",
   "settings.general.aide.aria": "Foliole Section rangement aide",
   "settings.general.aide.row": "Données de l'appareil",
-  "settings.general.aide.description": "Les conversations et les fichiers de support restent sur cet appareil et ne sont pas inclus dans les sauvegardes de la bibliothèque Foliole.",
+  "settings.general.aide.description": "Les conversations sont enregistrées sur cet appareil, séparément des sauvegardes de la bibliothèque.",
   "settings.general.aide.loading": "Calcul de l'espace de stockage utilisé sur cet appareil...",
   "settings.general.aide.size": "{size} sur cet appareil.",
   "settings.general.aide.sizePartial": "{size} compté ; certains fichiers n'ont pas pu être mesurés.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Donne plus de poids aux révisions récentes pour que le modèle s’adapte plus vite aux changements de mémoire. Le modèle devient aussi plus sensible aux variations à court terme.",
   "settings.review.training.penalties": "Pénalités sur les intervalles de révision",
   "settings.review.training.penaltiesDescription": "L’entraînement pénalise les intervalles de révision très courts le même jour et les fortes hausses des intervalles longs. La prédiction du rappel peut devenir légèrement moins précise.",
-  "settings.review.training.resetOption": "Réinitialiser {label}"
+  "settings.review.training.resetOption": "Réinitialiser {label}",
+  "settings.general.aide.empty": "Aucune donnée de conversation locale"
 }

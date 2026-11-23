@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Assessor",
   "settings.general.aide.aria": "Foliole Seção de armazenamento auxiliar",
   "settings.general.aide.row": "Dados do dispositivo",
-  "settings.general.aide.description": "As conversas e os arquivos de suporte permanecem neste dispositivo e não são incluídos nos backups da biblioteca Foliole.",
+  "settings.general.aide.description": "As conversas ficam salvas neste dispositivo, separadas dos backups da biblioteca.",
   "settings.general.aide.loading": "Calculando o armazenamento usado neste dispositivo...",
   "settings.general.aide.size": "{size} neste dispositivo.",
   "settings.general.aide.sizePartial": "{size} contado; alguns arquivos não puderam ser medidos.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Dá mais peso às revisões recentes para o modelo se adaptar mais rápido às mudanças na sua memória. Ele também fica mais sensível a oscilações de curto prazo.",
   "settings.review.training.penalties": "Penalidades nos intervalos de revisão",
   "settings.review.training.penaltiesDescription": "Durante o treinamento, o modelo penaliza intervalos de revisão muito curtos no mesmo dia e aumentos bruscos nos intervalos longos. Isso pode reduzir ligeiramente a precisão da previsão de recordação.",
-  "settings.review.training.resetOption": "Redefinir {label}"
+  "settings.review.training.resetOption": "Redefinir {label}",
+  "settings.general.aide.empty": "Nenhum dado de conversa local"
 }

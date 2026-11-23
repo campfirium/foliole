@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Szukaj nurkowań...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Brak dostępnych nurkowań",
-  "desktop.nodeList.addToDive.noResults": "Brak pasujących nurkowań"
+  "desktop.nodeList.addToDive.noResults": "Brak pasujących nurkowań",
+  "desktop.nodeList.emptyTrashDialog.title": "Opróżnić Kosz?",
+  "desktop.nodeList.emptyTrashDialog.description": "Spowoduje to trwałe usunięcie wszystkiego z Kosza. Tej operacji nie można cofnąć."
 }

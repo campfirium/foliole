@@ -29,5 +29,21 @@
   "feedback.error.failed": "Nie można wysłać opinii. Twój tekst nadal tu jest.",
   "feedback.error.unavailable": "W tej kompilacji nie jest dostępna informacja zwrotna.",
   "feedback.error.verification": "Nie udało się wczytać weryfikacji. Spróbuj ponownie później.",
-  "feedback.errorSummary.label": "Dołącz szczegóły ostatnich błędów (bez danych osobowych)"
+  "feedback.errorSummary.label": "Dołącz szczegóły ostatnich błędów (bez danych osobowych)",
+  "supportLog.title": "Dzienniki",
+  "supportLog.intro": "Rozpocznij nagrywanie, gdy napotkasz problem, aby pomóc w jego diagnozie.",
+  "supportLog.desktopDescription": "Nagrywaj dzienniki aplikacji, aby pomóc w wykrywaniu problemów.",
+  "supportLog.startTooltip": "Przechwytuj szczegółowe dzienniki, gdy aplikacja działa.",
+  "supportLog.open": "Otwórz dziennik",
+  "supportLog.elapsed": "Czas nagrywania",
+  "supportLog.desktopFailed": "Nie udało się wykonać operacji na dzienniku. Spróbuj ponownie.",
+  "supportLog.start": "Rozpocznij nagrywanie",
+  "supportLog.restart": "Nagraj ponownie",
+  "supportLog.stop": "Zatrzymaj nagrywanie",
+  "supportLog.recording": "Nagrywanie",
+  "supportLog.instructions": "Zatrzymaj po odtworzeniu problemu. Nagrywanie zatrzyma się po 5 minutach.",
+  "supportLog.ready": "Nagrywanie zakończone.",
+  "supportLog.export": "Eksportuj dziennik",
+  "supportLog.exportFailed": "Nie udało się wyeksportować dziennika. Spróbuj ponownie.",
+  "supportLog.privacy": "Dzienniki pozostają na tym urządzeniu i nigdy nie są przesyłane automatycznie."
 }

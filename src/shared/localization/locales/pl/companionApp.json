@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Ładowanie towarzyszące nie powiodło się",
   "companion.app.iosPrepared.eyebrow": "Foliole dla iPhone'a",
   "companion.app.iosPrepared.message": "Magazyn lokalny jest gotowy. Przeglądanie, przeglądanie i synchronizacja tematów nie są dostępne w tej kompilacji.",
-  "companion.app.iosPrepared.title": "Ten iPhone jest gotowy"
+  "companion.app.iosPrepared.title": "Ten iPhone jest gotowy",
+  "companion.history.undoAction": "Cofnij: {action}",
+  "companion.history.redoAction": "Ponów: {action}",
+  "companion.history.action.delete": "Usuń",
+  "companion.history.action.restore": "Przywróć",
+  "companion.history.action.rename": "Zmień nazwę",
+  "companion.history.action.move": "Przenieś",
+  "companion.history.action.shelve": "Odłóż",
+  "companion.history.action.unshelve": "Przywróć z odłożonych",
+  "companion.history.action.priority": "Priorytet",
+  "companion.history.action.create": "Nowe",
+  "companion.history.action.import": "Importuj",
+  "companion.history.action.grade": "Oceń",
+  "companion.history.action.dismiss": "Odrzuć",
+  "companion.app.switchingLibrary": "Przełączanie biblioteki…",
+  "companion.app.switchFailed": "Nie udało się przełączyć biblioteki"
 }

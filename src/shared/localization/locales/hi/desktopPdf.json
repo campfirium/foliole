@@ -63,5 +63,7 @@
   "desktop.pdf.simple.unavailable.description": "यह PDF अटैचमेंट डेस्कटॉप से फिर सिंक करें।",
   "desktop.pdf.simple.noFile.title": "कोई PDF फ़ाइल नहीं चुनी गई",
   "desktop.pdf.simple.noFile.description": "सिंक की गई PDF फ़ाइल खाली है।",
-  "desktop.pdf.simple.readerLabel": "{title} का PDF रीडर"
+  "desktop.pdf.simple.readerLabel": "{title} का PDF रीडर",
+  "desktop.pdf.zoom.expandWidth": "चौड़ाई अपने आप बढ़ाएँ",
+  "desktop.pdf.zoom.expandWidthFailed": "चौड़ाई अपने आप बढ़ाने की सेटिंग सहेजी नहीं जा सकी"
 }

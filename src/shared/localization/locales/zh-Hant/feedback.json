@@ -29,5 +29,21 @@
   "feedback.error.failed": "無法發送回饋。你的文字還在這裡。",
   "feedback.error.unavailable": "此版本中不提供回饋。",
   "feedback.error.verification": "驗證無法載入。稍後再試。",
-  "feedback.errorSummary.label": "附上最近的錯誤資訊（已移除個人資訊）"
+  "feedback.errorSummary.label": "附上最近的錯誤資訊（已移除個人資訊）",
+  "supportLog.title": "記錄檔",
+  "supportLog.intro": "遇到問題時開始記錄，以協助疑難排解。",
+  "supportLog.desktopDescription": "記錄應用程式記錄檔，協助找出問題。",
+  "supportLog.startTooltip": "在應用程式執行期間擷取詳細記錄檔。",
+  "supportLog.open": "開啟記錄檔",
+  "supportLog.elapsed": "記錄時間",
+  "supportLog.desktopFailed": "無法完成記錄檔操作。請再試一次。",
+  "supportLog.start": "開始記錄",
+  "supportLog.restart": "重新記錄",
+  "supportLog.stop": "重現問題後停止記錄。記錄會在 5 分鐘後停止。",
+  "supportLog.recording": "正在記錄",
+  "supportLog.instructions": "記錄已結束。",
+  "supportLog.ready": "匯出記錄檔",
+  "supportLog.export": "無法匯出記錄檔。請再試一次。",
+  "supportLog.exportFailed": "記錄檔會留在此裝置上，絕不會自動上傳。",
+  "supportLog.privacy": "停止記錄"
 }

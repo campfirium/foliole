@@ -224,5 +224,6 @@
   "desktop.document.readingResume.jump": "Saltar a la posición",
   "desktop.reviewActions.reading.laterDays": "Ya has leído una parte y quieres seguir en {days} días (intervalo personalizado).",
   "desktop.reviewActions.reading.laterOneDay": "Ya has leído una parte y quieres seguir en 1 día (intervalo personalizado).",
-  "desktop.reviewActions.reading.laterCustomBody": "Aparece nuevamente después del intervalo especificado."
+  "desktop.reviewActions.reading.laterCustomBody": "Aparece nuevamente después del intervalo especificado.",
+  "desktop.palette.command.actionTips": "Consejos de acciones"
 }

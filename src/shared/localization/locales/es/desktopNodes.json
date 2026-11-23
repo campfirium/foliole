@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Buscar inmersiones...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "No hay inmersiones disponibles",
-  "desktop.nodeList.addToDive.noResults": "No hay inmersiones coincidentes"
+  "desktop.nodeList.addToDive.noResults": "No hay inmersiones coincidentes",
+  "desktop.nodeList.emptyTrashDialog.title": "¿Vaciar la papelera?",
+  "desktop.nodeList.emptyTrashDialog.description": "Esto elimina de forma permanente todo lo que hay en la papelera. No se puede deshacer."
 }

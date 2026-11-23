@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "最大",
   "desktop.rightPanel.assistant.model.effort.ultra": "超",
   "desktop.rightPanel.assistant.model.speed": "速度",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "連結目前材料",
+  "desktop.rightPanel.assistant.materialTag.failed": "無法更新材料連結。請再試一次。",
+  "desktop.rightPanel.assistant.materialTag.remove": "取消連結材料：{title}",
+  "desktop.rightPanel.assistant.materialTag.more": "更多已連結的材料",
+  "desktop.rightPanel.assistant.materialTag.open": "開啟材料：{title}",
+  "desktop.rightPanel.assistant.materialTag.current": "此材料",
+  "desktop.rightPanel.assistant.materialTag.library": "整個資料庫"
 }

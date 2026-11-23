@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "Max",
   "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
   "desktop.rightPanel.assistant.model.speed": "Geschwindigkeit",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "Aktuelles Material verknüpfen",
+  "desktop.rightPanel.assistant.materialTag.failed": "Die Materialverknüpfung konnte nicht aktualisiert werden. Versuche es erneut.",
+  "desktop.rightPanel.assistant.materialTag.remove": "Material entkoppeln: {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "Weitere verknüpfte Materialien",
+  "desktop.rightPanel.assistant.materialTag.open": "Material öffnen: {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "Dieses Material",
+  "desktop.rightPanel.assistant.materialTag.library": "Gesamte Bibliothek"
 }

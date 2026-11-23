@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole 補佐官",
   "settings.general.aide.aria": "Foliole 補助収納セクション",
   "settings.general.aide.row": "デバイスデータ",
-  "settings.general.aide.description": "会話とサポート ファイルはこのデバイス上に残り、Foliole ライブラリのバックアップには含まれません。",
+  "settings.general.aide.description": "会話はこのデバイスに保存され、ライブラリのバックアップとは別に管理されます。",
   "settings.general.aide.loading": "このデバイスで使用されるストレージを計算しています...\nこのデバイスの",
   "settings.general.aide.size": "{size}。",
   "settings.general.aide.sizePartial": "{size} がカウントされました。一部のファイルは測定できませんでした。",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "最近の復習の重みを増やすと、モデルが記憶力の変化に早く適応します。一時的な変化にも敏感になります。",
   "settings.review.training.penalties": "復習間隔のペナルティ",
   "settings.review.training.penaltiesDescription": "学習時に、同日内の極端に短い復習間隔と長い復習間隔の急な伸びにペナルティを課します。思い出せるかどうかの予測精度がわずかに下がる場合があります。",
-  "settings.review.training.resetOption": "{label}をリセット"
+  "settings.review.training.resetOption": "{label}をリセット",
+  "settings.general.aide.empty": "このデバイスに会話データはありません"
 }

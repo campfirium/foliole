@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "Falha na inicialização complementar",
   "companion.app.iosPrepared.eyebrow": "Foliole para iPhone",
   "companion.app.iosPrepared.message": "O armazenamento local está pronto. A navegação, revisão e sincronização de tópicos não estão disponíveis nesta versão.",
-  "companion.app.iosPrepared.title": "Este iPhone está pronto"
+  "companion.app.iosPrepared.title": "Este iPhone está pronto",
+  "companion.history.undoAction": "Desfazer {action}",
+  "companion.history.redoAction": "Refazer {action}",
+  "companion.history.action.delete": "Excluir",
+  "companion.history.action.restore": "Restaurar",
+  "companion.history.action.rename": "Renomear",
+  "companion.history.action.move": "Mover",
+  "companion.history.action.shelve": "Arquivar",
+  "companion.history.action.unshelve": "Desarquivar",
+  "companion.history.action.priority": "Prioridade",
+  "companion.history.action.create": "Novo",
+  "companion.history.action.import": "Importar",
+  "companion.history.action.grade": "Avaliar",
+  "companion.history.action.dismiss": "Dispensar",
+  "companion.app.switchingLibrary": "Trocando de biblioteca…",
+  "companion.app.switchFailed": "Não foi possível trocar de biblioteca"
 }

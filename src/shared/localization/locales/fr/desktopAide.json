@@ -18,5 +18,12 @@
   "desktop.rightPanel.assistant.model.effort.max": "Max",
   "desktop.rightPanel.assistant.model.effort.ultra": "Ultra",
   "desktop.rightPanel.assistant.model.speed": "Vitesse",
-  "desktop.rightPanel.assistant.model.defaultSpeed": "Default"
+  "desktop.rightPanel.assistant.model.defaultSpeed": "Default",
+  "desktop.rightPanel.assistant.materialTag.add": "Lier le matériel actuel",
+  "desktop.rightPanel.assistant.materialTag.failed": "Impossible de mettre à jour le lien du matériel. Réessayez.",
+  "desktop.rightPanel.assistant.materialTag.remove": "Délier le matériel : {title}",
+  "desktop.rightPanel.assistant.materialTag.more": "Autres matériels liés",
+  "desktop.rightPanel.assistant.materialTag.open": "Ouvrir le matériel : {title}",
+  "desktop.rightPanel.assistant.materialTag.current": "Ce matériel",
+  "desktop.rightPanel.assistant.materialTag.library": "Bibliothèque entière"
 }

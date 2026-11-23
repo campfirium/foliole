@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Pomocnik",
   "settings.general.aide.aria": "Foliole Sekcja przechowywania pomocy",
   "settings.general.aide.row": "Dane urządzenia",
-  "settings.general.aide.description": "Rozmowy i pliki pomocnicze pozostają na tym urządzeniu i nie są uwzględniane w kopiach zapasowych biblioteki Foliole.",
+  "settings.general.aide.description": "Rozmowy są przechowywane na tym urządzeniu, oddzielnie od kopii zapasowych biblioteki.",
   "settings.general.aide.loading": "Obliczanie pamięci używanej na tym urządzeniu...",
   "settings.general.aide.size": "{size} na tym urządzeniu.",
   "settings.general.aide.sizePartial": "policzono {size}; niektórych plików nie można było zmierzyć.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Nowsze powtórki mają większą wagę, dzięki czemu model szybciej dostosowuje się do zmian w zapamiętywaniu. Staje się też bardziej wrażliwy na krótkotrwałe wahania.",
   "settings.review.training.penalties": "Kary za odstępy między powtórkami",
   "settings.review.training.penaltiesDescription": "Podczas treningu naliczane są kary za bardzo krótkie odstępy między powtórkami tego samego dnia oraz gwałtowne wydłużanie długich odstępów. Prognoza zapamiętania może stać się nieco mniej dokładna.",
-  "settings.review.training.resetOption": "Zresetuj {label}"
+  "settings.review.training.resetOption": "Zresetuj {label}",
+  "settings.general.aide.empty": "Brak lokalnych danych rozmów"
 }

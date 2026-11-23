@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "搜尋專題…",
   "desktop.nodeList.addToDive.results": "專題",
   "desktop.nodeList.addToDive.empty": "沒有可用的專題",
-  "desktop.nodeList.addToDive.noResults": "沒有符合的專題"
+  "desktop.nodeList.addToDive.noResults": "沒有符合的專題",
+  "desktop.nodeList.emptyTrashDialog.title": "要清空垃圾桶嗎？",
+  "desktop.nodeList.emptyTrashDialog.description": "這會永久刪除垃圾桶中的所有內容，且無法復原。"
 }

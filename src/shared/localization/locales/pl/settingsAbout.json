@@ -94,5 +94,6 @@
   "settings.general.searchEnhancement.enhancedReady": "Dane wyszukiwania są dostępne dla języka chińskiego, japońskiego i koreańskiego.",
   "settings.general.searchEnhancement.option.cjk": "chiński, japoński czy koreański",
   "settings.general.searchEnhancement.option.wordBased": "Języki z odstępami między wyrazami",
-  "settings.general.searchEnhancement.ready": "Dane wyszukiwania są gotowe dla języków z odstępami między wyrazami."
+  "settings.general.searchEnhancement.ready": "Dane wyszukiwania są gotowe dla języków z odstępami między wyrazami.",
+  "settings.about.cli.status.unavailable": "Ta kompilacja nie zawiera instalatora CLI."
 }

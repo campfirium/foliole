@@ -12,5 +12,20 @@
   "companion.app.bootstrapFailed": "동반 부트스트랩 실패",
   "companion.app.iosPrepared.eyebrow": "iPhone용 Foliole",
   "companion.app.iosPrepared.message": "로컬 저장소가 준비되었습니다. 이 빌드에서는 주제 탐색, 검토 및 동기화를 사용할 수 없습니다.",
-  "companion.app.iosPrepared.title": "이 iPhone은 준비되었습니다"
+  "companion.app.iosPrepared.title": "이 iPhone은 준비되었습니다",
+  "companion.history.undoAction": "{action} 실행 취소",
+  "companion.history.redoAction": "{action} 다시 실행",
+  "companion.history.action.delete": "삭제",
+  "companion.history.action.restore": "복원",
+  "companion.history.action.rename": "이름 변경",
+  "companion.history.action.move": "이동",
+  "companion.history.action.shelve": "보류",
+  "companion.history.action.unshelve": "보류 해제",
+  "companion.history.action.priority": "우선순위",
+  "companion.history.action.create": "새로 만들기",
+  "companion.history.action.import": "가져오기",
+  "companion.history.action.grade": "등급 매기기",
+  "companion.history.action.dismiss": "닫기",
+  "companion.app.switchingLibrary": "라이브러리 전환 중…",
+  "companion.app.switchFailed": "라이브러리를 전환할 수 없습니다"
 }

@@ -191,5 +191,7 @@
   "desktop.nodeList.addToDive.placeholder": "Rechercher des plongées...",
   "desktop.nodeList.addToDive.results": "Dives",
   "desktop.nodeList.addToDive.empty": "Aucune plongée disponible",
-  "desktop.nodeList.addToDive.noResults": "Aucune plongée correspondante"
+  "desktop.nodeList.addToDive.noResults": "Aucune plongée correspondante",
+  "desktop.nodeList.emptyTrashDialog.title": "Vider la corbeille ?",
+  "desktop.nodeList.emptyTrashDialog.description": "Cela supprime définitivement tout le contenu de la corbeille. Cette action est irréversible."
 }

@@ -29,5 +29,21 @@
   "feedback.error.failed": "No se pudieron enviar comentarios. Tu texto todavía está aquí.",
   "feedback.error.unavailable": "Los comentarios no están disponibles en esta compilación.",
   "feedback.error.verification": "No se pudo cargar la verificación. Vuelve a intentarlo más tarde.",
-  "feedback.errorSummary.label": "Adjuntar detalles de errores recientes (sin datos personales)"
+  "feedback.errorSummary.label": "Adjuntar detalles de errores recientes (sin datos personales)",
+  "supportLog.title": "Registros",
+  "supportLog.intro": "Empieza a grabar cuando te encuentres con un problema para ayudar a diagnosticarlo.",
+  "supportLog.desktopDescription": "Graba los registros de la aplicación para ayudar a identificar problemas.",
+  "supportLog.startTooltip": "Captura registros detallados mientras la aplicación está en ejecución.",
+  "supportLog.open": "Abrir registro",
+  "supportLog.elapsed": "Tiempo de grabación",
+  "supportLog.desktopFailed": "No se pudo completar la acción del registro. Inténtalo de nuevo.",
+  "supportLog.start": "Empezar a grabar",
+  "supportLog.restart": "Grabar de nuevo",
+  "supportLog.stop": "Detener grabación",
+  "supportLog.recording": "Grabando",
+  "supportLog.instructions": "Detén la grabación después de reproducir el problema. La grabación se detiene a los 5 minutos.",
+  "supportLog.ready": "La grabación ha terminado.",
+  "supportLog.export": "Exportar registro",
+  "supportLog.exportFailed": "No se pudo exportar el registro. Inténtalo de nuevo.",
+  "supportLog.privacy": "Los registros se quedan en este dispositivo y nunca se suben automáticamente."
 }

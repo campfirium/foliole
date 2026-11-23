@@ -191,5 +191,7 @@
   "desktop.removed.preview.reimportCurrent": "मौजूदा स्रोत फिर इंपोर्ट करें",
   "desktop.removed.preview.changedSource": "यह विषय मिटाने के बाद स्रोत बदल गया। दोबारा इंपोर्ट में स्रोत का मौजूदा टेक्स्ट इस्तेमाल होगा।",
   "desktop.removed.preview.empty.title": "कोई विषय नहीं चुना गया",
-  "desktop.removed.preview.empty.description": "झलक देखने के लिए हटाया गया कोई विषय चुनें।"
+  "desktop.removed.preview.empty.description": "झलक देखने के लिए हटाया गया कोई विषय चुनें।",
+  "desktop.nodeList.emptyTrashDialog.title": "ट्रैश खाली करें?",
+  "desktop.nodeList.emptyTrashDialog.description": "इससे ट्रैश की सारी चीज़ें हमेशा के लिए मिट जाएँगी। इसे पूर्ववत नहीं किया जा सकता।"
 }

@@ -63,7 +63,7 @@
   "settings.general.aide.section": "Foliole Aiutante",
   "settings.general.aide.aria": "Foliole Sezione portaoggetti ausiliaria",
   "settings.general.aide.row": "Dati del dispositivo",
-  "settings.general.aide.description": "Le conversazioni e i file di supporto rimangono su questo dispositivo e non sono inclusi nei backup della libreria Foliole.",
+  "settings.general.aide.description": "Le conversazioni sono salvate su questo dispositivo, separatamente dai backup della libreria.",
   "settings.general.aide.loading": "Calcolo dello spazio di archiviazione utilizzato su questo dispositivo...",
   "settings.general.aide.size": "{size} su questo dispositivo.",
   "settings.general.aide.sizePartial": "{size} conteggiato; non è stato possibile misurare alcuni file.",
@@ -242,5 +242,6 @@
   "settings.review.training.recencyDescription": "Dà più peso ai ripassi recenti, così il modello si adatta più rapidamente ai cambiamenti della memoria e diventa più sensibile alle oscillazioni a breve termine.",
   "settings.review.training.penalties": "Penalità sugli intervalli di ripasso",
   "settings.review.training.penaltiesDescription": "L’addestramento penalizza gli intervalli di ripasso molto brevi nello stesso giorno e gli aumenti bruschi degli intervalli lunghi. La previsione della capacità di ricordare può diventare leggermente meno precisa.",
-  "settings.review.training.resetOption": "Reimposta {label}"
+  "settings.review.training.resetOption": "Reimposta {label}",
+  "settings.general.aide.empty": "Nessun dato di conversazione locale"
 }
