@@ -12,6 +12,7 @@ import type { AssistantContinuationMessage } from './codexAppServerThreadHistory
 
 export interface SendMessageArgs {
   clientTurnId: string;
+  customInstructions?: string;
   continuationMessages?: AssistantContinuationMessage[];
   imagePaths?: string[];
   message: string;

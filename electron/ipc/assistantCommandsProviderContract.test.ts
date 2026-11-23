@@ -103,6 +103,19 @@ it('updates only the provider-owned Foliole index status', async () => {
   expect(adapterSendMessage).toHaveBeenCalledTimes(1);
 });
 
+it('passes the saved custom instructions with each message and nothing once they are cleared', async () => {
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantSaveCustomInstructions, { text: 'Cite sources.' }))
+    .resolves.toEqual({ text: 'Cite sources.' });
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantLoadCustomInstructions, {}))
+    .resolves.toEqual({ text: 'Cite sources.' });
+  await seedCodexThread();
+  expect(adapterSendMessage).toHaveBeenLastCalledWith(expect.objectContaining({ customInstructions: 'Cite sources.' }));
+
+  await handleAssistantCommand(NATIVE_COMMANDS.assistantSaveCustomInstructions, { text: '' });
+  await seedCodexThread();
+  expect(adapterSendMessage.mock.lastCall?.[0]).not.toHaveProperty('customInstructions');
+});
+
 async function seedCodexThread() {
   adapterSendMessage.mockResolvedValueOnce({
     message: { text: 'Answer', threadId: 'thread-1' },

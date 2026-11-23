@@ -21,6 +21,8 @@ export const NATIVE_ASSISTANT_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.assistantTestModel, route: 'assistant', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.assistantDeleteModel, route: 'assistant', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.assistantSelectModel, route: 'assistant', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.assistantLoadCustomInstructions, route: 'assistant', capability: 'read' },
+  { command: NATIVE_COMMANDS.assistantSaveCustomInstructions, route: 'assistant', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.assistantLoadByokSettings, route: 'assistant', capability: 'read' },
   { command: NATIVE_COMMANDS.assistantSaveByokSettings, route: 'assistant', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.assistantSetProvider, route: 'assistant', capability: 'settingsMutation' },

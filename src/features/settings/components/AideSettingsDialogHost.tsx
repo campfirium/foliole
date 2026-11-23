@@ -18,6 +18,7 @@ import {
 import { settingsDialogPane, settingsDialogPaneBody, settingsDialogPaneHeader } from '../../../shared/ui/settingsDialogBounds';
 import { subscribeAideSettingsDialogOpen } from '../model/aideSettingsDialogRequests';
 
+import { SettingsAideCustomInstructionsSection } from './sections/SettingsAideCustomInstructionsSection';
 import { SettingsAideStorageSection } from './sections/SettingsAideStorageSection';
 import { SettingsModelsSection } from './sections/SettingsModelsSection';
 
@@ -59,6 +60,13 @@ export function AideSettingsDialogHost() {
               </div>
               <SettingsSection ariaLabel={t('settings.models.section')} title={t('settings.models.section')}>
                 <SettingsModelsSection />
+              </SettingsSection>
+              <SettingsSection
+                ariaLabel={t('settings.aide.instructions.section')}
+                description={t('settings.aide.instructions.description')}
+                title={t('settings.aide.instructions.section')}
+              >
+                <SettingsAideCustomInstructionsSection />
               </SettingsSection>
               <SettingsSection ariaLabel={t('settings.general.aide.row')}>
                 <SettingsAideStorageSection />

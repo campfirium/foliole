@@ -9,6 +9,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { appendAideCustomInstructions } from './aideCustomInstructions.js';
 import { formatOpenAiCompatibleAideSystemPrompt } from './aideProductContext.js';
 import type { StoredAssistantImage } from './assistantImageStorage.js';
 import { loadFolioleAideByokRuntimeConfig } from './folioleAideByokSettings.js';
@@ -18,6 +19,7 @@ import { createChatCompletionsAideTools } from './openAiCompatibleTools.js';
 
 interface OpenAiCompatibleSendInput {
   clientTurnId: string;
+  customInstructions?: string;
   history: NativeAssistantThreadMessageRecord[];
   images: StoredAssistantImage[];
   message: string;
@@ -81,6 +83,7 @@ export class OpenAiCompatibleAdapter {
 }
 
 async function createMessages(input: {
+  customInstructions?: string;
   history: NativeAssistantThreadMessageRecord[];
   images: StoredAssistantImage[];
   message: string;
@@ -94,7 +97,10 @@ async function createMessages(input: {
     })))
   ];
   return [
-    { content: formatOpenAiCompatibleAideSystemPrompt(context), role: 'system' },
+    {
+      content: appendAideCustomInstructions(formatOpenAiCompatibleAideSystemPrompt(context), input.customInstructions),
+      role: 'system'
+    },
     ...selectRecentOpenAiCompatibleHistory(input.history)
       .map(({ role, text }) => ({ content: text, role })),
     { content: currentContent, role: 'user' }

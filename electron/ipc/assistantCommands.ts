@@ -18,6 +18,7 @@ import {
   saveFolioleAideByokSettings,
   setFolioleAideProvider
 } from '../assistant/folioleAideByokSettings.js';
+import { loadFolioleAideCustomInstructions } from '../assistant/folioleAideCustomInstructions.js';
 import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
@@ -137,8 +138,10 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   } catch {
     return assistantProtocolFailure();
   }
+  const customInstructions = await readCustomInstructionsForTurn();
   const result = await sendAssistantTurn({
     agentControl,
+    customInstructions,
     adapter: assistantAdapter,
     byokAdapter: getAssistantByokAdapter(),
     clientTurnId,
@@ -160,6 +163,14 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     linkedMaterialIds: input.linkedMaterialIds,
     result
   });
+}
+
+async function readCustomInstructionsForTurn() {
+  try {
+    return (await runWithDatabaseConnectionOwner(loadFolioleAideCustomInstructions)).text;
+  } catch {
+    return '';
+  }
 }
 
 function readAssistantAdapter() {

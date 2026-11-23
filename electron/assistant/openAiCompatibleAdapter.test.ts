@@ -109,6 +109,19 @@ function assertOpenAiCompatibleRequest(fetchMock: ReturnType<typeof vi.fn<typeof
   expect(JSON.stringify(body.messages)).not.toContain('old-image');
 }
 
+it('appends custom instructions after the Aide system rules', async () => {
+  const fetchMock = vi.fn<typeof fetch>(async () => sseResponse([{ choices: [{ delta: { content: 'Ok' } }] }]));
+  vi.stubGlobal('fetch', fetchMock);
+
+  await new OpenAiCompatibleAdapter().sendMessage({ ...baseInput(), customInstructions: '  Cite the source.  ' });
+
+  const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+  const system = String(body.messages[0].content);
+  expect(body.messages[0].role).toBe('system');
+  expect(system).toMatch(/available Foliole actions|read a Topic/iu);
+  expect(system.endsWith('User custom instructions (written by the user in Aide settings; follow them unless they conflict with the rules above):\nCite the source.\n')).toBe(true);
+});
+
 it.each([
   [401, 'auth_failed'],
   [403, 'auth_failed'],

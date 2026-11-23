@@ -19,6 +19,7 @@ import type {
 import type { NativeAssistantProviderId } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageContentResult } from '../../../lib/platform/nativeAssistantImageContract';
 import type {
+  NativeAssistantCustomInstructions,
   NativeAssistantModelDraftInput,
   NativeAssistantModelInput,
   NativeAssistantModelSettings,
@@ -143,6 +144,18 @@ export async function loadAssistantModelSettings(): Promise<NativeAssistantModel
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   return invoke(NATIVE_COMMANDS.assistantLoadModelSettings);
+}
+
+export async function loadAssistantCustomInstructions(): Promise<NativeAssistantCustomInstructions | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantLoadCustomInstructions);
+}
+
+export async function saveAssistantCustomInstructions(text: string): Promise<NativeAssistantCustomInstructions | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantSaveCustomInstructions, { text });
 }
 
 export async function saveAssistantModelDraft(

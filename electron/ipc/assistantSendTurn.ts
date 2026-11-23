@@ -18,6 +18,7 @@ export async function sendAssistantTurn(input: {
   byokAdapter: OpenAiCompatibleAdapter;
   agentControl: NativeAssistantAgentControlContext;
   clientTurnId: string;
+  customInstructions?: string;
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   images: StoredAssistantImage[];
   message: string;
@@ -34,6 +35,7 @@ export async function sendAssistantTurn(input: {
     if (!input.adapter) return null;
     return await input.adapter.sendMessage({
       clientTurnId: input.clientTurnId,
+      ...(input.customInstructions ? { customInstructions: input.customInstructions } : {}),
       ...(input.images.length ? { imagePaths: input.images.map((image) => image.filePath) } : {}),
       message: input.message,
       ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
@@ -59,6 +61,7 @@ async function sendByokTurn(input: Parameters<typeof sendAssistantTurn>[0]) {
   try {
     return await input.byokAdapter.sendMessage({
       clientTurnId: input.clientTurnId,
+      ...(input.customInstructions ? { customInstructions: input.customInstructions } : {}),
       history: input.continuation.persistedContinuationMessages ?? [],
       images: input.images,
       message: input.message,

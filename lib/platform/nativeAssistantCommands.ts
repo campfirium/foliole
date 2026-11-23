@@ -17,6 +17,8 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantTestModel: 'assistant_test_model',
   assistantDeleteModel: 'assistant_delete_model',
   assistantSelectModel: 'assistant_select_model',
+  assistantLoadCustomInstructions: 'assistant_load_custom_instructions',
+  assistantSaveCustomInstructions: 'assistant_save_custom_instructions',
   assistantLoadByokSettings: 'assistant_load_byok_settings',
   assistantSaveByokSettings: 'assistant_save_byok_settings',
   assistantSetProvider: 'assistant_set_provider',

@@ -13,6 +13,7 @@ const SENSITIVE_NATIVE_COMMAND_ARGS = new Set<string>([
   NATIVE_COMMANDS.assistantSaveByokSettings,
   NATIVE_COMMANDS.assistantSaveModelDraft,
   NATIVE_COMMANDS.assistantTestModel,
+  NATIVE_COMMANDS.assistantSaveCustomInstructions,
   NATIVE_COMMANDS.connectFoliolePublishSettings,
   NATIVE_COMMANDS.saveEditorOperationHistory,
   NATIVE_COMMANDS.saveSystemEntryDisplayNames,

@@ -46,6 +46,13 @@ export type NativeAssistantModelTestResult =
       state: 'failed';
     };
 
+/** Per-device text Aide adds to its system instructions on every message. */
+export const NATIVE_ASSISTANT_CUSTOM_INSTRUCTIONS_MAX_LENGTH = 2000;
+
+export interface NativeAssistantCustomInstructions {
+  text: string;
+}
+
 export type NativeAssistantModelSettingsCommandMap = {
   [NATIVE_COMMANDS.assistantLoadModelSettings]: {
     args: undefined;
@@ -66,5 +73,13 @@ export type NativeAssistantModelSettingsCommandMap = {
   [NATIVE_COMMANDS.assistantSelectModel]: {
     args: { id: string };
     result: NativeAssistantModelSettings;
+  };
+  [NATIVE_COMMANDS.assistantLoadCustomInstructions]: {
+    args: undefined;
+    result: NativeAssistantCustomInstructions;
+  };
+  [NATIVE_COMMANDS.assistantSaveCustomInstructions]: {
+    args: NativeAssistantCustomInstructions;
+    result: NativeAssistantCustomInstructions;
   };
 };

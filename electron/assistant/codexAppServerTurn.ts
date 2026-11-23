@@ -5,6 +5,7 @@ import type {
   NativeAssistantSendMessageResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { appendAideCustomInstructions } from './aideCustomInstructions.js';
 import { createAideThreadRequest } from './codexAppServerAidePolicy.js';
 import { handleDynamicToolCall } from './codexAppServerDynamicToolCalls.js';
 import type { DynamicToolCallResult, FolioleDynamicToolRequest } from './codexAppServerDynamicTools.js';
@@ -72,7 +73,7 @@ export class CodexAppServerSession {
       this.write(createAideThreadRequest(
         threadRequestId,
         this.args.launcherCwd,
-        this.args.developerInstructions,
+        appendAideCustomInstructions(this.args.developerInstructions, args.customInstructions),
         args.providerThreadId,
         this.activeTurn.dynamicToolCapabilities
       ));

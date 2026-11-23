@@ -141,6 +141,7 @@ export class CodexAppServerAdapter {
 
   async sendMessage(input: {
     clientTurnId: string;
+    customInstructions?: string;
     continuationMessages?: AssistantContinuationMessage[];
     imagePaths?: string[];
     message: string;
@@ -169,6 +170,7 @@ export class CodexAppServerAdapter {
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,
+        ...(input.customInstructions ? { customInstructions: input.customInstructions } : {}),
         ...(input.continuationMessages ? { continuationMessages: input.continuationMessages } : {}),
         ...(input.imagePaths?.length ? { imagePaths: input.imagePaths } : {}),
         message,
