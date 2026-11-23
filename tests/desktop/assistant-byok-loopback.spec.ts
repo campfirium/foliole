@@ -82,14 +82,14 @@ async function runInitialJourney(harness: Harness, testInfo: TestInfo) {
     await captureModels(session.page, testInfo);
     await closeSettings(session.page);
     await openAssistantPanel(session.page);
-    await sendAndExpect(session.page, 'Loopback first', 'Loopback reply 1');
+    await sendAndExpect(session.page, 'Loopback first', 'Loopback reply 1', CREATED_TOPIC);
     await expect(session.page.getByText(CREATED_TOPIC, { exact: true })).toBeVisible();
     const firstTurn = requestsForPrompt(harness.requests, 'Loopback first');
     expect(firstTurn).toHaveLength(2);
     assertBaseRequest(firstTurn[0]);
     assertToolResultReplay(firstTurn[1]);
 
-    await sendAndExpect(session.page, 'Long loopback chain', 'Long loopback reply');
+    await sendAndExpect(session.page, 'Long loopback chain', 'Long loopback reply', LONG_CREATED_TOPIC);
     await expect(session.page.getByText(LONG_CREATED_TOPIC, { exact: true })).toBeVisible();
     const longTurn = requestsForPrompt(harness.requests, 'Long loopback chain');
     expect(longTurn).toHaveLength(11);
@@ -143,12 +143,21 @@ function modelInput(endpoint: string) {
   return { apiKey: API_KEY, endpoint, model: MODEL };
 }
 
-async function sendAndExpect(page: Page, prompt: string, answer: string) {
+async function sendAndExpect(page: Page, prompt: string, answer: string, approvedTitle?: string) {
   await page.getByLabel('Foliole Aide message').fill(prompt);
   await page.getByRole('button', { name: 'Send', exact: true }).click();
+  if (approvedTitle) await allowWrite(page, approvedTitle);
   const response = page.locator('[data-message-role="assistant"]').last();
   if (answer.startsWith('Loopback')) await expect(response).toContainText('Loopback');
   await expect(response).toContainText(answer);
+}
+
+// Aide asks before every change by default; the scenario allows the one write each such turn proposes.
+async function allowWrite(page: Page, title: string) {
+  const approval = page.getByRole('region', { name: /^(Aide wants to make these changes|Aide 想做以下修改)$/ });
+  await expect(approval).toContainText(title);
+  await approval.getByRole('button', { name: /^(Allow|允许)$/ }).click();
+  await expect(approval).toBeHidden();
 }
 
 async function sendExpectingFailure(page: Page, prompt: string) {
