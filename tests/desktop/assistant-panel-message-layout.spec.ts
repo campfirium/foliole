@@ -23,24 +23,37 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
   await desktopWindow.reload();
-  await installAssistantIpcMock(desktopApp);
+  await installAssistantIpcMock(desktopApp, true);
   await openAssistantPanel(desktopWindow);
 
+  const sendButton = desktopWindow.getByRole('button', { name: /^(Send|发送)$/ });
+  const sendIcon = sendButton.locator('svg');
+  const idleIcon = await sendIcon.innerHTML();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Explain this topic');
-  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
+  await sendButton.click();
 
-  await expect(desktopWindow.getByRole('status')).toContainText(/Thinking|正在思考/);
+  const messageScroll = desktopWindow.getByTestId('assistant-message-scroll');
+  const waitingStatus = messageScroll.getByRole('status');
+  await expect(waitingStatus).toContainText(/Thinking|正在思考/);
+  await expect(sendButton).toBeDisabled();
+  expect(await sendIcon.innerHTML()).toBe(idleIcon);
+  const waitingScreenshotPath = testInfo.outputPath('assistant-waiting.png');
+  await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]')
+    .screenshot({ path: waitingScreenshotPath });
+  await testInfo.attach('assistant-waiting', { contentType: 'image/png', path: waitingScreenshotPath });
+  await desktopApp.evaluate(({ ipcMain }) => { ipcMain.emit('assistant-layout-release-reply'); });
+
   await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeHidden();
   await expect(desktopWindow.getByRole('button', { name: /^(History|历史)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: /^(New|新建)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Explain this topic' })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Assistant answer' })).toBeVisible();
+  await expect(waitingStatus).toBeHidden();
   await expect(desktopWindow.getByRole('list')).toContainText('First item');
   await expect(desktopWindow.getByRole('table')).toContainText('Follow current material');
   await expect(desktopWindow.getByText('const ready = true;')).toBeVisible();
   await expect(desktopWindow.locator('[data-message-role="user"] p')).toHaveClass(/rounded-lg/);
   await expect(desktopWindow.locator('[data-message-role="assistant"]')).not.toHaveClass(/rounded|bg-/);
-  const messageScroll = desktopWindow.getByTestId('assistant-message-scroll');
   const rightInset = await messageScroll.evaluate((element) =>
     window.innerWidth - element.getBoundingClientRect().right
   );
@@ -119,19 +132,24 @@ async function openAssistantPanel(page: Page) {
   await page.getByRole('menuitem', { name: /Foliole Aide/ }).click();
 }
 
-async function installAssistantIpcMock(electronApp: ElectronApplication) {
+async function installAssistantIpcMock(electronApp: ElectronApplication, holdReply = false) {
   const response = createAssistantResponse();
   const longResponse = createAssistantResponse(
     `## Long answer\n\n${Array.from({ length: 30 }, (_, index) => `Paragraph ${index + 1}`).join('\n\n')}`
   );
   await electronApp.evaluate(({ ipcMain }, fixture) => {
+    const releaseReply = fixture.holdReply
+      ? new Promise<void>((resolve) => ipcMain.once('assistant-layout-release-reply', () => resolve()))
+      : null;
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: { message?: string; workspaceContext?: unknown }; command?: string }) => {
+      if (request.command === 'load_article_targets') return { available: [], selected: null };
+      if (request.command === 'desktop_update_check') return { phase: 'not-applicable' };
       if (request.command === 'assistant_get_status') return fixture.status;
       if (request.command === 'assistant_list_thread_index') return [fixture.savedThread];
       if (request.command === 'assistant_list_thread_messages') return [];
       if (request.command === 'assistant_send_message') {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await (releaseReply ?? new Promise((resolve) => setTimeout(resolve, 500)));
         if (request.args?.message === 'Fail this turn') {
           return { failure: { category: 'protocol_error' }, provider: 'codex-app-server', state: 'failed' };
         }
@@ -151,6 +169,7 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
       return null;
     });
   }, {
+    holdReply,
     longResponse,
     response,
     savedThread: {

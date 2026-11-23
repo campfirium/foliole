@@ -95,8 +95,8 @@ it('shows a live animated thinking state before response text arrives', () => {
   );
 
   expect(screen.getByRole('status')).toHaveTextContent('Thinking');
-  expect(container.querySelector('.animate-spin')).toBeInTheDocument();
-  expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
+  expect(container.querySelector('.animate-spin')).not.toBeInTheDocument();
+  expect(container.querySelectorAll('.motion-safe\\:animate-pulse')).toHaveLength(3);
 });
 
 it('shows streamed text and an interruption note together after a partial failure', () => {

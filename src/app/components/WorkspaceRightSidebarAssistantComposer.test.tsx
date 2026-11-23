@@ -28,21 +28,27 @@ it('sends with Enter and keeps Shift+Enter for a newline', () => {
   expect(onSubmit).toHaveBeenCalledTimes(1);
 });
 
-it('shows progress in the send control while a turn is active', () => {
-  const { container } = renderWithLocalization(
-    <WorkspaceRightSidebarAssistantComposer
-      inputLabel="Message"
-      messageText="Ready"
-      onMessageTextChange={vi.fn()}
-      onSubmit={vi.fn()}
-      placeholder="Ask"
-      sendLabel="Send"
-      sending
-    />
+it('keeps the send icon steady and blocks duplicate sends during an active turn', () => {
+  const props = {
+    inputLabel: 'Message',
+    messageText: 'Ready',
+    onMessageTextChange: vi.fn(),
+    onSubmit: vi.fn(),
+    placeholder: 'Ask',
+    sendLabel: 'Send'
+  };
+  const { rerender } = renderWithLocalization(
+    <WorkspaceRightSidebarAssistantComposer {...props} sending={false} />
   );
+  const sendButton = screen.getByRole('button', { name: 'Send' });
+  const sendIcon = sendButton.querySelector('svg');
+  expect(sendIcon).toBeInTheDocument();
+  const idleIcon = sendIcon?.innerHTML;
 
-  expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
-  expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+  rerender(<WorkspaceRightSidebarAssistantComposer {...props} sending />);
+
+  expect(sendButton).toBeDisabled();
+  expect(sendButton.querySelector('svg')?.innerHTML).toBe(idleIcon);
 });
 
 it('shows attached image previews and removes them', () => {

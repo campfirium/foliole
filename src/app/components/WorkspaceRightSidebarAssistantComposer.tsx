@@ -1,4 +1,4 @@
-import { ImagePlus, LoaderCircle, SendHorizontal } from 'lucide-react';
+import { ArrowUp, ImagePlus } from 'lucide-react';
 import { useRef } from 'react';
 import type { ClipboardEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from 'react';
 
@@ -89,9 +89,7 @@ function AssistantComposerActions(props: {
       <AppIconButton
         className="rounded-full bg-foreground/8 text-foreground hover:bg-foreground/12 disabled:bg-foreground/8"
         disabled={composer.sending || !composer.messageText.trim()}
-        icon={composer.sending
-          ? <LoaderCircle aria-hidden className="size-4 animate-spin" strokeWidth={1.8} />
-          : <SendHorizontal aria-hidden className="size-4" strokeWidth={1.8} />}
+        icon={<ArrowUp aria-hidden className="size-4" strokeWidth={1.8} />}
         label={composer.sendLabel}
         type="submit"
       />

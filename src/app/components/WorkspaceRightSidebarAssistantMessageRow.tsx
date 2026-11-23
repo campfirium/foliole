@@ -1,5 +1,3 @@
-import { LoaderCircle } from 'lucide-react';
-
 import { WorkspaceRightSidebarAssistantImageStrip } from './WorkspaceRightSidebarAssistantImageStrip';
 import { WorkspaceRightSidebarAssistantMarkdown } from './WorkspaceRightSidebarAssistantMarkdown';
 import { WorkspaceRightSidebarAssistantMessageActions } from './WorkspaceRightSidebarAssistantMessageActions';
@@ -54,15 +52,15 @@ function AssistantThinking(props: { label: string }) {
   return (
     <div
       aria-live="polite"
-      className="flex items-center gap-2 px-1 py-1 text-ui-sm text-foreground/58"
+      className="flex items-center px-1 py-1 text-foreground/58"
+      data-message-role="assistant"
       role="status"
     >
-      <LoaderCircle aria-hidden className="size-4 animate-spin" strokeWidth={1.8} />
-      <span>{props.label}</span>
+      <span className="sr-only">{props.label}</span>
       <span aria-hidden className="flex items-center gap-1">
-        <span className="size-1 animate-pulse rounded-full bg-current" />
-        <span className="size-1 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
-        <span className="size-1 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse" />
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:150ms]" />
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:300ms]" />
       </span>
     </div>
   );
