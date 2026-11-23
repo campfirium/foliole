@@ -33,6 +33,6 @@ export const ZH_HANS_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS: Partial<Record<Tran
   'settings.aideDialog.permissions.write.manageIndexes.title': '管理索引',
   'settings.aideDialog.permissions.write.manageIndexes.description': '创建、重命名或移除索引，整理索引中的主题。',
   'settings.aideDialog.permissions.write.manageDives.title': '管理专题',
-  'settings.aideDialog.permissions.write.manageDives.description': '创建或重命名专题，添加或移除其中的文件夹和主题。',
+  'settings.aideDialog.permissions.write.manageDives.description': '创建、重命名专题，增减其中的文件夹和主题。',
   'settings.aideDialog.permissions.saveFailed': 'AI 权限设置未能保存。'
 };

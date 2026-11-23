@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 
 import {
   AIDE_READ_BUDGET_MAX,
@@ -30,6 +30,15 @@ const WRITE_PERMISSION_ORDER: readonly AideWriteToolKey[] = [
   'createMaterial', 'createExcerpt', 'editContent', 'moveAndOrder', 'manageIndexes', 'manageDives', 'trash'
 ];
 
+// Each column spans one track for its heading, one for its first setting, and one per switch below it.
+const PERMISSION_GRID_TRACKS = {
+  '--read-track-count': READ_PERMISSION_ORDER.length + 2,
+  '--write-track-count': WRITE_PERMISSION_ORDER.length + 2
+} as CSSProperties;
+const PERMISSION_COLUMN = `min-[1080px]:row-start-1 min-[1080px]:mb-0 min-[1080px]:grid min-[1080px]:min-w-0 min-[1080px]:grid-rows-subgrid
+  min-[1080px]:[&>div:last-child]:row-start-2 min-[1080px]:[&>div:last-child]:row-end-[-1]
+  min-[1080px]:[&>div:last-child]:grid min-[1080px]:[&>div:last-child]:grid-rows-subgrid`;
+
 export function AideSettingsPermissionsPane() {
   const t = useTranslation();
   const { flush, saveFailed, settings, update } = useAideToolPermissionSettings();
@@ -44,20 +53,20 @@ export function AideSettingsPermissionsPane() {
       onReset={isDefaultAideToolPermissions(settings) ? undefined : reset}
       resetLabel={t('settings.aideDialog.permissions.reset')}
     >
-      <div className="grid grid-cols-2 items-start gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
+      <div
+        className="grid grid-cols-1 gap-5 pl-5 pr-5 min-[1080px]:grid-cols-2 min-[1080px]:gap-y-0 min-[1080px]:pl-0"
+        style={PERMISSION_GRID_TRACKS}
+      >
         <SettingsSection
           ariaLabel={t('settings.aideDialog.permissions.read.title')}
+          className={`${PERMISSION_COLUMN} min-[1080px]:col-start-1 min-[1080px]:row-span-[var(--read-track-count)]`}
           title={t('settings.aideDialog.permissions.read.title')}
         >
           <AideReadPermissionRows onChange={update} onCommit={flush} settings={settings} />
-          {saveFailed ? (
-            <p className="mx-settings-panel-x mt-2 text-ui-sm text-destructive" role="alert">{t('settings.aideDialog.permissions.saveFailed')}</p>
-          ) : null}
         </SettingsSection>
         <SettingsSection
           ariaLabel={t('settings.aideDialog.permissions.write.title')}
-          // Side by side with the read section, so it starts level with it; stacked, it keeps its divider.
-          className="min-[1080px]:pt-0 min-[1080px]:before:hidden"
+          className={`${PERMISSION_COLUMN} min-[1080px]:col-start-2 min-[1080px]:row-span-[var(--write-track-count)] min-[1080px]:pt-0 min-[1080px]:before:hidden`}
           title={t('settings.aideDialog.permissions.write.title')}
         >
           <AidePermissionRow
@@ -78,6 +87,9 @@ export function AideSettingsPermissionsPane() {
           />
         </SettingsSection>
       </div>
+      {saveFailed ? (
+        <p className="mx-settings-panel-x mt-2 text-ui-sm text-destructive" role="alert">{t('settings.aideDialog.permissions.saveFailed')}</p>
+      ) : null}
     </AideSettingsPaneFrame>
   );
 }
@@ -148,5 +160,9 @@ function AidePermissionSwitches<K extends string>({ group, keys, onChange, value
 }
 
 function AidePermissionRow({ children, description, title }: { children: ReactNode; description: string; title: string }) {
-  return <SettingsRow description={description} title={title}>{children}</SettingsRow>;
+  return (
+    <SettingsRow description={description || <span aria-hidden="true">{'\u00A0'}</span>} title={title}>
+      {children}
+    </SettingsRow>
+  );
 }
