@@ -41,3 +41,23 @@ it('keeps global conversation actions separate from the current conversation tit
   expect(screen.getByRole('heading', { name: 'Aide' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Back to history' })).not.toBeInTheDocument();
 });
+
+it('opens Aide settings from the panel toolbar', () => {
+  const opened = vi.fn();
+  window.addEventListener('foliole:open-aide-settings-dialog', opened);
+  try {
+    renderWithLocalization(
+      <AssistantPanelToolbar
+        conversationTitle={null}
+        historyVisible={false}
+        onBack={vi.fn()}
+        onNewThread={vi.fn()}
+        onShowHistory={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Aide settings' }));
+    expect(opened).toHaveBeenCalledOnce();
+  } finally {
+    window.removeEventListener('foliole:open-aide-settings-dialog', opened);
+  }
+});

@@ -36,7 +36,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('general', SETTINGS_CLI_SEARCH_ROW_ID, 'settings.search.aboutCli.title', 'settings.search.aboutCli.description', 'settings.search.aboutCli.terms', 'settings.general.externalAccess.section'),
   row('general', SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID, 'settings.general.agentControl.learningImport', 'settings.general.agentControl.learningImportDescription', 'settings.general.agentControl.searchTerms'),
   row('general', SETTINGS_SUPER_MEMO_SEARCH_ROW_ID, 'settings.general.dataMigration.superMemo', 'desktop.superMemoDrafts.description', 'desktop.superMemoDrafts.title', 'desktop.superMemoDrafts.searchTerms', 'settings.general.dataMigration.section'),
-  row('general', SETTINGS_MODELS_SEARCH_ROW_ID, 'settings.models.section', 'settings.models.description', 'settings.models.searchTerms'),
+  row('general', SETTINGS_MODELS_SEARCH_ROW_ID, 'settings.general.aide.settingsRow', 'settings.general.aide.settingsDescription', 'settings.models.searchTerms'),
   row('typography', 'typography-text-font', 'settings.appearance.textFont.title', 'settings.appearance.textFont.description'),
   row('typography', 'typography-monospace-font', 'settings.appearance.monospaceFont.title', 'settings.appearance.monospaceFont.description'),
   row('typography', 'typography-reading-font-size', 'settings.appearance.fontSize.title', 'settings.appearance.fontSize.description'),

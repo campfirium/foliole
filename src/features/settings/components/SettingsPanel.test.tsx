@@ -79,11 +79,13 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
 
-it('shows model connections under Foliole Aide in General without adding a sidebar category', async () => {
+it('links to Aide settings from Foliole Aide in General without adding a sidebar category', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
 
   const aide = screen.getByRole('region', { name: 'Foliole Aide' });
-  expect(within(aide).getByRole('table', { name: 'Aide model settings' })).toBeInTheDocument();
+  expect(within(aide).getByText('Aide settings')).toBeInTheDocument();
+  expect(within(aide).getByRole('button', { name: 'Open' })).toBeInTheDocument();
+  expect(within(aide).queryByRole('table', { name: 'Aide model settings' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Foliole Aide' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'General' })).toHaveAttribute('aria-current', 'page');
   expect(screen.queryByRole('button', { name: 'Manage AI services' })).not.toBeInTheDocument();

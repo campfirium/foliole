@@ -160,6 +160,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.rightPanel.assistant.input': 'Foliole Aide 消息',
   'desktop.rightPanel.assistant.placeholder': '输入问题或任务…',
   'desktop.rightPanel.assistant.history': '历史',
+  'desktop.rightPanel.assistant.settings': 'Aide 设置',
   'desktop.rightPanel.assistant.backToHistory': '返回历史',
   'desktop.rightPanel.assistant.newConversation': '新会话',
   'desktop.rightPanel.assistant.newThread': '新建',

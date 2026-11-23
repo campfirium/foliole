@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { AideSettingsDialogHost } from '../features/settings/components/AideSettingsDialogHost';
 import { CustomCopyDialogHost } from '../features/settings/components/CustomCopyDialogHost';
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { DesktopCustomCssProvider } from '../features/settings/context/DesktopCustomCssProvider';
@@ -33,6 +34,7 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
                   <AppConfirmationProvider>
                     <DesktopCustomCssProvider>{children}</DesktopCustomCssProvider>
                     <CustomCopyDialogHost />
+                    <AideSettingsDialogHost />
                     <BackupSearchDialogHost />
                   </AppConfirmationProvider>
                 </DocumentHeaderMenuSettingsProvider>

@@ -177,6 +177,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.input': 'Foliole Aide message',
   'desktop.rightPanel.assistant.placeholder': 'Enter a question or task...',
   'desktop.rightPanel.assistant.history': 'History',
+  'desktop.rightPanel.assistant.settings': 'Aide settings',
   'desktop.rightPanel.assistant.backToHistory': 'Back to history',
   'desktop.rightPanel.assistant.newConversation': 'New conversation',
   'desktop.rightPanel.assistant.newThread': 'New',

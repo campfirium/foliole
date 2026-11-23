@@ -1,5 +1,6 @@
-import { ArrowLeft, History, PenLine } from 'lucide-react';
+import { ArrowLeft, History, PenLine, Settings } from 'lucide-react';
 
+import { requestAideSettingsDialogOpen } from '../../features/settings/model/aideSettingsDialogRequests';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
@@ -44,6 +45,11 @@ export function AssistantPanelToolbar(props: {
             icon={<PenLine aria-hidden className="size-4" strokeWidth={1.8} />}
             label={t('desktop.rightPanel.assistant.newThread')}
             onClick={props.onNewThread}
+          />
+          <AppIconButton
+            icon={<Settings aria-hidden className="size-4" strokeWidth={1.8} />}
+            label={t('desktop.rightPanel.assistant.settings')}
+            onClick={requestAideSettingsDialogOpen}
           />
         </div>
       </div>

@@ -24,19 +24,18 @@ import {
 } from '../../../../shared/ui';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../../shared/ui';
 import { SettingsSuperMemoImport } from '../../../import/components/SettingsSuperMemoImport';
+import { requestAideSettingsDialogOpen } from '../../model/aideSettingsDialogRequests';
 import { requestCustomCopyDialogOpen } from '../../model/customCopyDialogRequests';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { SETTINGS_CLI_SEARCH_ROW_ID, SETTINGS_MODELS_SEARCH_ROW_ID, SETTINGS_SUPER_MEMO_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 import { SettingsAgentControlSection } from './SettingsAgentControlSection';
-import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsCliSection } from './SettingsCliSection';
 import { SettingsExperimentalFeaturesSection } from './SettingsExperimentalFeaturesSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
-import { SettingsModelsSection } from './SettingsModelsSection';
 import { SettingsSearchAliasRow } from './SettingsSearchAliasRow';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -180,8 +179,13 @@ export function SettingsGeneralSection({
         searchRowId={SETTINGS_MODELS_SEARCH_ROW_ID}
         title={t('settings.general.aide.section')}
       >
-        {previewDesktopSettings ? null : <SettingsModelsSection />}
-        <SettingsAideStorageSection preview={previewDesktopSettings} />
+        <SettingsRow description={t('settings.general.aide.settingsDescription')} title={t('settings.general.aide.settingsRow')}>
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+            <button className={settingsButtonClassName()} disabled={previewDesktopSettings} onClick={requestAideSettingsDialogOpen} type="button">
+              {t('settings.general.aide.settingsOpen')}
+            </button>
+          </SettingsControlSlot>
+        </SettingsRow>
       </SettingsSection>
       {showDesktopGroups ? (
         <SettingsSection

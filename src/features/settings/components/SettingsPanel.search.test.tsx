@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
@@ -114,6 +114,27 @@ it('jumps directly to a requested settings row', async () => {
     behavior: 'smooth',
     block: 'start'
   });
+});
+
+it('opens Aide settings from the General Foliole Aide row', async () => {
+  const opened = vi.fn();
+  window.addEventListener('foliole:open-aide-settings-dialog', opened);
+  try {
+    renderWithMouseGestureProvider(
+      <SettingsPanel {...createProps()} requestedCategory="general" requestedRowId="general-models" />
+    );
+
+    const row = await waitFor(() => {
+      const target = document.querySelector<HTMLElement>('[data-settings-search-row-id="general-models"]');
+      expect(target).not.toBeNull();
+      return target!;
+    });
+    expect(within(row).queryByRole('table', { name: /model/i })).toBeNull();
+    fireEvent.click(within(row).getByRole('button', { name: 'Open' }));
+    expect(opened).toHaveBeenCalledOnce();
+  } finally {
+    window.removeEventListener('foliole:open-aide-settings-dialog', opened);
+  }
 });
 
 it('shows the External folders category without a visibility switch', () => {
