@@ -5,7 +5,6 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import {
   AppDialog,
   AppDialogContent,
-  AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
@@ -15,16 +14,15 @@ import {
   SettingsSection,
   settingsDialogSurfaceClassName
 } from '../../../shared/ui';
-import { settingsDialogPane, settingsDialogPaneBody, settingsDialogPaneHeader } from '../../../shared/ui/settingsDialogBounds';
+import { settingsDialogGrid, settingsDialogPane } from '../../../shared/ui/settingsDialogBounds';
 import { subscribeAideSettingsDialogOpen } from '../model/aideSettingsDialogRequests';
 
 import { AideSettingsContextPane } from './AideSettingsContextPane';
+import { AideSettingsPaneFrame } from './AideSettingsPaneFrame';
 import { AideSettingsPermissionsPane } from './AideSettingsPermissionsPane';
 import { SettingsAideCustomInstructionsSection } from './sections/SettingsAideCustomInstructionsSection';
 import { SettingsAideStorageSection } from './sections/SettingsAideStorageSection';
 import { SettingsModelsSection } from './sections/SettingsModelsSection';
-
-const AIDE_SETTINGS_DIALOG_GRID = 'grid h-[min(760px,calc(100dvh-36px))] w-[min(1120px,calc(100vw-36px))] max-w-none grid-cols-[240px_minmax(0,1fr)] overflow-hidden';
 
 export function AideSettingsDialogHost() {
   const t = useTranslation();
@@ -39,7 +37,7 @@ export function AideSettingsDialogHost() {
         <AppDialogOverlay aria-label={t('settings.overlay.aria')} onClick={() => setOpen(false)} role="presentation" />
         <AppDialogContent
           aria-describedby="aide-settings-description"
-          className={settingsDialogSurfaceClassName(AIDE_SETTINGS_DIALOG_GRID)}
+          className={settingsDialogSurfaceClassName(settingsDialogGrid)}
         >
           <SettingsNavigation
             ariaLabel={t('settings.aideDialog.title')}
@@ -59,12 +57,9 @@ export function AideSettingsDialogHost() {
             </SettingsNavigationGroup>
           </SettingsNavigation>
           <div className={settingsDialogPane}>
-            <div aria-hidden="true" className={settingsDialogPaneHeader} />
-            <div className={settingsDialogPaneBody}>
-              {pane === 'context' ? <AideSettingsContextPane /> : null}
-              {pane === 'permissions' ? <AideSettingsPermissionsPane /> : null}
-              {pane === 'models' ? <AideSettingsModelsPane /> : null}
-            </div>
+            {pane === 'context' ? <AideSettingsContextPane /> : null}
+            {pane === 'permissions' ? <AideSettingsPermissionsPane /> : null}
+            {pane === 'models' ? <AideSettingsModelsPane /> : null}
           </div>
         </AppDialogContent>
       </AppDialogPortal>
@@ -77,13 +72,7 @@ type AideSettingsPane = 'context' | 'models' | 'permissions';
 function AideSettingsModelsPane() {
   const t = useTranslation();
   return (
-    <>
-      <div className="mb-7 px-5 pb-6">
-        <h2 className="m-0 text-xl font-semibold text-foreground">{t('settings.aideDialog.models.nav')}</h2>
-        <AppDialogDescription className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground" id="aide-settings-description">
-          {t('settings.aideDialog.models.description')}
-        </AppDialogDescription>
-      </div>
+    <AideSettingsPaneFrame description={t('settings.aideDialog.models.description')} title={t('settings.aideDialog.models.nav')}>
       <SettingsSection ariaLabel={t('settings.models.section')} title={t('settings.models.section')}>
         <SettingsModelsSection />
       </SettingsSection>
@@ -97,6 +86,6 @@ function AideSettingsModelsPane() {
       <SettingsSection ariaLabel={t('settings.general.aide.row')}>
         <SettingsAideStorageSection />
       </SettingsSection>
-    </>
+    </AideSettingsPaneFrame>
   );
 }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Info } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
 import {
   AIDE_READ_BUDGET_MAX,
@@ -13,14 +14,17 @@ import {
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../../shared/localization/translations';
 import {
-  AppDialogDescription,
   AppSwitch,
-  SettingsButton,
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipTrigger,
   SettingsRow,
   SettingsSection,
   settingsFieldClassName
 } from '../../../shared/ui';
 import { useAideToolPermissionSettings } from '../model/useAideToolPermissionSettings';
+
+import { AideSettingsPaneFrame } from './AideSettingsPaneFrame';
 
 export function AideSettingsPermissionsPane() {
   const t = useTranslation();
@@ -30,18 +34,12 @@ export function AideSettingsPermissionsPane() {
     flush();
   };
   return (
-    <>
-      <div className="mb-7 flex items-start justify-between gap-6 px-5 pb-6">
-        <div>
-          <h2 className="m-0 text-xl font-semibold text-foreground">{t('settings.aideDialog.permissions.nav')}</h2>
-          <AppDialogDescription className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground" id="aide-settings-description">
-            {t('settings.aideDialog.permissions.description')}
-          </AppDialogDescription>
-        </div>
-        {isDefaultAideToolPermissions(settings) ? null : (
-          <SettingsButton onClick={reset}>{t('settings.aideDialog.permissions.reset')}</SettingsButton>
-        )}
-      </div>
+    <AideSettingsPaneFrame
+      description={t('settings.aideDialog.permissions.description')}
+      onReset={isDefaultAideToolPermissions(settings) ? undefined : reset}
+      resetLabel={t('settings.aideDialog.permissions.reset')}
+      title={t('settings.aideDialog.permissions.nav')}
+    >
       <div className="grid grid-cols-2 items-start gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
         <SettingsSection
           ariaLabel={t('settings.aideDialog.permissions.read.title')}
@@ -60,7 +58,7 @@ export function AideSettingsPermissionsPane() {
           description={t('settings.aideDialog.permissions.write.description')}
           title={t('settings.aideDialog.permissions.write.title')}
         >
-          <SettingsRow
+          <AidePermissionRow
             description={t('settings.aideDialog.permissions.askBeforeWrite.description')}
             title={t('settings.aideDialog.permissions.askBeforeWrite.title')}
           >
@@ -69,7 +67,7 @@ export function AideSettingsPermissionsPane() {
               checked={settings.askBeforeWrite}
               onCheckedChange={(askBeforeWrite) => update({ ...settings, askBeforeWrite })}
             />
-          </SettingsRow>
+          </AidePermissionRow>
           <AidePermissionSwitches
             group="write"
             keys={AIDE_WRITE_TOOL_KEYS}
@@ -78,7 +76,7 @@ export function AideSettingsPermissionsPane() {
           />
         </SettingsSection>
       </div>
-    </>
+    </AideSettingsPaneFrame>
   );
 }
 
@@ -97,7 +95,7 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
   };
   return (
     <>
-      <SettingsRow
+      <AidePermissionRow
         description={t('settings.aideDialog.permissions.readBudget.description')}
         title={t('settings.aideDialog.permissions.readBudget.title')}
       >
@@ -114,7 +112,7 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
           type="number"
           value={draft ?? settings.readBudget}
         />
-      </SettingsRow>
+      </AidePermissionRow>
       <AidePermissionSwitches
         group="read"
         keys={AIDE_READ_TOOL_KEYS}
@@ -136,13 +134,37 @@ function AidePermissionSwitches<K extends string>({ group, keys, onChange, value
     const prefix = `settings.aideDialog.permissions.${group === 'read' ? 'tool' : 'write'}.${key}`;
     const title = t(`${prefix}.title` as TranslationKey);
     return (
-      <SettingsRow description={t(`${prefix}.description` as TranslationKey)} key={key} title={title}>
+      <AidePermissionRow description={t(`${prefix}.description` as TranslationKey)} key={key} title={title}>
         <AppSwitch
           aria-label={title}
           checked={values[key]}
           onCheckedChange={(enabled) => onChange({ ...values, [key]: enabled })}
         />
-      </SettingsRow>
+      </AidePermissionRow>
     );
   });
+}
+
+// One line per permission: the explanation sits behind an info icon so both columns fit without scrolling.
+function AidePermissionRow({ children, description, title }: { children: ReactNode; description: string; title: string }) {
+  return (
+    <SettingsRow className="items-center max-[1080px]:flex-row max-[1080px]:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <h4 className="text-ui-lg font-normal text-foreground">{title}</h4>
+        <AppTooltip>
+          <AppTooltipTrigger asChild>
+            <button
+              aria-label={description}
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded text-settings-icon hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              type="button"
+            >
+              <Info aria-hidden="true" size={15} strokeWidth={1.8} />
+            </button>
+          </AppTooltipTrigger>
+          <AppTooltipContent layer="dropdown" side="top">{description}</AppTooltipContent>
+        </AppTooltip>
+      </div>
+      {children}
+    </SettingsRow>
+  );
 }
