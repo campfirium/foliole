@@ -137,7 +137,7 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
   const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
   expect(budget).toHaveValue(20000);
   expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
-    'Read other parts of a material', 'Read text from a PDF page', 'Locate the original text',
+    'Read other parts of a material', 'Read text from a PDF page', 'Get base topic details for derived material',
     'Find in the current material', 'Find in the library'
   ]);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
