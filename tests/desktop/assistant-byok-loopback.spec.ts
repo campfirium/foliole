@@ -74,6 +74,14 @@ async function runFailedDraftJourney(harness: Harness) {
   }
 }
 
+// Aide writes to the library root while the tree may still show Inbox, so check the stored node.
+async function expectWorkspaceTopic(page: Page, title: string) {
+  await expect.poll(async () => page.evaluate((expected) => {
+    const nodes = globalThis.window?.__folioleWorkspaceDebug?.listNodes?.() ?? [];
+    return nodes.some((node) => node.title === expected);
+  }, title), { message: `waiting for Aide-created topic ${title}` }).toBe(true);
+}
+
 async function runInitialJourney(harness: Harness, testInfo: TestInfo) {
   const session = await harness.launch();
   try {
@@ -83,14 +91,14 @@ async function runInitialJourney(harness: Harness, testInfo: TestInfo) {
     await closeSettings(session.page);
     await openAssistantPanel(session.page);
     await sendAndExpect(session.page, 'Loopback first', 'Loopback reply 1', CREATED_TOPIC);
-    await expect(session.page.getByText(CREATED_TOPIC, { exact: true })).toBeVisible();
+    await expectWorkspaceTopic(session.page, CREATED_TOPIC);
     const firstTurn = requestsForPrompt(harness.requests, 'Loopback first');
     expect(firstTurn).toHaveLength(2);
     assertBaseRequest(firstTurn[0]);
     assertToolResultReplay(firstTurn[1]);
 
     await sendAndExpect(session.page, 'Long loopback chain', 'Long loopback reply', LONG_CREATED_TOPIC);
-    await expect(session.page.getByText(LONG_CREATED_TOPIC, { exact: true })).toBeVisible();
+    await expectWorkspaceTopic(session.page, LONG_CREATED_TOPIC);
     const longTurn = requestsForPrompt(harness.requests, 'Long loopback chain');
     expect(longTurn).toHaveLength(11);
     expect(longTurn.at(-1)?.body.messages?.filter((message) => message.role === 'tool')).toHaveLength(28);
@@ -108,7 +116,7 @@ async function runRelaunchJourney(harness: Harness, testInfo: TestInfo) {
   const session = await harness.launch();
   try {
     await prepareAide(session.page);
-    await expect(session.page.getByText(CREATED_TOPIC, { exact: true })).toBeVisible();
+    await expectWorkspaceTopic(session.page, CREATED_TOPIC);
     await openAssistantPanel(session.page);
     await session.page.getByRole('button', { name: /Loopback first/ }).click();
     await expect(session.page.getByText('Loopback reply 2')).toBeVisible();
