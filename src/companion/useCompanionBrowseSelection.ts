@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY
@@ -33,7 +34,16 @@ export function useCompanionBrowseSelection(
 ) {
   const { viewHideDismissedTopics } = useDismissedTopicVisibility();
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
-  const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useCompanionNavigationField('selectedBrowseNodeId', null);
+  const [selectedBrowseNodeId, selectNode] = useCompanionNavigationField('selectedBrowseNodeId', null);
+  const [breadcrumbJump, setBreadcrumbJump] = useState<{
+    nodeId: string; libraryScope: string | undefined; anchor: StoredAnchorLink;
+  } | null>(null);
+
+  const libraryScope = snapshot?.libraryScope;
+  const setSelectedBrowseNodeId = useCallback((nodeId: string | null, anchor?: StoredAnchorLink) => {
+    setBreadcrumbJump(nodeId && anchor ? { nodeId, libraryScope, anchor } : null);
+    selectNode(nodeId);
+  }, [libraryScope, selectNode]);
   const resolvedReadableArticle = useMemo(
     () => {
       if (!selectedBrowseNodeId) {
@@ -63,9 +73,11 @@ export function useCompanionBrowseSelection(
     if (selectedBrowseNodeId && !snapshot?.nodesById[selectedBrowseNodeId] && !resolvedReadableArticle && !browsedFolder) {
       setSelectedBrowseNodeId(null);
     }
-  }, [browsedFolder, resolvedReadableArticle, selectedBrowseNodeId, snapshot]);
+  }, [browsedFolder, resolvedReadableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId, snapshot]);
 
   return {
+    breadcrumbAnchor: breadcrumbJump && breadcrumbJump.nodeId === selectedBrowseNodeId &&
+      breadcrumbJump.libraryScope === libraryScope ? breadcrumbJump.anchor : null,
     browsedFolder,
     readableArticle: resolvedReadableArticle,
     selectedBrowseNodeId,

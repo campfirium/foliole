@@ -1,3 +1,4 @@
+import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { markCompanionNodeOpened } from './companionBrowseOpenState';
@@ -17,25 +18,18 @@ type CompanionActionStateArgs = {
   setBrowseReturnNodeId: (nodeId: string | null) => void;
   setReadingError: (value: string | null) => void;
   setReviewError: (value: string | null) => void;
-  setSelectedBrowseNodeId: (nodeId: string | null) => void;
+  setSelectedBrowseNodeId: (nodeId: string | null, anchor?: StoredAnchorLink) => void;
   snapshot: WorkspaceSnapshot | null;
   workspaceSync: CompanionWorkspaceSyncApi;
 };
 
-function markOpened(args: CompanionActionStateArgs, nodeId: string) {
+function openBrowseNode(args: CompanionActionStateArgs, nodeId: string) {
+  const node = args.snapshot?.nodesById[nodeId];
+  if (node?.kind === 'folder' && node.virtualFilter) {
+    void Promise.resolve(args.workspaceSync.openVirtualFolder(nodeId)).catch(() => undefined);
+  }
   void markCompanionNodeOpened({ nodeId, snapshot: args.snapshot, workspaceSync: args.workspaceSync })
     .catch(() => undefined);
-}
-
-function loadArticle(args: CompanionActionStateArgs, nodeId: string) {
-  const node = args.snapshot?.nodesById[nodeId];
-  if (!node) return;
-  if (node.kind === 'folder') {
-    if (node.virtualFilter) {
-      void Promise.resolve(args.workspaceSync.openVirtualFolder(nodeId)).catch(() => undefined);
-    }
-    return;
-  }
 }
 
 export function useCompanionActionState(args: CompanionActionStateArgs) {
@@ -57,17 +51,16 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
   function handleSelectRecentArticle(nodeId: string) {
     args.setBrowseReturnNodeId(null);
     args.setSelectedBrowseNodeId(nodeId);
-    loadArticle(args, nodeId);
-    markOpened(args, nodeId);
+    openBrowseNode(args, nodeId);
     if (args.activeAction !== 'review') args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
 
-  function handleSelectBrowseNode(nodeId: string) {
+  function handleSelectBrowseNode(nodeId: string, anchor?: StoredAnchorLink) {
     args.setBrowseReturnNodeId(args.browsedFolderNodeId ?? (nodeId === args.browseReturnNodeId ? null : args.browseReturnNodeId));
-    args.setSelectedBrowseNodeId(nodeId);
-    loadArticle(args, nodeId);
-    markOpened(args, nodeId);
+    if (anchor) args.setSelectedBrowseNodeId(nodeId, anchor);
+    else args.setSelectedBrowseNodeId(nodeId);
+    openBrowseNode(args, nodeId);
     if (args.activeAction !== 'review') args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }

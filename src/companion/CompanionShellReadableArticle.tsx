@@ -4,6 +4,7 @@ import { findNextSequentialReadingTopic } from '../../lib/core/review/sequential
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
+import { resolveAncestorAnchorLink } from '../store/workspaceNavigation';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionImageClozeLayer } from './CompanionImageClozeLayer';
@@ -109,20 +110,33 @@ function FlowFooter({ surface }: { surface: Surface }) {
   );
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; onSelectBreadcrumbNode?: ((nodeId: string) => void) | undefined; surface: Surface; workspaceSync: WorkspaceSync }) {
+function selectCompanionBreadcrumb(
+  snapshot: WorkspaceSync['state']['workspace_snapshot'],
+  currentNodeId: string | null,
+  nodeId: string,
+  selectNode: Surface['handleSelectBrowseNode']
+) {
+  const anchor = currentNodeId && snapshot && snapshot.nodesById[nodeId]?.kind !== 'folder'
+    ? resolveAncestorAnchorLink(currentNodeId, nodeId, snapshot.nodesById).focusAnchor : null;
+  if (anchor) selectNode(nodeId, anchor);
+  else selectNode(nodeId);
+}
+
+export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined; surface: Surface; workspaceSync: WorkspaceSync }) {
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const current = props.surface.effectiveReviewSession.currentCard;
   const flowTopicId = props.flow && current?.itemKind === 'reading' && isAvailableNativeCompanionRuntime()
     ? current.nodeId : null;
   const nextTopicId = useMemo(() => snapshot && flowTopicId
     ? findNextSequentialReadingTopic({ ...snapshot, currentNodeId: flowTopicId }) : null, [snapshot, flowTopicId]);
-  const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
-    props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null
-      : props.surface.readableArticle?.nodeId ?? props.surface.selectedBrowseNodeId);
+  const currentNodeId = props.flow ? current?.nodeId ?? null
+    : props.surface.readableArticle?.nodeId ?? props.surface.selectedBrowseNodeId;
+  const breadcrumbItems = useReviewBreadcrumbItems(snapshot, currentNodeId);
   const navigation = useCompanionReadingNavigation(props.surface.readingActivity,
     !props.flow && props.surface.readableArticle && canContinueToNext(props.surface.readableArticle) ? props.navigation : undefined);
   const header = props.flow || props.surface.isFlowBrowsing || breadcrumbItems.length > 0
-    ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.onSelectBreadcrumbNode ?? props.surface.handleSelectBrowseNode} /> : null;
+    ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={nodeId => selectCompanionBreadcrumb(snapshot, currentNodeId, nodeId,
+      props.onSelectBreadcrumbNode ?? props.surface.handleSelectBrowseNode)} /> : null;
   const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
   if (!props.surface.readableArticle) return <CompanionReviewLoading header={header} footer={footer} />;
   const activity = props.surface.readingActivity;
@@ -140,6 +154,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       content={props.surface.readableArticle.content} versionId={props.surface.readableArticle.currentVersionId ?? null}>
     <ImmersiveReadableArticle
       key={props.surface.readableArticle.nodeId}
+      breadcrumbAnchor={nodeId === props.surface.selectedBrowseNodeId ? props.surface.breadcrumbAnchor : null}
       searchMatch={props.searchMatch}
       navigation={navigation}
       activity={activity}

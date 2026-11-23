@@ -12,8 +12,8 @@ export interface NodeNavigationResult {
   nodeId: string;
 }
 
-export interface AncestorNavigationTarget {
-  focusAnchor: NodeAnchorLink | null;
+export interface AncestorNavigationTarget<Anchor = NodeAnchorLink> {
+  focusAnchor: Anchor | null;
   isAncestor: boolean;
 }
 
@@ -45,20 +45,20 @@ export function sanitizeNavigationState(
   };
 }
 
-export function resolveAncestorAnchorLink(
+export function resolveAncestorAnchorLink<Anchor>(
   activeNodeId: string,
   ancestorNodeId: string,
-  nodesById: Record<string, Node>
-): AncestorNavigationTarget {
+  nodesById: Record<string, { parentNodeId: string | null; anchorLink?: Anchor | null }>
+): AncestorNavigationTarget<Anchor> {
   const activeNode = nodesById[activeNodeId];
   if (!activeNode) {
     return { focusAnchor: null, isAncestor: false };
   }
 
   let cursorId: string | null = activeNodeId;
-  let nearestAnchor: Node['anchorLink'] = null;
+  let nearestAnchor: Anchor | null = null;
   while (cursorId !== null) {
-    const cursor: Node | undefined = nodesById[cursorId];
+    const cursor: (typeof nodesById)[string] | undefined = nodesById[cursorId];
     if (!cursor) {
       return { focusAnchor: null, isAncestor: false };
     }

@@ -25,20 +25,21 @@ export function resolveTextAnchorLocatorInContent(
   };
 }
 
+export function resolveTextAnchorLocatorsInContent(parentContent: string, locator: unknown) {
+  const locators = getTextAnchorLocators(locator);
+  const resolved = locators
+    .map(range => resolveTextAnchorLocatorInContent(parentContent, range))
+    .filter((range): range is TextAnchorLocator => range !== null);
+  return resolved.length === locators.length ? resolved : null;
+}
+
 export function resolveTextAnchorLinkInContent(
   anchorLink: NodeAnchorLink,
   parentContent: string
 ): NodeAnchorLink | null {
-  const locators = getTextAnchorLocators(anchorLink.locator);
-  if (locators.length === 0) {
-    return anchorLink;
-  }
-  const resolvedLocators = locators
-    .map((locator) => resolveTextAnchorLocatorInContent(parentContent, locator))
-    .filter((locator): locator is TextAnchorLocator => locator !== null);
-  if (resolvedLocators.length !== locators.length) {
-    return null;
-  }
+  const resolvedLocators = resolveTextAnchorLocatorsInContent(parentContent, anchorLink.locator);
+  if (!resolvedLocators) return null;
+  if (resolvedLocators.length === 0) return anchorLink;
   return {
     ...anchorLink,
     locator: resolvedLocators.length === 1

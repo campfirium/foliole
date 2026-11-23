@@ -39,7 +39,7 @@ export function renderCompanionShellSearchSurface(props: {
   onOpenExternalDocument(document: CompanionExternalDocumentSearchResult, query: string): void;
   onOpenPdf(result: CompanionPdfPageTextSearchResult): void;
   onOpenTopic(result: CompanionTopicSearchResult, query: string): void;
-  onSelectBreadcrumbNode?: ((nodeId: string) => void) | undefined;
+  onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined;
   surface: Surface;
   workspaceSync: WorkspaceSync;
 }) {

@@ -136,7 +136,7 @@ Read a Topic with `materials/read` and `content_mode: "full"`. Then send the ret
 foliole materials create-text-excerpt --source-id <id> --expected-updated-at <updated_at> --from 0 --to 12
 ```
 
-Offsets are zero-based UTF-16 code units into the complete stored Markdown body. `from` is inclusive and `to` is exclusive. The offsets distinguish repeated passages. Foliole trims surrounding whitespace, derives a title, and saves the excerpt as a child Topic with a highlight anchor. The response contains `material.id`. On desktop, open the child and click the source Topic in its breadcrumbs to jump to the original passage. To read the stored anchor, use `materials/read` with `include_relations: true`.
+Offsets are zero-based UTF-16 code units into the complete stored Markdown body. `from` is inclusive and `to` is exclusive. The offsets distinguish repeated passages. Foliole trims surrounding whitespace, derives a title, and saves the excerpt as a child Topic with a highlight anchor. The response contains `material.id`. On desktop and mobile, open the child and click the source Topic in its breadcrumbs to jump to the original text passage. This viewport action stays in the UI. To read the stored anchor, use `materials/read` with `include_relations: true`.
 
 The route uses the existing bearer token and advertises `materials.createTextExcerpt`. A changed revision or trashed source returns 409; a missing source returns 404. Empty or out-of-bounds ranges, split surrogate pairs, ranges crossing or following CR line endings, frontmatter, and image selections return 400. PDF, image and cloze excerpts and attachment transfer are outside this route. Repeating a successful request creates another excerpt.
 

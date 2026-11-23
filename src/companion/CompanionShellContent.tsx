@@ -58,8 +58,9 @@ function handleExitReadableArticle(surface: Surface) {
   surface.handleExitBrowseArticle();
 }
 
-export function selectCompanionBreadcrumbNode(props: Pick<CompanionShellContentProps, 'browseSortDirection' | 'browseSortKey' | 'isBrowseDirectoryOpen' | 'onChangeDirectorySelection' | 'surface' | 'workspaceSync'>, nodeId: string) {
-  props.surface.handleSelectBrowseNode(nodeId);
+export function selectCompanionBreadcrumbNode(props: Pick<CompanionShellContentProps, 'browseSortDirection' | 'browseSortKey' | 'isBrowseDirectoryOpen' | 'onChangeDirectorySelection' | 'surface' | 'workspaceSync'>, nodeId: string, anchor?: Parameters<Surface['handleSelectBrowseNode']>[1]) {
+  if (anchor) props.surface.handleSelectBrowseNode(nodeId, anchor);
+  else props.surface.handleSelectBrowseNode(nodeId);
   if (!props.isBrowseDirectoryOpen) return;
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const isContainer = snapshot?.nodesById[nodeId]?.kind === 'folder' || Boolean(resolveCompanionFolderViewByNodeId(snapshot, nodeId,
@@ -67,7 +68,7 @@ export function selectCompanionBreadcrumbNode(props: Pick<CompanionShellContentP
   if (isContainer) props.onChangeDirectorySelection({ kind: 'internal', nodeId });
 }
 
-function RecentBrowseContent(props: { onSelectBreadcrumbNode: (nodeId: string) => void; surface: Surface; workspaceSync: WorkspaceSync; navigation: ReturnType<typeof readingNavigation> }) {
+function RecentBrowseContent(props: { onSelectBreadcrumbNode: Surface['handleSelectBrowseNode']; surface: Surface; workspaceSync: WorkspaceSync; navigation: ReturnType<typeof readingNavigation> }) {
   if (props.surface.browsedFolder) {
     return (
       <>
@@ -131,7 +132,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
       return (
         <CompanionShellReadableArticle
           onExit={DirectoryArticle.resolveCompanionDirectoryArticleExit(props)}
-          onSelectBreadcrumbNode={nodeId => selectCompanionBreadcrumbNode(props, nodeId)}
+          onSelectBreadcrumbNode={(nodeId, anchor) => selectCompanionBreadcrumbNode(props, nodeId, anchor)}
           navigation={navigation}
           surface={props.surface}
           workspaceSync={props.workspaceSync}
@@ -155,7 +156,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
       />
     );
   }
-  return <RecentBrowseContent navigation={navigation} onSelectBreadcrumbNode={nodeId => selectCompanionBreadcrumbNode(props, nodeId)}
+  return <RecentBrowseContent navigation={navigation} onSelectBreadcrumbNode={(nodeId, anchor) => selectCompanionBreadcrumbNode(props, nodeId, anchor)}
     surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
@@ -175,7 +176,7 @@ function renderContent(props: CompanionShellContentProps) {
     onOpenExternalDocument: props.onOpenSearchExternalDocument,
     onOpenPdf: props.onOpenSearchPdf,
     onOpenTopic: props.onOpenSearchTopic,
-    onSelectBreadcrumbNode: nodeId => selectCompanionBreadcrumbNode(props, nodeId),
+    onSelectBreadcrumbNode: (nodeId, anchor) => selectCompanionBreadcrumbNode(props, nodeId, anchor),
     surface: props.surface,
     workspaceSync: props.workspaceSync
   });

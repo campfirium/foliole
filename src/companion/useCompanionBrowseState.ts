@@ -46,7 +46,7 @@ export function useCompanionBrowseState(
 ) {
   const snapshot = workspaceSync.state.workspace_snapshot;
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
-  const { browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
+  const { breadcrumbAnchor, browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
     snapshot,
     workspaceSync.readableArticle,
     sort
@@ -69,6 +69,7 @@ export function useCompanionBrowseState(
   [projectedArticles, workspaceSync.readableArticle]);
 
   return {
+    breadcrumbAnchor,
     browsedFolder,
     readableArticle,
     recentArticles,

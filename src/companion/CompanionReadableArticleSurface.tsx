@@ -1,11 +1,15 @@
-import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
+import { getPdfAnchorLocators } from '../../lib/core/anchors/pdfAnchorLocator';
+import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { resolveTextAnchorLocatorsInContent } from '../features/nodes/model/textAnchorResolution';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 
 import { CompanionArticleSelectionLayer } from './CompanionArticleSelectionLayer';
+import { createArticleToolbarEvents } from './companionArticleToolbarEvents';
 import { useCompanionArticleExit } from './CompanionArticleTransition';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
@@ -18,7 +22,6 @@ import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayou
 import { CompanionReviewHeader } from './CompanionReviewHeader';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
-import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } from './companionSelectionToolbarState';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
@@ -50,6 +53,7 @@ export interface ImmersiveReadableArticleProps {
   footer?: ReactNode;
   endOfArticleAction?: ReactNode;
   header?: ReactNode;
+  breadcrumbAnchor?: StoredAnchorLink | null;
   searchMatch?: CompanionSearchMatch | null | undefined;
   onAttachmentResourceSynced?: () => void;
   onCreateSelectionAnnotation?: (
@@ -71,37 +75,15 @@ export interface ImmersiveReadableArticleProps {
   syncEndpointUrl?: string | null;
 }
 
-function createArticleToolbarEvents(
-  toolbar: ReturnType<typeof useCompanionSelectionAnnotationToolbar>,
-  reading: ReturnType<typeof useImmersiveReadableArticleState>
-) {
-  function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
-  }
-  function closeToolbarFromArticleTouch(event: ReactTouchEvent<HTMLElement>) {
-    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
-  }
-  function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    reading.handleSurfacePointerUp(event);
-    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.openSelectionToolbar(event);
-  }
-  function handleSurfacePointerDown(event: ReactPointerEvent<HTMLElement>) {
-    reading.handleSurfacePointerDown(event);
-    closeToolbarFromArticlePointer(event);
-  }
-  function handleSurfacePointerMove(event: ReactPointerEvent<HTMLElement>) {
-    reading.handleSurfacePointerMove(event);
-    closeToolbarFromArticlePointer(event);
-  }
-  function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
-    reading.handleSurfaceClick(event);
-    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.openSelectionToolbar(event);
-  }
-  return { handleSurfaceClick, handleSurfacePointerDown, handleSurfacePointerMove, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
-}
-
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, scrollAnchor: CompanionEditToggleScrollAnchor) {
-  const reading = useImmersiveReadableArticleState(resolveCompanionSearchSelection(props.readableArticle.content, props.searchMatch));
+  const { breadcrumbAnchor, readableArticle: { content } } = props;
+  const locator = breadcrumbAnchor?.locator;
+  const anchor = locator && getPdfAnchorLocators(locator).length === 0
+    ? resolveTextAnchorLocatorsInContent(content, locator)?.[0] : undefined;
+  const reading = useImmersiveReadableArticleState(
+    anchor ? { from: anchor.from, to: anchor.from } : resolveCompanionSearchSelection(content, props.searchMatch),
+    anchor ? 'companion-breadcrumb-anchor' : undefined
+  );
   const snapshot = props.snapshot;
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) &&

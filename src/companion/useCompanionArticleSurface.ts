@@ -31,7 +31,7 @@ function useCompanionBrowseActions(args: {
   setActiveAction: (action: CompanionTabAction) => void;
   setReadingError: (value: string | null) => void;
   setReviewError: (value: string | null) => void;
-  setSelectedBrowseNodeId: (nodeId: string | null) => void;
+  setSelectedBrowseNodeId: Parameters<typeof useCompanionActionState>[0]['setSelectedBrowseNodeId'];
   snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'];
   workspaceSync: CompanionWorkspaceSyncApi;
 }) {
@@ -60,10 +60,10 @@ function useCompanionInteractionState(
   activeAction: CompanionTabAction,
   isFlowBrowsing: boolean,
   setActiveAction: (action: CompanionTabAction) => void,
-  setSelectedBrowseNodeId: (nodeId: string | null) => void,
-  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
+  browse: ReturnType<typeof useCompanionBrowseState>,
   workspaceSync: CompanionWorkspaceSyncApi
 ) {
+  const { breadcrumbAnchor, setSelectedBrowseNodeId, snapshot } = browse;
   const { setReadingError, setReviewError, ...reviewActions } = useCompanionSurfaceActions({
     floatingBar,
     flow,
@@ -95,6 +95,7 @@ function useCompanionInteractionState(
 
   return {
     ...reviewActions,
+    breadcrumbAnchor,
     browseReturnNodeId,
     handleRevealAnswer: flow.reveal,
     handleContinueReading: flow.continueReading,
@@ -171,8 +172,7 @@ export function useCompanionArticleSurface(
     activeAction,
     isFlowBrowsing,
     setUserActiveAction,
-    browseState.setSelectedBrowseNodeId,
-    browseState.snapshot,
+    browseState,
     workspaceSync
   );
   useExitUnavailableDive(flow, activeAction, workspaceSync, interactionState);

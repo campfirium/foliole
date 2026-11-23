@@ -5,7 +5,7 @@ import { useImmersiveReadingSurfaceTap } from './useImmersiveReadingSurfaceTap';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
-export function useImmersiveReadableArticleState(initialSelection: EditorSelection | null = null) {
+export function useImmersiveReadableArticleState(initialSelection: EditorSelection | null = null, initialCommandId = 'companion-search-match') {
   const [isChromeVisible, setIsChromeVisible] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
@@ -55,7 +55,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
     isSearchSheetOpen,
     openDocumentSearch,
     openReadingSheet,
-    readingRestoreCommandId: readingTarget?.commandId ?? (initialSelection ? 'companion-search-match' : null),
+    readingRestoreCommandId: readingTarget?.commandId ?? (initialSelection ? initialCommandId : null),
     readingSelection: readingTarget?.selection ?? initialSelection,
     setIsActionsSheetOpen,
     setIsOutlineOpen,
