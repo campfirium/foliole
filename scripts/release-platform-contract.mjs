@@ -137,13 +137,14 @@ function validateSyncCompatibility(value, selectedPlatforms, registry) {
   return { mode: value.mode, basis };
 }
 
-export function createReleaseIntent({ registry: input, version, publicationMode, platforms, compatibility }) {
+export function createReleaseIntent({ registry: input, version, publicationMode, platforms, compatibility, qualityBaseline }) {
   const registry = validatePlatformRegistry(input);
   const selectedPlatforms = requireStringArray(platforms, 'Explicit release platforms');
   if (!compatibility) throw new Error('An explicit cross-version sync compatibility assessment is required.');
   return validateReleaseIntent({ schemaVersion: 1, version, publicationMode, selectedPlatforms,
     syncCompatibility: compatibility,
-    scopeBasis: Object.fromEntries(selectedPlatforms.map(id => [id, compatibility.basis]))
+    scopeBasis: Object.fromEntries(selectedPlatforms.map(id => [id, compatibility.basis])),
+    ...(qualityBaseline ? { qualityBaseline } : {})
   }, registry, version);
 }
 

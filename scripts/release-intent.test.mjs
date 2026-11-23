@@ -90,3 +90,14 @@ it('keeps a valid QA baseline in the release identity and rejects any other shap
     expect(() => resolve(invalid)).toThrow('qualityBaseline');
   }
 });
+
+it('records the QA full pass a release is frozen from only when both identifiers are given', async () => {
+  const sha = 'c'.repeat(40);
+  const args = parseReleaseIntentArgs(['--platforms', 'windows', '--sync', 'compatible', '--basis', compatible.basis,
+    '--quality-run', '45000584817', '--quality-sha', sha]);
+  expect(args.qualityBaseline).toEqual({ runId: '45000584817', sha });
+  expect((await prepareDefaultReleaseIntent(fixture(), args)).qualityBaseline).toEqual({ runId: '45000584817', sha });
+  expect(parseReleaseIntentArgs(['--platforms', 'windows']).qualityBaseline).toBeUndefined();
+  expect(() => parseReleaseIntentArgs(['--quality-run', '1'])).toThrow('together');
+  expect(() => parseReleaseIntentArgs(['--quality-sha', sha])).toThrow('together');
+});

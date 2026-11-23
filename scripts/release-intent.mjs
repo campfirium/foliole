@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createReleaseIntent } from './release-platform-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 
-export async function prepareDefaultReleaseIntent(root, { write = false, platforms, compatibility } = {}) {
+export async function prepareDefaultReleaseIntent(root, { write = false, platforms, compatibility, qualityBaseline } = {}) {
   const read = file => readFile(path.join(root, file), 'utf8').then(JSON.parse);
   const [registry, product, manifest] = await Promise.all([
     read('.github/release-platforms.json'), read('package.json'), read('releases/update-manifest.json')
@@ -13,7 +13,7 @@ export async function prepareDefaultReleaseIntent(root, { write = false, platfor
     throw new Error('Choose the new product version before preparing its release intent; published history stays unchanged');
   }
   const publicationMode = manifest.desktopUpdater?.compatibilityBridgeVersion ? 'scoped' : 'bridge';
-  const intent = createReleaseIntent({ registry, version: product.version, publicationMode, platforms, compatibility });
+  const intent = createReleaseIntent({ registry, version: product.version, publicationMode, platforms, compatibility, qualityBaseline });
   if (write) await writeFile(path.join(root, '.github/release-intent.json'), `${JSON.stringify(intent, null, 2)}\n`);
   return intent;
 }
@@ -23,14 +23,19 @@ export function parseReleaseIntentArgs(args) {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--write') { if (result.write) throw new Error('Duplicate --write'); result.write = true; continue; }
-    const key = { '--platforms': 'platforms', '--sync': 'mode', '--basis': 'basis' }[arg];
+    const key = { '--platforms': 'platforms', '--sync': 'mode', '--basis': 'basis',
+      '--quality-run': 'qualityRun', '--quality-sha': 'qualitySha' }[arg];
     if (!key || result[key] !== undefined || !args[index + 1] || args[index + 1].startsWith('--')) {
-      throw new Error('Use --platforms <ids> --sync <compatible|coordinated> --basis <evidence> [--write]');
+      throw new Error('Use --platforms <ids> --sync <compatible|coordinated> --basis <evidence> [--quality-run <QA run ID> --quality-sha <QA commit>] [--write]');
     }
     result[key] = args[++index];
   }
+  if ((result.qualityRun === undefined) !== (result.qualitySha === undefined)) {
+    throw new Error('--quality-run and --quality-sha name one QA full pass together');
+  }
   return { write: result.write, platforms: result.platforms?.split(','),
-    compatibility: result.mode ? { mode: result.mode, basis: result.basis } : undefined };
+    compatibility: result.mode ? { mode: result.mode, basis: result.basis } : undefined,
+    qualityBaseline: result.qualityRun ? { runId: result.qualityRun, sha: result.qualitySha } : undefined };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
