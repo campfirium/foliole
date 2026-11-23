@@ -8,6 +8,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
+import { cancelAideWriteApprovals } from '../assistant/aideWriteApprovals.js';
 import type { StoredAssistantImage } from '../assistant/assistantImageStorage.js';
 import type { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
 import type { OpenAiCompatibleAdapter } from '../assistant/openAiCompatibleAdapter.js';
@@ -57,6 +58,9 @@ export async function sendAssistantTurn(input: {
     });
   } catch {
     return null;
+  } finally {
+    // A reply that ends declines whatever it was still waiting on.
+    cancelAideWriteApprovals(input.clientTurnId);
   }
 }
 

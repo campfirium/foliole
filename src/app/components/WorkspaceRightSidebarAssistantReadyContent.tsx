@@ -22,6 +22,7 @@ import {
 import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 import { AssistantProviderAndModelControls } from './WorkspaceRightSidebarAssistantProviderControl';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
+import { WorkspaceRightSidebarAssistantWriteApproval } from './WorkspaceRightSidebarAssistantWriteApproval';
 
 export function FolioleAideReadyContent(props: {
   activeNodeId: string | null;
@@ -82,6 +83,12 @@ function AssistantConversationView(props: {
       <WorkspaceRightSidebarAssistantConversation
         activeMessages={props.controller.activeMessages}
         materialTags={<AssistantMaterialTags {...props} />}
+        {...(props.controller.writeApproval.approval ? {
+          writeApproval: <WorkspaceRightSidebarAssistantWriteApproval
+            approval={props.controller.writeApproval.approval}
+            onResolve={props.controller.writeApproval.resolve}
+          />
+        } : {})}
         attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
         inputLabel={t('desktop.rightPanel.assistant.input')}
         imageErrorText={resolveAssistantImageError(props.controller, t)}

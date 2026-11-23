@@ -11,6 +11,8 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
 import { createAideToolSession } from '../assistant/aideToolSession.js';
+import { cancelAideWriteApprovals, requestAideWriteApproval, resolveAideWriteApproval } from '../assistant/aideWriteApprovals.js';
+import { describeAideWriteRequests } from '../assistant/aideWriteChangeDescriptions.js';
 import { persistAssistantImages } from '../assistant/assistantImageStorage.js';
 import {
   createAssistantFailure,
@@ -73,6 +75,10 @@ export async function handleAssistantCommand(
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantListModels) return getAssistantAdapter().listModels();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
+  if (command === NATIVE_COMMANDS.assistantResolveWriteApproval) {
+    if (typeof args.approvalId !== 'string' || typeof args.approved !== 'boolean') throw new Error('invalid_write_approval');
+    return { resolved: resolveAideWriteApproval(args.approvalId, args.approved) };
+  }
   return handleAssistantLocalHistoryCommand(command, args) ?? handleAssistantStorageCommand(command);
 }
 
@@ -153,7 +159,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     message,
     provider,
     ...(sender ? { sender } : {}),
-    toolSession: createAideToolSession(await readToolPermissionsForTurn()),
+    toolSession: await createTurnToolSession(clientTurnId, provider, sender),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})
@@ -184,6 +190,32 @@ async function readToolPermissionsForTurn() {
   } catch {
     return createDefaultAideToolPermissionSettings();
   }
+}
+
+// Changes are put to the person in the conversation that asked for them; without a window nobody can allow them.
+async function createTurnToolSession(
+  clientTurnId: string,
+  provider: import('../../lib/platform/nativeAssistantContract.js').NativeAssistantProviderId,
+  sender?: WebContents
+) {
+  const settings = await readToolPermissionsForTurn();
+  if (!sender) return createAideToolSession(settings);
+  const send = createAssistantTurnEventSender(sender, clientTurnId);
+  return createAideToolSession(settings, async (requests, signal) => {
+    if (sender.isDestroyed()) return false;
+    const cancel = () => cancelAideWriteApprovals(clientTurnId);
+    sender.once('destroyed', cancel);
+    try {
+      return await requestAideWriteApproval({
+        changes: await describeAideWriteRequests(requests),
+        clientTurnId,
+        emit: (approval) => send({ approval, clientTurnId, kind: 'approval_requested', provider }),
+        ...(signal ? { signal } : {})
+      });
+    } finally {
+      sender.removeListener('destroyed', cancel);
+    }
+  });
 }
 
 function readAssistantAdapter() {

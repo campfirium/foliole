@@ -207,9 +207,29 @@ export type NativeAssistantLoginResult = Pick<
   'failure' | 'provider' | 'state'
 >;
 
-export type NativeAssistantTurnEventKind = 'completed' | 'delta' | 'failed' | 'started';
+export type NativeAssistantTurnEventKind = 'approval_requested' | 'completed' | 'delta' | 'failed' | 'started';
+
+/** One change Aide wants to make, described for the person who must allow it. */
+export interface NativeAssistantWriteChangeDetail {
+  field: 'content' | 'materials' | 'parent' | 'title';
+  /** For parent, an empty value is the library root. */
+  value: string;
+}
+
+/** One change waiting for the person: what the tool does, to which material, and with what. */
+export interface NativeAssistantWriteChange {
+  details: NativeAssistantWriteChangeDetail[];
+  target?: string;
+  tool: string;
+}
+
+export interface NativeAssistantWriteApproval {
+  changes: NativeAssistantWriteChange[];
+  id: string;
+}
 
 export interface NativeAssistantTurnEvent {
+  approval?: NativeAssistantWriteApproval;
   clientTurnId: string;
   failure?: NativeAssistantFailure;
   kind: NativeAssistantTurnEventKind;

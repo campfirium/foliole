@@ -14,7 +14,11 @@ import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
 
 export function refreshTurnIdleTimeout(turn: TurnState, onTimeout: () => void) {
   clearTimeout(turn.timeout);
-  turn.timeout = setTimeout(onTimeout, turn.timeoutMs);
+  turn.timeout = setTimeout(() => {
+    // A change waiting for the person is not a stalled reply; the wait has no time limit.
+    if (turn.toolSession?.awaitingApproval) refreshTurnIdleTimeout(turn, onTimeout);
+    else onTimeout();
+  }, turn.timeoutMs);
 }
 
 export function readTurnCompletionFailure(

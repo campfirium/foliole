@@ -22,7 +22,7 @@ const descriptor: AgentControlSessionDescriptor = {
 };
 
 function session(read: Record<string, boolean> = {}, readBudget = 20_000, write: Record<string, boolean> = {}) {
-  return createAideToolSession(normalizeAideToolPermissionSettings({ read, readBudget, write }));
+  return createAideToolSession(normalizeAideToolPermissionSettings({ askBeforeWrite: false, read, readBudget, write }));
 }
 
 function localRead(text: string): Record<string, AideLocalToolHandler> {
@@ -137,5 +137,54 @@ describe('Aide modify switches', () => {
     );
     expect(result.success).toBe(true);
     expect(onDispatch).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('Aide ask before changing', () => {
+  const update = { arguments: { content: 'new', expected_updated_at: 'now', id: 'a' }, tool: 'update_material' };
+  const asking = (approver?: (requests: unknown[]) => Promise<boolean>) =>
+    createAideToolSession(normalizeAideToolPermissionSettings({}), approver);
+
+  it('does not make a change while the person has not answered, and makes it once they allow it', async () => {
+    let answer: (approved: boolean) => void = () => undefined;
+    const approver = vi.fn(() => new Promise<boolean>((resolve) => { answer = resolve; }));
+    const toolSession = asking(approver);
+    const fetcher = vi.fn(async () => new Response('{"ok":true}', { status: 200 }));
+    const pending = executeAideTool(update, { descriptor, fetcher, session: toolSession });
+    await vi.waitFor(() => expect(approver).toHaveBeenCalledWith([{ arguments: update.arguments, tool: 'update_material' }], undefined));
+    expect(toolSession.awaitingApproval).toBe(true);
+    expect(fetcher).not.toHaveBeenCalled();
+    answer(true);
+    expect((await pending).success).toBe(true);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(toolSession.awaitingApproval).toBe(false);
+  });
+
+  it('makes no change when the person declines or nobody can answer', async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    const onDispatch = vi.fn();
+    const rename = vi.fn(async () => ({ ok: true, payload: {} }));
+    const declined = await executeAideTool(update, { descriptor, fetcher, onDispatch, session: asking(async () => false) });
+    const unattended = await executeAideTool(
+      { arguments: { id: 'd', title: 'New' }, tool: 'rename_dive' },
+      { descriptor: { ...descriptor, capabilities: ['virtualFolders.update'] }, localTools: { rename_dive: rename }, session: asking() }
+    );
+    for (const result of [declined, unattended]) {
+      expect(result.success).toBe(false);
+      expect(readText(result)).toMatchObject({ error: 'write_declined' });
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(rename).not.toHaveBeenCalled();
+    expect(onDispatch).not.toHaveBeenCalled();
+  });
+
+  it('reads without asking, and changes without asking when the switch is off', async () => {
+    const approver = vi.fn(async () => false);
+    const read = await executeAideTool({ arguments: { id: 'a' }, tool: 'read_material' }, { descriptor, localTools: localRead('x'), session: asking(approver) });
+    const fetcher = vi.fn(async () => new Response('{"ok":true}', { status: 200 }));
+    const write = await executeAideTool(update, { descriptor, fetcher, session: session() });
+    expect(read.success && write.success).toBe(true);
+    expect(approver).not.toHaveBeenCalled();
+    expect(session().confirmWrites).toBeUndefined();
   });
 });

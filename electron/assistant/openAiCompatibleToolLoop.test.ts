@@ -198,3 +198,34 @@ function sse(chunks: unknown[]) {
     headers: { 'content-type': 'text/event-stream' }
   });
 }
+
+it('asks once for all changes in a round, passes the answer to each change and waits without timing out', async () => {
+  vi.useFakeTimers();
+  const write = (index: number, id: string, title: string) => toolCall(index, id, 'update_material', JSON.stringify({ expected_updated_at: 'now', id: 'topic-1', title }));
+  const fetchMock = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(sse([toolDelta([
+      toolCall(0, 'read-1', 'read_material', '{"id":"topic-1"}'), write(1, 'write-1', 'A'), write(2, 'write-2', 'B')
+    ])]))
+    .mockResolvedValueOnce(sse([{ choices: [{ delta: { content: 'Done' }, finish_reason: 'stop' }] }]));
+  vi.stubGlobal('fetch', fetchMock);
+  let allow: (approved: boolean) => void = () => undefined;
+  const confirmWrites = vi.fn<(requests: unknown[]) => Promise<boolean>>(() => new Promise((resolve) => { allow = resolve; }));
+  const toolSession = { awaitingApproval: false, confirmWrites, disabledTools: new Set<string>(), readBudget: 20_000, readUsed: 0 };
+  const result = runOpenAiCompatibleToolLoop({
+    allowedCapabilities: ['materials.read', 'materials.update'],
+    apiKey: 'secret', controller: new AbortController(), endpoint: 'https://models.example/chat',
+    messages: [{ content: 'Prompt', role: 'user' }], model: 'model-a', onText: () => undefined, toolSession, tools: []
+  });
+  await vi.advanceTimersByTimeAsync(600_000);
+  expect(confirmWrites).toHaveBeenCalledTimes(1);
+  expect(confirmWrites.mock.calls[0]?.[0]).toEqual([
+    { arguments: { expected_updated_at: 'now', id: 'topic-1', title: 'A' }, tool: 'update_material' },
+    { arguments: { expected_updated_at: 'now', id: 'topic-1', title: 'B' }, tool: 'update_material' }
+  ]);
+  expect(executeTool).not.toHaveBeenCalled();
+  allow(false);
+  await expect(result).resolves.toBe('Done');
+  expect(executeTool.mock.calls.map(([request, options]) => [request.tool, options.writeApproval])).toEqual([
+    ['read_material', false], ['update_material', false], ['update_material', false]
+  ]);
+});

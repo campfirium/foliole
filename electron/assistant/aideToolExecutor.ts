@@ -5,7 +5,12 @@ import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
-import { chargeAideReadResult, isAideToolOffered, type AideToolSession } from './aideToolSession.js';
+import {
+  chargeAideReadResult,
+  confirmAideWrites,
+  isAideToolOffered,
+  type AideToolSession
+} from './aideToolSession.js';
 
 export interface AideToolCallResult {
   contentItems: Array<{ text: string; type: 'inputText' }>;
@@ -27,6 +32,8 @@ export async function executeAideTool(
     onDispatch?: (mutates: boolean) => void;
     session?: AideToolSession;
     signal?: AbortSignal;
+    /** Already settled for the batch this call belongs to; otherwise a change asks on its own. */
+    writeApproval?: boolean;
   } = {}
 ): Promise<AideToolCallResult> {
   const definition = AIDE_TOOL_REGISTRY[request.tool];
@@ -48,6 +55,10 @@ export async function executeAideTool(
   }
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
+  if (definition.mutates && !(options.writeApproval
+    ?? await confirmAideWrites(options.session, [{ arguments: body, tool: request.tool }], options.signal))) {
+    return writeDeclined();
+  }
   const outcome = definition.local
     ? await executeLocal(request.tool, definition.mutates, body, options)
     : await executeRemote(definition, body, descriptor, options);
@@ -109,6 +120,13 @@ function readLimitReached(remaining: number) {
       ? `This reply's read limit is almost reached; only about ${remaining} tokens remain. Ask for less, or answer with what has been read and say where reading stopped.`
       : "This reply's read limit is reached. Answer with what has been read and say where reading stopped.",
     remaining_tokens: remaining
+  }, false);
+}
+
+function writeDeclined() {
+  return result({
+    error: 'write_declined',
+    message: 'The person did not allow this change, so nothing was changed. Do not retry it unless they ask.'
   }, false);
 }
 

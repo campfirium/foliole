@@ -69,6 +69,12 @@ export async function sendAssistantMessage(
   return invoke(NATIVE_COMMANDS.assistantSendMessage, args);
 }
 
+export async function resolveAssistantWriteApproval(approvalId: string, approved: boolean) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantResolveWriteApproval, { approvalId, approved });
+}
+
 export function subscribeAssistantTurnEvents(
   handler: (event: NativeAssistantTurnEvent) => void
 ) {

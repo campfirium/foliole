@@ -138,9 +138,11 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
 
   const write = within(dialog).getByRole('region', { name: 'Allow AI to modify' });
   expect(within(write).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
-    'Create excerpts', 'Create materials and Items', 'Edit content', 'Move and reorder', 'Move to trash', 'Manage indexes', 'Manage Dives'
+    'Ask before changing', 'Create excerpts', 'Create materials and Items', 'Edit content', 'Move and reorder', 'Move to trash', 'Manage indexes', 'Manage Dives'
   ]);
 
+  expect(within(write).getByRole('switch', { name: 'Ask before changing' })).toBeChecked();
+  fireEvent.click(within(write).getByRole('switch', { name: 'Ask before changing' }));
   fireEvent.click(within(write).getByRole('switch', { name: 'Manage Dives' }));
   fireEvent.click(within(read).getByRole('switch', { name: 'Read PDF pages' }));
   fireEvent.change(budget, { target: { value: '8' } });
@@ -149,7 +151,7 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
   expect(budget).toHaveValue(1000);
   await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions).toHaveBeenCalled());
   expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0]).toMatchObject({
-    read: { readPdfPage: false, traceSource: true }, readBudget: 1000, write: { editContent: true, manageDives: false }
+    askBeforeWrite: false, read: { readPdfPage: false, traceSource: true }, readBudget: 1000, write: { editContent: true, manageDives: false }
   });
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));

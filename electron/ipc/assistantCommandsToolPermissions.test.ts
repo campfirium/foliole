@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import type { WebContents } from 'electron';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-assistant-tool-permission-tests';
@@ -45,6 +46,7 @@ vi.mock('../assistant/codexAppServerAdapter.js', () => ({
 import { normalizeAideToolPermissionSettings } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import type { NativeAssistantTurnEvent } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { AGENT_CONTROL_CAPABILITIES, AGENT_CONTROL_PROTOCOL_VERSION } from '../agentControl/agentControlTypes.js';
 import { AIDE_LOCAL_READ_TOOLS } from '../assistant/aideLocalReadTools.js';
@@ -163,7 +165,7 @@ const descriptor = {
 };
 
 async function callDiveTool(tool: string, args: Record<string, unknown>, write: Record<string, boolean> = {}) {
-  const session = createAideToolSession(normalizeAideToolPermissionSettings({ write }));
+  const session = createAideToolSession(normalizeAideToolPermissionSettings({ askBeforeWrite: false, write }));
   const result = await executeAideTool({ arguments: args, tool }, { descriptor, session });
   return { ...result, payload: JSON.parse(result.contentItems[0]?.text ?? '{}') as Record<string, unknown> };
 }
@@ -195,4 +197,59 @@ it('refuses Dive changes when Manage Dives is off and reports unavailable source
   expect((await callDiveTool('rename_dive', { id: 'nope', title: 'X' })).payload).toEqual({ error: 'dive_not_found' });
   expect(listDives(openDatabaseConnection().sqlite)).toEqual([]);
   expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
+});
+
+// One reply in which the model asks to create a Dive, with "ask before changing" on (the default).
+function startReplyThatCreatesDive() {
+  const events: NativeAssistantTurnEvent[] = [];
+  const sender = {
+    isDestroyed: () => false, once: vi.fn(), removeListener: vi.fn(),
+    send: (_channel: string, event: NativeAssistantTurnEvent) => events.push(event)
+  } as unknown as WebContents;
+  const toolResults: Array<Awaited<ReturnType<typeof executeAideTool>>> = [];
+  adapterSendMessage.mockImplementation(async (input: { toolSession: ReturnType<typeof createAideToolSession> }) => {
+    toolResults.push(await executeAideTool(
+      { arguments: { source_ids: ['book'], title: 'Economics' }, tool: 'create_dive' },
+      { descriptor, session: input.toolSession }
+    ));
+    return { message: { text: 'ok', threadId: 'thread-1', turnId: 'turn-1' }, provider: 'codex-app-server', state: 'ready' };
+  });
+  const reply = handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+    message: 'Make a Dive', openingLocation: { type: 'workspace' }, provider: 'codex-app-server'
+  }, sender);
+  return { events, reply, toolResults };
+}
+
+async function waitForApproval(events: NativeAssistantTurnEvent[]) {
+  await vi.waitFor(() => expect(events.some((event) => event.kind === 'approval_requested')).toBe(true));
+  return events.find((event) => event.kind === 'approval_requested')!.approval!;
+}
+
+it('shows the change in the conversation and writes nothing until the person allows it', async () => {
+  seedBookWithExcerpts();
+  const { events, reply, toolResults } = startReplyThatCreatesDive();
+  const approval = await waitForApproval(events);
+  expect(approval.changes).toEqual([{
+    details: [{ field: 'materials', value: 'The Wealth of Nations' }], target: 'Economics', tool: 'create_dive'
+  }]);
+  expect(listDives(openDatabaseConnection().sqlite)).toEqual([]);
+
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantResolveWriteApproval, { approvalId: approval.id, approved: true }))
+    .resolves.toEqual({ resolved: true });
+  await reply;
+  expect(toolResults[0]?.success).toBe(true);
+  expect(listDives(openDatabaseConnection().sqlite)).toEqual([expect.objectContaining({ directSourceIds: ['book'], title: 'Economics' })]);
+});
+
+it('writes nothing when the person declines the change', async () => {
+  seedBookWithExcerpts();
+  const { events, reply, toolResults } = startReplyThatCreatesDive();
+  const approval = await waitForApproval(events);
+  await handleAssistantCommand(NATIVE_COMMANDS.assistantResolveWriteApproval, { approvalId: approval.id, approved: false });
+  await reply;
+  expect(JSON.parse(toolResults[0]?.contentItems[0]?.text ?? '{}')).toMatchObject({ error: 'write_declined' });
+  expect(listDives(openDatabaseConnection().sqlite)).toEqual([]);
+  expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantResolveWriteApproval, { approvalId: approval.id, approved: true }))
+    .resolves.toEqual({ resolved: false });
 });

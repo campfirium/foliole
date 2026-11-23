@@ -3,6 +3,7 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantListModels: 'assistant_list_models',
   assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
   assistantSendMessage: 'assistant_send_message',
+  assistantResolveWriteApproval: 'assistant_resolve_write_approval',
   assistantLinkThreadMaterial: 'assistant_link_thread_material',
   assistantUnlinkThreadMaterial: 'assistant_unlink_thread_material',
   assistantListThreadIndex: 'assistant_list_thread_index',

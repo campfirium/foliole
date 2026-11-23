@@ -60,6 +60,16 @@ export function AideSettingsPermissionsPane() {
           description={t('settings.aideDialog.permissions.write.description')}
           title={t('settings.aideDialog.permissions.write.title')}
         >
+          <SettingsRow
+            description={t('settings.aideDialog.permissions.askBeforeWrite.description')}
+            title={t('settings.aideDialog.permissions.askBeforeWrite.title')}
+          >
+            <AppSwitch
+              aria-label={t('settings.aideDialog.permissions.askBeforeWrite.title')}
+              checked={settings.askBeforeWrite}
+              onCheckedChange={(askBeforeWrite) => update({ ...settings, askBeforeWrite })}
+            />
+          </SettingsRow>
           <AidePermissionSwitches
             group="write"
             keys={AIDE_WRITE_TOOL_KEYS}

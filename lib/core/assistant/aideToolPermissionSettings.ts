@@ -44,6 +44,8 @@ export const AIDE_WRITE_TOOL_NAMES: Record<AideWriteToolKey, readonly string[]> 
 };
 
 export interface AideToolPermissionSettings {
+  /** Every change waits for the person to allow it in the conversation. */
+  askBeforeWrite: boolean;
   read: Record<AideReadToolKey, boolean>;
   readBudget: number;
   write: Record<AideWriteToolKey, boolean>;
@@ -59,6 +61,7 @@ function allOn<K extends string>(keys: readonly K[]) {
 
 export function createDefaultAideToolPermissionSettings(): AideToolPermissionSettings {
   return {
+    askBeforeWrite: true,
     read: allOn(AIDE_READ_TOOL_KEYS),
     readBudget: AIDE_READ_BUDGET_DEFAULT,
     write: allOn(AIDE_WRITE_TOOL_KEYS)
@@ -76,6 +79,7 @@ function readSwitches<K extends string>(value: unknown, keys: readonly K[]) {
 export function normalizeAideToolPermissionSettings(value: unknown): AideToolPermissionSettings {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   return {
+    askBeforeWrite: typeof record.askBeforeWrite === 'boolean' ? record.askBeforeWrite : true,
     read: readSwitches(record.read, AIDE_READ_TOOL_KEYS),
     readBudget: normalizeAideReadBudget(record.readBudget),
     write: readSwitches(record.write, AIDE_WRITE_TOOL_KEYS)
@@ -90,6 +94,7 @@ export function normalizeAideReadBudget(value: unknown) {
 export function isDefaultAideToolPermissions(settings: AideToolPermissionSettings) {
   const defaults = createDefaultAideToolPermissionSettings();
   return settings.readBudget === defaults.readBudget
+    && settings.askBeforeWrite === defaults.askBeforeWrite
     && AIDE_READ_TOOL_KEYS.every((key) => settings.read[key] === defaults.read[key])
     && AIDE_WRITE_TOOL_KEYS.every((key) => settings.write[key] === defaults.write[key]);
 }

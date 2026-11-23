@@ -18,6 +18,8 @@ export const EN_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS = {
   'settings.aideDialog.permissions.tool.readPdfPage.description': 'Read the text of a given PDF page',
   'settings.aideDialog.permissions.write.title': 'Allow AI to modify',
   'settings.aideDialog.permissions.write.description': 'Control which changes Aide can make. The AI can never delete permanently.',
+  'settings.aideDialog.permissions.askBeforeWrite.title': 'Ask before changing',
+  'settings.aideDialog.permissions.askBeforeWrite.description': 'List the changes first and make them only after you allow them',
   'settings.aideDialog.permissions.write.createExcerpt.title': 'Create excerpts',
   'settings.aideDialog.permissions.write.createExcerpt.description': 'Create excerpts from the original text',
   'settings.aideDialog.permissions.write.createMaterial.title': 'Create materials and Items',

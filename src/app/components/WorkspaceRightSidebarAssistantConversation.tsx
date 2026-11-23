@@ -16,6 +16,8 @@ interface AssistantConversationProps {
   messageText: string;
   modelControl?: ReactNode;
   materialTags?: ReactNode;
+  /** Changes the reply is waiting on, shown above the composer. */
+  writeApproval?: ReactNode;
   onAddImageFiles?: (files: File[]) => void;
   onRemoveImage?: (index: number) => void;
   onMessageTextChange: (text: string) => void;
@@ -62,6 +64,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: AssistantConve
         transitionEvent={props.transitionEvent}
       />
       <div className="px-3 pb-3">
+        {props.writeApproval}
         {props.materialTags}
         <WorkspaceRightSidebarAssistantComposer
           {...(props.attachImageLabel ? { attachImageLabel: props.attachImageLabel } : {})}

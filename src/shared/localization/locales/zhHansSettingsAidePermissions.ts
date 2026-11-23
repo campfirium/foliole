@@ -20,6 +20,8 @@ export const ZH_HANS_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS: Partial<Record<Tran
   'settings.aideDialog.permissions.tool.readPdfPage.description': '读取 PDF 指定页面的文字',
   'settings.aideDialog.permissions.write.title': '允许 AI 修改',
   'settings.aideDialog.permissions.write.description': '控制 Aide 可以做哪些修改。AI 不能永久删除。',
+  'settings.aideDialog.permissions.askBeforeWrite.title': '修改前先问我',
+  'settings.aideDialog.permissions.askBeforeWrite.description': '先列出要做的修改，你确认后再执行',
   'settings.aideDialog.permissions.write.createExcerpt.title': '新建摘录',
   'settings.aideDialog.permissions.write.createExcerpt.description': '从原文中创建摘录',
   'settings.aideDialog.permissions.write.createMaterial.title': '新建材料和 Item',

@@ -14,6 +14,7 @@ describe('Aide tool permission settings', () => {
     expect(defaults.readBudget).toBe(20_000);
     expect(Object.values(defaults.read).every(Boolean)).toBe(true);
     expect(Object.values(defaults.write).every(Boolean)).toBe(true);
+    expect(defaults.askBeforeWrite).toBe(true);
     expect(listAideDisabledToolNames(defaults)).toEqual([]);
     expect(isDefaultAideToolPermissions(defaults)).toBe(true);
   });
@@ -46,5 +47,12 @@ describe('Aide tool permission settings', () => {
     ]);
     expect(isDefaultAideToolPermissions(settings)).toBe(false);
     expect(normalizeAideToolPermissionSettings({ read: {} }).write.editContent).toBe(true);
+  });
+
+  it('asks before changing unless that is switched off', () => {
+    expect(normalizeAideToolPermissionSettings({ askBeforeWrite: 'no' }).askBeforeWrite).toBe(true);
+    const off = normalizeAideToolPermissionSettings({ askBeforeWrite: false });
+    expect(off.askBeforeWrite).toBe(false);
+    expect(isDefaultAideToolPermissions(off)).toBe(false);
   });
 });

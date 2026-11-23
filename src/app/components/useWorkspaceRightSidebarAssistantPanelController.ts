@@ -11,6 +11,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { useAssistantMaterialLinks } from './useAssistantMaterialLinks';
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
+import { useAssistantWriteApproval } from './useAssistantWriteApproval';
 import { useFolioleAideModelControls } from './useFolioleAideModelControls';
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
@@ -87,8 +88,9 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     setMessageText,
     setSending
   });
+  const writeApproval = useAssistantWriteApproval(activeTurnRef, sending);
 
-  return createPanelControllerResult({
+  return { ...createPanelControllerResult({
     activeMessages,
     activeTurnRef,
     args,
@@ -106,7 +108,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     setSending,
     threadMessageStatus,
     threads
-  });
+  }), writeApproval };
 }
 
 function useAssistantImageDraftState(setMessageText: (text: string) => void) {

@@ -23,6 +23,10 @@ export type NativeAssistantCommandMap = NativeAssistantByokCommandMap & NativeAs
     args: NativeAssistantSendMessageArgs;
     result: NativeAssistantSendMessageResult;
   };
+  [NATIVE_COMMANDS.assistantResolveWriteApproval]: {
+    args: { approvalId: string; approved: boolean };
+    result: { resolved: boolean };
+  };
   [NATIVE_COMMANDS.assistantLinkThreadMaterial]: {
     args: NativeAssistantThreadIndexMutationArgs & { nodeId: string };
     result: NativeAssistantThreadIndexRecord;

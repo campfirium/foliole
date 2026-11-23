@@ -1,6 +1,9 @@
 import type { NativeAssistantFailureCategory } from '../../lib/platform/nativeAssistantContract.js';
 
+import { validateAideToolArguments } from './aideToolArguments.js';
 import { executeAideTool } from './aideToolExecutor.js';
+import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
+import { confirmAideWrites, isAideToolOffered, type AideToolSession, type AideWriteRequest } from './aideToolSession.js';
 import {
   formatOpenAiCompatibleToolCall,
   readOpenAiCompatibleSse,
@@ -17,7 +20,7 @@ export async function runOpenAiCompatibleToolLoop(input: {
   messages: unknown[];
   model: string;
   onText: (text: string) => void;
-  toolSession?: import('./aideToolSession.js').AideToolSession;
+  toolSession?: AideToolSession;
   tools: unknown[];
 }) {
   const messages = [...input.messages];
@@ -43,8 +46,9 @@ export async function runOpenAiCompatibleToolLoop(input: {
       if (toolRounds > MAX_SEQUENTIAL_TOOL_ROUNDS) throw categorized('tool_limit_reached');
       deadline.refresh();
       messages.push(assistantToolCallMessage(completion));
+      const writeApproval = await approveWriteBatch(completion.toolCalls, input, deadline);
       for (const call of completion.toolCalls) {
-        const result = await executeToolCall(call, input, () => { writeDispatched = true; });
+        const result = await executeToolCall(call, input, writeApproval, () => { writeDispatched = true; });
         deadline.refresh();
         messages.push({
           content: result.contentItems.map((item) => item.text).join('\n'),
@@ -113,24 +117,53 @@ function assertFreshToolCalls(calls: OpenAiCompatibleToolCall[], accepted: Set<s
   }
 }
 
+function parseArguments(call: OpenAiCompatibleToolCall): unknown {
+  try {
+    return JSON.parse(call.argumentsText);
+  } catch {
+    return null;
+  }
+}
+
+// All changes the model asks for in one round are put to the person together, once.
+async function approveWriteBatch(
+  calls: OpenAiCompatibleToolCall[],
+  input: Parameters<typeof runOpenAiCompatibleToolLoop>[0],
+  deadline: { clear: () => void; refresh: () => void }
+) {
+  const session = input.toolSession;
+  if (!session?.confirmWrites) return undefined;
+  const requests: AideWriteRequest[] = [];
+  for (const call of calls) {
+    const definition = AIDE_TOOL_REGISTRY[call.name];
+    if (!definition?.mutates || !isAideToolOffered(session, call.name)) continue;
+    if (!input.allowedCapabilities.includes(definition.capability)) continue;
+    const body = validateAideToolArguments(call.name, parseArguments(call));
+    if (body) requests.push({ arguments: body, tool: call.name });
+  }
+  if (!requests.length) return undefined;
+  deadline.clear();
+  try {
+    return await confirmAideWrites(session, requests, input.controller.signal);
+  } finally {
+    deadline.refresh();
+  }
+}
+
 async function executeToolCall(
   call: OpenAiCompatibleToolCall,
   input: Parameters<typeof runOpenAiCompatibleToolLoop>[0],
+  writeApproval: boolean | undefined,
   markWriteDispatched: () => void
 ) {
-  let argumentsValue: unknown;
-  try {
-    argumentsValue = JSON.parse(call.argumentsText);
-  } catch {
-    argumentsValue = null;
-  }
   return executeAideTool(
-    { arguments: argumentsValue, tool: call.name },
+    { arguments: parseArguments(call), tool: call.name },
     {
       allowedCapabilities: input.allowedCapabilities,
       onDispatch: (mutates) => { if (mutates) markWriteDispatched(); },
       ...(input.toolSession ? { session: input.toolSession } : {}),
-      signal: input.controller.signal
+      signal: input.controller.signal,
+      ...(writeApproval === undefined ? {} : { writeApproval })
     }
   );
 }
