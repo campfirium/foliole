@@ -32,11 +32,11 @@ beforeEach(() => {
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
-it('does not send current editor selection text eagerly', async () => {
+it('sends the current editor selection text with the turn', async () => {
   const editorAdapterRef = {
     current: {
       getContent: () => 'Alpha Beta Gamma',
-      getSelectionRanges: () => [{ from: 6, to: 10 }]
+      getSelection: () => ({ from: 6, to: 10 })
     } as never
   };
   assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
@@ -69,5 +69,10 @@ it('does not send current editor selection text eagerly', async () => {
     )
   );
   const payload = assistantRuntime.sendAssistantMessage.mock.calls[0]?.[0];
-  expect(payload.workspaceContext).not.toHaveProperty('selection');
+  expect(payload.workspaceContext.selection).toEqual({
+    charCount: 4,
+    ranges: [{ from: 6, to: 10 }],
+    text: 'Beta',
+    truncated: false
+  });
 });
