@@ -170,7 +170,9 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-None pending.
+| Proposal | Reviewed head | Target | Adoption | Local evidence | Required QA |
+| --- | --- | --- | --- | --- | --- |
+| [#304](https://github.com/campfirium/foliole/pull/304) (`app/renovate`, base `dev`) | `73774ff541cfbe9895c3f6184a52192dd4ca5882` | react-pdf 11.1.0 with the matching direct pdfjs-dist 6.5.438 (React-PDF now pins 6.5.438, clearing the #222 and #191 deferrals) | commit 008575 | PDF worker, text extraction, Readwise match, viewer, builder-config and dependabot-contract tests; Electron canvas runtime test | full (desktop PDF viewer and dependency hardening; mobile PDF reading) |
 
 ### Completed November 22 centralized batch
 
@@ -522,9 +524,7 @@ batch review also covers support changes without a new target version.
 
 | Proposal | Deferred target and evidence | Resume condition | Reviewed | Owner |
 | --- | --- | --- | --- | --- |
-| [#222](https://github.com/campfirium/foliole/pull/222) | pdfjs-dist 6.5.438; React-PDF 11.0.0 still pins 6.3.289, so the proposal installs two incompatible PDF.js versions. | At the next dependency review, check the latest React-PDF dependency and verify the matching viewer and worker together. | 2026-11-12 | Dependency batch handler |
 | [#226](https://github.com/campfirium/foliole/pull/226) | OkHttp 5.5.1; the published Android AAR requires compile SDK 37, while Foliole and the Mac build environment use 36. | At the next dependency review, check SDK 37 availability and a working Android build lane, then validate OkHttp and the WebDAV client. | 2026-11-12 | Dependency batch handler |
-| [#191](https://github.com/campfirium/foliole/pull/191) | pdfjs-dist 6.4.299; React-PDF 11.0.0 pins 6.3.289, creating mismatched main and worker runtimes. | Official React-PDF supports a matching newer PDF.js; adopt and validate the pair. | 2026-11-03 | Dependency batch handler |
 | [#192](https://github.com/campfirium/foliole/pull/192) | minimatch 10.2.6; actual glob7 escaped-name regression, plus GHSA-g3hv-75wg-m249 still affects this target. | Upstream installer/temp/rimraf/glob chain supports a patched matcher, or a reviewed alternative passes the existing installer behavior tests; advisory repair remains separate. | 2026-11-03 | Dependency batch handler |
 | [#193](https://github.com/campfirium/foliole/pull/193) | TypeScript 7.0.2; typescript-eslint 8.72.1 requires TypeScript <6.1 and the new compiler API is not stable. | Official lint tooling supports TS7 and the production compiler-API consumers have a supported migration path. | 2026-11-03 | Dependency batch handler |
 
