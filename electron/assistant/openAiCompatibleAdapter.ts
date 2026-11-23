@@ -9,6 +9,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { composeAideAttachedUserText } from './aideAttachedContextTurn.js';
 import { appendAideCustomInstructions } from './aideCustomInstructions.js';
 import { formatOpenAiCompatibleAideSystemPrompt } from './aideProductContext.js';
 import type { StoredAssistantImage } from './assistantImageStorage.js';
@@ -18,6 +19,7 @@ import { runOpenAiCompatibleToolLoop } from './openAiCompatibleToolLoop.js';
 import { createChatCompletionsAideTools } from './openAiCompatibleTools.js';
 
 interface OpenAiCompatibleSendInput {
+  attachedContext?: string;
   clientTurnId: string;
   customInstructions?: string;
   history: NativeAssistantThreadMessageRecord[];
@@ -83,6 +85,7 @@ export class OpenAiCompatibleAdapter {
 }
 
 async function createMessages(input: {
+  attachedContext?: string;
   customInstructions?: string;
   history: NativeAssistantThreadMessageRecord[];
   images: StoredAssistantImage[];
@@ -90,7 +93,7 @@ async function createMessages(input: {
   workspaceContext?: NativeAssistantWorkspaceContext;
 }, context: NativeAssistantWorkspaceContext) {
   const currentContent = [
-    { text: input.message, type: 'text' },
+    { text: composeAideAttachedUserText(input.message, input.attachedContext), type: 'text' },
     ...await Promise.all(input.images.map(async (image) => ({
       image_url: { url: `data:${image.mimeType};base64,${(await fs.readFile(image.filePath)).toString('base64')}` },
       type: 'image_url'
@@ -101,7 +104,9 @@ async function createMessages(input: {
       content: appendAideCustomInstructions(formatOpenAiCompatibleAideSystemPrompt(context), input.customInstructions),
       role: 'system'
     },
-    ...selectRecentOpenAiCompatibleHistory(input.history)
+    ...selectRecentOpenAiCompatibleHistory(input.history.map((message) => (message.role === 'user'
+      ? { ...message, text: composeAideAttachedUserText(message.text, message.attachedContext?.text) }
+      : message)))
       .map(({ role, text }) => ({ content: text, role })),
     { content: currentContent, role: 'user' }
   ];

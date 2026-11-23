@@ -17,6 +17,7 @@ export async function sendAssistantTurn(input: {
   adapter: CodexAppServerAdapter | null;
   byokAdapter: OpenAiCompatibleAdapter;
   agentControl: NativeAssistantAgentControlContext;
+  attachedContext?: string;
   clientTurnId: string;
   customInstructions?: string;
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
@@ -34,6 +35,7 @@ export async function sendAssistantTurn(input: {
     }
     if (!input.adapter) return null;
     return await input.adapter.sendMessage({
+      ...(input.attachedContext ? { attachedContext: input.attachedContext } : {}),
       clientTurnId: input.clientTurnId,
       ...(input.customInstructions ? { customInstructions: input.customInstructions } : {}),
       ...(input.images.length ? { imagePaths: input.images.map((image) => image.filePath) } : {}),
@@ -60,6 +62,7 @@ async function sendByokTurn(input: Parameters<typeof sendAssistantTurn>[0]) {
   input.sender?.once('destroyed', abort);
   try {
     return await input.byokAdapter.sendMessage({
+      ...(input.attachedContext ? { attachedContext: input.attachedContext } : {}),
       clientTurnId: input.clientTurnId,
       ...(input.customInstructions ? { customInstructions: input.customInstructions } : {}),
       history: input.continuation.persistedContinuationMessages ?? [],

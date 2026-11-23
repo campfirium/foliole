@@ -3,6 +3,7 @@ import {
   type NativeAssistantAgentControlContext,
   type NativeAssistantProviderId
 } from '../../lib/platform/nativeAssistantContract.js';
+import { composeAideAttachedUserText } from '../assistant/aideAttachedContextTurn.js';
 import { readAssistantImageContent } from '../assistant/assistantImageStorage.js';
 import type { AssistantContinuationMessage } from '../assistant/codexAppServerThreadHistory.js';
 import { getAssistantThreadIndex } from '../database/assistantThreadIndex.js';
@@ -53,7 +54,8 @@ export async function prepareAssistantThreadContinuation(
 async function hydrateContinuationImages(
   messages: ReturnType<typeof listAssistantThreadMessages>
 ): Promise<AssistantContinuationMessage[]> {
-  return Promise.all(messages.map(async (message) => {
+  return Promise.all(messages.map(async (raw) => {
+    const message = { ...raw, text: composeAideAttachedUserText(raw.text, raw.attachedContext?.text) };
     if (!message.images?.length) return { role: message.role, text: message.text };
     const images = await Promise.all(message.images.map(async (image) => {
       const content = await readAssistantImageContent(image.id);

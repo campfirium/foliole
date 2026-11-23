@@ -83,6 +83,8 @@ export interface NativeAssistantThreadMessageRecord {
   role: 'assistant' | 'user';
   text: string;
   images?: NativeAssistantImageAttachment[];
+  // Main-process only: Foliole context attached to this user message; stripped before reaching the renderer.
+  attachedContext?: { materialId: string; text: string };
 }
 
 export interface NativeAssistantStatusResult {
@@ -109,7 +111,6 @@ export interface NativeAssistantWorkspaceChildSummary {
   anchorKind?: 'cloze' | 'highlight' | 'image-excerpt';
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   hasContent: boolean;
-  isActive?: boolean;
   kind: string;
   nodeId: string;
   preview?: string;
@@ -165,7 +166,6 @@ export interface NativeAssistantWorkspaceContext {
   document?: NativeAssistantWorkspaceDocumentContext;
   folder?: NativeAssistantWorkspaceFolderContext;
   path?: string[];
-  parentFolder?: NativeAssistantWorkspaceFolderContext;
   selection?: NativeAssistantWorkspaceSelectionContext;
   schemaVersion?: 1;
   scope: 'node' | 'workspace';

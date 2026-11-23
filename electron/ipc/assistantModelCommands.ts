@@ -1,5 +1,9 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
+  loadFolioleAideAttachedContextSettings,
+  saveFolioleAideAttachedContextSettings
+} from '../assistant/folioleAideAttachedContextSettings.js';
+import {
   loadFolioleAideCustomInstructions,
   saveFolioleAideCustomInstructions
 } from '../assistant/folioleAideCustomInstructions.js';
@@ -35,6 +39,13 @@ export function handleAssistantModelCommand(command: string, args: Record<string
     if (typeof args.text !== 'string') throw new Error('invalid_custom_instructions');
     const text = args.text;
     return runWithDatabaseConnectionOwner(() => saveFolioleAideCustomInstructions(text));
+  }
+  if (command === NATIVE_COMMANDS.assistantLoadAttachedContextSettings) {
+    return runWithDatabaseConnectionOwner(loadFolioleAideAttachedContextSettings);
+  }
+  if (command === NATIVE_COMMANDS.assistantSaveAttachedContextSettings) {
+    const settings = args.settings;
+    return runWithDatabaseConnectionOwner(() => saveFolioleAideAttachedContextSettings(settings));
   }
   return undefined;
 }

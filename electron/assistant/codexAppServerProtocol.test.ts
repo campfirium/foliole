@@ -78,25 +78,17 @@ it('formats missing Agent Control read/search capabilities as unavailable', () =
   expect(input).not.toContain('Available Foliole actions');
 });
 
-it('formats current editor selection as explicit assistant context', () => {
+it('sends the selection only through the attached context, right before the user message', () => {
   const input = composeAssistantTurnInput('Explain this', {
     activeTitle: 'Topic',
     schemaVersion: 1,
     scope: 'node',
-    selection: {
-      charCount: 13,
-      ranges: [{ from: 2, to: 15 }],
-      text: 'Selected text',
-      truncated: false
-    }
-  });
+    selection: { charCount: 13, ranges: [{ from: 2, to: 15 }], text: 'Selected text', truncated: false }
+  }, 'Attached Foliole context for "Topic" (id=t).\n[Selected content]\nSelected text');
 
-  expect(input).toContain('Current editor selection');
-  expect(input).toContain('Current editor selection, 13 chars:');
-  expect(input).toContain('Selected text');
-  expect(input).toContain('selection is present, treat it as the most specific focus');
+  expect(input).not.toContain('Current editor selection');
   expect(input).toContain('asking about the active Foliole topic or folder');
-  expect(input).toContain('User message:\nExplain this');
+  expect(input).toContain('[Selected content]\nSelected text\n\nUser message:\nExplain this');
 });
 
 it('formats folder children with ids for follow-up Agent Control reads', () => {
@@ -162,7 +154,7 @@ it('formats special folder entries without treating their own id as the preferre
   expect(input).toContain('For a special Folder, use included children first and search');
 });
 
-it('formats active anchors with parent material read guidance', () => {
+it('formats active anchors without the retired anchor-preview guidance', () => {
   const input = composeAssistantTurnInput('Explain this highlight', {
     activeKind: 'topic',
     activeNodeId: 'highlight-1',
@@ -186,5 +178,5 @@ it('formats active anchors with parent material read guidance', () => {
   expect(input).toContain('Active Foliole anchor: highlight, id=anchor-1');
   expect(input).toContain('Anchor parent material id: parent-1');
   expect(input).toContain('Anchor text:\nImportant highlighted text');
-  expect(input).toContain('read its parent Topic for source context');
+  expect(input).not.toContain('anchor preview');
 });

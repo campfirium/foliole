@@ -1,8 +1,10 @@
 import type {
   NativeAssistantThreadIndexRecord,
-  NativeAssistantModelSelection
+  NativeAssistantModelSelection,
+  NativeAssistantWorkspaceSelectionContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { sendAssistantMessage } from '../../shared/platform/assistantRuntime';
 
@@ -31,6 +33,10 @@ export async function sendAssistantTurn(
     nodesById: args.nodesById
   });
   if (materials.length) workspaceContext.conversationMaterials = materials;
+  const selection = workspaceContext.activeNodeId === args.activeNodeId
+    ? readEditorSelectionContext(args.editorAdapterRef?.current ?? null)
+    : null;
+  if (selection) workspaceContext.selection = selection;
   return sendAssistantMessage({
     clientTurnId,
     ...(images.length ? { images } : {}),
@@ -44,6 +50,25 @@ export async function sendAssistantTurn(
     workspaceContext,
     ...(args.selectedThreadId ? { providerThreadId: args.selectedThreadId } : {})
   });
+}
+
+const MAX_SELECTION_CHARS = 1200;
+
+// Only the selected text is sent; the main process assembles the rest of the attached context.
+export function readEditorSelectionContext(
+  adapter: Pick<EditorAdapter, 'getContent' | 'getSelection'> | null
+): NativeAssistantWorkspaceSelectionContext | null {
+  if (!adapter) return null;
+  const { from, to } = adapter.getSelection();
+  if (to <= from) return null;
+  const text = adapter.getContent().slice(from, to);
+  if (!text.trim()) return null;
+  return {
+    charCount: text.length,
+    ranges: [{ from, to }],
+    text: text.slice(0, MAX_SELECTION_CHARS),
+    truncated: text.length > MAX_SELECTION_CHARS
+  };
 }
 
 export type AssistantSendTurnArgs = {

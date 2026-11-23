@@ -3,11 +3,13 @@ import { app, type WebContents } from 'electron';
 import type {
   NativeAssistantThreadOpeningLocation,
   NativeAssistantStatusResult,
-  NativeAssistantTurnEvent
+  NativeAssistantTurnEvent,
+  NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
-import { persistAssistantImages, type StoredAssistantImage } from '../assistant/assistantImageStorage.js';
+import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
+import { persistAssistantImages } from '../assistant/assistantImageStorage.js';
 import {
   createAssistantFailure,
   createAssistantStatus
@@ -132,15 +134,13 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   if (provider === 'codex-app-server' && !assistantAdapter) {
     return createAssistantFailure('failed', 'launch_failed');
   }
-  let images: StoredAssistantImage[];
-  try {
-    images = await persistAssistantImages(validatedImages);
-  } catch {
-    return assistantProtocolFailure();
-  }
+  const images = await persistAssistantImages(validatedImages).catch(() => null);
+  if (!images) return assistantProtocolFailure();
   const customInstructions = await readCustomInstructionsForTurn();
+  const attachedContext = await prepareAideAttachedContextForTurn({ provider, providerThreadId, workspaceContext });
   const result = await sendAssistantTurn({
     agentControl,
+    ...(attachedContext ? { attachedContext: attachedContext.text } : {}),
     customInstructions,
     adapter: assistantAdapter,
     byokAdapter: getAssistantByokAdapter(),
@@ -152,9 +152,10 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     ...(sender ? { sender } : {}),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
-    ...(workspaceContext ? { workspaceContext } : {})
+    ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})
   });
   return finishAssistantTurn({
+    ...(attachedContext ? { attachedContext } : {}),
     clientTurnId,
     continuation,
     images,
@@ -221,4 +222,11 @@ function areOpeningLocationsEqual(
 ) {
   if (left.type !== right.type) return false;
   return left.type === 'workspace' || left.nodeId === (right as { nodeId: string }).nodeId;
+}
+
+// The selection reaches the model only through the attached context, once per material.
+function omitSelection(context: NativeAssistantWorkspaceContext): NativeAssistantWorkspaceContext {
+  const rest = { ...context };
+  delete rest.selection;
+  return rest;
 }

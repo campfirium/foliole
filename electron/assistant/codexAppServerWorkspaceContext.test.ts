@@ -43,29 +43,6 @@ it('tells the assistant to answer location questions from Foliole context, not t
   expect(input).toContain('When the user asks what you know, can see, or have as context');
 });
 
-it('labels parent-folder entries as nearby directory siblings', () => {
-  const input = composeAssistantTurnInput('What else is here?', {
-    activeKind: 'topic',
-    activeNodeId: 'topic-a',
-    activeTitle: 'Topic A',
-    parentFolder: {
-      childCount: 2,
-      children: [
-        { hasContent: true, isActive: true, kind: 'topic', nodeId: 'topic-a', title: 'Topic A' },
-        { hasContent: true, kind: 'topic', nodeId: 'topic-b', preview: 'Neighbor', title: 'Topic B' }
-      ],
-      truncated: false
-    },
-    schemaVersion: 1,
-    scope: 'node'
-  });
-
-  expect(input).toContain('parent-folder entries are the active material directory siblings');
-  expect(input).toContain('Parent Foliole folder entries: 2 of 2.');
-  expect(input).toContain('Topic A [topic, id=topic-a, active]');
-  expect(input).toContain('Topic B [topic, id=topic-b]: Neighbor');
-});
-
 it('gives the agent linked article IDs and distinguishes an open linked article', () => {
   const conversationMaterials = [{ nodeId: 'a', title: 'Draft A' }, { nodeId: 'b', title: 'Draft B' }];
   const focused = composeAssistantTurnInput('Shorten this', {

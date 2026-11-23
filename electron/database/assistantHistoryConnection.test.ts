@@ -34,7 +34,7 @@ afterEach(async () => {
 it('bootstraps a versioned device-local history database and reopens it', () => {
   const connection = openAssistantHistoryConnection();
   expect(connection.dbPath).toBe(path.join(mockedAppDataDir, 'Aide', 'history.db'));
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(3);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(4);
   upsertAssistantThreadIndex({
     location: { type: 'workspace' },
     message: 'Device-local prompt',
@@ -61,11 +61,14 @@ it('upgrades v1 text history without changing its messages', () => {
   connection.sqlite.exec('DROP TABLE assistant_thread_message_images');
   connection.sqlite.exec('DROP TABLE assistant_image_attachments');
   connection.sqlite.exec('ALTER TABLE assistant_thread_index DROP COLUMN linked_material_ids');
+  connection.sqlite.exec('ALTER TABLE assistant_thread_messages DROP COLUMN attached_material_id');
+  connection.sqlite.exec('ALTER TABLE assistant_thread_messages DROP COLUMN attached_context');
   connection.sqlite.pragma('user_version = 1');
   closeAssistantHistoryConnection();
 
   const upgraded = openAssistantHistoryConnection();
-  expect(upgraded.sqlite.pragma('user_version', { simple: true })).toBe(3);
+  expect(upgraded.sqlite.pragma('user_version', { simple: true })).toBe(4);
+  expect(upgraded.sqlite.prepare('SELECT attached_material_id, attached_context FROM assistant_thread_messages').all()).toEqual([]);
   expect(listAssistantThreadIndex()).toEqual([
     expect.objectContaining({ providerThreadId: 'thread-v1', title: 'Keep this text history' })
   ]);

@@ -17,7 +17,7 @@ import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-const ASSISTANT_HISTORY_SCHEMA_VERSION = 3;
+const ASSISTANT_HISTORY_SCHEMA_VERSION = 4;
 
 export interface AssistantHistoryConnection {
   dbPath: string;
@@ -66,11 +66,15 @@ function initializeAssistantHistorySchema(sqlite: import('better-sqlite3').Datab
   if (version === ASSISTANT_HISTORY_SCHEMA_VERSION) return;
   if (version < 0 || version > ASSISTANT_HISTORY_SCHEMA_VERSION) throw new Error(`unsupported_assistant_history_schema_${version}`);
   sqlite.transaction(() => {
-    const statements = version === 0
-      ? ASSISTANT_THREAD_SCHEMA_STATEMENTS
-      : version === 1 ? ASSISTANT_IMAGE_SCHEMA_STATEMENTS : [];
-    for (const statement of statements) sqlite.exec(statement);
-    sqlite.exec("ALTER TABLE assistant_thread_index ADD COLUMN linked_material_ids TEXT NOT NULL DEFAULT '[]'");
+    if (version < 3) {
+      const statements = version === 0
+        ? ASSISTANT_THREAD_SCHEMA_STATEMENTS
+        : version === 1 ? ASSISTANT_IMAGE_SCHEMA_STATEMENTS : [];
+      for (const statement of statements) sqlite.exec(statement);
+      sqlite.exec("ALTER TABLE assistant_thread_index ADD COLUMN linked_material_ids TEXT NOT NULL DEFAULT '[]'");
+    }
+    sqlite.exec('ALTER TABLE assistant_thread_messages ADD COLUMN attached_material_id TEXT');
+    sqlite.exec('ALTER TABLE assistant_thread_messages ADD COLUMN attached_context TEXT');
     sqlite.pragma(`user_version = ${ASSISTANT_HISTORY_SCHEMA_VERSION}`);
   })();
 }

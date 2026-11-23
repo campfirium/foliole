@@ -12,9 +12,7 @@ export function formatAideMaterialProjection(context: NativeAssistantWorkspaceCo
     ...formatScopeGuidance(context, true),
     ...formatAnchorContext(context),
     ...formatDocumentContext(context),
-    ...formatSelectionContext(context),
-    ...formatFolderContext(context),
-    ...formatParentFolderContext(context)
+    ...formatFolderContext(context)
   ];
 }
 
@@ -30,9 +28,7 @@ export function formatToolFreeMaterialProjection(context?: NativeAssistantWorksp
     ...formatScopeGuidance(context, false),
     ...formatAnchorContext(context),
     ...formatDocumentContext(context),
-    ...formatSelectionContext(context),
-    ...formatFolderContext(context),
-    ...formatParentFolderContext(context)
+    ...formatFolderContext(context)
   ].join('\n');
 }
 
@@ -57,9 +53,6 @@ function formatScopeGuidance(context: NativeAssistantWorkspaceContext, codex: bo
   } else if (!context.conversationMaterials?.length) {
     lines.push('- By default, answer as if the user is asking about the Foliole workspace as a whole.');
   }
-  if (context.selection) {
-    lines.push('- If a selection is present, treat it as the most specific focus for explain, rewrite, summarize, or edit-style questions.');
-  }
   if (context.folder) {
     if (context.scope === 'workspace') {
       lines.push('- The included direct topics and folders are workspace-level top-level Foliole materials.');
@@ -67,9 +60,6 @@ function formatScopeGuidance(context: NativeAssistantWorkspaceContext, codex: bo
     lines.push(codex
       ? '- For Folder questions, use the included direct Topics and Folders first; when the list is truncated or details are needed, use the available Foliole actions.'
       : '- For Folder questions, use the included direct Topics and Folders; say when the included list is insufficient.');
-  }
-  if (context.parentFolder) {
-    lines.push('- The included parent-folder entries are the active material directory siblings; use them for nearby-material questions before broad search.');
   }
   if (context.document?.preview) {
     lines.push('- The included document preview is authoritative for the visible active topic, but it may be truncated.');
@@ -101,14 +91,6 @@ function formatDocumentContext(context: NativeAssistantWorkspaceContext) {
   return lines;
 }
 
-function formatSelectionContext(context: NativeAssistantWorkspaceContext) {
-  if (!context.selection) return [];
-  return [
-    `- Current editor selection${context.selection.truncated ? ' (truncated)' : ''}, ${context.selection.charCount} chars:`,
-    context.selection.text
-  ];
-}
-
 function formatFolderContext(context: NativeAssistantWorkspaceContext) {
   if (!context.folder) return [];
   const lines = [
@@ -116,21 +98,6 @@ function formatFolderContext(context: NativeAssistantWorkspaceContext) {
   ];
   for (const child of context.folder.children) {
     const meta = [child.kind, `id=${child.nodeId}`];
-    if (child.specialKind) meta.push(`special=${child.specialKind}`);
-    if (child.anchorKind) meta.push(`anchor=${child.anchorKind}`);
-    lines.push(`  - ${child.title} [${meta.join(', ')}]${child.preview ? `: ${child.preview}` : ''}`);
-  }
-  return lines;
-}
-
-function formatParentFolderContext(context: NativeAssistantWorkspaceContext) {
-  if (!context.parentFolder) return [];
-  const lines = [
-    `- Parent Foliole folder entries: ${context.parentFolder.children.length} of ${context.parentFolder.childCount}${context.parentFolder.truncated ? ' shown' : ''}.`
-  ];
-  for (const child of context.parentFolder.children) {
-    const meta = [child.kind, `id=${child.nodeId}`];
-    if (child.isActive) meta.push('active');
     if (child.specialKind) meta.push(`special=${child.specialKind}`);
     if (child.anchorKind) meta.push(`anchor=${child.anchorKind}`);
     lines.push(`  - ${child.title} [${meta.join(', ')}]${child.preview ? `: ${child.preview}` : ''}`);

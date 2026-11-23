@@ -103,16 +103,12 @@ it('passes sanitized Foliole workspace context to provider turns', async () => {
         }],
         truncated: true
       },
-      scope: 'node',
-      selection: {
-        charCount: 7,
-        ranges: [{ from: 1, to: 8 }],
-        text: 'selected',
-        truncated: false
-      }
+      scope: 'node'
     })
   }));
   expect(sentInput.workspaceContext).not.toHaveProperty('unknown');
+  // The selection only feeds the attached context; it is not repeated in every turn's projection.
+  expect(sentInput.workspaceContext).not.toHaveProperty('selection');
 });
 
 function createWorkspaceContext() {

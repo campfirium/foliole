@@ -17,6 +17,7 @@ import {
 
 export function recordAssistantThreadSuccess(input: {
   agentToolVersion: number;
+  attachedContext?: { materialId: string; text: string } | undefined;
   clientTurnId: string;
   continuationMessages?: NativeAssistantThreadMessageRecord[];
   continuedFromThreadId?: string;
@@ -39,16 +40,9 @@ export function recordAssistantThreadSuccess(input: {
       providerThreadId: input.result.threadId ?? ''
     });
     appendAssistantThreadMessages([
-      ...(input.continuationMessages ?? []).map((message) => ({
-        createdAt: message.createdAt,
-        id: message.id,
-        provider: message.provider,
-        providerThreadId: input.result.threadId ?? '',
-        role: message.role,
-        text: message.text,
-        ...(message.images?.length ? { images: message.images } : {})
-      })),
+      ...(input.continuationMessages ?? []).map((message) => copyContinuationMessage(message, input.result.threadId ?? '')),
       {
+        ...(input.attachedContext ? { attachedContext: input.attachedContext } : {}),
         id: `${turnId}:user`,
         provider: input.provider,
         providerThreadId: input.result.threadId ?? '',
@@ -72,6 +66,19 @@ export function recordAssistantThreadSuccess(input: {
       ? linkAssistantThreadMaterials(input.provider, threadIndex.providerThreadId, materialIds)
       : threadIndex;
   });
+}
+
+function copyContinuationMessage(message: NativeAssistantThreadMessageRecord, providerThreadId: string) {
+  return {
+    createdAt: message.createdAt,
+    id: message.id,
+    provider: message.provider,
+    providerThreadId,
+    role: message.role,
+    text: message.text,
+    ...(message.attachedContext ? { attachedContext: message.attachedContext } : {}),
+    ...(message.images?.length ? { images: message.images } : {})
+  };
 }
 
 function appendContinuationPrompt(

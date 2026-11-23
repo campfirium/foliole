@@ -11,6 +11,7 @@ import type { TurnState } from './codexAppServerSessionTypes.js';
 import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
 
 export interface SendMessageArgs {
+  attachedContext?: string;
   clientTurnId: string;
   customInstructions?: string;
   continuationMessages?: AssistantContinuationMessage[];
@@ -43,6 +44,6 @@ export function createTurnState(
     threadRequestId,
     timeout: setTimeout(onTimeout, args.timeoutMs),
     timeoutMs: args.timeoutMs,
-    userMessage: composeAssistantTurnInput(args.message, args.workspaceContext)
+    userMessage: composeAssistantTurnInput(args.message, args.workspaceContext, args.attachedContext)
   };
 }

@@ -1,3 +1,4 @@
+import type { NativeAssistantThreadMessageRecord } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
   deleteAssistantImageFiles,
@@ -47,7 +48,7 @@ export function handleAssistantLocalHistoryCommand(command: string, args: Record
     return runWithAssistantHistoryConnectionOwner(() => listAssistantThreadMessages(
       readAssistantProvider(args.provider),
       readProviderThreadId(args)
-    ));
+    ).map(withoutAttachedContext));
   }
   if (command === NATIVE_COMMANDS.assistantReadImageAttachment) {
     return runWithAssistantHistoryConnectionOwner(() =>
@@ -71,4 +72,11 @@ export function handleAssistantLocalHistoryCommand(command: string, args: Record
     });
   }
   return undefined;
+}
+
+// Attached context is model input only; the renderer shows what the user typed.
+function withoutAttachedContext(message: NativeAssistantThreadMessageRecord) {
+  const visible = { ...message };
+  delete visible.attachedContext;
+  return visible;
 }

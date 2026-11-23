@@ -12,6 +12,7 @@ import type { prepareAssistantThreadContinuation } from './assistantThreadContin
 import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
 
 export async function finishAssistantTurn(input: {
+  attachedContext?: { materialId: string; text: string } | undefined;
   clientTurnId: string;
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   images: StoredAssistantImage[];
@@ -37,6 +38,7 @@ export async function finishAssistantTurn(input: {
   try {
     const threadIndex = await runWithAssistantHistoryConnectionOwner(() => recordAssistantThreadSuccess({
       agentToolVersion: continuation.agentToolVersion,
+      ...(input.attachedContext ? { attachedContext: input.attachedContext } : {}),
       clientTurnId,
       ...continuationPersistenceInput(continuation),
       images,

@@ -1,3 +1,5 @@
+import type { AideAttachedContextSettings } from '../core/assistant/aideAttachedContextSettings.js';
+
 import type { NativeAssistantFailure } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
@@ -81,5 +83,13 @@ export type NativeAssistantModelSettingsCommandMap = {
   [NATIVE_COMMANDS.assistantSaveCustomInstructions]: {
     args: NativeAssistantCustomInstructions;
     result: NativeAssistantCustomInstructions;
+  };
+  [NATIVE_COMMANDS.assistantLoadAttachedContextSettings]: {
+    args: undefined;
+    result: AideAttachedContextSettings;
+  };
+  [NATIVE_COMMANDS.assistantSaveAttachedContextSettings]: {
+    args: { settings: AideAttachedContextSettings };
+    result: AideAttachedContextSettings;
   };
 };

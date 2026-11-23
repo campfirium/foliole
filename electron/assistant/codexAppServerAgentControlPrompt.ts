@@ -46,9 +46,6 @@ const WRITE_CAPABILITIES = [
 ];
 
 function formatActiveContextGuidance(context: NativeAssistantWorkspaceContext, capabilities: Set<string>) {
-  if (context.anchor?.parentNodeId && capabilities.has('materials.read')) {
-    return ['- When the included anchor preview is insufficient, read its parent Topic for source context.'];
-  }
   if (context.activeSpecialKind && capabilities.has('materials.search')) {
     return ['- For a special Folder, use included children first and search when more detail is needed.'];
   }

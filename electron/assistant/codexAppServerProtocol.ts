@@ -106,12 +106,14 @@ export function sendFailure(
 
 export function composeAssistantTurnInput(
   message: string,
-  context?: NativeAssistantWorkspaceContext
+  context?: NativeAssistantWorkspaceContext,
+  attachedContext?: string
 ) {
   if (!context) return message;
   const lines = [
     ...formatAideProductContext(context, 'codex-app-server'),
     '',
+    ...(attachedContext ? [attachedContext, ''] : []),
     'User message:',
     message
   ];

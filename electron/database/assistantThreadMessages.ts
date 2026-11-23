@@ -14,6 +14,8 @@ import {
 } from './assistantThreadImages.js';
 
 interface AssistantThreadMessageRow extends DatabaseRow {
+  attached_context: string | null;
+  attached_material_id: string | null;
   created_at: string;
   message_id: string;
   provider: NativeAssistantProviderId;
@@ -23,6 +25,7 @@ interface AssistantThreadMessageRow extends DatabaseRow {
 }
 
 export interface AssistantThreadMessageInput {
+  attachedContext?: NativeAssistantThreadMessageRecord['attachedContext'];
   createdAt?: string;
   id: string;
   images?: NativeAssistantImageAttachment[];
@@ -47,16 +50,20 @@ export function appendAssistantThreadMessages(
     provider: message.provider,
     providerThreadId: normalizeRequiredString(message.providerThreadId, 'providerThreadId'),
     role: normalizeAssistantMessageRole(message.role),
-    text: message.text
+    text: message.text,
+    attachedContext: message.attachedContext
   }));
   assertSameThreadBatch(normalized, provider, providerThreadId);
   openAssistantHistoryConnection().driver.transaction((driver) => {
     for (const message of normalized) {
       driver.execute(
         `INSERT OR REPLACE INTO assistant_thread_messages (
-          provider, provider_thread_id, message_id, role, text, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-        [message.provider, message.providerThreadId, message.id, message.role, message.text, message.createdAt]
+          provider, provider_thread_id, message_id, role, text, created_at, attached_material_id, attached_context
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          message.provider, message.providerThreadId, message.id, message.role, message.text, message.createdAt,
+          message.attachedContext?.materialId ?? null, message.attachedContext?.text ?? null
+        ]
       );
       replaceAssistantMessageImages({
         images: message.images ?? [],
@@ -118,8 +125,22 @@ function messageRowToRecord(row: AssistantThreadMessageRow): NativeAssistantThre
     provider: row.provider,
     providerThreadId: row.provider_thread_id,
     role: row.role,
-    text: row.text
+    text: row.text,
+    ...(row.attached_material_id && row.attached_context
+      ? { attachedContext: { materialId: row.attached_material_id, text: row.attached_context } }
+      : {})
   };
+}
+
+export function listAssistantThreadAttachedMaterialIds(
+  provider: NativeAssistantProviderId,
+  providerThreadId: string
+) {
+  return openAssistantHistoryConnection().driver.queryAll<{ attached_material_id: string } & DatabaseRow>(
+    `SELECT DISTINCT attached_material_id FROM assistant_thread_messages
+     WHERE provider = ? AND provider_thread_id = ? AND attached_material_id IS NOT NULL`,
+    [provider, normalizeRequiredString(providerThreadId, 'providerThreadId')]
+  ).map((row) => row.attached_material_id);
 }
 
 function normalizeRequiredString(value: string, field: string) {

@@ -1,3 +1,4 @@
+import type { AideAttachedContextSettings } from '../../../lib/core/assistant/aideAttachedContextSettings';
 import type { NativeAideStorageInfo } from '../../../lib/platform/nativeAideStorageContract';
 import type {
   NativeAssistantByokSettings,
@@ -156,6 +157,20 @@ export async function saveAssistantCustomInstructions(text: string): Promise<Nat
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   return invoke(NATIVE_COMMANDS.assistantSaveCustomInstructions, { text });
+}
+
+export async function loadAssistantAttachedContextSettings(): Promise<AideAttachedContextSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantLoadAttachedContextSettings);
+}
+
+export async function saveAssistantAttachedContextSettings(
+  settings: AideAttachedContextSettings
+): Promise<AideAttachedContextSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantSaveAttachedContextSettings, { settings });
 }
 
 export async function saveAssistantModelDraft(
