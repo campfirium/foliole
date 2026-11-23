@@ -36,6 +36,12 @@ export function ReadingActionsLayer(props: {
     handoffContext.activity,
     () => props.onOpenActions(false)
   );
+  const markdownExport = useCompanionArticleHandoff(
+    canShare && props.actionsOpen ? readableArticle.nodeId : undefined,
+    handoffContext.activity,
+    () => props.onOpenActions(false),
+    'markdown'
+  );
   return (
     <ReadingActionsSheet
       key={readableArticle.nodeId}
@@ -51,6 +57,7 @@ export function ReadingActionsLayer(props: {
         onOpenOutline: props.onOpenOutline,
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         articleHandoff,
+        markdownExport,
         onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
           ? () => restoreFromTrash(props.readableArticle.nodeId)
           : undefined

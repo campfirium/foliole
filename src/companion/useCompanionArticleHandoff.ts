@@ -3,7 +3,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   canHandoffCompanionArticle,
-  handoffCompanionArticle
+  handoffCompanionArticle,
+  type CompanionArticleHandoffMode
 } from '../shared/platform/companion/reading/companionArticleHandoff';
 
 import type { CompanionReadingActivity } from './companionReadingActivity';
@@ -11,7 +12,8 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 export function useCompanionArticleHandoff(
   nodeId: string | undefined,
   activity: CompanionReadingActivity | undefined,
-  close: () => void
+  close: () => void,
+  mode: CompanionArticleHandoffMode = 'open'
 ) {
   const t = useTranslation();
   const current = useRef<object | null>(null);
@@ -33,13 +35,15 @@ export function useCompanionArticleHandoff(
     try {
       if (!nodeId) return;
       const result = await handoffCompanionArticle({
-        nodeId, isCurrent, flush: async () => { await activity?.flush(undefined, { position: false }); }
+        nodeId, mode, isCurrent, flush: async () => { await activity?.flush(undefined, { position: false }); }
       });
       if (!isCurrent()) return;
-      if (result.status === 'unavailable') setError(t('companion.reading.articleHandoffUnavailable'));
+      if (result.status === 'unavailable') {
+        setError(t(mode === 'markdown' ? 'companion.reading.exportMarkdownUnavailable' : 'companion.reading.articleHandoffUnavailable'));
+      }
       if (result.status === 'presented') close();
     } catch {
-      if (isCurrent()) setError(t('companion.reading.articleHandoffFailed'));
+      if (isCurrent()) setError(t(mode === 'markdown' ? 'companion.reading.exportMarkdownFailed' : 'companion.reading.articleHandoffFailed'));
     } finally {
       pending.current = false;
     }

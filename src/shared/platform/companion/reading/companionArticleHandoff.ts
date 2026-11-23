@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import { articleMarkdownFileName, renderArticleMarkdownExport } from '../../../../../lib/core/articleHandoff/articleMarkdownExport';
 import { renderMobileArticleHtml } from '../../../../../lib/core/articleHandoff/mobileArticleHtml';
 import { prepareArticleHandoff, resolveArticleHandoffLanguage } from '../../../../../lib/core/articleHandoff/prepareArticleHandoff';
 import { loadCompanionNodeDocument } from '../../../../../lib/core/database/companionNodeDocumentRead';
@@ -11,7 +12,10 @@ type HandoffResult = { status: 'presented' | 'cancelled' | 'unavailable' };
 const pluginName = 'FolioleArticleHandoff';
 const nativeHandoff = registerPlugin<{
   open(options: { html: string }): Promise<HandoffResult>;
+  shareMarkdown(options: { text: string; fileName: string }): Promise<HandoffResult>;
 }>(pluginName);
+
+export type CompanionArticleHandoffMode = 'open' | 'markdown';
 
 export function canHandoffCompanionArticle() {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable(pluginName);
@@ -19,6 +23,7 @@ export function canHandoffCompanionArticle() {
 
 export async function handoffCompanionArticle(args: {
   nodeId: string;
+  mode?: CompanionArticleHandoffMode;
   flush: () => Promise<void>;
   isCurrent: () => boolean;
 }) {
@@ -36,6 +41,11 @@ export async function handoffCompanionArticle(args: {
   });
   if (!isCurrent()) return { status: 'cancelled' } as const;
   if (!article) return { status: 'unavailable' } as const;
+  if (args.mode === 'markdown') {
+    return nativeHandoff.shareMarkdown({
+      text: renderArticleMarkdownExport(article), fileName: articleMarkdownFileName(article.title)
+    });
+  }
   return nativeHandoff.open({
     html: renderMobileArticleHtml(article, resolveArticleHandoffLanguage(article.markdown, navigator.language))
   });

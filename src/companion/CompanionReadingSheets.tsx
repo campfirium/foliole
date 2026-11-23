@@ -1,4 +1,4 @@
-import { ArchiveRestore, ListTree, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
+import { ArchiveRestore, ListTree, Search, Share2, FileDown, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -83,6 +83,7 @@ export function ReadingActionsSheet(props: {
   onOpenReadingSheet(sheet: 'font'): void;
   onOpenClozeRemoval?: () => void;
   articleHandoff?: { run(): void; error: string | null };
+  markdownExport?: { run(): void; error: string | null };
   title?: string;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
@@ -118,6 +119,7 @@ export function ReadingActionsSheet(props: {
           onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
         /> : null}
         {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
+        {props.markdownExport && <ReadingArticleHandoff {...props.markdownExport} markdown />}
         {props.onOpenClozeRemoval ? <ReadingActionRow
           icon={<X aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.selection.deleteCloze')}
@@ -143,12 +145,13 @@ function ReadingWorkspaceActions({ nodeId, onClose, hasRestoreAction, children }
   </CompanionWorkspaceMenuActions>;
 }
 
-function ReadingArticleHandoff(props: { run(): void; error: string | null }) {
+function ReadingArticleHandoff(props: { run(): void; error: string | null; markdown?: boolean }) {
   const t = useTranslation();
+  const Icon = props.markdown ? FileDown : Share2;
   return (
     <>
-      <ReadingActionRow icon={<Share2 aria-hidden="true" className="h-5 w-5" />}
-        label={t('companion.reading.shareArticle')} onClick={props.run} />
+      <ReadingActionRow icon={<Icon aria-hidden="true" className="h-5 w-5" />}
+        label={t(props.markdown ? 'companion.reading.exportMarkdown' : 'companion.reading.shareArticle')} onClick={props.run} />
       {props.error && <p role="status" className="py-2 text-sm text-error">{props.error}</p>}
     </>
   );
