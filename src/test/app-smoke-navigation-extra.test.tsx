@@ -85,7 +85,8 @@ it('renders the full ancestor path and keeps nested topics navigable', () => {
   expect(within(nav).getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Book' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Chapter One' })).toBeInTheDocument();
-  expect(within(nav).getByRole('button', { name: 'De...' })).toBeInTheDocument();
-  expect(within(nav).getAllByRole('button', { name: 'Cu...' })).toHaveLength(2);
+  expect(within(nav).getByRole('button', { name: 'Derived card…' })).toHaveAttribute('title', 'Derived card title');
+  expect(within(nav).getByRole('button', { name: 'Current parent' })).toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: 'Current node' })).toBeInTheDocument();
   expect(within(nav).queryByRole('button', { name: 'Final node' })).not.toBeInTheDocument();
 });
