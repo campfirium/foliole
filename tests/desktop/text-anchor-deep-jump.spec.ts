@@ -100,8 +100,8 @@ test('really scrolls to a deep text anchor when returning to the parent from bre
   await seedLongTextAnchorWorkspace(desktopWindow);
 
   const timelinePromise = collectPromptEditorTimeline(desktopWindow);
-  await desktopWindow.getByRole('navigation', { name: 'Node breadcrumbs' })
-    .getByRole('button', { name: 'Playwright Long Anchor Parent' })
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle('Playwright Long Anchor Parent', { exact: true })
     .click();
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {

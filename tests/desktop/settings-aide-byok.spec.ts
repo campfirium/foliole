@@ -12,8 +12,9 @@ import {
 } from '../../scripts/desktop/macos-hidden-electron-credential-session.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../../scripts/desktop/macos-hidden-electron-runtime.mjs';
 
+import { fillModelDraft, openModelSettings } from './assistant-byok-loopback-ui.support';
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { expectWorkspaceShell } from './harness/settings';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance');
 const API_KEY = 'sk-foliole-t141-hidden-native-secret';
@@ -83,31 +84,23 @@ async function expectSecureStorageReady(electronApp: ElectronApplication) {
   }), { timeout: 10_000 }).toBe(true);
 }
 
-async function openByokSection(page: Page) {
-  const settings = await openSettingsCategory(page, 'General');
-  const section = settings.getByLabel(/^(Your model settings|你的模型设置)$/);
-  await expect(section).toBeVisible();
-  return section;
-}
-
-async function saveConfiguration(page: Page) {
-  const section = await openByokSection(page);
-  await section.getByLabel(/^(Model API endpoint|模型 API 端点)$/).fill(ENDPOINT);
-  await section.getByLabel(/^(Model name|模型名称)$/).fill(MODEL);
-  await section.getByLabel(/^(Model API key|模型 API key)$/).fill(API_KEY);
-  await section.getByRole('button', { name: /^(Save|保存)$/ }).click();
-  await expect(section).toContainText(/(?:Ready to use|已可在 Foliole Aide 中使用)/);
-  await expect(section.getByLabel(/^(Model API key|模型 API key)$/)).toHaveValue('');
+async function saveConfiguration(page: Page, secretPath: string) {
+  const section = await openModelSettings(page);
+  const addButton = section.getByRole('button', { name: /^(Add model|添加模型)$/ });
+  if (await addButton.isVisible().catch(() => false)) await addButton.click();
+  // Model drafts save as they are typed; the key goes to the device's secure storage.
+  await fillModelDraft(section, { apiKey: API_KEY, endpoint: ENDPOINT, model: MODEL });
+  await expect.poll(() => access(secretPath).then(() => true, () => false), { timeout: 10_000 }).toBe(true);
 }
 
 async function expectRestoredConfiguration(page: Page) {
-  const section = await openByokSection(page);
-  await expect(section.getByLabel(/^(Model API endpoint|模型 API 端点)$/)).toHaveValue(ENDPOINT);
-  await expect(section.getByLabel(/^(Model name|模型名称)$/)).toHaveValue(MODEL);
-  const key = section.getByLabel(/^(Model API key|模型 API key)$/);
+  const section = await openModelSettings(page);
+  await expect(section.getByLabel(/^(API endpoint|API 地址)$/).first()).toHaveValue(ENDPOINT);
+  await expect(section.getByLabel(/^(Model|模型)$/).first()).toHaveValue(MODEL);
+  const key = section.getByLabel(/^(API key|API 密钥)$/).first();
   await expect(key).toHaveValue('');
-  await expect(key).toHaveAttribute('placeholder', '••••••••');
-  await expect(section.getByRole('button', { name: /^(Remove|移除)$/ })).toBeVisible();
+  await expect(key).toHaveAttribute('placeholder', '•'.repeat(API_KEY.length));
+  await expect(section.getByRole('button', { name: /^(Remove model|删除模型)$/ })).toBeVisible();
   return section;
 }
 
@@ -144,7 +137,7 @@ async function runCredentialJourney(fixture: CredentialFixture, testInfo: TestIn
   const first = await fixture.launch();
   await expectWorkspaceShell(first.page);
   await expectSecureStorageReady(first.electronApp);
-  await saveConfiguration(first.page);
+  await saveConfiguration(first.page, fixture.secretPath);
   await expectNoRendererSecret(first.page);
   await expect(access(fixture.secretPath)).resolves.toBeUndefined();
   expect(await containsPlaintextSecret(fixture.stateRoot)).toBe(false);
@@ -155,12 +148,11 @@ async function runCredentialJourney(fixture: CredentialFixture, testInfo: TestIn
     await expectWorkspaceShell(second.page);
     await captureSection(second.page, testInfo);
     await expectNoRendererSecret(second.page);
-    const section = await openByokSection(second.page);
-    await section.getByRole('button', { name: /^(Remove|移除)$/ }).click();
-    await expect(section.getByLabel(/^(Model API endpoint|模型 API 端点)$/)).toHaveValue('');
-    await expect(section.getByLabel(/^(Model name|模型名称)$/)).toHaveValue('');
-    await expect(section.getByRole('button', { name: /^(Remove|移除)$/ })).toHaveCount(0);
-    await expect(access(fixture.secretPath)).rejects.toThrow();
+    const section = await openModelSettings(second.page);
+    await section.getByRole('button', { name: /^(Remove model|删除模型)$/ }).click();
+    await expect(section.getByLabel(/^(Model|模型)$/)).toHaveCount(0);
+    await expect(section.getByRole('button', { name: /^(Remove model|删除模型)$/ })).toHaveCount(0);
+    await expect.poll(() => access(fixture.secretPath).then(() => true, () => false)).toBe(false);
   } finally {
     await second.electronApp.close();
   }

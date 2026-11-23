@@ -12,7 +12,7 @@ async function collectHeaderSpacingMetrics(desktopWindow: import('@playwright/te
   return desktopWindow.evaluate(() => {
     const rail = document.querySelector('[data-testid="document-header-content-rail"]');
     const navigationActions = document.querySelector('[aria-label="Document navigation actions"], [aria-label="文档导航操作"]');
-    const breadcrumbs = document.querySelector('[aria-label="Node breadcrumbs"], [aria-label="面包屑"]');
+    const breadcrumbs = document.querySelector('[aria-label="Breadcrumb"], [aria-label="面包屑"]');
 
     const railRect = rail?.getBoundingClientRect() ?? null;
     const navigationRect = navigationActions?.getBoundingClientRect() ?? null;

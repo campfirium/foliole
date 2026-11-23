@@ -8,6 +8,7 @@ import {
   openAssistantPanel
 } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
+import { getAideSettingsDialog } from './harness/settings';
 
 const screenshotPath = path.join(
   process.cwd(),
@@ -119,10 +120,11 @@ test('Aide setup opens settings at the model section', async ({ desktopApp, desk
   const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   await surface.getByRole('button', { name: /^(Settings|设置)$/ }).click();
 
-  const section = desktopWindow.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
+  const aideDialog = getAideSettingsDialog(desktopWindow);
+  const section = aideDialog.getByRole('table', { name: /^(Aide model settings|Aide 模型设置)$/ });
   await expect(section).toBeInViewport();
   await mkdir(path.dirname(modelSettingsScreenshotPath), { recursive: true });
-  await desktopWindow.getByRole('dialog').screenshot({ path: modelSettingsScreenshotPath });
+  await aideDialog.screenshot({ path: modelSettingsScreenshotPath });
   await testInfo.attach('assistant-model-settings-deep-link', {
     path: modelSettingsScreenshotPath,
     contentType: 'image/png'

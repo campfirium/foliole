@@ -21,8 +21,8 @@ test('parent and highlight child stay responsive with 3500 topics', async ({ des
   const samples = [];
   for (let index = 0; index < 3; index += 1) {
     const started = Date.now();
-    await desktopWindow.getByRole('navigation', { name: /^(Node breadcrumbs|面包屑)$/ })
-      .getByRole('button', { name: 'Scale Parent' }).click();
+    await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+      .getByTitle('Scale Parent', { exact: true }).click();
     await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
       .toBe('scale-parent');
     await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toHaveText('Alpha Beta Gamma');

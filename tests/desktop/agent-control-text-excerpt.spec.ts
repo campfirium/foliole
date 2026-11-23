@@ -36,7 +36,7 @@ async function openExcerptAndJump(page: Page, excerptId: string, sourceId: strin
     await window.__folioleWorkspaceDebug?.openNode?.(id), excerptId)).toBe(true);
   await expect(page.locator('.prompt-editor-host .cm-content')).toHaveText(PASSAGE);
   await page.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
-    .getByRole('button', { name: SOURCE }).click();
+    .getByTitle(SOURCE, { exact: true }).click();
   await expect.poll(() => page.evaluate(() => ({
     active: window.__folioleWorkspaceDebug?.getActiveNodeId?.(),
     position: window.__folioleDebug?.getEditorSelection?.('prompt-editor')?.from

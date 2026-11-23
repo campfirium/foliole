@@ -72,8 +72,8 @@ test('jumps to the stored highlight range when returning to the parent from a ma
     await api?.openNode?.(target.id);
   });
 
-  await desktopWindow.getByRole('navigation', { name: 'Node breadcrumbs' })
-    .getByRole('button', { name: 'Playwright Text Anchor Parent' })
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle('Playwright Text Anchor Parent', { exact: true })
     .click();
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
@@ -112,8 +112,8 @@ test('keeps breadcrumb return correct after creating a normal text highlight fro
   });
 
   await desktopWindow.getByRole('treeitem', { name: 'Beta', exact: true }).click();
-  await desktopWindow.getByRole('navigation', { name: 'Node breadcrumbs' })
-    .getByRole('button', { name: 'Playwright Text Anchor Parent' })
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle('Playwright Text Anchor Parent', { exact: true })
     .click();
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {

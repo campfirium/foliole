@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect } from './harness/fixtures';
-import { openSettingsCategory } from './harness/settings';
+import { getAideSettingsDialog, getSettingsDialog, openAideModelSettings } from './harness/settings';
 
 export async function configureByok(
   page: Page,
@@ -42,8 +42,7 @@ export async function removeByok(page: Page) {
 }
 
 export async function openModelSettings(page: Page) {
-  const settings = await openSettingsCategory(page, 'Models');
-  return settings.getByRole('region', { name: /^(Aide model settings|Aide 模型设置)$/ });
+  return openAideModelSettings(page);
 }
 
 export async function fillModelDraft(
@@ -60,6 +59,13 @@ export function modelRadio(section: Locator, model: string) {
 }
 
 export async function closeSettings(page: Page) {
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
+  // Escape closes the stacked Aide settings dialog first, then the main settings dialog under it.
+  if (await getAideSettingsDialog(page).isVisible()) {
+    await page.keyboard.press('Escape');
+    await expect(getAideSettingsDialog(page)).toBeHidden();
+  }
+  if (await getSettingsDialog(page).isVisible()) {
+    await page.keyboard.press('Escape');
+  }
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 }

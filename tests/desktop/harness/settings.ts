@@ -52,6 +52,32 @@ export async function openSettingsCategory(windowPage: Page, categoryName: strin
   return settingsDialog;
 }
 
+const AIDE_SETTINGS_DIALOG_NAME = /^(Aide settings|Aide 设置)$/;
+const AIDE_MODEL_SETTINGS_NAME = /^(Aide model settings|Aide 模型设置)$/;
+
+export function getAideSettingsDialog(windowPage: Page): Locator {
+  return windowPage.getByRole('dialog', { name: AIDE_SETTINGS_DIALOG_NAME });
+}
+
+/** Opens General > Foliole Aide > Open; the Aide settings dialog stacks on top of the main settings dialog. */
+export async function openAideSettingsDialog(windowPage: Page) {
+  const aideDialog = getAideSettingsDialog(windowPage);
+  if (await aideDialog.isVisible()) return aideDialog;
+  const settingsDialog = await openSettingsCategory(windowPage, 'General');
+  await settingsDialog.getByRole('region', { name: 'Foliole Aide' })
+    .getByRole('button', { name: /^(Open|打开)$/ })
+    .click();
+  await waitForVisible(aideDialog);
+  return aideDialog;
+}
+
+export async function openAideModelSettings(windowPage: Page) {
+  const aideDialog = await openAideSettingsDialog(windowPage);
+  const table = aideDialog.getByRole('table', { name: AIDE_MODEL_SETTINGS_NAME });
+  await waitForVisible(table);
+  return table;
+}
+
 export async function setActiveSidebarTierDockedWidths(page: Page, left: number, right: number) {
   const settings = await openSettingsCategory(page, 'Appearance');
   const current = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ }).locator('tr[aria-current="true"]');

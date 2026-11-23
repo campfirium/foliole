@@ -38,7 +38,7 @@ async function collectWorkspaceSurfaceState(desktopWindow: Page) {
   return desktopWindow.evaluate(() => {
     const debugApi = globalThis.window?.__folioleWorkspaceDebug;
     const workspace = document.querySelector('main');
-    const breadcrumbs = document.querySelector('nav[aria-label="面包屑"], nav[aria-label="Node breadcrumbs"]');
+    const breadcrumbs = document.querySelector('nav[aria-label="面包屑"], nav[aria-label="Breadcrumb"]');
     const documentPanel = document.querySelector('[aria-label="文档面板"], [aria-label="Document panel"]');
     const headerButtons = Array.from(document.querySelectorAll('button'))
       .map((button) => button.textContent?.trim() ?? '')
@@ -73,9 +73,9 @@ test('clicking breadcrumb from a highlight child keeps the parent document visib
 
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe('playwright-highlight-child');
-  const breadcrumbs = desktopWindow.getByRole('navigation', { name: /^(Node breadcrumbs|面包屑)$/ });
+  const breadcrumbs = desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ });
   await expect(breadcrumbs).toBeVisible();
-  await breadcrumbs.getByRole('button', { name: 'Playwright Parent' }).click();
+  await breadcrumbs.getByTitle('Playwright Parent', { exact: true }).click();
 
   const afterClickState = await collectWorkspaceSurfaceState(desktopWindow);
   console.log('highlight-breadcrumb-after-click', JSON.stringify({ afterClickState, pageErrors }));
@@ -131,8 +131,8 @@ test('new topic body survives creating a highlight and opening its child', async
   await desktopWindow.locator(`[role="treeitem"][data-node-id="${childId}"]`).click();
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(childId);
-  await desktopWindow.getByRole('navigation', { name: /^(Node breadcrumbs|面包屑)$/ })
-    .getByRole('button', { name: /Alpha Beta Gamma/ }).click();
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle(/Alpha Beta Gamma/).click();
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(parentId);
   await expect(editor).toContainText('Alpha Beta Gamma');
@@ -174,8 +174,8 @@ test('a topic first loaded empty keeps its edited body after visiting a highligh
     .find((node) => node?.parentNodeId === id && node.anchorLink?.kind === 'highlight')?.id ?? null, parentId);
   expect(childId).toBeTruthy();
   await desktopWindow.locator(`[role="treeitem"][data-node-id="${childId}"]`).click();
-  await desktopWindow.getByRole('navigation', { name: /^(Node breadcrumbs|面包屑)$/ })
-    .getByRole('button', { name: 'Initially Empty Parent' }).click();
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle('Initially Empty Parent', { exact: true }).click();
   await expect(editor).toContainText('Alpha Beta Gamma');
   await desktopWindow.screenshot({ path: testInfo.outputPath('initially-empty-parent-reopened.png') });
 });

@@ -102,8 +102,8 @@ test('keeps breadcrumb return stable for a multi-range cloze child', async ({ de
 
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(childId);
-  await desktopWindow.getByRole('navigation')
-    .getByRole('button', { name: 'Playwright Text Anchor Parent' })
+  await desktopWindow.getByRole('navigation', { name: /^(Breadcrumb|面包屑)$/ })
+    .getByTitle('Playwright Text Anchor Parent', { exact: true })
     .click();
 
   const state = await collectTextAnchorState(desktopWindow);
