@@ -54,6 +54,20 @@ const guidedSampleLocaleOverride = guidedSampleLocale === 'en-US' || guidedSampl
   : null;
 const systemLanguage = process.env.FOLIOLE_SYSTEM_LANGUAGE?.trim() || null;
 
+// Only the fields the confirmation card shows cross into the page.
+function normalizeAssistantWriteApproval(approval) {
+  if (typeof approval?.id !== 'string' || !approval.id || !Array.isArray(approval.changes)) return undefined;
+  const changes = [];
+  for (const change of approval.changes) {
+    if (typeof change?.tool !== 'string') return undefined;
+    const details = Array.isArray(change.details) ? change.details
+      .filter((detail) => ['content', 'materials', 'parent', 'title'].includes(detail?.field) && typeof detail.value === 'string')
+      .map((detail) => ({ field: detail.field, value: detail.value })) : [];
+    changes.push({ details, ...(typeof change.target === 'string' ? { target: change.target } : {}), tool: change.tool });
+  }
+  return { changes, id: approval.id };
+}
+
 function normalizeReadwiseBookEpubProgressPayload(payload) {
   if (
     typeof payload?.detail !== 'string' ||
@@ -131,8 +145,12 @@ function subscribe(channel, handler) {
     }
     if (channel === IPC_ASSISTANT_TURN_EVENT_CHANNEL) {
       const kind = payload?.kind;
-      if (kind !== 'started' && kind !== 'delta' && kind !== 'completed' && kind !== 'failed') return;
+      if (kind !== 'started' && kind !== 'delta' && kind !== 'completed' && kind !== 'failed'
+        && kind !== 'approval_requested') return;
+      const approval = kind === 'approval_requested' ? normalizeAssistantWriteApproval(payload?.approval) : undefined;
+      if (kind === 'approval_requested' && !approval) return;
       handler({
+        ...(approval ? { approval } : {}),
         clientTurnId: typeof payload?.clientTurnId === 'string' ? payload.clientTurnId : '', kind,
         failure: payload?.failure?.category ? { category: payload.failure.category } : undefined,
         provider: 'codex-app-server', text: typeof payload?.text === 'string' ? payload.text : undefined,
