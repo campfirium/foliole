@@ -5,7 +5,7 @@ import { useLocalization } from '../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle } from '../shared/localization/systemEntryNames';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-import { useDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
+import { CompanionDirectoryConversionRows, useDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
 import { CompanionMenuRow } from './CompanionMenuSheet';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, getCompanionWorkspaceMenuOptions } from './CompanionWorkspaceMenuActions';
@@ -16,6 +16,7 @@ export type CompanionBrowsePage =
   | { kind: 'root' }
   | { kind: 'folder'; nodeId: string }
   | { kind: 'dive'; nodeId: string }
+  | { kind: 'index'; nodeId: string }
   | { kind: 'trash' }
   | { kind: 'recent' }
   | { kind: 'other' };
@@ -83,6 +84,17 @@ function DiveSection({ nodeId, onClose }: { nodeId: string; onClose(): void }) {
   </>;
 }
 
+/** A user index's detail page offers the same rows as its long-press menu in the parent list. */
+function IndexSection({ nodeId, onClose }: { nodeId: string; onClose(): void }) {
+  const { workspace, ready, title } = useContainerNode(nodeId);
+  const menu = useDirectoryConversionMenu({ nodeId, enabled: ready });
+  if (!ready || !workspace || !menu?.canRename) return null;
+  return <>
+    <div className={sectionClass}>{title}</div>
+    <CompanionDirectoryConversionRows menu={menu} onClose={onClose} />
+  </>;
+}
+
 /** Menu rows that change what the current container holds, placed before list-level rows. */
 export function CompanionBrowseContainerActions({ page, onClose, onOpenCreate }: {
   page: CompanionBrowsePage; onClose(): void; onOpenCreate(): void;
@@ -107,5 +119,6 @@ export function CompanionBrowseContainerActions({ page, onClose, onOpenCreate }:
 export function CompanionBrowseContainerSection({ page, onClose }: { page: CompanionBrowsePage; onClose(): void }) {
   if (page.kind === 'folder') return <FolderSection nodeId={page.nodeId} onClose={onClose} />;
   if (page.kind === 'dive') return <DiveSection nodeId={page.nodeId} onClose={onClose} />;
+  if (page.kind === 'index') return <IndexSection nodeId={page.nodeId} onClose={onClose} />;
   return null;
 }

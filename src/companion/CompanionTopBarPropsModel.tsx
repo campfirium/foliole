@@ -87,13 +87,14 @@ function resolveSettingsTopBar(
   return { title: t('companion.settings.title') };
 }
 
-function resolveBrowsePage(open: boolean, selection: CompanionDirectorySelection,
+export function resolveBrowsePage(open: boolean, selection: CompanionDirectorySelection,
   diveActions: CompanionBrowseDiveActions | undefined): CompanionBrowsePage {
   if (!open) return { kind: 'recent' };
   if (selection.kind === 'root') return { kind: 'root' };
   if (selection.kind === 'trash' || selection.kind === 'trashFolder') return { kind: 'trash' };
   if (diveActions) return { kind: 'dive', nodeId: diveActions.dive.id };
   if (selection.kind === 'internal') return { kind: 'folder', nodeId: selection.nodeId };
+  if (selection.kind === 'virtual') return { kind: 'index', nodeId: selection.nodeId };
   return { kind: 'other' };
 }
 
