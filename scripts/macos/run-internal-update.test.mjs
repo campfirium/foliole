@@ -37,7 +37,7 @@ describe('Internal update fixed-input worker', () => {
         ? spawnSync(command, args, options) : { status: 0 });
       const result = await runInternalUpdate({
         force: true, repositoryRoot: root, revision, stateRoot, run,
-        pathExists: async () => false
+        pathExists: async () => false, prepareRuntime: vi.fn()
       });
       expect(result.status).toBe(target === 'current' ? 'installed' : 'skipped');
       expect(run.mock.calls.some(([command]) => command === 'npm')).toBe(target === 'current');
@@ -116,7 +116,7 @@ describe('Internal update fixed-input worker', () => {
       baseline: 'a'.repeat(40), force: true,
       inspection: { changedFiles: ['docs/guide.md'], stale: false },
       makeDirectory: vi.fn(), makeTempDirectory: vi.fn(() => '/tmp/job'),
-      pathExists: vi.fn(async () => false), remove: vi.fn(), repositoryRoot: '/repo',
+      pathExists: vi.fn(async () => false), prepareRuntime: vi.fn(), remove: vi.fn(), repositoryRoot: '/repo',
       revision: REVISION, run, stateRoot: '/state', writeBaseline: vi.fn()
     })).resolves.toEqual({ revision: REVISION, status: 'installed' });
     expect(run).toHaveBeenCalledWith('npm', ['run', 'macos:internal:update'], expect.objectContaining({
@@ -144,7 +144,7 @@ describe('Internal update fixed-input worker', () => {
       makeDirectory: vi.fn(),
       makeTempDirectory: vi.fn(() => '/tmp/job'),
       baseline: null,
-      pathExists: vi.fn(async () => false),
+      pathExists: vi.fn(async () => false), prepareRuntime: vi.fn(),
       remove,
       repositoryRoot: '/repo',
       revision: REVISION,
@@ -154,11 +154,24 @@ describe('Internal update fixed-input worker', () => {
     expect(remove).toHaveBeenCalledWith('/tmp/job', { force: true, recursive: true });
   });
 
+  it('restores a missing MAS Electron runtime before cloning it into the build', async () => {
+    const order = [];
+    const run = vi.fn((command, args) => { order.push(args.includes('-cR') ? args[1] : command); return { status: 0 }; });
+    const prepareRuntime = vi.fn(async () => { order.push('prepare'); });
+    await runInternalUpdate({
+      baseline: null, makeDirectory: vi.fn(), makeTempDirectory: vi.fn(() => '/tmp/job'),
+      pathExists: vi.fn(async () => false), prepareRuntime, remove: vi.fn(), repositoryRoot: '/repo',
+      revision: REVISION, run, stateRoot: '/state', writeBaseline: vi.fn()
+    });
+    expect(prepareRuntime).toHaveBeenCalledWith({ repositoryRoot: '/repo' });
+    expect(order.indexOf('prepare')).toBeLessThan(order.indexOf('/repo/.tmp/electron-mas-arm64'));
+  });
+
   it('writes the baseline only after a successful fixed-input build', async () => {
     const writeBaseline = vi.fn();
     await expect(runInternalUpdate({
       baseline: null, makeDirectory: vi.fn(), makeTempDirectory: vi.fn(() => '/tmp/job'),
-      pathExists: vi.fn(async () => false), remove: vi.fn(), repositoryRoot: '/repo',
+      pathExists: vi.fn(async () => false), prepareRuntime: vi.fn(), remove: vi.fn(), repositoryRoot: '/repo',
       revision: REVISION, run: vi.fn(() => ({ status: 0 })), stateRoot: '/state', writeBaseline
     })).resolves.toEqual({ revision: REVISION, status: 'installed' });
     expect(writeBaseline).toHaveBeenCalledWith('/state', REVISION);
@@ -167,11 +180,13 @@ describe('Internal update fixed-input worker', () => {
   it('hands a background failure to Codex Desktop and preserves the original error', async () => {
     const failure = new Error('package failed');
     const submitFailure = vi.fn();
+    const log = vi.fn();
     await expect(runInternalUpdateWithHandoff({
       repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
     }, {
-      submitFailure, update: vi.fn(async () => { throw failure; })
+      log, submitFailure, update: vi.fn(async () => { throw failure; })
     })).rejects.toBe(failure);
+    expect(log).toHaveBeenCalledWith(`[internal-update] failed revision=${REVISION} error=package failed`);
     expect(submitFailure).toHaveBeenCalledWith(expect.objectContaining({
       error: failure, repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
     }));
@@ -181,7 +196,7 @@ describe('Internal update fixed-input worker', () => {
     const failure = new Error('package failed');
     const logError = vi.fn();
     await expect(runInternalUpdateWithHandoff({ repositoryRoot: '/repo' }, {
-      logError,
+      log: vi.fn(), logError,
       submitFailure: vi.fn(() => { throw new Error('handoff failed'); }),
       update: vi.fn(async () => { throw failure; })
     })).rejects.toBe(failure);

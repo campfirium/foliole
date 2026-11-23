@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { submitInternalUpdateFailureHandoff } from './internal-update-handoff.mjs';
+import { prepareMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { runtimeDownloadCacheEnv } from './runtime-download-cache.mjs';
 
 function assertRevision(revision) {
@@ -156,6 +157,8 @@ export async function runInternalUpdate(options) {
   try {
     await makeDirectory(build.sourceRoot);
     console.log(`[internal-update] building revision=${revision}`);
+    // A cleared .tmp loses the MAS Electron runtime; restore it instead of failing the clone step.
+    await (options.prepareRuntime ?? prepareMasElectronRuntime)({ repositoryRoot });
     for (const step of build.steps) {
       runStep(step.label, step.command, step.args, {
         cwd: step.cwd,
@@ -176,6 +179,10 @@ export async function runInternalUpdateWithHandoff(options, dependencies = {}) {
   try {
     return await update(options);
   } catch (error) {
+    // Waiters watch for one terminal line per revision, so a failure must print one too.
+    (dependencies.log ?? console.log)(
+      `[internal-update] failed revision=${options.revision} error=${error instanceof Error ? error.message : error}`
+    );
     try {
       submitFailure({ ...options, error });
     } catch (handoffError) {
