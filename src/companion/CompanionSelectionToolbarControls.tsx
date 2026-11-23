@@ -181,6 +181,7 @@ export function CompanionSelectionToolbarActions(props: {
       </ToolbarButton>
       {moreMenu ? <CompanionSelectionMoreMenu {...moreMenu}
         onSelectParagraph={props.onSelectParagraph ? () => { props.onSelectParagraph?.(); setMoreMenu(null); } : undefined}
+        onAskedChatGpt={() => setMoreMenu(null)}
         onCopied={() => { setMoreMenu(null); props.onCopied?.(); }} /> : null}
     </div>
   );

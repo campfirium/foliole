@@ -77,6 +77,7 @@
   "companion.reading.previousTopic": "이전 주제",
   "companion.selection.copyText": "텍스트 복사",
   "companion.selection.selectParagraph": "문단 전체 선택",
+  "companion.selection.askChatGpt": "ChatGPT에 질문",
   "companion.selection.copyError": "텍스트를 복사하지 못했습니다. 다시 시도하세요.",
   "companion.reading.shareArticle": "기사 공유",
   "companion.reading.articleHandoffUnavailable": "앱에서 기사를 열 수 없거나 기사에 사용 가능한 텍스트가 없습니다.",

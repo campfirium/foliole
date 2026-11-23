@@ -1,15 +1,18 @@
-import { Copy, Pilcrow } from 'lucide-react';
+import { Copy, MessageCircleQuestionMark, Pilcrow } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { writeClipboardText } from '../shared/platform/companion/runtime/textClipboard';
 import { AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../shared/ui';
 
+import { openChatGptQuestion } from './companionAskChatGpt';
+
 export function CompanionSelectionMoreMenu(props: {
   rect: DOMRect;
   text: string;
   onSelectParagraph?: (() => void) | undefined;
   onCopied: () => void;
+  onAskedChatGpt?: (() => void) | undefined;
 }) {
   const t = useTranslation();
   const pending = useRef(false);
@@ -50,6 +53,11 @@ export function CompanionSelectionMoreMenu(props: {
       <Pilcrow aria-hidden="true" size={16} />
       {t('companion.selection.selectParagraph')}
     </AppSelectionDropdownMenuItem> : null}
+    <AppSelectionDropdownMenuItem data-testid="companion-selection-ask-chatgpt" disabled={!props.text.trim()}
+      onClick={() => { if (openChatGptQuestion(props.text)) props.onAskedChatGpt?.(); }}>
+      <MessageCircleQuestionMark aria-hidden="true" size={16} />
+      {t('companion.selection.askChatGpt')}
+    </AppSelectionDropdownMenuItem>
     {failed ? <p className="px-2 py-1 text-ui-sm text-destructive" role="alert">{t('companion.selection.copyError')}</p> : null}
   </div>;
 }

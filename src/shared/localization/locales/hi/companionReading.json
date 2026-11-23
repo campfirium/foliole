@@ -72,6 +72,7 @@
   "companion.reading.alternative.error": "टेक्स्ट का यह संस्करण अपडेट नहीं हो सका। फिर कोशिश करें।",
   "companion.selection.copyText": "टेक्स्ट कॉपी करें",
   "companion.selection.selectParagraph": "पूरा पैराग्राफ़ चुनें",
+  "companion.selection.askChatGpt": "ChatGPT से पूछें",
   "companion.selection.copyError": "टेक्स्ट कॉपी नहीं हो सका। फिर कोशिश करें।",
   "companion.selection.loading": "टिप्पणी लोड हो रही है…",
   "companion.selection.loadError": "यह टिप्पणी लोड नहीं हो सकी।",

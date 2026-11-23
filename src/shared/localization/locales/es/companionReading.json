@@ -77,6 +77,7 @@
   "companion.reading.outline.emptyDescription": "Aquí aparecerán los encabezados y los temas e ítems relacionados.",
   "companion.selection.copyText": "Copiar texto",
   "companion.selection.selectParagraph": "Seleccionar párrafo",
+  "companion.selection.askChatGpt": "Preguntar a ChatGPT",
   "companion.selection.copyError": "No se pudo copiar el texto. Inténtalo de nuevo.",
   "companion.reading.shareArticle": "Compartir artículo",
   "companion.reading.articleHandoffUnavailable": "Ninguna aplicación puede abrir el artículo o el artículo no tiene texto disponible.",

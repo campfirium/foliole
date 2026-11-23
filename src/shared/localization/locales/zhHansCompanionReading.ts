@@ -104,6 +104,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。',
   'companion.selection.copyText': '复制文本',
   'companion.selection.selectParagraph': '选择整段',
+  'companion.selection.askChatGpt': '问 ChatGPT',
   'companion.selection.copyError': '无法复制文本，请重试。',
   'companion.selection.loading': '正在读取批注…',
   'companion.selection.loadError': '暂时无法读取这条批注。',

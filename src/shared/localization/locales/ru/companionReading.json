@@ -77,6 +77,7 @@
   "companion.reading.outline.emptyDescription": "Здесь появятся заголовки, связанные темы и элементы.",
   "companion.selection.copyText": "Копировать текст",
   "companion.selection.selectParagraph": "Выделить абзац",
+  "companion.selection.askChatGpt": "Спросить ChatGPT",
   "companion.selection.copyError": "Не удалось скопировать текст. Повторите попытку.",
   "companion.reading.shareArticle": "Поделиться статьей",
   "companion.reading.articleHandoffUnavailable": "Ни одно приложение не может открыть статью, или в статье нет доступного текста.",
