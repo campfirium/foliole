@@ -7,6 +7,7 @@ import { AppButton, appFocusSilentClassName } from '../shared/ui';
 
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { CompanionSearchResults } from './CompanionSearchResults';
+import { CompanionSearchSaveIndex } from './CompanionSearchSaveIndex';
 import { useCompanionSearch } from './useCompanionSearch';
 import { useCompanionSearchTopicOpen } from './useCompanionSearchTopicOpen';
 
@@ -37,6 +38,7 @@ export function CompanionSearchContent(props: {
           value={query}
         />
       </label>
+      <CompanionSearchSaveIndex query={query} />
       <div className="mt-4">
         {topicOpen.failed ? <p role="alert">{t('companion.search.unavailable')}</p> : null}
         <CompanionSearchResults

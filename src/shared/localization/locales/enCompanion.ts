@@ -80,6 +80,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.search.previousMatch': 'Previous match',
   'companion.search.documentPlaceholder': 'Search this document',
   'companion.search.label': 'Search topics',
+  'companion.search.saveAsIndex': 'Save search as index',
+  'companion.search.savedAsIndex': 'Saved to Virtual',
   'companion.search.placeholder': 'Search synced topics',
   'companion.search.title': 'Local search',
   'companion.search.description': 'Topics and synced reading materials on this device.',

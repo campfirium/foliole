@@ -174,9 +174,9 @@ it('converts current full-body matches into fixed eligible sources on mobile', a
     renderWithLocalization(<Directory initial={await readSnapshot()} />);
     openFolderMenu('Matches');
     const filteredMenu = within(screen.getByRole('dialog', { name: 'Matches' }));
-    for (const name of ['Add source…', 'Remove source…', 'Rename', 'Move to Trash']) {
-      expect(filteredMenu.queryByRole('button', { name })).toBeNull();
-    }
+    // A saved search is renamed and trashed like any index, but its sources come from the filter, never by hand.
+    for (const name of ['Add source…', 'Remove source…']) expect(filteredMenu.queryByRole('button', { name })).toBeNull();
+    for (const name of ['Rename', 'Move to Trash']) expect(filteredMenu.getByRole('button', { name })).toBeVisible();
     fireEvent.click(filteredMenu.getByRole('button', { name: 'Close' }));
     await convert('Matches', 'Convert to Dive', /Future matches won’t be added automatically/);
     expect(screen.getAllByRole('button', { name: 'Open folder Matches' })).toHaveLength(1);

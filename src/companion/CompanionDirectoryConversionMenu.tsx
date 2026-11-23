@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { readDiveNode } from '../../lib/core/nodes/dive';
 import { resolveDiveDirectoryConversionTarget } from '../../lib/core/nodes/diveDirectoryConversion';
-import { isManualVirtualFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
+import { isManualVirtualFolderNode, isVirtualIndexFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -36,12 +36,14 @@ export function useDirectoryConversionMenu({ nodeId, enabled, onStart, restore }
   if (!enabled) return null;
   const node = workspace?.snapshot?.nodesById[nodeId];
   const target = resolveDiveDirectoryConversionTarget(node);
-  const manualIndex = isManualVirtualFolderNode(node);
-  const canRename = manualIndex && !node?.deletedAt;
+  // A manual index and a saved search are both user indexes; only the manual one takes hand-picked sources.
+  const userIndex = isVirtualIndexFolderNode(node);
+  const canRename = userIndex && !node?.deletedAt;
+  const canEditSources = canRename && isManualVirtualFolderNode(node);
   const canTrash = target === 'index' || canRename;
-  const canRestore = Boolean(restore || (node?.deletedAt && (readDiveNode(node) || manualIndex)));
+  const canRestore = Boolean(restore || (node?.deletedAt && (readDiveNode(node) || userIndex)));
   if (!onStart && !(workspace && (target || canRestore) && isAvailableNativeCompanionRuntime())) return null;
-  return { nodeId, workspace, node, target, canRename, canTrash, canRestore, onStart, restore };
+  return { nodeId, workspace, node, target, canRename, canEditSources, canTrash, canRestore, onStart, restore };
 }
 
 export function CompanionDirectoryConversionMenu({ menu, open, setOpen, title }: {
@@ -50,7 +52,7 @@ export function CompanionDirectoryConversionMenu({ menu, open, setOpen, title }:
   title: string;
   setOpen(open: boolean): void;
 }) {
-  const { nodeId, workspace, node, target, canRename, canTrash, canRestore, onStart, restore } = menu;
+  const { nodeId, workspace, node, target, canRename, canEditSources, canTrash, canRestore, onStart, restore } = menu;
   const t = useTranslation();
   const interaction = useCompanionListInteraction();
   useEffect(() => {
@@ -67,7 +69,7 @@ export function CompanionDirectoryConversionMenu({ menu, open, setOpen, title }:
     <CompanionMenuSheet onOpenChange={setOpen} open={open} title={title}>
       {onStart && <CompanionMenuRow label={t('desktop.nodeList.dive.startFlow')}
         onSelect={() => { close(); onStart(); }} />}
-      {workspace && canRename && <IndexMembershipMenuActions disabled={workspace.busy || workspace.pending}
+      {workspace && canEditSources && <IndexMembershipMenuActions disabled={workspace.busy || workspace.pending}
         hasSources={Boolean(node?.manualChildOrder?.length)} openSheet={openSheet} />}
       {workspace && target && <CompanionMenuRow disabled={workspace.busy || workspace.pending}
         label={t(target === 'dive' ? 'desktop.nodeList.dive.convertToDive' : 'desktop.nodeList.dive.convertToIndex')}

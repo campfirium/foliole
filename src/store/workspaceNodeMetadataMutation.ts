@@ -1,7 +1,7 @@
 import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode } from '../../lib/core/nodes/dive';
-import { createManualVirtualNodeFilter, isManualVirtualFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
+import { createKeywordVirtualNodeFilter, createManualVirtualNodeFilter, isVirtualIndexFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 
 import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from './workspaceNodeMetadataHistory';
@@ -9,7 +9,7 @@ import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from '
 export type WorkspaceMetadataCommand =
   | { type: 'create'; kind: 'folder' | 'topic' | 'item'; title: string; parentNodeId: string | null; nodeId: string }
   | { type: 'create-dive'; title: string; nodeId: string; sourceId: string | null }
-  | { type: 'create-index'; title: string; nodeId: string }
+  | { type: 'create-index'; title: string; nodeId: string; keyword?: string }
   | { type: 'set-priority'; nodeId: string; priority: number }
   | { type: 'rename'; nodeId: string; title: string }
   | { type: 'move'; nodeId: string; parentNodeId: string | null }
@@ -30,13 +30,17 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
       node.virtualFilter = DIVE_NODE_FILTER;
       node.manualChildOrder = command.sourceId ? [command.sourceId] : [];
     }
-    if (isIndex) node.virtualFilter = createManualVirtualNodeFilter();
+    if (isIndex) {
+      // A keyword makes a saved search; without one the index is filled by hand.
+      if (command.keyword !== undefined && !command.keyword.trim()) throw new Error('node_create_unavailable');
+      node.virtualFilter = command.keyword ? createKeywordVirtualNodeFilter(command.keyword) : createManualVirtualNodeFilter();
+    }
     else assertWorkspaceMetadataParent(node, node.parentNodeId, nodes);
     return { nodes: [node], subtreeNodeIds: [node.id], title: isDive ? 'Create Dive' : isIndex ? 'Create in Virtual' : `Create ${node.kind}` };
   }
   const node = nodes[command.nodeId];
   const trashAction = command.type === 'delete' || command.type === 'restore';
-  const index = isManualVirtualFolderNode(node);
+  const index = isVirtualIndexFolderNode(node);
   const dive = Boolean(readDiveNode(node));
   const virtualAction = ((trashAction || command.type === 'rename') && dive) || (index && (trashAction || command.type === 'rename'));
   if (!node || node.id.startsWith('special-') || (node.virtualFilter && !virtualAction) ||

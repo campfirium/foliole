@@ -1,5 +1,5 @@
 import {
-  VIRTUAL_NODE_FILTER_VERSION,
+  createKeywordVirtualNodeFilter,
   type VirtualNodeFilter
 } from '../../../../lib/core/nodes/virtualNodeFilter';
 import {
@@ -15,20 +15,7 @@ export interface VirtualNodeResultReference {
 }
 
 export function createVirtualNodeFilterFromKeyword(value: string): VirtualNodeFilter {
-  const trimmedValue = value.trim();
-  return {
-    version: VIRTUAL_NODE_FILTER_VERSION,
-    match: 'all',
-    conditions: trimmedValue
-      ? [
-          {
-            field: 'text',
-            operator: 'contains',
-            value: trimmedValue
-          }
-        ]
-      : []
-  };
+  return createKeywordVirtualNodeFilter(value);
 }
 
 export function getVirtualNodePrimaryKeyword(filter: VirtualNodeFilter | null | undefined) {

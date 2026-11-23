@@ -81,6 +81,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.search.previousMatch': '上一个匹配项',
   'companion.search.documentPlaceholder': '搜索此文档',
   'companion.search.label': '搜索主题',
+  'companion.search.saveAsIndex': '保存搜索为索引',
+  'companion.search.savedAsIndex': '已存为索引',
   'companion.search.placeholder': '搜索已同步主题',
   'companion.search.title': '本机搜索',
   'companion.search.description': '这台设备上的主题和已同步阅读资料。',

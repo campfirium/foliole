@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -12,7 +12,7 @@ import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
 
 export const readBatchDirectorySnapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 
-export function BatchDirectoryFixture({ initial }: { initial: WorkspaceSnapshot }) {
+export function BatchDirectoryFixture({ initial, children }: { initial: WorkspaceSnapshot; children?: ReactNode }) {
   const [snapshot, setSnapshot] = useState(initial);
   const [selection, setSelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
   return <CompanionWorkspaceActionsProvider snapshot={snapshot} flush={async () => {}} restoreFlow={() => {}}
@@ -31,6 +31,7 @@ export function BatchDirectoryFixture({ initial }: { initial: WorkspaceSnapshot 
       <button type="button" onClick={requestToggleDismissedTopicVisibility}>Toggle Topic Focus</button>
       <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection} onExitArticle={setSelection}
         onSelectNode={() => {}} snapshot={snapshot} sortDirection="asc" sortKey="name" />
+      {children}
     </CompanionDirectoryBatchMenuProvider>
   </CompanionWorkspaceActionsProvider>;
 }

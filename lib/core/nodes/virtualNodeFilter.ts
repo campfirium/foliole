@@ -89,3 +89,20 @@ export function isManualVirtualFolderNode(node: {
   return Boolean(node && node.kind === 'folder' && node.parentNodeId === VIRTUAL_ROOT_NODE_ID &&
     !node.id.startsWith('special-') && isManualVirtualNodeFilter(node.virtualFilter));
 }
+
+export function createKeywordVirtualNodeFilter(keyword: string): VirtualNodeFilter {
+  const value = keyword.trim();
+  return {
+    conditions: value ? [{ field: 'text', operator: 'contains', value }] : [],
+    match: 'all',
+    version: VIRTUAL_NODE_FILTER_VERSION
+  };
+}
+
+/** A user index under the Virtual root: a manual index or a saved search, never a built-in entry. */
+export function isVirtualIndexFolderNode(node: {
+  id: string; kind: string; parentNodeId: string | null; virtualFilter?: VirtualNodeFilter | null;
+} | null | undefined): boolean {
+  return Boolean(node && node.kind === 'folder' && node.parentNodeId === VIRTUAL_ROOT_NODE_ID &&
+    !node.id.startsWith('special-') && node.virtualFilter);
+}
