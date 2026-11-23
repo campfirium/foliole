@@ -80,11 +80,27 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
   delete_virtual_folder: tool('virtualFolders.deleteSoft', 'Move a Foliole virtual Folder to trash.', 'virtual-folders/delete-soft',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
   restore_virtual_folder: tool('virtualFolders.restore', 'Restore a Foliole virtual Folder from trash.', 'virtual-folders/restore',
-    schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id']))
+    schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
+  list_dives: localTool('List Foliole Dives (topic collections that gather Topics and Folders without moving them) with their direct source ids.',
+    schema({}), 'virtualFolders.list'),
+  create_dive: localTool('Create a Foliole Dive, optionally with source Topics or Folders.',
+    schema({ source_ids: { items: STRING, type: 'array', uniqueItems: true }, title: STRING }, ['title']), 'virtualFolders.create', true),
+  rename_dive: localTool('Rename a Foliole Dive.',
+    schema({ id: STRING, title: STRING }, ['id', 'title']), 'virtualFolders.update', true),
+  add_dive_sources: localTool('Add Topics or Folders to a Foliole Dive.',
+    schema({ id: STRING, source_ids: IDS }, ['id', 'source_ids']), 'virtualFolders.addItems', true),
+  remove_dive_sources: localTool('Remove Topics or Folders from a Foliole Dive; the materials themselves stay where they are.',
+    schema({ id: STRING, source_ids: IDS }, ['id', 'source_ids']), 'virtualFolders.removeItems', true)
 };
 
-function localTool(description: string, inputSchema: Record<string, unknown>): AideToolDefinition {
-  return { capability: 'materials.read', description, inputSchema, local: true, mutates: false, path: '' };
+// Dive tools borrow the virtual Folder capabilities: a Dive is a virtual Folder of sources.
+function localTool(
+  description: string,
+  inputSchema: Record<string, unknown>,
+  capability: AgentControlCapability = 'materials.read',
+  mutates = false
+): AideToolDefinition {
+  return { capability, description, inputSchema, local: true, mutates, path: '' };
 }
 
 function tool(

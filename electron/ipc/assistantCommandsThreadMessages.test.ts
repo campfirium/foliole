@@ -193,7 +193,7 @@ it('continues a version-one tool thread with the current tools and saved history
   expect(result).toMatchObject({
     message: { threadId: 'thread-new' },
     threadIndex: {
-      agentToolVersion: 3,
+      agentToolVersion: 4,
       continuedFromThreadId: 'thread-old',
       providerThreadId: 'thread-new'
     }

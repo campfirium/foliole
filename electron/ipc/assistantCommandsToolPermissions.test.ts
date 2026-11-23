@@ -29,6 +29,9 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+const notifyWorkspaceContentChanged = vi.hoisted(() => vi.fn());
+vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged }));
+
 vi.mock('../assistant/codexAppServerAdapter.js', () => ({
   CodexAppServerAdapter: vi.fn(function CodexAppServerAdapter() {
     return {
@@ -39,11 +42,18 @@ vi.mock('../assistant/codexAppServerAdapter.js', () => ({
   })
 }));
 
+import { normalizeAideToolPermissionSettings } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { AGENT_CONTROL_CAPABILITIES, AGENT_CONTROL_PROTOCOL_VERSION } from '../agentControl/agentControlTypes.js';
 import { AIDE_LOCAL_READ_TOOLS } from '../assistant/aideLocalReadTools.js';
+import { executeAideTool } from '../assistant/aideToolExecutor.js';
+import { createAideToolSession } from '../assistant/aideToolSession.js';
 import { closeAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { listDives } from '../database/diveRepository.js';
 
 import {
   handleAssistantCommand,
@@ -56,6 +66,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-tool-permissions-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   adapterSendMessage.mockReset();
+  notifyWorkspaceContentChanged.mockReset();
   resetAssistantCommandAdapterForTests();
   initializeDatabaseConnection(openDatabaseConnection());
 });
@@ -73,6 +84,8 @@ function seedBookWithExcerpts() {
   const from = BOOK.indexOf(QUOTE);
   const insert = sqlite.prepare(`INSERT INTO nodes (id, parent_id, kind, title, content, anchor_link, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, 'now', 'now')`);
+  sqlite.prepare("INSERT OR REPLACE INTO settings VALUES ('host_name', 'test-host', 'now')").run();
+  bindParentOrderWriter(createBetterSqlite3Driver(sqlite), { deviceAnchor: 'test-host', libraryPath: tempRoot });
   insert.run('folder', null, 'folder', 'Books', '', null);
   insert.run('book', 'folder', 'topic', 'The Wealth of Nations', BOOK, null);
   insert.run('excerpt', 'book', 'topic', 'Division of labour', QUOTE,
@@ -137,4 +150,49 @@ it('reports a material without PDF text instead of reading a page', async () => 
   seedBookWithExcerpts();
   const result = await AIDE_LOCAL_READ_TOOLS.read_pdf_page!({ id: 'book', page: 1 });
   expect(result).toEqual({ ok: false, payload: { error: 'pdf_text_unavailable', status: 'unavailable' } });
+});
+
+const descriptor = {
+  capabilities: [...AGENT_CONTROL_CAPABILITIES],
+  endpoint: 'http://127.0.0.1:1',
+  pid: 1,
+  protocol_version: AGENT_CONTROL_PROTOCOL_VERSION as 1,
+  runtime_identity: { boot_id: 'boot', database_device_id_hash: null, pid: 1, started_at: 'now' },
+  started_at: 'now',
+  token: 'secret'
+};
+
+async function callDiveTool(tool: string, args: Record<string, unknown>, write: Record<string, boolean> = {}) {
+  const session = createAideToolSession(normalizeAideToolPermissionSettings({ write }));
+  const result = await executeAideTool({ arguments: args, tool }, { descriptor, session });
+  return { ...result, payload: JSON.parse(result.contentItems[0]?.text ?? '{}') as Record<string, unknown> };
+}
+
+it('creates, fills, trims and renames a Dive in the library through the Aide Dive tools', async () => {
+  seedBookWithExcerpts();
+  const created = await callDiveTool('create_dive', { source_ids: ['book'], title: 'Economics' });
+  expect(created.payload).toMatchObject({ dive: { source_ids: ['book'] } });
+  const id = (created.payload.dive as { id: string }).id;
+  expect((await callDiveTool('add_dive_sources', { id, source_ids: ['folder'] })).payload.dive)
+    .toMatchObject({ source_ids: ['book', 'folder'] });
+  expect((await callDiveTool('remove_dive_sources', { id, source_ids: ['book'] })).payload.dive)
+    .toMatchObject({ source_ids: ['folder'] });
+  await callDiveTool('rename_dive', { id, title: 'Classical economics' });
+
+  const { sqlite } = openDatabaseConnection();
+  expect(listDives(sqlite)).toEqual([{ directSourceIds: ['folder'], id, title: 'Classical economics' }]);
+  expect((await callDiveTool('list_dives', {})).payload).toEqual({ dives: [{ id, source_ids: ['folder'], title: 'Classical economics' }] });
+  expect(sqlite.prepare("SELECT parent_id FROM nodes WHERE id = 'book'").pluck().get()).toBe('folder');
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(4);
+});
+
+it('refuses Dive changes when Manage Dives is off and reports unavailable sources without writing', async () => {
+  seedBookWithExcerpts();
+  const refused = await callDiveTool('create_dive', { title: 'Economics' }, { manageDives: false });
+  expect(refused.payload).toEqual({ error: 'tool_disabled' });
+  const missing = await callDiveTool('create_dive', { source_ids: ['missing'], title: 'Economics' });
+  expect(missing).toMatchObject({ payload: { error: 'source_unavailable' }, success: false });
+  expect((await callDiveTool('rename_dive', { id: 'nope', title: 'X' })).payload).toEqual({ error: 'dive_not_found' });
+  expect(listDives(openDatabaseConnection().sqlite)).toEqual([]);
+  expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
 });

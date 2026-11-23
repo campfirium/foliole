@@ -21,8 +21,8 @@ const descriptor: AgentControlSessionDescriptor = {
   token: 'secret'
 };
 
-function session(read: Record<string, boolean> = {}, readBudget = 20_000) {
-  return createAideToolSession(normalizeAideToolPermissionSettings({ read, readBudget }));
+function session(read: Record<string, boolean> = {}, readBudget = 20_000, write: Record<string, boolean> = {}) {
+  return createAideToolSession(normalizeAideToolPermissionSettings({ read, readBudget, write }));
 }
 
 function localRead(text: string): Record<string, AideLocalToolHandler> {
@@ -105,5 +105,37 @@ describe('Aide per-reply read limit', () => {
     const used = createAideToolSession(settings);
     used.readUsed = 3_000;
     expect(createAideToolSession(settings)).toMatchObject({ readBudget: 3_000, readUsed: 0 });
+  });
+});
+
+describe('Aide modify switches', () => {
+  it('does not offer the switched-off modify tools and rejects calls to them', async () => {
+    const capabilities = ['materials.read', 'materials.update', 'materials.move', 'materials.reorder', 'virtualFolders.create'];
+    const toolSession = session({}, 20_000, { editContent: false, manageIndexes: false });
+    const [namespace] = createFolioleDynamicTools(capabilities, toolSession.disabledTools);
+    const names = namespace?.tools.map((tool) => tool.name) ?? [];
+    expect(names).toEqual(expect.arrayContaining(['move_material', 'reorder_materials']));
+    expect(names).not.toContain('update_material');
+    expect(names).not.toContain('create_virtual_folder');
+    const fetcher = vi.fn<typeof fetch>();
+    const onDispatch = vi.fn();
+    const result = await executeAideTool(
+      { arguments: { content: 'new', expected_updated_at: 'now', id: 'a' }, tool: 'update_material' },
+      { descriptor, fetcher, onDispatch, session: toolSession }
+    );
+    expect(readText(result)).toEqual({ error: 'tool_disabled' });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(onDispatch).not.toHaveBeenCalled();
+  });
+
+  it('marks a local Dive change as a write so the reply knows something changed', async () => {
+    const onDispatch = vi.fn();
+    const rename = vi.fn(async () => ({ ok: true, payload: { dive: { id: 'd' } } }));
+    const result = await executeAideTool(
+      { arguments: { id: 'd', title: 'New' }, tool: 'rename_dive' },
+      { descriptor: { ...descriptor, capabilities: ['virtualFolders.update'] }, localTools: { rename_dive: rename }, onDispatch, session: session() }
+    );
+    expect(result.success).toBe(true);
+    expect(onDispatch).toHaveBeenCalledWith(true);
   });
 });

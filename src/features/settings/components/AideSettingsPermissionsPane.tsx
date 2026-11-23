@@ -4,8 +4,9 @@ import {
   AIDE_READ_BUDGET_MAX,
   AIDE_READ_BUDGET_MIN,
   AIDE_READ_TOOL_KEYS,
+  AIDE_WRITE_TOOL_KEYS,
   createDefaultAideToolPermissionSettings,
-  isDefaultAideReadPermissions,
+  isDefaultAideToolPermissions,
   normalizeAideReadBudget,
   type AideToolPermissionSettings
 } from '../../../../lib/core/assistant/aideToolPermissionSettings';
@@ -24,9 +25,8 @@ import { useAideToolPermissionSettings } from '../model/useAideToolPermissionSet
 export function AideSettingsPermissionsPane() {
   const t = useTranslation();
   const { flush, saveFailed, settings, update } = useAideToolPermissionSettings();
-  const resetRead = () => {
-    const defaults = createDefaultAideToolPermissionSettings();
-    update({ ...settings, read: defaults.read, readBudget: defaults.readBudget });
+  const reset = () => {
+    update(createDefaultAideToolPermissionSettings());
     flush();
   };
   return (
@@ -38,8 +38,8 @@ export function AideSettingsPermissionsPane() {
             {t('settings.aideDialog.permissions.description')}
           </AppDialogDescription>
         </div>
-        {isDefaultAideReadPermissions(settings) ? null : (
-          <SettingsButton onClick={resetRead}>{t('settings.aideDialog.permissions.reset')}</SettingsButton>
+        {isDefaultAideToolPermissions(settings) ? null : (
+          <SettingsButton onClick={reset}>{t('settings.aideDialog.permissions.reset')}</SettingsButton>
         )}
       </div>
       <div className="grid grid-cols-2 items-start gap-5 pr-5 max-[1080px]:grid-cols-1 max-[1080px]:pl-5">
@@ -52,6 +52,20 @@ export function AideSettingsPermissionsPane() {
           {saveFailed ? (
             <p className="mx-settings-panel-x mt-2 text-ui-sm text-destructive" role="alert">{t('settings.aideDialog.permissions.saveFailed')}</p>
           ) : null}
+        </SettingsSection>
+        <SettingsSection
+          ariaLabel={t('settings.aideDialog.permissions.write.title')}
+          // Side by side with the read section, so it starts level with it; stacked, it keeps its divider.
+          className="min-[1080px]:pt-0 min-[1080px]:before:hidden"
+          description={t('settings.aideDialog.permissions.write.description')}
+          title={t('settings.aideDialog.permissions.write.title')}
+        >
+          <AidePermissionSwitches
+            group="write"
+            keys={AIDE_WRITE_TOOL_KEYS}
+            onChange={(write) => update({ ...settings, write })}
+            values={settings.write}
+          />
         </SettingsSection>
       </div>
     </>
@@ -72,7 +86,7 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
     onCommit();
   };
   return (
-    <div>
+    <>
       <SettingsRow
         description={t('settings.aideDialog.permissions.readBudget.description')}
         title={t('settings.aideDialog.permissions.readBudget.title')}
@@ -91,22 +105,34 @@ function AideReadPermissionRows({ onChange, onCommit, settings }: {
           value={draft ?? settings.readBudget}
         />
       </SettingsRow>
-      {AIDE_READ_TOOL_KEYS.map((key) => {
-        const title = t(`settings.aideDialog.permissions.tool.${key}.title` as TranslationKey);
-        return (
-          <SettingsRow
-            description={t(`settings.aideDialog.permissions.tool.${key}.description` as TranslationKey)}
-            key={key}
-            title={title}
-          >
-            <AppSwitch
-              aria-label={title}
-              checked={settings.read[key]}
-              onCheckedChange={(enabled) => onChange({ ...settings, read: { ...settings.read, [key]: enabled } })}
-            />
-          </SettingsRow>
-        );
-      })}
-    </div>
+      <AidePermissionSwitches
+        group="read"
+        keys={AIDE_READ_TOOL_KEYS}
+        onChange={(read) => onChange({ ...settings, read })}
+        values={settings.read}
+      />
+    </>
   );
+}
+
+function AidePermissionSwitches<K extends string>({ group, keys, onChange, values }: {
+  group: 'read' | 'write';
+  keys: readonly K[];
+  onChange: (values: Record<K, boolean>) => void;
+  values: Record<K, boolean>;
+}) {
+  const t = useTranslation();
+  return keys.map((key) => {
+    const prefix = `settings.aideDialog.permissions.${group === 'read' ? 'tool' : 'write'}.${key}`;
+    const title = t(`${prefix}.title` as TranslationKey);
+    return (
+      <SettingsRow description={t(`${prefix}.description` as TranslationKey)} key={key} title={title}>
+        <AppSwitch
+          aria-label={title}
+          checked={values[key]}
+          onCheckedChange={(enabled) => onChange({ ...values, [key]: enabled })}
+        />
+      </SettingsRow>
+    );
+  });
 }

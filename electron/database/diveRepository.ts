@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { DIVE_SOURCE_ELIGIBILITY_SQL, diveSourceEligibilityArgs } from '../../lib/core/database/diveSourceEligibility.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { appendDiveSources, DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode, removeDirectDiveSource, type Dive } from '../../lib/core/nodes/dive.js';
+import { appendDiveSources, DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode, removeDirectDiveSource, removeDirectDiveSources, type Dive } from '../../lib/core/nodes/dive.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 
@@ -77,6 +77,10 @@ export function addDiveSources(db: SqliteDatabase, diveId: string, ids: readonly
 
 export function removeDiveSource(db: SqliteDatabase, diveId: string, sourceId: string): Dive {
   return updateDive(db, diveId, dive => removeDirectDiveSource(dive, sourceId));
+}
+
+export function removeDiveSources(db: SqliteDatabase, diveId: string, sourceIds: readonly string[]): Dive {
+  return updateDive(db, diveId, dive => removeDirectDiveSources(dive, sourceIds));
 }
 
 function updateDive(db: SqliteDatabase, diveId: string, update: (dive: Dive) => Dive): Dive {

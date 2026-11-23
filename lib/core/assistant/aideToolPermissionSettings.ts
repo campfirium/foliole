@@ -17,33 +17,68 @@ export const AIDE_READ_TOOL_NAMES: Record<AideReadToolKey, string> = {
   traceSource: 'trace_source'
 };
 
+export const AIDE_WRITE_TOOL_KEYS = [
+  'createExcerpt',
+  'createMaterial',
+  'editContent',
+  'moveAndOrder',
+  'trash',
+  'manageIndexes',
+  'manageDives'
+] as const;
+
+export type AideWriteToolKey = typeof AIDE_WRITE_TOOL_KEYS[number];
+
+// Each modify switch governs one group of Aide tools; restoring from trash belongs with moving there.
+export const AIDE_WRITE_TOOL_NAMES: Record<AideWriteToolKey, readonly string[]> = {
+  createExcerpt: ['create_text_excerpt'],
+  createMaterial: ['create_material'],
+  editContent: ['update_material'],
+  manageDives: ['list_dives', 'create_dive', 'rename_dive', 'add_dive_sources', 'remove_dive_sources'],
+  manageIndexes: [
+    'create_virtual_folder', 'add_virtual_folder_items', 'remove_virtual_folder_items',
+    'reorder_virtual_folder_items', 'update_virtual_folder', 'delete_virtual_folder', 'restore_virtual_folder'
+  ],
+  moveAndOrder: ['move_material', 'reorder_materials'],
+  trash: ['delete_material', 'restore_material']
+};
+
 export interface AideToolPermissionSettings {
   read: Record<AideReadToolKey, boolean>;
   readBudget: number;
+  write: Record<AideWriteToolKey, boolean>;
 }
 
 export const AIDE_READ_BUDGET_DEFAULT = 20_000;
 export const AIDE_READ_BUDGET_MIN = 1_000;
 export const AIDE_READ_BUDGET_MAX = 200_000;
 
+function allOn<K extends string>(keys: readonly K[]) {
+  return Object.fromEntries(keys.map((key) => [key, true])) as Record<K, boolean>;
+}
+
 export function createDefaultAideToolPermissionSettings(): AideToolPermissionSettings {
   return {
-    read: Object.fromEntries(AIDE_READ_TOOL_KEYS.map((key) => [key, true])) as Record<AideReadToolKey, boolean>,
-    readBudget: AIDE_READ_BUDGET_DEFAULT
+    read: allOn(AIDE_READ_TOOL_KEYS),
+    readBudget: AIDE_READ_BUDGET_DEFAULT,
+    write: allOn(AIDE_WRITE_TOOL_KEYS)
   };
 }
 
+function readSwitches<K extends string>(value: unknown, keys: readonly K[]) {
+  const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return Object.fromEntries(keys.map((key) => [
+    key,
+    typeof record[key] === 'boolean' ? record[key] : true
+  ])) as Record<K, boolean>;
+}
+
 export function normalizeAideToolPermissionSettings(value: unknown): AideToolPermissionSettings {
-  const defaults = createDefaultAideToolPermissionSettings();
-  if (!value || typeof value !== 'object') return defaults;
-  const record = value as { read?: unknown; readBudget?: unknown };
-  const read = record.read && typeof record.read === 'object' ? record.read as Record<string, unknown> : {};
+  const record = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   return {
-    read: Object.fromEntries(AIDE_READ_TOOL_KEYS.map((key) => [
-      key,
-      typeof read[key] === 'boolean' ? read[key] : defaults.read[key]
-    ])) as Record<AideReadToolKey, boolean>,
-    readBudget: normalizeAideReadBudget(record.readBudget)
+    read: readSwitches(record.read, AIDE_READ_TOOL_KEYS),
+    readBudget: normalizeAideReadBudget(record.readBudget),
+    write: readSwitches(record.write, AIDE_WRITE_TOOL_KEYS)
   };
 }
 
@@ -52,12 +87,16 @@ export function normalizeAideReadBudget(value: unknown) {
   return Math.min(AIDE_READ_BUDGET_MAX, Math.max(AIDE_READ_BUDGET_MIN, Math.round(value)));
 }
 
-export function isDefaultAideReadPermissions(settings: AideToolPermissionSettings) {
+export function isDefaultAideToolPermissions(settings: AideToolPermissionSettings) {
   const defaults = createDefaultAideToolPermissionSettings();
   return settings.readBudget === defaults.readBudget
-    && AIDE_READ_TOOL_KEYS.every((key) => settings.read[key] === defaults.read[key]);
+    && AIDE_READ_TOOL_KEYS.every((key) => settings.read[key] === defaults.read[key])
+    && AIDE_WRITE_TOOL_KEYS.every((key) => settings.write[key] === defaults.write[key]);
 }
 
 export function listAideDisabledToolNames(settings: AideToolPermissionSettings): string[] {
-  return AIDE_READ_TOOL_KEYS.filter((key) => !settings.read[key]).map((key) => AIDE_READ_TOOL_NAMES[key]);
+  return [
+    ...AIDE_READ_TOOL_KEYS.filter((key) => !settings.read[key]).map((key) => AIDE_READ_TOOL_NAMES[key]),
+    ...AIDE_WRITE_TOOL_KEYS.filter((key) => !settings.write[key]).flatMap((key) => AIDE_WRITE_TOOL_NAMES[key])
+  ];
 }

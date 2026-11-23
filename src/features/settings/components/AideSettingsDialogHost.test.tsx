@@ -123,7 +123,7 @@ it('turns items off, reorders by keyboard, saves and restores defaults', async (
   expect(assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0]).toEqual(createDefaultAideAttachedContextSettings());
 });
 
-it('switches AI read tools and the per-reply read limit, saves them and restores defaults', async () => {
+it('switches AI read and modify tools and the per-reply read limit, saves them and restores defaults', async () => {
   renderWithLocalization(<AideSettingsDialogHost />);
   act(() => requestAideSettingsDialogOpen());
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
@@ -136,6 +136,12 @@ it('switches AI read tools and the per-reply read limit, saves them and restores
   ]);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
 
+  const write = within(dialog).getByRole('region', { name: 'Allow AI to modify' });
+  expect(within(write).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
+    'Create excerpts', 'Create materials and Items', 'Edit content', 'Move and reorder', 'Move to trash', 'Manage indexes', 'Manage Dives'
+  ]);
+
+  fireEvent.click(within(write).getByRole('switch', { name: 'Manage Dives' }));
   fireEvent.click(within(read).getByRole('switch', { name: 'Read PDF pages' }));
   fireEvent.change(budget, { target: { value: '8' } });
   expect(budget).toHaveValue(8);
@@ -143,7 +149,7 @@ it('switches AI read tools and the per-reply read limit, saves them and restores
   expect(budget).toHaveValue(1000);
   await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions).toHaveBeenCalled());
   expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0]).toMatchObject({
-    read: { readPdfPage: false, traceSource: true }, readBudget: 1000
+    read: { readPdfPage: false, traceSource: true }, readBudget: 1000, write: { editContent: true, manageDives: false }
   });
 
   fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));

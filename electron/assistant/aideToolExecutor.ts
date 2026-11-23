@@ -1,6 +1,7 @@
 import { getAgentControlApiSessionDescriptor } from '../agentControl/agentControlServer.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
+import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
@@ -48,25 +49,29 @@ export async function executeAideTool(
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
   const outcome = definition.local
-    ? await executeLocal(request.tool, body, options.localTools)
+    ? await executeLocal(request.tool, definition.mutates, body, options)
     : await executeRemote(definition, body, descriptor, options);
   if (definition.mutates || !outcome.success) return outcome;
   const charge = chargeAideReadResult(options.session, outcome.contentItems[0]?.text ?? '');
   return charge.ok ? outcome : readLimitReached(charge.remaining);
 }
 
+const LOCAL_TOOLS: Record<string, AideLocalToolHandler> = { ...AIDE_LOCAL_READ_TOOLS, ...AIDE_LOCAL_DIVE_TOOLS };
+
 async function executeLocal(
   tool: string,
+  mutates: boolean,
   body: Record<string, unknown>,
-  overrides: Record<string, AideLocalToolHandler> | undefined
+  options: NonNullable<Parameters<typeof executeAideTool>[1]>
 ) {
-  const handler = overrides?.[tool] ?? AIDE_LOCAL_READ_TOOLS[tool];
+  const handler = options.localTools?.[tool] ?? LOCAL_TOOLS[tool];
   if (!handler) return failure('tool_unavailable');
   try {
+    options.onDispatch?.(mutates);
     const outcome = await handler(body);
     return result(outcome.payload, outcome.ok);
   } catch {
-    return failure('read_failed');
+    return failure(mutates ? 'write_failed' : 'read_failed');
   }
 }
 

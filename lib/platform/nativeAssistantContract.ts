@@ -54,7 +54,7 @@ export type NativeAssistantThreadOpeningLocation =
 
 export type NativeAssistantThreadIndexStatus = 'active' | 'archived' | 'deleted';
 export type NativeAssistantThreadReadState = 'available' | 'failed' | 'not_requested';
-export const CURRENT_ASSISTANT_AGENT_TOOL_VERSION = 3;
+export const CURRENT_ASSISTANT_AGENT_TOOL_VERSION = 4;
 
 export interface NativeAssistantThreadIndexRecord {
   agentToolVersion: number;

@@ -19,7 +19,7 @@ import { createChatCompletionsAideTools } from './openAiCompatibleTools.js';
 
 it('registers every Agent Control product capability exactly once on its protected route', () => {
   const all = Object.values(AIDE_TOOL_REGISTRY);
-  // Local read tools run in the main process under materials.read; every other tool maps to one route.
+  // Local tools run in the main process; every other tool maps to one route.
   const definitions = all.filter((definition) => !definition.local);
   const routeByCapability = new Map(AGENT_CONTROL_ROUTE_REGISTRY
     .filter((route) => route.access === 'product')
@@ -27,8 +27,10 @@ it('registers every Agent Control product capability exactly once on its protect
 
   expect(new Set(all.map((definition) => definition.capability))).toEqual(new Set(AGENT_CONTROL_CAPABILITIES));
   expect(new Set(definitions.map((definition) => definition.capability)).size).toBe(definitions.length);
-  expect(all.filter((definition) => definition.local).every((definition) => definition.capability === 'materials.read' && !definition.mutates))
-    .toBe(true);
+  // Local tools are reads under materials.read, or Dive tools under the virtual Folder capabilities.
+  expect(all.filter((definition) => definition.local).every((definition) => definition.capability === 'materials.read'
+    ? !definition.mutates
+    : definition.capability.startsWith('virtualFolders.'))).toBe(true);
   expect(AIDE_TOOL_REGISTRY.list_trash?.mutates).toBe(false);
   expect(AIDE_TOOL_REGISTRY.create_text_excerpt?.mutates).toBe(true);
   for (const definition of definitions) {
