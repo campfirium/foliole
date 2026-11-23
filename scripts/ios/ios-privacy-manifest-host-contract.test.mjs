@@ -48,7 +48,7 @@ function validatePrivacyContract(manifest, sources) {
 }
 
 describe('iOS privacy manifest host contract', () => {
-  it('declares reasons for app-local preferences, file metadata and elapsed time', () => {
+  it('declares reasons for app-local preferences, file metadata, elapsed time and free space before writing', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 
     expect(manifest).toContain('<key>NSPrivacyAccessedAPITypes</key>');
@@ -57,7 +57,8 @@ describe('iOS privacy manifest host contract', () => {
     expect(manifest).toContain('<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>');
     expect(manifest).toContain('<string>C617.1</string>');
     expect(manifest).toMatch(/NSPrivacyAccessedAPICategorySystemBootTime<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>\s*<string>35F9\.1<\/string>/);
-    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(3);
+    expect(manifest).toMatch(/NSPrivacyAccessedAPICategoryDiskSpace<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>\s*<string>E174\.1<\/string>/);
+    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(4);
     expect(manifest).not.toContain('NSPrivacyTracking');
     expect(manifest).not.toContain('NSPrivacyCollectedDataTypes');
   });
@@ -107,13 +108,13 @@ describe('iOS privacy manifest host contract', () => {
     const missingCategory = manifest.replace('NSPrivacyAccessedAPICategoryUserDefaults', 'NotAPrivacyCategory');
     const addedCategory = manifest.replace(
       '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>',
-      '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>\n<string>NSPrivacyAccessedAPICategoryDiskSpace</string>'
+      '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>\n<string>NSPrivacyAccessedAPICategoryActiveKeyboards</string>'
     );
 
     expect(() => validatePrivacyContract(missingCategory, sources))
       .toThrow('Undeclared required-reason API categories: NSPrivacyAccessedAPICategoryUserDefaults');
     expect(() => validatePrivacyContract(addedCategory, sources))
-      .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategoryDiskSpace');
+      .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategoryActiveKeyboards');
   });
 
   it('rejects a missing elapsed-time declaration while app-owned timers use uptime', () => {
