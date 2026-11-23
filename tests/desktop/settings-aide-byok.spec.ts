@@ -33,7 +33,8 @@ async function createCredentialFixture() {
     close: async () => {
       release();
       runtime.cleanup();
-      await rm(stateRoot, { force: true, recursive: true });
+      // Aide's Codex runtime can still be flushing files under user-data right after the app quits.
+      await rm(stateRoot, { force: true, maxRetries: 10, recursive: true, retryDelay: 200 });
     },
     launch: () => launchCredentialApp({ appRoot, executablePath: runtime.executablePath, session, stateRoot }),
     secretDir: session.userDataPath,

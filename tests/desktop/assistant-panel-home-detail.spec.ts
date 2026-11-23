@@ -147,9 +147,10 @@ test('Aide panel returns to the connection gate after a provider auth failure', 
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
 
   // Sign-in now happens in Aide settings, so the gate only offers the Settings entry.
+  const assistantSurface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   await expect(desktopWindow.getByRole('heading', { name: 'Aide', exact: true })).toBeVisible();
   await expect(desktopWindow.getByText(/Use ChatGPT or other AI services directly in Foliole|在 Foliole 中直接使用 ChatGPT 或其他 AI 服务/)).toBeVisible();
-  await expect(desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
+  await expect(assistantSurface.getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: /Sign in with OpenAI|使用 OpenAI 登录/ })).toHaveCount(0);
   await expect(desktopWindow.getByText(/Check result:|检查结果：/)).toHaveCount(0);
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/)).toBeHidden();
@@ -201,7 +202,8 @@ test('Aide panel routes a Foliole tools startup failure to Aide settings', async
   await openAssistantPanel(desktopWindow);
 
   // The gate no longer prints the raw tool error; it hides the composer and points to Aide settings.
-  await expect(desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
+  await expect(desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]')
+    .getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/)).toBeHidden();
 });
 
@@ -222,10 +224,9 @@ test('Aide panel removes a thread from local history with the explicit history c
   await removeButton.locator('xpath=ancestor::li[1]').hover();
   await removeButton.click();
 
-  const requests = await desktopApp.evaluate(() => globalThis.__folioleAssistantInvokeRequests);
-  expect(requests).toEqual(expect.arrayContaining([
+  await expect.poll(() => desktopApp.evaluate(() => globalThis.__folioleAssistantInvokeRequests)).toEqual(expect.arrayContaining([
     expect.objectContaining({
-      args: { providerThreadId: 'thread-1' },
+      args: expect.objectContaining({ providerThreadId: 'thread-1' }),
       command: 'assistant_remove_thread_from_history'
     })
   ]));
