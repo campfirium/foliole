@@ -1,4 +1,5 @@
 import type { AideAttachedContextSettings } from '../core/assistant/aideAttachedContextSettings.js';
+import type { AideToolPermissionSettings } from '../core/assistant/aideToolPermissionSettings.js';
 
 import type { NativeAssistantFailure } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
@@ -91,5 +92,13 @@ export type NativeAssistantModelSettingsCommandMap = {
   [NATIVE_COMMANDS.assistantSaveAttachedContextSettings]: {
     args: { settings: AideAttachedContextSettings };
     result: AideAttachedContextSettings;
+  };
+  [NATIVE_COMMANDS.assistantLoadToolPermissions]: {
+    args: undefined;
+    result: AideToolPermissionSettings;
+  };
+  [NATIVE_COMMANDS.assistantSaveToolPermissions]: {
+    args: { settings: AideToolPermissionSettings };
+    result: AideToolPermissionSettings;
   };
 };

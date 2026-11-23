@@ -1,4 +1,4 @@
-import { ListPlus, MessagesSquare } from 'lucide-react';
+import { ListPlus, MessagesSquare, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
@@ -19,6 +19,7 @@ import { settingsDialogPane, settingsDialogPaneBody, settingsDialogPaneHeader } 
 import { subscribeAideSettingsDialogOpen } from '../model/aideSettingsDialogRequests';
 
 import { AideSettingsContextPane } from './AideSettingsContextPane';
+import { AideSettingsPermissionsPane } from './AideSettingsPermissionsPane';
 import { SettingsAideCustomInstructionsSection } from './sections/SettingsAideCustomInstructionsSection';
 import { SettingsAideStorageSection } from './sections/SettingsAideStorageSection';
 import { SettingsModelsSection } from './sections/SettingsModelsSection';
@@ -52,12 +53,17 @@ export function AideSettingsDialogHost() {
               <SettingsNavigationItem current={pane === 'context' ? 'page' : undefined} icon={ListPlus} onClick={() => setPane('context')}>
                 {t('settings.aideDialog.context.nav')}
               </SettingsNavigationItem>
+              <SettingsNavigationItem current={pane === 'permissions' ? 'page' : undefined} icon={ShieldCheck} onClick={() => setPane('permissions')}>
+                {t('settings.aideDialog.permissions.nav')}
+              </SettingsNavigationItem>
             </SettingsNavigationGroup>
           </SettingsNavigation>
           <div className={settingsDialogPane}>
             <div aria-hidden="true" className={settingsDialogPaneHeader} />
             <div className={settingsDialogPaneBody}>
-              {pane === 'context' ? <AideSettingsContextPane /> : <AideSettingsModelsPane />}
+              {pane === 'context' ? <AideSettingsContextPane /> : null}
+              {pane === 'permissions' ? <AideSettingsPermissionsPane /> : null}
+              {pane === 'models' ? <AideSettingsModelsPane /> : null}
             </div>
           </div>
         </AppDialogContent>
@@ -66,7 +72,7 @@ export function AideSettingsDialogHost() {
   );
 }
 
-type AideSettingsPane = 'context' | 'models';
+type AideSettingsPane = 'context' | 'models' | 'permissions';
 
 function AideSettingsModelsPane() {
   const t = useTranslation();

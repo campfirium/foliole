@@ -1,0 +1,20 @@
+export const EN_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS = {
+  'settings.aideDialog.permissions.nav': 'AI permissions',
+  'settings.aideDialog.permissions.description': 'Choose what Aide may read on its own while answering. Changes apply from your next message.',
+  'settings.aideDialog.permissions.reset': 'Restore defaults',
+  'settings.aideDialog.permissions.read.title': 'Allow AI to read',
+  'settings.aideDialog.permissions.read.description': 'The AI can read more material when it needs to, and cites where it read it.',
+  'settings.aideDialog.permissions.readBudget.title': 'Max read per reply (tokens)',
+  'settings.aideDialog.permissions.readBudget.description': 'Limits how much the AI reads for one reply',
+  'settings.aideDialog.permissions.tool.continueReading.title': 'Keep reading',
+  'settings.aideDialog.permissions.tool.continueReading.description': 'Read other parts of a material when needed',
+  'settings.aideDialog.permissions.tool.searchCurrent.title': 'Find in the current material',
+  'settings.aideDialog.permissions.tool.searchCurrent.description': 'Find related content in the current material',
+  'settings.aideDialog.permissions.tool.searchLibrary.title': 'Find in the library',
+  'settings.aideDialog.permissions.tool.searchLibrary.description': 'Find related material in the library',
+  'settings.aideDialog.permissions.tool.traceSource.title': 'Trace back to the original',
+  'settings.aideDialog.permissions.tool.traceSource.description': 'Follow an excerpt back, level by level, to the original text',
+  'settings.aideDialog.permissions.tool.readPdfPage.title': 'Read PDF pages',
+  'settings.aideDialog.permissions.tool.readPdfPage.description': 'Read the text of a given PDF page',
+  'settings.aideDialog.permissions.saveFailed': 'AI permission settings could not be saved.'
+} as const;

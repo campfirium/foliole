@@ -1,9 +1,12 @@
 import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
 
-export function createChatCompletionsAideTools(capabilities: readonly string[] = []) {
+export function createChatCompletionsAideTools(
+  capabilities: readonly string[] = [],
+  disabledTools: ReadonlySet<string> = new Set()
+) {
   const enabled = new Set(capabilities);
   return Object.entries(AIDE_TOOL_REGISTRY)
-    .filter(([, definition]) => enabled.has(definition.capability))
+    .filter(([name, definition]) => enabled.has(definition.capability) && !disabledTools.has(name))
     .map(([name, definition]) => ({
       function: {
         description: definition.description,

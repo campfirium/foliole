@@ -18,14 +18,17 @@ import { createFolioleDynamicTools } from './codexAppServerDynamicTools.js';
 import { createChatCompletionsAideTools } from './openAiCompatibleTools.js';
 
 it('registers every Agent Control product capability exactly once on its protected route', () => {
-  const definitions = Object.values(AIDE_TOOL_REGISTRY);
+  const all = Object.values(AIDE_TOOL_REGISTRY);
+  // Local read tools run in the main process under materials.read; every other tool maps to one route.
+  const definitions = all.filter((definition) => !definition.local);
   const routeByCapability = new Map(AGENT_CONTROL_ROUTE_REGISTRY
     .filter((route) => route.access === 'product')
     .map((route) => [route.capability, route.apiPath]));
 
-  expect(definitions).toHaveLength(routeByCapability.size);
-  expect(new Set(definitions.map((definition) => definition.capability)))
-    .toEqual(new Set(AGENT_CONTROL_CAPABILITIES));
+  expect(new Set(all.map((definition) => definition.capability))).toEqual(new Set(AGENT_CONTROL_CAPABILITIES));
+  expect(new Set(definitions.map((definition) => definition.capability)).size).toBe(definitions.length);
+  expect(all.filter((definition) => definition.local).every((definition) => definition.capability === 'materials.read' && !definition.mutates))
+    .toBe(true);
   expect(AIDE_TOOL_REGISTRY.list_trash?.mutates).toBe(false);
   expect(AIDE_TOOL_REGISTRY.create_text_excerpt?.mutates).toBe(true);
   for (const definition of definitions) {

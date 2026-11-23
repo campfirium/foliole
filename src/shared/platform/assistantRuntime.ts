@@ -1,4 +1,5 @@
 import type { AideAttachedContextSettings } from '../../../lib/core/assistant/aideAttachedContextSettings';
+import type { AideToolPermissionSettings } from '../../../lib/core/assistant/aideToolPermissionSettings';
 import type { NativeAideStorageInfo } from '../../../lib/platform/nativeAideStorageContract';
 import type {
   NativeAssistantByokSettings,
@@ -266,4 +267,18 @@ function publishModelSettings(settings: NativeAssistantModelSettings) {
     state: 'not_configured'
   });
   return settings;
+}
+
+export async function loadAssistantToolPermissions(): Promise<AideToolPermissionSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantLoadToolPermissions);
+}
+
+export async function saveAssistantToolPermissions(
+  settings: AideToolPermissionSettings
+): Promise<AideToolPermissionSettings | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantSaveToolPermissions, { settings });
 }

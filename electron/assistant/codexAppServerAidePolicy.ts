@@ -3,13 +3,14 @@ import { createFolioleDynamicTools } from './codexAppServerDynamicTools.js';
 export function createAideThreadStartParams(
   cwd: string,
   developerInstructions: string,
-  capabilities: readonly string[] = []
+  capabilities: readonly string[] = [],
+  disabledTools: ReadonlySet<string> = new Set()
 ) {
   return {
     approvalPolicy: 'never',
     cwd,
     developerInstructions,
-    dynamicTools: createFolioleDynamicTools(capabilities),
+    dynamicTools: createFolioleDynamicTools(capabilities, disabledTools),
     sandbox: 'read-only'
   };
 }
@@ -19,7 +20,8 @@ export function createAideThreadRequest(
   cwd: string,
   developerInstructions: string,
   providerThreadId?: string,
-  capabilities: readonly string[] = []
+  capabilities: readonly string[] = [],
+  disabledTools: ReadonlySet<string> = new Set()
 ) {
   return providerThreadId
     ? {
@@ -30,7 +32,7 @@ export function createAideThreadRequest(
     : {
         id,
         method: 'thread/start',
-        params: createAideThreadStartParams(cwd, developerInstructions, capabilities)
+        params: createAideThreadStartParams(cwd, developerInstructions, capabilities, disabledTools)
       };
 }
 

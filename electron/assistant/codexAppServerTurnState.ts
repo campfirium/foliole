@@ -21,6 +21,7 @@ export interface SendMessageArgs {
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
   timeoutMs: number;
+  toolSession?: import('./aideToolSession.js').AideToolSession;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }
 
@@ -44,6 +45,7 @@ export function createTurnState(
     threadRequestId,
     timeout: setTimeout(onTimeout, args.timeoutMs),
     timeoutMs: args.timeoutMs,
+    ...(args.toolSession ? { toolSession: args.toolSession } : {}),
     userMessage: composeAssistantTurnInput(args.message, args.workspaceContext, args.attachedContext)
   };
 }

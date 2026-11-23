@@ -46,3 +46,29 @@ export function searchCurrentPdfDocument(nodeId: string, query: string) {
   );
   return { matches: searchPdfDocumentText(pages, query), status };
 }
+
+export function readCurrentPdfDocumentPage(nodeId: string, page: number) {
+  const attachment = findPdfAttachment(nodeId);
+  const status = attachment?.pdf_index_status ?? 'unavailable';
+  if (!attachment || status !== 'ready') return { page: null, pageCount: 0, status };
+  const { driver } = openDatabaseConnection();
+  const count = driver.queryOne<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = ?',
+    [attachment.attachment_id]
+  )?.count ?? 0;
+  const row = driver.queryOne<PdfPageTextRow>(
+    'SELECT page, text FROM pdf_page_text WHERE attachment_id = ? AND page = ?',
+    [attachment.attachment_id, page]
+  );
+  return { page: row ?? null, pageCount: count, status };
+}
+
+export function readCurrentPdfDocumentPageTexts(nodeId: string, pages: readonly number[]) {
+  const attachment = findPdfAttachment(nodeId);
+  if (!attachment || attachment.pdf_index_status !== 'ready' || !pages.length) return new Map<number, string>();
+  const rows = openDatabaseConnection().driver.queryAll<PdfPageTextRow>(
+    `SELECT page, text FROM pdf_page_text WHERE attachment_id = ? AND page IN (${pages.map(() => '?').join(', ')})`,
+    [attachment.attachment_id, ...pages]
+  );
+  return new Map(rows.map((row) => [row.page, row.text]));
+}

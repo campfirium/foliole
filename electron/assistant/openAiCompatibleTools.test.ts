@@ -9,7 +9,11 @@ it('omits strict-object hints from wire schemas while preserving local validatio
   const [tool] = createChatCompletionsAideTools(['materials.read']);
 
   expect(tool?.function.parameters).toEqual({
-    properties: { id: { minLength: 1, type: 'string' } },
+    properties: {
+      id: { minLength: 1, type: 'string' },
+      length: { minimum: 1, type: 'integer' },
+      offset: { minimum: 0, type: 'integer' }
+    },
     required: ['id'],
     type: 'object'
   });

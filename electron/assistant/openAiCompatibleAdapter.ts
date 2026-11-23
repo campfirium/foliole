@@ -27,6 +27,7 @@ interface OpenAiCompatibleSendInput {
   message: string;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
+  toolSession?: import('./aideToolSession.js').AideToolSession;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }
 
@@ -49,12 +50,13 @@ export class OpenAiCompatibleAdapter {
         ...config,
         allowedCapabilities,
         controller,
+        ...(input.toolSession ? { toolSession: input.toolSession } : {}),
         messages: await createMessages(input, context),
         onText: (delta) => input.onEvent?.({
           ...event(input.clientTurnId, 'delta', threadId),
           text: delta
         }),
-        tools: createChatCompletionsAideTools(allowedCapabilities)
+        tools: createChatCompletionsAideTools(allowedCapabilities, input.toolSession?.disabledTools)
       });
       input.onEvent?.({ ...event(input.clientTurnId, 'completed', threadId), text });
       return {

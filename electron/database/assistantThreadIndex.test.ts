@@ -84,7 +84,7 @@ it('upserts provider threads by opening location without storing message bodies'
   });
 
   expect(first).toMatchObject({
-    agentToolVersion: 2,
+    agentToolVersion: 3,
     continuedFromThreadId: null,
     location: { nodeId: 'node-1', type: 'node' },
     preview: 'First prompt body',

@@ -5,6 +5,7 @@ import { expect, it, vi } from 'vitest';
 import { AGENT_CONTROL_CAPABILITIES } from '../agentControl/agentControlTypes.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
+import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
 import {
   createFolioleDynamicTools,
   executeFolioleDynamicTool
@@ -35,6 +36,9 @@ it('registers every enabled read and write tool', () => {
   expect(namespace).toMatchObject({ name: 'foliole', type: 'namespace' });
   expect(namespace?.tools.map((tool) => tool.name)).toEqual([
     'read_material',
+    'search_in_material',
+    'trace_source',
+    'read_pdf_page',
     'search_materials',
     'update_material'
   ]);
@@ -43,7 +47,9 @@ it('registers every enabled read and write tool', () => {
 it('keeps one dynamic tool for every product capability', () => {
   const [namespace] = createFolioleDynamicTools(AGENT_CONTROL_CAPABILITIES);
 
-  expect(namespace?.tools).toHaveLength(AGENT_CONTROL_CAPABILITIES.length);
+  expect(namespace?.tools).toHaveLength(Object.keys(AIDE_TOOL_REGISTRY).length);
+  expect(new Set(namespace?.tools.map((tool) => AIDE_TOOL_REGISTRY[tool.name]?.capability)))
+    .toEqual(new Set(AGENT_CONTROL_CAPABILITIES));
 });
 
 it('describes conditional question-answer Item creation without enabling automatic saves', () => {
@@ -93,14 +99,14 @@ it('calls the existing protected Agent Control route without exposing its token'
   }));
 
   const result = await executeFolioleDynamicTool({
-    arguments: { id: 'topic-1' },
-    tool: 'read_material'
+    arguments: { query: 'memo' },
+    tool: 'search_materials'
   }, { descriptor, fetcher });
 
   expect(fetcher).toHaveBeenCalledWith(
-    'http://127.0.0.1:5000/agent-control/v1/materials/read',
+    'http://127.0.0.1:5000/agent-control/v1/materials/search',
     expect.objectContaining({
-      body: JSON.stringify({ id: 'topic-1' }),
+      body: JSON.stringify({ query: 'memo' }),
       headers: expect.objectContaining({
         authorization: 'Bearer secret-token',
         'x-foliole-agent-id': 'foliole-aide'

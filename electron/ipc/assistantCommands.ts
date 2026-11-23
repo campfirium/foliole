@@ -1,5 +1,6 @@
 import { app, type WebContents } from 'electron';
 
+import { createDefaultAideToolPermissionSettings } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 import type {
   NativeAssistantThreadOpeningLocation,
   NativeAssistantStatusResult,
@@ -9,6 +10,7 @@ import type {
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
+import { createAideToolSession } from '../assistant/aideToolSession.js';
 import { persistAssistantImages } from '../assistant/assistantImageStorage.js';
 import {
   createAssistantFailure,
@@ -21,6 +23,7 @@ import {
   setFolioleAideProvider
 } from '../assistant/folioleAideByokSettings.js';
 import { loadFolioleAideCustomInstructions } from '../assistant/folioleAideCustomInstructions.js';
+import { loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
 import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
@@ -150,6 +153,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     message,
     provider,
     ...(sender ? { sender } : {}),
+    toolSession: createAideToolSession(await readToolPermissionsForTurn()),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})
@@ -171,6 +175,14 @@ async function readCustomInstructionsForTurn() {
     return (await runWithDatabaseConnectionOwner(loadFolioleAideCustomInstructions)).text;
   } catch {
     return '';
+  }
+}
+
+async function readToolPermissionsForTurn() {
+  try {
+    return await runWithDatabaseConnectionOwner(loadFolioleAideToolPermissionSettings);
+  } catch {
+    return createDefaultAideToolPermissionSettings();
   }
 }
 

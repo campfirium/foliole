@@ -89,8 +89,8 @@ function assertOpenAiCompatibleRequest(fetchMock: ReturnType<typeof vi.fn<typeof
   expect(init?.headers).toMatchObject({ authorization: 'Bearer secret-key' });
   const body = JSON.parse(String(init?.body));
   expect(body).toMatchObject({ model: 'local-model', stream: true });
-  expect(body.tools).toEqual([
-    expect.objectContaining({ function: expect.objectContaining({ name: 'read_material' }), type: 'function' })
+  expect(body.tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual([
+    'read_material', 'search_in_material', 'trace_source', 'read_pdf_page'
   ]);
   expect(body.messages).toEqual([
     expect.objectContaining({ content: expect.stringContaining('Topic body'), role: 'system' }),

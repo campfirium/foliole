@@ -29,6 +29,7 @@ export interface TurnState {
   threadRequestId: number;
   timeout: NodeJS.Timeout;
   timeoutMs: number;
+  toolSession?: import('./aideToolSession.js').AideToolSession;
   turnId?: string;
   userMessage: string;
 }

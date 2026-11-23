@@ -7,6 +7,7 @@ import type {
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
+import type { AideToolSession } from '../assistant/aideToolSession.js';
 import type { StoredAssistantImage } from '../assistant/assistantImageStorage.js';
 import type { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
 import type { OpenAiCompatibleAdapter } from '../assistant/openAiCompatibleAdapter.js';
@@ -27,6 +28,7 @@ export async function sendAssistantTurn(input: {
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   provider: NativeAssistantProviderId;
   sender?: WebContents;
+  toolSession?: AideToolSession;
   workspaceContext?: NativeAssistantWorkspaceContext;
 }) {
   try {
@@ -48,6 +50,7 @@ export async function sendAssistantTurn(input: {
       ...(input.continuation.providerThreadId
         ? { providerThreadId: input.continuation.providerThreadId }
         : {}),
+      ...(input.toolSession ? { toolSession: input.toolSession } : {}),
       workspaceContext: input.workspaceContext
         ? { ...input.workspaceContext, agentControl: input.agentControl }
         : { agentControl: input.agentControl, schemaVersion: 1, scope: 'workspace' }
@@ -72,6 +75,7 @@ async function sendByokTurn(input: Parameters<typeof sendAssistantTurn>[0]) {
       ...(input.continuation.providerThreadId
         ? { providerThreadId: input.continuation.providerThreadId }
         : {}),
+      ...(input.toolSession ? { toolSession: input.toolSession } : {}),
       workspaceContext: input.workspaceContext
         ? { ...input.workspaceContext, agentControl: input.agentControl }
         : { agentControl: input.agentControl, schemaVersion: 1, scope: 'workspace' }

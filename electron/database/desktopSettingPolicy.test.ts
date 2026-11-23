@@ -36,6 +36,7 @@ describe('desktop setting policy', () => {
     ['foliole_aide_byok_settings', 'local_only', false],
     ['foliole_aide_custom_instructions', 'local_only', false],
     ['foliole_aide_attached_context_settings', 'local_only', false],
+    ['foliole_aide_tool_permissions', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {
     expect(resolveDesktopSettingPolicy(key)).toMatchObject({ canonical, declared: true, scope });

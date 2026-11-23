@@ -1,8 +1,10 @@
 import { getAgentControlApiSessionDescriptor } from '../agentControl/agentControlServer.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
+import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
-import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
+import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
+import { chargeAideReadResult, isAideToolOffered, type AideToolSession } from './aideToolSession.js';
 
 export interface AideToolCallResult {
   contentItems: Array<{ text: string; type: 'inputText' }>;
@@ -20,7 +22,9 @@ export async function executeAideTool(
     allowedCapabilities?: readonly string[];
     descriptor?: AgentControlSessionDescriptor | null;
     fetcher?: typeof fetch;
+    localTools?: Record<string, AideLocalToolHandler>;
     onDispatch?: (mutates: boolean) => void;
+    session?: AideToolSession;
     signal?: AbortSignal;
   } = {}
 ): Promise<AideToolCallResult> {
@@ -36,8 +40,42 @@ export async function executeAideTool(
   if (!descriptor.capabilities.includes(definition.capability)) {
     return failure('capability_disabled');
   }
+  // The model may still call a tool it saw earlier in the thread; the reply's switches decide.
+  if (!isAideToolOffered(options.session, request.tool)) return failure('tool_disabled');
+  if (!definition.mutates && options.session && options.session.readUsed >= options.session.readBudget) {
+    return readLimitReached(0);
+  }
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
+  const outcome = definition.local
+    ? await executeLocal(request.tool, body, options.localTools)
+    : await executeRemote(definition, body, descriptor, options);
+  if (definition.mutates || !outcome.success) return outcome;
+  const charge = chargeAideReadResult(options.session, outcome.contentItems[0]?.text ?? '');
+  return charge.ok ? outcome : readLimitReached(charge.remaining);
+}
+
+async function executeLocal(
+  tool: string,
+  body: Record<string, unknown>,
+  overrides: Record<string, AideLocalToolHandler> | undefined
+) {
+  const handler = overrides?.[tool] ?? AIDE_LOCAL_READ_TOOLS[tool];
+  if (!handler) return failure('tool_unavailable');
+  try {
+    const outcome = await handler(body);
+    return result(outcome.payload, outcome.ok);
+  } catch {
+    return failure('read_failed');
+  }
+}
+
+async function executeRemote(
+  definition: AideToolDefinition,
+  body: Record<string, unknown>,
+  descriptor: AgentControlSessionDescriptor,
+  options: NonNullable<Parameters<typeof executeAideTool>[1]>
+) {
   try {
     options.onDispatch?.(definition.mutates);
     const response = await (options.fetcher ?? fetch)(`${descriptor.endpoint}/agent-control/v1/${definition.path}`, {
@@ -57,6 +95,16 @@ export async function executeAideTool(
     if (definition.mutates) throw new Error('tool_write_outcome_uncertain', { cause: error });
     return failure('connection_failed');
   }
+}
+
+function readLimitReached(remaining: number) {
+  return result({
+    error: 'read_limit_reached',
+    message: remaining > 0
+      ? `This reply's read limit is almost reached; only about ${remaining} tokens remain. Ask for less, or answer with what has been read and say where reading stopped.`
+      : "This reply's read limit is reached. Answer with what has been read and say where reading stopped.",
+    remaining_tokens: remaining
+  }, false);
 }
 
 export function aideToolFailure(error: string): AideToolCallResult {

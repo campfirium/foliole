@@ -14,6 +14,10 @@ import {
   selectFolioleAideModel,
   testAndSaveFolioleAideModel
 } from '../assistant/folioleAideModelSettings.js';
+import {
+  loadFolioleAideToolPermissionSettings,
+  saveFolioleAideToolPermissionSettings
+} from '../assistant/folioleAideToolPermissionSettings.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 export function handleAssistantModelCommand(command: string, args: Record<string, unknown>) {
@@ -46,6 +50,13 @@ export function handleAssistantModelCommand(command: string, args: Record<string
   if (command === NATIVE_COMMANDS.assistantSaveAttachedContextSettings) {
     const settings = args.settings;
     return runWithDatabaseConnectionOwner(() => saveFolioleAideAttachedContextSettings(settings));
+  }
+  if (command === NATIVE_COMMANDS.assistantLoadToolPermissions) {
+    return runWithDatabaseConnectionOwner(loadFolioleAideToolPermissionSettings);
+  }
+  if (command === NATIVE_COMMANDS.assistantSaveToolPermissions) {
+    const settings = args.settings;
+    return runWithDatabaseConnectionOwner(() => saveFolioleAideToolPermissionSettings(settings));
   }
   return undefined;
 }

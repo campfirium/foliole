@@ -17,6 +17,7 @@ export async function runOpenAiCompatibleToolLoop(input: {
   messages: unknown[];
   model: string;
   onText: (text: string) => void;
+  toolSession?: import('./aideToolSession.js').AideToolSession;
   tools: unknown[];
 }) {
   const messages = [...input.messages];
@@ -128,6 +129,7 @@ async function executeToolCall(
     {
       allowedCapabilities: input.allowedCapabilities,
       onDispatch: (mutates) => { if (mutates) markWriteDispatched(); },
+      ...(input.toolSession ? { session: input.toolSession } : {}),
       signal: input.controller.signal
     }
   );

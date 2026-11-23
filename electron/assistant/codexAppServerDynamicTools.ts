@@ -8,6 +8,7 @@ import {
   type AideToolRequest
 } from './aideToolExecutor.js';
 import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
+import type { AideToolSession } from './aideToolSession.js';
 import { readNestedString, type JsonRpcMessage } from './codexAppServerProtocol.js';
 import type { TurnState } from './codexAppServerSessionTypes.js';
 
@@ -34,10 +35,13 @@ export function dynamicToolFailure(error: string): DynamicToolCallResult {
   return aideToolFailure(error);
 }
 
-export function createFolioleDynamicTools(capabilities: readonly string[] = []) {
+export function createFolioleDynamicTools(
+  capabilities: readonly string[] = [],
+  disabledTools: ReadonlySet<string> = new Set()
+) {
   const enabled = new Set(capabilities);
   const tools = Object.entries(AIDE_TOOL_REGISTRY)
-    .filter(([, definition]) => enabled.has(definition.capability))
+    .filter(([name, definition]) => enabled.has(definition.capability) && !disabledTools.has(name))
     .map(([name, definition]) => ({
       description: definition.description,
       inputSchema: definition.inputSchema,
@@ -57,6 +61,7 @@ export async function executeFolioleDynamicTool(
   options: {
     descriptor?: AgentControlSessionDescriptor | null;
     fetcher?: typeof fetch;
+    session?: AideToolSession;
   } = {}
 ): Promise<DynamicToolCallResult> {
   return executeAideTool(request, options);

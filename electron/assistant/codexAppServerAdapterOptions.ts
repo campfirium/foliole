@@ -16,7 +16,10 @@ export interface CodexAppServerAdapterOptions {
   developerInstructions?: string;
   findCommandCandidates?: (env: NodeJS.ProcessEnv) => Promise<string[]>;
   env?: NodeJS.ProcessEnv;
-  executeDynamicTool?: (request: FolioleDynamicToolRequest) => Promise<DynamicToolCallResult>;
+  executeDynamicTool?: (
+    request: FolioleDynamicToolRequest,
+    session?: import('./aideToolSession.js').AideToolSession
+  ) => Promise<DynamicToolCallResult>;
   launcherCwd: string;
   loginWithChatGpt?: (options: {
     appVersion: string;

@@ -73,7 +73,8 @@ export class CodexAppServerAdapter {
     this.commandDiscoveryEnv = options.commandDiscoveryEnv ?? options.env ?? process.env;
     this.developerInstructions = options.developerInstructions ?? '';
     this.env = options.env ?? process.env;
-    this.executeDynamicTool = options.executeDynamicTool ?? executeFolioleDynamicTool;
+    this.executeDynamicTool = options.executeDynamicTool
+      ?? ((request, session) => executeFolioleDynamicTool(request, session ? { session } : {}));
     this.findCommandCandidates = options.findCommandCandidates ?? findCodexCommandCandidates;
     this.launcherCwd = options.launcherCwd;
     this.loginWithChatGpt = options.loginWithChatGpt ?? loginCodexWithChatGpt;
@@ -149,6 +150,7 @@ export class CodexAppServerAdapter {
     modelSelection?: NativeAssistantModelSelection;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
+    toolSession?: import('./aideToolSession.js').AideToolSession;
     workspaceContext?: NativeAssistantWorkspaceContext;
   }): Promise<NativeAssistantSendMessageResult> {
     if (this.active) return createAssistantFailure('busy', 'busy');
@@ -180,7 +182,8 @@ export class CodexAppServerAdapter {
         ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),
         ...(input.workspaceContext ? { workspaceContext: input.workspaceContext } : {}),
-        timeoutMs: this.timeoutMs
+        timeoutMs: this.timeoutMs,
+        ...(input.toolSession ? { toolSession: input.toolSession } : {})
       });
     } catch (error) {
       return createAssistantFailure('failed', failureFromError(error));

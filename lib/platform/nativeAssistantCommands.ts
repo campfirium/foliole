@@ -21,6 +21,8 @@ export const NATIVE_ASSISTANT_COMMANDS = {
   assistantSaveCustomInstructions: 'assistant_save_custom_instructions',
   assistantLoadAttachedContextSettings: 'assistant_load_attached_context_settings',
   assistantSaveAttachedContextSettings: 'assistant_save_attached_context_settings',
+  assistantLoadToolPermissions: 'assistant_load_tool_permissions',
+  assistantSaveToolPermissions: 'assistant_save_tool_permissions',
   assistantLoadByokSettings: 'assistant_load_byok_settings',
   assistantSaveByokSettings: 'assistant_save_byok_settings',
   assistantSetProvider: 'assistant_set_provider',

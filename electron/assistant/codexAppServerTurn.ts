@@ -6,6 +6,7 @@ import type {
 } from '../../lib/platform/nativeAssistantContract.js';
 
 import { appendAideCustomInstructions } from './aideCustomInstructions.js';
+import type { AideToolSession } from './aideToolSession.js';
 import { createAideThreadRequest } from './codexAppServerAidePolicy.js';
 import { handleDynamicToolCall } from './codexAppServerDynamicToolCalls.js';
 import type { DynamicToolCallResult, FolioleDynamicToolRequest } from './codexAppServerDynamicTools.js';
@@ -46,7 +47,7 @@ export class CodexAppServerSession {
     private readonly args: {
       appVersion: string;
       developerInstructions: string;
-      executeDynamicTool: (request: FolioleDynamicToolRequest) => Promise<DynamicToolCallResult>;
+      executeDynamicTool: (request: FolioleDynamicToolRequest, session?: AideToolSession) => Promise<DynamicToolCallResult>;
       launcherCwd: string;
       skillRoots: readonly string[];
       spawn: () => SpawnedCodexProcess;
@@ -75,7 +76,8 @@ export class CodexAppServerSession {
         this.args.launcherCwd,
         appendAideCustomInstructions(this.args.developerInstructions, args.customInstructions),
         args.providerThreadId,
-        this.activeTurn.dynamicToolCapabilities
+        this.activeTurn.dynamicToolCapabilities,
+        this.activeTurn.toolSession?.disabledTools
       ));
     });
   }
@@ -135,7 +137,9 @@ export class CodexAppServerSession {
     if (message.method === 'item/tool/call') {
       const child = this.child;
       void handleDynamicToolCall({
-        execute: this.args.executeDynamicTool,
+        execute: (request) => (turn.toolSession
+          ? this.args.executeDynamicTool(request, turn.toolSession)
+          : this.args.executeDynamicTool(request)),
         isCurrent: () => this.activeTurn === turn && this.child === child,
         message,
         onProtocolError: () => this.failActiveTurn('protocol_error', true),

@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createDefaultAideAttachedContextSettings } from '../../../../lib/core/assistant/aideAttachedContextSettings';
+import { createDefaultAideToolPermissionSettings } from '../../../../lib/core/assistant/aideToolPermissionSettings';
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import { requestAideSettingsDialogOpen } from '../model/aideSettingsDialogRequests';
 
@@ -14,10 +15,12 @@ const assistantRuntime = vi.hoisted(() => ({
   loadAssistantModelSettings: vi.fn(),
   loadAssistantStatus: vi.fn(),
   loadAssistantStorageInfo: vi.fn(),
+  loadAssistantToolPermissions: vi.fn(),
   openAssistantStorageLocation: vi.fn(),
   saveAssistantAttachedContextSettings: vi.fn(),
   saveAssistantCustomInstructions: vi.fn(),
   saveAssistantModelDraft: vi.fn(),
+  saveAssistantToolPermissions: vi.fn(),
   selectAssistantModel: vi.fn(),
   startAssistantChatGptLogin: vi.fn(),
   testAssistantModel: vi.fn()
@@ -38,6 +41,8 @@ beforeEach(() => {
   assistantRuntime.loadAssistantAttachedContextSettings.mockResolvedValue(createDefaultAideAttachedContextSettings());
   assistantRuntime.saveAssistantAttachedContextSettings.mockImplementation(async (settings: unknown) => settings);
   assistantRuntime.saveAssistantCustomInstructions.mockImplementation(async (text: string) => ({ text }));
+  assistantRuntime.loadAssistantToolPermissions.mockResolvedValue(createDefaultAideToolPermissionSettings());
+  assistantRuntime.saveAssistantToolPermissions.mockImplementation(async (settings: unknown) => settings);
   assistantRuntime.loadAssistantStorageInfo.mockResolvedValue({
     bytes: 2048,
     complete: true,
@@ -116,4 +121,33 @@ it('turns items off, reorders by keyboard, saves and restores defaults', async (
   fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));
   await waitFor(() => expect(previewSections(dialog)).toContain('location'));
   expect(assistantRuntime.saveAssistantAttachedContextSettings.mock.calls.at(-1)?.[0]).toEqual(createDefaultAideAttachedContextSettings());
+});
+
+it('switches AI read tools and the per-reply read limit, saves them and restores defaults', async () => {
+  renderWithLocalization(<AideSettingsDialogHost />);
+  act(() => requestAideSettingsDialogOpen());
+  const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'AI permissions' }));
+  const read = await within(dialog).findByRole('region', { name: 'Allow AI to read' });
+  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
+  expect(budget).toHaveValue(20000);
+  expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
+    'Keep reading', 'Find in the current material', 'Find in the library', 'Trace back to the original', 'Read PDF pages'
+  ]);
+  expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
+
+  fireEvent.click(within(read).getByRole('switch', { name: 'Read PDF pages' }));
+  fireEvent.change(budget, { target: { value: '8' } });
+  expect(budget).toHaveValue(8);
+  fireEvent.blur(budget);
+  expect(budget).toHaveValue(1000);
+  await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions).toHaveBeenCalled());
+  expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0]).toMatchObject({
+    read: { readPdfPage: false, traceSource: true }, readBudget: 1000
+  });
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Restore defaults' }));
+  await waitFor(() => expect(assistantRuntime.saveAssistantToolPermissions.mock.calls.at(-1)?.[0])
+    .toEqual(createDefaultAideToolPermissionSettings()));
+  expect(budget).toHaveValue(20000);
 });

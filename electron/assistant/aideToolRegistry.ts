@@ -4,6 +4,8 @@ export interface AideToolDefinition {
   capability: AgentControlCapability;
   description: string;
   inputSchema: Record<string, unknown>;
+  // Local tools run in the main process instead of through the Agent Control HTTP route.
+  local?: boolean;
   mutates: boolean;
   path: string;
 }
@@ -14,6 +16,7 @@ const TEXT = { type: 'string' } as const;
 const NULLABLE_STRING = { minLength: 1, type: ['string', 'null'] } as const;
 const IDS = { items: STRING, minItems: 1, type: 'array', uniqueItems: true } as const;
 const LIMIT = { minimum: 1, type: 'integer' } as const;
+const OFFSET = { minimum: 0, type: 'integer' } as const;
 
 function schema(
   properties: Record<string, unknown>,
@@ -24,8 +27,14 @@ function schema(
 }
 
 export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
-  read_material: tool('materials.read', 'Read one Foliole Topic, Folder, or Item by id.', 'materials/read',
+  read_material: localTool('Read one Foliole Topic, Folder, or Item by id. Long text comes in segments: pass offset (a character position, from 0) and length to continue where content_end stopped.',
+    schema({ id: STRING, length: LIMIT, offset: OFFSET }, ['id'])),
+  search_in_material: localTool('Find text inside one Foliole material (a PDF searches its pages). Returns each match with its character position or PDF page.',
+    schema({ id: STRING, limit: LIMIT, query: STRING }, ['id', 'query'])),
+  trace_source: localTool('Follow an excerpt or highlight back through its source excerpts to the original text, with the quoted text and position at each level.',
     schema({ id: STRING }, ['id'])),
+  read_pdf_page: localTool('Read the text of one page of the PDF attached to a Foliole material.',
+    schema({ id: STRING, page: LIMIT }, ['id', 'page'])),
   search_materials: tool('materials.search', 'Search readable Foliole Topics and Folders.', 'materials/search',
     schema({ limit: LIMIT, query: STRING }, ['query'])),
   list_folder: tool('materials.listChildren', 'List the direct Topics and Folders in a Foliole Folder or at the workspace root.', 'materials/list-children',
@@ -73,6 +82,10 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
   restore_virtual_folder: tool('virtualFolders.restore', 'Restore a Foliole virtual Folder from trash.', 'virtual-folders/restore',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id']))
 };
+
+function localTool(description: string, inputSchema: Record<string, unknown>): AideToolDefinition {
+  return { capability: 'materials.read', description, inputSchema, local: true, mutates: false, path: '' };
+}
 
 function tool(
   capability: AgentControlCapability,
