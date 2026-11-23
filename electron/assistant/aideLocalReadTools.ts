@@ -1,4 +1,4 @@
-import { resolveAideContextSource, readAideAnchorOriginalText, readAideAnchorRange, locateAideFocusRange, type AideContextNode } from '../../lib/core/assistant/aideAttachedContextSource.js';
+import { describeAideBaseTopic } from '../../lib/core/assistant/aideBaseTopic.js';
 import { AIDE_READ_SEGMENT_MAX, searchAideMaterialText, sliceAideMaterialText } from '../../lib/core/assistant/aideMaterialText.js';
 import { readAgentControlMaterial } from '../agentControl/agentControlMaterials.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -62,35 +62,7 @@ function searchInMaterial(args: Record<string, unknown>): AideLocalToolResult {
 function traceSource(args: Record<string, unknown>): AideLocalToolResult {
   const snapshot = loadAideAttachedContextSnapshot(String(args.id));
   if (!snapshot) return notFound();
-  const nodes = [snapshot.focus, ...snapshot.ancestors];
-  const chain = resolveAideContextSource(snapshot.focus, snapshot.ancestors);
-  if (!chain) return { ok: false, payload: { error: 'no_source' } };
-  const levels = nodes.slice(0, nodes.indexOf(chain.source)).map((node, index) => describeLevel(node, nodes[index + 1]));
-  return { ok: true, payload: {
-    material_id: snapshot.focus.id,
-    levels,
-    source: {
-      content_char_count: chain.source.content.length,
-      focus_position: locateAideFocusRange({ chain, focus: snapshot.focus }),
-      folder_path: chain.folderPath,
-      id: chain.source.id,
-      kind: chain.source.kind,
-      title: chain.source.title
-    }
-  } };
-}
-
-function describeLevel(node: AideContextNode, parent: AideContextNode | undefined) {
-  const locator = node.anchor?.locator as Record<string, unknown> | undefined;
-  return {
-    id: node.id,
-    kind: node.kind,
-    ...(typeof locator?.page === 'number' ? { page: locator.page } : {}),
-    parent_id: parent?.id ?? null,
-    position_in_parent: readAideAnchorRange(node.anchor),
-    quoted_text: readAideAnchorOriginalText(node.anchor),
-    title: node.title
-  };
+  return describeAideBaseTopic(snapshot.focus, snapshot.ancestors);
 }
 
 function readPdfPage(args: Record<string, unknown>): AideLocalToolResult {

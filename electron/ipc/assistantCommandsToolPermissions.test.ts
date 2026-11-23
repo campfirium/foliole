@@ -138,14 +138,15 @@ it('finds text inside a material and returns positions that point back into it',
   expect(result.matches).toEqual([expect.objectContaining({ from: start, to: start + 'division of labour'.length })]);
 });
 
-it('traces a highlight back through its excerpt to the original book', async () => {
+it('finds the Base Topic of a highlight through its excerpt', async () => {
   const from = seedBookWithExcerpts();
   const result = payload(await AIDE_LOCAL_READ_TOOLS.trace_source!({ id: 'highlight' }));
-  expect(result.levels).toEqual([
+  expect(result.derivation_path).toEqual([
     expect.objectContaining({ id: 'highlight', parent_id: 'excerpt', position_in_parent: { from: 26, to: 39 }, quoted_text: 'raises output' }),
     expect.objectContaining({ id: 'excerpt', parent_id: 'book', position_in_parent: { from, to: from + QUOTE.length }, quoted_text: QUOTE })
   ]);
-  expect(result.source).toMatchObject({ folder_path: ['Books'], focus_position: { from, to: from + QUOTE.length }, id: 'book' });
+  expect(result.base_topic).toMatchObject({ folder_path: ['Books'], focus_position: { from, to: from + QUOTE.length }, id: 'book' });
+  expect(await AIDE_LOCAL_READ_TOOLS.trace_source!({ id: 'book' })).toEqual({ ok: false, payload: { error: 'not_derived', kind: 'topic' } });
 });
 
 it('reports a material without PDF text instead of reading a page', async () => {

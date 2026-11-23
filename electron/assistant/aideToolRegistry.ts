@@ -31,7 +31,7 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
     schema({ id: STRING, length: LIMIT, offset: OFFSET }, ['id'])),
   search_in_material: localTool('Find text inside one Foliole material (a PDF searches its pages). Returns each match with its character position or PDF page.',
     schema({ id: STRING, limit: LIMIT, query: STRING }, ['id', 'query'])),
-  trace_source: localTool('Follow an excerpt or highlight back through its source excerpts to the original text, with the quoted text and position at each level.',
+  trace_source: localTool('Get the Base Topic a derived Topic or Item came from: its id, title, folder path and where the derived material sits in it, plus the quoted text of each excerpt in between. A Base Topic or Folder is not derived and returns not_derived.',
     schema({ id: STRING }, ['id'])),
   read_pdf_page: localTool('Read the text of one page of the PDF attached to a Foliole material.',
     schema({ id: STRING, page: LIMIT }, ['id', 'page'])),
@@ -57,7 +57,7 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
     schema({ material_ids: IDS, parent_id: NULLABLE_STRING }, ['material_ids', 'parent_id'])),
   restore_material: tool('materials.restore', 'Restore a Foliole Topic, Folder, or Item from trash.', 'materials/restore',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
-  update_material: tool('materials.update', 'Update a Foliole Topic or Item, including an Item answer.', 'materials/update',
+  update_material: tool('materials.update', 'Update a Foliole Topic, Item, or Folder: body text, title, an Item answer, or a Folder name.', 'materials/update',
     schema({ content: TEXT, expected_updated_at: STRING, id: STRING, reveal: TEXT, title: TEXT }, ['expected_updated_at', 'id'], {
       anyOf: [{ required: ['content'] }, { required: ['reveal'] }, { required: ['title'] }]
     })),
