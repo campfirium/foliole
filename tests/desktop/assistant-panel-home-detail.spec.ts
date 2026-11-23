@@ -44,7 +44,7 @@ test('Aide keeps the home composer at the bottom of the panel', async ({ desktop
   const sidebar = desktopWindow.locator('.workspace-region-main-sidebar');
   const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   const composer = desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).locator('xpath=ancestor::form');
-  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
+  await expect(desktopWindow.getByRole('heading', { name: 'Aide', exact: true })).toBeVisible();
   await expect(desktopWindow.getByText(/Use Codex inside Foliole|\u5728 Foliole \u5de5\u4f5c\u533a\u4e2d\u4f7f\u7528 Codex/)).toHaveCount(0);
   const [sidebarBounds, surfaceBounds, composerBounds] = await Promise.all([
     sidebar.boundingBox(),
@@ -146,10 +146,11 @@ test('Aide panel returns to the connection gate after a provider auth failure', 
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Trigger auth failure');
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
 
-  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
-  await expect(desktopWindow.getByText(/Use Codex directly in Foliole|直接在 Foliole 中使用 Codex/)).toBeVisible();
-  await expect(desktopWindow.getByText(/Sign in on OpenAI's website|登录将在 OpenAI 官网完成/)).toBeVisible();
-  await expect(desktopWindow.getByRole('button', { name: /Sign in with OpenAI|使用 OpenAI 登录/ })).toBeVisible();
+  // Sign-in now happens in Aide settings, so the gate only offers the Settings entry.
+  await expect(desktopWindow.getByRole('heading', { name: 'Aide', exact: true })).toBeVisible();
+  await expect(desktopWindow.getByText(/Use ChatGPT or other AI services directly in Foliole|在 Foliole 中直接使用 ChatGPT 或其他 AI 服务/)).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /Sign in with OpenAI|使用 OpenAI 登录/ })).toHaveCount(0);
   await expect(desktopWindow.getByText(/Check result:|检查结果：/)).toHaveCount(0);
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/)).toBeHidden();
 
@@ -182,7 +183,7 @@ test('Aide panel keeps the conversation after the Codex process exits', async ({
   await testInfo.attach('assistant-panel-transient-failure', { path: failureScreenshot, contentType: 'image/png' });
 });
 
-test('Aide panel shows the Foliole tools startup failure detail', async ({ desktopApp, desktopWindow }) => {
+test('Aide panel routes a Foliole tools startup failure to Aide settings', async ({ desktopApp, desktopWindow }) => {
   await desktopWindow.evaluate(() => {
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
@@ -199,7 +200,9 @@ test('Aide panel shows the Foliole tools startup failure detail', async ({ deskt
   } });
   await openAssistantPanel(desktopWindow);
 
-  await expect(desktopWindow.getByText(/Tool detail: listen EADDRINUSE 127\.0\.0\.1:5000|工具详情：listen EADDRINUSE 127\.0\.0\.1:5000/)).toBeVisible();
+  // The gate no longer prints the raw tool error; it hides the composer and points to Aide settings.
+  await expect(desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ })).toBeVisible();
+  await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/)).toBeHidden();
 });
 
 test('Aide panel removes a thread from local history with the explicit history command', async ({
@@ -214,7 +217,10 @@ test('Aide panel removes a thread from local history with the explicit history c
   await installAssistantIpcMock(desktopApp);
   await openAssistantPanel(desktopWindow);
 
-  await desktopWindow.getByRole('button', { name: /Remove from local Foliole Aide history|从本地 Foliole Aide 历史移除/ }).click();
+  // The remove button only takes pointer events while its history row is hovered.
+  const removeButton = desktopWindow.getByRole('button', { name: /Remove from local Foliole Aide history|从本地 Foliole Aide 历史移除/ });
+  await removeButton.locator('xpath=ancestor::li[1]').hover();
+  await removeButton.click();
 
   const requests = await desktopApp.evaluate(() => globalThis.__folioleAssistantInvokeRequests);
   expect(requests).toEqual(expect.arrayContaining([

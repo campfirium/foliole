@@ -72,8 +72,11 @@ export async function installAssistantIpcMock(
       title,
       updatedAt: '2026-07-07T00:00:00.000Z'
     });
+    // Commands the fixture does not fake go to the real handler, so the rest of the app keeps loading.
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
     ipcMain.removeHandler('foliole:invoke');
-    ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
+    ipcMain.handle('foliole:invoke', async (event, request: { args?: unknown; command?: string }) => {
       const command = request?.command;
       globalThis.__folioleAssistantInvokeRequests.push(request);
       if (command === 'assistant_get_status') return fixture.status;
@@ -101,7 +104,7 @@ export async function installAssistantIpcMock(
           threadIndex: createThread('thread-new', 'New prompt')
         };
       }
-      return null;
+      return handleInvokeRequest(request, { sender: event.sender });
     });
   }, { messages: savedThreadMessages, options, status: options.status ?? assistantReadyStatus });
 }

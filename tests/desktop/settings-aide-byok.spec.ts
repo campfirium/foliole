@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -36,7 +36,7 @@ async function createCredentialFixture() {
       await rm(stateRoot, { force: true, recursive: true });
     },
     launch: () => launchCredentialApp({ appRoot, executablePath: runtime.executablePath, session, stateRoot }),
-    secretPath: path.join(session.userDataPath, 'foliole-aide-byok-secret.bin'),
+    secretDir: session.userDataPath,
     stateRoot
   };
 }
@@ -84,13 +84,18 @@ async function expectSecureStorageReady(electronApp: ElectronApplication) {
   }), { timeout: 10_000 }).toBe(true);
 }
 
-async function saveConfiguration(page: Page, secretPath: string) {
+// Each custom model keeps its encrypted key in its own foliole-aide-model-<id>.bin file.
+async function hasModelSecret(secretDir: string) {
+  return (await readdir(secretDir)).some((name) => /^foliole-aide-model-.+\.bin$/u.test(name));
+}
+
+async function saveConfiguration(page: Page, secretDir: string) {
   const section = await openModelSettings(page);
   const addButton = section.getByRole('button', { name: /^(Add model|添加模型)$/ });
   if (await addButton.isVisible().catch(() => false)) await addButton.click();
   // Model drafts save as they are typed; the key goes to the device's secure storage.
   await fillModelDraft(section, { apiKey: API_KEY, endpoint: ENDPOINT, model: MODEL });
-  await expect.poll(() => access(secretPath).then(() => true, () => false), { timeout: 10_000 }).toBe(true);
+  await expect.poll(() => hasModelSecret(secretDir), { timeout: 10_000 }).toBe(true);
 }
 
 async function expectRestoredConfiguration(page: Page) {
@@ -137,9 +142,8 @@ async function runCredentialJourney(fixture: CredentialFixture, testInfo: TestIn
   const first = await fixture.launch();
   await expectWorkspaceShell(first.page);
   await expectSecureStorageReady(first.electronApp);
-  await saveConfiguration(first.page, fixture.secretPath);
+  await saveConfiguration(first.page, fixture.secretDir);
   await expectNoRendererSecret(first.page);
-  await expect(access(fixture.secretPath)).resolves.toBeUndefined();
   expect(await containsPlaintextSecret(fixture.stateRoot)).toBe(false);
   await first.electronApp.close();
 
@@ -152,7 +156,7 @@ async function runCredentialJourney(fixture: CredentialFixture, testInfo: TestIn
     await section.getByRole('button', { name: /^(Remove model|删除模型)$/ }).click();
     await expect(section.getByLabel(/^(Model|模型)$/)).toHaveCount(0);
     await expect(section.getByRole('button', { name: /^(Remove model|删除模型)$/ })).toHaveCount(0);
-    await expect.poll(() => access(fixture.secretPath).then(() => true, () => false)).toBe(false);
+    await expect.poll(() => hasModelSecret(fixture.secretDir)).toBe(false);
   } finally {
     await second.electronApp.close();
   }
