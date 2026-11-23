@@ -14,7 +14,7 @@ export const ZH_HANS_SETTINGS_AIDE_PERMISSIONS_TRANSLATIONS: Partial<Record<Tran
   'settings.aideDialog.permissions.tool.searchCurrent.description': '',
   'settings.aideDialog.permissions.tool.searchLibrary.title': '在资料库里查找',
   'settings.aideDialog.permissions.tool.searchLibrary.description': '可查找主题和文件夹。',
-  'settings.aideDialog.permissions.tool.traceSource.title': '查看原生材料',
+  'settings.aideDialog.permissions.tool.traceSource.title': '查找来源',
   'settings.aideDialog.permissions.tool.traceSource.description': '找到摘录或高亮来自哪份材料，以及它在那份材料里的位置。',
   'settings.aideDialog.permissions.tool.readPdfPage.title': '读取 PDF 指定页的文字',
   'settings.aideDialog.permissions.tool.readPdfPage.description': '',
