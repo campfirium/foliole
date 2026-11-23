@@ -41,8 +41,9 @@ describe('describeAideBaseTopic', () => {
     expect(result.ok && (result.payload.derivation_path as { id: string }[]).map((level) => level.id)).toEqual(['Item', 'Derived']);
   });
 
-  it('says a Base Topic or Folder is not derived material', () => {
-    expect(describeAideBaseTopic(base, [folder])).toEqual({ ok: false, payload: { error: 'not_derived', kind: 'topic' } });
+  it('treats a Base Topic as its own Base Topic and a Folder as not derived material', () => {
+    const result = describeAideBaseTopic(base, [folder]);
+    expect(result.ok && result.payload).toMatchObject({ base_topic: { id: 'Base' }, derivation_path: [] });
     expect(describeAideBaseTopic(folder, [])).toEqual({ ok: false, payload: { error: 'not_derived', kind: 'folder' } });
   });
 

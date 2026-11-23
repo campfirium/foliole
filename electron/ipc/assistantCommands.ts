@@ -10,6 +10,7 @@ import type {
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
+import { readAideLinkedMaterialIds } from '../assistant/aideReadScope.js';
 import { createAideToolSession } from '../assistant/aideToolSession.js';
 import { cancelAideWriteApprovals, requestAideWriteApproval, resolveAideWriteApproval } from '../assistant/aideWriteApprovals.js';
 import { describeAideWriteRequests } from '../assistant/aideWriteChangeDescriptions.js';
@@ -159,7 +160,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     message,
     provider,
     ...(sender ? { sender } : {}),
-    toolSession: await createTurnToolSession(clientTurnId, provider, sender),
+    toolSession: await createTurnToolSession(clientTurnId, provider, sender, readAideLinkedMaterialIds(workspaceContext)),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})
@@ -196,10 +197,11 @@ async function readToolPermissionsForTurn() {
 async function createTurnToolSession(
   clientTurnId: string,
   provider: import('../../lib/platform/nativeAssistantContract.js').NativeAssistantProviderId,
-  sender?: WebContents
+  sender?: WebContents,
+  linkedMaterialIds: readonly string[] = []
 ) {
   const settings = await readToolPermissionsForTurn();
-  if (!sender) return createAideToolSession(settings);
+  if (!sender) return createAideToolSession(settings, undefined, linkedMaterialIds);
   const send = createAssistantTurnEventSender(sender, clientTurnId);
   return createAideToolSession(settings, async (requests, signal) => {
     if (sender.isDestroyed()) return false;
@@ -215,7 +217,7 @@ async function createTurnToolSession(
     } finally {
       sender.removeListener('destroyed', cancel);
     }
-  });
+  }, linkedMaterialIds);
 }
 
 function readAssistantAdapter() {

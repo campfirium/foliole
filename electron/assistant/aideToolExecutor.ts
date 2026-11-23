@@ -3,6 +3,7 @@ import type { AgentControlSessionDescriptor } from '../agentControl/agentControl
 
 import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
+import { AIDE_SCOPED_READ_TOOLS, isAideMaterialInReach } from './aideReadScope.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
 import {
@@ -55,6 +56,10 @@ export async function executeAideTool(
   }
   const body = validateAideToolArguments(request.tool, request.arguments);
   if (!body) return failure('invalid_arguments');
+  if (AIDE_SCOPED_READ_TOOLS.has(request.tool) && options.session?.readScope
+    && !await isAideMaterialInReach(options.session.readScope, String(body.id))) {
+    return outsideReadScope();
+  }
   if (definition.mutates && !(options.writeApproval
     ?? await confirmAideWrites(options.session, [{ arguments: body, tool: request.tool }], options.signal))) {
     return writeDeclined();
@@ -120,6 +125,13 @@ function readLimitReached(remaining: number) {
       ? `This reply's read limit is almost reached; only about ${remaining} tokens remain. Ask for less, or answer with what has been read and say where reading stopped.`
       : "This reply's read limit is reached. Answer with what has been read and say where reading stopped.",
     remaining_tokens: remaining
+  }, false);
+}
+
+function outsideReadScope() {
+  return result({
+    error: 'outside_read_scope',
+    message: 'This material is not linked to the conversation and the AI permissions do not reach it. Answer from what you can read, or ask the person to link it.'
   }, false);
 }
 

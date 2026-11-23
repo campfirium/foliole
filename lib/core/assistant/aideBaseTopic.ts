@@ -12,11 +12,10 @@ export type AideBaseTopicLookup =
 
 // A derived Topic or Item leads, through the anchors of its excerpt chain, back to the Base Topic it came from.
 export function describeAideBaseTopic(focus: AideContextNode, ancestors: AideContextNode[]): AideBaseTopicLookup {
-  if (focus.kind === 'folder' || (focus.kind === 'topic' && !focus.anchor)) {
-    return { ok: false, payload: { error: 'not_derived', kind: focus.kind } };
-  }
+  if (focus.kind === 'folder') return { ok: false, payload: { error: 'not_derived', kind: focus.kind } };
   const chain = resolveAideContextSource(focus, ancestors);
-  if (!chain || chain.source.id === focus.id || chain.source.kind !== 'topic') {
+  // A Base Topic is its own Base Topic; an Item that was not excerpted from anything has none.
+  if (!chain || chain.source.kind !== 'topic') {
     return { ok: false, payload: { error: 'no_base_topic' } };
   }
   const nodes = [focus, ...ancestors];

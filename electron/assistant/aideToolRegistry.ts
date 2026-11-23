@@ -27,11 +27,11 @@ function schema(
 }
 
 export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
-  read_material: localTool('Read one Foliole Topic, Folder, or Item by id. Long text comes in segments: pass offset (a character position, from 0) and length to continue where content_end stopped.',
+  read_material: localTool('Read one linked Foliole Topic, Folder, or Item by id, or one reached through its Base Topic or a library search. Long text comes in segments: pass offset (a character position, from 0) and length to continue where content_end stopped.',
     schema({ id: STRING, length: LIMIT, offset: OFFSET }, ['id'])),
   search_in_material: localTool('Find text inside one Foliole material (a PDF searches its pages). Returns each match with its character position or PDF page.',
     schema({ id: STRING, limit: LIMIT, query: STRING }, ['id', 'query'])),
-  trace_source: localTool('Get the Base Topic a derived Topic or Item came from: its id, title, folder path and where the derived material sits in it, plus the quoted text of each excerpt in between. A Base Topic or Folder is not derived and returns not_derived.',
+  trace_source: localTool('Get the Base Topic a derived Topic or Item came from: its id, title, folder path, where the derived material sits in it, the quoted text of each excerpt in between, and every material derived from that Base Topic. Those materials can then be read and searched by id.',
     schema({ id: STRING }, ['id'])),
   read_pdf_page: localTool('Read the text of one page of the PDF attached to a Foliole material.',
     schema({ id: STRING, page: LIMIT }, ['id', 'page'])),

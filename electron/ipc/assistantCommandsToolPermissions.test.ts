@@ -146,7 +146,10 @@ it('finds the Base Topic of a highlight through its excerpt', async () => {
     expect.objectContaining({ id: 'excerpt', parent_id: 'book', position_in_parent: { from, to: from + QUOTE.length }, quoted_text: QUOTE })
   ]);
   expect(result.base_topic).toMatchObject({ folder_path: ['Books'], focus_position: { from, to: from + QUOTE.length }, id: 'book' });
-  expect(await AIDE_LOCAL_READ_TOOLS.trace_source!({ id: 'book' })).toEqual({ ok: false, payload: { error: 'not_derived', kind: 'topic' } });
+  expect(result.base_topic_materials).toEqual({
+    materials: [expect.objectContaining({ id: 'excerpt', parent_id: 'book' }), expect.objectContaining({ id: 'highlight', parent_id: 'excerpt' })],
+    truncated: false
+  });
 });
 
 it('reports a material without PDF text instead of reading a page', async () => {
@@ -164,6 +167,27 @@ const descriptor = {
   started_at: 'now',
   token: 'secret'
 };
+
+async function readInScope(id: string, linked: string[], read: Record<string, boolean>) {
+  const session = createAideToolSession(normalizeAideToolPermissionSettings({ read }), undefined, linked);
+  const result = await executeAideTool({ arguments: { id }, tool: 'read_material' }, { descriptor, session });
+  return (JSON.parse(result.contentItems[0]?.text ?? '{}') as { error?: string }).error ?? 'read';
+}
+
+it('reads only linked materials, their whole Base Topic when allowed, and anything once library search is on', async () => {
+  seedBookWithExcerpts();
+  const { sqlite } = openDatabaseConnection();
+  sqlite.prepare(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+    VALUES ('other', 'folder', 'topic', 'Another book', 'Other text', 'now', 'now')`).run();
+  const narrow = { searchLibrary: false, traceSource: false };
+  expect(await readInScope('highlight', ['highlight'], narrow)).toBe('read');
+  expect(await readInScope('book', ['highlight'], narrow)).toBe('outside_read_scope');
+  const family = { searchLibrary: false, traceSource: true };
+  expect(await readInScope('book', ['highlight'], family)).toBe('read');
+  expect(await readInScope('excerpt', ['highlight'], family)).toBe('read');
+  expect(await readInScope('other', ['highlight'], family)).toBe('outside_read_scope');
+  expect(await readInScope('other', ['highlight'], { searchLibrary: true, traceSource: false })).toBe('read');
+});
 
 async function callDiveTool(tool: string, args: Record<string, unknown>, write: Record<string, boolean> = {}) {
   const session = createAideToolSession(normalizeAideToolPermissionSettings({ askBeforeWrite: false, write }));

@@ -5,6 +5,8 @@ import {
   type AideToolPermissionSettings
 } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 
+import type { AideReadScope } from './aideReadScope.js';
+
 export interface AideWriteRequest {
   arguments: Record<string, unknown>;
   tool: string;
@@ -21,12 +23,15 @@ export interface AideToolSession {
   confirmWrites?: AideWriteApprover;
   disabledTools: ReadonlySet<string>;
   readBudget: number;
+  /** Present when the reply knows which materials are linked to the conversation. */
+  readScope?: AideReadScope;
   readUsed: number;
 }
 
 export function createAideToolSession(
   settings: AideToolPermissionSettings = createDefaultAideToolPermissionSettings(),
-  approver?: AideWriteApprover
+  approver?: AideWriteApprover,
+  linkedMaterialIds?: readonly string[]
 ): AideToolSession {
   return {
     awaitingApproval: false,
@@ -34,6 +39,11 @@ export function createAideToolSession(
     ...(settings.askBeforeWrite ? { confirmWrites: approver ?? (async () => false) } : {}),
     disabledTools: new Set(listAideDisabledToolNames(settings)),
     readBudget: settings.readBudget,
+    ...(linkedMaterialIds ? { readScope: {
+      anyMaterial: settings.read.searchLibrary,
+      baseFamily: settings.read.traceSource,
+      linkedIds: new Set(linkedMaterialIds)
+    } } : {}),
     readUsed: 0
   };
 }

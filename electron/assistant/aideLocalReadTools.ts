@@ -5,6 +5,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readCurrentPdfDocumentPage, readCurrentPdfDocumentPageTexts, searchCurrentPdfDocument } from '../database/pdfDocumentSearch.js';
 
 import { loadAideAttachedContextSnapshot } from './aideAttachedContextLoader.js';
+import { listAideBaseTopicFamily } from './aideReadScope.js';
 
 export interface AideLocalToolResult {
   ok: boolean;
@@ -62,7 +63,10 @@ function searchInMaterial(args: Record<string, unknown>): AideLocalToolResult {
 function traceSource(args: Record<string, unknown>): AideLocalToolResult {
   const snapshot = loadAideAttachedContextSnapshot(String(args.id));
   if (!snapshot) return notFound();
-  return describeAideBaseTopic(snapshot.focus, snapshot.ancestors);
+  const lookup = describeAideBaseTopic(snapshot.focus, snapshot.ancestors);
+  if (!lookup.ok) return lookup;
+  const baseTopic = lookup.payload.base_topic as { id: string };
+  return { ok: true, payload: { ...lookup.payload, base_topic_materials: listAideBaseTopicFamily(baseTopic.id) } };
 }
 
 function readPdfPage(args: Record<string, unknown>): AideLocalToolResult {
