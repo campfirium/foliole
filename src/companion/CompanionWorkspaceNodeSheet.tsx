@@ -44,7 +44,7 @@ export function CompanionWorkspaceNodeSheet(props: { state: WorkspaceNodeSheetSt
       (mode === 'add-index-source' || mode === 'remove-index-source') ? (
         indexSourceChange && node && !node.deletedAt && isManualVirtualFolderNode(node) && actions.snapshot ? <CompanionIndexSourceForm
           index={node} snapshot={actions.snapshot} disabled={disabled} change={indexSourceChange}
-          onSubmit={sourceId => actions.changeIndexSource(node.id, sourceId, indexSourceChange)} /> : null
+          onSubmit={sourceIds => actions.changeIndexSources(node.id, sourceIds, indexSourceChange)} /> : null
       ) :
       (mode === 'convert-to-dive' || mode === 'convert-to-index') ? (node?.virtualFilter && conversion ? <>
         {conversion === 'dive' && !isManualVirtualNodeFilter(node.virtualFilter) && <p className="py-2 text-sm text-companion-text-secondary">

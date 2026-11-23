@@ -64,8 +64,9 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
       if (!node) throw new Error('workspace_mutation_not_applied');
       const previous = before[i];
       const priorityChanged = Boolean(previous && (previous.priority ?? null) !== (node.priority ?? null));
-      return { nodeId: node.id, before: previous ? workspaceNodeMetadata(previous, priorityChanged) : null,
-        after: workspaceNodeMetadata(node, priorityChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
+      const orderChanged = Boolean(previous && JSON.stringify(previous.manualChildOrder ?? null) !== JSON.stringify(node.manualChildOrder ?? null));
+      return { nodeId: node.id, before: previous ? workspaceNodeMetadata(previous, priorityChanged, orderChanged) : null,
+        after: workspaceNodeMetadata(node, priorityChanged, orderChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
     })
   };
   await appendCompanionFlowHistory(db, companionFlowHistoryKey(hostName ?? await iosCompanionHostName(db)), entry);
@@ -169,6 +170,14 @@ export async function replayCompanionNodeHistoryWithDb(db: DbPort, entry: Worksp
   await validateCompanionHistoryOrders(db, entry.orders);
   await writeCompanionHistoryReadings(db, entry.relatedReadings, mode);
   const records = await createCompanionMetadataVersions(db, targets, host);
+  // A manual index's source list travels in its own column, which a metadata version otherwise carries unchanged.
+  for (const [index, change] of entry.changes.entries()) {
+    const order = (mode === 'undo' ? change.before : change.after)?.manualChildOrder;
+    const record = records[index];
+    if (order === undefined || !record) continue;
+    record.snapshot = { ...record.snapshot, manual_child_order: order === null ? null : JSON.stringify(order) };
+    record.content_hash = topicTextSnapshotHash(record.snapshot);
+  }
   const restoring = targets.some(node => !node.deletedAt && nodes[node.id]?.deletedAt);
   // A replay stores versions this host builds on the current ones, as an edit does.
   const result = await applyLocalNodeVersionsWithDbPort(db, records, restoring ? 'local_restore' : 'local_mutation');

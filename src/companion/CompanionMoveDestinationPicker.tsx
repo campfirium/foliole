@@ -40,6 +40,8 @@ export function CompanionDestinationPicker(props: Pick<PickerProps, 'disabled' |
   searchLabel: string;
   emptyLabel: string;
   rootLabel?: string | undefined;
+  /** Several rows can be ticked at once; each choice toggles its row through `onChange`. */
+  selectedIds?: ReadonlySet<string> | undefined;
 }) {
   const { t } = useLocalization();
   const [query, setQuery] = useState('');
@@ -49,7 +51,9 @@ export function CompanionDestinationPicker(props: Pick<PickerProps, 'disabled' |
   const rows = useMemo(() => visibleMoveDestinations(tree, expanded, query), [tree, expanded, query]);
   const searching = Boolean(query.trim());
   const showRoot = rootLabel && (!searching || rootLabel.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
-  const selected = tree.rows.get(props.value);
+  const multiple = props.selectedIds !== undefined;
+  const isSelected = (id: string) => props.selectedIds ? props.selectedIds.has(id) : props.value === id;
+  const selected = multiple ? undefined : tree.rows.get(props.value);
   const toggle = (id: string) => setExpanded(current => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -69,11 +73,11 @@ export function CompanionDestinationPicker(props: Pick<PickerProps, 'disabled' |
       <VirtualListSurface items={rows} getItemKey={row => row.id} estimateSize={() => searching ? 76 : 52}
         scrollElementRef={scrollRef} autoScroll={false} accountForOffset measureItems
         renderItem={row => <DestinationRow row={row} disabled={props.disabled} searching={searching}
-          selected={props.value === row.id} expanded={expanded.has(row.id)} onToggle={() => toggle(row.id)}
+          selected={isSelected(row.id)} expanded={expanded.has(row.id)} onToggle={() => toggle(row.id)}
           onSelect={() => props.onChange(row.id)} />} />
       {rows.length === 0 && !showRoot && <p role="status">{props.emptyLabel}</p>}
     </div>
-    {selected || (props.value === '' && rootLabel) ?
+    {!multiple && (selected || (props.value === '' && rootLabel)) ?
       <p className="companion-move-location">{selected?.path ?? rootLabel}</p> : null}
   </section>;
 }

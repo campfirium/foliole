@@ -9,7 +9,8 @@ import { convertCompanionDiveDirectory } from '../shared/platform/companion/runt
 import { addCompanionDiveSource, addCompanionDiveSources, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey, type CompanionHistoryTop } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
-import { changeCompanionIndexSource, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
+import { changeCompanionIndexSources, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
+import { relearnCompanionBatch, unshelveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchLearning';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
@@ -34,10 +35,12 @@ type Actions = {
   convertDirectory(nodeId: string, target: DiveDirectoryConversionTarget, expectedFilter: string): void;
   addToDive(diveId: string, sourceId: string): void;
   removeFromDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): void;
-  changeIndexSource(indexId: string, sourceId: string, change: CompanionIndexSourceChange): void;
+  changeIndexSources(indexId: string, sourceIds: readonly string[], change: CompanionIndexSourceChange): void;
   moveBatchToTrash(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   moveBatch(targets: readonly CompanionBatchTarget[], parentNodeId: string | null, onSaved: () => void): Promise<void>;
   addBatchToDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): Promise<void>;
+  unshelveBatch(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
+  relearnBatch(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   restoreBatch(targets: readonly CompanionBatchTarget[], onSaved: (skipped: number) => void): Promise<void>;
   purgeBatch(plan: CompanionBatchPurgePlan, onSaved: () => void): Promise<void>;
   replay(mode: Mode): void;
@@ -75,13 +78,15 @@ function previewMetadataCommand(command: WorkspaceMetadataCommand, closeSheet: (
   return preview ? () => { const withdraw = preview(); closeSheet(); return withdraw; } : undefined;
 }
 
-function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'purgeBatch'> {
+function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'unshelveBatch' | 'relearnBatch' | 'purgeBatch'> {
   return {
     moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error',
       () => { const withdraw = previewCompanionTrash(targets.map(target => target.id)); onSaved(); return withdraw; }),
     moveBatch: (targets, parentNodeId, onSaved) => run(async () => { await moveCompanionBatch(targets, parentNodeId); }, onSaved, 'companion.batch.error'),
     addBatchToDive: (diveId, sourceIds, onSaved) => run(() => addCompanionDiveSources(diveId, sourceIds), onSaved,
       'desktop.nodeList.addToDive.saveFailed'),
+    unshelveBatch: (targets, onSaved) => run(async () => { await unshelveCompanionBatch(targets); }, onSaved, 'companion.workspace.failure.unshelve'),
+    relearnBatch: (targets, onSaved) => run(async () => { await relearnCompanionBatch(targets); }, onSaved, 'companion.workspace.failure.relearn'),
     purgeBatch: (plan, onSaved) => run(async () => { await purgeCompanionTrashBatch(plan); }, onSaved, 'companion.batch.error')
   };
 }
@@ -121,7 +126,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     removeFromDive: (diveId, sourceIds, onSaved) => void run(() => removeCompanionDiveSources(diveId, sourceIds), onSaved,
       'companion.workspace.failure.removeDiveSource'),
     ...createBatchWriteActions(run),
-    changeIndexSource: (indexId, sourceId, change) => void run(() => changeCompanionIndexSource(indexId, sourceId, change),
+    changeIndexSources: (indexId, sourceIds, change) => void run(() => changeCompanionIndexSources(indexId, sourceIds, change),
       undefined, change === 'add' ? 'companion.index.addSourceFailed' : 'companion.index.removeSourceFailed'),
     restoreBatch: (targets, onSaved) => {
       let skipped = 0;

@@ -21,7 +21,7 @@ import { CompanionListSelectionControls } from './CompanionListSelectionControls
 import { useCompanionPageActive } from './CompanionPageStack';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
-export type CompanionListBatchMode = 'library' | 'trash' | 'dive';
+export type CompanionListBatchMode = 'library' | 'trash' | 'dive' | 'shelved' | 'removed';
 
 function listBatchCandidates(
   sections: DirectorySection[], snapshot: WorkspaceSnapshot | null, mode: CompanionListBatchMode | undefined
@@ -30,8 +30,11 @@ function listBatchCandidates(
   if (!mode) return targets;
   for (const item of sections.flatMap(section => section.items)) {
     const node = snapshot?.nodesById[item.nodeId];
+    // The built-in Shelved and Removed views list topics as virtual-folder rows.
     const eligible = mode === 'trash' ? item.source === 'trash' && node?.deletedAt && !node.id.startsWith('special-')
-      : item.source === 'internal' && (mode === 'dive' ? Boolean(item.directDiveId) : canMoveCompanionBatchNodeToTrash(node));
+      : mode === 'shelved' ? item.source === 'virtual' && node?.kind === 'topic' && Boolean(node.shelvedAt) && !node.deletedAt
+        : mode === 'removed' ? item.source === 'virtual' && node?.kind === 'topic' && Boolean(node.deletedAt)
+          : item.source === 'internal' && (mode === 'dive' ? Boolean(item.directDiveId) : canMoveCompanionBatchNodeToTrash(node));
     if (eligible && node?.currentVersionId) {
       targets.set(item.nodeId, { id: item.nodeId, version: node.currentVersionId });
     }
@@ -85,7 +88,9 @@ function batchWrites(args: {
     restore: () => applyToBatch(args.selected, targets => args.restoreTargets(targets, closeSelection)),
     removeFromDive: () => applyToBatch(args.selected, targets => {
       if (args.diveId) actions?.removeFromDive(args.diveId, targets.map(target => target.id), closeSelection);
-    })
+    }),
+    unshelve: () => applyToBatch(args.selected, targets => void actions?.unshelveBatch(targets, closeSelection)),
+    relearn: () => applyToBatch(args.selected, targets => void actions?.relearnBatch(targets, closeSelection))
   };
 }
 
@@ -175,6 +180,8 @@ export function CompanionDirectoryBatchControls({ batch }: { batch: ReturnType<t
   };
   const actions = batch.mode === 'dive'
     ? [{ label: t('desktop.nodeList.menu.removeFromDive'), onSelect: batch.removeFromDive }]
+    : batch.mode === 'shelved' ? [{ label: t('companion.workspace.unshelve'), onSelect: batch.unshelve }]
+    : batch.mode === 'removed' ? [{ label: t('desktop.nodeList.menu.relearn'), onSelect: batch.relearn }]
     : trash ? [{ label: t('desktop.nodeList.menu.restore'), onSelect: batch.restore }, deleteAction]
       : [{ label: t('companion.batch.move'), onSelect: () => batch.openTarget('move') },
         { label: t('companion.batch.addToDive'), onSelect: () => batch.openTarget('add-to-dive') }, deleteAction];

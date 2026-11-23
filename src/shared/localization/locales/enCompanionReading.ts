@@ -36,6 +36,9 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.index.noSources': 'No matching sources',
   'companion.index.addSourceFailed': 'Could not add the source to the index.',
   'companion.index.removeSourceFailed': 'Could not remove the source from the index.',
+  'companion.index.addSources': 'Add {count} sources',
+  'companion.index.removeSources': 'Remove {count} sources',
+  'companion.workspace.failure.relearn': 'Could not relearn the selected Topics.',
   'companion.workspace.savedRefreshError': 'Saved. Refresh to show the change.',
 
   'companion.reading.undoFlow': 'Undo review action',

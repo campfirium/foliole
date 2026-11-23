@@ -14,6 +14,7 @@ import { supportsCompanionNodeMutationSurface } from '../shared/platform/compani
 import { AppButton } from '../shared/ui';
 
 import { useCompanionArticleExit } from './CompanionArticleTransition';
+import type { CompanionListBatchMode } from './CompanionDirectoryBatchSelection';
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
 import {
@@ -92,6 +93,14 @@ function resolveEmptyTitle(selection: CompanionDirectorySelection, isDive: boole
   return 'companion.directory.empty.folder';
 }
 
+function resolveBatchMode(selection: CompanionDirectorySelection, isDive: boolean, virtualId: string | null): CompanionListBatchMode | undefined {
+  if (selection.kind === 'trash' || selection.kind === 'trashFolder') return 'trash';
+  if (isDive) return 'dive';
+  if (virtualId === VIRTUAL_SHELVED_NODE_ID) return 'shelved';
+  if (virtualId === VIRTUAL_REMOVED_NODE_ID) return 'removed';
+  return selection.kind === 'internal' ? 'library' : undefined;
+}
+
 function CompanionDirectoryListContent(props: {
   onStartDive?: ((id: string) => void) | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
@@ -113,7 +122,7 @@ function CompanionDirectoryListContent(props: {
       <CompanionDirectoryList
         key={JSON.stringify([props.snapshot?.libraryScope, props.viewKey])}
         containerNodeId={props.selection.kind === 'internal' ? props.selection.nodeId : undefined}
-        batchMode={props.selection.kind === 'trash' || props.selection.kind === 'trashFolder' ? 'trash' : dive ? 'dive' : props.selection.kind === 'internal' ? 'library' : undefined}
+        batchMode={resolveBatchMode(props.selection, Boolean(dive), id)}
         diveId={dive?.id}
         trashRoot={props.selection.kind === 'trash'}
         directory={props.directory}

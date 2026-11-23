@@ -20,10 +20,10 @@ export function CompanionIndexSourceForm({ index, snapshot, change, disabled, on
   snapshot: WorkspaceSnapshot;
   change: CompanionIndexSourceChange;
   disabled: boolean;
-  onSubmit(sourceId: string): void;
+  onSubmit(sourceIds: string[]): void;
 }) {
   const { locale, t } = useLocalization();
-  const [sourceId, select] = useState('');
+  const [sourceIds, setSourceIds] = useState<ReadonlySet<string>>(() => new Set());
   const tree = useMemo(() => {
     const current = new Set(index.manualChildOrder ?? []);
     const nodes = snapshot.nodesById;
@@ -35,16 +35,24 @@ export function CompanionIndexSourceForm({ index, snapshot, change, disabled, on
     });
     return buildCompanionDestinationTree(candidates, nodes, node => resolveNodeDisplayTitle(locale, node.id, node.title));
   }, [change, index.manualChildOrder, locale, snapshot]);
-  const canSubmit = !disabled && tree.rows.get(sourceId)?.selectable;
+  // A source that left the candidates (synced away or already added) drops out of the choice.
+  const chosen = [...sourceIds].filter(id => tree.rows.get(id)?.selectable);
+  const canSubmit = !disabled && chosen.length > 0;
+  const toggle = (id: string) => setSourceIds(current => {
+    const next = new Set(current);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
   return <form className="space-y-4" onSubmit={event => {
     event.preventDefault();
-    if (canSubmit) onSubmit(sourceId);
+    if (canSubmit) onSubmit(chosen);
   }}>
     <CompanionDestinationPicker tree={tree} title={t('companion.index.sources')}
       searchLabel={t('companion.workspace.searchDiveSources')} emptyLabel={t('companion.index.noSources')}
-      disabled={disabled} value={sourceId} onChange={select} />
+      disabled={disabled} value="" selectedIds={sourceIds} onChange={toggle} />
     <button className="min-h-11 w-full rounded bg-companion-subtle px-3 text-sm disabled:opacity-40" type="submit" disabled={!canSubmit}>
-      {t(change === 'add' ? 'companion.index.addSource' : 'companion.index.removeSource')}
+      {chosen.length > 1 ? t(change === 'add' ? 'companion.index.addSources' : 'companion.index.removeSources', { count: chosen.length })
+        : t(change === 'add' ? 'companion.index.addSource' : 'companion.index.removeSource')}
     </button>
   </form>;
 }

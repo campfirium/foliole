@@ -14,7 +14,9 @@ export const workspaceHistoryReadingSchema = z.object({ intervalDurationMs: z.nu
   repetitionCount: z.number(), state: z.enum(READING_STATES) });
 
 const fields = z.object({ title: z.string(), isTitleManual: z.boolean(), parentNodeId: z.string().nullable(),
-  deletedAt: z.string().nullable(), shelvedAt: z.string().nullable(), priority: z.number().nullable().optional() });
+  deletedAt: z.string().nullable(), shelvedAt: z.string().nullable(), priority: z.number().nullable().optional(),
+  // A manual index's source list, recorded only when the change edits it.
+  manualChildOrder: z.array(z.string()).nullable().optional() });
 export const workspaceRelatedReadingSchema = z.object({ nodeId: z.string(), beforeReading: workspaceHistoryReadingSchema.nullable(), afterReading: workspaceHistoryReadingSchema.nullable() });
 export type WorkspaceRelatedReading = z.infer<typeof workspaceRelatedReadingSchema>;
 
@@ -31,9 +33,10 @@ export const workspaceNodeMetadataHistorySchema = z.object({
 });
 export type WorkspaceNodeMetadataHistoryEntry = z.infer<typeof workspaceNodeMetadataHistorySchema>;
 
-export function workspaceNodeMetadata(node: WorkspaceNodeSnapshot, includePriority = false) {
+export function workspaceNodeMetadata(node: WorkspaceNodeSnapshot, includePriority = false, includeManualChildOrder = false) {
   return { title: node.title, isTitleManual: node.isTitleManual, parentNodeId: node.parentNodeId,
-    deletedAt: node.deletedAt ?? null, shelvedAt: node.shelvedAt ?? null, ...(includePriority ? { priority: node.priority ?? null } : {}) };
+    deletedAt: node.deletedAt ?? null, shelvedAt: node.shelvedAt ?? null, ...(includePriority ? { priority: node.priority ?? null } : {}),
+    ...(includeManualChildOrder ? { manualChildOrder: node.manualChildOrder ?? null } : {}) };
 }
 
 export function collectWorkspaceMetadataSubtree(rootId: string, nodes: Record<string, WorkspaceNodeSnapshot>) {
@@ -89,12 +92,13 @@ export function resolveWorkspaceMetadataHistory(entry: WorkspaceNodeMetadataHist
     if (!node) throw new Error('workspace_history_node_missing');
     const source = mode === 'undo' ? change.after : change.before;
     const target = mode === 'undo' ? change.before : change.after;
-    const current = workspaceNodeMetadata(node, source?.priority !== undefined);
+    const current = workspaceNodeMetadata(node, source?.priority !== undefined, source?.manualChildOrder !== undefined);
     if (source ? JSON.stringify(current) !== JSON.stringify(source) : !node.deletedAt ||
       JSON.stringify({ ...current, deletedAt: null }) !== JSON.stringify({ ...change.after, deletedAt: null })) throw new Error('workspace_history_changed');
     if (!change.before && change.creationContent !== hashTextBody(JSON.stringify([node.content, node.reveal]))) throw new Error('workspace_history_content_changed');
-    const { priority, ...metadata } = target ?? change.after;
+    const { priority, manualChildOrder, ...metadata } = target ?? change.after;
     const next = { ...node, ...metadata, ...(priority === undefined ? {} : { priority }),
+      ...(manualChildOrder === undefined ? {} : { manualChildOrder }),
       deletedAt: target ? target.deletedAt : now, updatedAt: now };
     if (!next.deletedAt && next.parentNodeId !== node.parentNodeId) assertWorkspaceMetadataParent(next, next.parentNodeId, nodes);
     return next;
