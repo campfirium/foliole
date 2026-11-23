@@ -19,6 +19,7 @@ import {
 } from './assistant-byok-loopback.support';
 import { openAssistantPanel } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
+import { getAideSettingsDialog } from './harness/settings';
 
 const API_KEY = 'sk-foliole-t141-loopback-secret';
 const MODEL = 'foliole-loopback-model';
@@ -215,10 +216,7 @@ async function captureAide(page: Page, testInfo: TestInfo) {
 
 async function captureModels(page: Page, testInfo: TestInfo) {
   await mkdir(EVIDENCE_DIR, { recursive: true });
-  const settings = page.getByRole('dialog').filter({
-    has: page.getByLabel(/^(Settings categories|设置分类)$/)
-  });
-  await settings.screenshot({ path: MODELS_SCREENSHOT });
+  await getAideSettingsDialog(page).screenshot({ path: MODELS_SCREENSHOT });
   await testInfo.attach('aide-models-settings', {
     contentType: 'image/png', path: MODELS_SCREENSHOT
   });
