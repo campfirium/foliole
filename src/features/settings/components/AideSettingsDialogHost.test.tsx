@@ -99,9 +99,9 @@ function previewSections(dialog: HTMLElement) {
 it('shows attached content items with a preview built by the real allocation', async () => {
   const dialog = await openContextPane();
   expect(within(dialog).getByRole('button', { name: 'Attached content' })).toHaveAttribute('aria-current', 'page');
-  expect(within(dialog).getByRole('spinbutton', { name: 'Total budget' })).toHaveValue(2100);
+  expect(within(dialog).getByRole('spinbutton', { name: 'Total budget (tokens)' })).toHaveValue(2100);
   expect(within(dialog).queryByRole('button', { name: 'Restore defaults' })).toBeNull();
-  const preview = within(dialog).getByRole('region', { name: 'What the AI receives' });
+  const preview = within(dialog).getByRole('region', { name: 'Attached content preview' });
   expect(within(preview).getByText(/More context isn’t always better/u)).toBeInTheDocument();
   expect(previewSections(dialog)).toEqual(['selection', 'metadata', 'surrounding', 'outline', 'location', 'annotations']);
   expect(within(preview).getByText('what matters')).toBeInTheDocument();
@@ -134,7 +134,7 @@ it('switches AI read and modify tools and the per-reply read limit, saves them a
   const dialog = await screen.findByRole('dialog', { name: 'Aide settings' });
   fireEvent.click(within(dialog).getByRole('button', { name: 'AI permissions' }));
   const read = await within(dialog).findByRole('region', { name: 'Allow AI to read' });
-  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply' });
+  const budget = within(read).getByRole('spinbutton', { name: 'Max read per reply (tokens)' });
   expect(budget).toHaveValue(20000);
   expect(within(read).getAllByRole('switch').map((node) => node.getAttribute('aria-label'))).toEqual([
     'Keep reading', 'Find in the current material', 'Find in the library', 'Trace back to the original', 'Read PDF pages'

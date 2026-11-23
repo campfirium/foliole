@@ -1,4 +1,3 @@
-import { Info } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import {
@@ -15,9 +14,6 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import type { TranslationKey } from '../../../shared/localization/translations';
 import {
   AppSwitch,
-  AppTooltip,
-  AppTooltipContent,
-  AppTooltipTrigger,
   SettingsRow,
   SettingsSection,
   settingsFieldClassName
@@ -144,26 +140,6 @@ function AidePermissionSwitches<K extends string>({ group, keys, onChange, value
   });
 }
 
-// One line per permission: the explanation sits behind an info icon so both columns fit without scrolling.
 function AidePermissionRow({ children, description, title }: { children: ReactNode; description: string; title: string }) {
-  return (
-    <SettingsRow className="items-center max-[1080px]:flex-row max-[1080px]:items-center">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <h4 className="text-ui-lg font-normal text-foreground">{title}</h4>
-        <AppTooltip>
-          <AppTooltipTrigger asChild>
-            <button
-              aria-label={description}
-              className="inline-flex size-6 shrink-0 items-center justify-center rounded text-settings-icon hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              type="button"
-            >
-              <Info aria-hidden="true" size={15} strokeWidth={1.8} />
-            </button>
-          </AppTooltipTrigger>
-          <AppTooltipContent layer="dropdown" side="top">{description}</AppTooltipContent>
-        </AppTooltip>
-      </div>
-      {children}
-    </SettingsRow>
-  );
+  return <SettingsRow description={description} title={title}>{children}</SettingsRow>;
 }

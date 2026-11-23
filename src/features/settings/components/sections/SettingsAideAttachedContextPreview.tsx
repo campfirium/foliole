@@ -70,20 +70,24 @@ export function SettingsAideAttachedContextPreview({ active, settings }: {
         </header>
         {/* Bottom padding lets the last segments scroll level with their rows. */}
         <div className="relative pb-[50%] pt-1.5">
-          <p
-            aria-label={t('settings.aideDialog.context.preview.question')}
-            className="mx-[18px] mb-1.5 mt-2 rounded-[10px] bg-settings-selected px-3.5 py-2.5 text-ui-md leading-[22px]"
-            lang="en"
-          >
-            {AIDE_CONTEXT_EXAMPLE_QUESTION}
-          </p>
+          <PreviewLabel>{t('settings.aideDialog.context.preview.question')}</PreviewLabel>
+          <p className="mx-[18px] mb-3 mt-0 text-ui-md leading-[22px]" lang="en">{AIDE_CONTEXT_EXAMPLE_QUESTION}</p>
+          <PreviewLabel>{t('settings.aideDialog.context.preview.attached')}</PreviewLabel>
           {items.length
             ? items.map((item) => <PreviewSegment active={active?.key === item.key} item={item} key={item.key} />)
             : <p className="mx-[18px] text-ui-md text-foreground/50">{t('settings.aideDialog.context.preview.empty')}</p>}
+          <div className="mx-[18px] mt-3 border-t border-settings-divider/70 pt-3">
+            <b className="block text-ui-sm font-semibold leading-[18px] text-foreground/55">{t('settings.aideDialog.context.preview.exampleNote.title')}</b>
+            <p className="m-0 mt-0.5 text-ui-sm leading-5 text-foreground/55">{t('settings.aideDialog.context.preview.exampleNote.body')}</p>
+          </div>
         </div>
       </div>
     </section>
   );
+}
+
+function PreviewLabel({ children }: { children: string }) {
+  return <b className="mx-[18px] mb-1 mt-2 block text-ui-sm font-semibold leading-[18px] text-foreground/55">{children}</b>;
 }
 
 function PreviewSegment({ active, item }: { active: boolean; item: AideAllocatedContextItem }) {
