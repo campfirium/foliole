@@ -11,6 +11,9 @@ export function useAssistantWriteApproval(activeTurnRef: { current: AssistantAct
   useEffect(() => subscribeAssistantTurnEvents((event) => {
     if (event.clientTurnId !== activeTurnRef.current?.clientTurnId) return;
     if (event.kind === 'approval_requested' && event.approval) setApproval(event.approval);
+    if (event.kind === 'approval_cancelled') {
+      setApproval((current) => current?.id === event.approvalId ? null : current);
+    }
     if (event.kind === 'completed' || event.kind === 'failed') setApproval(null);
   }), [activeTurnRef]);
   useEffect(() => {

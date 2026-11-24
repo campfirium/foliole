@@ -1,7 +1,7 @@
 import { act, fireEvent, renderHook, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantTurnEvent, NativeAssistantWriteChange } from '../../../lib/platform/nativeAssistantContract';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { useAssistantWriteApproval } from './useAssistantWriteApproval';
@@ -61,4 +61,36 @@ it('shows the request for the current reply only and clears it once answered or 
   emit({ approval });
   rerender({ sending: false });
   expect(result.current.approval).toBeNull();
+});
+
+it('removes only the approval cancelled by a library change while the reply is still active', () => {
+  const activeTurnRef = { current: { clientTurnId: 'turn-1', prompt: '', provider: 'codex-app-server' as const, responseText: '', threadKey: 'k' } };
+  const { result } = renderHook(() => useAssistantWriteApproval(activeTurnRef, true));
+  const emit = (event: NativeAssistantTurnEvent) => act(() => runtime.handlers.forEach((handler) => handler(event)));
+  const turn = { clientTurnId: 'turn-1', provider: 'codex-app-server' } as const;
+  emit({ ...turn, approval, kind: 'approval_requested' });
+  emit({ ...turn, approvalId: 'older', kind: 'approval_cancelled' });
+  expect(result.current.approval).toEqual(approval);
+  emit({ ...turn, approvalId: approval.id, kind: 'approval_cancelled' });
+  expect(result.current.approval).toBeNull();
+  expect(runtime.resolveAssistantWriteApproval).not.toHaveBeenCalled();
+});
+
+it('shows the question and answer independently and labels an explicit body clear', () => {
+  const changes: NativeAssistantWriteChange[] = [{
+    details: [{ field: 'question', value: 'New question' }, { field: 'answer', value: 'New answer' }],
+    target: 'Item', tool: 'update_material'
+  }, {
+    details: [{ field: 'title', value: 'New topic title' }, { field: 'content', value: '' }],
+    target: 'Topic', tool: 'update_material'
+  }];
+  renderWithLocalization(<WorkspaceRightSidebarAssistantWriteApproval
+    approval={{ id: 'approval-2', changes }}
+    onResolve={vi.fn()}
+  />);
+  const card = screen.getByRole('region', { name: 'Aide wants to make these changes' });
+  expect(within(card).getByText('Question: New question')).toBeInTheDocument();
+  expect(within(card).getByText('Answer: New answer')).toBeInTheDocument();
+  expect(within(card).getByText('New title: New topic title')).toBeInTheDocument();
+  expect(within(card).getByText('Content: Clear')).toBeInTheDocument();
 });

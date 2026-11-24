@@ -67,3 +67,23 @@ it('drops approval requests without a usable approval and unknown kinds', () => 
   emit({ clientTurnId: 'turn-1', kind: 'unknown' });
   expect(handler).not.toHaveBeenCalled();
 });
+
+it('forwards cancellation for a specific approval through the sandbox bridge', () => {
+  const { emit, handler } = subscribeTurnEvents();
+  emit({ clientTurnId: 'turn-1', kind: 'approval_cancelled' });
+  emit({ approvalId: 'approval-1', clientTurnId: 'turn-1', kind: 'approval_cancelled' });
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler.mock.calls[0]?.[0]).toMatchObject({
+    approvalId: 'approval-1', clientTurnId: 'turn-1', kind: 'approval_cancelled'
+  });
+});
+
+it('forwards distinct question and answer details and keeps an explicit empty body', () => {
+  const { emit, handler } = subscribeTurnEvents();
+  const changes = [
+    { details: [{ field: 'question', value: 'New question' }, { field: 'answer', value: 'New answer' }], tool: 'update_material' },
+    { details: [{ field: 'content', value: '' }], tool: 'update_material' }
+  ];
+  emit({ approval: { changes, id: 'approval-2' }, clientTurnId: 'turn-1', kind: 'approval_requested' });
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({ approval: { changes, id: 'approval-2' } }));
+});

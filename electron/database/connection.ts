@@ -14,6 +14,7 @@ import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath 
 import { releaseDesktopNodeIndex } from './desktopNodeIndex.js';
 import { bindFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
+import { endLibraryConnectionLifetime } from './libraryConnectionLifetime.js';
 import { closeRequestSyncReadonlyConnections } from './requestSyncReadonlySnapshot.js';
 import { SqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
@@ -133,6 +134,7 @@ export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
 
 export function closeDatabaseConnection() {
   mainDatabaseCoordinator.assertCanClose();
+  endLibraryConnectionLifetime();
   closeRequestSyncReadonlyConnections();
   cachedConnection?.framedSyncPayloadBudget.close();
   if (cachedConnection) releaseDesktopNodeIndex(cachedConnection.sqlite);

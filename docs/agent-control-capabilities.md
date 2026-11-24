@@ -36,7 +36,7 @@ Each desktop library keeps one migration JSON with a record for each selected XM
 
 Aide history shows material links for desktop conversation navigation. The linked material titles and IDs are included in Aide turn context. A linked material open at send time becomes the active material. Aide reads bodies through existing material permissions. Desktop users can remove manually linked materials from a draft or saved conversation. Future turns use the updated links and retain the conversation’s opening material. Agent Control has no conversation-link routes.
 
-Desktop Aide settings provide individual controls for permissions and attached content. The Attached content section heading offers a reset for that section. These preferences stay on the device and are managed in the app.
+Desktop Aide settings provide individual controls for permissions and attached content. The Attached content section heading offers a reset for that section. These preferences stay on the device and are managed in the app. An Aide reply can write only to the library where it began. Switching libraries withdraws its pending confirmations.
 
 New conversation opens an empty Aide composer on desktop. The conversation is created when the first message is sent. This composer action stays in the desktop UI.
 

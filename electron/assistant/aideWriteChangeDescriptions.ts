@@ -9,30 +9,30 @@ import type { AideWriteRequest } from './aideToolSession.js';
 const SNIPPET_LENGTH = 120;
 const TARGET_KEYS = ['id', 'folder_id', 'source_id'] as const;
 
-type TitleLookup = (id: string) => string;
+type MaterialSummary = { kind: string; title: string };
+type MaterialLookup = (id: string) => MaterialSummary | undefined;
 
 /** Turns tool calls into what the person reads on the confirmation card, using titles rather than ids. */
 export async function describeAideWriteRequests(requests: AideWriteRequest[]): Promise<NativeAssistantWriteChange[]> {
   try {
     return await runWithDatabaseConnectionOwner(() => {
-      const select = openDatabaseConnection().sqlite.prepare('SELECT title FROM nodes WHERE id = ?').pluck();
-      const titleOf: TitleLookup = (id) => {
-        const title = select.get(id);
-        return typeof title === 'string' && title.trim() ? title : id;
-      };
-      return requests.map((request) => describe(request, titleOf));
+      const select = openDatabaseConnection().sqlite.prepare('SELECT kind, title FROM nodes WHERE id = ?');
+      return requests.map((request) => describe(request, (id) => select.get(id) as MaterialSummary | undefined));
     });
   } catch {
-    return requests.map((request) => describe(request, (id) => id));
+    return requests.map((request) => describe(request, () => undefined));
   }
 }
 
-function describe(request: AideWriteRequest, titleOf: TitleLookup): NativeAssistantWriteChange {
+function describe(request: AideWriteRequest, materialOf: MaterialLookup): NativeAssistantWriteChange {
   const args = request.arguments;
   const targetId = TARGET_KEYS.map((key) => args[key]).find((value) => typeof value === 'string');
+  const material = targetId === undefined ? undefined : materialOf(targetId);
+  const titleOf = (id: string) => text(materialOf(id)?.title) ?? id;
   const details: NativeAssistantWriteChangeDetail[] = [];
-  const target = typeof targetId === 'string' ? titleOf(targetId) : text(args.title) ?? snippet(args.content);
-  if (typeof targetId === 'string' && text(args.title)) details.push({ field: 'title', value: String(args.title) });
+  const title = text(args.title);
+  const target = targetId === undefined ? title : text(material?.title) ?? targetId;
+  if (targetId !== undefined && title) details.push({ field: 'title', value: title });
   if ('parent_id' in args && !(request.tool === 'create_material' && args.parent_id === undefined)) {
     details.push({ field: 'parent', value: typeof args.parent_id === 'string' ? titleOf(args.parent_id) : '' });
   }
@@ -40,8 +40,13 @@ function describe(request: AideWriteRequest, titleOf: TitleLookup): NativeAssist
   if (Array.isArray(materialIds) && materialIds.length) {
     for (const id of materialIds) details.push({ field: 'materials', value: titleOf(String(id)) });
   }
-  const content = snippet(args.content ?? args.reveal);
-  if (content && content !== target) details.push({ field: 'content', value: content });
+  const content = snippet(args.content);
+  if (content || (request.tool === 'update_material' && typeof args.content === 'string')) {
+    const isQuestion = material?.kind === 'item' || args.kind === 'item' || typeof args.reveal === 'string';
+    details.push({ field: isQuestion ? 'question' : 'content', value: content ?? '' });
+  }
+  const answer = snippet(args.reveal);
+  if (answer) details.push({ field: 'answer', value: answer });
   return { details, ...(target ? { target } : {}), tool: request.tool };
 }
 

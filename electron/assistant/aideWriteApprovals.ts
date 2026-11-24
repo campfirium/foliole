@@ -14,12 +14,16 @@ export function requestAideWriteApproval(input: {
   changes: NativeAssistantWriteChange[];
   clientTurnId: string;
   emit: (approval: NativeAssistantWriteApproval) => void;
+  onAbort?: (approvalId: string) => void;
   signal?: AbortSignal;
 }): Promise<boolean> {
   if (input.signal?.aborted) return Promise.resolve(false);
   const id = randomUUID();
   return new Promise((resolve) => {
-    const onAbort = () => settle(false);
+    const onAbort = () => {
+      settle(false);
+      input.onAbort?.(id);
+    };
     const settle = (approved: boolean) => {
       if (!pending.delete(id)) return;
       input.signal?.removeEventListener('abort', onAbort);
@@ -27,7 +31,11 @@ export function requestAideWriteApproval(input: {
     };
     pending.set(id, { clientTurnId: input.clientTurnId, settle });
     input.signal?.addEventListener('abort', onAbort, { once: true });
-    input.emit({ changes: input.changes, id });
+    try {
+      input.emit({ changes: input.changes, id });
+    } catch {
+      settle(false);
+    }
   });
 }
 

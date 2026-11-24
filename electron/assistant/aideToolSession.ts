@@ -28,6 +28,8 @@ export interface AideToolSession {
   /** Present when the reply knows its current materials; without it reads are not limited by place. */
   readScope?: AideReadScope;
   readUsed: number;
+  /** Connection generation that owns this reply's writes. */
+  writeLibraryGeneration?: string;
 }
 
 export function createAideToolSession(

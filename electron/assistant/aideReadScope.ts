@@ -87,8 +87,10 @@ export async function filterAideReadResult(scope: AideReadScope, tool: string, p
   if (!payload || typeof payload !== 'object') return payload;
   const record = payload as Record<string, unknown>;
   if (tool === 'search_materials' && Array.isArray(record.results)) {
-    const results = await keep(record.results as Array<{ id?: unknown; kind?: unknown }>, (item) => reachesFound(scope, item));
-    return { ...record, count: results.length, results };
+    return runWithDatabaseConnectionOwner(() => {
+      const results = (record.results as SearchHit[]).filter(createAideSearchFilter(scope));
+      return { ...record, count: results.length, results };
+    });
   }
   if (tool === 'list_folder' && Array.isArray(record.children)) {
     return { ...record, children: await keep(record.children as Array<{ id?: unknown }>, (item) => reachesMaterial(scope, String(item.id))) };
@@ -114,10 +116,31 @@ async function keep<T>(items: T[], test: (item: T) => Promise<boolean>) {
   return kept;
 }
 
-async function reachesFound(scope: AideReadScope, item: { id?: unknown; kind?: unknown }) {
-  if (item.kind === 'external') return scope.scopes.external;
-  if (item.kind === 'removed') return scope.scopes.trash;
-  return reachesMaterial(scope, String(item.id));
+type SearchHit = { id?: unknown; kind?: unknown };
+
+// Search calls this while owning the connection, before projecting or limiting results.
+export function createAideSearchFilter(scope: AideReadScope) {
+  const reach = readReachWithinOwner(scope);
+  const { scopes } = scope;
+  const canReadBeyondCurrent = scopes.home || scopes.trash
+    || (scopes.baseTopic && reach.baseTopicIds.size > 0)
+    || (scopes.folder && reach.topFolderIds.size > 0)
+    || (scopes.virtual && reach.indexIds.size > 0)
+    || (scopes.dives && reach.diveIds.size > 0);
+  const visibleById = new Map<string, boolean>();
+
+  return (item: SearchHit) => {
+    if (item.kind === 'external') return scopes.external;
+    if (item.kind === 'removed') return scopes.trash;
+    const id = item.id;
+    if (typeof id !== 'string' || (!canReadBeyondCurrent && !(scopes.current && reach.linkedIds.has(id)))) return false;
+    const known = visibleById.get(id);
+    if (known !== undefined) return known;
+    const placement = readAideMaterialPlacement(id);
+    const visible = placement !== null && isAideMaterialReachable(placement, reach, scopes);
+    visibleById.set(id, visible);
+    return visible;
+  };
 }
 
 async function reachesMaterial(scope: AideReadScope, id: string) {
@@ -128,11 +151,15 @@ async function reachesMaterial(scope: AideReadScope, id: string) {
   });
 }
 
-async function readReach(scope: AideReadScope) {
-  scope.reach ??= await runWithDatabaseConnectionOwner(() => buildAideReachContext(
+function readReach(scope: AideReadScope) {
+  return runWithDatabaseConnectionOwner(() => readReachWithinOwner(scope));
+}
+
+function readReachWithinOwner(scope: AideReadScope) {
+  scope.reach ??= buildAideReachContext(
     scope.currentIds.flatMap((id) => readAideMaterialPlacement(id) ?? []),
     readAideCollections()
-  ));
+  );
   return scope.reach;
 }
 
