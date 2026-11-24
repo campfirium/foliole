@@ -5,6 +5,11 @@ type ExternalResourceStateInput = SyncObjectStateInput & {
   objectType: 'external_document' | 'external_folder';
 };
 
+export function nextExternalResourceSyncTimestamp(now: string, previousUpdatedAt?: string | null) {
+  const previousTime = Date.parse(previousUpdatedAt ?? '');
+  return previousTime >= Date.parse(now) ? new Date(previousTime + 1).toISOString() : now;
+}
+
 export function upsertExternalResourceSyncState(
   driver: DatabaseDriver,
   input: ExternalResourceStateInput

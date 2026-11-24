@@ -1,5 +1,5 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { nextExternalResourceSyncTimestamp, upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { computeSyncContentHash, type SyncObjectStateInput, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
@@ -70,8 +70,12 @@ function recordHostProjectionSync(
     syncDirty: true,
     updatedAt: input.updatedAt
   };
-  if (objectType === 'external_folder') upsertExternalResourceSyncState(driver, {
-    ...state, objectType
-  });
-  else upsertSyncObjectState(driver, state);
+  if (objectType === 'external_folder') {
+    const previous = driver.queryOne<{ updated_at: string }>(`SELECT updated_at FROM sync_object_state
+      WHERE object_type = 'external_folder' AND object_id = ?`, [source.object_id]);
+    upsertExternalResourceSyncState(driver, { ...state, objectType,
+      updatedAt: nextExternalResourceSyncTimestamp(input.updatedAt, previous?.updated_at) });
+  } else {
+    upsertSyncObjectState(driver, state);
+  }
 }

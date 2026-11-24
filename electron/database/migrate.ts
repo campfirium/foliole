@@ -118,9 +118,9 @@ function initializeSchemaWorkspaceAndSearch(
   const attachmentTargets = captureLegacyAttachmentTargets(connection);
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => {
-      if (rebindMemberIdentity) rebindStartupMemberIdentity(connection.driver, connection.dbPath);
+      const rebound = rebindMemberIdentity ? rebindStartupMemberIdentity(connection.driver, connection.dbPath) : null;
       bindParentOrderWriter(connection.driver, loadDesktopLibraryWriterBinding(connection.dbPath));
-      migrateDesktopHostProfile(connection, currentHostName);
+      migrateDesktopHostProfile(connection, currentHostName, undefined, rebound?.previousDeviceId);
       runDesktopLibraryDataUpgrade(connection, { assetsDir: resolveRuntimeDataPaths().assetsDir,
         attachmentTargets, fresh, hostName: currentHostName, version });
     }

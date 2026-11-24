@@ -52,13 +52,20 @@ export function overwriteBusinessState(host: Awaited<ReturnType<typeof overwrite
 
 async function currentFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-overwrite-progress-'));
-  const file = path.join(root, 'main.sqlite');
+  let file = path.join(root, 'main.sqlite');
   let main = new Database(file);
   await bootstrapCompanionDatabase(createBetterSqliteDbPort(main), {
     allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06'
   });
   main.exec('DELETE FROM nodes');
-  return { get main() { return main; }, port: () => createBetterSqliteDbPort(main),
+  return { root, get main() { return main; }, port: () => createBetterSqliteDbPort(main),
+    move() {
+      main.close();
+      const moved = path.join(root, 'moved.sqlite');
+      fs.renameSync(file, moved);
+      file = moved;
+      main = new Database(file);
+    },
     reopen() { main.close(); main = new Database(file); },
     close() { main.close(); fs.rmSync(root, { recursive: true, force: true }); } };
 }
