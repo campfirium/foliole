@@ -62,16 +62,22 @@ function bindOwner(session: BackupSearchSession) {
   session.owner.once('render-process-gone', session.ownerCleanup);
 }
 
-export async function cleanupOrphanedBackupSearchSessions() {
+const SESSION_DIRECTORY_NAME = /^session-(?:[A-Za-z0-9]{6}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/u;
+
+async function removeOrphanedBackupSearchDirectories() {
   const root = searchRoot();
   await fs.mkdir(root, { recursive: true });
   const active = new Set([...sessions.values()].map((session) => path.resolve(session.directory)));
   const entries = await fs.readdir(root, { withFileTypes: true });
   await Promise.all(entries.map(async (entry) => {
-    if (!entry.isDirectory() || !/^session-[0-9a-f-]{36}$/u.test(entry.name)) return;
+    if (!entry.isDirectory() || !SESSION_DIRECTORY_NAME.test(entry.name)) return;
     const directory = path.join(root, entry.name);
     if (!active.has(path.resolve(directory))) await removeSessionDirectory(directory);
   }));
+}
+
+export function cleanupOrphanedBackupSearchSessions() {
+  return serializeLifecycle(removeOrphanedBackupSearchDirectories);
 }
 
 export function startBackupSearchSession(query: string, owner: WebContents) {
@@ -82,10 +88,11 @@ export function startBackupSearchSession(query: string, owner: WebContents) {
     const existingId = sessionIdsByOwner.get(owner.id);
     const existing = existingId ? sessions.get(existingId) : null;
     if (existing) await cancelSessionInternal(existing);
-    await cleanupOrphanedBackupSearchSessions();
+    await removeOrphanedBackupSearchDirectories();
     const backups = await listApplicationDatabaseBackups();
     const id = randomUUID();
-    const directory = await fs.mkdtemp(path.join(searchRoot(), 'session-'));
+    const directory = path.join(searchRoot(), `session-${id}`);
+    await fs.mkdir(directory);
     const client = new BackupSearchWorkerClient({ backups, query: normalizedQuery, sessionDirectory: directory });
     const session: BackupSearchSession = {
       cancelled: false,
