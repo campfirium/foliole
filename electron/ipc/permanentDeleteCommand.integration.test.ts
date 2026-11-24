@@ -31,7 +31,7 @@ vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => null, getAllWindows: () => [] },
   app: { getName: () => 'Foliole', getVersion: () => 'test', getPath: () => appDataDir },
   shell: {}, dialog: {}, ipcMain: {}, nativeImage: {}, clipboard: {}, Menu: {},
-  systemPreferences: { subscribeNotification: vi.fn() }, screen: {}, nativeTheme: { shouldUseDarkColors: false }
+  systemPreferences: { subscribeNotification: vi.fn() }, screen: {}, nativeTheme: { shouldUseDarkColors: false, on: vi.fn() }
 }));
 vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({ rebuildMirrorAttachmentLinks: vi.fn() }));

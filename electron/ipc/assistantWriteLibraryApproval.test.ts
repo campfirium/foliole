@@ -16,6 +16,7 @@ import { getAgentControlApiSessionDescriptor, stopAgentControlApiServer } from '
 import { executeAideTool, type AideToolRequest } from '../assistant/aideToolExecutor.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
 import { FOLIOLE_AIDE_TOOL_PERMISSIONS_KEY, loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
+import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 import { migrateLibraryPathChange, runLibraryHomeMigration } from './libraryPathMigration.js';
@@ -31,6 +32,7 @@ vi.mock('electron', () => ({
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({ app_cache_dir: root, app_config_dir: root, app_data_dir: root, app_log_dir: root })
 }));
+vi.mock(import('../diagnostics/diagnosticLog.js'), { spy: true });
 vi.mock('../assistant/codexAppServerAdapter.js', () => ({
   CodexAppServerAdapter: class {
     dispose = vi.fn();
@@ -97,6 +99,10 @@ beforeEach(() => {
 
 afterEach(async () => {
   await stopAgentControlApiServer();
+  // Agent Control can return its response while its diagnostic log is still writing.
+  const diagnosticWrites = vi.mocked(appendDiagnosticLog);
+  await Promise.allSettled(diagnosticWrites.mock.results.map(({ value }) => value));
+  diagnosticWrites.mockClear();
   libraryA.close();
   libraryB.close();
   rmSync(root, { force: true, recursive: true });
