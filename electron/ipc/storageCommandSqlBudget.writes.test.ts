@@ -26,6 +26,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { flushCoalescedWorkspaceSearchInvalidations, resetSearchInvalidationCoalescerForTests } from '../database/searchIndexInvalidationCoalescer.js';
 import { measureSqlStatements, type SqlStatementReport } from '../database/sqlStatementMeter.testSupport.js';
 
 import { handleStorageCommand } from './storageCommands.js';
@@ -160,6 +161,9 @@ export async function countAction(action: Action) {
   await handleStorageCommand(NATIVE_COMMANDS.flushDirtyNodeSyncVersions, {});
   const args = action.run.args();
   const write = (await measureSqlStatements(() => handleStorageCommand(action.run.command, args))).report;
+  // Content edits queue search invalidations behind a 1 s idle timer. Write them into this library outside both
+  // windows, so on a slower host the timer cannot fire inside this or a later action's measured drain.
+  await flushCoalescedWorkspaceSearchInvalidations();
   const deferred = (await measureSqlStatements(() => handleStorageCommand(NATIVE_COMMANDS.flushDirtyNodeSyncVersions, {}))).report;
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
@@ -175,6 +179,7 @@ const strict = process.env.FOLIOLE_SQL_BUDGET_STRICT === '1';
 
 beforeEach(() => { tick = 0; });
 afterEach(async () => {
+  resetSearchInvalidationCoalescerForTests();
   closeDatabaseConnection();
   if (tempRoot) await fs.rm(tempRoot, { recursive: true, force: true });
   tempRoot = '';
