@@ -54,14 +54,14 @@ it.each(['remove', 'insert', 'reorder'] as const)('keeps all three result sets f
   expect(snapshot.pdf.every((row) => row.text === '')).toBe(true);
 });
 
-it('serializes all categories with a real writer and keeps committed facts after a subsequent rollback', async () => {
+it('keeps all categories stable across a concurrent writer and a subsequent rollback', async () => {
   library = await createSearchLibrary();
   let release!: () => void;
   let entered!: () => void;
   const started = new Promise<void>((resolve) => { entered = resolve; });
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  const originalQuery = library.connection.query;
-  library.connection.query = async (sql, params) => {
+  const originalQuery = library.readonlyQueries.query;
+  library.readonlyQueries.query = async (sql, params) => {
     const result = await originalQuery(sql, params);
     if (sql.startsWith('SELECT') && sql.includes(' FROM (')) { entered(); await gate; }
     return result;
@@ -81,10 +81,11 @@ it('serializes all categories with a real writer and keeps committed facts after
       throw new Error('later apply failed');
   }), { kind: 'business' }));
   expect(wrote).toBe(false);
-  release();
+  try { await expect(writer).rejects.toThrow('later apply failed'); }
+  finally { release(); }
+  expect(wrote).toBe(true);
   const snapshot = await searching;
-  await expect(writer).rejects.toThrow('later apply failed');
-  library.connection.query = originalQuery;
+  library.readonlyQueries.query = originalQuery;
   expect(Object.values(identities(snapshot)).map((rows) => rows.length)).toEqual([125, 125, 125]);
   const current = await searchCompanionFullTextSnapshot('alpha');
   expect(Object.values(identities(current)).map((rows) => rows.length)).toEqual([124, 124, 124]);
@@ -95,8 +96,8 @@ it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each c
   library = await createSearchLibrary(count);
   let writerWaitMs = 0;
   let waiting: Promise<void> | null = null;
-  const query = library.connection.query;
-  library.connection.query = async (sql, params) => {
+  const query = library.readonlyQueries.query;
+  library.readonlyQueries.query = async (sql, params) => {
     const rows = await query(sql, params);
     if (sql.includes(' FROM (') && !waiting) {
       const queuedAt = performance.now();

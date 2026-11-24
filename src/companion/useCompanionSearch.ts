@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { searchCompanionFullTextSnapshot, type CompanionFullTextSearchResults } from '../shared/platform/companionFullTextSearch';
 
@@ -10,22 +10,21 @@ export function useCompanionSearch(query: string) {
   const [status, setStatus] = useState<Status>('idle');
   const [count, setCount] = useState(PAGE_SIZE);
   const [refresh, setRefresh] = useState(0);
-  const generation = useRef(0);
   const normalizedQuery = query.trim();
   useEffect(() => {
-    const current = ++generation.current;
     setSnapshot(null);
     setCount(PAGE_SIZE);
     setStatus(normalizedQuery ? 'loading' : 'idle');
     if (!normalizedQuery) return;
-    searchCompanionFullTextSnapshot(normalizedQuery).then((next) => {
-      if (generation.current !== current) return;
+    const controller = new AbortController();
+    searchCompanionFullTextSnapshot(normalizedQuery, controller.signal).then((next) => {
+      if (controller.signal.aborted) return;
       setSnapshot(next);
       setStatus('ready');
     }).catch(() => {
-      if (generation.current === current) setStatus('error');
+      if (!controller.signal.aborted) setStatus('error');
     });
-    return () => { generation.current += 1; };
+    return () => controller.abort();
   }, [normalizedQuery, refresh]);
 
   const results = snapshot ? {

@@ -55,7 +55,9 @@ it('retries failed snapshot creation without publishing a partial list', async (
   expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
   expect(await screen.findByText('Topic 20')).toBeInTheDocument();
-  expect(search.mock.calls[0]).toEqual(search.mock.calls[1]);
+  expect(search.mock.calls[0]![0]).toBe(search.mock.calls[1]![0]);
+  expect(search.mock.calls[0]![1].aborted).toBe(true);
+  expect(search.mock.calls[1]![1].aborted).toBe(false);
 });
 
 it('ignores an older snapshot after changing the query', async () => {
