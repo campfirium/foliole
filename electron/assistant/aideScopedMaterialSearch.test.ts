@@ -73,8 +73,8 @@ function createDescriptor(endpoint: string): AgentControlSessionDescriptor {
   };
 }
 
-async function searchWithAide(endpoint: string, limit: number, currentIds: string[]) {
-  const session = createAideToolSession(normalizeAideToolPermissionSettings({ read }), undefined, currentIds);
+async function searchWithAide(endpoint: string, limit: number, currentIds: string[], scopes = read) {
+  const session = createAideToolSession(normalizeAideToolPermissionSettings({ read: scopes }), undefined, currentIds);
   const result = await executeAideTool({ arguments: { limit, query: 'needle' }, tool: 'search_materials' }, {
     descriptor: createDescriptor(endpoint),
     session
@@ -97,6 +97,19 @@ it.each([
       limit,
       query: 'needle',
       results: expected.map((id) => expect.objectContaining({ id }))
+    });
+  } finally {
+    await closeAgentControlTestServer(server);
+  }
+});
+
+it('fills the page with a folder match when the current-material switch is off', async () => {
+  db.exec(`INSERT INTO nodes (id, kind, title) VALUES ('folder', 'folder', 'Shelf');
+    UPDATE nodes SET parent_id = 'folder' WHERE id IN ('allowed-older', 'allowed-newer')`);
+  const { endpoint, server } = await startAgentControlTestServer();
+  try {
+    expect(await searchWithAide(endpoint, 1, ['allowed-older'], { ...read, current: false, folder: true })).toMatchObject({
+      count: 1, results: [{ id: 'allowed-newer' }]
     });
   } finally {
     await closeAgentControlTestServer(server);
@@ -138,6 +151,22 @@ it('applies the permitted material scope to a PDF hit from that material', async
         match: { attachment_id: 'attachment', kind: 'pdf', page: 1 }
       }]
     });
+  } finally {
+    await closeAgentControlTestServer(server);
+  }
+});
+
+it('keeps the request size limit when Aide searches within a scope', async () => {
+  const { endpoint, server } = await startAgentControlTestServer();
+  const request = { arguments: { query: '界'.repeat(6_000) }, tool: 'search_materials' };
+  const session = createAideToolSession(normalizeAideToolPermissionSettings({ read }), undefined, ['allowed-newer']);
+  try {
+    const descriptor = createDescriptor(endpoint);
+    const unscoped = await executeAideTool(request, { descriptor });
+    const scoped = await executeAideTool(request, { descriptor, session });
+    expect(unscoped.success).toBe(false);
+    expect(scoped.success).toBe(false);
+    expect(scoped).toEqual(unscoped);
   } finally {
     await closeAgentControlTestServer(server);
   }

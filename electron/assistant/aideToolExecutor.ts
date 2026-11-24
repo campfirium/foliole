@@ -1,4 +1,5 @@
 import { AGENT_CONTROL_LIBRARY_GENERATION_HEADER, matchesAgentControlLibraryGeneration } from '../agentControl/agentControlLibraryGuard.js';
+import { AGENT_CONTROL_JSON_BODY_LIMIT_BYTES } from '../agentControl/agentControlRequestBody.js';
 import { getAgentControlApiSessionDescriptor } from '../agentControl/agentControlServer.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -90,6 +91,10 @@ async function executeScopedSearch(
 ) {
   try {
     options.onDispatch?.(false);
+    options.signal?.throwIfAborted();
+    if (Buffer.byteLength(JSON.stringify(body)) > AGENT_CONTROL_JSON_BODY_LIMIT_BYTES) {
+      return failure('request_body_too_large');
+    }
     return result(await searchAideMaterials(scope, body, options.signal), true);
   } catch (error) {
     if (options.signal?.aborted) throw error;
