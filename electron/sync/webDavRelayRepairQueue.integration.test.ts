@@ -39,6 +39,9 @@ it('delivers a healthy attachment past a full repair batch and retries a restore
     await writeFile(path.join(source.assets, healthyKey), healthy);
     await edit(source.peer, [healthyKey], 'new-article');
     await fixture.sync(source);
+    expect(fixture.uploads).toHaveLength(65);
+    await fixture.sync(target);
+    expect(await readFile(path.join(target.assets, healthyKey))).toEqual(healthy);
     await source.reopen();
     await fixture.sync(source);
     await fixture.sync(target);

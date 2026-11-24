@@ -18,6 +18,7 @@ import { publishWebDavRelayAttachment, type WebDavRelayRequest } from './webDavR
 import { resolveWebDavRelayRepairKeys } from './webDavRelayRepairAuthorization.js';
 import { repairRequestSchema, type RepairRequest } from './webDavRelayRepairWire.js';
 
+const ATTACHMENT_BATCH_SIZE = 64;
 const pendingSchema = webDavRelayPacketSchema.pick({ name: true, chunks: true, bytes: true })
   .extend({ key: attachmentBlockResourceSchema.shape.storageKey, resourceBytes: attachmentBlockResourceSchema.shape.byteLength.optional(), repairId: z.string().optional() });
 type Pending = ReturnType<typeof pendingSchema.parse>;
@@ -114,9 +115,7 @@ export async function publishWebDavRelayAttachments(input: Input) {
     [new Date().toISOString(), prefix(scope), `${scope.key}:attachment;`]));
     return;
   }
-  const keys = await host.readSnapshot(db => db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
-    WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{') ORDER BY updated_at, key LIMIT 64`,
-  [prefix(scope), `${scope.key}:attachment;`]), input.signal);
+  const keys = await readAttachmentBatch(input);
   for (const row of keys) {
     if (input.lanConnected()) return;
     await input.assertScope();
@@ -130,6 +129,23 @@ export async function publishWebDavRelayAttachments(input: Input) {
     if (!pending) continue;
     if (!await publish(input, pending, repair)) return;
   }
+}
+
+function readAttachmentBatch({ host, scope, signal }: Input) {
+  const lower = prefix(scope);
+  const upper = `${scope.key}:attachment;`;
+  return host.readSnapshot(async db => {
+    const batch = await db.query<{ key: string; ordinary: number }>(`SELECT key, value = 'pending' AS ordinary
+      FROM sync_group_metadata WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{')
+      ORDER BY updated_at, key LIMIT ?`, [lower, upper, ATTACHMENT_BATCH_SIZE]);
+    if (batch.length < ATTACHMENT_BATCH_SIZE || batch.some(row => row.ordinary)) return batch;
+
+    // Keep a repair slot while admitting normal sends even when repairs fill the queue head.
+    const ordinary = await db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
+      WHERE key >= ? AND key < ? AND value = 'pending' ORDER BY updated_at, key LIMIT ?`,
+    [lower, upper, ATTACHMENT_BATCH_SIZE - 1]);
+    return [...ordinary, ...batch.slice(0, ATTACHMENT_BATCH_SIZE - ordinary.length)];
+  }, signal);
 }
 
 async function freeze(input: Input, key: string, repair?: RepairRequest) {
