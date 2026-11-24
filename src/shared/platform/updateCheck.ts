@@ -177,6 +177,18 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
   }
 }
 
+/** Re-reads the manifest only to refresh per-channel availability; never touches the download state. */
+export async function refreshCachedUpdateManifest() {
+  try {
+    const response = await fetch(getManifestUrl(), { cache: 'no-store' });
+    if (!response.ok) return;
+    const manifest = normalizeUpdateManifest(await response.json());
+    if (manifest) writeUpdateCheckState({ ...readUpdateCheckState(), cachedManifest: manifest });
+  } catch {
+    // Keep the previous manifest; the next scheduled check retries.
+  }
+}
+
 export function openFolioleLatestRelease() {
   const state = readUpdateCheckState();
   return state.latestReleaseUrl ? openExternalUrl(state.latestReleaseUrl) : openFolioleReleaseLink('releases');

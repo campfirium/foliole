@@ -18,12 +18,19 @@ interface UpdateCheckPolicy {
   intervalMinutes?: number;
 }
 
+export const SYNC_GATE_PLATFORMS = ['ios', 'googlePlay', 'apk'] as const;
+export type SyncGatePlatform = (typeof SYNC_GATE_PLATFORMS)[number];
+
 export interface UpdateRelease {
   architectures?: string[];
   date?: string;
+  /** Per mobile channel: `true` once that channel serves a build that syncs with this release. */
+  mobileAvailability?: Partial<Record<SyncGatePlatform, boolean>>;
   platforms: string[];
   severity?: 'critical' | 'normal' | 'security';
   summary?: string;
+  /** Set when installing this release stops sync with the previous mobile versions. */
+  syncBreaking?: boolean;
   url: string;
   version: string;
 }
@@ -96,6 +103,14 @@ function normalizeTrustedReleaseUrl(value: string) {
   }
 }
 
+function normalizeMobileAvailability(value: unknown) {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const entries = SYNC_GATE_PLATFORMS.filter((platform) => typeof raw[platform] === 'boolean')
+    .map((platform) => [platform, raw[platform] as boolean] as const);
+  return entries.length ? Object.fromEntries(entries) as Partial<Record<SyncGatePlatform, boolean>> : null;
+}
+
 function normalizeRelease(value: unknown): UpdateRelease | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
@@ -107,12 +122,15 @@ function normalizeRelease(value: unknown): UpdateRelease | null {
     ? raw.architectures.filter((architecture): architecture is string => typeof architecture === 'string')
     : [];
   if (!platforms.length) return null;
+  const mobileAvailability = normalizeMobileAvailability(raw.mobileAvailability);
   return {
     ...(architectures.length ? { architectures } : {}),
     ...(typeof raw.date === 'string' ? { date: raw.date } : {}),
+    ...(mobileAvailability ? { mobileAvailability } : {}),
     platforms,
     ...(raw.severity === 'critical' || raw.severity === 'normal' || raw.severity === 'security' ? { severity: raw.severity } : {}),
     ...(typeof raw.summary === 'string' ? { summary: raw.summary } : {}),
+    ...(raw.syncBreaking === true ? { syncBreaking: true } : {}),
     url: releaseUrl,
     version: raw.version
   };

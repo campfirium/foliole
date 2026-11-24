@@ -4,6 +4,10 @@
     workspace-update-settle 700ms linear 2100ms 1;
 }
 
+.workspace-update-action-dim {
+  opacity: 0.4;
+}
+
 @keyframes workspace-update-nudge {
   0%, 100% { transform: translateY(0); }
   10%, 90% { transform: translateY(-9px); }

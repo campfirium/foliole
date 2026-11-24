@@ -6,7 +6,9 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
 const updateMock = vi.hoisted(() => ({
+  choice: vi.fn(),
   install: vi.fn(),
+  manifest: null as unknown,
   state: { phase: 'idle' } as { phase: string; version?: string },
   subscriber: null as (() => void) | null
 }));
@@ -22,7 +24,18 @@ vi.mock('../../shared/platform/desktopUpdate', () => ({
   }
 }));
 
+vi.mock('../../shared/platform/updateCheck', () => ({
+  readUpdateCheckState: () => ({ cachedManifest: updateMock.manifest }),
+  refreshCachedUpdateManifest: async () => undefined,
+  subscribeUpdateCheckState: () => () => undefined
+}));
+
+vi.mock('../../shared/ui/appChoice', () => ({ requestAppChoice: updateMock.choice }));
+
 beforeEach(() => {
+  window.localStorage.clear();
+  updateMock.choice.mockReset();
+  updateMock.manifest = null;
   updateMock.install.mockReset();
   updateMock.state = { phase: 'idle' };
   updateMock.subscriber = null;
@@ -80,4 +93,52 @@ it('replays the reminder after one minute while the update stays ready', () => {
   const replayedButton = screen.getByRole('button', { name: 'Restart to install update' });
   expect(replayedButton).toHaveAttribute('data-nudge-sequence', '1');
   expect(replayedButton).not.toBe(firstButton);
+});
+
+function gatedManifest() {
+  return {
+    releases: [{ mobileAvailability: { apk: true }, syncBreaking: true, version: '0.8.3' }],
+    schemaVersion: 1
+  };
+}
+
+it('dims the button and asks before installing while mobile channels are missing', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.choice.mockResolvedValue(null);
+  renderWithLocalization(<WorkspaceUpdateAction />);
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  act(() => updateMock.subscriber?.());
+
+  const button = screen.getByRole('button', { name: 'Restart to install update' });
+  expect(button.className).toContain('workspace-update-action-dim');
+  await act(async () => fireEvent.click(button));
+
+  expect(updateMock.choice).toHaveBeenCalledTimes(1);
+  expect(updateMock.choice.mock.calls[0]![0].choices.map((choice: { value: string }) => choice.value))
+    .toEqual(['ios', 'googlePlay', 'all', 'install']);
+  expect(updateMock.install).not.toHaveBeenCalled();
+});
+
+it('installs right away when the dialog chooses to install anyway', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.choice.mockResolvedValue('install');
+  renderWithLocalization(<WorkspaceUpdateAction />);
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  act(() => updateMock.subscriber?.());
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart to install update' })));
+
+  expect(updateMock.install).toHaveBeenCalledTimes(1);
+});
+
+it('hides the button after choosing to wait', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.choice.mockResolvedValue('ios');
+  renderWithLocalization(<WorkspaceUpdateAction />);
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  act(() => updateMock.subscriber?.());
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart to install update' })));
+
+  expect(screen.queryByRole('button', { name: 'Restart to install update' })).not.toBeInTheDocument();
 });

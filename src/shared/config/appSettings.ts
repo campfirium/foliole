@@ -172,6 +172,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   webLookupEntries: 'foliole-web-lookup-entries',
   feedbackRememberedContact: 'foliole-feedback-remembered-contact',
   updateCheckState: 'foliole-update-check-state',
+  updateSyncWait: 'foliole-update-sync-wait',
   manualComparisonDrafts: 'foliole-manual-comparison-drafts',
   devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',
   devReviewStatusBarOpen: 'foliole-dev-review-status-bar-open',

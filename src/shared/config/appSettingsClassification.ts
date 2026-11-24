@@ -177,6 +177,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'commandShortcutOverrides',
   'webLookupEntries',
   'updateCheckState',
+  'updateSyncWait',
   'devReviewStatusBarPersistenceEnabled',
   'devReviewStatusBarOpen'
 ] as const satisfies readonly AppSettingsStorageName[];

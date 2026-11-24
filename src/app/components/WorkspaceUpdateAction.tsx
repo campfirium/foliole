@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  installDesktopUpdate,
   readDesktopUpdateState,
   subscribeDesktopUpdateState
 } from '../../shared/platform/desktopUpdate';
 import { ToolbarActionGroup } from '../../shared/ui';
 
+import { useWorkspaceUpdateSyncGate } from './useWorkspaceUpdateSyncGate';
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import './WorkspaceUpdateAction.css';
 
@@ -20,6 +20,7 @@ export function WorkspaceUpdateAction() {
   const t = useTranslation();
   const [state, setState] = useState(readDesktopUpdateState);
   const [nudgeSequence, setNudgeSequence] = useState(0);
+  const gate = useWorkspaceUpdateSyncGate(state.version, state.phase === 'ready');
 
   useEffect(() => subscribeDesktopUpdateState(() => setState(readDesktopUpdateState())), []);
   useEffect(() => {
@@ -31,6 +32,7 @@ export function WorkspaceUpdateAction() {
     return () => window.clearInterval(interval);
   }, [state.phase, state.version]);
   if (state.phase !== 'ready' && state.phase !== 'restarting') return null;
+  if (gate.hidden) return null;
 
   const restarting = state.phase === 'restarting';
   const restartFailed = state.phase === 'ready' && state.errorCode?.startsWith('install-');
@@ -41,7 +43,7 @@ export function WorkspaceUpdateAction() {
     <ToolbarActionGroup ariaLabel={label} className="w-full gap-0" fullWidth orientation="vertical">
       <div className="flex h-[var(--workspace-top-toolbar-height)] w-full items-center justify-center">
         <WorkspaceRailTooltipButton
-          className={UPDATE_BUTTON_CLASS_NAME}
+          className={gate.dim && !restarting ? `${UPDATE_BUTTON_CLASS_NAME} workspace-update-action-dim` : UPDATE_BUTTON_CLASS_NAME}
           data-nudge-sequence={nudgeSequence}
           disabled={restarting}
           forceTooltipOpen={restarting}
@@ -50,7 +52,7 @@ export function WorkspaceUpdateAction() {
             : <CircleArrowDown aria-hidden="true" size={18} strokeWidth={1.75} />}
           key={`${state.version ?? 'ready'}-${nudgeSequence}`}
           label={label}
-          onClick={restarting ? undefined : () => void installDesktopUpdate()}
+          onClick={restarting ? undefined : () => void gate.onInstallClick()}
         />
       </div>
     </ToolbarActionGroup>

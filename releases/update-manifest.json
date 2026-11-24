@@ -3,7 +3,7 @@
   "channel": "beta",
   "latest": "0.8.2",
   "checkPolicy": {
-    "intervalMinutes": 1440,
+    "intervalMinutes": 60,
     "failureRetryMinutes": 15
   },
   "desktopUpdater": {
