@@ -38,14 +38,17 @@ enum FolioleCompanionBonjourEndpoint {
         return "http://\(host):\(service.port)"
     }
 
-    // A service can resolve several times; a host-name fallback never replaces a resolved address.
+    // Keep the numeric address across partial results only while the advertised port agrees.
     static func preferredEndpoint(current: String?, resolved: String) -> String {
-        guard let current, isNumericHost(current), !isNumericHost(resolved) else { return resolved }
+        guard let current, let previous = URLComponents(string: current),
+              let next = URLComponents(string: resolved),
+              let port = previous.port, port == next.port,
+              isNumericHost(previous), !isNumericHost(next) else { return resolved }
         return current
     }
 
-    private static func isNumericHost(_ endpoint: String) -> Bool {
-        URLComponents(string: endpoint)?.host.flatMap { IPv4Address($0) } != nil
+    private static func isNumericHost(_ endpoint: URLComponents) -> Bool {
+        endpoint.host.flatMap { IPv4Address($0) } != nil
     }
 
     static func preferredResolvedIPv4(

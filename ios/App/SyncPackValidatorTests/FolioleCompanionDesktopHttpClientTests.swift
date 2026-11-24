@@ -43,6 +43,13 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
             current: ip, resolved: "http://192.168.0.22:59324"), "http://192.168.0.22:59324")
     }
 
+    func testBonjourUsesTheNewPortWhenOnlyAHostnameWasResolved() {
+        let previous = "http://192.168.0.10:59324"
+        let resolved = "http://Maci-2.local:59325"
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredEndpoint(
+            current: previous, resolved: resolved), resolved)
+    }
+
         func testBonjourPreservesDeviceAndProtocolIdentityFromSharedHostFixture() throws {
         let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: sharedFixtureURL()))
             as? [String: Any]
