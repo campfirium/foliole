@@ -20,6 +20,12 @@ export interface NodeBacklinkRecord {
   match_count: number;
 }
 
+export interface NodeBacklinkSourceChange {
+  nodeId: string;
+  titleChanged: boolean;
+  outgoingLinksChanged: boolean;
+}
+
 function normalizeTitle(value: string) {
   return value.trim().toLocaleLowerCase();
 }
@@ -51,6 +57,30 @@ function collectMatchingLinkOffsets(content: string, normalizedTargetTitle: stri
   }
   WIKI_LINK_PATTERN.lastIndex = 0;
   return offsets;
+}
+
+function summarizeBacklinkSource(content: string) {
+  const targets = new Map<string, { count: number; context: string }>();
+  for (const match of content.matchAll(WIKI_LINK_PATTERN)) {
+    const title = normalizeTitle(match[1] ?? '');
+    if (!title) continue;
+    const existing = targets.get(title);
+    if (existing) existing.count++;
+    else targets.set(title, { count: 1, context: buildBacklinkContext(content, match.index) });
+  }
+  return targets;
+}
+
+export function didOutgoingBacklinksChange(previous: string, next: string) {
+  if (previous === next || (!previous.includes('[[') && !next.includes('[['))) return false;
+  const previousTargets = summarizeBacklinkSource(previous);
+  const nextTargets = summarizeBacklinkSource(next);
+  if (previousTargets.size !== nextTargets.size) return true;
+  for (const [title, before] of previousTargets) {
+    const after = nextTargets.get(title);
+    if (after?.count !== before.count || after.context !== before.context) return true;
+  }
+  return false;
 }
 
 export const NODE_BACKLINK_TARGET_SQL = `SELECT id, title

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -14,11 +15,13 @@ vi.mock('../../electron/ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockReso
 vi.mock('../../electron/mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('../../electron/database/releasedBodyCollectionTask.js', () => ({ enqueueReleasedBodyCollection: vi.fn() }));
 
+import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection.js';
 import { initializeDatabase } from '../../electron/database/migrate.js';
 import { drainDirtyNodeSyncVersions } from '../../electron/database/nodeSyncVersionDrain.js';
 import { handleStorageCommand } from '../../electron/ipc/storageCommands.js';
 import { executePreload } from '../../electron/preload.testSupport.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import { WorkspaceRightSidebarBacklinksPanel } from '../app/components/WorkspaceRightSidebarBacklinksPanel';
 import type { Node } from '../features/nodes/model/nodeTypes';
@@ -52,6 +55,7 @@ export function installBridge(owner = reader) {
   });
   preload.ipcInvoke.mockImplementation((_channel, request) => handleStorageCommand(request.command, request.args, owner as never));
   Object.defineProperty(window, 'electronAPI', { configurable: true, value: preload.exposeInMainWorld.mock.calls[0]?.[1] });
+  return preload.ipcInvoke;
 }
 
 export async function mutate(command: string, args: Record<string, unknown>, owner = writer) {
@@ -59,6 +63,15 @@ export async function mutate(command: string, args: Record<string, unknown>, own
 }
 export const save = (nodeId: string, title: string, content: string, owner = writer) =>
   mutate(NATIVE_COMMANDS.updateNodeContent, snapshot(nodeId, title, content), owner);
+
+export async function saveVersioned(nodeId: string, title: string, content: string) {
+  const current = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(openDatabaseConnection().sqlite), nodeId);
+  if (!current?.version_id) throw new Error('Missing saved version for content edit');
+  await mutate(NATIVE_COMMANDS.updateNodeContentWithAnchors, {
+    parent: snapshot(nodeId, title, content), affectedAnchors: [],
+    edit: { baseVersionId: current.version_id, baseContent: persisted(nodeId)?.content, versionId: randomUUID() }
+  });
+}
 
 export function persisted(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<{ title: string; content: string; deleted_at: string | null }>(

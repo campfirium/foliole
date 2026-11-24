@@ -1,3 +1,4 @@
+import type { NodeBacklinkSourceChange } from '../../../lib/core/database/nodeBacklinks.js';
 import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
@@ -56,6 +57,7 @@ export interface ReadwiseReaderImportProgressPayload {
 }
 
 export interface WorkspaceContentChangedPayload {
+  backlinkSourceChange?: NodeBacklinkSourceChange;
   workspaceScope?: WorkspaceRefreshScope;
   libraryScope?: string;
   scope: 'workspace';

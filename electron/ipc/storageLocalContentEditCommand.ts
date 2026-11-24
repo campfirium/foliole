@@ -1,5 +1,6 @@
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCodec.js';
+import { didOutgoingBacklinksChange } from '../../lib/core/database/nodeBacklinks.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -23,7 +24,10 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   const versionId = asString(edit.versionId, 'versionId');
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const { driver, sqlite } = openDatabaseConnection();
+  const previous = driver.queryOne<{ title: string; content: string }>(
+    'SELECT title, content FROM nodes WHERE id = ? AND deleted_at IS NULL', [parent.nodeId]);
+  const port = createBetterSqliteDbPort(sqlite);
   const result = await applyLocalContentEdit(port, {
     ...(edit.field === 'reveal' ? { field: 'reveal' as const } : {}),
     ...(edit.baseContent !== undefined ? { baseContent: asString(edit.baseContent, 'baseContent') } : {}),
@@ -49,16 +53,22 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const updatedNodeIds = [parent.nodeId, ...anchorUpdates.map((child) => child.nodeId)];
   enqueueCoalescedWorkspaceSearchInvalidation(updatedNodeIds);
   scheduleMirrorSync(updatedNodeIds);
+  const content = result.current.body_text ?? '';
+  const title = result.current.snapshot.title;
   return {
     ...(buildNodeMutationPatchResult({
       libraryScope, workspaceScope: { kind: 'nodes', nodeIds: updatedNodeIds },
       anchorUpdates,
+      ...(previous && { backlinkSourceChange: {
+        nodeId: parent.nodeId, titleChanged: previous.title !== title,
+        outgoingLinksChanged: didOutgoingBacklinksChange(previous.content, content)
+      } }),
       nodes: [{
         ...parent,
-        content: result.current.body_text ?? '',
+        content,
         reveal: result.current.snapshot.reveal ?? null,
         hideTitleHeading: result.current.snapshot.hide_title_heading,
-        title: result.current.snapshot.title,
+        title,
         updatedAt: result.current.updated_at
       }],
       originWindow,

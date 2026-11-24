@@ -100,6 +100,12 @@ function sanitizeWorkspaceScope(payload) {
   return { libraryScope: payload.libraryScope, workspaceScope: next };
 }
 
+function sanitizeBacklinkSourceChange(change, scope) {
+  if (scope?.kind !== 'nodes' || typeof change?.nodeId !== 'string' || !scope.nodeIds.includes(change.nodeId) ||
+      typeof change.titleChanged !== 'boolean' || typeof change.outgoingLinksChanged !== 'boolean') return null;
+  return { nodeId: change.nodeId, titleChanged: change.titleChanged, outgoingLinksChanged: change.outgoingLinksChanged };
+}
+
 function subscribe(channel, handler) {
   if (!SUBSCRIBABLE_CHANNELS.has(channel)) return () => undefined;
 
@@ -231,9 +237,12 @@ function subscribe(channel, handler) {
       return;
     }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
+      const scoped = sanitizeWorkspaceScope(payload);
+      const backlinkSourceChange = sanitizeBacklinkSourceChange(payload?.backlinkSourceChange, scoped.workspaceScope);
       handler({
         scope: payload?.scope === 'workspace' ? 'workspace' : '',
-        ...sanitizeWorkspaceScope(payload),
+        ...scoped,
+        ...(backlinkSourceChange ? { backlinkSourceChange } : {}),
         ...(payload?.refreshWorkspace === false ? { refreshWorkspace: false } : {})
       });
       return;
