@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 
 import { app } from 'electron';
 
-import { pdfDocumentPreferenceSchema, pdfReadingViewsSchema, pdfTopBarsRecordsSchema } from '../../lib/platform/pdfDocumentPreference.js';
 import { AGENT_CONTROL_LEARNING_IMPORT_KEY } from '../../lib/platform/agentControlLearningImport.js';
+import { pdfDocumentPreferenceSchema, pdfReadingViewsSchema, pdfTopBarsRecordsSchema } from '../../lib/platform/pdfDocumentPreference.js';
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../src/shared/config/appSettings.js';
 import {
   getLocalStorageAppSettingsKeys,

@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import type { SqliteDatabase } from './connection.js';

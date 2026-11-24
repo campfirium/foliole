@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import type { PdfDocumentPreference } from '../../../lib/platform/pdfDocumentPreference';
 import {
   PdfTopBarsDocument,
   PdfTopBarsDocumentConnection
 } from '../../features/pdf/components/PdfTopBarsDocument';
-import type { PdfDocumentPreference } from '../../../lib/platform/pdfDocumentPreference';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import {

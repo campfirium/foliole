@@ -26,7 +26,6 @@ import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './n
 import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
 import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
 import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
-import type { PdfDocumentPreference } from './pdfDocumentPreference.js';
 import type { NativeReadingResumeContext } from './nativeReadingProgressContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeReminderCommandMap } from './nativeReminderContract.js';
@@ -53,6 +52,7 @@ import type { NativeDesktopUpdateCommandMap } from './nativeUpdateContract.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult } from './nativeUtilityContract.js';
 import type { NativeWordPressPublishCommandMap } from './nativeWordPressPublishContract.js';
+import type { PdfDocumentPreference } from './pdfDocumentPreference.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js'; export type * from './nativeSplitTopicPreferencesContract.js';
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';

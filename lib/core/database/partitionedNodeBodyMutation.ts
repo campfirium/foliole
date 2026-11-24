@@ -8,7 +8,8 @@ import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { writeNodeBody } from './nodeBodyMutation.js';
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
-import { ensureNodeParentMembership } from './nodeOrderMutations.js';
+import { ensureNodeParentMembership, rewriteParentChildOrder } from './nodeOrderMutations.js';
+import { readParentChildOrder } from './parentChildOrder.js';
 import { readBodyPartIds, readBodyPartSlots, readPartitionedNodeBody } from './partitionedNodeBody.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
@@ -84,6 +85,20 @@ function writePart(
   return id;
 }
 
+function orderReplacementParts(driver: DatabaseDriver, nodeId: string, ids: string[],
+  slots: ReturnType<typeof readBodyPartSlots>) {
+  if (!ids.some((id, index) => {
+    const previous = slots.get(bodyPartNodeId(nodeId, index));
+    return previous && previous.id !== id;
+  })) return;
+  const { childIds, byId } = readParentChildOrder(driver, nodeId);
+  const parts = new Set(ids);
+  let nextPart = 0;
+  const visible = childIds.filter(id => byId.get(id)?.deleted_at === null);
+  const ordered = visible.map(id => parts.has(id) ? ids[nextPart++]! : id);
+  if (ordered.some((id, index) => id !== visible[index])) rewriteParentChildOrder(driver, nodeId, ordered);
+}
+
 function retireUnusedParts(driver: DatabaseDriver, nodeId: string, retainedIds: string[], now: string) {
   const oldIds = readBodyPartIds(driver, nodeId).filter((id) => !retainedIds.includes(id));
   for (const id of oldIds) {
@@ -123,6 +138,7 @@ export function partitionStoredNodeBody(
     }
     writeNodeBody({ driver, nodeId, title: node.title, content: '', updatedAt: now });
     retireUnusedParts(driver, nodeId, ids, now);
+    orderReplacementParts(driver, nodeId, ids, slots);
     enqueueWorkspaceSearchInvalidationForNodeIds(driver, [nodeId, ...ids, ...anchors.map((anchor) => anchor.id)]);
     return ids;
   });

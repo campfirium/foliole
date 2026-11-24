@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { readBodyPartIds } from '../../lib/core/database/partitionedNodeBody.js';
 import { partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
-import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { prepareEpubBookNode, buildEpubRootContent, type PreparedBookNode } from '../../lib/core/import/epub/epubPreparedBook.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';

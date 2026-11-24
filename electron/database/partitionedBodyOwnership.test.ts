@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
-import { moveNodes } from '../../lib/core/database/nodeMoveMutations.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
-import { softDeleteNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { moveNodes } from '../../lib/core/database/nodeMoveMutations.js';
+import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
+import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
@@ -102,7 +102,17 @@ it('reimports after Trash creates a gap while retaining the trashed topic and la
   expect(importBody(updated, '2026-10-08T00:02:00.000Z', root)).toBe(root);
   expect(driver.queryOne('SELECT deleted_at, content FROM nodes WHERE id = ?', [middle]))
     .toEqual({ deleted_at: deletedAt, content: 'y'.repeat(TEXT_BODY_MAX_BYTES) });
-  expect(readBodyPartIds(driver, root)).toEqual([first, expect.any(String), last]);
-  expect(readBodyPartIds(driver, root)).not.toContain(middle);
-  expect(readPartitionedNodeBody(driver, root)).toBe(updated);
+  const parts = readBodyPartIds(driver, root);
+  expect(parts).toEqual([first, expect.any(String), last]);
+  expect(parts).not.toContain(middle);
+  expect(readMoveParentOrder(driver, root).visibleIds).toEqual(parts);
+  expect(readPartitionedNodeBody(driver, root) === updated).toBe(true);
+
+  expect(restoreNodes(driver, { nodeIds: [middle] }).restoredNodeIds).toEqual([middle]);
+  writeNodeBody({ driver, nodeId: middle, title: 'Restored topic', content: LOCAL_EDIT, updatedAt: NOW });
+  expect(importBody(updated + '!', '2026-10-08T00:03:00.000Z', root)).toBe(root);
+  expect(readMoveParentOrder(driver, root).visibleIds).toContain(middle);
+  expect(driver.queryOne('SELECT content FROM nodes WHERE id = ?', [middle])?.content).toBe(LOCAL_EDIT);
+  expect(readBodyPartIds(driver, root)).toEqual(parts);
+  expect(readPartitionedNodeBody(driver, root) === updated + '!').toBe(true);
 });

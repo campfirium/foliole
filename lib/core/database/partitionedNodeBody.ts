@@ -18,6 +18,7 @@ export function readBodyPartSlots(driver: DatabaseDriver, nodeId: string) {
     UNION ALL
     SELECT node_id, NULL, deleted_at, NULL FROM node_sync_tombstones
       WHERE node_id >= ? AND node_id < ?
+        AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = node_id)
     ORDER BY id DESC`, [prefix, upperBound, prefix, upperBound]);
   const slots = new Map<string, BodyPartRow>();
   for (const row of rows) {
