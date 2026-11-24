@@ -16,7 +16,6 @@ let snapshot: FolderListSortMemoryPayload = EMPTY_FOLDER_LIST_SORT_MEMORY;
 let pendingSave: Promise<unknown> = Promise.resolve();
 type LibraryContext = { demo: boolean; libraryScope?: string | undefined };
 let context: LibraryContext = { demo: false };
-let hydrated = false;
 let revision = 0;
 
 function publish(next: FolderListSortMemoryPayload) {
@@ -38,7 +37,6 @@ function readDemoPayload() {
 export async function hydrateFolderListSortMemory(options: LibraryContext) {
   if (context.demo !== options.demo || context.libraryScope !== options.libraryScope) {
     context = options;
-    hydrated = false;
     pendingSave = Promise.resolve();
     publish(EMPTY_FOLDER_LIST_SORT_MEMORY);
   }
@@ -55,7 +53,6 @@ export async function hydrateFolderListSortMemory(options: LibraryContext) {
   if (readRevision !== revision) return;
   const result = await invoke(NATIVE_COMMANDS.loadFolderListSortMemory, { libraryScope });
   if (readRevision === revision) {
-    hydrated = true;
     publish(parseFolderListSortMemoryPayload(result));
   }
 }
@@ -77,10 +74,11 @@ export function rememberFolderListSort(
   const target = context;
   const { demo, libraryScope } = target;
   const invoke = getRuntimeInvoke();
-  if (invoke && !demo && (!hydrated || !libraryScope)) return;
+  if (invoke && !demo && !libraryScope) return;
 
   const next = withFolderListSortChoice(snapshot, listId, choice, fallback);
-  if (JSON.stringify(next) === JSON.stringify(snapshot)) return;
+  // The database can already have a different choice when the renderer still shows the default.
+  if ((demo || !invoke) && JSON.stringify(next) === JSON.stringify(snapshot)) return;
   const writeRevision = ++revision;
   publish(next);
   if (demo) {
@@ -112,7 +110,6 @@ export function resetFolderListSortMemoryForTests() {
   snapshot = EMPTY_FOLDER_LIST_SORT_MEMORY;
   pendingSave = Promise.resolve();
   context = { demo: false };
-  hydrated = false;
   revision++;
   listeners.clear();
 }

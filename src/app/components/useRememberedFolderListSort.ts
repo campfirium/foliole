@@ -11,9 +11,16 @@ export type FolderListSortChoice = { direction: FolderListSortDirection; key: Fo
  * The sort a list shows: the person's last choice for this list, else the list's own default. Changes are kept per
  * list, so another folder is never affected; without a list id the default is shown and nothing is kept.
  */
-export function useRememberedFolderListSort(listId: string | null | undefined, fallback: FolderListSortChoice) {
+export function useRememberedFolderListSort(
+  listId: string | null | undefined,
+  fallback: FolderListSortChoice,
+  ignoredKey?: FolderListSortKey
+) {
   useFolderListSortMemorySnapshot();
-  const current = () => readRememberedFolderListSort(listId) ?? fallback;
+  const current = () => {
+    const remembered = readRememberedFolderListSort(listId);
+    return remembered && remembered.key !== ignoredKey ? remembered : fallback;
+  };
   const shown = current();
 
   return {

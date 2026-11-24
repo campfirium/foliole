@@ -9,5 +9,5 @@ export function useDocumentPanelFolderListSort(containerId: string | null, defau
   return useRememberedFolderListSort(containerId, {
     direction: resolveDefaultFolderListSortDirection(defaultKey),
     key: defaultKey
-  });
+  }, defaultKey === 'dateDeleted' ? undefined : 'dateDeleted');
 }
