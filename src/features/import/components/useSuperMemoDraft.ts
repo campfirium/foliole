@@ -61,7 +61,7 @@ function updateDraftFolder(state: DraftState, id: number, folder: boolean) {
   const rows = draft.preview.rows.slice();
   rows[index] = applySuperMemoFolderDisplay(row, folder);
   setDraft({ ...draft, folderChoices, preview: { ...draft.preview, rows } });
-  void rememberDraftSource(source, { percent, sourceFormat, folderChoices }, true).catch(() => setError('save'));
+  void rememberDraftSource(source, { percent, sourceFormat, folderChoices }, true).catch(error => setError(previewFailure(error, 'save')));
 }
 
 export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle: string) {
@@ -82,7 +82,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   }, setBusy, setError);
 
   function saveForm(next: Pick<SuperMemoMigrationForm, 'percent' | 'sourceFormat'>) {
-    if (remembered) void rememberDraftSource(remembered, next, true).catch(() => setError('save'));
+    if (remembered) void rememberDraftSource(remembered, next, true).catch(error => setError(previewFailure(error, 'save')));
   }
 
   function changePercent(next: number) {

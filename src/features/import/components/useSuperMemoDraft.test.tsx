@@ -203,8 +203,10 @@ it('shows an import error and keeps the import settings available for retry', as
   fireEvent.change(screen.getByRole('textbox', { name: 'Source import field name' }), { target: { value: 'repository' } });
   fireEvent.click(screen.getByRole('button', { name: /^Import$/ }));
   await waitFor(() => expect(runtime.runRuntimeSuperMemoImport).toHaveBeenCalledOnce());
-  await act(async () => write.reject(new Error('could_not_import')));
+  await act(async () => write.reject(new Error('Could not open /private/library.xml')));
   expect(screen.getByRole('dialog', { name: 'Import failed' })).toBeVisible();
+  expect(screen.getByText('supermemo_unknown_failure', { exact: true })).toBeVisible();
+  expect(screen.queryByText(/\/private\/library\.xml/)).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Import complete' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.getByRole('button', { name: /^Import$/ })).toBeEnabled();

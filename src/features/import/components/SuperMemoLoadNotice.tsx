@@ -55,13 +55,15 @@ export function SuperMemoLoadNotice(props: NoticeProps) {
   const { error: notice, busy, inline, candidates, onClose, recover } = props;
   const error = superMemoNoticeKind(notice);
   if (!error) return null;
+  const diagnosticCode = typeof notice === 'object' ? notice.code
+    : error === 'collectionChoice' ? undefined : 'supermemo_unknown_failure';
   const title = t(error === 'collectionAccess' ? 'desktop.superMemoDrafts.collectionAccessTitle'
     : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' :
       error === 'xmlUpdated' ? 'desktop.superMemoDrafts.sourceUpdatedTitle' :
         error === 'convert' ? 'desktop.superMemoDrafts.importFailedTitle' : 'desktop.superMemoDrafts.loadFailed');
   const description = <>
     {t(descriptions[error])}
-    {typeof notice === 'object' ? <code className="mt-2 block select-all break-all">{notice.code}</code> : null}
+    {diagnosticCode ? <code className="mt-2 block select-all break-all">{diagnosticCode}</code> : null}
     {error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos'
       ? <span className="mt-2 block">{t('desktop.superMemoDrafts.macPermissionLocation')}</span> : null}
   </>;

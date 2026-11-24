@@ -4,7 +4,7 @@ type NoticeKind = 'selectionRead' | 'collectionChoice' | 'xmlAccess' | 'xmlUpdat
 type DiagnosticNotice = { kind: NoticeKind; code: string };
 export type SuperMemoNotice = false | NoticeKind | DiagnosticNotice;
 
-const diagnosticKinds: Record<string, NoticeKind> = {
+const diagnosticKinds: Record<string, NoticeKind | undefined> = {
   invalid_supermemo_xml: 'xmlFormat',
   supermemo_xml_malformed: 'xmlFormat',
   supermemo_xml_doctype: 'xmlFormat',
@@ -24,7 +24,19 @@ const diagnosticKinds: Record<string, NoticeKind> = {
   supermemo_collection_unreadable: 'collectionRead',
   supermemo_collection_mismatch: 'collectionMismatch',
   supermemo_source_mismatch: 'sourceMismatch',
-  supermemo_link_save_failed: 'save'
+  supermemo_link_save_failed: 'save',
+  supermemo_source_changed: undefined,
+  supermemo_import_unavailable: undefined,
+  supermemo_grade_settings_unavailable: undefined,
+  supermemo_preview_required: undefined,
+  supermemo_existing_batch_grade_mapping: undefined,
+  supermemo_export_already_linked: undefined,
+  supermemo_import_batch_missing: undefined,
+  supermemo_update_source_changed: undefined,
+  supermemo_update_preview_required: undefined,
+  supermemo_update_additions_not_prepared: undefined,
+  supermemo_update_addition_missing: undefined,
+  supermemo_withdrawal_changed: undefined
 };
 
 export function superMemoNoticeKind(notice: SuperMemoNotice) {
@@ -36,7 +48,7 @@ export function previewFailure(error: unknown, fallback: NoticeKind = 'preview')
   const message = String(error).replace(/^(?:Error: )?(?:Error invoking remote method '[^']+': )?(?:Error: )*/, '');
   // Only show diagnostic identifiers emitted by this importer, never raw error text.
   for (const code of [cause, message]) {
-    if (Object.hasOwn(diagnosticKinds, code)) return { kind: diagnosticKinds[code]!, code };
+    if (Object.hasOwn(diagnosticKinds, code)) return { kind: diagnosticKinds[code] ?? fallback, code };
   }
   return fallback;
 }

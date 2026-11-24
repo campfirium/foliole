@@ -1,6 +1,6 @@
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { card, loadSource, openPreview, parameters } from './harness/superMemoImport';
+import { card, gradesStep, loadSource, openPreview, parameters, superMemoImportComplete } from './harness/superMemoImport';
 
 const importCommand = /^(Import from SuperMemo|从 SuperMemo 导入)$/;
 const previewTitle = /^(SuperMemo import|SuperMemo 导入)$/;
@@ -46,11 +46,25 @@ test('opens SuperMemo migration from the command palette and shares the draft wi
   await expect(reopened.getByText('Example', { exact: true })).toBeVisible();
 });
 
-test('shows the specific reason a valid XML export cannot be loaded', async ({ desktopWindow, desktopApp }, testInfo) => {
+for (const source of [
+  { name: 'WrongCount', xml: `<SuperMemoCollection><Count>2</Count>${card}</SuperMemoCollection>`,
+    code: 'supermemo_element_count_mismatch' },
+  { name: 'Malformed', xml: `<SuperMemoCollection><Count>1</Count>${card}`, code: 'supermemo_xml_malformed' }
+]) {
+  test(`shows the specific error code for ${source.name}`, async ({ desktopWindow, desktopApp }, testInfo) => {
+    const dialog = await openPreview(desktopWindow);
+    await loadSource(desktopApp, dialog, testInfo.outputPath(source.name), source.xml);
+    const notice = dialog.getByRole('alert').filter({ hasText: source.code });
+    await expect(notice.getByText(source.code, { exact: true })).toBeVisible();
+    await notice.screenshot({ path: testInfo.outputPath('supermemo-error-code.png') });
+  });
+}
+
+test('imports an unmodified export with a review after midnight', async ({ desktopWindow, desktopApp }, testInfo) => {
   const dialog = await openPreview(desktopWindow);
-  const wrongCount = `<SuperMemoCollection><Count>2</Count>${card}</SuperMemoCollection>`;
-  await loadSource(desktopApp, dialog, testInfo.outputPath('WrongCount'), wrongCount);
-  const notice = dialog.getByRole('alert').filter({ hasText: 'supermemo_element_count_mismatch' });
-  await expect(notice.getByText('supermemo_element_count_mismatch', { exact: true })).toBeVisible();
-  await notice.screenshot({ path: testInfo.outputPath('supermemo-error-code.png') });
+  const xml = `<SuperMemoCollection><Count>1</Count>${card.replace('Hour=3.5', 'Hour=25.789')}</SuperMemoCollection>`;
+  await loadSource(desktopApp, dialog, testInfo.outputPath('CrossMidnight'), xml);
+  await dialog.getByRole('button', { name: gradesStep }).click();
+  await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
+  await expect(superMemoImportComplete(desktopWindow)).toBeVisible();
 });

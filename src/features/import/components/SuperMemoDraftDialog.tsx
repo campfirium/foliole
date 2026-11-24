@@ -18,7 +18,7 @@ import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
 import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
-import { superMemoNoticeKind } from './superMemoNotice';
+import { previewFailure, superMemoNoticeKind } from './superMemoNotice';
 import { SuperMemoUpdateComplete } from './SuperMemoUpdateComplete';
 import { SuperMemoUpdateReview } from './SuperMemoUpdateReview';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
@@ -96,7 +96,8 @@ function useSourceContent({ source, setError }: ReturnType<typeof useSuperMemoDr
     }).catch(error => {
       if (!active) return;
       setCache({ source, elements: null });
-      if (/supermemo_(xml|collection)_updated/.test(String(error))) setError('xmlUpdated');
+      const notice = previewFailure(error);
+      if (superMemoNoticeKind(notice) === 'xmlUpdated') setError(notice);
     });
     return () => { active = false; };
   }, [open, source, setError]);

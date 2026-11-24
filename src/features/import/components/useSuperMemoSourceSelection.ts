@@ -6,6 +6,7 @@ import {
   getRuntimeSuperMemoSourceSelection, saveRuntimeSuperMemoPanel
 } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
+import { previewFailure } from './superMemoNotice';
 import { restoreSuperMemoDraft } from './superMemoSavedDraft';
 import type { DraftState } from './useSuperMemoDraft';
 
@@ -17,8 +18,8 @@ function useRestorePanel(state: DraftState, initialGrades: SuperMemoGradeMap) {
       if (!active || !selection) return;
       restoreSuperMemoDraft({ setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget },
         selection, initialGrades);
-    }).catch(() => {
-      if (active) setError('selectionRead');
+    }).catch(error => {
+      if (active) setError(previewFailure(error, 'selectionRead'));
     }).finally(() => {
       if (active) setBusy(false);
     });
@@ -36,8 +37,8 @@ export function useSuperMemoSourceSelection(state: DraftState, initialGrades: Su
     try {
       if (snapshot) await saveRuntimeSuperMemoPanel(remembered, panel, snapshot);
       else await saveRuntimeSuperMemoPanel(remembered, panel);
-    } catch {
-      setError('save');
+    } catch (error) {
+      setError(previewFailure(error, 'save'));
     }
   }
 

@@ -58,7 +58,11 @@ function requireInvoke() {
 function parseSuperMemoXml<T>(xml: string, read: (document: Document) => T): T {
   if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('supermemo_xml_doctype');
   const document = new DOMParser().parseFromString(xml, 'application/xml');
-  if (document.documentElement.localName === 'parsererror') throw new Error('supermemo_xml_malformed');
+  // Chromium can insert a parser error into a partially parsed collection.
+  if (document.documentElement?.localName === 'parsererror' ||
+      document.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'parsererror').length > 0) {
+    throw new Error('supermemo_xml_malformed');
+  }
   try {
     return read(document);
   } catch (error) {
