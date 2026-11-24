@@ -1,16 +1,21 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdateContract';
 import { SettingsVersionBlock } from '../../features/settings/components/sections/SettingsVersionBlock';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { DEFAULT_UPDATE_STATE, type MobileChannels, type UpdateManifest } from '../../shared/platform/updateCheckModel';
+import { registerAppConfirmationHandler } from '../../shared/ui/appConfirmation';
 
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
 const updateMock = vi.hoisted(() => ({
   choice: vi.fn(),
   install: vi.fn(),
-  manifest: null as unknown,
-  state: { phase: 'idle' } as { phase: string; version?: string },
+  manifest: null as UpdateManifest | null,
+  mobileChannels: {} as MobileChannels,
+  manifestSubscribers: new Set<() => void>(),
+  state: { phase: 'idle' } as NativeDesktopUpdateState,
   subscriber: null as (() => void) | null
 }));
 
@@ -28,13 +33,15 @@ vi.mock('../../shared/platform/desktopUpdate', () => ({
 vi.mock(import('../../shared/platform/updateCheck'), async (importOriginal) => ({
   ...await importOriginal(),
   readUpdateCheckState: () => ({
+    ...DEFAULT_UPDATE_STATE,
     cachedManifest: updateMock.manifest,
-    lastCheckStatus: 'idle',
-    cachedReleaseNotes: null,
-    cachedMobileChannels: { apk: { status: 'available', version: '0.8.3' } }
+    cachedMobileChannels: updateMock.mobileChannels
   }),
   refreshCachedUpdateManifest: async () => undefined,
-  subscribeUpdateCheckState: () => () => undefined
+  subscribeUpdateCheckState: (subscriber: () => void) => {
+    updateMock.manifestSubscribers.add(subscriber);
+    return () => { updateMock.manifestSubscribers.delete(subscriber); };
+  }
 }));
 
 vi.mock('../../shared/ui/appChoice', () => ({ requestAppChoice: updateMock.choice }));
@@ -43,6 +50,8 @@ beforeEach(() => {
   window.localStorage.clear();
   updateMock.choice.mockReset();
   updateMock.manifest = null;
+  updateMock.mobileChannels = { apk: { status: 'available', version: '0.8.3' } };
+  updateMock.manifestSubscribers.clear();
   updateMock.install.mockReset();
   updateMock.state = { phase: 'idle' };
   updateMock.subscriber = null;
@@ -82,7 +91,7 @@ it('shows immediate persistent disabled feedback while Foliole restarts', async 
 });
 
 it('makes a failed restart retryable instead of looking unresponsive', () => {
-  updateMock.state = { errorCode: 'install-failed', phase: 'ready', version: '0.7.0' } as never;
+  updateMock.state = { errorCode: 'install-failed', phase: 'ready', version: '0.7.0' };
   renderWithLocalization(<WorkspaceUpdateAction />);
 
   expect(screen.getByRole('button', { name: 'Restart failed. Try again' })).toBeEnabled();
@@ -102,9 +111,14 @@ it('replays the reminder after one minute while the update stays ready', () => {
   expect(replayedButton).not.toBe(firstButton);
 });
 
-function gatedManifest() {
+function gatedManifest(): UpdateManifest {
   return {
-    releases: [{ syncBreaking: true, version: '0.8.3' }],
+    releases: [{
+      platforms: ['macos'],
+      syncBreaking: true,
+      url: 'https://github.com/campfirium/foliole/releases/tag/v0.8.3',
+      version: '0.8.3'
+    }],
     schemaVersion: 1
   };
 }
@@ -180,4 +194,27 @@ it('never installs a later candidate using the previous candidate’s confirmati
   await act(async () => confirm('install'));
 
   expect(updateMock.install).not.toHaveBeenCalled();
+});
+
+it('shows one installation confirmation when the awaited mobile channel is ready', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  updateMock.choice.mockResolvedValue('ios');
+  const confirm = vi.fn(async () => true);
+  const unregister = registerAppConfirmationHandler(confirm);
+  try {
+    renderWithLocalization(<><WorkspaceUpdateAction /><SettingsVersionBlock /></>);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart and install' })));
+    expect(confirm).not.toHaveBeenCalled();
+
+    await act(async () => {
+      updateMock.mobileChannels.ios = { status: 'available', version: '0.8.3' };
+      updateMock.manifestSubscribers.forEach(subscriber => subscriber());
+    });
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(updateMock.install).toHaveBeenCalledExactlyOnceWith('0.8.3');
+  } finally {
+    unregister();
+  }
 });

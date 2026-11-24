@@ -7,8 +7,8 @@ import {
   subscribeDesktopUpdateState
 } from '../../shared/platform/desktopUpdate';
 import { ToolbarActionGroup } from '../../shared/ui';
-
 import { useDesktopUpdateSyncGate } from '../../shared/ui/useDesktopUpdateSyncGate';
+
 
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import './WorkspaceUpdateAction.css';
