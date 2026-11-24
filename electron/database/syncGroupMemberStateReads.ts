@@ -40,3 +40,13 @@ export function completeEligibleRemovals(groupId: string, now: string) {
   }
   forgetDepartedExternalFolders(driver, groupId, now);
 }
+
+export function forgetExpiredDesktopExternalFolders(now = new Date().toISOString()) {
+  openDatabaseConnection().driver.transaction((driver) => {
+    const current = driver.queryOne<{ group_id: string }>(`SELECT local.group_id FROM sync_group_local_state local
+      JOIN sync_group_devices device ON device.group_id = local.group_id
+        AND device.device_identity_key = local.local_device_identity_key
+      WHERE local.singleton_id = 1 AND local.state = 'active' AND device.state = 'active'`);
+    if (current) forgetDepartedExternalFolders(driver, current.group_id, now);
+  });
+}

@@ -1,12 +1,16 @@
 import { app, BrowserWindow } from 'electron';
 
-import { runWithDatabaseConnectionOwner } from './database/connection.js';
+import { runDesktopDatabaseWrite } from './database/desktopDatabaseWriteQueue.js';
 import { loadExternalSearchFolders } from './database/externalSearchFolders.js';
+import { forgetExpiredDesktopExternalFolders } from './database/syncGroupMemberStateReads.js';
 import { submitDesktopOperation } from './desktopOperations.js';
 import { createExternalSearchBackgroundRefreshController } from './externalSearchBackgroundRefresh.js';
 
 const externalSearchBackgroundRefresh = createExternalSearchBackgroundRefreshController({
-  readFolders: () => runWithDatabaseConnectionOwner(loadExternalSearchFolders),
+  readFolders: () => runDesktopDatabaseWrite('background', () => {
+    forgetExpiredDesktopExternalFolders();
+    return loadExternalSearchFolders();
+  }),
   rebuild: () =>
     submitDesktopOperation('external-search-refresh', {
       failureLabel: '[external-search] background refresh failed',
