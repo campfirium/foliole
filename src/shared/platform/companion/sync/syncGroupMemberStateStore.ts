@@ -18,8 +18,10 @@ import {
 } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
+import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { loadVisibleCompanionExternalFolderIds, publishCompanionExternalVisibilityChanged } from './companionExternalVisibility';
 import { assertCompanionPeerProofFresh, loadCompanionLocalNodeProof } from './nodeVersionCompanionPeerProof';
 import { assertIncomingProtocolCompatible, canMergeRestoreSourceMembers, companionMemberStateReady } from './syncGroupMemberStateGuards.js';
 import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads';
@@ -39,60 +41,73 @@ export async function applyCompanionSyncGroupMemberState(
   authenticatedDeviceId: string
 ) {
   assertIncomingProtocolCompatible(incoming);
-  return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(
-    (db) => db.transaction(async (tx) => {
-      const context = await loadContext(tx);
-      if (!context || incoming.group_id !== context.groupId ||
-          incoming.sender_device_identity_key !== authenticatedDeviceId) {
-        throw new Error('sync_group_member_state_identity_mismatch');
-      }
-      const peerAdoptionKey = syncGroupPeerAdoptionKey(context.groupId, authenticatedDeviceId);
-      if (incoming.adopting_from === context.localDeviceId) await tx.run(
-        `INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, 'true', ?)
-         ON CONFLICT(key) DO UPDATE SET value = 'true', updated_at = excluded.updated_at`,
-        [peerAdoptionKey, new Date().toISOString()]);
-      else await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [peerAdoptionKey]);
-      let localRestore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
-      if (incoming.restore) {
-        localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
-      }
-      const adoption = await loadSyncGroupLocalAdoption(tx);
-      if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);
-      const normalSyncReady = companionMemberStateReady(incoming, adoption, localRestore, context.localDeviceId) &&
-        (adoption ? true : incoming.adopting_from === context.localDeviceId ? !await loadSyncGroupLocalExpiry(tx, context.groupId)
-          : await syncGroupMembersCurrent(tx, context.groupId, authenticatedDeviceId, incoming.coverage));
-      if (!normalSyncReady) {
-        if (!adoption && await canMergeRestoreSourceMembers(tx, incoming, localRestore, context.localDeviceId)) {
-          await mergeMemberMetadata(tx, incoming, context.localDeviceId);
-        }
-        return { local_exited: false, normal_sync_ready: false, state: await loadState(tx, context) };
-      }
-      if (!adoption && incoming.adopting_from !== context.localDeviceId) {
-        await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
-      }
-      if (incoming.adopting_from === context.localDeviceId) {
-        await tx.run('DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
-          [incoming.group_id, authenticatedDeviceId]);
-      }
+  return runCompanionSyncWriterTask(async () => {
+    const scope = getCompanionReadingScope();
+    const { visibleBefore, visibleAfter, ...result } = await getIosCompanionDatabaseOwner().runWriter(
+      db => db.transaction(tx => applyMemberState(tx, incoming, authenticatedDeviceId)), { kind: 'business' }
+    );
+    publishCompanionExternalVisibilityChanged(visibleBefore, visibleAfter, scope);
+    return result;
+  });
+}
+
+async function applyMemberState(tx: DbPort, incoming: SyncGroupMemberStatePayload, authenticatedDeviceId: string) {
+  const context = await loadContext(tx);
+  if (!context || incoming.group_id !== context.groupId ||
+      incoming.sender_device_identity_key !== authenticatedDeviceId) {
+    throw new Error('sync_group_member_state_identity_mismatch');
+  }
+  const visibleBefore = await loadVisibleCompanionExternalFolderIds(tx);
+  const peerAdoptionKey = syncGroupPeerAdoptionKey(context.groupId, authenticatedDeviceId);
+  if (incoming.adopting_from === context.localDeviceId) await tx.run(
+    `INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, 'true', ?)
+     ON CONFLICT(key) DO UPDATE SET value = 'true', updated_at = excluded.updated_at`,
+    [peerAdoptionKey, new Date().toISOString()]);
+  else await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [peerAdoptionKey]);
+  let localRestore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
+  if (incoming.restore) {
+    localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
+  }
+  const adoption = await loadSyncGroupLocalAdoption(tx);
+  if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);
+  const normalSyncReady = companionMemberStateReady(incoming, adoption, localRestore, context.localDeviceId) &&
+    (adoption ? true : incoming.adopting_from === context.localDeviceId ? !await loadSyncGroupLocalExpiry(tx, context.groupId)
+      : await syncGroupMembersCurrent(tx, context.groupId, authenticatedDeviceId, incoming.coverage));
+  if (!normalSyncReady) {
+    if (!adoption && await canMergeRestoreSourceMembers(tx, incoming, localRestore, context.localDeviceId)) {
       await mergeMemberMetadata(tx, incoming, context.localDeviceId);
-      const now = new Date().toISOString();
-      let localExited = false;
-      for (const removal of await loadRemovals(tx, incoming.group_id)) {
-        if (removal.superseded_at) continue;
-        const targetsLocal = removal.target_device_identity_key === context.localDeviceId;
-        await persistRemovalConfirmation(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
-          targetsLocal ? 'target_exit' : 'enforced', now);
+    }
+    return loadMemberStateResult(tx, context, visibleBefore, false, false);
+  }
+  if (!adoption && incoming.adopting_from !== context.localDeviceId) {
+    await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
+  }
+  if (incoming.adopting_from === context.localDeviceId) {
+    await tx.run('DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
+      [incoming.group_id, authenticatedDeviceId]);
+  }
+  await mergeMemberMetadata(tx, incoming, context.localDeviceId);
+  const now = new Date().toISOString();
+  let localExited = false;
+  for (const removal of await loadRemovals(tx, incoming.group_id)) {
+    if (removal.superseded_at) continue;
+    const targetsLocal = removal.target_device_identity_key === context.localDeviceId;
+    await persistRemovalConfirmation(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
+      targetsLocal ? 'target_exit' : 'enforced', now);
+    if (targetsLocal) {
+      await persistLocalExit(tx, context, now);
+      localExited = true;
+    }
+  }
+  await completeEligibleRemovals(tx, context.groupId, now);
+  return loadMemberStateResult(tx, context, visibleBefore, localExited, true);
+}
 
-
-        if (targetsLocal) {
-          await persistLocalExit(tx, context, now);
-          localExited = true;
-        }
-      }
-      await completeEligibleRemovals(tx, context.groupId, now);
-      return { local_exited: localExited, normal_sync_ready: true, state: await loadState(tx, context) };
-    }), { kind: 'business' }
-  ));
+async function loadMemberStateResult(db: DbPort, context: Context, visibleBefore: Set<string>,
+  localExited: boolean, normalSyncReady: boolean) {
+  const state = await loadState(db, context);
+  const visibleAfter = await loadVisibleCompanionExternalFolderIds(db);
+  return { visibleBefore, visibleAfter, local_exited: localExited, normal_sync_ready: normalSyncReady, state };
 }
 
 export async function isCompanionSyncGroupDeviceBlocked(groupId: string, deviceId: string) {

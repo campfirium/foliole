@@ -59,12 +59,15 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
     await files({ operation: 'write-state', state: JSON.stringify(state) });
     assertOwner();
   };
-  const revision = companionAttachmentRevisionGuard(owner, assertOwner);
+  const readRevision = request.action === 'clean'
+    ? (db: DbPort) => attachmentDatabaseRevision(db, owner.committedWrites.usageChangeCount)
+    : attachmentDatabaseRevision;
+  const revision = companionAttachmentRevisionGuard(owner, assertOwner, readRevision);
   const updateAvailability = companionAttachmentFileOperation(owner, files, revision.write, signal);
   return maintainAttachments({
     generation,
     references: () => request.action === 'observe'
-      ? readCompanionObservationReferences(owner, generation, signal) : readCompanionAttachmentReferences(owner, signal),
+      ? readCompanionObservationReferences(owner, generation, signal) : readCompanionAttachmentReferences(owner, signal, readRevision),
     inventory: async (trash) => {
       const result = await files({ operation: 'inventory', trash });
       if (!result.files) throw new Error('attachment_inventory_missing');
@@ -90,12 +93,13 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
   }, request, day, signal);
 }
 
-function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner, assertOwner: () => void) {
+function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner, assertOwner: () => void,
+  readRevision: (db: DbPort) => Promise<string>) {
   let activeDb: DbPort | undefined;
   let expectedRevision: string | undefined;
   const check = async (db: DbPort, snapshotRevision: string) => {
     assertOwner();
-    if ((expectedRevision ?? snapshotRevision) !== await attachmentDatabaseRevision(db)) {
+    if ((expectedRevision ?? snapshotRevision) !== await readRevision(db)) {
       throw new Error('attachment_scan_database_changed');
     }
     assertOwner();
@@ -105,7 +109,7 @@ function companionAttachmentRevisionGuard(owner: CapacitorCompanionDatabaseOwner
       await check(tx, snapshotRevision);
       return action(tx);
     });
-    expectedRevision = await attachmentDatabaseRevision(db);
+    expectedRevision = await readRevision(db);
     return result;
   }, { kind: 'business' });
   const withStableRevision: AttachmentMaintenancePort['withStableRevision'] = (snapshotRevision, action) =>

@@ -1,7 +1,8 @@
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
-import { iosSearchParams, normalizeRow, readIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { iosSearchParams, normalizeRow } from './iosCompanionActiveDatabase';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 type SearchKind = 'topicSearch' | 'externalDocumentSearch' | 'pdfPageTextSearch';
 
@@ -18,12 +19,11 @@ async function readResults(db: DbPort, kind: SearchKind, query: string) {
   return rows.map((row) => normalizeRow(row, definition.columns));
 }
 
-export function loadCompanionSearchSnapshot(query: string) {
-  // The owner serializes this whole operation with production writes. Do not
-  // enqueue separate owner reads between categories or keep a transaction open.
-  return readIosCompanionDatabase(async (db) => ({
+export function loadCompanionSearchSnapshot(query: string, signal?: AbortSignal) {
+  // Search keeps one committed view. Opening or copying an article needs a separate read.
+  return getIosCompanionDatabaseOwner().readSnapshot(async (db) => ({
     topics: await readResults(db, 'topicSearch', query),
     pdf: await readResults(db, 'pdfPageTextSearch', query),
     external: await readResults(db, 'externalDocumentSearch', query)
-  }));
+  }), signal, { allowInteractiveBorrow: false });
 }

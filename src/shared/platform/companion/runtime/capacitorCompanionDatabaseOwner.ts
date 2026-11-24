@@ -128,8 +128,9 @@ export class CapacitorCompanionDatabaseOwner {
     return this.enqueue(() => task(this.requireDb()));
   }
 
-  readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    return this.enqueueSnapshot(task, signal);
+  readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal,
+    options?: { allowInteractiveBorrow: false }): Promise<T> {
+    return this.enqueueSnapshot(task, signal, options?.allowInteractiveBorrow);
   }
 
   async readInteractiveSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -140,10 +141,10 @@ export class CapacitorCompanionDatabaseOwner {
     return this.snapshots!.readInteractive(task, signal);
   }
 
-  private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal, borrowable = true): Promise<T> {
     const registered = await this.enqueue(() => {
       this.requireDb();
-      return Promise.resolve({ result: this.snapshots!.read(task, signal) });
+      return Promise.resolve({ result: this.snapshots!.read(task, signal, borrowable) });
     });
     return registered.result;
   }
@@ -176,7 +177,7 @@ export class CapacitorCompanionDatabaseOwner {
     const libraryChange = isLibraryChange(write.kind);
     if (libraryChange) this.abortBackgroundReaders();
     return timeFlowQueue(write.timing, write.queue ?? 'mutation-writer', execute => this.enqueue(execute),
-      () => timeFlow(write.timing, 'write', () => this.committedWrites.write(this.requireDb(), task, libraryChange)));
+      () => timeFlow(write.timing, 'write', () => this.committedWrites.write(this.requireDb(), task, write.kind)));
   }
 
   runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>,
@@ -185,7 +186,7 @@ export class CapacitorCompanionDatabaseOwner {
     if (libraryChange) this.abortBackgroundReaders();
     return timeFlowQueue(write.timing, 'mutation-writer', execute => this.enqueue(execute),
       () => task(this.requireDb(), execute => timeFlow(write.timing, 'write',
-        () => this.committedWrites.write(this.requireDb(), execute, libraryChange))));
+        () => this.committedWrites.write(this.requireDb(), execute, write.kind))));
   }
 
   private abortBackgroundReaders() {
@@ -258,6 +259,7 @@ export class CapacitorCompanionDatabaseOwner {
     await this.manager.closeConnection(COMPANION_DATABASE_NAME, false);
     this.connection = null;
     this.db = null;
+    this.committedWrites.resetUsageChanges();
     this.journalMode = null;
     this.path = null;
     this.snapshots = null;

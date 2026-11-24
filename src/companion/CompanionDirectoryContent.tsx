@@ -143,14 +143,24 @@ function CompanionDirectoryListContent(props: {
   );
 }
 
-export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
+function ExternalArticleFallback({ document, onExit }: {
+  document: ReturnType<typeof useCompanionExternalDocument>;
+  onExit(): void;
+}) {
   const t = useTranslation();
+  return <section aria-busy={document === undefined} className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
+    <AppButton onClick={onExit} variant="ghost">{t('companion.back')}</AppButton>
+    {document === null ? <p role="status">{t('companion.search.unavailable')}</p> : null}
+  </section>;
+}
+
+export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
   const selectedNode = (props.selection.kind === 'virtual' || props.selection.kind === 'internal')
     ? props.snapshot?.nodesById[props.selection.nodeId] : undefined;
   const folderId = selectedNode?.virtualFilter && !readDiveNode(selectedNode) ? selectedNode.id : null;
   useEffect(() => folderId ? retainCompanionOpenVirtualFolder(folderId) : undefined, [folderId]);
   const directory = useCompanionExternalDirectory();
-  const externalDocument = useCompanionExternalDocument(props.selection);
+  const externalDocument = useCompanionExternalDocument(props.selection.kind === 'externalDocument' ? props.selection.documentId : null);
   const { sections } = useCompanionDirectorySections({
     directory,
     selection: props.selection,
@@ -191,11 +201,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     );
   }
 
-  if (props.articleOnly) return <section aria-busy="true" className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
-    <AppButton onClick={exitPending} variant="ghost">
-      {t('companion.back')}
-    </AppButton>
-  </section>;
+  if (props.articleOnly) return <ExternalArticleFallback document={externalDocument} onExit={exitPending} />;
 
   return <CompanionDirectoryListContent
     directory={directory} onStartDive={props.onStartDive}

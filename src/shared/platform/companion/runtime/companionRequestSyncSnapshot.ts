@@ -30,8 +30,8 @@ export class CompanionRequestSyncSnapshots {
   constructor(private readonly manager: CapacitorCompanionDatabaseManager,
     private readonly platform: 'android' | 'ios') {}
 
-  read<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    return this.enqueue(execute, signal, true);
+  read<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal, borrowable = true): Promise<T> {
+    return this.enqueue(execute, signal, borrowable);
   }
 
   async readInteractive<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {

@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
-
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { loadCompanionExternalDocument, type CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
+import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 import { AppButton } from '../shared/ui';
 
 import { useCompanionArticleExit } from './CompanionArticleTransition';
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import type { CompanionSearchMatch } from './companionSearchMatch';
+import { useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
 export function CompanionSearchExternalArticle(props: {
   document: Pick<CompanionExternalDocumentSearchResult, 'document_id'>;
@@ -16,22 +15,13 @@ export function CompanionSearchExternalArticle(props: {
 }) {
   const t = useTranslation();
   const exitPending = useCompanionArticleExit(props.onExit);
-  const id = props.document.document_id;
-  const [loaded, setLoaded] = useState<{ id: string; document: Awaited<ReturnType<typeof loadCompanionExternalDocument>> } | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    setLoaded(null);
-    void loadCompanionExternalDocument(id).then((document) => {
-      if (!cancelled) setLoaded({ id, document });
-    }).catch(() => { if (!cancelled) setLoaded({ id, document: null }); });
-    return () => { cancelled = true; };
-  }, [id]);
-  if (loaded?.id === id && loaded.document) return (
+  const document = useCompanionExternalDocument(props.document.document_id);
+  if (document) return (
     <ImmersiveReadableArticle searchMatch={props.searchMatch} onExit={props.onExit}
-      readableArticle={toReadableExternalArticle(loaded.document)} snapshot={null} />
+      readableArticle={toReadableExternalArticle(document)} snapshot={null} />
   );
   return <section className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
     <AppButton onClick={exitPending} variant="ghost">{t('companion.back')}</AppButton>
-    <p role="status">{t(loaded?.id === id ? 'companion.search.unavailable' : 'companion.search.loading')}</p>
+    <p role="status">{t(document === null ? 'companion.search.unavailable' : 'companion.search.loading')}</p>
   </section>;
 }

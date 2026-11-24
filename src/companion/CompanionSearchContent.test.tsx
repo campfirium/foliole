@@ -54,7 +54,7 @@ describe('CompanionSearchContent presentation', () => {
     renderWithLocalization(<CompanionSearchContent />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
-    await waitFor(() => expect(searchCompanionFullText).toHaveBeenCalledWith('alpha'));
+    await waitFor(() => expect(searchCompanionFullText).toHaveBeenCalledWith('alpha', expect.any(AbortSignal)));
     expect(screen.getByText('Topics')).toBeInTheDocument();
     expect(screen.getByText('Topic Alpha')).toBeInTheDocument();
     expect(screen.getByText('PDF text')).toBeInTheDocument();

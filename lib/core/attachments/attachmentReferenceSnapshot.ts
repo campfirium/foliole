@@ -1,9 +1,11 @@
 import type { DbPort } from '../sync/dbPort.js';
 import { loadNodeOwnedArticleResourceNeeds } from '../sync/nodeOwnedArticleResourceNeeds.js';
 
-export async function attachmentDatabaseRevision(port: DbPort) {
+export async function attachmentDatabaseRevision(port: DbPort, excludedChanges?: number) {
   const data = await port.query('PRAGMA data_version');
-  const changes = await port.query('SELECT total_changes() AS changes');
+  const changes = excludedChanges === undefined
+    ? await port.query('SELECT total_changes() AS changes')
+    : await port.query('SELECT total_changes() - ? AS changes', [excludedChanges]);
   return JSON.stringify([data, changes]);
 }
 

@@ -55,3 +55,20 @@ it('leaves the native item pending when persistence fails', async () => {
   })).rejects.toThrow('storage unavailable');
   expect(runtime.acknowledge).not.toHaveBeenCalled();
 });
+
+it('reports the oversized share while acknowledging a later valid share', async () => {
+  const oversized = { delivery_id: '00000000-0000-4000-8000-000000000002',
+    received_at: '2026-09-21T00:00:00.000Z', parts: [{ kind: 'text', value: '中'.repeat(349_526) }] };
+  const valid = { ...oversized, delivery_id: '00000000-0000-4000-8000-000000000003',
+    parts: [{ kind: 'text', value: 'Short note' }] };
+  runtime.load.mockResolvedValue([oversized, valid]);
+  runtime.persist.mockResolvedValue({ snapshot: {} });
+
+  await expect(consumeCompanionShareInbox({
+    bootstrapState: { device_id: 'device' }, refreshAfterMutation: vi.fn(),
+    state: { workspace_snapshot: {} as never }
+  })).rejects.toThrow('text_body_too_large');
+  expect(runtime.persist).toHaveBeenCalledTimes(1);
+  expect(runtime.persist).toHaveBeenCalledWith(expect.objectContaining({ text: 'Short note' }));
+  expect(runtime.acknowledge.mock.calls).toEqual([[valid.delivery_id]]);
+});

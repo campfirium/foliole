@@ -61,11 +61,12 @@ export async function searchCompanionFullText(query: string, limit?: number, off
   return { external, pdf, strategy, topics };
 }
 
-export async function searchCompanionFullTextSnapshot(query: string): Promise<CompanionFullTextSearchResults> {
+export async function searchCompanionFullTextSnapshot(query: string, signal?: AbortSignal): Promise<CompanionFullTextSearchResults> {
   const normalizedQuery = query.trim();
   const strategy = await loadCompanionFullTextSearchStrategyOrDefault();
   if (!normalizedQuery || !isNativeCompanionTopicSearchRuntime()) return { external: [], pdf: [], strategy, topics: [] };
-  const snapshot = await loadCompanionSearchSnapshot(normalizedQuery);
+  signal?.throwIfAborted();
+  const snapshot = await loadCompanionSearchSnapshot(normalizedQuery, signal);
   return {
     strategy,
     topics: (snapshot.topics as unknown as NativeTopicSearchResult[]).map(toCompanionTopicSearchResult),

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { TextBodyTooLargeError } from '../../lib/core/nodes/textBodyBudget';
+
 import { consumeCompanionShareInbox, listenForCompanionShares } from './companionShareInboxRuntime';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function useCompanionShareInbox(workspace: ReturnType<typeof useCompanionWorkspaceSync>) {
   const workspaceRef = useRef(workspace);
   workspaceRef.current = workspace;
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<false | 'incomplete' | 'text-too-large'>(false);
   const [pending, setPending] = useState(false);
   const retryRef = useRef<() => void>(() => {});
   const hasWorkspaceSnapshot = Boolean(workspace.state.workspace_snapshot);
@@ -26,8 +28,8 @@ export function useCompanionShareInbox(workspace: ReturnType<typeof useCompanion
         try {
           await consumeCompanionShareInbox(workspaceRef.current);
           if (!disposed) setFailed(false);
-        } catch {
-          if (!disposed) setFailed(true);
+        } catch (error) {
+          if (!disposed) setFailed(error instanceof TextBodyTooLargeError ? 'text-too-large' : 'incomplete');
         }
       } while (!disposed && rerun);
       running = false;
@@ -41,7 +43,7 @@ export function useCompanionShareInbox(workspace: ReturnType<typeof useCompanion
         if (disposed) void handle.remove();
         else remove = () => handle.remove();
       })
-      .catch(() => { if (!disposed) setFailed(true); });
+      .catch(() => { if (!disposed) setFailed('incomplete'); });
     return () => {
       disposed = true;
       retryRef.current = () => {};
