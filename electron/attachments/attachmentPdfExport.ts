@@ -5,8 +5,10 @@ import { dialog, type BrowserWindow } from 'electron';
 
 import type { NativeExportNodePdfResult } from '../../lib/platform/nativeUtilityContract.js';
 import { listNodeAttachments } from '../database/attachments.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
+import { readAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
 
 function suggestedPdfName(originalName: string | null) {
@@ -31,19 +33,26 @@ export async function exportNodePdf(
   nodeId: string,
   window: BrowserWindow | null
 ): Promise<NativeExportNodePdfResult> {
-  const link = listNodeAttachments(nodeId).find(
-    (entry) => entry.role === 'reference' && entry.attachment.mimeType === 'application/pdf'
-  );
-  if (!link) return { path: null, status: 'not_found' };
+  const source = await runWithDatabaseConnectionOwner(() => {
+    const link = listNodeAttachments(nodeId).find(
+      (entry) => entry.role === 'reference' && entry.attachment.mimeType === 'application/pdf'
+    );
+    const library = readAttachmentLibraryPathSnapshot();
+    if (!link || !library) return null;
+    return {
+      assetsDir: library.assetsDir,
+      storageKey: `${link.attachmentId}.pdf`,
+      name: loadNodeSourceDetails(nodeId)?.importSource?.source_name ?? link.attachment.originalName
+    };
+  });
+  if (!source) return { path: null, status: 'not_found' };
 
-  const resolved = await resolveAttachmentFile(`${link.attachmentId}.pdf`);
+  const resolved = await resolveAttachmentFile(source.storageKey, source.assetsDir);
   if (resolved.status !== 'ready') return { path: null, status: resolved.status };
 
   const options = {
     buttonLabel: 'Save PDF',
-    defaultPath: suggestedPdfName(
-      loadNodeSourceDetails(nodeId)?.importSource?.source_name ?? link.attachment.originalName
-    ),
+    defaultPath: suggestedPdfName(source.name),
     filters: [{ extensions: ['pdf'], name: 'PDF files' }],
     title: 'Export PDF'
   };

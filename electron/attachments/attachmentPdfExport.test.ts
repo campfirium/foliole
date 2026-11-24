@@ -18,6 +18,12 @@ const { showSaveDialog, listNodeAttachments, loadAttachmentResourceDescription, 
 
 vi.mock('electron', () => ({ dialog: { showSaveDialog } }));
 vi.mock('../database/attachments.js', () => ({ listNodeAttachments }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+}));
+vi.mock('./attachmentLibraryPathSnapshot.js', () => ({
+  readAttachmentLibraryPathSnapshot: () => ({ assetsDir: '/library/Assets' })
+}));
 vi.mock('../database/attachmentResourceDescription.js', () => ({ loadAttachmentResourceDescription }));
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('./resourceResolver.js', () => ({ resolveAttachmentFile }));
