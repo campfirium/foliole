@@ -1,47 +1,60 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
+import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import {
+  getCompanionExternalVisibilityRevision, subscribeCompanionExternalVisibility
+} from '../shared/platform/companion/sync/companionExternalVisibility';
 import {
   loadCompanionExternalDirectory,
   loadCompanionExternalDocument,
-  type CompanionExternalDirectory
+  type CompanionExternalDirectory,
+  type CompanionExternalDocument
 } from '../shared/platform/companionExternalDocuments';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 
+const emptyDirectory: CompanionExternalDirectory = { entries: [], folders: [] };
+type LibraryRevision = { scope: object; revision: number };
+
+function useExternalLibraryRevision() {
+  return {
+    scope: useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope),
+    revision: useSyncExternalStore(subscribeCompanionExternalVisibility, getCompanionExternalVisibilityRevision)
+  };
+}
+
 export function useCompanionExternalDirectory() {
-  const [directory, setDirectory] = useState<CompanionExternalDirectory>({ entries: [], folders: [] });
+  const { scope, revision } = useExternalLibraryRevision();
+  const [loaded, setLoaded] = useState<(LibraryRevision & { directory: CompanionExternalDirectory }) | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void loadCompanionExternalDirectory().then((nextDirectory) => {
-      if (!cancelled) setDirectory(nextDirectory);
+    void loadCompanionExternalDirectory().then(directory => {
+      if (!cancelled) setLoaded({ scope, revision, directory });
+    }).catch(() => {
+      if (!cancelled) setLoaded({ scope, revision, directory: emptyDirectory });
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return () => { cancelled = true; };
+  }, [scope, revision]);
 
-  return directory;
+  return loaded?.scope === scope && loaded.revision === revision ? loaded.directory : emptyDirectory;
 }
 
 export function useCompanionExternalDocument(selection: CompanionDirectorySelection) {
-  const [document, setDocument] = useState<Awaited<ReturnType<typeof loadCompanionExternalDocument>>>(null);
+  const { scope, revision } = useExternalLibraryRevision();
+  const id = selection.kind === 'externalDocument' ? selection.documentId : null;
+  const [loaded, setLoaded] = useState<(LibraryRevision & { id: string; document: CompanionExternalDocument | null }) | null>(null);
 
   useEffect(() => {
+    if (id === null) return;
     let cancelled = false;
-    setDocument(null);
-    if (selection.kind !== 'externalDocument') {
-      return () => {
-        cancelled = true;
-      };
-    }
-    void loadCompanionExternalDocument(selection.documentId).then((nextDocument) => {
-      if (!cancelled) setDocument(nextDocument);
+    void loadCompanionExternalDocument(id).then(document => {
+      if (!cancelled) setLoaded({ scope, revision, id, document });
+    }).catch(() => {
+      if (!cancelled) setLoaded({ scope, revision, id, document: null });
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [selection]);
+    return () => { cancelled = true; };
+  }, [scope, revision, id]);
 
-  return document;
+  return loaded?.scope === scope && loaded.revision === revision && loaded.id === id ? loaded.document : undefined;
 }

@@ -191,10 +191,11 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     );
   }
 
-  if (props.articleOnly) return <section aria-busy="true" className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
+  if (props.articleOnly) return <section aria-busy={externalDocument === undefined} className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
     <AppButton onClick={exitPending} variant="ghost">
       {t('companion.back')}
     </AppButton>
+    {externalDocument === null ? <p role="status">{t('companion.search.unavailable')}</p> : null}
   </section>;
 
   return <CompanionDirectoryListContent

@@ -20,6 +20,7 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/sy
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { publishCompanionExternalVisibilityChanged } from './companionExternalVisibility';
 import { assertCompanionPeerProofFresh, loadCompanionLocalNodeProof } from './nodeVersionCompanionPeerProof';
 import { assertIncomingProtocolCompatible, canMergeRestoreSourceMembers, companionMemberStateReady } from './syncGroupMemberStateGuards.js';
 import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads';
@@ -39,13 +40,16 @@ export async function applyCompanionSyncGroupMemberState(
   authenticatedDeviceId: string
 ) {
   assertIncomingProtocolCompatible(incoming);
-  return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(
+  const { externalVisibilityChanged, ...result } = await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(
     (db) => db.transaction(async (tx) => {
       const context = await loadContext(tx);
       if (!context || incoming.group_id !== context.groupId ||
           incoming.sender_device_identity_key !== authenticatedDeviceId) {
         throw new Error('sync_group_member_state_identity_mismatch');
       }
+      const departedBefore = new Set((await tx.query<{ device_identity_key: string }>(
+        "SELECT device_identity_key FROM sync_group_devices WHERE group_id = ? AND state = 'left'", [context.groupId]
+      )).map(device => device.device_identity_key));
       const peerAdoptionKey = syncGroupPeerAdoptionKey(context.groupId, authenticatedDeviceId);
       if (incoming.adopting_from === context.localDeviceId) await tx.run(
         `INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, 'true', ?)
@@ -65,7 +69,7 @@ export async function applyCompanionSyncGroupMemberState(
         if (!adoption && await canMergeRestoreSourceMembers(tx, incoming, localRestore, context.localDeviceId)) {
           await mergeMemberMetadata(tx, incoming, context.localDeviceId);
         }
-        return { local_exited: false, normal_sync_ready: false, state: await loadState(tx, context) };
+        return loadMemberStateResult(tx, context, departedBefore, false, false);
       }
       if (!adoption && incoming.adopting_from !== context.localDeviceId) {
         await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
@@ -90,9 +94,19 @@ export async function applyCompanionSyncGroupMemberState(
         }
       }
       await completeEligibleRemovals(tx, context.groupId, now);
-      return { local_exited: localExited, normal_sync_ready: true, state: await loadState(tx, context) };
+      return loadMemberStateResult(tx, context, departedBefore, localExited, true);
     }), { kind: 'business' }
   ));
+  if (externalVisibilityChanged) publishCompanionExternalVisibilityChanged();
+  return result;
+}
+
+async function loadMemberStateResult(db: DbPort, context: Context, departedBefore: Set<string>,
+  localExited: boolean, normalSyncReady: boolean) {
+  const state = await loadState(db, context);
+  const externalVisibilityChanged = state.devices.some(device =>
+    (device.state === 'left') !== departedBefore.has(device.device_identity_key));
+  return { externalVisibilityChanged, local_exited: localExited, normal_sync_ready: normalSyncReady, state };
 }
 
 export async function isCompanionSyncGroupDeviceBlocked(groupId: string, deviceId: string) {
