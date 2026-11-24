@@ -7,19 +7,21 @@ import type { DbPort } from './dbPort.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
-import { stageWebDavRelayPacket, webDavRelayPacketBytes, webDavRelayPacketDirectory } from './webDavRelayBodyOutbox.js';
+import { retiredWebDavRelayPacketSchema, stageWebDavRelayPacket, webDavRelayPacketBytes,
+  webDavRelayPacketDirectory } from './webDavRelayBodyOutbox.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection } from './webDavRelayCollections.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
 import { prepareWebDavRelayRepair, repairDemandSchema, WEB_DAV_REPAIR_SUFFIX } from './webDavRelayRepairWire.js';
 
 const packetSchema = z.object({
-  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.repair\.(?:dat|bin)$/u),
+  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.repair\.dat$/u),
   chunks: z.number().int().positive(),
   bytes: z.number().int().positive()
 });
 const stateSchema = z.object({
-  sent: z.array(z.string()), demand: repairDemandSchema, packet: packetSchema.optional(),
+  sent: z.array(z.string()), demand: repairDemandSchema,
+  packet: z.union([packetSchema, retiredWebDavRelayPacketSchema.transform(() => undefined)]).optional(),
   policy: z.string(), replace: z.boolean(), more: z.boolean()
 });
 type State = z.infer<typeof stateSchema>;
@@ -35,22 +37,22 @@ type Input = {
   lanConnected(): boolean;
 };
 
-const key = (scope: WebDavRelayBodyScope) => `${scope.key}:repair-outbox`;
-function directory(scope: WebDavRelayBodyScope) {
+export const webDavRelayRepairOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:repair-outbox`;
+export function webDavRelayRepairPacketDirectory(scope: WebDavRelayBodyScope) {
   const path = webDavRelayPacketDirectory(scope);
   const source = bytesToHex(sha256(new TextEncoder().encode(`${path}:repair`)));
   return `${path.slice(0, -64)}${source}`;
 }
 
 async function read(db: DbPort, scope: WebDavRelayBodyScope): Promise<State> {
-  const [row] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?', [key(scope)]);
+  const [row] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?', [webDavRelayRepairOutboxKey(scope)]);
   return row ? stateSchema.parse(JSON.parse(row.value)) : { sent: [], demand: [], policy: '', replace: false, more: false };
 }
 
 async function write(db: DbPort, scope: WebDavRelayBodyScope, state: State) {
   await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  [key(scope), JSON.stringify(state), new Date().toISOString()]);
+  [webDavRelayRepairOutboxKey(scope), JSON.stringify(state), new Date().toISOString()]);
 }
 
 export async function hasWebDavRelayRepairToSend(db: DbPort, scope: WebDavRelayBodyScope) {
@@ -70,7 +72,7 @@ export async function refreshWebDavRelayRepair(input: Input) {
   if (scope.attachmentPolicy.mode === 'off') {
     if (state.demand.length || state.sent.length || state.more) {
       await host.write(db => write(db, scope, { sent: [], demand: [], policy, replace: false, more: false }));
-      if (state.packet) await input.files.remove(directory(scope));
+      if (state.packet) await input.files.remove(webDavRelayRepairPacketDirectory(scope));
     }
     return;
   }
@@ -89,7 +91,7 @@ export async function refreshWebDavRelayRepair(input: Input) {
   const packet = sameDemand && replace === state.replace ? state.packet : undefined;
   const next = { sent: retained.sort(), demand, ...(packet ? { packet } : {}), policy, replace, more };
   if (JSON.stringify(next) !== JSON.stringify(state)) await host.write(db => write(db, scope, next));
-  if (state.packet && !packet) await input.files.remove(directory(scope));
+  if (state.packet && !packet) await input.files.remove(webDavRelayRepairPacketDirectory(scope));
 }
 
 async function collectDemand(input: Input, sent: string[]) {
@@ -131,7 +133,7 @@ export async function publishWebDavRelayRepair(input: Input) {
   if (input.lanConnected()) return false;
   const state = await host.readSnapshot(db => read(db, scope), signal);
   if (!state.demand.length) return false;
-  const slot = directory(scope);
+  const slot = webDavRelayRepairPacketDirectory(scope);
   const packet = state.packet ?? await stageWebDavRelayPacket(files, scope,
     await prepareWebDavRelayRepair(input, state.demand, state.replace), WEB_DAV_REPAIR_SUFFIX, slot);
   if (!state.packet) await host.write(db => write(db, scope, { ...state, packet }));

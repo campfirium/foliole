@@ -46,9 +46,10 @@ async function attachmentPeer(peer: RestorePeer) {
   }, get attachments() { return { ...source, ...receiver, needsSlice, needs: async () => (await needsSlice(() => false)).keys }; } };
 }
 
-export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
+export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy,
+  intercept?: Parameters<typeof setupDav>[1]) {
   const fixture = await restoreFixture();
-  const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL);
+  const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL, intercept);
   await new Promise<void>(resolve => dav.server.listen(0, '127.0.0.1', resolve));
   const peers = [await attachmentPeer(fixture.peer('source')), await attachmentPeer(await fixture.companionPeer('target'))] as const;
   const close = async () => {

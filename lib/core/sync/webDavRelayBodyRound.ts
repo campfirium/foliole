@@ -8,6 +8,7 @@ import { freezeWebDavRelayBodyPacket, readWebDavRelayBodyOutbox, webDavRelayPack
 import { receiveWebDavRelayBodyPackets } from './webDavRelayBodyReceive.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection } from './webDavRelayCollections.js';
+import { discardRetiredWebDavRelayPackets } from './webDavRelayOutboxDiscard.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
 import { isWebDavRelayReceiveDue, recordWebDavRelayReceive } from './webDavRelayReceiveFreshness.js';
 import { hasWebDavRelayRepairToSend, publishWebDavRelayRepair, refreshWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
@@ -35,6 +36,7 @@ export function runWebDavRelayBodyRound(input: Input) {
     await input.assertScope();
     if (input.foregroundReceive && (input.lanConnected() || !await input.host.readSnapshot(
       db => isWebDavRelayReceiveDue(db, input.scope.receiveScope), input.signal))) return input.progress;
+    await discardRetiredWebDavRelayPackets(input);
     return withWebDavAuthenticationPause(input.host, input.authentication, input.request, input.signal,
       request => runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange({ ...input, request })));
   });
