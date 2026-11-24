@@ -61,6 +61,7 @@ it('shows creation, moves, subtree trash and restore, and permanent removal with
   expectStructure();
   await mutate('restore_nodes', { nodeIds: ['created', 'child'] });
   expectStructure();
+  await mutate('soft_delete_nodes', { nodeIds: ['created', 'child'], deletedAt: new Date().toISOString() });
   await mutate('delete_nodes_permanently', { nodeIds: ['created', 'child'] });
   expectStructure();
   expect(useWorkspaceStore.getState().nodesById.created).toBeUndefined();
@@ -72,8 +73,9 @@ it('shows creation, moves, subtree trash and restore, and permanent removal with
 });
 
 it('publishes already committed deletion chunks when a later SQLite chunk fails', async () => {
-  for (const id of ['blocked', ...Array.from({ length: 10 }, (_, index) => `removed-${index}`)]) await create(id);
   const ids = ['blocked', ...Array.from({ length: 10 }, (_, index) => `removed-${index}`)];
+  for (const id of ids) await create(id);
+  await mutate('soft_delete_nodes', { nodeIds: ids, deletedAt: new Date().toISOString() });
   const view = renderHook(() => useWorkspaceContentChangedRefresh());
   await act(async () => { await Promise.resolve(); });
   invoke.mockClear();
@@ -104,7 +106,10 @@ it('refreshes a parent image changed by removing a child absent from the receive
   useWorkspaceStore.setState({ activeNodeId: 'image-parent' });
   await mutate('create_item', { ...node, nodeId: 'unknown-child', parentNodeId: 'image-parent', kind: 'item',
     anchorLink: { id: 'gone', kind: 'cloze', locator: { attachmentId: 'image', x: 0, y: 0, width: 0.5, height: 0.5 } } });
+  await mutate('soft_delete_nodes', { nodeIds: ['unknown-child'], deletedAt: now });
   expect(useWorkspaceStore.getState().nodesById['unknown-child']).toBeUndefined();
+  expect(useWorkspaceStore.getState().nodesById['image-parent']?.imageRegions)
+    .toEqual([{ attachmentId: 'image', regions: [region('gone'), region('keep')] }]);
   const view = renderHook(() => useWorkspaceContentChangedRefresh());
   await act(async () => { await Promise.resolve(); });
   invoke.mockClear();

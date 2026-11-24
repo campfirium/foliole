@@ -170,8 +170,12 @@ it('deletes all selected nodes from node-list context menu', async () => {
     const node2Button = getCurrentFolderTreeItem('Node 2');
     const node3Button = getCurrentFolderTreeItem('Node 3');
 
-    fireEvent.click(node2Button);
-    fireEvent.click(node3Button, { ctrlKey: true });
+    await act(async () => {
+      fireEvent.click(node2Button);
+      fireEvent.click(node3Button, { ctrlKey: true });
+      await vi.advanceTimersToNextTimerAsync();
+    });
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
     fireEvent.contextMenu(node3Button, { clientX: 56, clientY: 64 });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 

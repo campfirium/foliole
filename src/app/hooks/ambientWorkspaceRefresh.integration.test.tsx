@@ -25,7 +25,8 @@ it('loads an ordinary committed body through the actual preload without a full l
   expect(invoke.mock.calls.filter(([name]) => name === 'load_workspace_list_projection')).toHaveLength(1);
   expect(origin.webContents.send.mock.calls).toEqual([['foliole:workspace-content-changed', {
     scope: 'workspace', libraryScope: useWorkspaceStore.getState().libraryScope,
-    workspaceScope: { kind: 'nodes', nodeIds: ['topic'] }, refreshWorkspace: false
+    workspaceScope: { kind: 'nodes', nodeIds: ['topic'] }, refreshWorkspace: false,
+    backlinkSourceChange: { nodeId: 'topic', outgoingLinksChanged: false, titleChanged: false }
   }]]);
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id = ?', ['topic'])?.content).toBe(updated);
   view.unmount(); vi.useRealTimers(); closeDatabaseConnection();
