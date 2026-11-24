@@ -10,6 +10,7 @@ import { hasDiscussionChat } from './github-desktop-handoff-discussions.mjs';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 import { notifySecurityMonitor } from './security/security-monitor-notifications.mjs';
 import { refreshGithubSecurityOwner } from './security/github-security-import.mjs';
+import { dispatchPendingStoreReview } from './store-review-dispatch.mjs';
 
 export function resolveRepositoryRoot(moduleUrl = import.meta.url) {
   return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
@@ -167,6 +168,10 @@ function scan({ emit = false, includeExisting = false, scheduled = false } = {})
   const replyScan = collectReplyEvents(dueConfigs.replies, state, errors, cutoff);
   const events = [...listGithubMonitorEvents(dueConfigs, state, includeExisting, errors, renderTemplate),
     ...replyScan.events].filter((event) => !state.submitted[event.dedupeKey]);
+  const storeReview = emit ? dispatchPendingStoreReview(state, {
+    repository: configs.playReview?.repository ?? 'campfirium/foliole',
+    errors
+  }) : state.storeReviewDispatch;
   if (fullScan) {
     state.lastErrors = errors;
     state.lastCheckedAt = new Date().toISOString();
@@ -190,7 +195,7 @@ function scan({ emit = false, includeExisting = false, scheduled = false } = {})
       if (fullScan) securityNotifications = notifySecurityMonitor(REPO_ROOT, errors);
     }
   }
-  return { emit, events, stateFile: STATE_FILE, securityImport, securityNotifications };
+  return { emit, events, stateFile: STATE_FILE, securityImport, securityNotifications, storeReview };
 }
 
 async function monitor() {
