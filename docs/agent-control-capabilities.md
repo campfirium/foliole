@@ -87,6 +87,8 @@ Priority is a Foliole integer from 0 to 9. Timestamps require an offset and are 
 
 The mobile Flow progress indicator uses the current learning session. Its display stays in the app UI because it adds no new learning action or stored data.
 
+After a user saves a new learning-day start hour, reopening Flow on desktop or mobile builds the list for the new interval and counts completed actions in that interval. The library-wide setting and Flow session stay in the app UI.
+
 ### Importing an Item first review date
 
 With the same local permission, send `review_schedule` on an Item `materials/create` request. The CLI takes the same JSON through `--review-schedule`.

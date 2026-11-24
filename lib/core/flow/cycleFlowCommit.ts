@@ -10,6 +10,7 @@ import { chooseCycleCurrent, isCycleCurrentReady, reconcileCycle } from './cycle
 import { cycleWindow } from './cycleFlowSelection.js';
 import { sameCycleProgress } from './cycleFlowState.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
+import { differsFromStoredFlowWindow } from './dailyFlowDayWindow.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { flowDay, flowPlan } from './dailyFlowPlanning.js';
 import { acceptsRebuiltFlowSource } from './dailyFlowRebuildSource.js';
@@ -36,7 +37,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   if (!stored || stored.day_key !== args.token.dayKey ||
     (stored.revision !== args.token.revision && (!args.sourceSession?.cycle ||
       !sameCycleProgress(args.sourceSession, stored.session) && !acceptsRebuiltFlowSource(stored, args))) ||
-    (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
+    (!args.historyMode && (stored.day_key !== flowDay(args.now, settings) || differsFromStoredFlowWindow(stored, settings)))) throw new Error('daily_flow_changed');
   if (args.navigation) return commitDailyFlowNavigation(db, stored, args, settings, hash);
   const mode = stored.mode as ReviewSessionMode;
   const invalidated = stored.invalidated || stored.settings_key !== JSON.stringify(settings);

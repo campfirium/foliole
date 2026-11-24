@@ -10,6 +10,7 @@ import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
 import type { CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
+import { differsFromStoredFlowWindow } from './dailyFlowDayWindow.js';
 import { flowDay, flowPlan, fullDayCandidates } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -49,7 +50,8 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
   meta.reviewRemaining = remaining.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length;
   delete meta.change;
   if (captureChanges) meta.change = changes.change();
-  return { ...stored.session, cycle: meta };
+  const total = (stored.session.readTopicCount ?? 0) + (stored.session.reviewedItemCount ?? 0) + meta.remaining;
+  return { ...stored.session, totalNodeCount: Math.max(stored.session.totalNodeCount, total), cycle: meta };
 }
 
 async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
@@ -141,7 +143,8 @@ async function resumeStoredCycle(db: DailyFlowStore, session: DailyFlowSession, 
 export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
   let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
-  if (stored && stored.day_key !== dayKey) {
+  const previousRevision = stored?.revision ?? 0;
+  if (stored && (stored.day_key !== dayKey || differsFromStoredFlowWindow(stored, settings))) {
     await timeFlow(db.timing, 'day-reset', () => db.resetCycle());
     stored = null;
     args = { ...args, seed: undefined, preferredNodeId: undefined };
@@ -181,7 +184,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
   if (stored && unchanged && !captureChanges && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
   const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
-    revision: (stored?.revision ?? 0) + 1, session });
+    revision: previousRevision + 1, session });
   return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, saved.currentNodeId) };
 }
 

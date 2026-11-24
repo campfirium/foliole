@@ -4,7 +4,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import { commitCycleFlow } from './cycleFlowCommit.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
-import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
+import { dailyFlowSettingsForInstant, differsFromStoredFlowWindow } from './dailyFlowDayWindow.js';
 import { applyLocalDailyFlowOperations } from './dailyFlowLocalApplication.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
@@ -35,7 +35,7 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
     const config = await dailyFlowSettingsForInstant(tx, settings, args.now);
     if (args.dive) {
       const stored = await readDailyFlow(tx);
-      const global = stored?.day_key === flowDay(args.now, config) ? stored.session
+      const global = stored?.day_key === flowDay(args.now, config) && !differsFromStoredFlowWindow(stored, config) ? stored.session
         : (await openGlobalDailyFlow(tx, { now: args.now, mode: 'recommended', prepareOnly: true },
           config, persistence, previous, timing)).session;
       const store = createSqliteDailyFlowStore(tx, persistence);
@@ -51,11 +51,13 @@ async function openGlobalDailyFlow(tx: DbPort, args: DailyFlowOpenArgs, config: 
   let result = await openCycleFlow(tx, args, config, persistence, false, undefined, timing);
   await recordDailyFlowSync(tx, result, config, args.now);
   if (await applyLocalDailyFlowOperations(tx, args.now)) {
-    if (previous?.day_key !== result.session.daily!.dayKey) {
+    if (previous?.day_key !== result.session.daily!.dayKey || differsFromStoredFlowWindow(previous, config)) {
       const stored = (await readDailyFlow(tx))!;
       await saveCycleFlow(tx, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
         now: args.now, revision: stored.revision, session: { ...stored.session, currentNodeId: null,
           cycle: { ...stored.session.cycle!, scanAfter: 0 } } });
+      // The rewind only changes the cursor. The replayed rows still need reconciliation.
+      await tx.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
     }
     result = await openCycleFlow(tx, args, config, persistence, false, undefined, timing);
   }

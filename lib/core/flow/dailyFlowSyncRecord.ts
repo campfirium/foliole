@@ -11,15 +11,17 @@ import { writeDailyFlowSync } from './dailyFlowSyncWrites.js';
 export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, settings: DailyFlowSettings,
   now: string, command?: DailyFlowCommitArgs) {
   if (result.replayed) return;
-  const [head] = await db.query<{ root_id: string; head_id: string; day_start: string }>(
-    `SELECT p.root_id, p.head_id, f.day_start FROM daily_flow_sync_projection p
+  const [head] = await db.query<{ root_id: string; head_id: string; day_start: string; day_end: string }>(
+    `SELECT p.root_id, p.head_id, f.day_start, f.day_end FROM daily_flow_sync_projection p
      JOIN daily_flow_sync_facts f ON f.id = p.head_id WHERE p.id = 1`);
-  const sameDay = head && head.day_start === settings.dayWindow!.start;
+  const window = settings.dayWindow!;
+  const sameStart = head?.day_start === window.start;
+  const sameDay = sameStart && head.day_end === window.end;
   if (sameDay && !command) return;
   const id = command?.opId ?? crypto.randomUUID();
   const [latest] = await db.query<{ occurred_at: string }>(
     `SELECT MAX(occurred_at) AS occurred_at FROM daily_flow_sync_facts
-      WHERE kind!='create' AND day_start<? AND day_end>?`, [settings.dayWindow!.end, settings.dayWindow!.start]);
+      WHERE kind!='create' AND day_start<? AND day_end>?`, [window.end, window.start]);
   const occurredAt = new Date(Math.max(Date.parse(now), latest?.occurred_at ? Date.parse(latest.occurred_at) + 1 : 0)).toISOString();
   const session = withoutLocalCursor({ ...result.session, daily: undefined, candidateMembershipHash: undefined, rebuildSourceRevision: undefined });
   const history = command?.cycleReplay;
@@ -40,7 +42,7 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
     removedNodeIds: before?.filter(row => !retained.has(row.node_id)).map(row => row.node_id) ?? [] });
   // Keep the local before rows alongside the canonical fact, including rebuilt source baselines.
   await writeDailyFlowSync(db, fact, result,
-    result.session.cycle?.change?.before ?? command?.cycleReplay?.before, Boolean(command?.historyMode));
+    result.session.cycle?.change?.before ?? command?.cycleReplay?.before, Boolean(command?.historyMode), sameStart && !sameDay);
 }
 
 // The timed-queue resume cursor is device-local and never part of a shared operation record.

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createDailyFlowDayWindow } from '../../lib/core/flow/dailyFlowDayWindow';
 import { prepareDailyFlowPlans } from '../../lib/core/flow/dailyFlowPlanning';
+import { resolveReviewSessionProgress } from '../../lib/core/flow/flowSessionProgress';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { companionDailyFlowSettings, openCompanionDailyFlow, ownedCompanionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
@@ -28,20 +29,34 @@ beforeEach(async () => {
 });
 afterEach(async () => { await library.close(); });
 
-it('keeps the live day and current topic after changing the boundary, then adopts it in the next day', async () => {
-  const now = '2026-11-03T08:00:00.000Z';
+it.each([1, 2])('opens Flow on the saved boundary and keeps %i completed Topics', async completed => {
+  const now = new Date(2026, 10, 3, 12).toISOString();
   const open = (stamp: string) => openCompanionDailyFlow({ now: stamp, mode: 'recommended', preserveCurrent: true });
   const before = await open(now);
   expect(before.session.currentNodeId).not.toBeNull();
+  let session = before.session;
+  for (let index = 0; index < completed; index++) {
+    const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+    const read = await persistFlowMutation({ action: 'read', nodeId: session.currentNodeId!, now, snapshot,
+      history: { key: 'learning-settings', mode: 'recommended', session } });
+    session = read.session!;
+  }
+  expect(session.readTopicCount).toBe(completed);
   render(<CompanionLearningSettingsContent />);
   await changeLearningSetting('New day starts at', '10');
+  expect((await loadCompanionReviewSettings()).newDayStartsAtHour).toBe(10);
   const after = await open(now);
-  expect(after.session.dayWindow).toEqual(before.session.dayWindow);
-  expect(after.session.currentNodeId).toBe(before.session.currentNodeId);
-  expect(after.session.cycle?.remaining).toBe(before.session.cycle?.remaining);
-  const nextInstant = new Date(Date.parse(before.session.dayWindow!.end) + 60_000).toISOString();
-  const next = await open(nextInstant);
-  expect(next.session.dayWindow).toEqual(createDailyFlowDayWindow(nextInstant, 10));
+  const updated = createDailyFlowDayWindow(now, 10);
+  expect(updated.start).not.toBe(before.session.dayWindow?.start);
+  expect(after.session.dayWindow).toEqual(updated);
+  expect(after.session.currentNodeId).toBe(session.currentNodeId);
+  expect(resolveReviewSessionProgress(after.session)).toEqual({ reviewCompletedCount: completed, reviewQueueCount: 2 - completed });
+  const formerRollover = await open(before.session.dayWindow!.end);
+  expect(formerRollover.session.dayWindow).toEqual(updated);
+  expect(formerRollover.session.readTopicCount).toBe(completed);
+  const next = await open(updated.end);
+  expect(next.session.dayWindow).toEqual(createDailyFlowDayWindow(updated.end, 10));
+  expect(next.session.readTopicCount).toBe(0);
   const row = library.database.prepare('SELECT session_json FROM daily_flow_state').get() as { session_json: string };
   expect(JSON.parse(row.session_json).dayWindow).toEqual(next.session.dayWindow);
 });

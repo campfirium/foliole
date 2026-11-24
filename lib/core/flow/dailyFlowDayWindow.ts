@@ -18,10 +18,21 @@ export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDa
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-/** The creator fixes the interval; a receiving host does not reinterpret its timezone. */
+export function differsFromStoredFlowWindow(stored: CycleStored, settings: DailyFlowSettings) {
+  const previous = stored.session.dayWindow;
+  const next = settings.dayWindow;
+  return Boolean(previous && next && (previous.start !== next.start || previous.end !== next.end));
+}
+
+/** Keep the active interval until the device changes its learning-day hour or the interval expires. */
 export async function dailyFlowSettingsForInstant(db: DbPort, settings: DailyFlowSettings, now: string, history = false, current?: CycleStored | null) {
   const stored = current === undefined ? await readDailyFlow(db) : current;
   const window = stored?.session.dayWindow ?? settings.dayWindow;
-  return { ...settings, dayWindow: window && (history || isFlowWindowUnexpired(window, now)) ? window
-    : createDailyFlowDayWindow(now, settings.newDayStartsAtHour) };
+  const savedHour = stored ? (JSON.parse(stored.settings_key) as DailyFlowSettings).newDayStartsAtHour : undefined;
+  const hourChanged = savedHour !== undefined && savedHour !== settings.newDayStartsAtHour;
+  if (window && (history || (!hourChanged && isFlowWindowUnexpired(window, now)))) {
+    return { ...settings, newDayStartsAtHour: history ? savedHour ?? settings.newDayStartsAtHour : settings.newDayStartsAtHour,
+      dayWindow: window };
+  }
+  return { ...settings, dayWindow: createDailyFlowDayWindow(now, settings.newDayStartsAtHour) };
 }
