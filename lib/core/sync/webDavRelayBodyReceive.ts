@@ -46,9 +46,10 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
         deferred.push(name);
       }
     }
-    if (deferred.length === remaining.length) throw new Error('webdav_relay_body_dependency_pending');
-    input.retry(deferred.length);
+    const stalled = deferred.length === remaining.length;
     remaining = deferred;
+    if (stalled) break;
+    input.retry(deferred.length);
   }
   let repairQueued = false;
   if (input.attachments) for (const packet of pending) {
@@ -58,7 +59,7 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
       if (await receiveRepair(input, packet)) repairQueued = true;
     }
   }
-  return repairQueued;
+  return { repairQueued, bodyPending: remaining.length > 0 };
 }
 
 type Packet = { name: string; kind: string | undefined; url: URL };

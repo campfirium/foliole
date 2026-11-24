@@ -41,26 +41,29 @@ export function runWebDavRelayBodyRound(input: Input) {
 }
 
 async function exchange(input: Input) {
-  const repairQueued = await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
+  const { repairQueued, bodyPending } = await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
     retry: count => { input.progress.retries += count; } });
   input.signal?.throwIfAborted();
   await input.assertScope();
   const attachments = input.attachments && { ...input, attachments: input.attachments };
   if (attachments) await refreshWebDavRelayRepair(attachments);
-  const recordReceive = () => input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  const recordReceive = async () => {
+    if (!bodyPending) await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  };
   if (!input.authentication || input.foregroundReceive) await recordReceive();
   if (input.foregroundReceive) {
     if (repairQueued || await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) {
       input.requestSend?.();
     }
-    return input.progress;
+  } else {
+    try { await publishPending(input, attachments); }
+    catch (error) {
+      if (input.authentication && !(error instanceof WebDavAuthenticationError)) await recordReceive();
+      throw error;
+    }
+    if (input.authentication) await recordReceive();
   }
-  try { await publishPending(input, attachments); }
-  catch (error) {
-    if (input.authentication && !(error instanceof WebDavAuthenticationError)) await recordReceive();
-    throw error;
-  }
-  if (input.authentication) await recordReceive();
+  if (bodyPending) throw new Error('webdav_relay_body_dependency_pending');
   return input.progress;
 }
 
