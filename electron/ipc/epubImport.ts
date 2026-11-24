@@ -133,7 +133,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
     });
     const finalizedNodes = await finalizeBookNodes(
       nodes, nodeIdsByKey, importedAt, book.workingDirectory);
-    return runWithDatabaseConnectionOwner(() => {
+    return await runWithDatabaseConnectionOwner(() => {
       if (options?.sequentialReadingMode) {
         const { driver } = openDatabaseConnection();
         const readingNodeIds = [...nodeIdsByKey.values()].flatMap(id => {
