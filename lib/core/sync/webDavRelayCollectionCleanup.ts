@@ -10,7 +10,7 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection, readRelayCollections, relayCollectionOffer, relayCollectionUrl, relayGenerationRoot,
   writeRelayCollections, type RelayCollectionOffer } from './webDavRelayCollections.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
-import { pruneWebDavRelayPacketReceipts } from './webDavRelayReceipts.js';
+import { hasWebDavRelayPacketReceipts, pruneWebDavRelayPacketReceipts } from './webDavRelayReceipts.js';
 
 type Runtime = {
   host: RequestSyncDatabaseHost;
@@ -42,6 +42,8 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
     async verify(offer: RelayCollectionOffer) {
       await assertCurrent();
       const covered = await hasFiles(input, offer);
+      if (covered) await reconcileIncomingReceipts(input, scope, offer, assertCurrent)
+        .catch(error => console.warn('[sync] WebDAV receipt cleanup deferred', error));
       await assertCurrent();
       return covered;
     },
@@ -83,10 +85,25 @@ async function deleteRelayCollection(input: Runtime, scope: WebDavRelayBodyScope
   const target = direction === 'incoming' ? scope.incoming : scope.outgoingDirection;
   const status = await input.request(relayCollectionUrl(target, offer.generation), { method: 'DELETE' }, webDavRelayStatus);
   if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
-  if (direction === 'incoming') await input.host.write(async db => {
+  if (direction === 'incoming') await pruneIncomingReceipts(input, scope, offer.generation);
+}
+
+function reconcileIncomingReceipts(input: Runtime, scope: WebDavRelayBodyScope, offer: RelayCollectionOffer,
+  assertCurrent: () => Promise<void>) {
+  return input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
+    await assertCurrent();
+    if (!await input.host.readSnapshot(db => hasWebDavRelayPacketReceipts(db, scope.key, offer.generation), input.signal)) return;
+    const url = relayCollectionUrl(scope.incoming, offer.generation);
+    const status = await input.request(url, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
+    if (status === 404) await pruneIncomingReceipts(input, scope, offer.generation);
+  });
+}
+
+function pruneIncomingReceipts(input: Runtime, scope: WebDavRelayBodyScope, generation: RelayCollectionOffer['generation']) {
+  return input.host.write(async db => {
     input.signal.throwIfAborted();
     if ((await input.loadScope(db))?.key !== scope.key) throw new Error('webdav_relay_scope_changed');
-    await pruneWebDavRelayPacketReceipts(db, scope.key, offer.generation);
+    await pruneWebDavRelayPacketReceipts(db, scope.key, generation);
   });
 }
 

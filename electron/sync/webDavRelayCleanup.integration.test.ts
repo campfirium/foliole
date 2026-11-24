@@ -89,6 +89,27 @@ it('keeps receipts until incoming deletion succeeds, then prunes only the retire
   } finally { await fixture.close(); }
 });
 
+it('prunes incoming receipts when the peer initiated LAN and deleted its outgoing collection', async () => {
+  const fixture = await relayFixture();
+  try {
+    const phone = fixture.peers[1];
+    const first = await publishAttachment(fixture, 0, 'retired-by-sender');
+    expect(await fixture.sync(phone)).toMatchObject({ applied: 2 });
+    const { key } = (await fixture.scope(phone.peer))!;
+    const readReceipts = () => phone.peer.db.query<{ key: string }>(
+      'SELECT key FROM sync_group_metadata WHERE key >= ? AND key < ? ORDER BY key', [`${key}:applied:`, `${key}:applied;`]);
+    const receipts = await readReceipts();
+    expect(receipts).toHaveLength(2);
+
+    expect(await fixture.lan()).toMatchObject({ complete: true });
+    expect(await status(fixture, first.scope.outgoing)).toBe(404);
+    expect(await readReceipts()).toEqual(receipts);
+    await phone.reopen();
+    expect(await fixture.lan()).toMatchObject({ complete: true });
+    expect(await readReceipts()).toEqual([]);
+  } finally { await fixture.close(); }
+});
+
 it.each([true, false])('keeps both directions until LAN verifies the attachment and delivers from fresh collections (trailing slash: %s)', async trailingSlash => {
   const fixture = await relayFixture();
   try {

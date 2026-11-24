@@ -4,6 +4,7 @@ import type { RelayCollectionOffer } from './webDavRelayCollections.js';
 export type WebDavRelayPacketIdentity = { name: string; generation: RelayCollectionOffer['generation'] };
 
 const RECEIPT_LOOKUP_BATCH = 128;
+const receiptCollectionFilter = 'key >= ? AND key < ? AND value IN (?, ?)';
 const receiptPrefix = (scopeKey: string) => `${scopeKey}:applied:`;
 const receiptValue = (generation: WebDavRelayPacketIdentity['generation'], damaged: boolean) =>
   `${generation}:${damaged ? 'damaged' : 'true'}`;
@@ -25,8 +26,16 @@ export function recordWebDavRelayPacketReceipt(db: DbPort, scopeKey: string, pac
     [receiptPrefix(scopeKey) + packet.name, receiptValue(packet.generation, damaged), new Date().toISOString()]);
 }
 
+function collectionParams(scopeKey: string, generation: WebDavRelayPacketIdentity['generation']) {
+  return [receiptPrefix(scopeKey), `${scopeKey}:applied;`, receiptValue(generation, false), receiptValue(generation, true)];
+}
+
+export async function hasWebDavRelayPacketReceipts(db: DbPort, scopeKey: string, generation: WebDavRelayPacketIdentity['generation']) {
+  return (await db.query(`SELECT 1 FROM sync_group_metadata WHERE ${receiptCollectionFilter} LIMIT 1`,
+    collectionParams(scopeKey, generation))).length > 0;
+}
+
 export function pruneWebDavRelayPacketReceipts(db: DbPort, scopeKey: string, generation: WebDavRelayPacketIdentity['generation']) {
   // Older receipts do not identify their collection. Keep them available for exact-name deduplication.
-  return db.run(`DELETE FROM sync_group_metadata WHERE key >= ? AND key < ? AND value IN (?, ?)`,
-    [receiptPrefix(scopeKey), `${scopeKey}:applied;`, receiptValue(generation, false), receiptValue(generation, true)]);
+  return db.run(`DELETE FROM sync_group_metadata WHERE ${receiptCollectionFilter}`, collectionParams(scopeKey, generation));
 }
