@@ -2,6 +2,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { resolveContentLength, resolveEmptyContentReady, resolveReady } from './performanceDiagnosticsFlowHelpers';
+import { reportSlowNodeSwitch } from './performanceDiagnosticsSlowSwitchLog';
 import {
   POSITION_REQUEST_GRACE_MS,
   createNodeSelectionFlow,
@@ -100,6 +101,7 @@ export function markNodeBodyReady(nodeId: string) {
     return;
   }
   resolveReady(flow);
+  reportSlowNodeSwitch(flow, 'body');
 }
 
 export function markNodeBodyPainted(nodeId: string) {
@@ -231,6 +233,7 @@ export function markNodePositionReady(nodeId: string) {
   flow.positionRequestedAt = flow.positionRequestedAt ?? Date.now();
   flow.positionReadyAt = flow.positionReadyAt ?? Date.now();
   recordFlowEvent(flow, 'position_ready');
+  reportSlowNodeSwitch(flow, 'position');
 }
 
 export function updateNodeImageState(nodeId: string, totalCount: number, loadedCount: number) {

@@ -41,18 +41,27 @@ const MAX_BOOT_EVENTS = 8;
 const NOISE_BOOT_STAGES = new Set(['app_responsive', 'desktop_task_progress']);
 const SAFE_PAYLOAD_KEYS = [
   'action',
+  'bodyPaintMs',
+  'bodyReadyMs',
+  'cacheHit',
   'calls',
   'code',
   'count',
   'command',
+  'connectionWaitMs',
+  'databaseReadyMs',
   'durationMs',
   'lastObservedBlocker',
+  'loadResolvedMs',
+  'loadStartMs',
   'maxMs',
   'message',
   'moduleLabel',
   'name',
   'operation',
+  'positionReadyMs',
   'reason',
+  'requestToApplyMs',
   'resource',
   'source_kind',
   'stage',
@@ -170,7 +179,7 @@ function asSafePayloadDetail(payload: unknown) {
       .map(([key, value]) => [key, typeof value === 'string' ? redactExportedDiagnosticText(value) : value])
   );
   const text = JSON.stringify(redactDiagnosticValue(safe));
-  return text === '{}' ? undefined : text.slice(0, 180);
+  return text === '{}' ? undefined : text.slice(0, 320);
 }
 
 export function formatRecord(record: ParsedLogRecord): FormattedRecord {
