@@ -1,6 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { SettingsVersionBlock } from '../../features/settings/components/sections/SettingsVersionBlock';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
@@ -24,9 +25,12 @@ vi.mock('../../shared/platform/desktopUpdate', () => ({
   }
 }));
 
-vi.mock('../../shared/platform/updateCheck', () => ({
+vi.mock(import('../../shared/platform/updateCheck'), async (importOriginal) => ({
+  ...await importOriginal(),
   readUpdateCheckState: () => ({
     cachedManifest: updateMock.manifest,
+    lastCheckStatus: 'idle',
+    cachedReleaseNotes: null,
     cachedMobileChannels: { apk: { status: 'available', version: '0.8.3' } }
   }),
   refreshCachedUpdateManifest: async () => undefined,
@@ -144,4 +148,36 @@ it('hides the button after choosing to wait', async () => {
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart to install update' })));
 
   expect(screen.queryByRole('button', { name: 'Restart to install update' })).not.toBeInTheDocument();
+});
+
+it('uses the same warning and wait state for both desktop install buttons', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  updateMock.choice.mockResolvedValueOnce(null).mockResolvedValueOnce('ios');
+  renderWithLocalization(<><WorkspaceUpdateAction /><SettingsVersionBlock /></>);
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart and install' })));
+  expect(updateMock.choice).toHaveBeenCalledTimes(1);
+  expect(updateMock.install).not.toHaveBeenCalled();
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart to install update' })));
+  expect(screen.queryByRole('button', { name: 'Restart to install update' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Restart and install' })).not.toBeInTheDocument();
+  expect(updateMock.install).not.toHaveBeenCalled();
+});
+
+it('never installs a later candidate using the previous candidate’s confirmation', async () => {
+  updateMock.manifest = gatedManifest();
+  updateMock.state = { phase: 'ready', version: '0.8.3' };
+  let confirm: (choice: string) => void = () => undefined;
+  updateMock.choice.mockReturnValue(new Promise((resolve) => { confirm = resolve; }));
+  renderWithLocalization(<WorkspaceUpdateAction />);
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Restart to install update' })));
+  expect(updateMock.choice).toHaveBeenCalledTimes(1);
+  updateMock.state = { phase: 'ready', version: '0.8.4' };
+  act(() => updateMock.subscriber?.());
+  await act(async () => confirm('install'));
+
+  expect(updateMock.install).not.toHaveBeenCalled();
 });

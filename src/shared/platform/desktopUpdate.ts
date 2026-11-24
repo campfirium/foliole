@@ -36,14 +36,18 @@ function ensureBridgeSubscription() {
 }
 
 async function invokeUpdateCommand(
-  command: typeof NATIVE_COMMANDS.desktopUpdateDownload | typeof NATIVE_COMMANDS.desktopUpdateInstall
+  ...request: [typeof NATIVE_COMMANDS.desktopUpdateDownload]
+    | [typeof NATIVE_COMMANDS.desktopUpdateInstall, { targetVersion: string }]
 ) {
   await ensureBridgeSubscription();
   const api = getElectronAPI();
   if (!api) return publish(NOT_APPLICABLE_STATE);
   const revision = publicationRevision;
   try {
-    const nextState = await api.invoke(command);
+    const [command, args] = request;
+    const nextState = command === NATIVE_COMMANDS.desktopUpdateInstall
+      ? await api.invoke(command, args)
+      : await api.invoke(command);
     return revision === publicationRevision ? publish(nextState) : state;
   } catch {
     return publish({ errorCode: 'invalid-command-state', phase: 'error', version: state.version });
@@ -91,9 +95,10 @@ function waitForRestartFeedbackPaint() {
   });
 }
 
-export async function installDesktopUpdate() {
-  if (state.phase !== 'ready') return Promise.resolve(state);
-  publish({ ...state, errorCode: undefined, phase: 'restarting' });
+export async function installDesktopUpdate(targetVersion: string) {
+  if (state.phase !== 'ready' || state.version !== targetVersion) return state;
+  const restarting = publish({ ...state, errorCode: undefined, phase: 'restarting' });
   await waitForRestartFeedbackPaint();
-  return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateInstall);
+  if (state !== restarting) return state;
+  return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateInstall, { targetVersion });
 }

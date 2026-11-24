@@ -136,17 +136,17 @@ it('keeps restart feedback readable before the native command exits the app', as
   await Promise.resolve();
   stateHandler?.({ phase: 'ready', version: '0.7.3' });
 
-  void runtime.installDesktopUpdate();
+  void runtime.installDesktopUpdate('0.7.3');
 
   expect(runtime.readDesktopUpdateState()).toEqual({ phase: 'restarting', version: '0.7.3' });
-  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+  expect(invoke.mock.calls.map(([command]) => command)).not.toContain('desktop_update_install');
 
   frameCallbacks.shift()?.(0);
-  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+  expect(invoke.mock.calls.map(([command]) => command)).not.toContain('desktop_update_install');
 
   frameCallbacks.shift()?.(16);
-  expect(invoke).not.toHaveBeenCalledWith('desktop_update_install');
+  expect(invoke.mock.calls.map(([command]) => command)).not.toContain('desktop_update_install');
 
   await vi.runAllTimersAsync();
-  await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('desktop_update_install'));
+  await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('desktop_update_install', { targetVersion: '0.7.3' }));
 });

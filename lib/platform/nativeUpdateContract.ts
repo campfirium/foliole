@@ -37,7 +37,7 @@ export type NativeDesktopUpdateCommandMap = {
     result: NativeDesktopUpdateState;
   };
   [NATIVE_COMMANDS.desktopUpdateInstall]: {
-    args: undefined;
+    args: { targetVersion: string };
     result: NativeDesktopUpdateState;
   };
 };

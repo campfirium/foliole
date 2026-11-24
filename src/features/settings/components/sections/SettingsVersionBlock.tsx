@@ -4,7 +4,6 @@ import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { formatBuildVersion, useAppVersion } from '../../../../shared/platform/appVersion';
 import {
-  installDesktopUpdate,
   readDesktopUpdateState,
   subscribeDesktopUpdateState
 } from '../../../../shared/platform/desktopUpdate';
@@ -15,6 +14,7 @@ import {
   type UpdateCheckState
 } from '../../../../shared/platform/updateCheck';
 import { AppStatusBadge, SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
+import { useDesktopUpdateSyncGate } from '../../../../shared/ui/useDesktopUpdateSyncGate';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
@@ -71,6 +71,7 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
   const appRow = useLocalizedSettingsSearchRow('about-foliole-desktop');
   const appVersion = useAppVersion();
   const update = useUpdateViewState();
+  const gate = useDesktopUpdateSyncGate(update.desktop.version, update.desktop.phase === 'ready');
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
   const status = resolveViewStatus(update.manifest, update.desktop.phase, update.isChecking);
   const handleCheck = async () => {
@@ -95,9 +96,9 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
           {update.manifest.lastCheckStatus === 'available' ? (
             <SettingsSupportButton onRunAction={() => setReleaseNotesOpen(true)}>{t('settings.about.viewUpdateDetails')}</SettingsSupportButton>
           ) : null}
-          {update.desktop.phase === 'ready' || update.desktop.phase === 'restarting' ? (
+          {(update.desktop.phase === 'ready' && !gate.hidden) || update.desktop.phase === 'restarting' ? (
             <SettingsSupportButton onRunAction={update.desktop.phase === 'ready'
-              ? () => void installDesktopUpdate()
+              ? () => void gate.onInstallClick()
               : undefined}>
               {t(update.desktop.phase === 'restarting'
                 ? 'settings.about.restarting'
