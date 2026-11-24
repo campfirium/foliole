@@ -5,6 +5,7 @@ import {
   PdfTopBarsDocument,
   PdfTopBarsDocumentConnection
 } from '../../features/pdf/components/PdfTopBarsDocument';
+import type { PdfDocumentPreference } from '../../../lib/platform/pdfDocumentPreference';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import {
@@ -31,9 +32,12 @@ vi.mock('react-pdf', () => ({
 }));
 vi.mock('../../shared/platform/appSettingsState', () => ({
   loadRuntimeAppSettingsState: async () => backend.settings,
-  saveRuntimeAppSettingsState: async (next: Record<string, string>) => {
+  saveRuntimePdfDocumentPreference: async (next: PdfDocumentPreference) => {
     if (backend.failSave) return false;
-    backend.settings = { ...backend.settings, ...next };
+    if (next.kind !== 'topBars') throw new Error('Unexpected preference');
+    const key = APP_SETTINGS_STORAGE_KEYS.pdfTopBarsPreferences;
+    const records = JSON.parse(backend.settings[key] ?? '{}') as Record<string, boolean>;
+    backend.settings = { ...backend.settings, [key]: JSON.stringify({ ...records, [next.fingerprint]: next.enabled }) };
     return true;
   }
 }));

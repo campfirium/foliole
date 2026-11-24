@@ -9,7 +9,7 @@ import { writeNodeBody } from './nodeBodyMutation.js';
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { ensureNodeParentMembership } from './nodeOrderMutations.js';
-import { readBodyPartIds, readPartitionedNodeBody } from './partitionedNodeBody.js';
+import { readBodyPartIds, readBodyPartSlots, readPartitionedNodeBody } from './partitionedNodeBody.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 interface AnchoredChild extends DatabaseRow {
@@ -59,18 +59,25 @@ function moveAnchor(driver: DatabaseDriver, id: string, parentId: string, anchor
   ensureNodeParentMembership(driver, id);
 }
 
-function writePart(driver: DatabaseDriver, node: PartitionNode, content: string, index: number, now: string) {
-  const id = bodyPartNodeId(node.id, index);
-  const existing = driver.queryOne<{ title: string; parent_id: string | null }>('SELECT title, parent_id FROM nodes WHERE id = ?', [id]);
-  if (existing) {
-    driver.execute('UPDATE nodes SET parent_id = ?, deleted_at = NULL, sync_dirty = 1 WHERE id = ?', [node.id, id]);
+function writePart(
+  driver: DatabaseDriver, node: PartitionNode, content: string, index: number, now: string,
+  slots: ReturnType<typeof readBodyPartSlots>
+) {
+  const slot = bodyPartNodeId(node.id, index);
+  const existing = slots.get(slot);
+  let id = slot;
+  if (existing?.parent_id === node.id && existing.deleted_at === null && existing.title !== null) {
+    id = existing.id;
     writeNodeBody({ driver, nodeId: id, title: existing.title, content, updatedAt: now });
-    if (existing.parent_id !== node.id) ensureNodeParentMembership(driver, id);
   } else {
+    if (existing) {
+      const generation = existing.id === slot ? 1 : Number(existing.id.slice(slot.length + 1)) + 1;
+      id = `${slot}-${String(generation).padStart(12, '0')}`;
+    }
     upsertNodeSnapshot(driver, {
       nodeId: id, parentNodeId: node.id, kind: 'topic', title: `${node.title} (${index + 1})`,
       isTitleManual: true, content, reveal: null, anchorLink: null, position: null, createdAt: now, updatedAt: now
-    }, {  });
+    });
   }
   driver.execute('UPDATE nodes SET image_sources = ?, resource_references = ? WHERE id = ?',
     [node.image_sources, node.resource_references, id]);
@@ -91,7 +98,9 @@ function retireUnusedParts(driver: DatabaseDriver, nodeId: string, retainedIds: 
 }
 
 /** The caller owns the import/edit transaction; temporary expansion is never committed. */
-export function partitionStoredNodeBody(driver: DatabaseDriver, nodeId: string, now: string) {
+export function partitionStoredNodeBody(
+  driver: DatabaseDriver, nodeId: string, now: string, options?: { retireEmptyParts: boolean }
+) {
   return driver.transaction(() => {
     const node = driver.queryOne<PartitionNode>(
       'SELECT id, title, image_sources, resource_references FROM nodes WHERE id = ?', [nodeId]);
@@ -99,13 +108,14 @@ export function partitionStoredNodeBody(driver: DatabaseDriver, nodeId: string, 
     const body = loadNodeBodyResolution(driver, nodeId);
     if (!body) throw new NodeBodyUnavailableError([nodeId]);
     if (utf8ByteLength(body.content) <= TEXT_BODY_MAX_BYTES) {
-      if (body.content && readBodyPartIds(driver, nodeId).length) retireUnusedParts(driver, nodeId, [], now);
+      if (body.content || options?.retireEmptyParts) retireUnusedParts(driver, nodeId, [], now);
       return [];
     }
     const anchors = readAnchoredChildren(driver, nodeId);
     const parts = splitImportBody(body.content, TEXT_BODY_MAX_BYTES, protectedBodyPartAnchorSpans(body.content, anchors.map(anchor => anchor.anchor_link)));
     const placements = anchors.map((anchor) => ({ anchor, index: fittingBodyPartAnchorIndex(anchor.anchor_link, parts) }));
-    const ids = parts.map((part, index) => writePart(driver, node, part.content, index, now));
+    const slots = readBodyPartSlots(driver, nodeId);
+    const ids = parts.map((part, index) => writePart(driver, node, part.content, index, now, slots));
     for (const { anchor, index } of placements) {
       const part = parts[index];
       const id = ids[index];

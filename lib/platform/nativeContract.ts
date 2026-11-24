@@ -26,6 +26,7 @@ import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './n
 import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
 import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
 import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
+import type { PdfDocumentPreference } from './pdfDocumentPreference.js';
 import type { NativeReadingResumeContext } from './nativeReadingProgressContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeReminderCommandMap } from './nativeReminderContract.js';
@@ -166,7 +167,7 @@ export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommand
     result: 'dark' | 'light';
   };
   [NATIVE_COMMANDS.saveAppSettingsState]: {
-    args: { settings: Record<string, string> };
+    args: { settings: Record<string, string> } | { pdfPreference: PdfDocumentPreference };
     result: null;
   };
   [NATIVE_COMMANDS.saveLoginItemSettings]: {

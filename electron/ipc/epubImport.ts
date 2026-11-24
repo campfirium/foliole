@@ -1,9 +1,14 @@
 import { createHash } from 'node:crypto';
 
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { readBodyPartIds } from '../../lib/core/database/partitionedNodeBody.js';
+import { partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { prepareEpubBookNode, buildEpubRootContent, type PreparedBookNode } from '../../lib/core/import/epub/epubPreparedBook.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 
@@ -30,37 +35,39 @@ function prepareBookNode(node: RawBookNode, index: number, importedAt: string, r
 }
 
 function createBookNodes(
+  driver: DatabaseDriver,
   parentNodeId: string,
   sourceFingerprint: string,
   importedAt: string,
   nodes: PreparedBookNode[]
 ) {
-  const connection = openDatabaseConnection();
   const nodeIdsByKey = new Map<string, string>();
-
-  connection.driver.transaction((driver) => {
-    nodes.forEach((node) => {
-      const nodeId = createEpubGeneratedNodeId(
-        createHash('sha256').update(`${sourceFingerprint}\u001f${node.key}`).digest('hex')
-      );
-      nodeIdsByKey.set(node.key, nodeId);
-      upsertNodeSnapshot(driver, {
-        anchorLink: null,
-        content: node.content,
-        createdAt: importedAt,
-        hideTitleHeading: node.hideTitleHeading,
-        isTitleManual: true,
-        kind: 'topic',
-        nodeId,
-        parentNodeId: node.parentKey ? (nodeIdsByKey.get(node.parentKey) ?? parentNodeId) : parentNodeId,
-        position: null,
-        reveal: null,
-        title: node.title,
-        updatedAt: importedAt
-      });
+  for (const node of nodes) {
+    const nodeId = createEpubGeneratedNodeId(
+      createHash('sha256').update(`${sourceFingerprint}\u001f${node.key}`).digest('hex')
+    );
+    const content = node.content;
+    const needsPartition = utf8ByteLength(content) > TEXT_BODY_MAX_BYTES;
+    nodeIdsByKey.set(node.key, nodeId);
+    upsertNodeSnapshot(driver, {
+      anchorLink: null,
+      content: needsPartition ? '' : content,
+      createdAt: importedAt,
+      hideTitleHeading: node.hideTitleHeading,
+      isTitleManual: true,
+      kind: 'topic',
+      nodeId,
+      parentNodeId: node.parentKey ? (nodeIdsByKey.get(node.parentKey) ?? parentNodeId) : parentNodeId,
+      position: null,
+      reveal: null,
+      title: node.title,
+      updatedAt: importedAt
     });
-  });
-
+    if (needsPartition) {
+      writeNodeBody({ driver, nodeId, content, title: node.title, updatedAt: importedAt });
+    }
+    partitionStoredNodeBody(driver, nodeId, importedAt, { retireEmptyParts: true });
+  }
   return nodeIdsByKey;
 }
 
@@ -110,12 +117,15 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
       titleStrategy: 'heading'
     });
     const { imported, nodeId, nodeIdsByKey } = await runWithDatabaseConnectionOwner(() => {
-      if (options?.targetNodeId) ensureTrackedImportTarget(rootNode, options.targetNodeId);
-      const imported = runPreparedImport(rootNode);
-      const nodeId = imported.nodeId;
-      if (!nodeId) throw new Error('EPUB import failed: parent node was not created');
-      return { imported, nodeId, nodeIdsByKey: createBookNodes(
-        nodeId, imported.sourceFingerprint, importedAt, nodes) };
+      const { driver, sqlite } = openDatabaseConnection();
+      return sqlite.transaction(() => {
+        if (options?.targetNodeId) ensureTrackedImportTarget(rootNode, options.targetNodeId);
+        const imported = runPreparedImport(rootNode);
+        const nodeId = imported.nodeId;
+        if (!nodeId) throw new Error('EPUB import failed: parent node was not created');
+        return { imported, nodeId, nodeIdsByKey: createBookNodes(
+          driver, nodeId, imported.sourceFingerprint, importedAt, nodes) };
+      }).immediate();
     });
     const finalizedRoot = await importEmbeddedImagesForNode(nodeId, importedAt, {
       content: rootNode.content, degradedReason: rootNode.degradedReason,
@@ -125,9 +135,13 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
       nodes, nodeIdsByKey, importedAt, book.workingDirectory);
     return runWithDatabaseConnectionOwner(() => {
       if (options?.sequentialReadingMode) {
+        const { driver } = openDatabaseConnection();
+        const readingNodeIds = [...nodeIdsByKey.values()].flatMap(id => {
+          const parts = readBodyPartIds(driver, id);
+          return parts.length ? parts : [id];
+        });
         applyEpubSequentialReadingMode({
-          driver: openDatabaseConnection().driver, importedAt, mode: options.sequentialReadingMode,
-          nodeIds: [...nodeIdsByKey.values()], sourceNodeId: nodeId
+          driver, importedAt, mode: options.sequentialReadingMode, nodeIds: readingNodeIds, sourceNodeId: nodeId
         });
       }
       persistImportedOpeningTexts({ finalizedNodes, finalizedRoot, nodeIdsByKey,

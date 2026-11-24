@@ -72,7 +72,7 @@ export async function resolveAttachmentFile(storageKey: string, assetsDir?: stri
   const parsed = parseCanonicalAttachmentStorageKey(storageKey);
   if (!parsed) return { status: 'not_found' };
   const canonicalPath = resolveAttachmentStorageKeyPath(resolvedAssetsDir, storageKey);
-  let bytes: Buffer;
+  let bytes: Buffer<ArrayBuffer>;
   try {
     if (!fs.existsSync(canonicalPath)) restoreAttachmentFromTrash(resolvedAssetsDir, storageKey);
     const linkStat = await fs.promises.lstat(canonicalPath);
@@ -85,7 +85,7 @@ export async function resolveAttachmentFile(storageKey: string, assetsDir?: stri
       const stat = await descriptor.stat();
       if (!stat.isFile()) return { status: 'missing_file', mimeType: parsed.mimeType };
       bytes = await descriptor.readFile();
-      if (Buffer.from(await webcrypto.subtle.digest('SHA-256', new Uint8Array(bytes))).toString('hex') !== parsed.contentHash ||
+      if (Buffer.from(await webcrypto.subtle.digest('SHA-256', bytes)).toString('hex') !== parsed.contentHash ||
           classifyAttachmentBytes(bytes) !== parsed.mimeType) {
         return { status: 'missing_file', mimeType: parsed.mimeType };
       }
