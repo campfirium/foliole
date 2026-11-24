@@ -1,5 +1,5 @@
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { isCurrentDatabaseConnection, openDatabaseConnection, type DatabaseConnection } from '../database/connection.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import {
   deletePermanentDeleteChunk,
@@ -23,40 +23,59 @@ function yieldToEventLoop() {
   return new Promise<void>((resolve) => setImmediate(resolve));
 }
 
+function assertPermanentDeleteConnection(connection: DatabaseConnection) {
+  if (!isCurrentDatabaseConnection(connection)) throw new Error('permanent_delete_library_changed');
+}
+
+function loadChunkParents(connection: DatabaseConnection, nodeIds: string[]) {
+  return connection.driver.queryAll<{ parent_id: string }>(
+    'SELECT DISTINCT parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND parent_id IS NOT NULL',
+    [JSON.stringify(nodeIds)]).map(row => row.parent_id);
+}
+
 /** Deletes in short write tasks; a failure leaves the remaining nodes in the trash. */
 export async function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseDeleteNodesPermanentlyArgs(args);
-  const { plan, libraryScope, parents } = await runDesktopDatabaseWrite('foreground', () => ({
-    plan: preparePermanentDelete(parsed.nodeIds), libraryScope: currentLibraryScope(),
-    parents: openDatabaseConnection().driver.queryAll<{ parent_id: string }>(
-      'SELECT DISTINCT parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND parent_id IS NOT NULL',
-      [JSON.stringify(parsed.nodeIds)]).map(row => row.parent_id) }));
-  const released: string[] = [];
+  const { plan, libraryScope, connection } = await runDesktopDatabaseWrite('foreground', () => ({
+    connection: openDatabaseConnection(), libraryScope: currentLibraryScope(),
+    plan: preparePermanentDelete(parsed.nodeIds)
+  }));
   const removed: string[] = [];
+  const parents = new Set<string>();
   const affectedArticleIds = new Set<string>();
+  const refreshScope = () => ({ kind: 'nodes' as const, nodeIds: [...new Set([...removed, ...parents])], structure: true });
   try {
     for (const chunk of splitPermanentDeleteChunks(plan, PERMANENT_DELETE_CHUNK_SIZE)) {
-      const result = await runDesktopDatabaseWrite('foreground', () => {
-        const mirrors = capturePermanentMirrorPaths(chunk);
+      const mirrors = await runDesktopDatabaseWrite('foreground', () => {
+        assertPermanentDeleteConnection(connection);
+        const retiredMirrors = capturePermanentMirrorPaths(chunk);
         const articleIds = chunk.flatMap(resolveArticleIdsFromNodeId);
-        return { released: deletePermanentDeleteChunk(chunk), mirrors, articleIds };
+        const chunkParents = loadChunkParents(connection, chunk);
+        const released = deletePermanentDeleteChunk(chunk);
+        removed.push(...chunk);
+        for (const parent of chunkParents) parents.add(parent);
+        for (const articleId of articleIds) affectedArticleIds.add(articleId);
+        enqueueReleasedBodyCollection(released);
+        return retiredMirrors;
       });
-      released.push(...result.released);
-      removed.push(...chunk);
-      for (const articleId of result.articleIds) affectedArticleIds.add(articleId);
-      await retirePermanentMirrorPaths(result.mirrors);
+      await retirePermanentMirrorPaths(mirrors);
       await yieldToEventLoop();
     }
-    await runDesktopDatabaseWrite('foreground', () => finishPermanentDelete(plan));
+    return await runDesktopDatabaseWrite('foreground', () => {
+      assertPermanentDeleteConnection(connection);
+      finishPermanentDelete(plan);
+      return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow, refreshScope(), libraryScope);
+    });
   } catch (error) {
     // The origin window reloads on its own failure path; other windows learn about removed chunks here.
-    if (removed.length) notifyWorkspaceContentChanged(originWindow, { libraryScope,
-      workspaceScope: { kind: 'nodes', nodeIds: [...removed, ...parents], structure: true } });
+    if (removed.length) notifyWorkspaceContentChanged(originWindow, {
+      libraryScope, workspaceScope: refreshScope(),
+      ...(!isCurrentDatabaseConnection(connection) && { requestSync: false })
+    });
     throw error;
   } finally {
-    enqueueReleasedBodyCollection(released);
-    if (removed.length) scheduleMirrorSync([...new Set([...removed, ...affectedArticleIds])]);
+    if (removed.length && isCurrentDatabaseConnection(connection)) {
+      scheduleMirrorSync([...new Set([...removed, ...affectedArticleIds])]);
+    }
   }
-  return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow,
-    { kind: 'nodes', nodeIds: [...removed, ...parents], structure: true }, libraryScope);
 }
