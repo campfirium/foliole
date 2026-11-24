@@ -89,7 +89,14 @@ test('previews and updates a generated title and source information on the same 
   const review = await openSuperMemoUpdateReview(dialog);
   await expect(review.getByRole('heading', { name: /^(Text changes|内容变化)$/ })).toBeVisible();
   await expect(review.getByText('→ Original title', { exact: true })).toHaveCount(0);
+  const categories = review.getByRole('navigation', { name: /^(Changes by category|更新类别)$/ });
+  const textCategory = categories.getByRole('button', { name: /^(Text changes|内容变化)\s*\(1\)$/ });
+  const citationCategory = categories.getByRole('button', { name: /^(Source information changes|来源信息变化)\s*\(1\)$/ });
+  await expect(textCategory).toHaveAttribute('aria-current', 'page');
+  await citationCategory.click();
+  await expect(citationCategory).toHaveAttribute('aria-current', 'page');
   await expect(review.getByRole('heading', { name: /^(Source information changes|来源信息变化)$/ })).toBeVisible();
+  await expect(review.getByRole('heading', { name: /^(Text changes|内容变化)$/ })).toHaveCount(0);
   await expect(review.getByText(/^(Directory changes|目录位置变化)$/)).toHaveCount(0);
   expect(await readTopic('Original title')).toEqual(before);
   await review.screenshot({ path: testInfo.outputPath('review-title-update.png') });

@@ -2,33 +2,21 @@ import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/na
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import type { runRuntimeSuperMemoImport } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
-export function SuperMemoDirectoryUpdate({ update }: { update: NativeSuperMemoDirectoryUpdate }) {
+export function CitationChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['citationChanges'] }) {
   const t = useTranslation();
-  if (update.sourceMatch && update.sourceMatch.status !== 'verified') return <SourceMatch match={update.sourceMatch} />;
-  if (update.pairedSourceRequired) return <p>{t('desktop.superMemoDrafts.updateNeedsCollection')}</p>;
-  if (!update.sourceMatch && update.proposedPercent === undefined && !update.changes.length && !update.textChanges.length &&
-      !update.firstReviewChanges.length && !update.citationChanges.length && !update.withdrawals.length) {
-    return <p>{t('desktop.superMemoDrafts.noBatchChanges')}</p>;
-  }
-  return <div className="grid gap-3">
-    {update.sourceMatch ? <SourceMatch match={update.sourceMatch} /> : null}
-    <DirectoryChanges changes={update.changes} />
-    <TextChanges changes={update.textChanges} />
-    <FirstReviewChanges changes={update.firstReviewChanges} />
-    {update.citationChanges.length ? <section className="grid gap-2">
-      <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.citationChanges')}</h2>
-      <ul className="divide-y divide-foreground/10 text-sm">
-        {update.citationChanges.map(change => <li key={change.sourceId} className="py-2">
-          <span>{change.title}</span>
-          <span className="ml-2 text-foreground/65">{t(change.status === 'update'
-            ? 'desktop.superMemoDrafts.citationUpdate' : 'desktop.superMemoDrafts.citationProtected')}</span>
-        </li>)}
-      </ul>
-    </section> : null}
-  </div>;
+  return <section className="grid gap-2">
+    <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.citationChanges')}</h2>
+    <ul className="divide-y divide-foreground/10 text-sm">
+      {changes.map(change => <li key={change.sourceId} className="grid gap-1 py-2">
+        <span>{change.title}</span>
+        <span className="text-foreground/65">{t(change.status === 'update'
+          ? 'desktop.superMemoDrafts.citationUpdate' : 'desktop.superMemoDrafts.citationProtected')}</span>
+      </li>)}
+    </ul>
+  </section>;
 }
 
-function SourceMatch({ match }: { match: NonNullable<NativeSuperMemoDirectoryUpdate['sourceMatch']> }) {
+export function SourceMatch({ match }: { match: NonNullable<NativeSuperMemoDirectoryUpdate['sourceMatch']> }) {
   const t = useTranslation();
   return <section className="grid gap-2">
     <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.exportMatch')}</h2>
@@ -65,11 +53,12 @@ export function FirstReviewChanges({ changes, showHeading = true }: {
   </section>;
 }
 
-function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['textChanges'] }) {
+export function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['textChanges'] }) {
   const t = useTranslation();
   if (!changes.length) return null;
   return <section className="grid gap-2">
     <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.textChanges')}</h2>
+    <p className="text-sm text-foreground/75">{t('desktop.superMemoDrafts.textChangesExplanation')}</p>
     <ul className="divide-y divide-foreground/10 text-sm">
       {changes.map(change => <li key={`${change.sourceId}-${change.field}`} className="py-2">
         <span>{change.title} · {t(`desktop.superMemoDrafts.textField.${change.field}`)}</span>
@@ -80,7 +69,7 @@ function TextChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['tex
   </section>;
 }
 
-function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['changes'] }) {
+export function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirectoryUpdate['changes'] }) {
   const t = useTranslation();
   if (!changes.length) return null;
   const root = t('desktop.superMemoDrafts.directoryRoot');
