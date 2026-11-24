@@ -6,6 +6,14 @@ export function cycleMeta(state: CycleMeta): CycleMeta {
   return { clearKey, clearedAt, scanAfter, lapLimit, tailKey, remaining, reviewRemaining, ...(timedResume ? { timedResume } : {}) };
 }
 
+export function copyCycleNavigation(target: CycleMeta, source: CycleMeta) {
+  target.scanAfter = source.scanAfter;
+  target.lapLimit = source.lapLimit;
+  target.clearedAt = source.clearedAt;
+  if (source.timedResume) target.timedResume = { ...source.timedResume };
+  else delete target.timedResume;
+}
+
 function progress(session: DailyFlowSession) {
   const meta = session.cycle!;
   return [meta.clearKey, meta.clearedAt, meta.scanAfter, meta.lapLimit, meta.remaining, meta.reviewRemaining,

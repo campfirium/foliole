@@ -3,7 +3,7 @@ import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 import { cycleChanges } from './cycleFlowChanges.js';
 import { chooseCycleCurrent, isCycleCurrentReady } from './cycleFlowOpen.js';
 import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
-import { allocateCycleKey } from './cycleFlowState.js';
+import { allocateCycleKey, copyCycleNavigation } from './cycleFlowState.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { fullDayCandidates } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -86,15 +86,15 @@ function applyPreparedNavigation(db: DailyFlowStore, source: DailyFlowSession, s
     prepared.source.candidateMembershipHash === source.candidateMembershipHash &&
     prepared.source.cycle?.scanAfter === source.cycle?.scanAfter &&
     prepared.source.cycle?.lapLimit === source.cycle?.lapLimit &&
+    prepared.source.cycle?.timedResume?.key === source.cycle?.timedResume?.key &&
+    prepared.source.cycle?.timedResume?.after === source.cycle?.timedResume?.after &&
     (prepared.next.currentNodeId || !eligible.has(source.currentNodeId!)) ? prepared.next : null;
   if (navigation?.cycle) {
     session.currentNodeId = navigation.currentNodeId;
     session.currentItemStartedAt = now;
     session.isAnswerRevealed = false;
     session.continueNodeId = null;
-    session.cycle!.scanAfter = navigation.cycle.scanAfter;
-    session.cycle!.lapLimit = navigation.cycle.lapLimit;
-    session.cycle!.clearedAt = navigation.cycle.clearedAt;
+    copyCycleNavigation(session.cycle!, navigation.cycle);
     session.completedAt = navigation.currentNodeId ? null : session.cycle!.clearedAt;
     return true;
   }
