@@ -25,6 +25,7 @@ it.each(['restore', 'adoption'] as const)(
     try {
       const settings = await seedRestoreFixture(fixture);
       const sources = seedReceiverRestoreSources(fixture.rightSnapshot.databasePath, oldId, fixture.rightSnapshot.stateRoot);
+      expect(sources.storedLocators).toEqual([{ node_id: oldId }]);
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       const secondExpected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, secondId);
       const previous = sourceArticleIdentity(fixture.rightSnapshot.databasePath, oldId);

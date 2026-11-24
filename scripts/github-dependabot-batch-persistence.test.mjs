@@ -22,13 +22,14 @@ function prepareProducer() {
     'github-desktop-handoff-monitor', 'github-desktop-handoff-events',
     'github-desktop-handoff-pr-events', 'github-desktop-handoff-title',
     'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events', 'github-play-review-events',
-    'github-handoff-replies', 'github-handoff-reply-api', 'github-desktop-handoff-discussions'
+    'github-handoff-replies', 'github-handoff-reply-api', 'github-desktop-handoff-discussions', 'store-review-dispatch'
   ]) fs.copyFileSync(path.join(sourceRoot, `scripts/${name}.mjs`), path.join(root, `scripts/${name}.mjs`));
   fs.symlinkSync(path.join(sourceRoot, 'scripts/mobile'), path.join(root, 'scripts/mobile'), 'junction');
   fs.cpSync(path.join(sourceRoot, 'scripts/security'), path.join(root, 'scripts/security'), { recursive: true });
   fs.symlinkSync(path.join(sourceRoot, 'node_modules'), path.join(root, 'node_modules'), 'junction');
   fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}');
   fs.writeFileSync(path.join(root, 'pr'), 'console.log(process.env.TEST_PRS);');
+  fs.writeFileSync(path.join(root, 'api'), 'if (!process.argv[2]?.endsWith("/releases?per_page=10")) process.exit(1); console.log("[]");');
   fs.writeFileSync(path.join(root, 'clock.mjs'), 'Date.now = () => Number(process.env.TEST_NOW);');
   prepareHandoffBoundary();
 }

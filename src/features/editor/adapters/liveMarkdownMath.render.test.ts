@@ -194,6 +194,7 @@ async function expectFocusedFormulaClozeRegionMatchesCopiedFormula() {
     canCreate: false,
     hiddenRegionIds: ['formula-region-1'],
     outlinedRegionIds: [],
+    matchByFormulaText: true,
     regions: [
       {
         display: 'inline',

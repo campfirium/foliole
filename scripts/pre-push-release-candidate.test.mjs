@@ -32,7 +32,8 @@ const FILES = [
   'scripts/quality/quality-command-contract-data.mjs',
   'scripts/quality/quality-command-contracts.mjs',
   'scripts/release-platform-contract.mjs',
-  'scripts/release-publication-contract.mjs'
+  'scripts/release-publication-contract.mjs',
+  'scripts/release-sync-protocol-contract.mjs'
 ];
 
 function git(cwd, ...args) {

@@ -43,7 +43,10 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-text-alternative-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
+  const connection = openDatabaseConnection();
+  initializeDatabaseConnection(connection);
+  connection.driver.execute('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)',
+    ['host_name', JSON.stringify('desktop'), new Date().toISOString()]);
   await seedAlternative();
 });
 

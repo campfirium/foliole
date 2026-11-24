@@ -68,7 +68,7 @@ function createStatementRuns() {
   return {
     deleteReadingRun: vi.fn(),
     insertSearchSeedRun: vi.fn(),
-    upsertNodeRun: vi.fn(),
+    upsertNodeRun: vi.fn(() => ({ changes: 1, lastInsertRowId: 0 })),
     upsertOrderRun: vi.fn(),
     upsertReadingDeviceRun: vi.fn(),
     upsertReadingRun: vi.fn()

@@ -18,6 +18,7 @@ const readwiseId = 'receiver-readwise-config', importId = 'receiver-import-confi
 
 export function seedReceiverRestoreSources(databasePath: string, oldNodeId: string, stateRoot: string) {
   const sqlite = new Database(databasePath);
+  const driver = createBetterSqlite3Driver(sqlite);
   const registryFile = path.join(stateRoot, 'data', 'config', 'readwise-api-connections-v1.json');
   fs.mkdirSync(path.dirname(registryFile), { recursive: true });
   fs.writeFileSync(registryFile, JSON.stringify({ version: 2, connection: {
@@ -42,7 +43,6 @@ export function seedReceiverRestoreSources(databasePath: string, oldNodeId: stri
          last_content_fingerprint, latest_node_id, watched_binding_id, watched_relative_path, source_ref, source_location)
         VALUES (?, 'watched', 'markdown', 'Article.md', ?, ?, ?, ?, ?, ?, 'Article.md', ?, 'Article.md')`)
         .run(importId, originalFile, time, time, 'original-source-fingerprint', oldNodeId, watchedId, `watched:${watchedId}`);
-      const driver = createBetterSqlite3Driver(sqlite);
       for (const [type, id] of [['watched_folder', watchedId], ['external_folder', externalId], ['import_source', importId]] as const) {
         const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[type], [id]);
         if (!row) throw new Error('restore_fixture_source_payload_missing');
@@ -57,7 +57,7 @@ export function seedReceiverRestoreSources(databasePath: string, oldNodeId: stri
     expect(baseline.external).toHaveLength(1);
     expect(baseline.imports).toHaveLength(1);
     expect(baseline.state).toHaveLength(3);
-    return { originalFile, originalBytes, registryFile };
+    return { originalFile, originalBytes, registryFile, storedLocators: baseline.storedLocators };
   } finally { sqlite.close(); }
 }
 
@@ -89,6 +89,7 @@ function receiverRestoreSourceRows(sqlite: Database.Database) {
     external: sqlite.prepare(`SELECT id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
       created_at, updated_at, source_ref FROM external_search_folders WHERE id = ?`).all(externalId),
     imports: sqlite.prepare('SELECT * FROM import_sources WHERE source_fingerprint = ?').all(importId),
+    storedLocators: sqlite.prepare('SELECT node_id FROM stored_import_locators WHERE source_fingerprint = ?').all(importId),
     state: sqlite.prepare('SELECT * FROM sync_object_state WHERE object_id IN (?, ?, ?) ORDER BY object_type')
       .all(watchedId, externalId, importId)
   };

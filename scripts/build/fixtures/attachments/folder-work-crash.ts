@@ -14,6 +14,7 @@ const sqlite = new Database(path.join(root, 'source.sqlite'));
 sqlite.pragma('journal_mode=WAL');
 sqlite.pragma('synchronous=FULL');
 const db = createBetterSqliteDbPort(sqlite);
+const target = path.join(root, 'target', 'Attachments', key);
 const stop = () => {
   writeFileSync(path.join(root, 'crash-boundary'), boundary);
   process.kill(process.pid, 'SIGKILL');
@@ -26,7 +27,7 @@ if (boundary.startsWith('delete-')) {
   await db.transaction(tx => completeFolderAttachmentCopy(tx, key));
   if (boundary === 'delete-after-ready') stop();
   await sqlite.backup(path.join(root, 'Foliole.sqlite'));
-  unlinkSync(path.join(root, 'target', key));
+  unlinkSync(target);
   if (boundary === 'delete-after-target') stop();
   const [work] = await readFolderAttachmentWork(db, 'profile');
   assert(work);
@@ -44,7 +45,7 @@ await db.transaction(tx => completeFolderAttachmentCopy(tx, key));
 if (boundary === 'after-ready') stop();
 const [work] = await readFolderAttachmentWork(db, 'profile');
 assert(work);
-copyFileSync(file, path.join(root, 'target', key));
+copyFileSync(file, target);
 if (boundary === 'after-target') stop();
 await confirmFolderAttachmentCopy(db, 'profile', work);
 if (boundary === 'after-confirm') stop();
