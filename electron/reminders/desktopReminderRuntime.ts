@@ -1,7 +1,10 @@
 import { Notification } from 'electron';
 
 import { isReminderForDevice, type ReminderRule } from '../../lib/core/reminders/reminderRule.js';
-import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import {
+  isCurrentDatabaseConnection, openDatabaseConnection, registerDatabaseConnectionCleanup,
+  runWithDatabaseConnectionOwner, type DatabaseConnection
+} from '../database/connection.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { isReminderForeground, subscribeReminderForeground } from './desktopReminderForeground.js';
@@ -10,14 +13,16 @@ import { loadDesktopReminder, loadDesktopReminderDevice, loadDesktopReminders } 
 
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 const delivered = new Map<string, Notification>();
-const foregroundRules = new Map<string, ReminderRule>();
+const foregroundRules = new Map<string, { rule: ReminderRule; connection: DatabaseConnection }>();
+let loadedConnection: DatabaseConnection | undefined;
 let unsubscribeForeground: (() => void) | undefined;
+let cleanupRegistered = false;
 
 function reportFailure(error: unknown) {
   appendMainProcessDiagnosticLog('desktop_reminder_failed', { error });
 }
 
-function deliverReminder(rule: ReminderRule) {
+function deliverReminder(rule: ReminderRule, connection: DatabaseConnection) {
   if (!Notification.isSupported()) throw new Error('Desktop notifications are unavailable.');
   const notification = new Notification({ title: 'Foliole', body: rule.message });
   delivered.set(rule.id, notification);
@@ -28,10 +33,12 @@ function deliverReminder(rule: ReminderRule) {
   if (rule.destination) {
     notification.once('click', () => {
       void runWithDatabaseConnectionOwner(() => {
+        if (!isCurrentDatabaseConnection(connection)) return;
         const current = loadDesktopReminder(rule.id);
         return current?.enabled && current.revision === rule.revision &&
           isReminderForDevice(current, loadDesktopReminderDevice()) ? current.destination : undefined;
-      }).then(openDesktopReminderDestination).catch(reportFailure);
+      }).then(destination => openDesktopReminderDestination(destination, () => isCurrentDatabaseConnection(connection)))
+        .catch(reportFailure);
     });
   }
   notification.once('failed', (_event, error) => {
@@ -57,34 +64,34 @@ function cancelReminderTimer(id: string) {
   timers.delete(id);
 }
 
-export function scheduleDesktopReminder(rule: ReminderRule) {
+export function scheduleDesktopReminder(rule: ReminderRule, connection = openDatabaseConnection()) {
   cancelReminderTimer(rule.id);
   foregroundRules.delete(rule.id);
   if (!rule.enabled || rule.trigger.kind === 'once') return;
   if (rule.trigger.kind === 'foreground') {
-    foregroundRules.set(rule.id, rule);
-    if (isReminderForeground()) armReminderTimer(rule, rule.trigger.minutes * 60_000);
+    foregroundRules.set(rule.id, { rule, connection });
+    if (isReminderForeground()) armReminderTimer(rule, connection, rule.trigger.minutes * 60_000);
     return;
   }
   const now = Date.now();
-  armReminderTimer(rule, nextDailyOccurrence(rule.trigger.time, now) - now);
+  armReminderTimer(rule, connection, nextDailyOccurrence(rule.trigger.time, now) - now);
 }
 
-function armReminderTimer(rule: ReminderRule, delay: number) {
+function armReminderTimer(rule: ReminderRule, connection: DatabaseConnection, delay: number) {
   const dueAt = Date.now() + delay;
   const timer = setTimeout(() => {
     void runWithDatabaseConnectionOwner(() => {
-      if (timers.get(rule.id) !== timer) return;
+      if (timers.get(rule.id) !== timer || !isCurrentDatabaseConnection(connection)) return;
       timers.delete(rule.id);
       const current = loadDesktopReminder(rule.id);
       if (!current?.enabled || current.revision !== rule.revision ||
         !isReminderForDevice(current, loadDesktopReminderDevice())) return;
       if (current.trigger.kind === 'foreground') {
-        if (isReminderForeground()) deliverReminder(current);
+        if (isReminderForeground()) deliverReminder(current, connection);
         return;
       }
-      scheduleDesktopReminder(current);
-      if (Date.now() >= dueAt) deliverReminder(current);
+      scheduleDesktopReminder(current, connection);
+      if (Date.now() >= dueAt) deliverReminder(current, connection);
     }).catch(reportFailure);
   }, delay);
   timer.unref();
@@ -92,18 +99,43 @@ function armReminderTimer(rule: ReminderRule, delay: number) {
 }
 
 function updateForegroundReminders(focused: boolean) {
-  for (const rule of foregroundRules.values()) {
+  for (const { rule, connection } of foregroundRules.values()) {
     cancelReminderTimer(rule.id);
     if (focused && rule.trigger.kind === 'foreground') {
-      armReminderTimer(rule, rule.trigger.minutes * 60_000);
+      armReminderTimer(rule, connection, rule.trigger.minutes * 60_000);
     }
+  }
+}
+
+function clearReminderSchedule() {
+  loadedConnection = undefined;
+  foregroundRules.clear();
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
+  delivered.clear();
+}
+
+export function refreshDesktopReminders() {
+  if (!unsubscribeForeground) return;
+  try {
+    const connection = openDatabaseConnection();
+    if (loadedConnection === connection) return;
+    clearReminderSchedule();
+    for (const rule of loadDesktopReminders()) scheduleDesktopReminder(rule, connection);
+    loadedConnection = connection;
+  } catch (error) {
+    reportFailure(error);
   }
 }
 
 export function startDesktopReminders() {
   try {
+    if (!cleanupRegistered) {
+      registerDatabaseConnectionCleanup(clearReminderSchedule);
+      cleanupRegistered = true;
+    }
     unsubscribeForeground ??= subscribeReminderForeground(updateForegroundReminders);
-    for (const rule of loadDesktopReminders()) scheduleDesktopReminder(rule);
+    refreshDesktopReminders();
   } catch (error) {
     reportFailure(error);
   }
@@ -112,8 +144,5 @@ export function startDesktopReminders() {
 export function stopDesktopReminders() {
   unsubscribeForeground?.();
   unsubscribeForeground = undefined;
-  foregroundRules.clear();
-  for (const timer of timers.values()) clearTimeout(timer);
-  timers.clear();
-  delivered.clear();
+  clearReminderSchedule();
 }

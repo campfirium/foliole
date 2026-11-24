@@ -19,6 +19,7 @@ import type {
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
+import { refreshDesktopReminders } from '../reminders/desktopReminderRuntime.js';
 
 import {
   readLegacyLibraryPathOverrides,
@@ -239,6 +240,7 @@ async function applyLibraryPathSetting(args: NativeUpdateLibraryPathSettingArgs)
       return nextPaths;
     } finally {
       endLibraryHomeMigration();
+      refreshDesktopReminders();
     }
   }
   await applyMigration();
