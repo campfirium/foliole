@@ -5,6 +5,7 @@ import { HOME_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionNavigationResume, saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
+import { hydrateCompanionBrowseShowChildTopics } from '../shared/platform/companion/settings/companionBrowseChildTopicsStore';
 import {
   hydrateCompanionFolderListSortMemory,
   readCompanionFolderListSort,
@@ -70,7 +71,8 @@ function NavigationOwner(props: {
   useEffect(() => {
     if (!props.ready) return;
     let cancelled = false;
-    void Promise.all([loadCompanionNavigationResume(props.libraryScope), hydrateCompanionFolderListSortMemory()])
+    void Promise.all([loadCompanionNavigationResume(props.libraryScope), hydrateCompanionFolderListSortMemory(),
+      hydrateCompanionBrowseShowChildTopics()])
       .then(async ([value]) => {
         await migrateLegacyBrowseSort(value);
         if (!cancelled) setLoaded({ scope: props.scope, state: restoreCompanionNavigation(value, props.snapshot) });

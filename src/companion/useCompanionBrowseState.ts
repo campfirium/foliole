@@ -7,12 +7,12 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
+import { useCompanionBrowseShowChildTopics } from '../shared/platform/companion/settings/companionBrowseChildTopicsStore';
 import {
   type CompanionRecentArticle,
   resolveCompanionRecentArticles
 } from '../shared/platform/companionBrowseLists';
 
-import { useCompanionBrowseShowChildTopics } from './companionBrowseChildTopics';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';

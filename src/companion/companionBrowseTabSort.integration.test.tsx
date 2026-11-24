@@ -11,6 +11,12 @@ vi.mock('../shared/platform/appLifecycle', () => ({
 }));
 
 import { loadCompanionNavigationResume, saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
+import {
+  getCompanionBrowseShowChildTopics,
+  hydrateCompanionBrowseShowChildTopics,
+  resetCompanionBrowseShowChildTopicsForTests,
+  toggleCompanionBrowseShowChildTopics
+} from '../shared/platform/companion/settings/companionBrowseChildTopicsStore';
 import { resetCompanionFolderListSortMemoryForTests } from '../shared/platform/companion/settings/companionFolderListSortMemoryStore';
 import { saveCompanionSyncNodeOpenState } from '../shared/platform/companionSyncObjects';
 import { createResumeLibrary, renderResumeSurface } from '../test/companionNavigationResume.testSupport';
@@ -24,7 +30,9 @@ beforeEach(async () => {
     VALUES ('new', 'folder', 'New topic', 'topic', 'Body', '2026-10-25T01:00:00Z', '2026-10-25T01:00:00Z')`).run();
   await saveCompanionSyncNodeOpenState({ nodeId: 'article', lastOpenedAt: '2026-10-25T02:00:00Z' });
 });
-afterEach(async () => { cleanup(); await library.close(); resetCompanionFolderListSortMemoryForTests(); });
+afterEach(async () => {
+  cleanup(); await library.close(); resetCompanionFolderListSortMemoryForTests(); resetCompanionBrowseShowChildTopicsForTests();
+});
 
 function phoneSortRows() {
   return library.database.prepare(`SELECT scope, platform, form_factor, host_name, value_json FROM setting_records
@@ -168,4 +176,18 @@ it('leaves home on the last opened default when older navigation held the old de
   await waitFor(() => expect(ui.result.current).not.toBeNull());
   expect(topicOrder(ui)).toEqual(['article', 'new']);
   expect(phoneSortRows()).toEqual([]);
+});
+
+it('keeps Show child topics off in this phone\'s library database, not WebView storage', async () => {
+  await openBrowse();
+  await toggleCompanionBrowseShowChildTopics();
+  expect(library.database.prepare(`SELECT scope, form_factor, host_name, value_json FROM setting_records
+    WHERE key = 'companion_browse_show_child_topics'`).all())
+    .toEqual([{ scope: 'host', form_factor: 'phone', host_name: 'Resume library', value_json: 'false' }]);
+  expect(window.localStorage.getItem('foliole-companion-browse-show-child-topics')).toBeNull();
+
+  resetCompanionBrowseShowChildTopicsForTests();
+  expect(getCompanionBrowseShowChildTopics()).toBe(true);
+  await hydrateCompanionBrowseShowChildTopics();
+  expect(getCompanionBrowseShowChildTopics()).toBe(false);
 });

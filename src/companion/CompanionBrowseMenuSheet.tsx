@@ -12,9 +12,9 @@ import {
 } from '../features/nodes/model/folderListSortOptions';
 import { useReminderDraftRequest } from '../features/settings/context/ReminderDraftRequest';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { toggleCompanionBrowseShowChildTopics, useCompanionBrowseShowChildTopics } from '../shared/platform/companion/settings/companionBrowseChildTopicsStore';
 import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
 
-import { toggleCompanionBrowseShowChildTopics, useCompanionBrowseShowChildTopics } from './companionBrowseChildTopics';
 import {
   CompanionBrowseContainerActions,
   CompanionBrowseContainerSection,

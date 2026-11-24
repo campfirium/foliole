@@ -20,7 +20,7 @@ const groups: readonly SettingPolicyGroup[] = [
   { scope: 'host', recovery: 'saved', keys: [
     'app_settings', 'backup_settings', 'import_manager_settings', 'library_path_settings',
     'readwise_api_import_state', 'discourse_publish_settings', 'foliole_publish_settings',
-    'readwise_import_settings', 'wordpress_publish_settings'
+    'readwise_import_settings', 'wordpress_publish_settings', 'companion_browse_show_child_topics'
   ] },
   { scope: 'session_resume', recovery: 'saved', keys: ['readwise_book_epub_picker_state', 'window_state'] },
   { scope: 'local_only', recovery: 'saved', keys: [
