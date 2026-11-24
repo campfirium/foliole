@@ -110,12 +110,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 26.13.0
+      # A QA baseline never covers an Android release (Play needs this run's own full chain).
       # Without a covering QA baseline, a candidate that changes only test files since the
       # previous failed full release run reruns just that run's unpassed stages.
       - name: Decide whether the QA baseline or a test repair covers this candidate
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SCOPE_JSON: ${{ needs.release_context.outputs.release_scope_json }}
           TARGET_SHA: ${{ needs.release_context.outputs.target_sha }}
         run: node scripts/quality/release-quality-reuse.mjs
 

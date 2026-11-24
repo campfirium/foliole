@@ -125,6 +125,7 @@ describe('T7 release workflow contract', () => {
     const decide = reuse.steps.find(step => step.id === 'decide');
     expect(decide.run).toBe('node scripts/quality/release-quality-reuse.mjs');
     expect(decide.env.TARGET_SHA).toBe('${{ needs.release_context.outputs.target_sha }}');
+    expect(decide.env.RELEASE_SCOPE_JSON).toBe('${{ needs.release_context.outputs.release_scope_json }}');
     // The full chain is the fallback for every outcome except an explicit reuse decision.
     expect(jobs.t6_quality.needs).toEqual(['release_context', 'quality_reuse']);
     expect(jobs.t6_quality.if).toContain('!cancelled()');

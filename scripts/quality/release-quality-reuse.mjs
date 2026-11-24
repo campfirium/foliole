@@ -74,10 +74,30 @@ export function evaluateBaselineEvidence({ evidence, baseline, repository }) {
   return null;
 }
 
+export function readReleaseScope(text) {
+  let scope;
+  try {
+    scope = JSON.parse(text ?? '');
+  } catch {
+    scope = null;
+  }
+  if (!Array.isArray(scope) || !scope.length || scope.some(platform => typeof platform !== 'string' || !platform)) {
+    throw new Error('RELEASE_SCOPE_JSON must list the release platforms');
+  }
+  return scope;
+}
+
 /** Decide whether the release candidate may reuse a passed QA full chain. */
-export function decideQualityReuse({ baseline, isAncestor, changes, readAt, evidence, repository }) {
+export function decideQualityReuse({ baseline, releaseScope = [], isAncestor, changes, readAt, evidence, repository }) {
   const no = reason => ({ reuse: false, reason, localizationChanged: false });
   if (!baseline) return no('release intent names no quality baseline');
+  // Play registration accepts only this run's own passed full release-t7 receipt and its
+  // quality admission job. A reused QA baseline leaves this run with a Windows replay
+  // receipt only, and its stages come from a non-release lane, so carrying them as reused
+  // release stages would widen what Play accepts. Android releases run the full chain.
+  if (releaseScope.includes('android')) {
+    return no('release scope includes android, whose Play registration needs this run\'s own full release chain');
+  }
   if (!isAncestor) return no('quality baseline is not an ancestor of the release candidate');
   let localizationChanged = false;
   const blocked = [];
@@ -201,6 +221,7 @@ export function runReleaseQualityReuse({ cwd = process.cwd(), env = process.env,
   if (!FULL_SHA.test(targetSha)) throw new Error('TARGET_SHA must be a full commit SHA');
   const baseline = readQualityBaseline(git(cwd, 'show', `${targetSha}:${INTENT_PATH}`));
   if (!baseline) return decideQualityReuse({ baseline });
+  const releaseScope = readReleaseScope(env.RELEASE_SCOPE_JSON);
   let isAncestor = false;
   try {
     git(cwd, 'merge-base', '--is-ancestor', baseline.sha, targetSha);
@@ -211,7 +232,7 @@ export function runReleaseQualityReuse({ cwd = process.cwd(), env = process.env,
       .map(line => { const [status, file] = line.split('\t'); return { status, file }; })
     : [];
   return decideQualityReuse({
-    baseline, isAncestor, changes, repository: env.GITHUB_REPOSITORY,
+    baseline, releaseScope, isAncestor, changes, repository: env.GITHUB_REPOSITORY,
     readAt: (side, file) => readAtRevision(cwd, side === 'base' ? baseline.sha : targetSha, file),
     evidence: () => readEvidence({ repository: env.GITHUB_REPOSITORY, runId: baseline.runId })
   });

@@ -66,8 +66,9 @@ function evidence(sha, { lane = 'dev-remote', selection = 'all', path: workflowP
   };
 }
 
-function decide(cwd, target, readEvidence) {
-  return runReleaseQualityReuse({ cwd, env: { TARGET_SHA: target, GITHUB_REPOSITORY: repository }, readEvidence });
+function decide(cwd, target, readEvidence, scope = '["macos","windows","linux","ios"]') {
+  return runReleaseQualityReuse({ cwd, env: { TARGET_SHA: target, GITHUB_REPOSITORY: repository,
+    ...(scope === null ? {} : { RELEASE_SCOPE_JSON: scope }) }, readEvidence });
 }
 
 describe('release quality reuse', () => {
@@ -114,6 +115,22 @@ describe('release quality reuse', () => {
     git(cwd, 'commit', '-qam', 'bad baseline');
     expect(decide(cwd, git(cwd, 'rev-parse', 'HEAD'), () => evidence(orphan)).reason).toContain('not an ancestor');
   });
+
+  it('runs the full chain for an Android release, which Play registers only from its own full chain', () => {
+    const { cwd, base } = repo();
+    const target = release(cwd, base);
+    const result = decide(cwd, target, () => { throw new Error('evidence must not be read'); },
+      '["macos","windows","linux","android","ios"]');
+    expect(result).toMatchObject({ reuse: false, localizationChanged: false });
+    expect(result.reason).toContain('release scope includes android');
+  });
+
+  it.each([null, '', 'android', '[]', '[""]', '{"android":true}'])(
+    'refuses to decide without a readable release scope (%s)', scope => {
+      const { cwd, base } = repo();
+      const target = release(cwd, base);
+      expect(() => decide(cwd, target, () => evidence(base), scope)).toThrow('RELEASE_SCOPE_JSON');
+    });
 
   it('rejects a malformed baseline instead of guessing', () => {
     const { cwd, base } = repo();
