@@ -6,6 +6,10 @@ on:
         required: false
         type: string
         default: ''
+      reuse:
+        required: false
+        type: string
+        default: ''
       stages:
         required: true
         type: string
@@ -36,6 +40,7 @@ jobs:
         id: verdict
         env:
           CHAIN_LANE: ${{ inputs.execution_lane }}
+          CHAIN_REUSE: ${{ inputs.reuse }}
           CHAIN_STAGES: ${{ inputs.stages }}
           TARGET_SHA: ${{ inputs.target_sha }}
           CHAIN_NEEDS: ${{ inputs.stage_results }}

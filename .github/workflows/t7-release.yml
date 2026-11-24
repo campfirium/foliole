@@ -95,6 +95,9 @@ jobs:
       accepted_sha: ${{ steps.decide.outputs.accepted_sha }}
       localization_changed: ${{ steps.decide.outputs.localization_changed }}
       reason: ${{ steps.decide.outputs.reason }}
+      repair: ${{ steps.decide.outputs.repair }}
+      repair_reuse: ${{ steps.decide.outputs.repair_reuse }}
+      repair_stages: ${{ steps.decide.outputs.repair_stages }}
       reuse: ${{ steps.decide.outputs.reuse }}
     steps:
       - name: Check out release candidate history
@@ -107,7 +110,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 26.13.0
-      - name: Decide whether the QA baseline covers this candidate
+      # Without a covering QA baseline, a candidate that changes only test files since the
+      # previous failed full release run reruns just that run's unpassed stages.
+      - name: Decide whether the QA baseline or a test repair covers this candidate
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
@@ -158,6 +163,8 @@ jobs:
     uses: ./.github/workflows/t6-hosted-quality.yml
     with:
       execution_lane: release-t7
+      stages: ${{ needs.quality_reuse.outputs.repair == 'true' && needs.quality_reuse.outputs.repair_stages || 'all' }}
+      reuse: ${{ needs.quality_reuse.outputs.repair == 'true' && needs.quality_reuse.outputs.repair_reuse || '' }}
       target_sha: ${{ needs.release_context.outputs.target_sha }}
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 

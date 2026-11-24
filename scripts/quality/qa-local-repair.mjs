@@ -2,17 +2,15 @@ import { execFileSync, spawnSync } from 'node:child_process';
 
 import { qaGit, readQaWorkspace } from './qa-workspace-state.mjs';
 import { saveQaRecord } from './qa-workspace-integration.mjs';
+import { isTestOnlyFile } from './test-only-files.mjs';
+
+export { isTestOnlyFile };
 
 // A test-only repair of a completed full run is proven locally instead of by another full hosted run.
 export const LOCAL_REPAIR_REPEATS = 3;
-const TEST_FILE = /\.test\.[cm]?[jt]sx?$|[.-]test-?support\.[cm]?[jt]sx?$|TestSupport\.[cm]?[jt]sx?$/u;
 const AGGREGATE_JOB = /admission|verdict/iu;
 const FAILED_TEST = /\[vitest-summary\] fail \d+\. (\S+) :: /u;
 const REPO_PATH = /(?:^|\/)((?:src|scripts|electron|lib|tests|android|ios)\/\S+)$/u;
-
-export function isTestOnlyFile(file) {
-  return TEST_FILE.test(file) || file.startsWith('src/test/');
-}
 
 export function failedTestsByJob(failedLog) {
   const byJob = new Map();

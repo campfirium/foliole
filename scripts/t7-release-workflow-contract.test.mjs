@@ -129,6 +129,20 @@ describe('T7 release workflow contract', () => {
     expect(jobs.t6_quality.needs).toEqual(['release_context', 'quality_reuse']);
     expect(jobs.t6_quality.if).toContain('!cancelled()');
     expect(jobs.t6_quality.if).toContain("needs.quality_reuse.outputs.reuse != 'true'");
+    // A test repair narrows the same release-lane chain to the unpassed stages and hands the
+    // reused stages to its verdict; any other decision runs every stage.
+    expect(jobs.t6_quality.with.stages).toBe(
+      "${{ needs.quality_reuse.outputs.repair == 'true' && needs.quality_reuse.outputs.repair_stages || 'all' }}");
+    expect(jobs.t6_quality.with.reuse).toBe(
+      "${{ needs.quality_reuse.outputs.repair == 'true' && needs.quality_reuse.outputs.repair_reuse || '' }}");
+    expect(reuse.outputs).toMatchObject({ repair: '${{ steps.decide.outputs.repair }}',
+      repair_reuse: '${{ steps.decide.outputs.repair_reuse }}', repair_stages: '${{ steps.decide.outputs.repair_stages }}' });
+    const chain = parse(fs.readFileSync('.github/workflows/t6-hosted-quality.yml', 'utf8'));
+    expect(chain.on.workflow_call.inputs.reuse.default).toBe('');
+    expect(chain.jobs.context.steps.find(step => step.id === 'select').env.CHAIN_REUSE).toBe('${{ inputs.reuse }}');
+    expect(chain.jobs['quality-admission'].with.reuse).toBe('${{ inputs.reuse }}');
+    const verdict = parse(fs.readFileSync('.github/workflows/hosted-quality-chain-verdict.yml', 'utf8'));
+    expect(verdict.jobs.verdict.steps.find(step => step.id === 'verdict').env.CHAIN_REUSE).toBe('${{ inputs.reuse }}');
     // The release lane runs the one non-duplicated stage the QA full chain omits.
     const windows = jobs.reuse_windows_acceptance;
     expect(windows.uses).toBe('./.github/workflows/t6-hosted-quality.yml');

@@ -32,24 +32,68 @@ export function requestedStages(input, lane) {
   return [...new Set(stages)];
 }
 
-export function stagesVerdict(stages, needs, targetSha) {
+// A reused stage passed at its recorded ancestor SHA; every other stage must accept the target.
+export function stagesVerdict(stages, needs, targetSha, reusedShas = {}) {
   const results = stages.map(stage => needs[stage]?.result);
   if (results.includes('failure')) return 'failed';
   if (results.some(result => result !== 'success')) return 'incomplete';
-  return stages.every(stage => needs[stage]?.outputs?.accepted_sha === targetSha)
+  return stages.every(stage => needs[stage]?.outputs?.accepted_sha === (reusedShas[stage] ?? targetSha))
     ? 'passed' : 'failed';
 }
 
-export function createChainVerdict({ selection, targetSha, needs, runId, runAttempt, lane }) {
-  if (!/^[0-9a-f]{40}$/u.test(targetSha)) throw new Error('Chain target must be an exact SHA');
-  const requested = requestedStages(selection, lane);
-  const verdict = stagesVerdict(requested, needs, targetSha);
+const FULL_SHA = /^[0-9a-f]{40}$/u;
+
+/**
+ * Validates a release test-repair reuse record: stages a failed release chain already passed at
+ * an ancestor that differs from the target only in test files. Only the release lane may carry it,
+ * and the reused and rerun stages must partition the full release chain.
+ */
+export function validateChainReuse(reuse, { lane, targetSha, rerunStages }) {
+  if (lane !== RELEASE_LANE) throw new Error('Only the release lane may reuse stages');
+  if (!/^\d+$/u.test(String(reuse?.run_id ?? '')) || !Number.isSafeInteger(reuse?.run_attempt)
+    || !FULL_SHA.test(reuse?.sha ?? '') || reuse.sha === targetSha || !Array.isArray(reuse.changed_files)) {
+    throw new Error('Reuse must name the failed release run, its attempt and its exact SHA');
+  }
+  const reused = Object.entries(reuse.stages ?? {});
+  if (!reused.length || reused.some(([stage, sha]) => !CHAIN_STAGES.includes(stage) || !FULL_SHA.test(sha) || sha === targetSha)) {
+    throw new Error('Reused stages must be chain stages accepted at an exact ancestor SHA');
+  }
+  if (rerunStages) {
+    const full = fullChainStages(lane);
+    const covered = [...rerunStages, ...reused.map(([stage]) => stage)];
+    if (!rerunStages.length || new Set(covered).size !== covered.length || covered.length !== full.length
+      || full.some(stage => !covered.includes(stage))) {
+      throw new Error('Reused and rerun stages must partition the full release chain');
+    }
+  }
+  return Object.fromEntries(reused);
+}
+
+function parseReuse(text) {
+  return text ? JSON.parse(text) : null;
+}
+
+export function createChainVerdict({ selection, targetSha, needs, runId, runAttempt, lane, reuse = null }) {
+  if (!FULL_SHA.test(targetSha)) throw new Error('Chain target must be an exact SHA');
+  const rerun = requestedStages(selection, lane);
+  let requested = rerun;
+  let reusedShas = {};
+  let merged = needs;
+  if (reuse) {
+    if (selection === 'all') throw new Error('A reusing chain reruns an explicit stage list');
+    reusedShas = validateChainReuse(reuse, { lane, targetSha, rerunStages: rerun });
+    requested = fullChainStages(lane);
+    merged = { ...needs, ...Object.fromEntries(Object.entries(reusedShas).map(([stage, sha]) =>
+      [stage, { result: 'success', outputs: { accepted_sha: sha } }])) };
+  }
+  const verdict = stagesVerdict(requested, merged, targetSha, reusedShas);
   const receipt = {
     run_id: String(runId), run_attempt: Number(runAttempt),
-    kind: selection === 'all' ? 'full' : 'replay', target_sha: targetSha,
+    kind: selection === 'all' || reuse ? 'full' : 'replay', target_sha: targetSha,
     ...(lane ? { lane } : {}),
-    stages: Object.fromEntries(requested.map(stage => [stage, needs[stage]?.result ?? 'skipped'])),
-    stage_shas: Object.fromEntries(requested.map(stage => [stage, needs[stage]?.outputs?.accepted_sha ?? ''])),
+    stages: Object.fromEntries(requested.map(stage => [stage, merged[stage]?.result ?? 'skipped'])),
+    stage_shas: Object.fromEntries(requested.map(stage => [stage, merged[stage]?.outputs?.accepted_sha ?? ''])),
+    ...(reuse ? { reused: reuse } : {}),
     verdict
   };
   if (receipt.kind === 'full' && verdict === 'passed') receipt.accepted_sha = targetSha;
@@ -60,9 +104,14 @@ export function runChainCommand(command, env = process.env) {
   const selection = env.CHAIN_STAGES;
   const needs = JSON.parse(env.CHAIN_NEEDS ?? '{}');
   const lane = env.CHAIN_LANE || undefined;
+  const reuse = parseReuse(env.CHAIN_REUSE);
   if (command === 'select') {
     const stages = requestedStages(selection, lane);
-    if (!/^[0-9a-f]{40}$/u.test(env.TARGET_SHA)) throw new Error('Chain target must be an exact SHA');
+    if (!FULL_SHA.test(env.TARGET_SHA)) throw new Error('Chain target must be an exact SHA');
+    if (reuse) {
+      if (selection === 'all') throw new Error('A reusing chain reruns an explicit stage list');
+      validateChainReuse(reuse, { lane, targetSha: env.TARGET_SHA, rerunStages: stages });
+    }
     appendFileSync(env.GITHUB_OUTPUT, `stages=${JSON.stringify(stages)}\n`);
     return;
   }
@@ -75,7 +124,7 @@ export function runChainCommand(command, env = process.env) {
   }
   if (command !== 'write') throw new Error('Unknown chain command');
   const receipt = createChainVerdict({ selection, targetSha: env.TARGET_SHA, needs,
-    runId: env.GITHUB_RUN_ID, runAttempt: env.GITHUB_RUN_ATTEMPT, lane });
+    runId: env.GITHUB_RUN_ID, runAttempt: env.GITHUB_RUN_ATTEMPT, lane, reuse });
   writeFileSync('chain-verdict.json', `${JSON.stringify(receipt, null, 2)}\n`);
   appendFileSync(env.GITHUB_OUTPUT, `verdict=${receipt.verdict}\n`);
   if (receipt.accepted_sha) appendFileSync(env.GITHUB_OUTPUT, `accepted_sha=${receipt.accepted_sha}\n`);

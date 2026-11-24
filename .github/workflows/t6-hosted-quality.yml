@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: all
+      reuse:
+        description: Release test repair record of stages a failed release run passed at a test-only ancestor; other lanes reject it
+        required: false
+        type: string
+        default: ''
     outputs:
       accepted_sha:
         description: Exact commit admitted by T5 and the full T6 tail
@@ -42,6 +47,7 @@ jobs:
         id: select
         env:
           CHAIN_LANE: ${{ inputs.execution_lane }}
+          CHAIN_REUSE: ${{ inputs.reuse }}
           CHAIN_STAGES: ${{ inputs.stages }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node scripts/quality/chain-verdict.mjs select
@@ -224,5 +230,6 @@ jobs:
     with:
       execution_lane: ${{ inputs.execution_lane }}
       stages: ${{ inputs.stages }}
+      reuse: ${{ inputs.reuse }}
       target_sha: ${{ inputs.target_sha }}
       stage_results: ${{ toJSON(needs) }}

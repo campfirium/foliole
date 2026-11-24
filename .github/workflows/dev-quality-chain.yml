@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: all
+      reuse:
+        description: Release test repair record of stages a failed release run passed at a test-only ancestor; other lanes reject it
+        required: false
+        type: string
+        default: ''
     outputs:
       accepted_sha:
         description: Exact commit admitted by every selected dev chain stage
@@ -204,5 +209,6 @@ jobs:
     with:
       execution_lane: ${{ inputs.execution_lane }}
       stages: ${{ inputs.stages }}
+      reuse: ${{ inputs.reuse }}
       target_sha: ${{ inputs.target_sha }}
       stage_results: ${{ toJSON(needs) }}

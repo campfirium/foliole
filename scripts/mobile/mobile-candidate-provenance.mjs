@@ -1,4 +1,4 @@
-import { fullChainStages, stagesVerdict } from '../quality/chain-verdict.mjs';
+import { RELEASE_LANE, fullChainStages, stagesVerdict, validateChainReuse } from '../quality/chain-verdict.mjs';
 import { verifyPlayCandidate } from '../android/play-distribution.mjs';
 import { parseRemoteQualityRun } from '../quality/remote-quality-run-title.mjs';
 import { verifyPlayDexIdentity } from '../android/play-dex-identity.mjs';
@@ -49,7 +49,19 @@ export function verifyPlayQuality({ run, qualityArtifact, quality, jobs }) {
   const needs = Object.fromEntries(stages.map(stage => [stage, {
     result: quality.stages?.[stage], outputs: { accepted_sha: quality.stage_shas?.[stage] }
   }]));
-  if (stagesVerdict(stages, needs, run.head_sha) !== 'passed') fail('full quality did not accept the source');
+  // A release test repair admits the same run and SHA, carrying stages its failed predecessor
+  // passed on an ancestor that differs only in test files; other lanes never carry reuse.
+  let reusedShas = {};
+  if (quality.reused !== undefined) {
+    if (lane !== RELEASE_LANE) fail('only release quality may reuse stages');
+    try {
+      reusedShas = validateChainReuse(quality.reused, { lane, targetSha: run.head_sha,
+        rerunStages: stages.filter(stage => !(stage in quality.reused.stages)) });
+    } catch (error) {
+      fail(`reused quality is invalid: ${error.message}`);
+    }
+  }
+  if (stagesVerdict(stages, needs, run.head_sha, reusedShas) !== 'passed') fail('full quality did not accept the source');
   const admission = lane === 'release-t7' ? 'Full chain / quality-admission / verdict' : 'full-quality / quality-admission / verdict';
   if (!jobs.some(job => job.name === admission && job.conclusion === 'success')) fail('quality admission did not succeed');
   if (lane === 'release-t7' && !jobs.some(job =>
