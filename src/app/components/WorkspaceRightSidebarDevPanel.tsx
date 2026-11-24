@@ -17,6 +17,7 @@ import {
 } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { SchedulingPrioritySource } from './SchedulingPrioritySource';
 import {
   formatDateTime,
   formatDurationDays,
@@ -34,7 +35,7 @@ interface WorkspaceRightSidebarDevPanelProps {
   nodesById: Record<string, Node>;
 }
 
-function SchedulingInfoRow({ label, value }: { label: string; value: string }) {
+function SchedulingInfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <>
       <dt className={inspectorDefinitionTermClassName}>{label}</dt>
@@ -81,7 +82,9 @@ function EmptyDevPanelState({ t }: { t: SchedulingTranslate }) {
   );
 }
 
-function ReadingTopicContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
+type SchedulingContentProps = { data: SchedulingPanelData; source: ReactNode; t: SchedulingTranslate };
+
+function ReadingTopicContent({ data, source, t }: SchedulingContentProps) {
   const { node, priority } = data;
   const currentInterval = node.reading?.intervalDurationMs ?? data.initialReadingIntervalMs;
   const previousInterval = node.reading && node.reading.repetitionCount > 1
@@ -99,6 +102,7 @@ function ReadingTopicContent({ data, t }: { data: SchedulingPanelData; t: Schedu
       </SchedulingSection>
       <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.prioritySource')} value={source} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.growthFactor')} value={formatNumber(data.readingGrowthFactor)} />
@@ -119,7 +123,7 @@ function SchedulingHeader({ subtitle, t }: { subtitle: string; t: SchedulingTran
   );
 }
 
-function ReviewItemContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
+function ReviewItemContent({ data, source, t }: SchedulingContentProps) {
   const { desiredRetention, node, priority, retrievability } = data;
   const nextDue = node.review?.due ?? '';
 
@@ -135,6 +139,7 @@ function ReviewItemContent({ data, t }: { data: SchedulingPanelData; t: Scheduli
 
       <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.prioritySource')} value={source} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.retention')} value={formatPercent(desiredRetention.value)} />
@@ -153,14 +158,14 @@ function ReviewItemContent({ data, t }: { data: SchedulingPanelData; t: Scheduli
   );
 }
 
-function DevPanelContent({ data, t }: { data: SchedulingPanelData; t: SchedulingTranslate }) {
-  if (data.kind === 'topic') {
-    return <ReadingTopicContent data={data} t={t} />;
+function DevPanelContent(props: SchedulingContentProps) {
+  if (props.data.kind === 'topic') {
+    return <ReadingTopicContent {...props} />;
   }
-  if (data.kind === 'item') {
-    return <ReviewItemContent data={data} t={t} />;
+  if (props.data.kind === 'item') {
+    return <ReviewItemContent {...props} />;
   }
-  return <EmptyDevPanelState t={t} />;
+  return <EmptyDevPanelState t={props.t} />;
 }
 
 export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPanelProps) {
@@ -183,5 +188,8 @@ export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPan
     return null;
   }
 
-  return <DevPanelContent data={data} t={t} />;
+  return (
+    <DevPanelContent data={data} t={t}
+      source={<SchedulingPrioritySource key={node.id} priority={data.priority} nodesById={props.nodesById} settings={reviewSchedulerSettings} />} />
+  );
 }

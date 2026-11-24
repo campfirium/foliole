@@ -7,7 +7,7 @@ import {
   resolveNodeShortTermSetting,
   type ResolvedNodeSetting
 } from '../model/nodeReviewSettings';
-import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
+import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
 import {
@@ -27,7 +27,10 @@ import {
   settingsSwitchKnobClassName
 } from '@/shared/ui';
 
-function getScopeLabel(node: WorkspaceListNode, t: Translate) {
+type ReviewOptionsNode = Pick<WorkspaceListNode,
+  'id' | 'kind' | 'parentNodeId' | 'priority' | 'desiredRetention' | 'enableShortTerm'>;
+
+function getScopeLabel(node: ReviewOptionsNode, t: Translate) {
   if (node.kind === 'folder') {
     return t('desktop.nodeReview.scope.folder');
   }
@@ -41,7 +44,7 @@ function renderShortTermDescription(t: Translate) {
   return t('desktop.nodeReview.shortTerm.description');
 }
 
-function renderPriorityDescription(node: WorkspaceListNode, t: Translate) {
+function renderPriorityDescription(node: ReviewOptionsNode, t: Translate) {
   return t('desktop.nodeReview.priority.description', { scope: getScopeLabel(node, t) });
 }
 
@@ -91,7 +94,7 @@ function PriorityControl(props: {
 }
 
 function useNodeReviewSchedulingDraft(args: {
-  node: WorkspaceListNode;
+  node: ReviewOptionsNode;
   priority: ResolvedNodeSetting<number>;
   shortTerm: ResolvedNodeSetting<boolean>;
 }) {
@@ -162,7 +165,7 @@ function RetentionRow({ draft, retention, t }: {
 function ReviewSchedulingRows(props: {
   draft: NodeReviewSchedulingDraft;
   retention: ResolvedNodeSetting<number>;
-  node: WorkspaceListNode;
+  node: ReviewOptionsNode;
   t: Translate;
 }) {
   return (
@@ -181,8 +184,9 @@ function ReviewSchedulingRows(props: {
 export function NodeReviewSchedulingDialog(props: {
   defaultPriority: number;
   defaultDesiredRetention: number;
-  node: WorkspaceListNode | null;
-  nodesById: WorkspaceListNodesById;
+  node: ReviewOptionsNode | null;
+  nodesById: Record<string, ReviewOptionsNode | undefined>;
+  titleQualifier?: string;
   onClose: () => void;
   onDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
   onPriorityChange: (nodeId: string, priority: number | null) => void;
@@ -217,7 +221,9 @@ export function NodeReviewSchedulingDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent aria-describedby={undefined} className="w-[min(640px,calc(100vw-32px))] p-0">
           <div className="px-5 pb-2 pt-5">
-            <AppDialogTitle className="text-base font-semibold">{t('desktop.nodeReview.title')}</AppDialogTitle>
+            <AppDialogTitle className="text-base font-semibold">
+              {t('desktop.nodeReview.title')}{props.titleQualifier ? ` · ${props.titleQualifier}` : null}
+            </AppDialogTitle>
           </div>
           <ReviewSchedulingRows draft={draft} node={node} retention={retention} t={t} />
         </AppDialogContent>
