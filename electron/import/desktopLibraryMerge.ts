@@ -13,12 +13,12 @@ import { NODE_KINDS, type NodeKind } from '../../lib/core/nodes/nodeKind.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { snapshotBackupRestoreSource } from '../database/backupRestoreSourceSnapshot.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { createDatabaseRestoreArtifacts } from '../database/databaseRestoreArtifacts.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { verifySqliteDatabaseFileOffMainThread } from '../database/sqliteFileOffMainThread.js';
 
-import { copyLibraryMergeAttachments } from './desktopLibraryMergeAttachments.js';
+import { captureLibraryMergeTarget, copyLibraryMergeAttachments, type LibraryMergeTarget, withLibraryMergeTarget } from './desktopLibraryMergeAttachments.js';
 import { stageMobileLibrarySource } from './mobileLibraryMergeSource.js';
 
 export interface DesktopLibraryMergeResult extends Omit<LibraryMergeReport, 'attachmentKeys'> {
@@ -106,8 +106,8 @@ function desktopHost(fingerprint: string, folderTitle: string, now: string): Lib
 }
 
 /** Each batch takes the shared connection for its own transaction, so the app keeps working between batches. */
-function ownedPort(port: DbPort): DbPort {
-  return { ...port, transaction: run => runWithDatabaseConnectionOwner(() => port.transaction(run)) } as DbPort;
+function ownedPort(port: DbPort, target: LibraryMergeTarget): DbPort {
+  return { ...port, transaction: run => withLibraryMergeTarget(target, () => port.transaction(run)) };
 }
 
 function sourceTables(sqlite: Database.Database) {
@@ -143,7 +143,8 @@ export async function mergeDesktopLibrary(input: {
   sourcePath: string; attachmentsDirectory: string | null; folderTitle: string; now?: string; batchSize?: number;
 }): Promise<DesktopLibraryMergeResult> {
   const now = input.now ?? new Date().toISOString();
-  const connection = openDatabaseConnection();
+  const target = await runWithDatabaseConnectionOwner(captureLibraryMergeTarget);
+  const { connection } = target;
   if (path.resolve(input.sourcePath) === path.resolve(connection.dbPath)) throw new Error('library_merge_source_is_current');
   const workDirectory = path.dirname(connection.dbPath);
   const mobile = await stageMobileLibrarySource(input.sourcePath, workDirectory, input.attachmentsDirectory);
@@ -157,9 +158,10 @@ export async function mergeDesktopLibrary(input: {
       await migrateSource(sqlite, now);
       const host = desktopHost(fingerprint, input.folderTitle, now);
       const report = await runLibraryMerge({ source: createBetterSqliteDbPort(sqlite), now,
-        target: ownedPort(createBetterSqliteDbPort(connection.sqlite)), host,
+        target: ownedPort(createBetterSqliteDbPort(connection.sqlite), target), host,
         ...(input.batchSize ? { batchSize: input.batchSize } : {}) });
-      const attachments = await copyLibraryMergeAttachments(report.attachmentKeys, mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory);
+      const attachments = await copyLibraryMergeAttachments(report.attachmentKeys,
+        mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory, target);
       return { added: report.added, alternatives: report.alternatives, alternativesChanged: report.alternativesChanged,
         unchanged: report.unchanged,
         skippedDeleted: report.skippedDeleted, reviewsAdded: report.reviewsAdded, attachmentsCopied: attachments.copied, attachmentsMissing: attachments.missing,

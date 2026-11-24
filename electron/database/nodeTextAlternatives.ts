@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
 import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
@@ -10,6 +10,7 @@ import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 export async function loadNodeTextAlternativePreview(nodeId: string, alternativeId?: string) {
   const connection = openDatabaseConnection();
@@ -24,10 +25,8 @@ export function loadNodeTextAlternativePreviewWithDriver(
   const alternatives = loadTopicTextStateWithDriver(driver, nodeId).filter((entry) => entry.expires_at > now);
   const selected = (alternativeId ? alternatives.find((entry) => entry.id === alternativeId) : null) ?? alternatives[0];
   if (!selected) return null;
-  const row = driver.queryOne<NodeBodyRow & DatabaseRow & { snapshot_json: string }>(
-    `SELECT n.content, n.body_blob_hash, v.snapshot_json FROM nodes n
-     JOIN node_sync_versions v ON v.version_id = n.current_version_id
-     WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]);
+  const row = driver.queryOne<NodeBodyRow>(
+    'SELECT content, body_blob_hash FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
   if (!row) return null;
   const body = resolveNodeBody(row);
   const selectedBody = loadTopicTextBodiesWithDriver(driver, nodeId, [selected])[0]!;
@@ -49,11 +48,14 @@ export function promoteNodeTextAlternative(nodeId: string, alternativeId: string
 async function updateAlternative(nodeId: string, alternativeId: string, action: 'dismissed' | 'promoted') {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'mutate-topic-text' });
   return port.transaction(async (tx) => {
+    const now = new Date().toISOString();
     const [node] = await tx.query<{ id: string }>(
       `SELECT n.id FROM nodes n JOIN node_text_alternatives entry ON entry.node_id = n.id
-       WHERE n.id = ? AND entry.alternative_id = ? AND entry.status = 'available' AND n.deleted_at IS NULL`, [nodeId, alternativeId]);
+       WHERE n.id = ? AND entry.alternative_id = ? AND entry.status = 'available'
+         AND entry.expires_at > ? AND n.deleted_at IS NULL`, [nodeId, alternativeId, now]);
     if (!node) return { alternative_id: alternativeId, node_id: null, status: 'unavailable' as const };
-    return mutateTopicText(tx, { nodeId: node.id, alternativeId, action, now: new Date().toISOString(),
+    if (action === 'promoted') flushNodeSyncVersion(node.id, now);
+    return mutateTopicText(tx, { nodeId: node.id, alternativeId, action, now,
       versionId: createOpaqueVersionRef(randomUUID()), hostName: 'desktop-text-selection' });
   });
 }

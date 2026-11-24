@@ -19,7 +19,7 @@ interface PdfQueueRow extends DatabaseRow {
   id: string;
 }
 
-const queuedAttachmentIds = new Set<string>();
+const queuedAttachments = new Map<string, symbol>();
 interface PdfAttempt {
   number: number;
 }
@@ -53,17 +53,14 @@ function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: nu
 }
 
 function enqueueInternal(attachmentId: string) {
-  if (queuedAttachmentIds.has(attachmentId)) {
-    return;
-  }
-  queuedAttachmentIds.add(attachmentId);
-  const handle = submitPdfIndexingTask(attachmentId, async () => {
-    queuedAttachmentIds.delete(attachmentId);
-    await processOneAttachment(attachmentId);
-  });
-  void handle.promise.catch(() => {
-    queuedAttachmentIds.delete(attachmentId);
-  });
+  if (queuedAttachments.has(attachmentId)) return;
+  const token = Symbol();
+  queuedAttachments.set(attachmentId, token);
+  const clearQueued = () => {
+    if (queuedAttachments.get(attachmentId) === token) queuedAttachments.delete(attachmentId);
+  };
+  const handle = submitPdfIndexingTask(attachmentId, () => processOneAttachment(attachmentId, clearQueued));
+  void handle.promise.then(clearQueued, clearQueued);
 }
 
 function isCurrentAttempt(attachmentId: string, attempt: PdfAttempt) {
@@ -101,8 +98,11 @@ function failAttempt(attachmentId: string, attempt: PdfAttempt, error: unknown) 
   return retry;
 }
 
-async function processOneAttachment(attachmentId: string) {
-  const attempt = await runWithDatabaseConnectionOwner(() => beginAttempt(attachmentId));
+async function processOneAttachment(attachmentId: string, clearQueued: () => void) {
+  const attempt = await runWithDatabaseConnectionOwner(() => {
+    clearQueued();
+    return beginAttempt(attachmentId);
+  });
   if (!attempt) return;
   try {
     const pages = await extractPdfPageText(attachmentId);
@@ -128,6 +128,15 @@ export function markPdfAttachmentIndexPending(attachmentId: string) {
   }
   resetPdfIndexState(attachmentId);
   activeAttempts.delete(attachmentId);
+}
+
+/** Starts or resumes indexing for a mounted PDF whose file is now available. */
+export function ensurePdfAttachmentIndexing(attachmentId: string) {
+  if (queuedAttachments.has(attachmentId) || activeAttempts.has(attachmentId)) return;
+  const status = readPdfIndexState(attachmentId)?.status;
+  if (status === PDF_STATUS_READY || !isMountedPdf(attachmentId)) return;
+  if (status !== PDF_STATUS_PENDING && status !== PDF_STATUS_INDEXING) markPdfAttachmentIndexPending(attachmentId);
+  enqueueInternal(attachmentId);
 }
 
 export async function resumePendingPdfAttachmentIndexing() {

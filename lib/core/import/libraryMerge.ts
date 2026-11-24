@@ -106,8 +106,7 @@ async function collectRetainedAttachmentKeys(
   if (sourceKeys.size === 0) return;
 
   const alternatives = await tx.query<AttachmentReferences>(`SELECT body_text AS content, resource_references
-    FROM node_text_alternatives WHERE node_id = ? AND body_blob_hash = ? AND status = 'available' AND expires_at > ?`,
-  [node.id, hashTextBody(node.content), now]);
+    FROM node_text_alternatives WHERE node_id = ? AND status = 'available' AND expires_at > ?`, [node.id, now]);
   for (const alternative of alternatives) {
     for (const key of nodeAttachmentKeys(alternative)) if (sourceKeys.has(key)) keys.add(key);
   }

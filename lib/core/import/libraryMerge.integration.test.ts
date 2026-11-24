@@ -113,6 +113,24 @@ it('retries only source attachments still referenced by the target', async () =>
   expect(await merge(source, target)).toMatchObject({ added: 0, alternatives: 0, attachmentKeys: [INLINE_IMAGE] });
 });
 
+it('recovers an attachment shared by a retained body and a dismissed backup body', async () => {
+  const target = library();
+  const first = library();
+  const second = library();
+  const image = `![shared](${buildAssetMarkdownUrl(IMAGE)})`;
+  addNode(target.db, 'conflict', 'Local body');
+  addNode(first.db, 'conflict', `First body ${image}`, { versionId: 'first' });
+  addNode(second.db, 'conflict', `Second body ${image}`, { versionId: 'second' });
+  expect(await merge(first, target)).toMatchObject({ alternatives: 1, attachmentKeys: [IMAGE] });
+  expect(await merge(second, target)).toMatchObject({ alternatives: 1, attachmentKeys: [IMAGE] });
+  target.db.exec(`UPDATE node_text_alternatives SET status = 'dismissed', body_text = '', resource_references = '[]'
+    WHERE source_version_id = 'second'`);
+
+  expect(await merge(second, target)).toMatchObject({ alternatives: 0, attachmentKeys: [IMAGE] });
+  expect(target.db.prepare("SELECT body_text FROM node_text_alternatives WHERE status = 'available'").all())
+    .toEqual([{ body_text: `First body ${image}` }]);
+});
+
 function previewBodies(target: ReturnType<typeof library>, nodeId: string) {
   const reader = {
     queryAll<T extends DatabaseRow>(sql: string, params: DatabaseBindParams = []) {
