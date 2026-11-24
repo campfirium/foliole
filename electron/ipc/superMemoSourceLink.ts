@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 import type { RememberedSuperMemoSource } from '../../lib/platform/nativeSuperMemoImportContract.js';
@@ -9,30 +10,32 @@ import { assertAuthorizedImportDirectoryPath, assertAuthorizedImportFilePath, re
 import { superMemoCollectionStamp } from './readSuperMemoCollection.js';
 import { readSuperMemoSource } from './readSuperMemoSource.js';
 import {
-  activeMigrationSource, linkSchema, migrationStorePath, panelSchema, readMigrationStore, savedLinkSchema,
-  saveMigrationSource, type SavedSuperMemoSource, writeMigrationStore
+  activeMigrationSource, linkSchema, migrationStorePath, panelSchema, readMigrationPanelStep, readMigrationStore,
+  savedLinkSchema, saveActiveMigrationPanelStep, saveMigrationSource, type SavedSuperMemoSource, writeMigrationStore
 } from './superMemoMigrationStore.js';
 
-function sourceSelection(link: SavedSuperMemoSource, deletedEntries = link.deletedEntries): RememberedSuperMemoSource {
-  const { filePath, collectionDirectory, panel } = link;
+async function sourceSelection(file: string, link: SavedSuperMemoSource, deletedEntries = link.deletedEntries): Promise<RememberedSuperMemoSource> {
+  const { filePath, collectionDirectory } = link;
+  const step = await readMigrationPanelStep(file, link);
+  const panel = step ? { ...link.panel, step } : link.panel;
   const savedForm = { percent: link.percent, sourceFormat: link.sourceFormat, gradeMap: link.gradeMap,
     folderChoices: link.folderChoices, comparison: link.comparison };
   return { filePath, name: path.basename(filePath), collectionDirectory: collectionDirectory ?? undefined,
     savedForm, snapshot: link.snapshot, ...(deletedEntries ? { deletedEntries } : {}), ...(panel ? { panel } : {}) };
 }
 
-export function getSuperMemoSourceSelection(refreshDeletions = false): RememberedSuperMemoSource | null {
+export async function getSuperMemoSourceSelection(refreshDeletions = false): Promise<RememberedSuperMemoSource | null> {
   const file = migrationStorePath();
   const store = readMigrationStore(file);
   const link = activeMigrationSource(store);
   if (!link) return null;
   const batch = link.panel?.batchId ?? link.snapshot.preview.directoryUpdate?.batchId;
-  if (!refreshDeletions || !batch) return sourceSelection(link);
+  if (!refreshDeletions || !batch) return sourceSelection(file, link);
   const entries = readSuperMemoDeletions(openDatabaseConnection().driver, batch);
   if (JSON.stringify(entries) !== JSON.stringify(link.deletedEntries ?? [])) {
     saveMigrationSource(file, store, { ...link, deletedEntries: entries });
   }
-  return sourceSelection(link, entries);
+  return sourceSelection(file, link, entries);
 }
 
 export async function activateSavedSuperMemoSource(pickerPath: string): Promise<RememberedSuperMemoSource | null> {
@@ -42,7 +45,7 @@ export async function activateSavedSuperMemoSource(pickerPath: string): Promise<
   const link = store.sources[filePath];
   if (!link) return null;
   if (store.activeFilePath !== filePath) writeMigrationStore(file, { ...store, activeFilePath: filePath });
-  return sourceSelection(link);
+  return sourceSelection(file, link);
 }
 
 export function clearSuperMemoSourceSelection() {
@@ -70,19 +73,25 @@ async function rememberLink(value: unknown, formOnly: boolean, snapshot: unknown
     const current = readMigrationStore(file);
     if (current.activeFilePath !== previousPath) throw new Error('supermemo_source_changed');
     const deletedEntries = current.sources[link.filePath]?.deletedEntries;
-    saveMigrationSource(file, current, savedLinkSchema.parse({ ...link, snapshot, xmlHash, collectionStamp, deletedEntries }));
+    saveMigrationSource(file, current, savedLinkSchema.parse({ ...link, snapshot, xmlHash, collectionStamp, deletedEntries, panelRevision: randomUUID() }));
   }
   return null;
 }
 
-function rememberPanel(args: Record<string, unknown>) {
+async function rememberPanel(args: Record<string, unknown>) {
   const file = migrationStorePath();
+  const panel = panelSchema.parse(args.panel);
+  if (!args.snapshot && panel.step && Object.keys(panel).length === 1) {
+    await saveActiveMigrationPanelStep(file, { filePath: args.filePath, collectionDirectory: args.collectionDirectory }, panel.step);
+    return null;
+  }
   const store = readMigrationStore(file);
   const link = activeMigrationSource(store);
   if (!link || link.filePath !== args.filePath || link.collectionDirectory !== args.collectionDirectory) {
     throw new Error('supermemo_source_changed');
   }
-  saveMigrationSource(file, store, savedLinkSchema.parse({ ...link, panel: { ...link.panel, ...panelSchema.parse(args.panel) },
+  saveMigrationSource(file, store, savedLinkSchema.parse({ ...link, panel: { ...link.panel, ...panel },
+    ...(panel.step ? { panelRevision: randomUUID() } : {}),
     ...(args.snapshot ? { snapshot: args.snapshot, comparison: undefined } : {}) }));
   return null;
 }
