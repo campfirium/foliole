@@ -4,11 +4,11 @@ import { openDatabaseConnection } from './connection.js';
 
 export function isMountedPdf(attachmentId: string) {
   if (!parseCanonicalAttachmentStorageKey(`${attachmentId}.pdf`)) return false;
+  // Recoverable Trash entries still own their PDF. A permanent deletion removes the mount.
   return Boolean(openDatabaseConnection().driver.queryOne(
     `SELECT 1 FROM nodes n, json_each(n.resource_references) resource
      WHERE json_extract(resource.value, '$.storage_key') = ?
-       AND json_extract(resource.value, '$.role') = 'reference'
-       AND n.deleted_at IS NULL LIMIT 1`, [`${attachmentId}.pdf`]
+       AND json_extract(resource.value, '$.role') = 'reference' LIMIT 1`, [`${attachmentId}.pdf`]
   ));
 }
 
