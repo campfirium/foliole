@@ -15,10 +15,13 @@ beforeAll(() => {
   execFileSync(`${java}/bin/javac`, ['-d', root, ...writeFolderDocumentStubs(root),
     'android/app/src/main/java/com/foliole/android/FolioleFolderBackupDocuments.java',
     'android/app/src/main/java/com/foliole/android/FolioleFolderBackupDocumentNames.java',
+    'android/app/src/main/java/com/foliole/android/FolioleFolderBackupReplacement.java',
     'scripts/build/fixtures/folder-documents/com/foliole/android/FolderDocumentsFixture.java']);
-  execFileSync('python3', ['-c',
-    'import sqlite3,sys;d=sqlite3.connect(sys.argv[1]);d.executescript("CREATE TABLE facts(value TEXT);INSERT INTO facts VALUES(\'external fact\');");d.close()',
-    path.join(root, 'foreign.sqlite')]);
+  for (const [name, fact] of [['foreign', 'external fact'], ['candidate', 'new fact']]) {
+    execFileSync('python3', ['-c',
+      'import sqlite3,sys; d=sqlite3.connect(sys.argv[1]); d.execute("CREATE TABLE facts(value TEXT)"); d.execute("INSERT INTO facts VALUES(?)",(sys.argv[2],)); d.commit(); d.close()',
+      path.join(root, name + '.sqlite'), fact]);
+  }
 });
 
 it.each(['before-create', 'after-create'])('resumes the same target after interruption %s', scenario => {
@@ -34,8 +37,18 @@ it.each(['owned-missing', 'owned-missing-interrupted'])('recreates a removed own
   expect(execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
     scenario, path.join(root, scenario)], { encoding: 'utf8' })).toContain('removed backup recreated');
 });
+function replace(scenario) {
+  return execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
+    scenario, path.join(root, scenario), path.join(root, 'foreign.sqlite'), path.join(root, 'candidate.sqlite')],
+  { encoding: 'utf8' });
+}
+
 it('replaces another backup only when the user confirmed it', () => {
-  expect(execFileSync(`${java}/bin/java`, ['-cp', root, 'com.foliole.android.FolderDocumentsFixture',
-    'foreign-replaced', path.join(root, 'foreign-replaced'), path.join(root, 'foreign.sqlite')], { encoding: 'utf8' }))
-    .toContain('other backup replaced');
+  expect(replace('foreign-replaced')).toContain('other backup replaced');
+});
+it.each(['create', 'write', 'publish'])('keeps the old database if replacement fails during %s', step => {
+  expect(replace(`foreign-replace-${step}-failed`)).toContain('old backup survives replacement failure');
+});
+it('keeps both completed databases when the published identity cannot be saved', () => {
+  expect(replace('foreign-replace-metadata-failed')).toContain('both backups survive metadata failure');
 });

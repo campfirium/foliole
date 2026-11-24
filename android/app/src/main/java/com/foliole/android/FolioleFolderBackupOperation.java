@@ -2,7 +2,9 @@ package com.foliole.android;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.os.Process;
+import android.system.Os;
 import org.json.JSONObject;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -11,11 +13,13 @@ import java.util.List;
 final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     static { System.loadLibrary("sqlcipher"); }
     final String requestId, epoch, source;
+    private final Context context;
     private final FolioleFolderBackupProfile store;
     private final String profileId;
     private final boolean replaceExisting;
     private long handle;
     private boolean cancelled, released;
+    private volatile boolean stagingReplacement;
     private String preparedFingerprint;
     private Exception callbackError;
     private final List<Runnable> releaseCallbacks = new ArrayList<>();
@@ -23,6 +27,7 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     FolioleFolderBackupOperation(Context context, JSONObject profile, String requestId,
         String epoch, String source, FolioleFolderBackupProfile store, boolean replaceExisting) throws Exception {
         super(context, Uri.parse(profile.getString("tree")));
+        this.context = context;
         this.profileId = profile.getString("id");
         this.replaceExisting = replaceExisting;
         this.requestId = requestId; this.epoch = epoch; this.source = source; this.store = store;
@@ -50,27 +55,108 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         preparedFingerprint = fingerprint;
     }
     public void transactionCommitted() {
-        try {
-            store.update(profileId, profile -> {
-                profile.put("fingerprint", preparedFingerprint);
-                profile.remove("pendingFingerprint");
-                profile.put("savedAt", Instant.now().toString());
-                profile.remove("attachmentFilesPending");
-                profile.remove("attachmentError");
-            });
-        } catch (Exception error) { callbackError = error; }
+        if (stagingReplacement) return;
+        try { recordCommit(); }
+        catch (Exception error) { callbackError = error; }
+    }
+    private void recordCommit() throws Exception {
+        if (preparedFingerprint == null) throw new IllegalStateException("Cannot retain the backup identity.");
+        store.update(profileId, profile -> {
+            profile.put("ownsTarget", true);
+            profile.remove("targetCreationPending");
+            profile.put("fingerprint", preparedFingerprint);
+            profile.remove("pendingFingerprint");
+            profile.put("savedAt", Instant.now().toString());
+            profile.remove("attachmentFilesPending");
+            profile.remove("attachmentError");
+        });
     }
     String[] run() throws Exception {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        checkActive();
         JSONObject profile = store.load();
-        synchronized (this) { if (cancelled) throw new IllegalStateException("Backup cancelled."); }
+        FolioleFolderBackupReplacement replacement = replacement(profileId);
+        if (profile.optBoolean("replacementPending")) {
+            if (replacement.recover()) return finishInterruptedPublication(replacement, profile);
+            clearReplacement();
+            profile = store.load();
+        }
+        Uri previous = replaceExisting ? foreignTarget(profile.optBoolean("ownsTarget"), profile.optBoolean("targetCreationPending")) : null;
+        if (previous != null) return replace(previous, replacement);
         prepare(profile.optBoolean("ownsTarget"), profile.optBoolean("targetCreationPending"),
-            () -> updateTargetCreation(true), () -> updateTargetCreation(false), this::forgetMissingTarget, replaceExisting);
+            () -> updateTargetCreation(true), () -> updateTargetCreation(false), this::forgetMissingTarget);
         profile = store.load(); // a recreated target no longer expects the removed backup's fingerprint
+        return writeSnapshot(optional(profile, "fingerprint"), optional(profile, "pendingFingerprint"));
+    }
+    private String[] replace(Uri original, FolioleFolderBackupReplacement replacement) throws Exception {
+        requireDistinctSource(original);
+        replacement.requireEmptySlots();
+        store.update(profileId, profile -> profile.put("replacementPending", true));
+        stagingReplacement = true;
+        try {
+            replacement.begin();
+            String[] result = writeSnapshot(null, null);
+            requireComplete(result);
+            checkActive();
+            replacement.publish(original, this::recordCommit);
+            replacement.discardPrevious();
+            clearReplacement();
+            return result;
+        } catch (Exception error) {
+            try { if (!replacement.recover()) clearReplacement(); }
+            catch (Exception recovery) {
+                error.addSuppressed(recovery);
+                throw new IllegalStateException("Backup replacement was interrupted. Previous backup: " + replacement.recoveryName(), error);
+            }
+            throw error;
+        } finally {
+            useSnapshotName(null);
+        }
+    }
+    private String[] finishInterruptedPublication(FolioleFolderBackupReplacement replacement, JSONObject profile) throws Exception {
+        String expected = optional(profile, "fingerprint");
+        String pending = optional(profile, "pendingFingerprint");
+        if (!profile.optBoolean("ownsTarget")) {
+            if (pending == null) throw new IllegalStateException("Cannot verify the interrupted backup replacement.");
+            // Keep the published candidate's fingerprint while the next source snapshot prepares its own.
+            store.update(profileId, value -> value.put("ownsTarget", true).put("fingerprint", pending));
+            expected = pending;
+        }
+        String[] result = writeSnapshot(expected, pending);
+        requireComplete(result);
+        replacement.discardPrevious();
+        clearReplacement();
+        return result;
+    }
+    private void clearReplacement() throws Exception {
+        store.update(profileId, profile -> {
+            profile.remove("replacementPending");
+            if (!profile.optBoolean("ownsTarget")) profile.remove("pendingFingerprint");
+        });
+    }
+    private void requireDistinctSource(Uri target) throws Exception {
+        try (ParcelFileDescriptor descriptor = context.getContentResolver().openFileDescriptor(target, "r")) {
+            if (descriptor == null) throw new IllegalStateException("Cannot open the previous backup.");
+            var previous = Os.fstat(descriptor.getFileDescriptor());
+            var active = Os.stat(source);
+            if (previous.st_dev == active.st_dev && previous.st_ino == active.st_ino) {
+                throw new IllegalStateException("Backup destination is the active database.");
+            }
+        }
+    }
+    private static void requireComplete(String[] result) {
+        if (!"1".equals(result[1]) || !"0".equals(result[2])) {
+            throw new IllegalStateException("The replacement backup did not finish.");
+        }
+    }
+    private synchronized void checkActive() {
+        if (cancelled) throw new IllegalStateException("Backup cancelled.");
+    }
+    private String[] writeSnapshot(String expected, String pending) throws Exception {
         long active;
         synchronized (this) {
             if (cancelled) throw new IllegalStateException("Backup cancelled.");
-            handle = createNative(source, optional(profile, "fingerprint"), optional(profile, "pendingFingerprint"));
+            handle = createNative(source, expected, pending);
             if (handle == 0) throw new IllegalStateException("Cannot initialize database backup.");
             active = handle;
         }

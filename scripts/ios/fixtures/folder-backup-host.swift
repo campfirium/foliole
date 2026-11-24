@@ -57,10 +57,29 @@ struct BackupHostFixture {
                 .run(directory: directory, profile: otherStore.load()!, filename: "Foliole.sqlite")
             preconditionFailure("wrote over a backup it does not own")
         } catch {}
+        let target = directory.appendingPathComponent("Foliole.sqlite")
+        let oldBytes = try Data(contentsOf: target)
+        let oldJournal = URL(fileURLWithPath: target.path + "-journal")
+        let journalBytes = Data([7])
+        try journalBytes.write(to: oldJournal)
+        let badSource = root.appendingPathComponent("invalid-source.sqlite")
+        try Data("Not a database".utf8).write(to: badSource)
+        do {
+            _ = try FolioleFolderBackupOperation(requestID: "failed-replacement", epoch: "owner", source: badSource.path,
+                store: otherStore, replaceExisting: true).run(directory: directory, profile: otherStore.load()!, filename: "Foliole.sqlite")
+            preconditionFailure("replacement with an invalid source succeeded")
+        } catch {}
+        let retainedBytes = try Data(contentsOf: target)
+        precondition(retainedBytes == oldBytes, "failed replacement lost the previous backup")
+        let retainedJournal = try Data(contentsOf: oldJournal)
+        precondition(retainedJournal == journalBytes, "failed replacement lost the previous journal")
+        let failedProfile = try otherStore.load()!
+        precondition(!failedProfile.ownsTarget && failedProfile.savedAt == nil, "failed replacement claimed the backup")
         let replaced = try FolioleFolderBackupOperation(requestID: "replace", epoch: "owner", source: source, store: otherStore,
             replaceExisting: true).run(directory: directory, profile: otherStore.load()!, filename: "Foliole.sqlite")
         let replacedProfile = try otherStore.load()!
         precondition(replaced.committed == 1 && replaced.pagesSent > 400 && replacedProfile.ownsTarget, "confirmed replacement failed")
+        precondition(!FileManager.default.fileExists(atPath: oldJournal.path), "replacement retained the old journal")
         let cancelled = FolioleFolderBackupOperation(requestID: "cancel", epoch: "owner", source: source, store: store)
         var released = false
         cancelled.cancel { released = true }
