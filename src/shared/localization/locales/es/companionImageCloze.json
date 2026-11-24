@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Colocar imagen",
   "companion.imageCloze.add": "Nueva máscara",
   "companion.imageCloze.deleteFailed": "No se pudo terminar de eliminar el ítem. Inténtalo de nuevo.",
-  "companion.imageCloze.remove": "Eliminar máscara seleccionada"
+  "companion.imageCloze.remove": "Eliminar máscara seleccionada",
+  "companion.imageCloze.mode": "Herramienta de imagen",
+  "companion.imageCloze.modeCloze": "Huecos",
+  "companion.imageCloze.modeFocus": "Enfoque",
+  "companion.imageCloze.modeCrop": "Recortar",
+  "companion.imageCloze.focusTitle": "Enfoque de imagen",
+  "companion.imageCloze.cropTitle": "Recortar imagen",
+  "companion.imageCloze.focusHelp": "Arrastra sobre la imagen para dibujar el área de enfoque; el resto se oscurece. Arrastra el marco o sus esquinas para ajustarlo.",
+  "companion.imageCloze.cropHelp": "Arrastra sobre la imagen para dibujar el área que se mostrará. Se conserva la imagen original. Arrastra el marco o sus esquinas para ajustarlo.",
+  "companion.imageCloze.focusRegion": "Área de enfoque",
+  "companion.imageCloze.cropRegion": "Área de recorte",
+  "companion.imageCloze.removeFocus": "Quitar enfoque",
+  "companion.imageCloze.removeCrop": "Quitar recorte",
+  "companion.imageCloze.savingRect": "Guardando…",
+  "companion.imageCloze.rectFailed": "No se pudo guardar. Tus cambios se conservan; inténtalo de nuevo. Si el artículo cambió, cancela y vuelve a abrir la imagen."
 }

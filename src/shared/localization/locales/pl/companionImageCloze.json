@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Ustaw obraz",
   "companion.imageCloze.add": "Nowa maska",
   "companion.imageCloze.deleteFailed": "Nie udało się dokończyć usuwania elementu. Spróbuj ponownie.",
-  "companion.imageCloze.remove": "Usuń zaznaczoną maskę"
+  "companion.imageCloze.remove": "Usuń zaznaczoną maskę",
+  "companion.imageCloze.mode": "Narzędzie obrazu",
+  "companion.imageCloze.modeCloze": "Luki",
+  "companion.imageCloze.modeFocus": "Wyróżnienie",
+  "companion.imageCloze.modeCrop": "Przytnij",
+  "companion.imageCloze.focusTitle": "Wyróżnienie obrazu",
+  "companion.imageCloze.cropTitle": "Przytnij obraz",
+  "companion.imageCloze.focusHelp": "Przeciągnij po obrazie, aby zaznaczyć obszar wyróżnienia; reszta zostanie przyciemniona. Przeciągnij ramkę lub jej narożniki, aby ją dopasować.",
+  "companion.imageCloze.cropHelp": "Przeciągnij po obrazie, aby zaznaczyć obszar do wyświetlenia. Oryginalny obraz zostaje zachowany. Przeciągnij ramkę lub jej narożniki, aby ją dopasować.",
+  "companion.imageCloze.focusRegion": "Obszar wyróżnienia",
+  "companion.imageCloze.cropRegion": "Obszar przycięcia",
+  "companion.imageCloze.removeFocus": "Usuń wyróżnienie",
+  "companion.imageCloze.removeCrop": "Usuń przycięcie",
+  "companion.imageCloze.savingRect": "Zapisywanie…",
+  "companion.imageCloze.rectFailed": "Nie udało się zapisać. Zmiany zostały zachowane; spróbuj ponownie. Jeśli artykuł się zmienił, anuluj i otwórz obraz ponownie."
 }

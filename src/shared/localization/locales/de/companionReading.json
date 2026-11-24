@@ -109,5 +109,8 @@
   "companion.index.noSources": "Keine passenden Quellen",
   "companion.index.addSourceFailed": "Die Quelle konnte nicht zum virtuellen Ordner hinzugefügt werden.",
   "companion.index.removeSourceFailed": "Die Quelle konnte nicht aus dem virtuellen Ordner entfernt werden.",
+  "companion.index.addSources": "{count} Quellen hinzufügen",
+  "companion.index.removeSources": "{count} Quellen entfernen",
+  "companion.workspace.failure.relearn": "Die ausgewählten Themen konnten nicht neu gelernt werden.",
   "companion.reading.queue": "Warteschlange"
 }

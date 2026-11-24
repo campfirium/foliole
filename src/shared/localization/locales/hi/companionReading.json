@@ -109,5 +109,8 @@
   "companion.index.noSources": "कोई मेल खाता स्रोत नहीं",
   "companion.index.addSourceFailed": "स्रोत को इंडेक्स में नहीं जोड़ा जा सका।",
   "companion.index.removeSourceFailed": "स्रोत को इंडेक्स से नहीं हटाया जा सका।",
+  "companion.index.addSources": "{count} स्रोत जोड़ें",
+  "companion.index.removeSources": "{count} स्रोत हटाएँ",
+  "companion.workspace.failure.relearn": "चुने हुए विषय फिर से नहीं सीखे जा सके।",
   "companion.reading.queue": "कतार"
 }

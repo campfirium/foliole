@@ -15,6 +15,7 @@ vi.mock('@capacitor/core', async () => {
 vi.mock('@capacitor/app', () => ({ App: { addListener: async () => ({ remove: async () => {} }) } }));
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
+import { getMobileGuidedSampleContent } from '../../lib/core/guidedSample/guidedSampleContent';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { loadCompanionDailySession, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
@@ -31,6 +32,7 @@ import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions'
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
 import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
+import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
 let root = '';
 let database: Database.Database;
@@ -70,7 +72,7 @@ async function seed(kind: 'topic' | 'item', future = false, nodeId: string = kin
 }
 
 function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSyncState; only?: boolean }) {
-  const [state, setState] = useState(initial);
+  const [state, setState] = useCompanionWorkspaceState(initial);
   const [, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const actions = createWorkspaceSnapshotActions({ state, setState, setError,
@@ -175,9 +177,25 @@ it('retains the reading until the next action selects the newly due minute item'
 });
 
 it('keeps an empty library distinct from Queue clear', async () => {
+  // A phone that has joined a sync group never gets the guided sample, so its library stays empty.
+  database.prepare(`INSERT INTO sync_groups (group_id,display_name,workgroup_key,created_at,updated_at)
+    VALUES ('group','Home','key',?,?)`).run(initialTime, initialTime);
+  database.prepare(`INSERT INTO sync_group_local_state (singleton_id,group_id,local_device_identity_key,state,updated_at)
+    VALUES (1,'group','device','active',?)`).run(initialTime);
   render(<Flow initial={await loadCompanionWorkspaceSyncState()} />);
   await screen.findByText('No topics synced yet');
   expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
+});
+
+it('opens Flow on the guided sample it writes into an untouched library without a reload', async () => {
+  // The clock stands still, so the sample is written at the very time Flow opens at.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-24T08:00:00.000Z'));
+  const sample = getMobileGuidedSampleContent('en');
+  render(<Flow initial={await loadCompanionWorkspaceSyncState()} />);
+  await screen.findByText(sample.root.title);
+  expect(screen.queryByText('No topics synced yet')).not.toBeInTheDocument();
+  expect((await loadCompanionDailySession())?.cycle).toMatchObject({ clearedAt: null, remaining: 1 + sample.children.length });
 });
 
 it('keeps Review first clear of reading topics after its last grade', async () => {

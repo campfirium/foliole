@@ -45,7 +45,8 @@ it('shows a single copy of the opening prompt in history', async () => {
   );
 
   const history = await screen.findByRole('list', { name: /local foliole aide history/i });
-  expect(within(history).getByRole('button', { name: 'One short prompt' })).toBeVisible();
+  expect(await within(history).findByRole('button', { name: 'One short prompt' })).toBeVisible();
+  expect(within(history).getAllByText('One short prompt')).toHaveLength(1);
 });
 
 it('keeps a continued thread title stable while updating the history preview', async () => {

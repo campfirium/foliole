@@ -115,8 +115,9 @@ it('retains an editable draft after a rolled back write and saves the revised te
   fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'Revised draft' } });
   database!.exec('DROP TRIGGER fail_capture');
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(screen.queryByLabelText('Capture text')).toBeNull());
-  expect(storedTopics()).toEqual([{ id: expect.any(String), title: 'Revised draft' }]);
+  // Save closes the sheet on tap (007681) before the write lands, so wait for the write itself.
+  await waitFor(() => expect(storedTopics()).toEqual([{ id: expect.any(String), title: 'Revised draft' }]));
+  expect(screen.queryByLabelText('Capture text')).toBeNull();
 });
 
 it('keeps a new capture independent when an earlier save finishes after closing and reopening', async () => {
@@ -142,13 +143,13 @@ it('keeps a new capture independent when an earlier save finishes after closing 
   await act(async () => { finish(); await waiting; });
   expect(screen.getByLabelText('Capture text')).toHaveValue('Second topic');
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(screen.queryByLabelText('Capture text')).toBeNull());
-  expect(storedTopics().map((row) => (row as { title: string }).title)).toEqual(['First topic', 'Second topic']);
+  await waitFor(() => expect(storedTopics().map((row) => (row as { title: string }).title)).toEqual(['First topic', 'Second topic']));
+  expect(screen.queryByLabelText('Capture text')).toBeNull();
 });
 
 it('starts a fresh capture after closing an already saved topic with a failed refresh', async () => {
   renderWithLocalization(<CaptureSurface initial={await loadCompanionWorkspaceSyncState()} />);
-  vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
+  const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
     .mockRejectedValueOnce(new Error('Read unavailable'));
   fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'Saved topic' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -159,6 +160,12 @@ it('starts a fresh capture after closing an already saved topic with a failed re
   expect(screen.getByLabelText('Capture text')).not.toHaveAttribute('readonly');
   fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'New topic' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(screen.queryByLabelText('Capture text')).toBeNull());
+  // Save closes the sheet on tap (007681) before the write lands, so wait for the second save to finish.
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    await refresh.mock.results[1]!.value;
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+  });
+  expect(screen.queryByLabelText('Capture text')).toBeNull();
   expect(storedTopics().map((row) => (row as { title: string }).title)).toEqual(['Saved topic', 'New topic']);
 });

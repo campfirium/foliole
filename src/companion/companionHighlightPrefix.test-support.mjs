@@ -6,7 +6,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 
-import { withDatabase } from './companionClozeGuard.test-support.mjs';
+import { removeGuidedSample, withDatabase } from './companionClozeGuard.test-support.mjs';
 
 const title = 'Highlight annotation prefix';
 const passage = 'A passage worth annotating';
@@ -76,8 +76,11 @@ async function main() {
     await page.goto(url);
     await page.locator('[data-companion-preview-ready="true"]').waitFor({ state: 'attached' });
     await page.close();
-    withDatabase(file, db => db.prepare(`INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at)
-      VALUES('prefix-source','topic','Prefix source',?,5,'2026-11-05','2026-11-05')`).run(content));
+    withDatabase(file, db => {
+      removeGuidedSample(db);
+      db.prepare(`INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at)
+        VALUES('prefix-source','topic','Prefix source',?,5,'2026-11-05','2026-11-05')`).run(content);
+    });
     page = await context.newPage();
     page.setDefaultTimeout(10000);
     await page.goto(url);

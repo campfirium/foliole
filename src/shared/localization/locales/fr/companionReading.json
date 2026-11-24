@@ -109,5 +109,8 @@
   "companion.index.noSources": "Aucune source correspondante",
   "companion.index.addSourceFailed": "Impossible d’ajouter la source au dossier virtuel.",
   "companion.index.removeSourceFailed": "Impossible de retirer la source du dossier virtuel.",
+  "companion.index.addSources": "Ajouter {count} sources",
+  "companion.index.removeSources": "Retirer {count} sources",
+  "companion.workspace.failure.relearn": "Impossible de réapprendre les sujets sélectionnés.",
   "companion.reading.queue": "File d’attente"
 }

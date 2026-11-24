@@ -43,19 +43,22 @@ function sampleNode(topic: GuidedSampleTopicTemplate, parentNodeId: string, time
   };
 }
 
+/** `now` is the newest creation time: a topic is due from its creation, so a Flow opened at `now` holds the whole sample. */
 export function buildCompanionGuidedSampleNodes(locale: GuidedSampleLocale, now = Date.now()) {
   const content = getMobileGuidedSampleContent(locale);
+  const topics = [content.root, ...content.children];
   const nodes: WorkspaceNodeSnapshot[] = [];
-  [content.root, ...content.children].forEach((topic, index) => {
+  topics.forEach((topic, index) => {
     // Distinct creation times keep the sample's sibling order stable wherever it syncs.
-    nodes.push(sampleNode(topic, nodes[0]?.id ?? specialNodeIds.INBOX_NODE_ID, new Date(now + index).toISOString()));
+    const createdAt = new Date(now - (topics.length - 1 - index)).toISOString();
+    nodes.push(sampleNode(topic, nodes[0]?.id ?? specialNodeIds.INBOX_NODE_ID, createdAt));
   });
   return nodes;
 }
 
-async function writeGuidedSample(db: DbPort, locale: GuidedSampleLocale) {
+async function writeGuidedSample(db: DbPort, locale: GuidedSampleLocale, now: number) {
   if (!await needsGuidedSample(db)) return [];
-  const nodes = buildCompanionGuidedSampleNodes(locale);
+  const nodes = buildCompanionGuidedSampleNodes(locale, now);
   const host = await iosCompanionHostName(db);
   const records = await Promise.all(nodes.map(node =>
     toWorkspaceNativeNodeVersion(node, host, createOpaqueVersionRef(createCompanionUuid()))));
@@ -65,8 +68,17 @@ async function writeGuidedSample(db: DbPort, locale: GuidedSampleLocale) {
 
 const settledOwners = new WeakSet<object>();
 
-/** Writes the phone's guided sample before Flow opens on an untouched library, so Flow starts with it. */
-export async function ensureCompanionGuidedSample(locale: GuidedSampleLocale = resolveGuidedSampleLocale()) {
+/** True once this library's sample question is answered, so a Flow open can skip the check without yielding. */
+export function isCompanionGuidedSampleSettled() {
+  try { return settledOwners.has(getIosCompanionDatabaseOwner()); }
+  catch { return false; }
+}
+
+/**
+ * Writes the phone's guided sample before Flow opens on an untouched library, so Flow starts with it.
+ * `now` is the time that Flow opens at; the sample is stamped no later, or the open would find none of it due yet.
+ */
+export async function ensureCompanionGuidedSample(now = Date.now(), locale: GuidedSampleLocale = resolveGuidedSampleLocale()) {
   const owner = getIosCompanionDatabaseOwner();
   if (settledOwners.has(owner)) return [];
   if (!await readIosCompanionDatabase(needsGuidedSample)) {
@@ -74,7 +86,7 @@ export async function ensureCompanionGuidedSample(locale: GuidedSampleLocale = r
     return [];
   }
   let created: string[] = [];
-  await runCompanionHistoryMutation(async db => (created = await writeGuidedSample(db, locale)),
+  await runCompanionHistoryMutation(async db => (created = await writeGuidedSample(db, locale, now)),
     ids => ({ kind: 'nodes', nodeIds: ids, structure: true, metadata: true }));
   settledOwners.add(owner);
   return created;
