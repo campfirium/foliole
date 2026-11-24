@@ -152,7 +152,10 @@ async function freeze(input: Input, key: string, repair?: RepairRequest) {
   } catch (error) {
     if (!(error instanceof AttachmentVerificationPending) &&
         !(error instanceof Error && error.message === 'attachment_source_missing')) throw error;
-    if (!repair) await host.write(db => markWebDavRelayAttachment(db, scope, key, 'pending'));
+    // Defer the retry without replacing its repair request.
+    await host.write(db => db.run(`UPDATE sync_group_metadata SET updated_at = ?
+      WHERE key = ? AND (value = 'pending' OR substr(value, 1, 1) = '{')`,
+    [new Date().toISOString(), prefix(scope) + key]));
     return null;
   }
 }
