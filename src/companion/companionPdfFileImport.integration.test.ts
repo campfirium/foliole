@@ -17,6 +17,7 @@ import { resolveLoadedCompanionArticle } from '../shared/platform/companionReada
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { createCompanionFileImportHandler } from './companionFileImportActions';
+import { verifyPdfIndexAfterTopicDeletion } from './companionPdfImportDeletion.testSupport';
 import { resolveCompanionPdfReadingEntry } from './CompanionPdfReadingEntry';
 
 const native = vi.hoisted(() => ({ access: null as null | ((input: NativeCompanionFramedFileRequest) => Promise<unknown>), fail: '', publishedPath: '' }));
@@ -237,4 +238,8 @@ it('records a parser failure even when its error message is empty', async () => 
   expect(await importPdf()).toHaveProperty('nodeId');
   expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([]);
   expect(library.database.prepare('SELECT status FROM pdf_index_state').get()).toEqual({ status: 'failed' });
+});
+
+it.each(['trash', 'purge', 'shared'] as const)('respects %s when PDF indexing completes after the topic is deleted', async mode => {
+  await verifyPdfIndexAfterTopicDeletion(mode, { importPdf, library, storageKey });
 });

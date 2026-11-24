@@ -1,3 +1,4 @@
+import { NODE_PDF_RESOURCES_SQL } from '../../../../../lib/core/database/nodePdfResourcesSql';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../../../../lib/core/nodes/nodeOpeningPreview';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { buildPdfTextArtifact, importPdfTextArtifact, PDF_TEXT_EXTRACTOR_VERSION } from '../../../../../lib/core/sync/pdfTextArtifact';
@@ -18,20 +19,37 @@ export async function completeCompanionPdfTextImport(source: { storageKey: strin
       page_width: page.pageWidth, page_height: page.pageHeight })));
     await runCompanionHistoryMutation(async db => {
       assertOwner(owner); signal?.throwIfAborted();
+      const node = await readPdfImportTopic(db, nodeId, pdf);
+      if (!node && !await hasPdfReference(db, pdf)) return;
       await importPdfTextArtifact(db, source.storageKey, artifact.storageKey, artifact.text);
       await saveIndexState(db, pdf, null);
       const first = pages.find(page => page.text.trim());
-      const [node] = await db.query<{ title: string }>('SELECT title FROM nodes WHERE id = ? AND instr(content,?) > 0',
-        [nodeId, PDF_READER_PLACEHOLDER_TEXT]);
-      if (first && node) await db.run('UPDATE nodes SET opening_text = ? WHERE id = ?', [resolveNodeOpeningText(first.text, node.title), nodeId]);
+      if (first && node?.deleted_at === null && node.placeholder) {
+        await db.run('UPDATE nodes SET opening_text = ? WHERE id = ?', [resolveNodeOpeningText(first.text, node.title), nodeId]);
+      }
     }, { kind: 'nodes', nodeIds: [nodeId] });
   } catch (error) {
     if (owner !== getIosCompanionDatabaseOwner()) return;
     await runCompanionHistoryMutation(async db => {
       assertOwner(owner);
-      await saveIndexState(db, pdf, error instanceof Error ? error.message : 'PDF text extraction failed.');
+      if (await readPdfImportTopic(db, nodeId, pdf) || await hasPdfReference(db, pdf)) {
+        await saveIndexState(db, pdf, error instanceof Error ? error.message : 'PDF text extraction failed.');
+      }
     }, { kind: 'nodes', nodeIds: [nodeId] });
   }
+}
+
+async function readPdfImportTopic(db: DbPort, nodeId: string, pdf: string) {
+  const [topic] = await db.query<{ deleted_at: string | null; placeholder: number; title: string }>(
+    `SELECT topic.title, topic.deleted_at, instr(topic.content, ?) AS placeholder
+     FROM nodes topic JOIN (${NODE_PDF_RESOURCES_SQL}) reference ON reference.node_id = topic.id
+     WHERE topic.id = ? AND reference.id = ?`, [PDF_READER_PLACEHOLDER_TEXT, nodeId, pdf]);
+  return topic;
+}
+
+async function hasPdfReference(db: DbPort, pdf: string) {
+  // Trashed Topics still own their original. Search includes them again on restore.
+  return (await db.query(`SELECT 1 FROM (${NODE_PDF_RESOURCES_SQL}) WHERE id = ? LIMIT 1`, [pdf])).length > 0;
 }
 
 function assertOwner(owner: Owner) {

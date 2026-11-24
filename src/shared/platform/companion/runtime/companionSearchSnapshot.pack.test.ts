@@ -9,7 +9,7 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { buildCanonicalExternalDocumentPayload } from '../../../../../lib/core/sync/canonicalExternalResourcePayload';
 import { searchCompanionFullTextSnapshot } from '../../companionFullTextSearch';
 
-import { createSearchLibrary } from './companionSearchSnapshot.testSupport';
+import { createSearchLibraryWithPdf } from './companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 
 vi.mock('@capacitor/core', async () => {
@@ -45,12 +45,12 @@ function updateSource(source: Peer, seq: number) {
       computeSyncContentHash('external_document', document), 'source', `2026-10-03T0${seq}:00:00Z`);
 }
 
-let library: Awaited<ReturnType<typeof createSearchLibrary>>;
+let library: Awaited<ReturnType<typeof createSearchLibraryWithPdf>>;
 let source: Peer;
 let target: Peer;
 beforeEach(async () => {
   await startLibraries();
-  library = await createSearchLibrary();
+  library = await createSearchLibraryWithPdf();
   source = createPeer('source');
   target = { ...source, id: 'receiver', name: 'Search', db: library.database,
     port: createBetterSqliteDbPort(library.database) };

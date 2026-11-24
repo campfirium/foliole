@@ -31,6 +31,8 @@ describe('iOS companion contract assets', () => {
 
     expect(ios.queries.workspaceSnapshotNodes).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes);
     expect(android.queries.workspaceSnapshotNodes).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes);
+    expect(ios.queries.pdfPageTextSearch).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.pdfPageTextSearch);
+    expect(android.queries.pdfPageTextSearch).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.pdfPageTextSearch);
     expect(ios.queries.syncPayloadSetting.syncPayload.defaultPlatform).toBe('ios');
     expect(android.queries.syncPayloadSetting.syncPayload.defaultPlatform).toBe('android');
     expect(ios.queries.syncPayloadViewActiveNode.syncPayload.platform).toBe('ios');

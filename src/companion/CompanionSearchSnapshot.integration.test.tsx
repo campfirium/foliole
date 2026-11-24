@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { createSearchLibraryWithPdf } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import { isCompanionSearchTopicAvailable } from '../shared/platform/companionFullTextSearch';
@@ -16,11 +16,11 @@ vi.mock('@capacitor/core', async () => {
     registerPlugin: createCompanionNativeSyncStub
   };
 });
-let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
+let library: Awaited<ReturnType<typeof createSearchLibraryWithPdf>> | null = null;
 afterEach(async () => { await library?.close(); library = null; });
 
 it('continues the production hook against its original SQLite result set and refreshes explicitly', async () => {
-  library = await createSearchLibrary();
+  library = await createSearchLibraryWithPdf();
   const hook = renderHook(() => useCompanionSearch('alpha'));
   await waitFor(() => expect(hook.result.current.status).toBe('ready'));
   expect(hook.result.current.results?.topics).toHaveLength(20);
@@ -48,7 +48,7 @@ it('continues the production hook against its original SQLite result set and ref
 });
 
 it('rejects deleted topics at open and reads current external content instead of the old result body', async () => {
-  library = await createSearchLibrary();
+  library = await createSearchLibraryWithPdf();
   const search = renderHook(() => useCompanionSearch('alpha'));
   await waitFor(() => expect(search.result.current.status).toBe('ready'));
   const result = search.result.current.results!.topics[0]!;
