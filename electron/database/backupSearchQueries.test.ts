@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { findBackupSearchMatch, inspectBackupSearchSchema } from './backupSearchQueries.js';
+import { inspectBackupSearchSchema, iterateBackupSearchMatches } from './backupSearchQueries.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -41,15 +41,9 @@ afterEach(() => sqlite.close());
 
 it('searches title before inline and blob bodies while retaining deleted rows and paths', () => {
   const schema = inspectBackupSearchSchema(sqlite);
-  const first = findBackupSearchMatch({
-    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 0, query: 'needle', schema, sqlite
-  });
-  const second = findBackupSearchMatch({
-    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 1, query: 'needle', schema, sqlite
-  });
-  const third = findBackupSearchMatch({
-    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', offset: 2, query: 'needle', schema, sqlite
-  });
+  const [first, second, third] = [...iterateBackupSearchMatches({
+    backupName: 'manual-2026-09-10.db.gz', backupUpdatedAt: '2026-09-10T00:00:00.000Z', query: 'needle', schema, sqlite
+  })];
 
   expect(first).toMatchObject({
     backup_name: 'manual-2026-09-10.db.gz', content: 'ordinary body', deleted: true,
