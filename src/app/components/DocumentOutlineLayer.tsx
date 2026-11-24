@@ -29,14 +29,10 @@ const HOVER_ZONE_WIDTH_PX = 72;
 const OUTLINE_OPEN_DELAY_MS = 120;
 const OUTLINE_EDGE_CLEARANCE_PX = 12;
 
-function getOutlineLayerStyle(
-  documentMaxWidth: number,
-  horizontalMetrics: OutlineHorizontalMetrics,
-  isOpen: boolean
-) {
+function getOutlineLayerStyle(horizontalMetrics: OutlineHorizontalMetrics, isOpen: boolean) {
   return {
     right: `${OUTLINE_EDGE_CLEARANCE_PX}px`,
-    width: isOpen ? `${getOutlineLayerWidth(horizontalMetrics, true)}px` : getOutlineClosedLayerWidth(documentMaxWidth)
+    width: isOpen ? `${getOutlineLayerWidth(horizontalMetrics, true)}px` : getOutlineClosedLayerWidth()
   };
 }
 
@@ -135,7 +131,7 @@ export function DocumentOutlineLayer({
       }}
       onMouseLeave={closeOutline}
       ref={layerRef}
-      style={getOutlineLayerStyle(documentMaxWidth, horizontalMetrics, isOpen)}
+      style={getOutlineLayerStyle(horizontalMetrics, isOpen)}
     >
       <OutlineList
         activeIndex={activeIndex}

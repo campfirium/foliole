@@ -207,11 +207,11 @@ describe('DocumentOutlineLayer hover alignment', () => {
 });
 
 describe('DocumentOutlineLayer gutter styling', () => {
-  it('keeps the closed hover zone aligned with the document right gutter', () => {
+  it('keeps the closed hover zone a narrow edge strip sized by percentage with a pixel floor', () => {
     renderOutline('# Article Title\n## Deep dive', 11, 860);
 
     expect(screen.getByLabelText('Document outline hover zone')).toHaveStyle({
-      width: 'max(72px, calc((100% - 860px) / 2 + 72px))'
+      width: 'max(24px, 3%)'
     });
   });
 

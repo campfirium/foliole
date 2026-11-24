@@ -1,6 +1,8 @@
 import { extractDocumentOutline, type DocumentOutlineItem } from '../../features/editor/model/documentOutline';
 
 const HOVER_ZONE_WIDTH_PX = 72;
+const CLOSED_ZONE_WIDTH_PERCENT = 3;
+const CLOSED_ZONE_MIN_WIDTH_PX = 24;
 const OUTLINE_RIGHT_GAP_RATIO = 0.1;
 
 export interface OutlineDisplayItem {
@@ -38,8 +40,8 @@ export function getOutlineLayerWidth(horizontalMetrics: OutlineHorizontalMetrics
   return Math.max(HOVER_ZONE_WIDTH_PX, horizontalMetrics.panelWidth + horizontalMetrics.panelRight + HOVER_ZONE_WIDTH_PX);
 }
 
-export function getOutlineClosedLayerWidth(documentMaxWidth: number) {
-  return `max(${HOVER_ZONE_WIDTH_PX}px, calc((100% - ${documentMaxWidth}px) / 2 + ${HOVER_ZONE_WIDTH_PX}px))`;
+export function getOutlineClosedLayerWidth() {
+  return `max(${CLOSED_ZONE_MIN_WIDTH_PX}px, ${CLOSED_ZONE_WIDTH_PERCENT}%)`;
 }
 
 export function resolveDisplayItems(content: string): OutlineDisplayItem[] {
