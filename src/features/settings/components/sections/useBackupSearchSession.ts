@@ -35,10 +35,11 @@ function useClearBackupSearchSession(
   sessionIdRef: MutableCell<string | null>
 ) {
   return useCallback(async () => {
-    generationRef.current += 1;
+    const generation = ++generationRef.current;
     const sessionId = sessionIdRef.current;
     sessionIdRef.current = null;
     if (sessionId) await cancelDatabaseBackupSearch(sessionId).catch(() => undefined);
+    return generation;
   }, [generationRef, sessionIdRef]);
 }
 
@@ -68,7 +69,7 @@ function useLoadNextBackupMatch(model: ReturnType<typeof useBackupSearchModel>) 
 
 function useSubmitBackupSearch(
   model: ReturnType<typeof useBackupSearchModel>,
-  clearSession: () => Promise<void>,
+  clearSession: () => Promise<number>,
   loadNext: (sessionId: string, generation: number) => Promise<void>
 ) {
   const {
@@ -78,8 +79,8 @@ function useSubmitBackupSearch(
   return useCallback(async () => {
     const normalized = query.trim();
     if (!normalized) return;
-    await clearSession();
-    const generation = generationRef.current;
+    const generation = await clearSession();
+    if (generationRef.current !== generation) return;
     setError('');
     setHistory([]);
     setCurrentIndex(-1);
@@ -116,7 +117,7 @@ function useContinueBackupSearch(
 function useBackupSearchLifecycle(
   open: boolean,
   model: ReturnType<typeof useBackupSearchModel>,
-  clearSession: () => Promise<void>
+  clearSession: () => Promise<number>
 ) {
   const {
     setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus, setSubmittedQuery

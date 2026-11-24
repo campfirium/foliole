@@ -113,3 +113,29 @@ it('cancels before the first result and ignores that result when it arrives late
   expect(result.current.current).toBeNull();
   expect(result.current.status).toBe('idle');
 });
+
+it('does not start a replacement query when the panel closes during cancellation', async () => {
+  let open = true;
+  const { result, rerender } = renderHook(() => useBackupSearchSession(open));
+  act(() => result.current.setQuery('old'));
+  await act(() => result.current.submit());
+  expect(result.current.current?.node_id).toBe('first');
+
+  const cancellation = Promise.withResolvers<void>();
+  runtime.cancel.mockReturnValueOnce(cancellation.promise);
+  act(() => result.current.setQuery('new'));
+  let replacement: Promise<void> | undefined;
+  act(() => { replacement = result.current.submit(); });
+  expect(runtime.cancel).toHaveBeenCalledWith('session-1');
+
+  open = false;
+  rerender();
+  await act(async () => {
+    cancellation.resolve();
+    await replacement;
+  });
+
+  expect(runtime.start).toHaveBeenCalledExactlyOnceWith('old');
+  expect(result.current.current).toBeNull();
+  expect(result.current.status).toBe('idle');
+});
