@@ -51,7 +51,7 @@ function useReaderNavigation() {
   const { activeNodeId, nodesById, nodeViewById } = workspace;
   const active = activeNodeId ? nodesById[activeNodeId] : undefined;
   useWorkspaceActiveNodeDocument(activeNodeId);
-  const runtime = useAppRuntime(workspace.listWidth, workspace.rightSidebarWidth);
+  const runtime = useAppRuntime(workspace.layout.listWidth, workspace.layout.rightSidebarWidth);
   const reading = useNavigationReadingPosition(runtime, nodeViewById, workspace.setNodeViewState, nodesById);
   useActiveNodeReadingPositionRestore(runtime, activeNodeId, nodeViewById, true);
   const navigation = useWorkspaceNavigation({
