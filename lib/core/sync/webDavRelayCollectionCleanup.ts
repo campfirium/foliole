@@ -10,6 +10,7 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection, readRelayCollections, relayCollectionOffer, relayCollectionUrl, relayGenerationRoot,
   writeRelayCollections, type RelayCollectionOffer } from './webDavRelayCollections.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { removeRelayCollectionReceipts } from './webDavRelayReceipts.js';
 
 type Runtime = {
   host: RequestSyncDatabaseHost;
@@ -62,6 +63,10 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       const target = direction === 'incoming' ? scope.incoming : scope.outgoingDirection;
       const status = await input.request(relayCollectionUrl(target, offer.generation), { method: 'DELETE' }, webDavRelayStatus);
       if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
+      if (direction === 'incoming') await input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
+        await assertCurrent();
+        await input.host.write(db => removeRelayCollectionReceipts(db, scope, offer.generation));
+      });
     },
     async forgetDeleted() {
       if (!captured?.retired) return;

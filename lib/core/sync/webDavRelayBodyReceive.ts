@@ -10,6 +10,7 @@ import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBo
 import { relayCollectionUrl, relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
 import { readWebDavRelayPacket } from './webDavRelayPacketRead.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { readUnappliedRelayPackets, recordRelayPacketReceipt } from './webDavRelayReceipts.js';
 import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
 import { readWebDavRelayRepair } from './webDavRelayRepairWire.js';
 
@@ -28,14 +29,9 @@ type Input = {
 };
 
 export async function receiveWebDavRelayBodyPackets(input: Input) {
-  const names = await listIncomingPackets(input.request, input.scope.incoming);
-  const pending = await input.host.readSnapshot(async db => {
-    const prefix = `${input.scope.key}:applied:`;
-    const rows = await db.query<{ key: string }>(
-      'SELECT key FROM sync_group_metadata WHERE key >= ? AND key < ?', [prefix, `${input.scope.key}:applied;`]);
-    const applied = new Set(rows.map(row => row.key.slice(prefix.length)));
-    return names.filter(packet => !applied.has(packet.name));
-  }, input.signal);
+  const packets = await listIncomingPackets(input.request, input.scope.incoming);
+  if (!packets.length) return { repairQueued: false, bodyPending: false };
+  const pending = await input.host.readSnapshot(db => readUnappliedRelayPackets(db, input.scope, packets), input.signal);
   let remaining = pending.filter(packet => !packet.kind);
   while (remaining.length) {
     const deferred = [];
@@ -62,7 +58,7 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
   return { repairQueued, bodyPending: remaining.length > 0 };
 }
 
-type Packet = { name: string; kind: string | undefined; url: URL };
+type Packet = { name: string; generation: string; kind: string | undefined; url: URL };
 
 async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) {
   const list = (directory: URL) => request(directory, { method: 'PROPFIND', headers: { Depth: '1' } },
@@ -74,16 +70,16 @@ async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) 
     const status = await request(new URL('../', direction), { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
     if (status !== 207) throw new Error(`webdav_relay_folder_unavailable:${status}`);
   }
-  const packets = (directory: URL, children: string[]): Packet[] => children.flatMap(name => {
+  const packets = (generation: string, directory: URL, children: string[]): Packet[] => children.flatMap(name => {
     const match = packetName.exec(name);
-    return match ? [{ name, kind: match[1], url: new URL(name, directory) }] : [];
+    return match ? [{ name, generation, kind: match[1], url: new URL(name, directory) }] : [];
   });
-  const result = packets(direction, legacy ?? []);
+  const result = packets('legacy', direction, legacy ?? []);
   for (const name of generations ?? []) {
     const generation = relayGeneration.safeParse(name.replace(/\/$/u, ''));
     if (!generation.success) continue;
     const directory = relayCollectionUrl(direction, generation.data);
-    result.push(...packets(directory, await list(directory) ?? []));
+    result.push(...packets(generation.data, directory, await list(directory) ?? []));
   }
   return result.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -114,10 +110,10 @@ async function listChildren(directory: URL, status: number, body: AsyncIterable<
   return [...names].sort();
 }
 
-async function receivePacket(input: Input, { name, url }: Packet) {
+async function receivePacket(input: Input, packet: Packet) {
   await input.assertScope();
   const { host, scope, signal } = input;
-  const count = await input.request(url, { method: 'GET' }, async (status, body) => {
+  const count = await input.request(packet.url, { method: 'GET' }, async (status, body) => {
     if (status !== 200) {
       await webDavRelayStatus(status, body);
       throw new Error(`webdav_relay_download_failed:${status}`);
@@ -130,15 +126,14 @@ async function receivePacket(input: Input, { name, url }: Packet) {
     if (failure) throw new Error(failure.error);
     return result.results.length;
   });
-  await host.write(db => db.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-    [`${scope.key}:applied:${name}`, 'true', new Date().toISOString()]));
+  await host.write(db => recordRelayPacketReceipt(db, scope, packet));
   input.applied(count);
 }
 
-async function receiveAttachment(input: Input, attachments: AttachmentBlockDestination, { name, url }: Packet) {
+async function receiveAttachment(input: Input, attachments: AttachmentBlockDestination, packet: Packet) {
   await input.assertScope();
   const { host, scope, signal, groupKey } = input;
-  const result = await readWebDavRelayPacket(() => input.request(url, { method: 'GET' }, async (status, body) => {
+  const result = await readWebDavRelayPacket(() => input.request(packet.url, { method: 'GET' }, async (status, body) => {
     if (status !== 200) {
       await webDavRelayStatus(status, body);
       throw new Error(`webdav_relay_download_failed:${status}`);
@@ -149,16 +144,15 @@ async function receiveAttachment(input: Input, attachments: AttachmentBlockDesti
   await host.write(db => db.transaction(async tx => {
     if (result.value) await markWebDavRelayAttachment(tx, scope, result.value, 'done');
     if (result.damaged) await rearmWebDavRelayRepair(tx, scope);
-    await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-      [`${scope.key}:applied:${name}`, result.damaged ? 'damaged' : 'true', new Date().toISOString()]);
+    await recordRelayPacketReceipt(tx, scope, packet, result.damaged);
   }));
   if (result.value) input.applied(1);
 }
 
-async function receiveRepair(input: Input, { name, url }: Packet) {
+async function receiveRepair(input: Input, packet: Packet) {
   const { host, scope, signal, groupKey } = input;
   await input.assertScope();
-  const result = await readWebDavRelayPacket(() => input.request(url, { method: 'GET' }, async (status, body) => {
+  const result = await readWebDavRelayPacket(() => input.request(packet.url, { method: 'GET' }, async (status, body) => {
     if (status !== 200) {
       await webDavRelayStatus(status, body);
       throw new Error(`webdav_relay_download_failed:${status}`);
@@ -172,8 +166,7 @@ async function receiveRepair(input: Input, { name, url }: Packet) {
         [`${scope.key}:repair-received:${result.value.id}`, 'true', new Date().toISOString()]);
       if (receipt.changes) await enqueueWebDavRelayAttachmentRepairs(tx, scope, result.value);
     }
-    await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-      [`${scope.key}:applied:${name}`, result.damaged ? 'damaged' : 'true', new Date().toISOString()]);
+    await recordRelayPacketReceipt(tx, scope, packet, result.damaged);
   }));
   return Boolean(result.value);
 }
