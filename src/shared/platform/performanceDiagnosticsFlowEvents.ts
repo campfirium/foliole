@@ -2,7 +2,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { resolveContentLength, resolveEmptyContentReady, resolveReady } from './performanceDiagnosticsFlowHelpers';
-import { reportSlowNodeSwitch } from './performanceDiagnosticsSlowSwitchLog';
+import { reportSlowNodeSwitch } from './diagnostics/performanceDiagnosticsSlowSwitchLog';
 import {
   POSITION_REQUEST_GRACE_MS,
   createNodeSelectionFlow,

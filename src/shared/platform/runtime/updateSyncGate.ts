@@ -1,13 +1,13 @@
-import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 
-import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../storage';
 import {
   SYNC_GATE_PLATFORMS,
   compareVersionStrings,
   type MobileChannels,
   type SyncGatePlatform,
   type UpdateManifest
-} from './updateCheckModel';
+} from '../updateCheckModel';
 
 export type SyncWaitTarget = SyncGatePlatform | 'all';
 

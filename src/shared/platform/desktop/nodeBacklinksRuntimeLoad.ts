@@ -1,7 +1,7 @@
-import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
-import { getElectronAPI, type ElectronAPI, type WorkspaceContentChangedPayload } from '../../shared/platform/electronApi';
-import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
-import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
+import type { BacklinkItem } from '../../../features/nodes/model/internalLinks';
+import { getElectronAPI, type ElectronAPI, type WorkspaceContentChangedPayload } from '../electronApi';
+import { loadRuntimeNodeBacklinks } from '../nodeBacklinksRuntimeRepository';
+import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../runtimeShellEvents';
 
 export interface RuntimeBacklinksState {
   errorMessage: string;

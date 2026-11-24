@@ -12,7 +12,7 @@ import {
   writeSyncWait,
   type SyncWait,
   type SyncWaitTarget
-} from '../platform/updateSyncGate';
+} from '../platform/runtime/updateSyncGate';
 
 import { requestAppChoice } from './appChoice';
 import { requestAppConfirmation } from './appConfirmation';

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { collectBacklinks } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { useWorkspaceStore } from '../../store/workspaceStore';
-
 import {
   EMPTY_RUNTIME_BACKLINKS_STATE, refreshRuntimeBacklinks, subscribeRuntimeBacklinks,
   type RuntimeBacklinksState
-} from './nodeBacklinksRuntimeLoad';
+} from '../../shared/platform/desktop/nodeBacklinksRuntimeLoad';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 function collectLocalBacklinks(args: {
