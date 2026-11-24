@@ -49,7 +49,7 @@ export function saveOriginalFileState(
   });
 }
 
-function replacePreviousOriginalLink(
+export function replacePreviousOriginalLink(
   nodeId: string | null,
   previous: ReadwiseApiOriginalFileState | null | undefined,
   current: ReadwiseApiOriginalFileState

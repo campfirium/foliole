@@ -23,6 +23,7 @@ export function placeReadwisePdfHighlights(input: {
   documentId: string;
   nodeId: string;
   pages: PdfPageForMatch[];
+  relocateExisting?: boolean;
 }) {
   const driver = openDatabaseConnection().driver;
   const source = loadReadwiseApiImportSource(input.connectionRef, input.documentId);
@@ -40,8 +41,8 @@ export function placeReadwisePdfHighlights(input: {
       const body = loadNodeBodyResolution(driver, row.id);
       if (!body) throw new NodeBodyUnavailableError([row.id]);
       const text = parseHighlightCardContent({ content: body.content }).text;
-      if (anchor?.locator && 'page' in anchor.locator && raw.pdfMatchText === text) continue;
-      if (anchor?.locator && 'page' in anchor.locator && typeof raw.pdfMatchText !== 'string') continue;
+      if (!input.relocateExisting && anchor?.locator && 'page' in anchor.locator
+        && (raw.pdfMatchText === text || typeof raw.pdfMatchText !== 'string')) continue;
       const locator = locateReadwiseTextInPdf(input.pages, text);
       const next = JSON.stringify({
         id: anchor?.id ?? `imported-highlight-${row.id}`, kind: 'highlight', origin: 'imported', pdfMatchText: text,
@@ -58,13 +59,14 @@ export async function placeReadwisePdfHighlightsFromAttachment(input: {
   connectionRef: string;
   documentId: string;
   nodeId: string;
-}) {
+}, beforeCommit?: () => void) {
   const file = await resolveAttachmentFile(`${input.attachmentId}.pdf`);
-  if (file.status !== 'ready') return;
+  if (file.status !== 'ready') return false;
   const pages = await readReadwisePdfPages(file.bytes);
-  await runWithDatabaseConnectionOwner(() => placeReadwisePdfHighlights({ connectionRef: input.connectionRef,
-    documentId: input.documentId,
-    nodeId: input.nodeId,
-    pages
+  await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
+    beforeCommit?.();
+    placeReadwisePdfHighlights({ connectionRef: input.connectionRef,
+      documentId: input.documentId, nodeId: input.nodeId, pages });
   }));
+  return true;
 }

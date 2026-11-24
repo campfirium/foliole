@@ -5,8 +5,7 @@ import type {
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { localizeReadwisePdfOriginal } from './readwisePdfOriginalAction.js';
-import { placeReadwisePdfHighlightsFromAttachment } from './readwisePdfPlacement.js';
+import { resyncReadwisePdfOriginal } from './readwisePdfOriginalAction.js';
 import {
   beginReadwiseSourceOperation,
   finishReadwiseSourceOperation,
@@ -59,24 +58,6 @@ export async function resyncReadwiseSource(
   } finally {
     finishReadwiseSourceOperation(nodeId);
   }
-}
-
-async function resyncReadwisePdfOriginal(
-  target: NonNullable<ReturnType<typeof loadReadwiseSourceResyncTarget>>,
-  snapshot: string,
-  dependencies?: ReadwiseApiFetchDependencies
-) {
-  const originalFile = target.state.originalFile;
-  if (originalFile?.status !== 'localized') {
-    await localizeReadwisePdfOriginal(target, snapshot, dependencies);
-    return;
-  }
-  await placeReadwisePdfHighlightsFromAttachment({
-    attachmentId: originalFile.attachmentId,
-    connectionRef: target.connectionRef,
-    documentId: target.documentId,
-    nodeId: target.nodeId
-  });
 }
 
 function state(
