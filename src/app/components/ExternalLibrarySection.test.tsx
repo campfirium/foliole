@@ -135,7 +135,7 @@ it('places the external folder icon after the label and keeps the count separate
   expect(row.querySelector('[aria-label="External folder"]')).toBeInTheDocument();
 });
 
-it('keeps the external folder section visible when the legacy enabled flag is false', () => {
+it('hides the external folder section when the saved visibility preference is off', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
 
   renderWithLocalization(
@@ -150,7 +150,8 @@ it('keeps the external folder section visible when the legacy enabled flag is fa
   );
 
   expect(screen.queryByRole('treeitem', { name: 'External' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /1act/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('tree')).not.toBeInTheDocument();
 });
 
 it('opens setup context menu with Connect folder', () => {

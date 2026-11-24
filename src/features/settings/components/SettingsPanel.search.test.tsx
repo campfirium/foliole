@@ -137,11 +137,11 @@ it('opens Aide settings from the General Foliole Aide row', async () => {
   }
 });
 
-it('shows the External folders category without a visibility switch', () => {
+it('shows a visibility switch in the External folders category', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="external-search" />);
 
   expect(screen.getByRole('heading', { level: 2, name: 'External folders' })).toBeInTheDocument();
-  expect(screen.queryByRole('switch', { name: 'Enable external folders' })).toBeNull();
+  expect(screen.getByRole('switch', { name: 'Enable external folders' })).toBeChecked();
 });
 
 it('finds advanced review scheduler rows from settings search', async () => {

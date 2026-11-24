@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FolderSectionRows, useFolderSectionControl, useFolderSectionStack } from '../../features/nodes/components/FolderSectionStack';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useExternalFoldersSettings } from '../../features/settings/context/ExternalFoldersSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
@@ -87,6 +88,11 @@ function useExternalSectionCollapse() {
 }
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
+  const { externalFoldersEnabled } = useExternalFoldersSettings();
+  return externalFoldersEnabled ? <VisibleExternalLibrarySection {...props} /> : null;
+}
+
+function VisibleExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const stack = useFolderSectionStack();

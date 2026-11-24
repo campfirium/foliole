@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/ui';
 
 import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
+import { SettingsExternalFoldersEnabledSwitch } from './SettingsExternalFoldersEnabledSwitch';
 import { SettingsRemoteExternalFolderRows } from './SettingsRemoteExternalFolderRows';
 
 interface SettingsExternalSearchSectionProps {
@@ -79,27 +80,20 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
   const remoteFolders = props.folders.filter((folder) => folder.accessMode !== 'local');
   const localFolders = props.folders.filter((folder) => folder.accessMode === 'local');
 
-  if (props.isLoading) {
-    return (
-      <SettingsSection
-        ariaLabel={t('settings.externalSources.sectionAria')}
-      >
-        <SettingsLoadingState />
-      </SettingsSection>
-    );
-  }
-
   return (
     <SettingsSection
+      actions={<SettingsExternalFoldersEnabledSwitch />}
       ariaLabel={t('settings.externalSources.sectionAria')}
       className={hasActiveSyncGroup && remoteFolders.length > 0 ? 'before:hidden' : ''}
     >
-      {hasActiveSyncGroup && remoteFolders.length > 0 ? (
-        <SettingsRemoteExternalFolderRows
-          folders={remoteFolders}
-        />
-      ) : null}
-      <LocalExternalFolders folders={localFolders} settings={props} />
+      {props.isLoading ? <SettingsLoadingState /> : (
+        <>
+          {hasActiveSyncGroup && remoteFolders.length > 0 ? (
+            <SettingsRemoteExternalFolderRows folders={remoteFolders} />
+          ) : null}
+          <LocalExternalFolders folders={localFolders} settings={props} />
+        </>
+      )}
     </SettingsSection>
   );
 }

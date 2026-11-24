@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { toWorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
+import { SettingsExternalSearchSection } from '../../features/settings/components/sections/SettingsExternalSearchSection';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -95,7 +96,7 @@ it('opens the simplified external folder setup dialog from the Connect folder ro
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
 });
 
-it('keeps external folders visible when the legacy enabled flag is false', () => {
+it('restores saved sidebar visibility and applies settings changes to the open workspace', () => {
   const onOpenExternalLibrarySettings = vi.fn();
   const nodesById: Record<string, Node> = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' })
@@ -105,7 +106,7 @@ it('keeps external folders visible when the legacy enabled flag is false', () =>
   );
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
 
-  renderWithLocalization(
+  const workspace = (
     <WorkspaceListArea
       activeNodeId={INBOX_NODE_ID}
       activeVirtualNodeId={null}
@@ -150,7 +151,50 @@ it('keeps external folders visible when the legacy enabled flag is false', () =>
     />
   );
 
+  const settings = (
+    <SettingsExternalSearchSection
+      error={null}
+      feedback={null}
+      folders={[]}
+      isDesktopRuntime
+      isLoading={false}
+      isSaving={false}
+      onAddFolder={vi.fn()}
+      onChooseAttachmentRoot={vi.fn()}
+      onChooseFolder={vi.fn()}
+      onDisconnectFolder={vi.fn()}
+      onReconnectFolder={vi.fn()}
+      onRebuildIndex={vi.fn()}
+      onRemoveFolder={vi.fn()}
+      onRetryLoad={vi.fn()}
+      onUpdateFolder={vi.fn()}
+    />
+  );
+  const view = renderWithLocalization(<>{workspace}{settings}</>);
+  const storageKey = APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled;
+
+  expect(screen.queryByRole('treeitem', { name: /^External$/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /1act/i })).not.toBeInTheDocument();
+
+  const visibilitySwitch = screen.getByRole('switch', { name: 'Enable external folders' });
+  expect(visibilitySwitch).not.toBeChecked();
+  fireEvent.click(visibilitySwitch);
+
+  expect(visibilitySwitch).toBeChecked();
+  expect(window.localStorage.getItem(storageKey)).toBe('true');
   expect(screen.getByRole('treeitem', { name: /^External$/ })).toBeVisible();
-  expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: /1act/i })).toBeVisible();
+
+  fireEvent.click(visibilitySwitch);
+
+  expect(visibilitySwitch).not.toBeChecked();
+  expect(window.localStorage.getItem(storageKey)).toBe('false');
+  expect(screen.queryByRole('treeitem', { name: /^External$/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /1act/i })).not.toBeInTheDocument();
   expect(onOpenExternalLibrarySettings).not.toHaveBeenCalled();
+
+  view.unmount();
+  renderWithLocalization(workspace);
+  expect(screen.queryByRole('treeitem', { name: /^External$/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: /1act/i })).not.toBeInTheDocument();
 });

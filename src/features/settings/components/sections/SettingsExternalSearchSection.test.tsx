@@ -93,7 +93,7 @@ it('shows remote mirrors only when a remote desktop folder exists', () => {
   expect(screen.queryByText('Read-only mirror')).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Other hosts' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'External folders' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('switch')).toEqual([screen.getByRole('switch', { name: 'Enable external folders' })]);
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
@@ -129,7 +129,7 @@ it('groups by Source Host without exposing receiver controls or guessing missing
   expect(screen.getByText('macOS')).toBeInTheDocument();
   expect(screen.getByText('Other host')).toBeInTheDocument();
   expect(screen.queryByText('mystery')).not.toBeInTheDocument();
-  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('switch')).toEqual([screen.getByRole('switch', { name: 'Enable external folders' })]);
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /More actions for/ })).not.toBeInTheDocument();
 });
