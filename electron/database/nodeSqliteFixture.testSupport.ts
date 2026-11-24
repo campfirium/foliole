@@ -4,6 +4,7 @@ import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktop
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import type { SqliteDatabase } from './connection.js';
 
 /** Runs desktop SQL against real SQLite in ordinary Node, without loading the Electron ABI. */
@@ -15,6 +16,9 @@ export function openNodeSqliteFixture() {
     VALUES ('host_name', '"test-host"', '2026-10-08T00:00:00.000Z')`);
   let nextSavepoint = 0;
   const sqlite = {
+    name: ':memory:',
+    readonly: false,
+    get inTransaction() { return database.isTransaction; },
     prepare: database.prepare.bind(database),
     exec: database.exec.bind(database),
     transaction<T>(execute: () => T) {
@@ -35,7 +39,8 @@ export function openNodeSqliteFixture() {
     },
     close: database.close.bind(database)
   };
-  const driver = createBetterSqlite3Driver(sqlite as unknown as SqliteDatabase);
+  const compatibleSqlite = sqlite as unknown as SqliteDatabase;
+  const driver = createBetterSqlite3Driver(compatibleSqlite);
   bindParentOrderWriter(driver, { deviceAnchor: 'test', libraryPath: '/test' });
-  return { driver, sqlite };
+  return { driver, sqlite, port: createBetterSqliteDbPort(compatibleSqlite) };
 }

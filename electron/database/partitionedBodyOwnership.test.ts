@@ -4,13 +4,16 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { moveNodes } from '../../lib/core/database/nodeMoveMutations.js';
 import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
-import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { deleteNodesPermanently, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
+import { recordCompletedSyncGroupRound } from '../../lib/core/sync/syncGroupCoverageStore.js';
+import { collectSyncGroupHistory } from '../../lib/core/sync/syncHistoryCollection.js';
 
 import { runPreparedImport } from './importPipeline.js';
 import { openNodeSqliteFixture } from './nodeSqliteFixture.testSupport.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { partitionEditedBody } from './partitionEditedBody.js';
 
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection }));
@@ -115,4 +118,44 @@ it('reimports after Trash creates a gap while retaining the trashed topic and la
   expect(driver.queryOne('SELECT content FROM nodes WHERE id = ?', [middle])?.content).toBe(LOCAL_EDIT);
   expect(readBodyPartIds(driver, root)).toEqual(parts);
   expect(readPartitionedNodeBody(driver, root) === updated + '!').toBe(true);
+});
+
+async function settleSyncHistory() {
+  const { port, sqlite } = connection;
+  sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', '${NOW}', '${NOW}');
+    INSERT INTO sync_group_local_state VALUES (1, 'group', 'desktop', 'active', '${NOW}');
+    INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
+      device_name, platform, state, joined_at, updated_at)
+    VALUES ('group', 'desktop', 'desktop-anchor', '/desktop', 'Desktop', 'mac', 'active', '${NOW}', '${NOW}'),
+      ('group', 'phone', 'phone-anchor', '/phone', 'Phone', 'ios', 'active', '${NOW}', '${NOW}')`);
+  await recordCompletedSyncGroupRound(port, { groupId: 'group', localDeviceId: 'desktop', peerDeviceId: 'phone',
+    startedAt: '2026-10-20T00:00:00.000Z' });
+}
+
+it('keeps the restored original independent after deleting its replacement and settling sync history', async () => {
+  const { driver, port } = connection;
+  const root = importBody(BASE_TEXT + 'original');
+  const original = readBodyPartIds(driver, root)[1]!;
+  softDeleteNodes(driver, { nodeIds: [original], deletedAt: '2026-10-08T00:01:00.000Z' });
+  importBody(BASE_TEXT + 'updated', '2026-10-08T00:02:00.000Z', root);
+  const replacement = readBodyPartIds(driver, root)[1]!;
+  expect(replacement).not.toBe(original);
+  expect(restoreNodes(driver, { nodeIds: [original] }).restoredNodeIds).toEqual([original]);
+  writeNodeBody({ driver, nodeId: original, title: 'Restored topic', content: LOCAL_EDIT, updatedAt: NOW });
+
+  const deletedAt = '2026-10-08T00:03:00.000Z';
+  softDeleteNodes(driver, { nodeIds: [replacement], deletedAt });
+  expect(flushNodeSyncVersionWithDriver(driver, replacement, 'test-host', deletedAt)).toBeTruthy();
+  deleteNodesPermanently(driver, { nodeIds: [replacement], deletedAt });
+  await settleSyncHistory();
+  await collectSyncGroupHistory(work => work(port), 'group');
+
+  const updated = BASE_TEXT + 'latest source text';
+  importBody(updated, '2026-10-21T00:00:00.000Z', root);
+  expect(driver.queryOne('SELECT content FROM nodes WHERE id = ?', [original])?.content).toBe(LOCAL_EDIT);
+  expect(readBodyPartIds(driver, root)).not.toContain(original);
+  expect(readPartitionedNodeBody(driver, root) === updated).toBe(true);
+
+  await collectSyncGroupHistory(work => work(port), 'group');
+  expect(driver.queryOne('SELECT node_id FROM node_sync_tombstones WHERE node_id = ?', [replacement])).toBeUndefined();
 });

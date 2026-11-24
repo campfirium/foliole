@@ -1,3 +1,4 @@
+import { BODY_PART_ID_PREFIX, BODY_PART_NUMBER_WIDTH, BODY_PART_SLOT_ID_LENGTH } from '../database/bodyPartitionIdentity.js';
 import { nodeChildOwnerSql } from '../database/nodeChildStateSql.js';
 
 const CHILD_EDGES = `child_edges(parent_id, child_id) AS (
@@ -38,9 +39,23 @@ export const RECLAIMABLE_HISTORY_SQL = `WITH ${CHILD_EDGES}, ${REFERENCED},
       WHERE edge.parent_id = version.version_id AND child.created_at < ?)
   ORDER BY version.version_id LIMIT ?`;
 
-/** Permanent deletions every member applied before the group line; the node itself is long gone. */
+const BODY_PART_SLOT = `substr(tomb.node_id, 1, ${BODY_PART_SLOT_ID_LENGTH})`;
+const REPLACEMENT_ID_LENGTH = BODY_PART_SLOT_ID_LENGTH + 1 + BODY_PART_NUMBER_WIDTH;
+
+// Keep the newest replacement identity while it prevents an older topic from being reused during import.
+const BODY_PART_OWNERSHIP_HOLD = `CASE WHEN tomb.node_id GLOB '${BODY_PART_ID_PREFIX}*'
+  AND length(tomb.node_id) = ${REPLACEMENT_ID_LENGTH}
+  AND substr(tomb.node_id, ${BODY_PART_SLOT_ID_LENGTH + 1}, 1) = '-'
+  THEN EXISTS (SELECT 1 FROM nodes older WHERE older.id >= ${BODY_PART_SLOT} AND older.id < tomb.node_id)
+    AND NOT EXISTS (SELECT 1 FROM nodes newer WHERE newer.id > tomb.node_id AND newer.id < ${BODY_PART_SLOT} || ':')
+    AND NOT EXISTS (SELECT 1 FROM node_sync_tombstones newer
+      WHERE newer.node_id > tomb.node_id AND newer.node_id < ${BODY_PART_SLOT} || ':')
+  ELSE 0 END`;
+
+/** Permanent deletions every member applied before the group line and no local fact still requires. */
 export const RECLAIMABLE_TOMBSTONES_SQL = `SELECT tomb.node_id FROM node_sync_tombstones tomb
   WHERE tomb.deleted_at < ? AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = tomb.node_id)
+    AND NOT (${BODY_PART_OWNERSHIP_HOLD})
   ORDER BY tomb.node_id LIMIT ?`;
 
 const placeholders = (count: number) => Array.from({ length: count }, () => '?').join(', ');
