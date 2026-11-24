@@ -77,6 +77,8 @@ export const EN_DESKTOP_REVIEW_TRANSLATIONS = {
   'desktop.nodeReview.description': '`desired retention` is the memory target. `priority` affects Review order; `P0` comes first and is not delayed by priority scaling.',
   'desktop.nodeReview.desiredRetention': 'Desired retention',
   'desktop.nodeReview.desiredRetention.aria': 'Review desired retention',
+  'desktop.nodeReview.desiredRetention.inherited': '{label} (Inherited)',
+  'desktop.nodeReview.desiredRetention.useInherited': 'Use inherited value',
   'desktop.nodeReview.priority': 'Priority',
   'desktop.nodeReview.priority.aria': 'Review queue priority',
   'desktop.nodeReview.shortTerm': 'Short-term learning steps',

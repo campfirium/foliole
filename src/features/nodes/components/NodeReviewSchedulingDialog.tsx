@@ -11,7 +11,6 @@ import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspa
 
 import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
 import {
-  appSurfaceControlClassName,
   AppDialog,
   AppDialogContent,
   AppDialogOverlay,
@@ -133,6 +132,33 @@ function useNodeReviewSchedulingDraft(args: {
 
 type NodeReviewSchedulingDraft = ReturnType<typeof useNodeReviewSchedulingDraft>;
 
+function RetentionRow({ draft, retention, t }: {
+  draft: NodeReviewSchedulingDraft;
+  retention: ResolvedNodeSetting<number>;
+  t: Translate;
+}) {
+  const inherits = draft.retentionDraft === null;
+  const percent = Math.round((draft.retentionDraft ?? retention.value) * 100);
+  const label = t('desktop.nodeReview.desiredRetention');
+  return (
+    <SettingsRow title={inherits ? t('desktop.nodeReview.desiredRetention.inherited', { label }) : label}>
+      <SettingsControlSlot>
+        {!inherits && (
+          <button className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => draft.setRetentionDraft(null)} type="button">
+            {t('desktop.nodeReview.desiredRetention.useInherited')}
+          </button>
+        )}
+        <input aria-label={t('desktop.nodeReview.desiredRetention.aria')} aria-valuetext={`${percent}%`}
+          className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)} min={1} max={99} step={1}
+          onChange={event => draft.setRetentionDraft(event.currentTarget.valueAsNumber / 100)}
+          type="range" value={percent} />
+        <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{percent}%</span>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
 function ReviewSchedulingRows(props: {
   draft: NodeReviewSchedulingDraft;
   retention: ResolvedNodeSetting<number>;
@@ -141,19 +167,7 @@ function ReviewSchedulingRows(props: {
 }) {
   return (
     <SettingsSection ariaLabel={props.t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
-      <SettingsRow title={props.t('desktop.nodeReview.desiredRetention')}>
-        <SettingsControlSlot>
-          <select aria-label={props.t('desktop.nodeReview.desiredRetention.aria')}
-            className={appSurfaceControlClassName()}
-            onChange={event => props.draft.setRetentionDraft(event.target.value === 'inherit' ? null : Number(event.target.value))}
-            value={props.draft.retentionDraft ?? 'inherit'}>
-            <option value="inherit">{props.t('desktop.nodeReview.inherit')} ({Math.round(props.retention.value * 100)}%)</option>
-            {Array.from({ length: 99 }, (_, index) => (index + 1) / 100).map(value => (
-              <option key={value} value={value}>{Math.round(value * 100)}%</option>
-            ))}
-          </select>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <RetentionRow draft={props.draft} retention={props.retention} t={props.t} />
       <SettingsRow description={renderPriorityDescription(props.node, props.t)} title={props.t('desktop.nodeReview.priority')}>
         <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
       </SettingsRow>

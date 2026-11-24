@@ -110,16 +110,17 @@ it('saves an explicit retention and can restore inheritance without changing pri
     onDesiredRetentionChange={onDesiredRetentionChange} onPriorityChange={onPriorityChange}
     onShortTermChange={() => undefined} />;
   const rendered = renderWithLocalization(view());
-  const control = screen.getByRole('combobox', { name: 'Review desired retention' });
-  expect(control).toHaveValue('0.99');
-  expect(screen.getByRole('option', { name: 'Inherit resolved value (80%)' })).toBeInTheDocument();
-  fireEvent.change(control, { target: { value: '0.85' } });
+  const control = screen.getByRole('slider', { name: 'Review desired retention' });
+  expect(control).toHaveValue('99');
+  fireEvent.change(control, { target: { value: '85' } });
   expect(onDesiredRetentionChange).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Close'));
   expect(onDesiredRetentionChange).toHaveBeenLastCalledWith('node-1', 0.85);
   node.desiredRetention = 0.85;
   rendered.rerender(view());
-  fireEvent.change(control, { target: { value: 'inherit' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Use inherited value' }));
+  expect(control).toHaveValue('80');
+  expect(screen.getByRole('heading', { name: 'Desired retention (Inherited)' })).toBeInTheDocument();
   fireEvent.click(screen.getByText('Close'));
   expect(onDesiredRetentionChange).toHaveBeenLastCalledWith('node-1', null);
   expect(onPriorityChange).not.toHaveBeenCalled();
