@@ -11,6 +11,8 @@ import {
 } from './workspaceActionHistory';
 import { applyReadingSnapshot, applyRelatedReadingSnapshots} from './workspaceActionHistoryReading';
 import { settleApplicationAction } from './workspaceApplicationActionAdmission';
+import type { ApplicationHistory } from './workspaceApplicationHistory';
+import { projectApplicationWorkspaceHistory } from './workspaceApplicationWorkspaceHistory';
 import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
@@ -87,6 +89,27 @@ function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPat
   return { applied, undoRequested };
 }
 
+type SoonAdmission = { before: ApplicationHistory; admitted: ApplicationHistory };
+
+function failReadingAction(history: WorkspaceState['appActionHistory'], entryId: string, soon?: SoonAdmission) {
+  const failed = failWorkspaceAction(history, entryId);
+  const application = failed.application;
+  if (!soon || !application || history.pendingAction?.entry.id !== entryId ||
+    application.sessionId !== soon.admitted.sessionId || application.branch !== soon.admitted.branch) return failed;
+
+  // The rejected Soon was the last admission. Keep updates to older operations while restoring
+  // the redo stack and any oldest entry trimmed by that admission.
+  const { before, admitted } = soon;
+  const oldestAdmittedOrder = admitted.undo[0]?.order ?? Infinity;
+  const evicted = before.undo.filter(operation => operation.order < oldestAdmittedOrder);
+  const undo = [...evicted, ...application.undo];
+  const missing = before.requests.findIndex(request =>
+    !undo.some(operation => operation.id === request.operationId) &&
+    !before.redo.some(operation => operation.id === request.operationId));
+  return projectApplicationWorkspaceHistory(failed, { ...before, undo,
+    requests: missing < 0 ? before.requests : before.requests.slice(0, missing) });
+}
+
 export async function persistAndApplyReadingReviewPatch(args: {
   buildPatch: (state: WorkspaceState) => ReadingReviewPatchResult | null | Promise<ReadingReviewPatchResult | null>;
   currentNodeId: string;
@@ -103,13 +126,18 @@ export async function persistAndApplyReadingReviewPatch(args: {
     result.beforeNodes = before.nodesById;
     const beforeReviewSession = before.reviewSession;
     let began = false;
+    let soonAdmission: SoonAdmission | undefined;
     acceptWorkspaceHistoryCommand(args.set, 'preserve', (state) => {
       const ids = [result.historyEntry.nodeId, ...(result.historyEntry.relatedReadings ?? []).map(value => value.nodeId)];
       if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate || ids.some(id => !state.nodesById[id] || state.trashedNodeIds.includes(id) ||
             !isSameNodeReading(state.nodesById[id], before.nodesById[id]))) return state;
       began = true;
-      return { appActionHistory: beginWorkspaceAction(state.appActionHistory, result.historyEntry) };
+      const appActionHistory = beginWorkspaceAction(state.appActionHistory, result.historyEntry);
+      if (result.historyEntry.title === 'Soon Topic' && state.appActionHistory.application && appActionHistory.application) {
+        soonAdmission = { before: state.appActionHistory.application, admitted: appActionHistory.application };
+      }
+      return { appActionHistory };
     });
     if (!began) return false;
     let persisted = false;
@@ -127,7 +155,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
       args.set((state) => ({
         appActionHistory: invalidPersistence
           ? createEmptyWorkspaceActionHistory()
-          : failWorkspaceAction(state.appActionHistory, result.historyEntry.id)
+          : failReadingAction(state.appActionHistory, result.historyEntry.id, blockedSoon ? soonAdmission : undefined)
       }));
       if (blockedSoon) throw blockedSoon;
       return false;
