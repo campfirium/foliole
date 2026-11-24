@@ -6,6 +6,8 @@ import { buildGuidedSampleContent } from './guided-sample-content.ts';
 const DEFAULT_CONTENT_ROOT = 'docs/i18n/guides';
 const DEFAULT_OUTPUT_PATH = 'src/demo/generated/demoPacks.ts';
 const DEFAULT_GUIDED_OUTPUT_PATH = 'lib/core/guidedSample/generated/guidedSamplePacks.ts';
+const MOBILE_GUIDED_CONTENT_ROOT = 'docs/i18n/guides-mobile';
+const MOBILE_GUIDED_OUTPUT_PATH = 'lib/core/guidedSample/generatedMobile/guidedSamplePacks.ts';
 
 function parseArgs(argv: string[]) {
   const flags = new Map<string, string>();
@@ -26,10 +28,13 @@ function parseArgs(argv: string[]) {
 const args = parseArgs(process.argv.slice(2));
 Promise.all([
   buildDemoGuidesContent(args),
-  buildGuidedSampleContent({ contentRoot: args.contentRoot, outputPath: args.guidedOutputPath })
+  buildGuidedSampleContent({ contentRoot: args.contentRoot, outputPath: args.guidedOutputPath }),
+  buildGuidedSampleContent({
+    contentRoot: MOBILE_GUIDED_CONTENT_ROOT, exportPrefix: 'MOBILE_', outputPath: MOBILE_GUIDED_OUTPUT_PATH
+  })
 ]).then(([packs]) => {
   const locales = Object.keys(packs).sort().join(', ');
-  console.log(`[guides] generated ${path.normalize(args.outputPath)} and ${path.normalize(args.guidedOutputPath)} for ${locales}`);
+  console.log(`[guides] generated ${path.normalize(args.outputPath)}, ${path.normalize(args.guidedOutputPath)} and ${MOBILE_GUIDED_OUTPUT_PATH} for ${locales}`);
 }).catch((error) => {
   console.error(`[guides] ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

@@ -51,7 +51,6 @@ export function renderCompanionShellSearchSurface(props: {
         onOpenExternalDocument={props.onOpenExternalDocument}
         onOpenPdf={props.onOpenPdf}
         onOpenTopic={props.onOpenTopic}
-        snapshot={props.workspaceSync.state.workspace_snapshot}
       /> : null}
       {props.externalDocument ? (
         <CompanionSearchExternalArticle searchMatch={props.searchMatch} document={props.externalDocument} onExit={props.onExitExternalDocument} />

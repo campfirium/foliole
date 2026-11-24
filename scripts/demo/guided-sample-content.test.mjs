@@ -25,6 +25,23 @@ it('keeps committed guided sample packs synchronized with the Guide sources', as
   }
 });
 
+it('keeps committed mobile guided sample packs synchronized with the mobile Guide sources', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-mobile-guided-sample-build-'));
+  const committed = 'lib/core/guidedSample/generatedMobile/guidedSamplePacks.ts';
+  try {
+    const outputPath = path.join(tempDir, 'generated', 'guidedSamplePacks.ts');
+    await buildGuidedSampleContent({ contentRoot: 'docs/i18n/guides-mobile', exportPrefix: 'MOBILE_', outputPath });
+    await expect(readFile(outputPath, 'utf8')).resolves.toBe(await readFile(committed, 'utf8'));
+    for (const fileName of ['en', 'de', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pl', 'pt_BR', 'ru', 'zh_Hans', 'zh_Hant']) {
+      await expect(readFile(path.join(tempDir, 'generated', 'locales', `${fileName}.ts`), 'utf8')).resolves.toBe(
+        await readFile(path.join(path.dirname(committed), 'locales', `${fileName}.ts`), 'utf8')
+      );
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 it('rejects a registered locale directory gap before producing packs', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-guided-sample-gap-'));
   try {

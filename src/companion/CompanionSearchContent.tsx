@@ -1,4 +1,3 @@
-import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
@@ -7,7 +6,6 @@ import type { CompanionPdfPageTextSearchResult } from '../shared/platform/compan
 import { AppButton, appFocusSilentClassName } from '../shared/ui';
 
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
-import { CompanionSearchHistory } from './CompanionSearchHistory';
 import { CompanionSearchResults } from './CompanionSearchResults';
 import { CompanionSearchSaveIndex } from './CompanionSearchSaveIndex';
 import { useCompanionSearch } from './useCompanionSearch';
@@ -17,7 +15,6 @@ export function CompanionSearchContent(props: {
   onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult, query: string) => void) | undefined;
   onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
   onOpenTopic?: ((result: CompanionTopicSearchResult, query: string) => void) | undefined;
-  snapshot?: WorkspaceSnapshot | null | undefined;
 }) {
   const t = useTranslation();
   const [query, setQuery] = useCompanionNavigationField('searchQuery', '');
@@ -56,13 +53,7 @@ export function CompanionSearchContent(props: {
             {t('companion.search.loadMore')}
           </AppButton>
         ) : null}
-        {!query.trim() && props.onOpenTopic ? <CompanionSearchHistory snapshot={props.snapshot ?? null}
-          onOpen={(nodeId, title) => void topicOpen.open(historyTopic(nodeId, title))} /> : null}
       </div>
     </section>
   );
-}
-
-function historyTopic(nodeId: string, title: string): CompanionTopicSearchResult {
-  return { bodyStatus: 'ready', excerpt: '', matchStart: 0, nodeId, openingText: null, title, updatedAt: '' };
 }

@@ -7,6 +7,7 @@ import { companionWorkspaceSnapshots } from '../companionWorkspaceSnapshotStore'
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
 
 import { companionDailyFlowSettings, openCompanionDailyFlow } from './companionDailyFlow';
+import { ensureCompanionGuidedSample } from './companionGuidedSample';
 
 const readReceiptNodes = new WeakSet<object>();
 export function isCompanionReadReceiptSnapshot(nodes: object | undefined) {
@@ -23,6 +24,8 @@ export async function ensureCompanionFlowDisplay(session: DailyFlowSession) {
 }
 
 export async function openCompanionDailyFlowForDisplay(args: DailyFlowOpenArgs, timing?: FlowTiming) {
+  // An untouched phone library gets its guided sample before the day's Flow is built, so Flow opens on it.
+  await ensureCompanionGuidedSample().catch(() => undefined);
   const before = companionWorkspaceSnapshots.getSnapshot();
   const result = await openCompanionDailyFlow(args, timing);
   await timeFlow(timing, 'receipt', () => applyCompanionFlowReceipt(result, before));

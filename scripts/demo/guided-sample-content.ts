@@ -23,6 +23,8 @@ const APP_LOCALES = Object.keys(appLocaleManifest.locales) as RegisteredAppLocal
 
 export interface BuildGuidedSampleContentArgs {
   contentRoot: string;
+  /** Distinguishes generated export names when another pack set (the mobile sample) is written beside this one. */
+  exportPrefix?: string;
   outputPath: string;
 }
 
@@ -48,7 +50,7 @@ export async function buildGuidedSampleContent(args: BuildGuidedSampleContentArg
     const sourceLocale = sourceLocaleByAppLocale[locale];
     packs[locale] = await buildLocalePack(args.contentRoot, locale, sourceLocale, guidedEntries, assets);
   }
-  await writeGeneratedPacks(args.outputPath, packs);
+  await writeGeneratedPacks(args.outputPath, packs, args.exportPrefix ?? '');
   return packs;
 }
 
@@ -99,20 +101,24 @@ function injectAssetMarkdown(markdown: string, assetIds: readonly string[]) {
   return [title, images, lines.join('\n').trim()].filter(Boolean).join('\n\n');
 }
 
-async function writeGeneratedPacks(outputPath: string, packs: Record<RegisteredAppLocale, GuidedSampleContentPack>) {
+async function writeGeneratedPacks(
+  outputPath: string,
+  packs: Record<RegisteredAppLocale, GuidedSampleContentPack>,
+  exportPrefix: string
+) {
   const resolved = path.resolve(outputPath);
   const localeDir = path.join(path.dirname(resolved), 'locales');
   await mkdir(localeDir, { recursive: true });
   const imports: string[] = [];
   const entries: string[] = [];
   for (const locale of APP_LOCALES) {
-    const name = locale.replaceAll('-', '_').toUpperCase();
+    const name = `${exportPrefix}${locale.replaceAll('-', '_').toUpperCase()}`;
     const fileName = locale.replaceAll('-', '_');
     imports.push(`import { ${name}_GUIDED_SAMPLE_PACK } from './locales/${fileName}.js';`);
     entries.push(`  ${JSON.stringify(locale)}: ${name}_GUIDED_SAMPLE_PACK`);
     const localeSource = `import type { GuidedSampleContentPack } from '../../guidedSamplePack.js';\n\nexport const ${name}_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = ${JSON.stringify(packs[locale], null, 2)};\n`;
     await writeIfChanged(path.join(localeDir, `${fileName}.ts`), localeSource);
   }
-  const source = `import type { GuidedSampleContentPack } from '../guidedSamplePack.js';\n\n${imports.sort().join('\n')}\n\nexport const GENERATED_GUIDED_SAMPLE_PACKS: Record<string, GuidedSampleContentPack> = {\n${entries.join(',\n')}\n};\n`;
+  const source = `import type { GuidedSampleContentPack } from '../guidedSamplePack.js';\n\n${imports.sort().join('\n')}\n\nexport const ${exportPrefix}GENERATED_GUIDED_SAMPLE_PACKS: Record<string, GuidedSampleContentPack> = {\n${entries.join(',\n')}\n};\n`;
   await writeIfChanged(resolved, source);
 }

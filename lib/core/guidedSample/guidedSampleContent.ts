@@ -1,6 +1,7 @@
 import type { RegisteredAppLocale as AppLocale } from '../localization/appLocaleRegistry.js';
 
 import { GENERATED_GUIDED_SAMPLE_PACKS } from './generated/guidedSamplePacks.js';
+import { MOBILE_GENERATED_GUIDED_SAMPLE_PACKS } from './generatedMobile/guidedSamplePacks.js';
 import type { GuidedSampleContentPack } from './guidedSamplePack.js';
 
 export type { GuidedSampleTopicTemplate } from './guidedSamplePack.js';
@@ -10,7 +11,16 @@ export const GUIDED_SAMPLE_PRIORITY = 0;
 const LEGACY_GUIDED_SAMPLE_ROOT_TITLES = ['Welcome to Foliole', '欢迎使用 Foliole'] as const;
 
 export function getGuidedSampleContent(locale: AppLocale) {
-  const pack = requireGuidedSamplePack(locale);
+  return toGuidedSampleContent(requireGuidedSamplePack(GENERATED_GUIDED_SAMPLE_PACKS, locale));
+}
+
+/** The phone's own sample: the same eight topics, written for touch instead of keyboard shortcuts. */
+export function getMobileGuidedSampleContent(locale: AppLocale) {
+  return toGuidedSampleContent(requireGuidedSamplePack(MOBILE_GENERATED_GUIDED_SAMPLE_PACKS, locale));
+}
+
+function toGuidedSampleContent(pack: GuidedSampleContentPack) {
+  const locale = pack.locale;
   const root = pack.topics.find((topic) => topic.id === pack.rootId);
   if (!root) throw new Error(`Guided sample pack is missing its root: ${locale}`);
   return {
@@ -27,8 +37,8 @@ export function getGuidedSampleRootTitles() {
   ]);
 }
 
-function requireGuidedSamplePack(locale: AppLocale): GuidedSampleContentPack {
-  const pack = GENERATED_GUIDED_SAMPLE_PACKS[locale];
+function requireGuidedSamplePack(packs: Record<string, GuidedSampleContentPack>, locale: AppLocale): GuidedSampleContentPack {
+  const pack = packs[locale];
   if (!pack) throw new Error(`Missing guided sample pack: ${locale}`);
   return pack;
 }
