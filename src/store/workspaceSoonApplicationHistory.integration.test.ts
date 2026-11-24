@@ -29,7 +29,7 @@ it('keeps a desktop action redoable after Soon finds no other topic', async () =
   await store.getState().startReviewSession(now);
   expect(await store.getState().revisitReviewTopicSoon(now)).toBe(true);
   expect(await store.getState().updateNodeTitle('folder', 'Renamed')).toBe(true);
-  expect(store.getState().undoApplicationOperation()).toBe(true);
+  expect(store.getState().undoApplicationOperation?.()).toBe(true);
   await vi.waitFor(() => expect(store.getState().appActionHistory.application?.requests).toEqual([]));
   expect(store.getState().nodesById.folder?.title).toBe('folder');
   expect(store.getState().reviewSession.currentNodeId).toBe('a');
@@ -44,7 +44,7 @@ it('keeps a desktop action redoable after Soon finds no other topic', async () =
   expect(store.getState().appActionHistory.undoStack).toEqual(before.appActionHistory.undoStack);
   expect(store.getState().appActionHistory.redoStack).toEqual(before.appActionHistory.redoStack);
   expect(localStorage.getItem('foliole-workspace-v1')).toBe(storedBefore);
-  expect(store.getState().redoApplicationOperation()).toBe(true);
+  expect(store.getState().redoApplicationOperation?.()).toBe(true);
   await vi.waitFor(() => expect(store.getState().appActionHistory.application?.requests).toEqual([]));
   expect(store.getState().nodesById.folder?.title).toBe('Renamed');
   const saved = JSON.parse(localStorage.getItem('foliole-workspace-v1')!);

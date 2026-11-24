@@ -10,6 +10,7 @@ import { PARENT_ORDER_FACT_SCHEMA } from '../../lib/core/database/currentParentO
 import { DAILY_FLOW_CURRENT_SCHEMA } from '../../lib/core/database/dailyFlowSchema.ts';
 import { READING_RESUME_SCHEMA } from '../../lib/core/database/readingResumeSchema.ts';
 import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.ts';
+import { LEGACY_REVIEW_CALENDAR_INDEX } from '../../lib/core/database/reviewCalendarLegacyIndex.ts';
 
 import {
   extractArrayBody,
@@ -99,6 +100,7 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
   const statements = [READING_RESUME_SCHEMA, ...extractStatementsFromBody(body, arrays)];
+  statements.push(LEGACY_REVIEW_CALENDAR_INDEX);
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/database/importRunSchema.ts'), arrays));
   statements.push(...extractStatementsFromBody(

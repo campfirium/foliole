@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { readReviewCalendarHistory } from '../../lib/core/database/reviewCalendarHistory.js';
 import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
+import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates.js';
 
 import { openNodeSqliteFixture } from './nodeSqliteFixture.testSupport.js';
 
@@ -49,13 +50,11 @@ it('counts old spellings in the same half-open window as replayed reviews', () =
         VALUES (?, ?, 'item', 'content', ?, ?)`, [id, id, time, time]);
       driver.execute(INSERT_REVIEW_EVENT_SQL, [id, id, 'test-host', id, 3, 'fsrs', time, 'review', null]);
     }
-    const history = readReviewCalendarHistory(driver, {
-      from: '2049-03-02T12:00:00.000Z', to: '2049-03-02T12:00:00.124Z'
-    }, 0);
-    expect(history.days).toEqual([expect.objectContaining({ day: '2049-03-02', items: 4 })]);
-    const late = readReviewCalendarHistory(driver, {
-      from: '2049-03-04T23:59:00Z', to: '2049-03-05T00:00:00Z'
-    }, 0);
-    expect(late.days).toEqual([expect.objectContaining({ day: '2049-03-04', items: 1 })]);
+    const start = '2049-03-02T12:00:00.000Z';
+    const rollover = '2049-03-04T23:59:00Z';
+    const history = readReviewCalendarHistory(driver, { from: start, to: '2049-03-02T12:00:00.124Z' }, 0);
+    expect(history.days).toEqual([expect.objectContaining({ day: reviewCalendarDayKey(new Date(start), 0), items: 4 })]);
+    const late = readReviewCalendarHistory(driver, { from: rollover, to: '2049-03-05T00:00:00Z' }, 0);
+    expect(late.days).toEqual([expect.objectContaining({ day: reviewCalendarDayKey(new Date(rollover), 0), items: 1 })]);
   } finally { sqlite.close(); }
 });
