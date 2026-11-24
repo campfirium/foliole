@@ -4,6 +4,7 @@ import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNode
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { updateLocalDesktopSourceHosts } from './desktopSourceHostProjection.js';
+import { migrateLegacyExternalFolderIdentity } from './externalSearchFolderIdentity.js';
 import { migrateReadwiseSourceIdentity } from './readwiseSourceIdentity.js';
 import { initializeDesktopStandaloneIdentity } from './standaloneDeviceIdentity.js';
 
@@ -24,13 +25,15 @@ export function loadOrCreateDesktopHostName(now = new Date().toISOString()) {
 export function migrateDesktopHostProfile(
   connection: DatabaseConnection,
   currentHostName: string,
-  now = new Date().toISOString()
+  now = new Date().toISOString(),
+  previousDeviceId?: string
 ) {
   const current = normalize(currentHostName);
   if (!current) throw new Error('Desktop system Host is unavailable.');
   const previous = readSetting(connection.driver, HOST_NAME_KEY) ?? readLegacyName(connection.driver) ?? current;
   initializeDesktopStandaloneIdentity(connection.driver, now);
   migrateReadwiseSourceIdentity(connection.driver, previous, now);
+  migrateLegacyExternalFolderIdentity(connection.driver, previous, now, previousDeviceId);
   if (previous !== current) transferSyncGroupHost(connection.driver, current, now);
   if (previous !== current) transferHostState(connection.driver, previous, current);
   if (previous !== current) updateLocalDesktopSourceHosts({
