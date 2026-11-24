@@ -44,6 +44,10 @@ export function readWorkspaceContentEditingSessionReady(libraryScope: string | u
   return session?.ready;
 }
 
+export function listWorkspaceContentEditingNodeIds(libraryScope: string | undefined) {
+  return [...sessions.values()].filter(session => session.libraryScope === libraryScope).map(session => session.nodeId);
+}
+
 export function isCurrentWorkspaceContentEditingSession(session: WorkspaceContentEditingSession) {
   return sessions.get(keyFor(session.libraryScope, session.nodeId)) === session;
 }

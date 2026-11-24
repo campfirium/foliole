@@ -65,3 +65,28 @@ it.each([false, true])('settles the topic left during a failed re-import (next i
   expect(hasContentEditingSession(app.port, 'other')).toBe(true);
   expect(await app.port.query("SELECT content FROM nodes WHERE id = 'other'")).toEqual([{ content: 'Saved in the next topic' }]);
 });
+
+it('settles a departed editor after its composition tail writes to the previous topic', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before composition'); expect(await app.drain()).toBe(true); });
+  let completeComposition!: () => void;
+  const composition = new Promise<void>(resolve => { completeComposition = resolve; });
+  act(() => { app.view.result.current.onEditorPendingInput?.(composition); });
+  await act(async () => { app.select('other'); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+
+  const tail = 'Composition accepted by the previous topic';
+  await act(async () => {
+    app.view.result.current.onEditorInput?.({ nodeId: 'topic', contentLength: tail.length });
+    app.view.result.current.handleEditorChange(tail, { nodeId: 'topic' });
+    completeComposition();
+    expect(await app.drain()).toBe(true);
+  });
+
+  expect((await app.current()).body_text).toBe(tail);
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect(app.store.getState().nodesById.topic?.content).toBe('');
+  await act(async () => { await app.remote(); });
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
+  expect(await app.bodies()).toContain(tail);
+});

@@ -3,6 +3,7 @@ import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRunti
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { setPendingNodeSyncResolvedListener } from './workspacePendingNodeSync';
 import { toRendererBoundaryNode } from './workspaceRendererBoundary';
+import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
 import type { WorkspaceState } from './workspaceStore';
 
 interface WorkspaceStoreLike {
@@ -16,7 +17,7 @@ export function registerPendingNodeSyncRendererBoundary(workspaceStore: Workspac
     }
 
     workspaceStore.setState((state: WorkspaceState) => {
-      if (state.activeNodeId === nodeId || state.rendererBoundaryKeepNodeIds.includes(nodeId)) {
+      if (state.activeNodeId === nodeId || collectRendererBoundaryKeepNodeIds(state, state).has(nodeId)) {
         return state;
       }
       const node = state.nodesById[nodeId];

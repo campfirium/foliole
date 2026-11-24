@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { logRuntimeError } from '../../shared/platform/runtimeLogging';
 import { subscribeMainWindowBlur } from '../../shared/platform/windowControls';
+import { patchWorkspaceRecord } from '../../shared/workspaceRecordPatch';
 import { waitForWorkspaceContentCommands } from '../../store/workspaceContentCommands';
 import { beginWorkspaceContentEditingSession, endWorkspaceContentEditingSession,
   isCurrentWorkspaceContentEditingSession, type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
@@ -72,6 +73,15 @@ async function settleEditingBoundary(boundary: EditingBoundary) {
   return !inLibrary() || await drainPendingNodeContentRuntimePersist(session.nodeId);
 }
 
+function releaseEditingDocument({ libraryScope, nodeId }: WorkspaceContentEditingSession) {
+  useWorkspaceStore.setState(state => {
+    const node = state.nodesById[nodeId];
+    if (state.libraryScope !== libraryScope || state.activeNodeId === nodeId || !node) return state;
+    // Reconcile this node now that the session no longer retains its document.
+    return { nodesById: patchWorkspaceRecord(state.nodesById, { [nodeId]: node }) };
+  });
+}
+
 function useFinishEditingSession(active: BoundaryRef): FinishEditingBoundary {
   return useCallback(async (boundary = active.current) => {
     if (!boundary || boundary.finishing) return;
@@ -80,6 +90,7 @@ function useFinishEditingSession(active: BoundaryRef): FinishEditingBoundary {
       if (!await settleEditingBoundary(boundary)) return;
       await endWorkspaceContentEditingSession(boundary.session);
       if (active.current === boundary) active.current = null;
+      releaseEditingDocument(boundary.session);
     } catch (error) {
       logRuntimeError('editor session could not finish', { area: 'persistence', action: 'content_editing_session', error });
     } finally {
@@ -123,7 +134,8 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
   }, [draft, libraryScope, nodeId, readOnly]);
   const handleEditorInput = useCallback((meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? nodeId;
-    if (sourceNodeId && !readOnly) {
+    // A delivery for the previous topic belongs to its departing boundary.
+    if (sourceNodeId && sourceNodeId === nodeId && !readOnly) {
       const previous = active.current;
       if (previous && (previous.session.nodeId !== sourceNodeId || previous.session.libraryScope !== libraryScope)) {
         leaveEditingBoundary(previous, finish);
