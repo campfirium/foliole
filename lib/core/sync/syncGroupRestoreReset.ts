@@ -12,6 +12,7 @@ const CLEAR_TABLES = [
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_reading_resume', 'node_view_state', 'review_log',
+  'topic_daily_count_entries', 'topic_daily_counts',
   'parent_order_sources', 'pdf_page_text', 'pdf_text_artifact', 'external_documents',
   'external_search_folders', 'external_folder_host_preferences', 'import_sources', 'watched_folder_bindings',
   'keep_import_items', 'keep_import_item_cache', 'watched_folder_conflict_decisions',
@@ -37,6 +38,11 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
       continue;
     }
     await port.run(`DELETE FROM main.${table}`);
+  }
+  if (tableNames.has('topic_daily_count_coverage')) {
+    // Earlier explicit facts can sync back, but the replaced library no longer proves zero-count days.
+    await port.run(`INSERT INTO main.topic_daily_count_coverage (id, started_at) VALUES (1, ?)
+      ON CONFLICT(id) DO UPDATE SET started_at = excluded.started_at`, [new Date().toISOString()]);
   }
   await clearRestoreWorkspaceSettings(port, tableNames);
   if (tableNames.has('nodes')) {

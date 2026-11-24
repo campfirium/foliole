@@ -2,8 +2,10 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 
+import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { readReviewCalendarHistory } from '../../lib/core/database/reviewCalendarHistory.js';
 import { recordTopicDailyCount } from '../../lib/core/database/reviewDailyCounts.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
@@ -11,11 +13,13 @@ import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDataba
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { loadLatestSyncGroupRestoreEvent, receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
+import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import type { Peer } from './syncLibrary.testSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
@@ -104,6 +108,56 @@ it('finishes adoption when a topic counted here meanwhile is permanently deleted
     expect(await target.db.query("SELECT version_id FROM node_sync_tombstones WHERE node_id = 'topic'"))
       .toEqual([{ version_id: deletion.version_id }]);
   } finally { source.sqlite.close(); target.sqlite.close(); await rm(root, { recursive: true }); }
+});
+
+it('replaces Topic calendar history with the chosen library and keeps it after reopen and sync', async () => {
+  await mkdir('.tmp/artifacts', { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/request-sync-calendar-'));
+  const targetPath = path.join(root, 'target.db');
+  const source = textDevice(); const target = textDevice(targetPath);
+  const day = '2026-10-23';
+  const range = { from: `${day}T12:00:00.000Z`, to: '2026-10-25T12:00:00.000Z' };
+  const expected = [{ day, items: 0, topics: 1 }];
+  const sourceDriver = createBetterSqlite3Driver(source.sqlite);
+  const targetDriver = createBetterSqlite3Driver(target.sqlite);
+  try {
+    seed(target, 'local'); seed(source, 'peer');
+    await source.receive([textBranch('source-v1', 'Source topic')]);
+    const old = textBranch('old-v1', 'Old library topic');
+    await target.receive([{ ...old, object_id: 'old-topic', snapshot: { ...old.snapshot, id: 'old-topic' } }]);
+    recordTopicDailyCount(sourceDriver, { day, nodeId: 'topic', hostName: 'peer' });
+    recordTopicDailyCount(targetDriver, { day, nodeId: 'old-topic', hostName: 'local' });
+    targetDriver.execute("UPDATE topic_daily_count_coverage SET started_at = '2026-10-01T00:00:00.000Z'");
+    expect(readReviewCalendarHistory(sourceDriver, range, 0).days).toEqual(expected);
+    expect(readReviewCalendarHistory(targetDriver, range, 0).days).toEqual(expected);
+    await beginSyncGroupLocalAdoption(target.db, {
+      groupId: 'group', libraryEpoch: 'new-epoch', providerDeviceId: 'peer',
+      providerDeviceName: 'Peer', providerPlatform: 'mac', endpointUrl: 'http://localhost:1'
+    });
+    await prepareSyncGroupOverwrite(target.db, progress);
+    const local = host(target, path.join(root, 'target'));
+    const round = roundPort(target, source, local, host(source, path.join(root, 'source')));
+    expect((await runRequestSyncOverwriteRound(local, progress, round)).complete).toBe(true);
+    const history = readReviewCalendarHistory(targetDriver, range, 0);
+    expect(history.days).toEqual(expected);
+    expect(history.topicCoverageFrom).not.toBe('2026-10-01');
+    target.sqlite.close();
+
+    const reopened = new Database(targetPath);
+    try {
+      const driver = createBetterSqlite3Driver(reopened);
+      expect(readReviewCalendarHistory(driver, range, 0)).toEqual(history);
+      const records = loadSyncObjectsFromDriver(driver, [`${day}:topic`, `${day}:old-topic`], ['topic_daily_count']);
+      expect(records.map(record => record.object_id)).toEqual([`${day}:topic`]);
+      await applySyncObjectsWithDbPort(source.db, records);
+      expect(readReviewCalendarHistory(sourceDriver, range, 0).days).toEqual(expected);
+      expect(driver.queryAll('SELECT node_id FROM topic_daily_count_entries')).toEqual([{ node_id: 'topic' }]);
+    } finally { reopened.close(); }
+  } finally {
+    source.sqlite.close();
+    if (target.sqlite.open) target.sqlite.close();
+    await rm(root, { recursive: true });
+  }
 });
 
 function host(device: ReturnType<typeof textDevice>, root: string): RequestSyncDatabaseHost {

@@ -10,8 +10,8 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-export function textDevice() {
-  const sqlite = new Database(':memory:');
+export function textDevice(databasePath = ':memory:') {
+  const sqlite = new Database(databasePath);
   initializeDatabaseSchema(sqlite);
   const db = createBetterSqliteDbPort(sqlite);
   return {
