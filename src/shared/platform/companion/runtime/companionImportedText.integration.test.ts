@@ -7,8 +7,8 @@ import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/wor
 import type { PreparedBookNode } from '../../../../../lib/core/import/epub/epubPreparedBook';
 import { createPreparedDesktopTextImport } from '../../../../../lib/core/import/fingerprint';
 
-import { openCompanionImportTestDatabase } from './companionImportSqlite.testSupport';
 import { persistCompanionImportedTextWithDb } from './companionImportedText';
+import { openCompanionImportTestDatabase } from './companionImportSqlite.testSupport';
 import { settleCompanionNodeVersionCollections } from './companionNodeHistory';
 
 let library: Awaited<ReturnType<typeof openCompanionImportTestDatabase>>;

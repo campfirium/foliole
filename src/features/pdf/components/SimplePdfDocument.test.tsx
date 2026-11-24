@@ -117,25 +117,6 @@ describe('SimplePdfDocument', () => {
     expect(document.querySelector('[data-pdf-page="2"] > span')).toHaveTextContent('PDF page 2');
   });
 
-  it.each([
-    { requestedPage: 2, savedPage: 1, expectedPage: 2, expectedTop: 100 },
-    { requestedPage: 2, savedPage: 2, expectedPage: 2, expectedTop: 100 },
-    { requestedPage: undefined, savedPage: 2, expectedPage: 2, expectedTop: 400 }
-  ])('opens page $expectedPage at $expectedTop from search target $requestedPage and saved page $savedPage',
-    async ({ requestedPage, savedPage, expectedPage, expectedTop }) => {
-      vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(function (this: HTMLElement) {
-        return new DOMRect(0, this.hasAttribute('data-list-position-index') ? 100 : 0, 400, 600);
-      });
-      resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({
-        resource_url: 'capacitor://pdf-file', status: 'ready'
-      });
-      renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} title="Paper"
-        {...(requestedPage === undefined ? {} : { initialPage: requestedPage })}
-        positionPersistence={{ initial: { page: savedPage, fraction: 0.5 } }} />);
-      await waitFor(() => expect(document.querySelector(`[data-pdf-page="${expectedPage}"]`)).toHaveAttribute('aria-current', 'page'));
-      await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ top: expectedTop }));
-    });
-
   it('keeps a long PDF window bounded while immediately including a deep search target', async () => {
     resourceMock.pages = 10000;
     resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ resource_url: 'capacitor://pdf-file', status: 'ready' });
@@ -164,6 +145,26 @@ describe('SimplePdfDocument', () => {
     expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
   });
 });
+
+it.each([
+  { requestedPage: 2, savedPage: 1, expectedPage: 2, expectedTop: 100 },
+  { requestedPage: 2, savedPage: 2, expectedPage: 2, expectedTop: 100 },
+  { requestedPage: undefined, savedPage: 2, expectedPage: 2, expectedTop: 400 }
+])('opens page $expectedPage at $expectedTop from search target $requestedPage and saved page $savedPage',
+  async ({ requestedPage, savedPage, expectedPage, expectedTop }) => {
+    vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockImplementation(function (this: HTMLElement) {
+      return new DOMRect(0, this.hasAttribute('data-list-position-index') ? 100 : 0, 400, 600);
+    });
+    resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({
+      resource_url: 'capacitor://pdf-file', status: 'ready'
+    });
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} title="Paper"
+      {...(requestedPage === undefined ? {} : { initialPage: requestedPage })}
+      positionPersistence={{ initial: { page: savedPage, fraction: 0.5 } }} />);
+    await waitFor(() => expect(document.querySelector(`[data-pdf-page="${expectedPage}"]`)).toHaveAttribute('aria-current', 'page'));
+    await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenLastCalledWith({ top: expectedTop }));
+  });
+
 
 describe('SimplePdfDocument unavailable state', () => {
   it('keeps the return action available when the PDF file is unavailable', async () => {
