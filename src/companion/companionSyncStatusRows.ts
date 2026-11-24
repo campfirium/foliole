@@ -2,7 +2,7 @@ import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanio
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
-import { formatCompletedWebDavMessage, formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
+import { formatSyncResultMessage, formatWebDavSyncResult, isReportableSyncEvent } from './companionSyncActivityCopy';
 import { formatCompanionSyncProgressSummary } from './companionSyncProgressSummary';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -27,7 +27,8 @@ export function resolveLastSyncRow(props: {
   if (props.status === 'syncing') return defaultRow(props.t('companion.sync.pullingChanges'), props.t('companion.sync.syncing'), props.t);
   if (latestEvent?.status === 'failed') return defaultRow(props.t('companion.sync.attention.activity'), props.t('companion.sync.failed'), props.t, 'error');
   if (latestEvent?.status === 'skipped') {
-    return defaultRow(formatStatusDetail(formatSyncResultMessage(latestEvent.message, props.t), props.t), formatClock(latestEvent.occurred_at, props.t), props.t);
+    const detail = formatWebDavSyncResult(latestEvent, props.t) ?? formatSyncResultMessage(latestEvent.message, props.t);
+    return defaultRow(formatStatusDetail(detail, props.t), formatClock(latestEvent.occurred_at, props.t), props.t);
   }
   return {
     detail: latestCompletedEvent ? formatLastSyncDetail(latestCompletedEvent, props.t) : props.t('companion.sync.noSyncYet'),
@@ -67,5 +68,5 @@ function formatLastSyncDetail(event: NativeCompanionSyncEvent | null, t: Transla
   if (!event) {
     return t('companion.sync.noSyncYet');
   }
-  return formatCompletedWebDavMessage(event, t) ?? formatStatusDetail(formatSyncResultMessage(event.message, t), t);
+  return formatWebDavSyncResult(event, t) ?? formatStatusDetail(formatSyncResultMessage(event.message, t), t);
 }

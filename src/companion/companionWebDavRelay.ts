@@ -46,13 +46,15 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
   const started = performance.now();
   let failure: string | undefined;
   let deferred = false;
+  let attachmentsPending = false;
   args.setStatus('syncing');
   args.setError(null);
   try {
     await beginNativeCompanionSyncRun(triggerReason, runId);
     await writeCompanionSyncActivity({ ...activity, kind: 'run_started', status: 'started', message: 'WebDAV relay started.' }, args.setError);
-    await runCompanionWebDavRelayRound(binding, stats, progress, args.signal, args.foregroundWebDavReceive || undefined,
+    const round = await runCompanionWebDavRelayRound(binding, stats, progress, args.signal, args.foregroundWebDavReceive || undefined,
       triggerReason === 'manual');
+    attachmentsPending = round.attachmentsPending;
   } catch (error) {
     deferred = triggerReason !== 'manual' && error instanceof WebDavAuthenticationError && error.deferred;
     if (!deferred) failure = formatCompanionSyncFailureMessage(error);
@@ -61,14 +63,15 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
     }
   }
   if (progress.applied) await refreshCompanionSyncDisplay(args).catch(() => args.setError('sync_display_unavailable'));
-  const result = args.cancelled() || deferred ? 'cancelled' : failure ? 'failed' : 'completed';
+  const result = args.cancelled() || deferred ? 'cancelled' : failure ? 'failed' : attachmentsPending ? 'waiting' : 'completed';
   const errorCode = failure && /^webdav_relay_[a-z0-9_:]+$/iu.test(failure) ? failure : undefined;
   const message = `WebDAV relay ${JSON.stringify({ ...stats, ...progress,
     elapsedMs: Math.round(performance.now() - started), errorCode })}`;
   const state = await writeCompanionSyncActivity({ ...activity, kind: 'run_finished', result, message,
-    status: result === 'cancelled' ? 'skipped' : result }, args.setError);
+    status: result === 'cancelled' || result === 'waiting' ? 'skipped' : result }, args.setError);
   if (state) args.setState(current => ({ ...current, ...state }));
   if (failure && result !== 'cancelled') args.setError(failure);
   args.setStatus('idle');
+  if (result === 'waiting') return 'relay-pending';
   return result === 'cancelled' ? 'skipped' : result;
 }

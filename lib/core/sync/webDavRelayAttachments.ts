@@ -36,6 +36,7 @@ type Input = {
 };
 
 const prefix = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment:`;
+const ATTACHMENT_BATCH_SIZE = 64;
 export const webDavRelayAttachmentOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment-outbox`;
 
 export async function hasWebDavRelayAttachmentsToSend(db: DbPort, scope: WebDavRelayBodyScope) {
@@ -106,7 +107,7 @@ export async function resumeWebDavRelayAttachment(input: Input) {
   }
 }
 
-export async function publishWebDavRelayAttachments(input: Input) {
+export async function publishWebDavRelayAttachments(input: Input, continueBatches = false) {
   const { host, scope } = input;
   if (scope.attachmentPolicy.mode === 'off') {
     await host.write(db => db.run(`UPDATE sync_group_metadata SET value = 'lan', updated_at = ?
@@ -114,11 +115,20 @@ export async function publishWebDavRelayAttachments(input: Input) {
     [new Date().toISOString(), prefix(scope), `${scope.key}:attachment;`]));
     return;
   }
+  const batchLimit = continueBatches ? 2 : 1;
+  for (let batch = 0; batch < batchLimit; batch++) {
+    if (!await publishAttachmentBatch(input)) break;
+  }
+}
+
+async function publishAttachmentBatch(input: Input) {
+  const { host, scope } = input;
   const keys = await host.readSnapshot(db => db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
-    WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{') ORDER BY updated_at, key LIMIT 64`,
-  [prefix(scope), `${scope.key}:attachment;`]), input.signal);
+    WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{') ORDER BY updated_at, key LIMIT ?`,
+  [prefix(scope), `${scope.key}:attachment;`, ATTACHMENT_BATCH_SIZE]), input.signal);
   for (const row of keys) {
-    if (input.lanConnected()) return;
+    input.signal?.throwIfAborted();
+    if (input.lanConnected()) return false;
     await input.assertScope();
     const key = attachmentBlockResourceSchema.shape.storageKey.parse(row.key.slice(prefix(scope).length));
     const repair = await readRepair(input, key);
@@ -128,8 +138,9 @@ export async function publishWebDavRelayAttachments(input: Input) {
     }
     const pending = await freeze(input, key, repair);
     if (!pending) continue;
-    if (!await publish(input, pending, repair)) return;
+    if (!await publish(input, pending, repair)) return false;
   }
+  return keys.length === ATTACHMENT_BATCH_SIZE;
 }
 
 async function freeze(input: Input, key: string, repair?: RepairRequest) {

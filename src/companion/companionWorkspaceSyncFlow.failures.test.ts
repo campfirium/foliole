@@ -10,7 +10,10 @@ import {
 const relay = vi.hoisted(() => ({
   load: vi.fn(async () => null as null | { id: string }),
   connected: vi.fn(() => false),
-  sync: vi.fn(async (_binding, _stats, progress: { published: number }) => { progress.published = 1; })
+  sync: vi.fn(async (_binding, _stats, progress: { published: number }) => {
+    progress.published = 1;
+    return { attachmentsPending: false };
+  })
 }));
 
 vi.mock('../shared/platform/companion/sync/companionWebDavRelayStore', () => ({ loadCompanionWebDavRelay: relay.load }));
@@ -179,6 +182,24 @@ describe('tryForegroundAutoSync failures', () => {
   });
 
   it('surfaces a missing desktop anchor before sync starts', testSurfacesMissingAnchorBeforeSyncStarts);
+
+  it('records remaining WebDAV attachments as waiting after a manual sync', async () => {
+    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
+    relay.sync.mockResolvedValueOnce({ attachmentsPending: true });
+    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+      .mockRejectedValueOnce(new Error('discovery_no_devices'));
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    const setError = vi.fn();
+    const outcome = await tryForegroundAutoSync({
+      cancelled: () => false, setError, setState: vi.fn(), setSyncProgress: vi.fn(),
+      setStatus: vi.fn(), state: createSyncState(), triggerReason: 'manual', runId: 'relay-waiting'
+    });
+    expect(outcome).toBe('relay-pending');
+    expect(setError).toHaveBeenCalledExactlyOnceWith(null);
+    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+      runId: 'relay-waiting', result: 'waiting', status: 'skipped'
+    }));
+  });
 });
 
 describe('scheduled WebDAV sends', () => {

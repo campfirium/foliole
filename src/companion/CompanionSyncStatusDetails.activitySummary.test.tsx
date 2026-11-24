@@ -111,6 +111,18 @@ describe('CompanionSyncStatusDetails activity summaries', () => {
 });
 
 describe('CompanionSyncStatusDetails WebDAV results', () => {
+  it.each(['sync', 'syncActivity'] as const)('shows pending WebDAV sends on %s', page => {
+    renderActivity([summaryEvent({
+      endpoint_url: null,
+      result: 'waiting',
+      status: 'skipped',
+      message: 'WebDAV relay {"published":64,"applied":0,"retries":0}'
+    }, false)], page);
+
+    expect(screen.getByText('Device changes are still waiting to sync.')).toBeInTheDocument();
+    expect(screen.queryByText(/All sync stages completed/)).not.toBeInTheDocument();
+  });
+
   it.each(['sync', 'syncActivity'] as const)('shows a completed WebDAV run as successful on %s', page => {
     renderActivity([summaryEvent({
       endpoint_url: null,

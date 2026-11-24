@@ -34,7 +34,8 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     const groupKey = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
     const authKey = webDavAuthenticationKey(binding, credential.device_id, scope.receiveScope.localEpoch);
     return runWebDavRelayBodyRound({
-      host, files, scope, groupKey, progress, signal, requestSend: notifyCompanionWebDavWork, ...(foregroundReceive ? { foregroundReceive } : {}),
+      host, files, scope, groupKey, progress, signal, requestSend: notifyCompanionWebDavWork, continueAttachmentBatches: manual,
+      ...(foregroundReceive ? { foregroundReceive } : {}),
       attachments: await currentCompanionAttachmentHost(host),
       ...(authKey ? { authentication: { key: authKey, manual, changed: notifyCompanionWebDavWork } } : {}),
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal,

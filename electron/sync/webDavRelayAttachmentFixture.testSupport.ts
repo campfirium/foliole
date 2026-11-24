@@ -86,12 +86,14 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
           remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
       },
       async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform,
-        foreground?: { requestSend(): void }) {
+        options?: { requestSend?(): void; continueAttachmentBatches?: boolean }) {
         const current = await scope(peer);
         if (!current) throw new Error('webdav_test_baseline_missing');
         return runWebDavRelayBodyRound({ host: { ...peer.host, enqueueSearchInvalidations: peer.desktop },
           files: peer.host.files, attachments, scope: current, groupKey: webDavTestGroupKey,
-          ...(foreground ? { foregroundReceive: true, requestSend: foreground.requestSend } : {}),
+          ...(options?.requestSend ? { requestSend: options.requestSend,
+            ...(!options.continueAttachmentBatches ? { foregroundReceive: true } : {}) } : {}),
+          ...(options?.continueAttachmentBatches ? { continueAttachmentBatches: true } : {}),
           request: alter ? alterAttachmentDownload(request, alter) : request, lanConnected: () => false,
           assertScope: async () => {
             const active = await scope(peer);
