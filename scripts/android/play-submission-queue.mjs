@@ -1,4 +1,4 @@
-import { obsoletePlaySubmissions } from './play-obsolete-submission.mjs';
+import { obsoletePlaySubmission } from './play-obsolete-submission.mjs';
 import { readPlayReleases } from './play-api.mjs';
 import { listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileStatus, readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
@@ -30,17 +30,23 @@ function predecessorResult(blocker, releases) {
   return found[0].releaseLifecycleState === PUBLISHED ? 'ready' : 'waiting';
 }
 
+const SETTLED = new Set(['published', 'retired']);
+
 export async function playSubmissionContext(github, readInventory) {
-  const rows = await listPlaySubmissions(github);
+  const queue = await listPlaySubmissions(github);
   const releases = await readInventory();
   pendingPlayBlockers(releases);
   const candidates = (await listMobileCandidates(github)).map(verifyStoredMobileCandidate);
-  const obsolete = await obsoletePlaySubmissions(github, { rows, releases, candidates });
-  if (obsolete.size) await readReservedPlayHistory(github);
+  // Each source waits only on the one registered before it, so reading newest first can stop at
+  // the first settled turn: older history can no longer change any pending source.
   const states = new Map();
-  const clearedBlockers = new Set();
-  for (const row of rows) {
-    if (obsolete.has(row.id)) continue;
+  const obsolete = new Map();
+  let start = 0;
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    const row = queue[index];
+    // An obsolete turn never ran, so its own history is neither read nor trusted.
+    const skipped = await obsoletePlaySubmission(github, row, { rows: queue, releases, candidates });
+    if (skipped) { obsolete.set(row.id, skipped.next); continue; }
     let state = await readPlaySubmissionState(github, row);
     const candidate = candidates.find(item => item.payload.runId === row.payload.runId);
     if (['admitted', 'submitted'].includes(state) && candidate &&
@@ -51,6 +57,14 @@ export async function playSubmissionContext(github, readInventory) {
       const next = { ready: 'published', blocked: 'blocked', waiting: 'submitted' }[result];
       if (next !== state) { await writePlaySubmissionState(github, row, next); state = next; }
     }
+    states.set(row.id, state);
+    if (SETTLED.has(state)) { start = index; break; }
+  }
+  const rows = queue.slice(start);
+  if (obsolete.size) await readReservedPlayHistory(github);
+  const clearedBlockers = new Set();
+  for (const row of rows) {
+    if (obsolete.has(row.id) || SETTLED.has(states.get(row.id))) continue;
     const proof = await readMobileStatus(github, row.id, 'Play predecessors: ');
     if (proof.value !== undefined && proof.value !== 'published') throw new Error('Unknown predecessor publication proof');
     if (proof.value === 'published' || row.payload.blockers.every(blocker => predecessorResult(blocker, releases) === 'ready')) {
@@ -58,7 +72,6 @@ export async function playSubmissionContext(github, readInventory) {
       if (!proof.value && row.payload.blockers.length) await github('POST', `deployments/${row.id}/statuses`, {
         state: 'pending', description: 'Play predecessors: published', auto_inactive: false });
     }
-    states.set(row.id, state);
   }
   return { rows, states, releases, clearedBlockers, obsolete };
 }

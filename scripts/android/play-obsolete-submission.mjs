@@ -75,24 +75,21 @@ function hasDurableSuccessor(candidates, { payload }) {
     saved.qualityArtifact.digest === quality.digest);
 }
 
-export async function obsoletePlaySubmissions(github, { rows, releases, candidates }) {
-  const obsolete = new Map();
-  for (const row of rows) {
-    const cancelled = row.payload.prebuilt === true && row.payload.blockers.length === 0;
-    const laterSource = item => item.id > row.id && item.payload.runId !== row.payload.runId &&
-      item.payload.sourceSha !== row.payload.sourceSha;
-    const successor = cancelled ? rows.findLast(laterSource) : rows.find(laterSource);
-    if (!successor || (!cancelled && !disappeared(row.payload.blockers, releases)) ||
-        candidates.some(item => item.payload.runId === row.payload.runId || item.payload.sourceSha === row.payload.sourceSha)) continue;
-    if (!await unexecuted(github, row, cancelled)) continue;
-    if (!cancelled || !hasDurableSuccessor(candidates, successor)) {
-      const evidence = await readPlayQueueEvidence(github, successor.payload.runId,
-        successor.payload.prebuilt ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
-      if (evidence.run.head_sha !== successor.payload.sourceSha || evidence.version !== successor.payload.version ||
-          evidence.qualityArtifact.digest !== successor.payload.qualityArtifact.digest) throw new Error('Queued quality identity changed');
-    }
-    // Preserve the cancelled row's own predecessor when skipping its empty turn.
-    obsolete.set(row.id, cancelled ? row.payload.predecessor : null);
+// Returns the turn an obsolete row hands on to, or undefined when the row still counts.
+export async function obsoletePlaySubmission(github, row, { rows, releases, candidates }) {
+  const cancelled = row.payload.prebuilt === true && row.payload.blockers.length === 0;
+  const laterSource = item => item.id > row.id && item.payload.runId !== row.payload.runId &&
+    item.payload.sourceSha !== row.payload.sourceSha;
+  const successor = cancelled ? rows.findLast(laterSource) : rows.find(laterSource);
+  if (!successor || (!cancelled && !disappeared(row.payload.blockers, releases)) ||
+      candidates.some(item => item.payload.runId === row.payload.runId || item.payload.sourceSha === row.payload.sourceSha)) return undefined;
+  if (!await unexecuted(github, row, cancelled)) return undefined;
+  if (!cancelled || !hasDurableSuccessor(candidates, successor)) {
+    const evidence = await readPlayQueueEvidence(github, successor.payload.runId,
+      successor.payload.prebuilt ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
+    if (evidence.run.head_sha !== successor.payload.sourceSha || evidence.version !== successor.payload.version ||
+        evidence.qualityArtifact.digest !== successor.payload.qualityArtifact.digest) throw new Error('Queued quality identity changed');
   }
-  return obsolete;
+  // Preserve the cancelled row's own predecessor when skipping its empty turn.
+  return { next: cancelled ? row.payload.predecessor : null };
 }

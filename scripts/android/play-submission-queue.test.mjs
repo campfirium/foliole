@@ -135,3 +135,21 @@ it('recovers publication proof written before the initial waiting status and ret
   expect(await admit(f, 43)).toMatchObject({ proceed: true });
   expect(f.reruns).toEqual([]);
 });
+
+it('reads the queue newest first and never touches history older than the latest settled turn', async () => {
+  const f = await fixture(); f.release('PUBLISHED');
+  expect(await admit(f)).toMatchObject({ proceed: true, state: 'admitted' });
+  f.addSource(43);
+  expect(await admit(f, 43)).toMatchObject({ state: 'waiting' });
+  await writePlaySubmissionState(f.clients().github, f.rows[1], 'published');
+  // The oldest turn now carries a hand-written retirement and a source that no longer verifies.
+  const oldest = f.rows[0];
+  f.histories.get(oldest.id).unshift({ description: 'Play submission: retired', creator: { login: 'any-user' } });
+  f.sources.get('42').run.head_branch = 'retired-branch';
+  f.addSource(44);
+  const before = f.calls.length;
+  expect(await admit(f, 44)).toMatchObject({ proceed: true, state: 'admitted' });
+  expect(await resume(f)).toBe('admitted');
+  expect(f.calls.slice(before).filter(call => call.route.startsWith(`deployments/${oldest.id}/`) ||
+    call.route.startsWith('actions/runs/42'))).toEqual([]);
+});
