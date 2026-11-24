@@ -18,14 +18,19 @@ const testflight = {
 };
 const table = /(?:^\|[^\r\n]*\|[ \t]*(?:\r?\n|$))+/gmu;
 
+const header = cell => cell.trim().replace(/^\*\*(.*)\*\*$/u, '$1');
+
 function updateTable(block, version, channel) {
   const lines = block.split(/(?<=\n)/u);
-  const column = lines[0].split('|').findIndex(cell => channel.columns.includes(cell.trim()));
+  const column = lines[0].split('|').findIndex(cell => channel.columns.includes(header(cell)));
   if (column < 1) return block;
-  const row = lines.findIndex((line, index) => index > 0 &&
-    channel.matches(line.split('|')[column]?.trim() ?? '') &&
-    lines[index - 1].split('|')[column]?.trim() === version);
-  if (row < 0) return block;
+  const cell = index => lines[index].split('|')[column]?.trim() ?? '';
+  const pending = lines.flatMap((line, index) => index > 0 && channel.matches(cell(index)) ? [index] : []);
+  // A table listing several versions names each one above its cells; a same-version table has no version row.
+  const hasVersionRow = lines.some((line, index) => index > 0 && /^\d+\.\d+\.\d+$/u.test(cell(index)));
+  const row = hasVersionRow ? pending.find(index => cell(index - 1) === version) :
+    pending.length === 1 ? pending[0] : undefined;
+  if (row === undefined) return block;
   const cells = lines[row].split('|');
   cells[column] = cells[column].replace(channel.review, channel.link);
   lines[row] = cells.join('|');

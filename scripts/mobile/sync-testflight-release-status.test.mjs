@@ -97,6 +97,16 @@ it('updates the published same-version layout without a version row', async () =
   await syncPlayReleaseStatus(api, [review]);
   expect(writes).toEqual([{ body: initialBody.replace(`${apk} · Play (In Review)`, `${apk} · [Play](${url})`) }]);
 
+  const ios = fakeGitHub({ initialBody });
+  await syncTestflightReleaseStatus(ios.api, [available]);
+  await syncTestflightReleaseStatus(ios.api, [available]);
+  expect(ios.writes).toEqual([{ body: initialBody.replace(`| ${link} (In Review) |`, `| ${link} |`) }]);
+  const iosDuplicate = fakeGitHub({ initialBody: `${initialBody}\r\n${initialBody}` });
+  await syncTestflightReleaseStatus(iosDuplicate.api, [available]);
+  expect(iosDuplicate.writes).toEqual([{
+    body: `${initialBody}\r\n${initialBody}`.replaceAll(`| ${link} (In Review) |`, `| ${link} |`)
+  }]);
+
   const duplicate = initialBody + initialBody;
   for (const [body, record] of [
     [initialBody.replaceAll('0.8.1', '0.8.0'), review],
