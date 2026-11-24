@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
-import { createPlayRegistration } from './mobile-candidate-provenance.mjs';
+import { createPlayRegistration, verifyPlaySourceIdentity } from './mobile-candidate-provenance.mjs';
 import { registrationFixture } from './mobile-candidate-test-fixtures.mjs';
 
 it.each(['dev-remote', 'release-t7'])('binds a signed candidate to actual run, original attempt and full %s quality', lane => {
@@ -10,6 +10,15 @@ it.each(['dev-remote', 'release-t7'])('binds a signed candidate to actual run, o
   expect(payload).toMatchObject({ sourceSha: f.run.head_sha, signedAttempt: 1, qualityAttempt: 1,
     signedArtifact: { id: 10 }, qualityArtifact: { id: 11 }, lane });
   expect(payload.candidate.untrustedCommand).toBeUndefined();
+});
+
+it('keeps finished Android full QA from the retired check branch verifiable without admitting later check runs', () => {
+  const legacy = registrationFixture();
+  Object.assign(legacy.run, { id: 42068459605, head_branch: 'check' });
+  expect(verifyPlaySourceIdentity(legacy.run)).toBe('dev-remote');
+  const later = registrationFixture();
+  Object.assign(later.run, { id: 44333354617, head_branch: 'check' });
+  expect(() => verifyPlaySourceIdentity(later.run)).toThrow('not an authorized release or explicit Android full QA');
 });
 
 it('rejects foreign workflows, ordinary QA, changed candidates and missing or failed quality before any registration', () => {

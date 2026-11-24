@@ -7,7 +7,10 @@ export const MOBILE_REPOSITORY = 'campfirium/foliole';
 export const MOBILE_TASK = 'foliole-mobile-candidate';
 export const PLAY_CANDIDATE_ENVIRONMENT = 'foliole-play-beta';
 const fail = message => { throw new Error(`Mobile candidate registration refused: ${message}`); };
-const UPLOAD_CERTIFICATE = '3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B';
+// Android full QA ran on `check` until 008245 renamed it to `review`; durable submissions from
+// those finished runs stay verifiable, while no later run may claim the retired branch.
+const LEGACY_CHECK_LAST_RUN_ID = 44114942674;
+const UPLOAD_CERTIFICATE ='3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B';
 
 export function verifyPlaySourceIdentity(run) {
   if (run?.head_repository?.full_name !== MOBILE_REPOSITORY ||
@@ -16,7 +19,9 @@ export function verifyPlaySourceIdentity(run) {
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
   const remote = parseRemoteQualityRun(run);
-  const qa = run.head_branch === 'review' && run.path === '.github/workflows/remote-quality.yml' &&
+  const qaBranch = run.head_branch === 'review' ||
+    (run.head_branch === 'check' && run.id <= LEGACY_CHECK_LAST_RUN_ID);
+  const qa = qaBranch && run.path === '.github/workflows/remote-quality.yml' &&
     run.event === 'workflow_dispatch' && remote?.scope === 'full' &&
     remote.mobileDistribution === 'android' && remote.testedSha === run.head_sha;
   if (!release && !qa) fail('not an authorized release or explicit Android full QA');
