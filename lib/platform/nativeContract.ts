@@ -52,6 +52,7 @@ import type { NativeDesktopUpdateCommandMap } from './nativeUpdateContract.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult } from './nativeUtilityContract.js';
 import type { NativeWordPressPublishCommandMap } from './nativeWordPressPublishContract.js';
+import type { PdfDocumentPreference } from './pdfDocumentPreference.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js'; export type * from './nativeSplitTopicPreferencesContract.js';
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
@@ -166,7 +167,7 @@ export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommand
     result: 'dark' | 'light';
   };
   [NATIVE_COMMANDS.saveAppSettingsState]: {
-    args: { settings: Record<string, string> };
+    args: { settings: Record<string, string> } | { pdfPreference: PdfDocumentPreference };
     result: null;
   };
   [NATIVE_COMMANDS.saveLoginItemSettings]: {

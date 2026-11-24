@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { createHash } from 'node:crypto';
+import { createHash, webcrypto } from 'node:crypto';
 import fsSync from 'node:fs';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -124,4 +124,17 @@ it('keeps an in-flight resource read bound to its starting library', async () =>
     expect(resolved).toMatchObject({ status: 'ready', bytes });
     expect(await resolveAttachmentFile(resource.storageKey)).toMatchObject({ status: 'missing_file' });
   } finally { clearAttachmentLibraryPathSnapshot(); }
+});
+
+it('validates the same file buffer that it returns for PDF export', async () => {
+  const bytes = Buffer.from('%PDF-1.7\nattachment bytes');
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  const key = buildCanonicalAttachmentStorageKey(hash, 'application/pdf')!;
+  await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, key), bytes);
+  const digest = vi.spyOn(webcrypto.subtle, 'digest');
+  const resolved = await resolveAttachmentFile(key, tempRoot);
+  expect(resolved.status).toBe('ready');
+  if (resolved.status !== 'ready') throw new Error('Expected a verified attachment');
+  expect(resolved.bytes.equals(bytes)).toBe(true);
+  expect(digest.mock.calls[0]?.[1] === resolved.bytes).toBe(true);
 });

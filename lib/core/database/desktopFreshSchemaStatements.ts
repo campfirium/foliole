@@ -29,6 +29,7 @@ import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
 import { isRetiredSyncSchema } from './retiredSyncSchema.js';
+import { LEGACY_REVIEW_CALENDAR_INDEX } from './reviewCalendarLegacyIndex.js';
 import { REVIEW_DAILY_COUNT_SCHEMA } from './reviewDailyCountSchema.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
@@ -48,6 +49,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DAILY_FLOW_SYNC_MERGE_INDEXES,
   ...NODE_VERSION_RETENTION_INDEX_SCHEMA,
   ...REVIEW_DAILY_COUNT_SCHEMA,
+  LEGACY_REVIEW_CALENDAR_INDEX,
   ...FOREGROUND_TIME_SCHEMA,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,

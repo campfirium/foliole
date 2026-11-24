@@ -33,6 +33,7 @@ import { migratePdfAttachmentNodeIndex } from './pdfAttachmentNodeIndex.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
 import { retireParentOrderProjection } from './retireParentOrderProjectionMigration.js';
+import { LEGACY_REVIEW_CALENDAR_INDEX } from './reviewCalendarLegacyIndex.js';
 import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
@@ -101,5 +102,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) db.exec(sql);
   } },
   { version: 198, migrate: migratePdfAttachmentNodeIndex },
-  { version: 199, migrate: migrateWatchedHistoryPathIndex }
+  { version: 199, migrate: migrateWatchedHistoryPathIndex },
+  { version: 200, migrate: db => db.exec(LEGACY_REVIEW_CALENDAR_INDEX) }
 ];

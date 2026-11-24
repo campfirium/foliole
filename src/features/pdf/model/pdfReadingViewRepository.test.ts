@@ -1,9 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { pdfReadingViewsSchema } from '../../../../lib/platform/pdfDocumentPreference';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
   loadRuntimeAppSettingsState,
-  saveRuntimeAppSettingsState
+  saveRuntimePdfDocumentPreference
 } from '../../../shared/platform/appSettingsState';
 
 import { DEFAULT_PDF_READING_VIEW } from './pdfReadingView';
@@ -11,14 +12,17 @@ import { loadPdfReadingView, savePdfReadingView } from './pdfReadingViewReposito
 
 vi.mock('../../../shared/platform/appSettingsState', () => ({
   loadRuntimeAppSettingsState: vi.fn(),
-  saveRuntimeAppSettingsState: vi.fn()
+  saveRuntimePdfDocumentPreference: vi.fn()
 }));
 let settings: Record<string, string>;
 beforeEach(() => {
   settings = { other: 'preserved' };
   vi.mocked(loadRuntimeAppSettingsState).mockImplementation(async () => settings);
-  vi.mocked(saveRuntimeAppSettingsState).mockImplementation(async (next) => {
-    settings = next;
+  vi.mocked(saveRuntimePdfDocumentPreference).mockImplementation(async (next) => {
+    if (next.kind !== 'readingView') throw new Error('Unexpected preference');
+    const key = APP_SETTINGS_STORAGE_KEYS.pdfDocumentViews;
+    const records = pdfReadingViewsSchema.parse(JSON.parse(settings[key] ?? '{}'));
+    settings = { ...settings, [key]: JSON.stringify({ ...records, [next.fingerprint]: next.view }) };
     return true;
   });
 });
@@ -39,7 +43,7 @@ it('serializes concurrent per-PDF writes without losing either record', async ()
   ).toEqual(['one', 'two']);
 });
 it('reports save failures and refuses to overwrite malformed stored settings', async () => {
-  vi.mocked(saveRuntimeAppSettingsState).mockResolvedValueOnce(false);
+  vi.mocked(saveRuntimePdfDocumentPreference).mockResolvedValueOnce(false);
   await expect(savePdfReadingView('one', DEFAULT_PDF_READING_VIEW)).rejects.toThrow(
     'Could not save'
   );

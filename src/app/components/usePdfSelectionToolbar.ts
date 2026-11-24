@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 
-import { resolvePdfSelectionSnapshot, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
+import { resolvePdfSelectionForEvent, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { resolvePdfSelectionToolbarPosition } from './pdfSelectionToolbarPosition';
 
 type PdfSelectionInteraction = { kind: 'idle' } | { kind: 'dragging' } | { kind: 'completed'; event: MouseEvent };
@@ -12,8 +12,8 @@ interface PdfSelectionToolbarInput {
 }
 
 function createToolbarHandlers(input: MutableRefObject<PdfSelectionToolbarInput>, surface: HTMLElement, interaction: MutableRefObject<PdfSelectionInteraction>) {
-  const open = (event: MouseEvent | KeyboardEvent) => {
-    const snapshot = resolvePdfSelectionSnapshot(surface);
+  const open = (event: MouseEvent | KeyboardEvent, selectionEvent: Event = event) => {
+    const snapshot = resolvePdfSelectionForEvent(surface, selectionEvent);
     if (snapshot) input.current.onOpen(snapshot, resolvePdfSelectionToolbarPosition(event));
   };
   const blur = () => { interaction.current = { kind: 'idle' }; };
@@ -34,8 +34,8 @@ function createToolbarHandlers(input: MutableRefObject<PdfSelectionToolbarInput>
       interaction.current = { kind: 'completed', event };
       open(event);
     },
-    selection: () => {
-      if (interaction.current.kind === 'completed') open(interaction.current.event);
+    selection: (event: Event) => {
+      if (interaction.current.kind === 'completed') open(interaction.current.event, event);
     },
     key: (event: KeyboardEvent) => {
       if (event.key === 'Escape') {

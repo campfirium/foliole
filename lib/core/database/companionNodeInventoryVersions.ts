@@ -6,6 +6,7 @@ import { INVALIDATE_ALL_SYNC_DIGESTS } from './framedSyncDigestSchema.js';
 import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
 import { migrateCompanionIndependentImportHistoryInventory } from './independentImportHistoryInventoryMigration.js';
 import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementMigration.js';
+import { LEGACY_REVIEW_CALENDAR_INDEX } from './reviewCalendarLegacyIndex.js';
 
 export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentVersion: number, targetVersion: number) {
   if (currentVersion < 119 && targetVersion >= 119) {
@@ -20,4 +21,5 @@ export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentV
   if (currentVersion < 124 && targetVersion >= 124) {
     for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) await db.run(sql);
   }
+  if (currentVersion < 125 && targetVersion >= 125) await db.run(LEGACY_REVIEW_CALENDAR_INDEX);
 }

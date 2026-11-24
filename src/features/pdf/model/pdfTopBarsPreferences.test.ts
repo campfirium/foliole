@@ -1,23 +1,27 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { pdfTopBarsRecordsSchema } from '../../../../lib/platform/pdfDocumentPreference';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
   loadRuntimeAppSettingsState,
-  saveRuntimeAppSettingsState
+  saveRuntimePdfDocumentPreference
 } from '../../../shared/platform/appSettingsState';
 
 import { loadPdfTopBarsPreference, savePdfTopBarsPreference } from './pdfTopBarsPreferences';
 
 vi.mock('../../../shared/platform/appSettingsState', () => ({
   loadRuntimeAppSettingsState: vi.fn(),
-  saveRuntimeAppSettingsState: vi.fn()
+  saveRuntimePdfDocumentPreference: vi.fn()
 }));
 let settings: Record<string, string>;
 beforeEach(() => {
   settings = { 'foliole-pdf-document-views': 'existing ranges' };
   vi.mocked(loadRuntimeAppSettingsState).mockImplementation(async () => settings);
-  vi.mocked(saveRuntimeAppSettingsState).mockImplementation(async (next) => {
-    settings = { ...settings, ...next };
+  vi.mocked(saveRuntimePdfDocumentPreference).mockImplementation(async (next) => {
+    if (next.kind !== 'topBars') throw new Error('Unexpected preference');
+    const key = APP_SETTINGS_STORAGE_KEYS.pdfTopBarsPreferences;
+    const records = pdfTopBarsRecordsSchema.parse(JSON.parse(settings[key] ?? '{}'));
+    settings = { ...settings, [key]: JSON.stringify({ ...records, [next.fingerprint]: next.enabled }) };
     return true;
   });
 });
@@ -39,7 +43,7 @@ it('retains both PDFs during concurrent saves', async () => {
 });
 
 it('reports failed writes and refuses to overwrite malformed saved records', async () => {
-  vi.mocked(saveRuntimeAppSettingsState).mockResolvedValueOnce(false);
+  vi.mocked(saveRuntimePdfDocumentPreference).mockResolvedValueOnce(false);
   await expect(savePdfTopBarsPreference('one', false)).rejects.toThrow('Could not save');
   expect(await loadPdfTopBarsPreference('one')).toBe(true);
   settings[APP_SETTINGS_STORAGE_KEYS.pdfTopBarsPreferences] = 'broken';

@@ -1,6 +1,7 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS, NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
+import { LEGACY_REVIEW_CALENDAR_INDEX } from './reviewCalendarLegacyIndex.js';
 
 export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   READING_RESUME_SCHEMA,
@@ -158,5 +159,6 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   )`,
   'CREATE INDEX IF NOT EXISTS idx_node_attachments_attachment_id ON node_attachments (attachment_id)',
   ...CORE_INDEX_SCHEMA_STATEMENTS,
+  LEGACY_REVIEW_CALENDAR_INDEX,
   ...NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA
 ];

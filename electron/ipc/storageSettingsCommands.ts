@@ -121,6 +121,10 @@ async function handleAppSettingsCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadFolderListSortMemory) return loadFolderListSortMemory(asString(args.libraryScope, 'libraryScope'));
   if (command === NATIVE_COMMANDS.saveFolderListSortMemory) return saveFolderListSortMemory(args);
   if (command !== NATIVE_COMMANDS.saveAppSettingsState) return undefined;
+  if (args.pdfPreference !== undefined) {
+    await saveAppSettingsState({}, args.pdfPreference);
+    return null;
+  }
   await saveAppSettingsState(readSettingsObject(args.settings));
   refreshGlobalClipShortcutFromSettings();
   await refreshManagedInboxMonitorFromSettings();

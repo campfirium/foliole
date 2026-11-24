@@ -31,8 +31,10 @@ let refreshLibraryScope: string | undefined;
 const refreshes = new WorkspaceSnapshotRefresh(null);
 let workspaceRefreshDebounceId: ReturnType<typeof globalThis.setTimeout> | null = null;
 let workspaceRefreshDebouncedSource: WorkspaceRefreshSource = 'content-changed';
+let workspaceRefreshDeadline: number | null = null;
 
 const WORKSPACE_REFRESH_EVENT_DEBOUNCE_MS = 1200;
+const WORKSPACE_REFRESH_EVENT_MAX_WAIT_MS = 2400;
 
 function logWorkspaceRehydrateDiagnostic(
   event: string,
@@ -109,14 +111,18 @@ export function requestWorkspaceStateRefresh(source: WorkspaceRefreshSource) {
 
 function scheduleWorkspaceRefresh(source: WorkspaceRefreshSource) {
   workspaceRefreshDebouncedSource = source;
+  const now = Date.now();
+  workspaceRefreshDeadline ??= now + WORKSPACE_REFRESH_EVENT_MAX_WAIT_MS;
+  const wait = Math.min(WORKSPACE_REFRESH_EVENT_DEBOUNCE_MS, Math.max(0, workspaceRefreshDeadline - now));
   if (workspaceRefreshDebounceId) {
     globalThis.clearTimeout(workspaceRefreshDebounceId);
   }
   workspaceRefreshDebounceId = globalThis.setTimeout(() => {
     workspaceRefreshDebounceId = null;
+    workspaceRefreshDeadline = null;
     void refreshRegisteredWorkspaceState(workspaceRefreshDebouncedSource).catch(error => {
       logRuntimeError('workspace refresh failed', { area: 'persistence', action: 'refresh_workspace',
         fallback: 'retain_pending_refresh', error });
     });
-  }, WORKSPACE_REFRESH_EVENT_DEBOUNCE_MS);
+  }, wait);
 }

@@ -27,7 +27,7 @@ vi.mock('./workgroupHttpCrypto.js', () => ({
   WORKGROUP_ENVELOPE_CONTENT_TYPE: 'application/vnd.foliole.workgroup-aead+json'
 }));
 
-import { fetchDesktopWorkgroupJson,
+import { fetchDesktopWorkgroupJson, postDesktopWorkgroupJson,
   readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 import { lanPeerHttp } from './lanPeerHttp.js';
@@ -80,5 +80,24 @@ it('retries a reset authenticated GET with fresh signed headers', async () => {
     })).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(createDesktopSyncGroupSignedHeaders).toHaveBeenCalledTimes(2);
+  } finally { fetchSpy.mockRestore(); }
+});
+
+it('checks the original library before accepting a delayed response', async () => {
+  let library = 'original';
+  const fetchSpy = vi.spyOn(lanPeerHttp, 'fetch').mockImplementation(async () => {
+    library = 'switched';
+    return new Response('encrypted', {
+      headers: { 'content-type': 'application/vnd.foliole.workgroup-aead+json' }
+    });
+  });
+  runtime.decrypt.mockClear();
+  try {
+    await expect(postDesktopWorkgroupJson({
+      assertCurrent: () => { if (library !== 'original') throw new Error('library_changed'); },
+      body: '{}', endpointUrl: 'http://peer', groupId: 'group-1', localDeviceId: 'local',
+      pathWithQuery: '/companion/readwise-group-setup', secret: 'secret'
+    })).rejects.toThrow('library_changed');
+    expect(runtime.decrypt).not.toHaveBeenCalled();
   } finally { fetchSpy.mockRestore(); }
 });

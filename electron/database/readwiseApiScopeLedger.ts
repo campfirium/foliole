@@ -10,6 +10,7 @@ import {
 } from '../import/readwiseApiIndexPlan.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { clearReadwiseApiScopeTagMatches } from './readwiseApiIndexStage.js';
 
 const LEDGER_KIND = 'candidate-scope-v3';
 
@@ -25,15 +26,20 @@ export function loadOrCreateReadwiseApiScopeLedgers(
     const current = loadScope(connectionRef, scope);
     if (current?.policySignature === signature) {
       if (current.runStartedAt === runStartedAt) return current;
-      return saveScope(connectionRef, { ...current, cursor: null, runStartedAt, status: 'running' });
+      return saveScope(connectionRef, { ...current, cursor: null, replayedTagCursor: false, runStartedAt, status: 'running' });
     }
-    return saveScope(connectionRef, {
+    const next: ReadwiseApiScopeLedger = {
       checkpoint: null,
       cursor: null,
       policySignature: signature,
       runStartedAt,
       scope,
       status: 'running'
+    };
+    if (!current) return saveScope(connectionRef, next);
+    return openDatabaseConnection().driver.transaction(driver => {
+      clearReadwiseApiScopeTagMatches(driver, connectionRef, scope);
+      return saveScope(connectionRef, next, driver);
     });
   });
 }
@@ -61,6 +67,7 @@ function deleteInactiveScopes(connectionRef: string, active: ReadonlySet<Readwis
   const driver = openDatabaseConnection().driver;
   for (const ledger of loadReadwiseApiScopeLedgers(connectionRef)) {
     if (active.has(ledger.scope)) continue;
+    clearReadwiseApiScopeTagMatches(driver, connectionRef, ledger.scope);
     driver.execute(
       `DELETE FROM readwise_api_import_stage
        WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`,
@@ -78,7 +85,11 @@ export function saveReadwiseApiScopeCursor(
 }
 
 export function restartReadwiseApiScope(connectionRef: string, ledger: ReadwiseApiScopeLedger) {
-  return saveScope(connectionRef, { ...ledger, cursor: null, status: 'running' });
+  const restart = { ...ledger, cursor: null, status: 'running' as const };
+  return openDatabaseConnection().driver.transaction(driver => {
+    clearReadwiseApiScopeTagMatches(driver, connectionRef, ledger.scope);
+    return saveScope(connectionRef, ledger.scope === 'reader:tag' ? { ...restart, replayedTagCursor: true } : restart, driver);
+  });
 }
 
 export function finalizeReadwiseApiScopeLedgers(connectionRef: string) {

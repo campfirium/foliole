@@ -176,3 +176,19 @@ it('performs one complete reread when a scoped read fails', async () => {
   await vi.advanceTimersByTimeAsync(1200);
   expect(full).toHaveBeenCalledTimes(1);
 });
+
+it('publishes new topic content while committed sync notifications keep arriving', async () => {
+  const invoke = vi.fn().mockImplementation(async (command: string) => {
+    if (command === 'load_workspace_list_projection') return projection();
+    if (command === 'load_node_document') return { ...node('topic', '2026-10-02T00:00:00Z'),
+      content: 'Synced during the burst', hideTitleHeading: false };
+    return null;
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  for (let tick = 0; tick < 6; tick += 1) {
+    requestWorkspaceSyncRefresh({ kind: 'nodes', nodeIds: ['topic'] }, 'library');
+    await vi.advanceTimersByTimeAsync(400);
+  }
+  expect(useWorkspaceStore.getState().nodesById.topic?.content).toBe('Synced during the burst');
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_projection')).toHaveLength(1);
+});

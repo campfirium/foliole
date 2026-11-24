@@ -70,8 +70,9 @@ function scheduleWatchedDecisionSync() {
   });
 }
 
-export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroupPeer) {
+export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroupPeer, assertCurrent?: () => void) {
   const request = await runWithDatabaseConnectionOwner(() => {
+    assertCurrent?.();
     const workgroup = loadDesktopWorkgroupKey(peer.group_id);
     if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
     const state = loadDesktopSyncGroupMemberState();
@@ -82,6 +83,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     };
   });
   const payload = await postDesktopWorkgroupJson({
+    ...(assertCurrent ? { assertCurrent } : {}),
     body: request.body,
     endpointUrl: peer.endpoint_url,
     groupId: peer.group_id,
@@ -90,6 +92,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     secret: request.secret
   });
   const result = await runWithDatabaseConnectionOwner(() => {
+    assertCurrent?.();
     const incoming = readCompatibleMemberState(payload, peer.peer_device_id);
     const applied = applyMemberStateWithDecisionChange(
       incoming, peer.peer_device_id

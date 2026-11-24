@@ -94,7 +94,7 @@ export async function publishWatchedFolderGroupMemberState() {
   for (const peer of [...endpoints.values(), ...loadDesktopSyncGroupRoutes(group.group_id)]) {
     if (peer.group_id === group.group_id) peers.set(peer.peer_device_id, peer);
   }
-  await Promise.allSettled([...peers.values()].map(exchangeDesktopSyncGroupMemberState));
+  await Promise.allSettled([...peers.values()].map(peer => exchangeDesktopSyncGroupMemberState(peer)));
 }
 
 export async function publishDesktopSyncGroupDeparture(groupId: string, senderDeviceId: string) {

@@ -4,13 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { app } from 'electron';
 
 import { AGENT_CONTROL_LEARNING_IMPORT_KEY } from '../../lib/platform/agentControlLearningImport.js';
+import { pdfDocumentPreferenceSchema, pdfReadingViewsSchema, pdfTopBarsRecordsSchema } from '../../lib/platform/pdfDocumentPreference.js';
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../src/shared/config/appSettings.js';
 import {
   getLocalStorageAppSettingsKeys,
   getRuntimeAppSettingsKeys
 } from '../../src/shared/config/appSettingsClassification.js';
 import { isAgentControlLearningImportEnabled, saveAgentControlLearningImportPermission } from '../database/agentControlLearningImportPermission.js';
-import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { loadJsonSetting, saveJsonSetting, writeJsonSetting } from '../database/settingsStore.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { applyNativeBaseColorMode } from '../nativeAppearance.js';
 import { writeStartupRendererHtml } from '../startupRendererPreparation.js';
@@ -89,7 +91,25 @@ export function hasStartupRendererSettingChange(
   return false;
 }
 
-export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
+function savePdfDocumentPreference(payload: unknown) {
+  const preference = pdfDocumentPreferenceSchema.parse(payload);
+  const key = preference.kind === 'topBars'
+    ? APP_SETTINGS_STORAGE_KEYS.pdfTopBarsPreferences : APP_SETTINGS_STORAGE_KEYS.pdfDocumentViews;
+  openDatabaseConnection().driver.transaction(driver => {
+    const settings = normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY));
+    const rawRecords = JSON.parse(settings[key] ?? '{}') as unknown;
+    const records = preference.kind === 'topBars'
+      ? { ...pdfTopBarsRecordsSchema.parse(rawRecords), [preference.fingerprint]: preference.enabled }
+      : { ...pdfReadingViewsSchema.parse(rawRecords), [preference.fingerprint]: preference.view };
+    writeJsonSetting(driver, APP_SETTINGS_KEY, { ...settings, [key]: JSON.stringify(records) });
+  });
+}
+
+export async function saveAppSettingsState(settings: Record<string, unknown>, pdfPreference?: unknown): Promise<void> {
+  if (pdfPreference !== undefined) {
+    savePdfDocumentPreference(pdfPreference);
+    return;
+  }
   const { [AGENT_CONTROL_LEARNING_IMPORT_KEY]: learningImport, ...appSettings } = settings;
   if (learningImport !== undefined) {
     saveAgentControlLearningImportPermission(learningImport);

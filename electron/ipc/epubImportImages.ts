@@ -1,5 +1,6 @@
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { parseNodeResourceReferences, serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
+import { partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { rewriteEpubEmbeddedImages } from '../../lib/core/import/epub/epubImageReferences.js';
 import { importEpubImageFile } from '../attachments/importEpubImageFile.js';
@@ -42,6 +43,7 @@ export async function importEmbeddedImagesForNode<T extends PreparedImportNodeCo
         [serializeNodeResourceReferences([...new Map([...resources, ...existing].map(reference => [reference.storage_key + reference.role, reference])).values()]), nodeId]);
       writeNodeBody({ driver: connection.driver, content: rewrittenContent, nodeId: nodeId,
         title: node.title, updatedAt: importedAt });
+      partitionStoredNodeBody(connection.driver, nodeId, importedAt, { retireEmptyParts: true });
     });
   });
 
