@@ -11,6 +11,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createEmptyLibraryPathOverrides, resolveLibraryPaths } from '../../lib/platform/libraryPaths.js';
 import type { NativeAssistantTurnEvent } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { deferred } from '../../src/test/deferred.js';
 import { getAgentControlApiSessionDescriptor, stopAgentControlApiServer } from '../agentControl/agentControlServer.js';
 import { executeAideTool, type AideToolRequest } from '../assistant/aideToolExecutor.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
@@ -115,7 +116,7 @@ async function switchLibrary(beforeSwitch?: () => Promise<void>) {
 
 function startWrite(request: AideToolRequest, options: { beforeWrite?: () => Promise<void>; fetcher?: typeof fetch } = {}) {
   const events: NativeAssistantTurnEvent[] = [];
-  const requested = Promise.withResolvers<string>();
+  const requested = deferred<string>();
   const sender = {
     isDestroyed: () => false,
     once: vi.fn(),
@@ -125,7 +126,7 @@ function startWrite(request: AideToolRequest, options: { beforeWrite?: () => Pro
       if (event.approval) requested.resolve(event.approval.id);
     }
   } as unknown as WebContents;
-  const write = Promise.withResolvers<Awaited<ReturnType<typeof executeAideTool>>>();
+  const write = deferred<Awaited<ReturnType<typeof executeAideTool>>>();
   adapterSendMessage.mockImplementationOnce(async ({ toolSession }: { toolSession: AideToolSession }) => {
     await options.beforeWrite?.();
     write.resolve(await executeAideTool(request, {
@@ -168,8 +169,8 @@ it('withdraws a pending approval for a Dive with no sources on switch and refuse
 it('rechecks a confirmed Dive write after the database owner switches libraries', async () => {
   const pending = startWrite(createDive);
   const id = await pending.approvalId;
-  const maintenanceEntered = Promise.withResolvers<void>();
-  const proceed = Promise.withResolvers<void>();
+  const maintenanceEntered = deferred<void>();
+  const proceed = deferred<void>();
   const switching = switchLibrary(async () => {
     maintenanceEntered.resolve();
     await proceed.promise;
@@ -188,8 +189,8 @@ it('rechecks a confirmed Dive write after the database owner switches libraries'
 });
 
 it('refuses a confirmed update that reached Agent Control only after the switch', async () => {
-  const dispatched = Promise.withResolvers<void>();
-  const deliver = Promise.withResolvers<void>();
+  const dispatched = deferred<void>();
+  const deliver = deferred<void>();
   const pending = startWrite(updateMaterial, { fetcher: async (request, init) => {
     dispatched.resolve();
     await deliver.promise;
@@ -229,8 +230,8 @@ it.each([createDive, updateMaterial])('keeps unprompted $tool writes in their or
   expect(sameLibrary.events).toEqual([]);
   expect(await sameLibrary.write).toMatchObject({ success: true });
 
-  const started = Promise.withResolvers<void>();
-  const proceed = Promise.withResolvers<void>();
+  const started = deferred<void>();
+  const proceed = deferred<void>();
   const pending = startWrite(request, { beforeWrite: async () => {
     started.resolve();
     await proceed.promise;

@@ -3,18 +3,17 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { expect, it } from 'vitest';
 
-import { saveIosReviewWithDb } from '../../../src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.js';
-import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
-import { reviewCalendarDayKey } from '../review/reviewCalendarDates.js';
-import { applyFramedFactSources, type FramedFactSource } from '../sync/framedSyncFactApply.js';
-import { projectFramedSyncReview } from '../sync/framedSyncRelationReviewFact.js';
-import { identityReviewRowSchema } from '../sync/syncFactRowSchemas.js';
-import { applyReviewLogRecordsWithDbPort } from '../sync/syncReviewLogApply.js';
-
-import { bootstrapCompanionDatabase } from './companionDatabaseLifecycle.js';
-import { companionPort, desktopMigrationTarget } from './fsrs7Migration.testSupport.js';
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
-import { readReviewCalendarHistoryWithDb } from './reviewCalendarHistory.js';
+import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { companionPort, desktopMigrationTarget } from '../../lib/core/database/fsrs7Migration.testSupport.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { readReviewCalendarHistoryWithDb } from '../../lib/core/database/reviewCalendarHistory.js';
+import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates.js';
+import { applyFramedFactSources, type FramedFactSource } from '../../lib/core/sync/framedSyncFactApply.js';
+import { projectFramedSyncReview } from '../../lib/core/sync/framedSyncRelationReviewFact.js';
+import { identityReviewRowSchema } from '../../lib/core/sync/syncFactRowSchemas.js';
+import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewLogApply.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
+import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.js';
 
 const due = '2026-03-10T12:00:00.000Z';
 const legacyAt = '2026-02-30T12:00:00Z';

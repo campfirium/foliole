@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
+import { deferred } from '../../src/test/deferred.js';
 import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { openNodeSqliteFixture } from '../database/nodeSqliteFixture.testSupport.js';
@@ -100,8 +101,8 @@ it('rolls back the book root and import records when chapter persistence fails',
 });
 
 it('keeps staged chapter text available while final persistence waits for the database owner', async () => {
-  const queued = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
+  const queued = deferred<void>();
+  const release = deferred<void>();
   beforeFinalOwner = async () => { queued.resolve(); await release.promise; };
   const pending = importBook(LONG_CHAPTER);
   await Promise.race([queued.promise, pending.then(() => { throw new Error('Final write did not queue'); })]);

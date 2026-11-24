@@ -109,7 +109,7 @@ it.each([false, true])('keeps reminders running when compaction reopens the data
   const rule = save('After maintenance', '12:01', true);
   const rename = fails ? vi.spyOn(fs, 'rename').mockRejectedValueOnce(new Error('injected replacement failure')) : null;
   try {
-    const compact = compactApplicationDatabase(compactAndVerifyDatabaseCandidate);
+    const compact = compactApplicationDatabase(async input => compactAndVerifyDatabaseCandidate(input));
     if (fails) await expect(compact).rejects.toThrow('current library has been restored');
     else await expect(compact).resolves.toHaveProperty('after');
   } finally {

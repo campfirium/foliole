@@ -7,7 +7,9 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
-import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
+
+import { deferred } from '../../src/test/deferred.js';
+mport { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { setAttachmentPublishedListener } from '../attachments/attachmentPublishedEvents.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { persistNodeResourceReference } from '../database/nodeResources.js';
@@ -57,8 +59,8 @@ it.each([false, true])('cancels a running export on disconnect (existing destina
 it('removes partial export writes when Readwise is disconnected during the save', async () => {
   const bytes = headingCoverEpubBytes();
   mockDownload(() => new Response(new Uint8Array(bytes)));
-  const partialWrite = Promise.withResolvers<string>();
-  const release = Promise.withResolvers<void>();
+  const partialWrite = deferred<string>();
+  const release = deferred<void>();
   const writeFile = fs.writeFile.bind(fs);
   vi.spyOn(fs, 'writeFile').mockImplementation(async (file, data, options) => {
     await writeFile(file, (data as Uint8Array).subarray(0, 32), options);
@@ -105,8 +107,8 @@ it('cancels a rebuild after EPUB bytes reach disk and preserves the stored Reade
 });
 
 it('keeps Readwise disconnected when an in-flight lookup returns an authorization error', async () => {
-  const started = Promise.withResolvers<void>();
-  const reply = Promise.withResolvers<Response>();
+  const started = deferred<void>();
+  const reply = deferred<Response>();
   vi.stubGlobal('fetch', vi.fn(() => {
     started.resolve();
     return reply.promise;
@@ -127,9 +129,9 @@ it('keeps Readwise disconnected when an in-flight lookup returns an authorizatio
 
 it('rechecks the export after a busy database releases its connection while closing the save dialog', async () => {
   const bytes = headingCoverEpubBytes();
-  const dialogOpened = Promise.withResolvers<void>();
-  const selection = Promise.withResolvers<{ canceled: boolean; filePath: string }>();
-  const release = Promise.withResolvers<void>();
+  const dialogOpened = deferred<void>();
+  const selection = deferred<{ canceled: boolean; filePath: string }>();
+  const release = deferred<void>();
   showSaveDialog.mockImplementationOnce(() => {
     dialogOpened.resolve();
     return selection.promise;
@@ -174,7 +176,7 @@ it('keeps the existing destination if disconnect wins the final replacement race
 
 it('waits for a busy database before starting a rebuild that can still be cancelled', async () => {
   const download = pauseDownload();
-  const release = Promise.withResolvers<void>();
+  const release = deferred<void>();
   const owner = coordinator.runExclusive(() => release.promise);
   const operation = useReadwiseOriginalEpub('book');
   release.resolve();
@@ -216,7 +218,7 @@ it('preserves a published cover that another topic adopts before the rebuild is 
 
 
 it('keeps EPUB actions available when their menu state is requested during a database write', async () => {
-  const release = Promise.withResolvers<void>();
+  const release = deferred<void>();
   const owner = coordinator.runExclusive(() => release.promise);
   const request = Promise.resolve().then(() => loadReadwiseOriginalEpubActionState('book'));
   release.resolve();

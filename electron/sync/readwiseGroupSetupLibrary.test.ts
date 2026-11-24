@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { READWISE_SOURCE_MODE_KEY } from '../../lib/core/import/readwiseSourceMode.js';
 import { READWISE_SOURCE_CUTOVER_COMPLETION_VERSION, READWISE_SOURCE_CUTOVER_JOURNAL_KEY } from '../../lib/core/readwise/readwiseSourceCutover.js';
+import { deferred } from '../../src/test/deferred.js';
 import { openNodeSqliteFixture } from '../database/nodeSqliteFixture.testSupport.js';
 import { loadReadwiseOwnerGuard } from '../database/readwiseOwnerGuard.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
@@ -93,8 +94,8 @@ afterEach(() => {
 });
 
 it('drops a delayed migration proof if the active library changed within the same group', async () => {
-  const inspection = Promise.withResolvers<void>();
-  const reply = Promise.withResolvers<typeof status>();
+  const inspection = deferred<void>();
+  const reply = deferred<typeof status>();
   post.mockImplementation(() => { inspection.resolve(); return reply.promise; });
   const pending = resolveReadwiseJoinDecision();
   await Promise.race([inspection.promise, pending.then(() => { throw new Error('No inspection request'); })]);
@@ -118,8 +119,8 @@ it('adopts the proof into the starting library when it remains active', async ()
 
 it('keeps automatic owner activation and its recovery intent bound to the starting library', async () => {
   post.mockResolvedValue({ ...status, apiProof: null, mode: 'relay', ready: false });
-  const requested = Promise.withResolvers<void>();
-  const reply = Promise.withResolvers<void>();
+  const requested = deferred<void>();
+  const reply = deferred<void>();
   remoteStop.mockImplementation(async (_url, init: RequestInit) => {
     requested.resolve();
     await reply.promise;

@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, vi } from 'vitest';
 
+import { deferred } from '../../src/test/deferred.js';
 import { saveReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 import { SqliteConnectionCoordinator } from '../database/sqliteConnectionCoordinator.js';
@@ -83,7 +84,7 @@ export function mockDownload(original: (signal?: AbortSignal | null) => Response
 
 export function pauseDownload() {
   const bytes = headingCoverEpubBytes();
-  const bodyRead = Promise.withResolvers<void>();
+  const bodyRead = deferred<void>();
   let stop: (() => void) | undefined;
   let signal: AbortSignal | null | undefined;
   mockDownload((downloadSignal) => {

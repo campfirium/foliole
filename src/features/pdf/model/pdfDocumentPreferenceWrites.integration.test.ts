@@ -1,22 +1,23 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { DEFAULT_PDF_READING_VIEW } from '../../src/features/pdf/model/pdfReadingView.js';
-import { loadPdfReadingView, savePdfReadingView } from '../../src/features/pdf/model/pdfReadingViewRepository.js';
-import { loadPdfTopBarsPreference, savePdfTopBarsPreference } from '../../src/features/pdf/model/pdfTopBarsPreferences.js';
-import { APP_SETTINGS_STORAGE_KEYS as keys } from '../../src/shared/config/appSettings.js';
-import { openNodeSqliteFixture } from '../database/nodeSqliteFixture.testSupport.js';
+import { openNodeSqliteFixture } from '../../../../electron/database/nodeSqliteFixture.testSupport.js';
+import { loadAppSettingsState, saveAppSettingsState } from '../../../../electron/ipc/storage.js';
+import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands.js';
+import { APP_SETTINGS_STORAGE_KEYS as keys } from '../../../shared/config/appSettings.js';
+import { deferred } from '../../../test/deferred.js';
 
-import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
+import { DEFAULT_PDF_READING_VIEW } from './pdfReadingView.js';
+import { loadPdfReadingView, savePdfReadingView } from './pdfReadingViewRepository.js';
+import { loadPdfTopBarsPreference, savePdfTopBarsPreference } from './pdfTopBarsPreferences.js';
 
 const { applyNativeBaseColorMode, writeStartupRendererHtml } = vi.hoisted(() => ({
   applyNativeBaseColorMode: vi.fn(), writeStartupRendererHtml: vi.fn()
 }));
 vi.mock('electron', () => ({ app: { getPath: () => '/unused' } }));
-vi.mock('../nativeAppearance.js', () => ({ applyNativeBaseColorMode }));
-vi.mock('../startupRendererPreparation.js', () => ({ writeStartupRendererHtml }));
-vi.mock('../database/connection.js', () => ({ openDatabaseConnection: () => connection }));
+vi.mock('../../../../electron/nativeAppearance.js', () => ({ applyNativeBaseColorMode }));
+vi.mock('../../../../electron/startupRendererPreparation.js', () => ({ writeStartupRendererHtml }));
+vi.mock('../../../../electron/database/connection.js', () => ({ openDatabaseConnection: () => connection }));
 
 let connection: ReturnType<typeof openNodeSqliteFixture>;
 let beforeSave: (() => Promise<void>) | undefined;
@@ -51,8 +52,8 @@ it('saves PDF top bars without clearing the saved appearance or startup settings
 });
 
 it('keeps newer appearance settings if they commit before an in-flight PDF view save', async () => {
-  const entered = Promise.withResolvers<void>();
-  const resume = Promise.withResolvers<void>();
+  const entered = deferred<void>();
+  const resume = deferred<void>();
   beforeSave = async () => { entered.resolve(); await resume.promise; };
   const view = { ...DEFAULT_PDF_READING_VIEW, mode: 'free' as const };
   const pending = savePdfReadingView('first', view);

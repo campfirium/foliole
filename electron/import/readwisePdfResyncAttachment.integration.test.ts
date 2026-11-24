@@ -7,7 +7,9 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { resolveAttachmentFile, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
+
+import { deferred } from '../../src/test/deferred.js';
+mport { resolveAttachmentFile, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
@@ -59,8 +61,8 @@ it.each(['connection disconnected', 'attachment link changed', 'Topic trashed'])
   'discards a parsed PDF highlight when the %s before placement', async change => {
     await writeLocalPdf();
     const before = readHighlight();
-    const parsed = Promise.withResolvers<void>();
-    const resume = Promise.withResolvers<void>();
+    const parsed = deferred<void>();
+    const resume = deferred<void>();
     pauseAfterPdfParsing(() => { parsed.resolve(); return resume.promise; });
     const result = resyncReadwiseSource(nodeId, { fetchImpl: remoteFetch(null), minIntervalMs: 0 });
     try {

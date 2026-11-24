@@ -4,7 +4,9 @@ import './readwisePdfResync.testSupport.js';
 
 import { expect, it, vi } from 'vitest';
 
-import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+
+import { deferred } from '../../src/test/deferred.js';
+mport { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import { disconnectReadwiseApi, loadReadwiseApiConnection } from './readwiseApiConnection.js';
@@ -91,7 +93,7 @@ it.each([
 
 it('cancels an in-flight export request when the Readwise account disconnects', async () => {
   await writeLocalPdf();
-  const started = Promise.withResolvers<void>();
+  const started = deferred<void>();
   const fetchImpl = vi.fn<typeof fetch>(async (_input, options) => {
     const signal = options?.signal;
     started.resolve();
@@ -120,8 +122,8 @@ it('asks for reconnection when an authorized export request receives a current 4
 
 it('keeps the account disconnected when an in-flight export returns a late unauthorized response', async () => {
   await writeLocalPdf();
-  const started = Promise.withResolvers<void>();
-  const response = Promise.withResolvers<Response>();
+  const started = deferred<void>();
+  const response = deferred<Response>();
   const fetchImpl = vi.fn<typeof fetch>(async () => {
     started.resolve();
     return response.promise;
