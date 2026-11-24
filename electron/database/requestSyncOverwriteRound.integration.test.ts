@@ -13,14 +13,14 @@ import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDataba
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
-import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { loadLatestSyncGroupRestoreEvent, receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
+import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
-import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import type { Peer } from './syncLibrary.testSupport.js';
+import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const progress = { groupId: 'group', overwriteId: 'new-epoch', providerDeviceId: 'peer',
