@@ -50,10 +50,14 @@ beforeEach(() => {
 it('creates one annotated crop with the exact occurrence locator and local rectangle', async () => {
   renderCreation();
   selectRegion();
-  fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'Diagram detail' } });
+  const receipt = Promise.withResolvers<string>();
+  createExcerpt.mockReturnValueOnce(receipt.promise);
+  const input = await screen.findByRole('textbox');
+  fireEvent.change(input, { target: { value: 'Diagram detail' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   await waitFor(() => expect(createExcerpt).toHaveBeenCalledOnce());
+  expect(input).toHaveProperty('readOnly', true);
   expect(createExcerpt).toHaveBeenCalledWith(
     'topic-1',
     { from: 5, originalText: imageMarkdown, to: 5 + imageMarkdown.length },
@@ -65,6 +69,7 @@ it('creates one annotated crop with the exact occurrence locator and local recta
     expect.any(String),
     expect.stringContaining('Diagram detail')
   );
+  receipt.resolve('excerpt-1');
   await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
 });
 
