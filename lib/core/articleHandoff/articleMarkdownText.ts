@@ -9,7 +9,7 @@ function splitLeadingFrontmatter(lines: string[]) {
   return closing > 0 ? closing + 1 : 0;
 }
 
-export function renderArticleMarkdownExport(article: ArticleBody) {
+export function renderArticleMarkdownText(article: ArticleBody) {
   const title = article.title.trim() || 'Untitled';
   const lines = article.markdown.replace(/\r\n?/gu, '\n').split('\n');
   const bodyStart = splitLeadingFrontmatter(lines);
@@ -20,16 +20,4 @@ export function renderArticleMarkdownExport(article: ArticleBody) {
   const frontmatter = lines.slice(0, bodyStart).join('\n');
   const body = lines.slice(bodyStart).join('\n').trim();
   return [frontmatter, `# ${title}`, body].filter(Boolean).join('\n\n') + '\n';
-}
-
-export function articleMarkdownFileName(title: string) {
-  const cleaned = Array.from(title)
-    .map(character => character.charCodeAt(0) <= 31 || '<>:"/\\|?*'.includes(character) ? ' ' : character)
-    .join('')
-    .replace(/\s+/gu, ' ')
-    .replace(/[.\s]+$/gu, '')
-    .replace(/^[.\s]+/gu, '')
-    .trim();
-  const limited = Array.from(cleaned).slice(0, 80).join('').trim();
-  return `${limited || 'Untitled'}.md`;
 }

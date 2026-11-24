@@ -7,8 +7,7 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleArticleHandoff"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "shareSupportLog", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "shareMarkdown", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "shareSupportLog", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func open(_ call: CAPPluginCall) {
@@ -25,16 +24,6 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         shareFile(call, content: text, name: "Foliole-log.txt")
-    }
-
-    @objc func shareMarkdown(_ call: CAPPluginCall) {
-        guard let text = call.getString("text"), !text.isEmpty, text.utf8.count <= 16 * 1024 * 1024,
-              let name = call.getString("fileName"), name.hasSuffix(".md"),
-              !name.contains("/"), !name.contains("\\") else {
-            call.reject("article_markdown_invalid")
-            return
-        }
-        shareFile(call, content: text, name: name)
     }
 
     private func shareFile(_ call: CAPPluginCall, content: String, name: String) {

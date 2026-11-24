@@ -18,13 +18,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(name = "FolioleArticleHandoff")
 public final class FolioleArticleHandoffPlugin extends Plugin {
-    private static final int MARKDOWN_EXPORT_LIMIT = 16 * 1024 * 1024;
-
     @PluginMethod
     public void open(PluginCall call) {
         String html = call.getString("html");
@@ -67,47 +64,6 @@ public final class FolioleArticleHandoffPlugin extends Plugin {
             if (file != null) file.delete();
             call.reject("support_log_export_failed");
         }
-    }
-
-    @PluginMethod
-    public void shareMarkdown(PluginCall call) {
-        String content = call.getString("text");
-        String name = call.getString("fileName");
-        if (content == null || content.isEmpty() || content.length() > MARKDOWN_EXPORT_LIMIT
-            || name == null || !name.endsWith(".md") || name.contains("/") || name.contains("\\")) {
-            call.reject("article_markdown_invalid");
-            return;
-        }
-        File directory = null;
-        try {
-            File root = new File(getContext().getCacheDir(), "article-markdown");
-            if (!root.mkdirs() && !root.isDirectory()) throw new IOException("article_markdown_cache_unavailable");
-            long expiry = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(24);
-            File[] expired = root.listFiles(entry -> entry.isDirectory() && entry.lastModified() < expiry);
-            if (expired != null) for (File entry : expired) deleteExport(entry);
-            directory = new File(root, UUID.randomUUID().toString());
-            if (!directory.mkdirs()) throw new IOException("article_markdown_cache_unavailable");
-            File file = new File(directory, name);
-            try (FileOutputStream output = new FileOutputStream(file)) {
-                output.write(content.getBytes(StandardCharsets.UTF_8));
-            }
-            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
-            Intent send = new Intent(Intent.ACTION_SEND).setType("text/markdown")
-                .putExtra(Intent.EXTRA_STREAM, uri).putExtra(Intent.EXTRA_TITLE, name)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            send.setClipData(ClipData.newRawUri(name, uri));
-            File exportDirectory = directory;
-            getActivity().runOnUiThread(() -> launch(call, exportDirectory, Intent.createChooser(send, null)));
-        } catch (IOException | IllegalArgumentException | SecurityException error) {
-            if (directory != null) deleteExport(directory);
-            call.reject("article_markdown_export_failed");
-        }
-    }
-
-    private static void deleteExport(File directory) {
-        File[] files = directory.listFiles();
-        if (files != null) for (File file : files) file.delete();
-        directory.delete();
     }
 
     private void shareLogFile(PluginCall call, File file) {

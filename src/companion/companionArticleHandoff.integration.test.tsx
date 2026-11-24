@@ -9,15 +9,16 @@ import { editableNode, stableEditingHost } from '../shared/platform/companion/ed
 import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
 import { CompanionReadingActivity } from './companionReadingActivity';
 
-const { nativeOpen, nativeMarkdown, getOwner } = vi.hoisted(() => ({ nativeOpen: vi.fn(), nativeMarkdown: vi.fn(), getOwner: vi.fn() }));
+const { nativeOpen, writeClipboardText, getOwner } = vi.hoisted(() => ({ nativeOpen: vi.fn(), writeClipboardText: vi.fn(), getOwner: vi.fn() }));
 vi.mock('@capacitor/core', async (load) => {
   const core = await load<typeof import('@capacitor/core')>();
   return {
     ...core,
     Capacitor: { ...core.Capacitor, isNativePlatform: () => true, isPluginAvailable: () => true },
-    registerPlugin: (name: string) => name === 'FolioleArticleHandoff' ? { open: nativeOpen, shareMarkdown: nativeMarkdown } : core.registerPlugin(name)
+    registerPlugin: (name: string) => name === 'FolioleArticleHandoff' ? { open: nativeOpen } : core.registerPlugin(name)
   };
 });
+vi.mock('../shared/platform/companion/runtime/textClipboard', () => ({ writeClipboardText }));
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', async (load) => ({
   ...await load<object>(), getIosCompanionDatabaseOwner: getOwner
 }));
@@ -91,14 +92,14 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
   }
 });
 
-it.each(['android', 'ios'] as const)('%s exports the saved body as a Markdown file through the share sheet', async platform => {
+it.each(['android', 'ios'] as const)('%s copies the saved Markdown body to the clipboard', async platform => {
   const host = await stableEditingHost(platform);
   getOwner.mockReturnValue(host.owner);
-  nativeMarkdown.mockReset().mockResolvedValueOnce({ status: 'cancelled' }).mockResolvedValueOnce({ status: 'presented' });
-  const savedContent = '---\nsource: river\n---\n\n## 河岸\n\n新保存的正文。';
+  writeClipboardText.mockReset().mockRejectedValueOnce(new Error('denied')).mockResolvedValueOnce(undefined);
+  const savedContent = '---\nsource: river\n---\n\n## 河岸\n\n新保存的**正文**。';
   const activity = new CompanionReadingActivity('topic', () => {});
   const close = vi.fn();
-  await host.seed(editableNode({ title: '沿河走: 上/下', content: '旧正文' }), 'base');
+  await host.seed(editableNode({ title: '沿河走', content: '旧正文' }), 'base');
   activity.flushDraft = async () => {
     await host.owner.runWriter(db => db.transaction(tx => saveCompanionContentEditWithDb(tx, {
       nodeId: 'topic', content: savedContent, baseVersionId: 'base', versionId: 'saved', updatedAt: '2026-11-24T00:00:00Z'
@@ -107,17 +108,15 @@ it.each(['android', 'ios'] as const)('%s exports the saved body as a Markdown fi
   };
   const view = renderWithLocalization(<Actions activity={activity} close={close} />);
   try {
-    const exportButton = screen.getByRole('button', { name: 'Export as Markdown' });
-    fireEvent.click(exportButton);
-    await waitFor(() => expect(nativeMarkdown).toHaveBeenCalledTimes(1));
-    expect(nativeMarkdown.mock.calls[0]?.[0]).toEqual({
-      fileName: '沿河走 上 下.md',
-      text: '---\nsource: river\n---\n\n# 沿河走: 上/下\n\n## 河岸\n\n新保存的正文。\n'
-    });
-    expect(nativeOpen).not.toHaveBeenCalled();
+    const copy = screen.getByRole('button', { name: 'Copy full text' });
+    fireEvent.click(copy);
+    await screen.findByText('Could not copy the full text. Try again.');
+    expect(writeClipboardText).toHaveBeenCalledWith('---\nsource: river\n---\n\n# 沿河走\n\n## 河岸\n\n新保存的**正文**。\n');
     expect(close).not.toHaveBeenCalled();
-    fireEvent.click(exportButton);
+    fireEvent.click(copy);
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(writeClipboardText).toHaveBeenCalledTimes(2);
+    expect(nativeOpen).not.toHaveBeenCalled();
   } finally {
     view.unmount();
     await host.close();

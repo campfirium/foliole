@@ -39,11 +39,11 @@ export function useCompanionArticleHandoff(
       });
       if (!isCurrent()) return;
       if (result.status === 'unavailable') {
-        setError(t(mode === 'markdown' ? 'companion.reading.exportMarkdownUnavailable' : 'companion.reading.articleHandoffUnavailable'));
+        setError(t(mode === 'copy' ? 'companion.reading.copyArticleUnavailable' : 'companion.reading.articleHandoffUnavailable'));
       }
       if (result.status === 'presented') close();
     } catch {
-      if (isCurrent()) setError(t(mode === 'markdown' ? 'companion.reading.exportMarkdownFailed' : 'companion.reading.articleHandoffFailed'));
+      if (isCurrent()) setError(t(mode === 'copy' ? 'companion.reading.copyArticleFailed' : 'companion.reading.articleHandoffFailed'));
     } finally {
       pending.current = false;
     }
