@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { InvalidReviewTimestampError, recomputeReview } from '../review/recomputeReview.js';
+import { recomputeReview } from '../review/recomputeReview.js';
+import { InvalidReviewTimestampError } from '../review/reviewTimestamp.js';
 import { createInitialSchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRowSchemas.js';

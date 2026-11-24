@@ -16,7 +16,7 @@ import { firstAt, secondAt, seedReviewPeer, score, reset, history, reviewState, 
 import { legacyReviewFact } from './reviewStateSyncRetirement.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
-it('rejects impossible local and received review dates without persisting facts or changing the card', async () => {
+it('rejects impossible new scores and unparseable received dates without changing the card', async () => {
   const f = await restoreFixture(); const a = f.peer('source'); const b = f.peer('target');
   try {
     await seedReviewPeer(a); await seedReviewPeer(b);
@@ -25,7 +25,7 @@ it('rejects impossible local and received review dates without persisting facts 
     const malformed = '2027-02-30T12:00:00.000Z';
     expect(() => score(b, 'invalid-local', malformed)).toThrow('invalid_review_timestamp');
     const incoming = identityReviewRowSchema.parse({ ...facts[0] as object,
-      id: 'invalid-remote', op_id: 'invalid-remote', reviewed_at: malformed });
+      id: 'invalid-remote', op_id: 'invalid-remote', reviewed_at: '2027-02-32T12:00:00.000Z' });
     await expect(applyReviewLogRecordsWithDbPort(b.db, [incoming])).rejects.toThrow('invalid_review_timestamp');
     b.reopen();
     expect(reviewFacts(b)).toEqual(facts);

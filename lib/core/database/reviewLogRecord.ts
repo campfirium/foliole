@@ -1,4 +1,5 @@
 import type { ReviewHistoryMutation } from '../review/reviewEventIdentity.js';
+import { requireReviewInstant } from '../review/reviewTimestamp.js';
 import type { DbPort } from '../sync/dbPort.js';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRowSchemas.js';
 
@@ -21,6 +22,7 @@ function historyEvent(rows: unknown[], input: {
   const reviews = rows.map(row => identityReviewRowSchema.parse(row));
   const target = reviews[0];
   if (!target) throw new Error('review_history_record_missing');
+  requireReviewInstant(input.updatedAt, input.opId);
   return input.history.mode === 'undo'
     ? [input.opId, input.opId, input.hostName, input.nodeId, 0, '', input.updatedAt, 'void', target.op_id]
     : [input.opId, input.opId, input.hostName, input.nodeId, target.grade,
