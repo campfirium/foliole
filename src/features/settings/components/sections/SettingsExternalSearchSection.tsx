@@ -11,8 +11,8 @@ import {
   SettingsStateAction
 } from '../../../../shared/ui';
 
-import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
 import { SettingsExternalFoldersEnabledSwitch } from './SettingsExternalFoldersEnabledSwitch';
+import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
 import { SettingsRemoteExternalFolderRows } from './SettingsRemoteExternalFolderRows';
 
 interface SettingsExternalSearchSectionProps {

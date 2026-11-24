@@ -1,6 +1,6 @@
+import { IMPORT_RUN_SCHEMA } from './importRunSchema.js';
 import { WATCHED_HISTORY_PATH_INDEX } from './watchedHistoryPathIndex.js';
 
-import { IMPORT_RUN_SCHEMA } from './importRunSchema.js';
 
 export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS mirror_articles (

@@ -44,12 +44,13 @@ it.each(['desktop', 'companion'])('adds the fingerprint index when upgrading a %
     sqlite.exec(`DROP INDEX ${NODE_IMPORT_FINGERPRINT_INDEX_NAME}`);
     expect(queryPlan(sqlite)).toMatch(/SCAN nodes/);
     if (host === 'desktop') {
-      sqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION - 1}`);
+      sqlite.pragma('user_version = 196');
       initializeDatabaseSchema(sqlite);
       expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
     } else {
-      sqlite.pragma(`user_version = ${COMPANION_DATABASE_VERSION - 1}`);
-      await db.transaction(tx => migrateCompanionDatabase(tx, COMPANION_DATABASE_VERSION - 1, COMPANION_DATABASE_VERSION));
+      const beforeFingerprintIndex = 123;
+      sqlite.pragma(`user_version = ${beforeFingerprintIndex}`);
+      await db.transaction(tx => migrateCompanionDatabase(tx, beforeFingerprintIndex, COMPANION_DATABASE_VERSION));
       expect(sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
     }
     expect(hasIndex(sqlite)).toBe(true);

@@ -25,6 +25,7 @@ const bootstrapRequest = { now: due, expectedHostName: 'host', allowCreate: true
 
 function seedHistory(sqlite: DatabaseSync, version: number, reviewedAt: string) {
   sqlite.exec(`DROP TRIGGER daily_flow_node_review_update;
+    DROP INDEX idx_review_log_calendar_legacy;
     ALTER TABLE node_review DROP COLUMN stability_fast;
     PRAGMA user_version = ${version};
     INSERT INTO nodes (id, kind, title, created_at, updated_at)
@@ -91,6 +92,8 @@ it.each(hosts)('keeps the original review facts and due dates when %s upgrades v
     await open(false);
     expect(readSchemaVersion(sqlite)).toBe(target);
     expect(readFacts(sqlite)).toEqual(facts);
+    expect(sqlite.prepare("SELECT name FROM sqlite_schema WHERE name = 'idx_review_log_calendar_legacy'")
+      .get()?.name).toBe('idx_review_log_calendar_legacy');
     expect(readCards(sqlite)).toEqual([
       expect.objectContaining({ node_id: 'a-valid-card', due, reps: 1, stability_fast: expect.any(Number) }),
       expect.objectContaining({ node_id: 'z-legacy-card', due, reps: 1, stability_fast: expect.any(Number) })

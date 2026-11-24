@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeSplitTopicOptions, NativeSplitTopicPreview, NativeSplitTopicSourceChanged } from '../../../lib/platform/nativeNodeMutationContract';
+import type { NativeSplitTopicMutationArgs, NativeSplitTopicOptions, NativeSplitTopicPreview, NativeSplitTopicSourceChanged } from '../../../lib/platform/nativeNodeMutationContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
@@ -181,18 +181,20 @@ export async function saveSplitTopicWorkspaceMutation(
     return null;
   }
   try {
-    const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, {
+    const source = {
       activeNodeId: args.activeNodeId,
       expectedSourceRevision: args.expectedSourceRevision,
-      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt, splitOptions: args.splitOptions } : {}),
-      disposition: args.disposition,
       generatedNodes: args.generatedNodes.map((node) =>
         createWorkspaceRuntimeNodeSnapshot(node, args.nodeOrder.indexOf(node.id))
       ),
       nodeOrder: args.nodeOrder,
       sourceNodeId: args.sourceNodeId,
       sourceParentNodeId: args.sourceParentNodeId
-    });
+    };
+    const payload: NativeSplitTopicMutationArgs = args.disposition === 'replace'
+      ? { ...source, disposition: 'replace', deletedAt: args.deletedAt, splitOptions: args.splitOptions }
+      : { ...source, disposition: 'keep-as-parent' };
+    const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, payload);
     if (result && 'status' in result && result.status === 'source-changed') return result;
     return isNodeMutationPatchResult(result) ? result : null;
   } catch (error) {

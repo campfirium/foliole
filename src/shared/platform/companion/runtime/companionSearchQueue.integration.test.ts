@@ -47,9 +47,11 @@ it('allows a write to commit while all search categories keep the same SQLite sn
   const library = companionNodeSqliteLibrary();
   try {
     const owner = await library.open();
+    const pdfHash = 'a'.repeat(64);
     await owner.runWriter(async db => {
-      await db.run("INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('old','Alpha','alpha','now','now')");
-      await db.run("INSERT INTO pdf_page_text (attachment_id,page,text) VALUES ('pdf',1,'alpha')");
+      await db.run("INSERT INTO nodes (id,title,content,created_at,updated_at,resource_references) VALUES ('old','Alpha','alpha','now','now',?)",
+        [JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'Alpha.pdf' }])]);
+      await db.run("INSERT INTO pdf_page_text (attachment_id,page,text) VALUES (?,1,'alpha')", [pdfHash]);
     }, { kind: 'business' });
     const paused = pauseAfterFirstSearchQuery(owner);
     const search = loadCompanionSearchSnapshot('alpha');

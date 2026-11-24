@@ -72,13 +72,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
         : await submitPreparedAction(args, { token, action, grade, releaseSequentialReading }, pending,
           () => latest.current.active, setReadingError, timing));
     } catch (error) {
-      if (isDailyFlowNoOtherTopics(error)) {
-        status = 'cancelled';
-        setReadingError(translate(getStoredAppLocale(), 'shared.flow.soonNoOtherTopics'));
-      } else {
-        const message = error instanceof Error ? error.message : 'Could not complete this action.';
-        (action === 'grade' ? setReviewError : setReadingError)(message);
-      }
+      status = presentFlowActionError(error, action, setReadingError, setReviewError);
     } finally {
       timing?.('action', status);
       args.flow.releaseAction();
@@ -99,6 +93,17 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     isSubmittingGrade: busy, isSubmittingReadingAction: busy,
     readingError, reviewError, setReadingError, setReviewError
   };
+}
+
+function presentFlowActionError(error: unknown, action: FlowAction, setReadingError: (message: string) => void,
+  setReviewError: (message: string) => void): FlowTimingStatus {
+  if (isDailyFlowNoOtherTopics(error)) {
+    setReadingError(translate(getStoredAppLocale(), 'shared.flow.soonNoOtherTopics'));
+    return 'cancelled';
+  }
+  const message = error instanceof Error ? error.message : 'Could not complete this action.';
+  (action === 'grade' ? setReviewError : setReadingError)(message);
+  return 'failed';
 }
 
 async function submitPreparedAction(args: CompanionSurfaceActionArgs,

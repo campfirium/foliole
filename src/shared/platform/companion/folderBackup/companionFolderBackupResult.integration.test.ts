@@ -7,7 +7,6 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
 import { COMPANION_FOLDER_ATTACHMENT_COPY_BATCH, type CompanionFolderBackupPort,
   type CompanionFolderBackupState } from '../../../../../lib/platform/companionFolderBackupContract';
-
 import { flushCompanionForegroundTime, startCompanionForegroundTime, stopCompanionForegroundTime } from '../runtime/companionForegroundTime';
 
 import { automaticFolderBackupFixture, closeAutomaticBackupFixtures, setCompanionAutomaticFolderBackup } from './companionAutomaticFolderBackup.testSupport';

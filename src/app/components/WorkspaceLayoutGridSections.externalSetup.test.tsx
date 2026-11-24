@@ -96,17 +96,14 @@ it('opens the simplified external folder setup dialog from the Connect folder ro
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
 });
 
-it('restores saved sidebar visibility and applies settings changes to the open workspace', () => {
-  const onOpenExternalLibrarySettings = vi.fn();
+function externalVisibilityWorkspace(onOpenExternalLibrarySettings: () => void) {
   const nodesById: Record<string, Node> = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' })
   };
   const listNodesById = Object.fromEntries(
     Object.entries(nodesById).map(([nodeId, node]) => [nodeId, toWorkspaceListNode(node)])
   );
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
-
-  const workspace = (
+  return (
     <WorkspaceListArea
       activeNodeId={INBOX_NODE_ID}
       activeVirtualNodeId={null}
@@ -150,8 +147,10 @@ it('restores saved sidebar visibility and applies settings changes to the open w
       trashedNodeIds={[]}
     />
   );
+}
 
-  const settings = (
+function externalVisibilitySettings() {
+  return (
     <SettingsExternalSearchSection
       error={null}
       feedback={null}
@@ -170,6 +169,13 @@ it('restores saved sidebar visibility and applies settings changes to the open w
       onUpdateFolder={vi.fn()}
     />
   );
+}
+
+it('restores saved sidebar visibility and applies settings changes to the open workspace', () => {
+  const onOpenExternalLibrarySettings = vi.fn();
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
+  const workspace = externalVisibilityWorkspace(onOpenExternalLibrarySettings);
+  const settings = externalVisibilitySettings();
   const view = renderWithLocalization(<>{workspace}{settings}</>);
   const storageKey = APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled;
 

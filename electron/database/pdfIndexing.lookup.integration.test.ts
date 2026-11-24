@@ -10,8 +10,8 @@ import { persistNodeResourceReference } from './nodeResources.js';
 import { searchCurrentPdfDocument } from './pdfDocumentSearch.js';
 import { enqueuePdfAttachmentIndexing } from './pdfIndexing.js';
 import { pdfId, seedPdfTopic, status, tasks } from './pdfIndexingTestSupport.js';
-import { findLoopFullScans } from './sqlScanPlan.testSupport.js';
 import { installSqlScaleProbe } from './sqlScaleProbe.testSupport.js';
+import { findLoopFullScans } from './sqlScanPlan.testSupport.js';
 
 it('indexes both owners of a PDF without scanning the library for its references', async () => {
   seedPdfTopic('shared-topic', false);

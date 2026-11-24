@@ -1,6 +1,6 @@
-import type { SoonReviewActionResult } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow/dailyFlowSession';
+import type { SoonReviewActionResult } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { EditorOperationHistoryInput, EditorOperationHistoryState, EditorTextEditOperationEntry, EditorTextHistoryReplayResult } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';

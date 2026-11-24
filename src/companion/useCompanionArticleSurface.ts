@@ -121,13 +121,12 @@ export function useCompanionArticleSurface(
     () => hydrateCompanionReviewSession(flow.view, currentArticle),
     [flow.view, currentArticle]
   );
-  const handleViewScroll = useCompanionViewStateSync({
+  const handleViewScroll = useCompanionArticleScroll(readingActivity, {
     activeAction: articleAction,
     readableArticleNodeId: browseState.readableArticle?.nodeId ?? null,
     reviewNodeId: effectiveReviewSession.currentCard?.nodeId ?? null,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId
   });
-  useReadingPositionFlush(readingActivity, handleViewScroll);
   const interactionState = useCompanionInteractionState(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
@@ -165,6 +164,12 @@ export function useCompanionArticleSurface(
     handleViewScroll,
     ...interactionState
   };
+}
+
+function useCompanionArticleScroll(activity: CompanionReadingActivity, input: Parameters<typeof useCompanionViewStateSync>[0]) {
+  const handleViewScroll = useCompanionViewStateSync(input);
+  useReadingPositionFlush(activity, handleViewScroll);
+  return handleViewScroll;
 }
 
 function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,

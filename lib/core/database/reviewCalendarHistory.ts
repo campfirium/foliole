@@ -12,7 +12,7 @@ type TopicRow = { day_key: string; count: number };
 const LEGACY_DATE = legacyReviewCalendarDateSql('r.reviewed_at');
 const ITEM_REVIEW_SQL = `SELECT r.node_id, r.reviewed_at FROM review_log r JOIN nodes n ON n.id = r.node_id
   WHERE n.kind = 'item' AND ${EFFECTIVE_REVIEW_PREDICATE}`;
-const ITEMS_SQL = `${ITEM_REVIEW_SQL} AND r.reviewed_at >= ? AND r.reviewed_at < ? AND NOT ${LEGACY_DATE}
+const ITEMS_SQL = `${ITEM_REVIEW_SQL} AND r.reviewed_at >= ? AND r.reviewed_at < ? AND NOT (${LEGACY_DATE})
   UNION ALL ${ITEM_REVIEW_SQL} AND ${LEGACY_DATE}`;
 const TOPICS_SQL = 'SELECT day_key, count FROM topic_daily_counts WHERE day_key >= ? AND day_key < ?';
 const COVERAGE_SQL = 'SELECT started_at FROM topic_daily_count_coverage WHERE id = 1';
@@ -24,8 +24,8 @@ function historyRanges(args: NativeReviewCalendarHistoryArgs, hour: number) {
   const to = new Date(args.to);
   const duration = to.getTime() - from.getTime();
   if (!Number.isFinite(duration) || duration <= 0 || duration > 370 * DAY_MS) throw new Error('Invalid calendar range');
-  // Offset timestamps and ISO midnight may cross UTC date boundaries.
-  const dateBefore = isoDateBound(from.getTime() - 2 * DAY_MS);
+  // Legacy February dates can roll over by three days. Midnight and offsets can add two more.
+  const dateBefore = isoDateBound(from.getTime() - 5 * DAY_MS);
   const dateAfter = isoDateBound(to.getTime() + 2 * DAY_MS);
   return {
     items: [dateBefore, dateAfter],

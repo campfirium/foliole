@@ -53,11 +53,7 @@ export function createReadwiseRequest(
       }
       dependencies.signal?.throwIfAborted();
       if (response.status === 401 || response.status === 403) {
-        await runWithDatabaseConnectionOwner(() => {
-          assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
-          const settings = loadStoredReadwiseHostSettings();
-          if (settings.apiConnection.state === 'connected') saveReconnectRequired(settings);
-        });
+        await markRejectedReadwiseCredentials(dependencies, connectionRef);
         throw new Error('readwise_api_reconnect_required');
       }
       if (response.status === 429 && retry < maxRetries) {
@@ -77,6 +73,14 @@ export function createReadwiseRequest(
     }
     throw new Error('readwise_api_request_retry_exhausted');
   };
+}
+
+function markRejectedReadwiseCredentials(dependencies: ReadwiseApiFetchDependencies, connectionRef?: string) {
+  return runWithDatabaseConnectionOwner(() => {
+    assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+    const settings = loadStoredReadwiseHostSettings();
+    if (settings.apiConnection.state === 'connected') saveReconnectRequired(settings);
+  });
 }
 
 export function assertReadwiseApiEligible(

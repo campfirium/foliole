@@ -2,7 +2,6 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { TextBodyTooLargeError } from '../../lib/core/nodes/textBodyBudget';
-
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';

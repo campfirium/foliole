@@ -7,6 +7,7 @@ import type { DatabaseMigrationTarget } from './migrationTypes.js';
 export function desktopMigrationTarget(sqlite: DatabaseSync): DatabaseMigrationTarget {
   return {
     exec: sql => sqlite.exec(sql),
+    function: sqlite.function.bind(sqlite),
     pragma: (command, options) => {
       const sql = `PRAGMA ${command}`;
       if (!options?.simple) return sqlite.exec(sql);

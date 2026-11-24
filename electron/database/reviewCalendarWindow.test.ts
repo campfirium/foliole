@@ -42,6 +42,7 @@ it('counts old spellings in the same half-open window as replayed reviews', () =
       ['month-name', '2 Mar 2049 12:00:00Z'],
       ['rounded-fraction', '2049-03-02t12:00:00.123999z'],
       ['outside-window', '2049-03-02T12:00:00.124Z'],
+      ['legacy-rollover', '2049-02-31T24:00:00-23:59'],
     ] as const;
     for (const [id, time] of reviews) {
       driver.execute(`INSERT INTO nodes (id, title, kind, content, created_at, updated_at)
@@ -52,5 +53,9 @@ it('counts old spellings in the same half-open window as replayed reviews', () =
       from: '2049-03-02T12:00:00.000Z', to: '2049-03-02T12:00:00.124Z'
     }, 0);
     expect(history.days).toEqual([expect.objectContaining({ day: '2049-03-02', items: 4 })]);
+    const late = readReviewCalendarHistory(driver, {
+      from: '2049-03-04T23:59:00Z', to: '2049-03-05T00:00:00Z'
+    }, 0);
+    expect(late.days).toEqual([expect.objectContaining({ day: '2049-03-04', items: 1 })]);
   } finally { sqlite.close(); }
 });

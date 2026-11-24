@@ -63,8 +63,7 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy,
     if (!address || typeof address === 'string') throw new Error('webdav_test_address_missing');
     const url = new URL(`http://127.0.0.1:${address.port}${dav.sandboxPath}${crypto.randomUUID()}/`);
     const transport = testTransport();
-    const { request } = transport;
-    await request(url, { method: 'MKCOL' }, webDavRelayStatus);
+    await transport.request(url, { method: 'MKCOL' }, webDavRelayStatus);
     const [mac, phone] = peers;
     const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: mac.peer.id,
       phone_device_id: phone.peer.id, directory_url: url.href, attachment_policy: attachmentPolicy };
@@ -76,7 +75,7 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy,
     }
     const scope = (peer: RestorePeer) => peer.host.readSnapshot(db => readWebDavRelayBodyScope(db, binding, peer.id));
     const lanSide = ({ peer, attachments }: typeof peers[number], cleanup: boolean) => ({
-      attachments, ...(cleanup ? { cleanup: { host: peer.host, files: peer.host.files, request, attachments,
+      attachments, ...(cleanup ? { cleanup: { host: peer.host, files: peer.host.files, request: transport.request, attachments,
         loadScope: (db: RestorePeer['db']) => readWebDavRelayBodyScope(db, binding, peer.id) } } : {})
     });
     const lan = (cleanup = true, beforeFinish?: () => Promise<void>, initiator: 0 | 1 = 0) => {
@@ -99,7 +98,7 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy,
           ...(options?.requestSend ? { requestSend: options.requestSend } : {}),
           ...(options?.foregroundReceive ? { foregroundReceive: true } : {}),
           ...(options?.continueAttachmentBatches ? { continueAttachmentBatches: true } : {}),
-          request: alter ? alterAttachmentDownload(request, alter) : request, lanConnected: () => false,
+          request: alter ? alterAttachmentDownload(transport.request, alter) : transport.request, lanConnected: () => false,
           assertScope: async () => {
             const active = await scope(peer);
             if (active?.key !== current.key || active.outgoing.href !== current.outgoing.href) throw new Error('webdav_relay_scope_changed');

@@ -24,6 +24,20 @@ async function createFixtureRoot() {
   return mkdtemp(path.resolve('.tmp/artifacts/T692/durable-work-'));
 }
 
+async function copyFolderAttachment(directory: string, target: string, storageKey: string) {
+  const file = path.join(target, storageKey), expected = storageKey.slice(0, 64);
+  const source = path.join(directory, storageKey);
+  if (attachmentDigest(await readFile(source)) !== expected) throw new Error('source checksum mismatch');
+  try {
+    if (attachmentDigest(await readFile(file)) !== expected) throw new Error('target changed externally');
+    return { copied: false };
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  await copyFile(source, `${file}.partial`);
+  if (attachmentDigest(await readFile(`${file}.partial`)) !== expected) throw new Error('copy checksum mismatch');
+  await rename(`${file}.partial`, file);
+  return { copied: true };
+}
+
 export async function folderAttachmentWorkFixture(native: {
   access: { mockImplementation(execute: (input: NativeCompanionFramedFileRequest) => Promise<unknown>): unknown };
 }, createPort: (sqlite: Database.Database) => DbPort) {
@@ -45,19 +59,7 @@ export async function folderAttachmentWorkFixture(native: {
   let receiver = await makeReceiver();
   const inventory = vi.fn(async () => ({ files: (await readdir(directory))
     .filter(key => /^[a-f0-9]{64}\.png$/.test(key)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));
-  const copy = async ({ storageKey }: { storageKey: string }) => {
-    const file = path.join(target, storageKey), expected = storageKey.slice(0, 64);
-    const source = path.join(directory, storageKey);
-    if (attachmentDigest(await readFile(source)) !== expected) throw new Error('source checksum mismatch');
-    try {
-      if (attachmentDigest(await readFile(file)) !== expected) throw new Error('target changed externally');
-      return { copied: false };
-    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    await copyFile(source, `${file}.partial`);
-    if (attachmentDigest(await readFile(`${file}.partial`)) !== expected) throw new Error('copy checksum mismatch');
-    await rename(`${file}.partial`, file);
-    return { copied: true };
-  };
+  const copy = ({ storageKey }: { storageKey: string }) => copyFolderAttachment(directory, target, storageKey);
   // Tests steer single files through copyAttachment; the batch contract replays it per key.
   const copyAttachment = vi.fn(copy), batch = folderAttachmentCopyPort(input => copyAttachment(input));
   const prepareAttachmentDirectory = vi.fn(async ({ create = true }: { create?: boolean } = {}) => {

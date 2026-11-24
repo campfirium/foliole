@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { registerStoredImportLocatorKey } from '../../lib/core/database/storedImportLocatorSchema.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -10,6 +11,7 @@ import type { SqliteDatabase } from './connection.js';
 /** Runs desktop SQL against real SQLite in ordinary Node, without loading the Electron ABI. */
 export function openNodeSqliteFixture() {
   const database = new DatabaseSync(':memory:');
+  registerStoredImportLocatorKey(database);
   database.exec("ATTACH DATABASE ':memory:' AS search");
   for (const sql of DESKTOP_FRESH_SCHEMA_STATEMENTS) database.exec(sql);
   database.exec(`INSERT INTO settings (key, value, updated_at)
