@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.2",
+  "version": "0.8.3",
   "publicationMode": "scoped",
   "selectedPlatforms": [
     "macos",
@@ -10,14 +10,14 @@
     "ios"
   ],
   "scopeBasis": {
-    "macos": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
-    "windows": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
-    "linux": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
-    "android": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
-    "ios": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers."
+    "macos": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
+    "windows": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
+    "linux": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
+    "android": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
+    "ios": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize."
   },
   "syncCompatibility": {
     "mode": "coordinated",
-    "basis": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers."
+    "basis": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize."
   }
 }
