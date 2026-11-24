@@ -17,6 +17,8 @@ const MAX_COMMAND_NAME_LENGTH = 80;
 const SLOW_REPEAT_WINDOW_MS = 60_000;
 const MAX_TRACKED_SLOW_COMMANDS = 200;
 
+/** Optional wait phases of one command, in ms; absent when the command did not pass that stage. */
+export type NativeCommandWaits = { connectionMs?: number; databaseReadyMs?: number };
 export type NativeCommandStat = { calls: number; failures: number; totalMs: number; maxMs: number };
 type HourBucket = { hourStart: number; commands: Map<string, NativeCommandStat>; reported: boolean };
 export type NativeCommandLoadHour = { hourStart: string; calls: number; totalMs: number;
@@ -43,7 +45,7 @@ function currentBucket(now: number) {
 
 /** Called once per native command when its result or error is ready. Never throws and never awaits the log. */
 export function recordNativeCommandTiming(command: string, durationMs: number, status: 'done' | 'failed',
-  now = Date.now()) {
+  now = Date.now(), waits: NativeCommandWaits = {}) {
   const name = commandName(command);
   const ms = Math.max(0, Math.round(durationMs));
   const bucket = currentBucket(now);
@@ -59,7 +61,9 @@ export function recordNativeCommandTiming(command: string, durationMs: number, s
   stat.maxMs = Math.max(stat.maxMs, ms);
   if (ms >= NATIVE_COMMAND_SLOW_MS && shouldLogSlow(name, now)) {
     void appendDiagnosticLog({ event: 'native_command_slow', level: 'info', occurred_at: new Date(now).toISOString(),
-      payload: { command: name, durationMs: ms, status }, source: 'electron.main' }).catch(() => undefined);
+      payload: { command: name, durationMs: ms, status,
+        ...(waits.databaseReadyMs === undefined ? {} : { databaseReadyMs: Math.round(waits.databaseReadyMs) }),
+        ...(waits.connectionMs === undefined ? {} : { connectionWaitMs: Math.round(waits.connectionMs) }) }, source: 'electron.main' }).catch(() => undefined);
   }
 }
 

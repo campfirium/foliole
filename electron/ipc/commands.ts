@@ -5,7 +5,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import { recordNativeCommandFailure } from '../diagnostics/nativeCommandFailureLog.js';
-import { recordNativeCommandTiming } from '../diagnostics/nativeCommandLoad.js';
+import { recordNativeCommandTiming, type NativeCommandWaits } from '../diagnostics/nativeCommandLoad.js';
 
 import { handleAssistantCommand } from './assistantCommands.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
@@ -40,18 +40,23 @@ function resolveTargetWindow(context?: InvokeContext) {
 
 export async function handleInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
   const startedAt = performance.now();
+  const waits: NativeCommandWaits = {};
   try {
-    const result = await dispatchInvokeRequest(request, context);
-    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'done');
+    const result = await dispatchInvokeRequest(request, context, waits);
+    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'done', Date.now(), waits);
     return result;
   } catch (error) {
-    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'failed');
+    recordNativeCommandTiming(String(request.command), performance.now() - startedAt, 'failed', Date.now(), waits);
     await recordNativeCommandFailure(String(request.command), error);
     throw error;
   }
 }
 
-async function dispatchInvokeRequest(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+async function dispatchInvokeRequest(
+  request: InvokeRequest,
+  context: InvokeContext | undefined,
+  waits: NativeCommandWaits
+): Promise<unknown> {
   const command = request.command;
   const args = (request.args ?? {}) as Record<string, unknown>;
   recordIpcPayloadBudget({
@@ -65,10 +70,12 @@ async function dispatchInvokeRequest(request: InvokeRequest, context?: InvokeCon
     throwUnsupportedCommand(command);
   }
   if (shouldWaitForDatabaseReady(command, route)) {
+    const readyStartedAt = performance.now();
     await waitForDatabaseReady();
+    waits.databaseReadyMs = performance.now() - readyStartedAt;
   }
 
-  const result = await dispatchRoutedCommand(route, request, args, context);
+  const result = await dispatchRoutedCommand(route, request, args, context, waits);
   if (result !== undefined) {
     recordIpcPayloadBudget({
       budgetBytes: IPC_RESPONSE_PAYLOAD_WARNING_BYTES,
@@ -99,7 +106,8 @@ function dispatchRoutedCommand(
   route: CommandRouteFamily,
   request: InvokeRequest,
   args: Record<string, unknown>,
-  context?: InvokeContext
+  context: InvokeContext | undefined,
+  waits: NativeCommandWaits
 ) {
   if (route === 'import') {
     return handleImportCommand(request, context);
@@ -114,9 +122,12 @@ function dispatchRoutedCommand(
     if (isForegroundNodeMutationCommand(request.command)) {
       return runDesktopDatabaseWrite('foreground', execute);
     }
-    return shouldCoordinateStorageDispatch(request.command, args)
-      ? runWithDatabaseConnectionOwner(execute)
-      : execute();
+    if (!shouldCoordinateStorageDispatch(request.command, args)) return execute();
+    const queuedAt = performance.now();
+    return runWithDatabaseConnectionOwner(() => {
+      waits.connectionMs = performance.now() - queuedAt;
+      return execute();
+    });
   }
   if (route === 'windowAndUtility') {
     return handleReminderNotificationCommand(request.command) ?? handleWindowAndUtilityCommand(request, context);
