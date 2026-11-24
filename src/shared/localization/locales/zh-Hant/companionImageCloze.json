@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "調整圖片位置",
   "companion.imageCloze.add": "新增遮罩",
   "companion.imageCloze.deleteFailed": "無法完成刪除檢測項，請重試。",
-  "companion.imageCloze.remove": "刪除選取的遮罩"
+  "companion.imageCloze.remove": "刪除選取的遮罩",
+  "companion.imageCloze.mode": "圖片工具",
+  "companion.imageCloze.modeCloze": "挖空",
+  "companion.imageCloze.modeFocus": "聚焦",
+  "companion.imageCloze.modeCrop": "裁切",
+  "companion.imageCloze.focusTitle": "圖片聚焦",
+  "companion.imageCloze.cropTitle": "裁切圖片",
+  "companion.imageCloze.focusHelp": "在圖片上拖出聚焦區域，區域外會變暗；拖動框或四角可調整。",
+  "companion.imageCloze.cropHelp": "在圖片上拖出要顯示的區域，原圖會保留；拖動框或四角可調整。",
+  "companion.imageCloze.focusRegion": "聚焦區域",
+  "companion.imageCloze.cropRegion": "裁切區域",
+  "companion.imageCloze.removeFocus": "移除聚焦",
+  "companion.imageCloze.removeCrop": "移除裁切",
+  "companion.imageCloze.savingRect": "正在儲存…",
+  "companion.imageCloze.rectFailed": "未能儲存，修改仍會保留。請重試；若文章已變更，請取消後重新開啟圖片。"
 }
