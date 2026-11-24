@@ -160,7 +160,10 @@ it('resumes a legacy repair packet and the peer uses it to recover a missing fil
     const scope = (await fixture.scope(target.peer))!;
     const targetRequests = () => fixture.repairUploads.filter(upload => upload.startsWith(scope.outgoing.href));
     expect(targetRequests()).toHaveLength(1);
-    await preserveLegacyOutboxName(target.peer, `${scope.key}:repair-outbox`);
+    const outboxKey = `${scope.key}:repair-outbox`;
+    await preserveLegacyOutboxName(target.peer, outboxKey);
+    await target.peer.db.run("UPDATE sync_group_metadata SET value = json_set(value, '$.policy', ?) WHERE key = ?",
+      [JSON.stringify(scope.attachmentPolicy), outboxKey]);
     await movePublishedToLegacyName(fixture.request, targetRequests()[0]!);
     await target.reopen();
     await fixture.sync(target);

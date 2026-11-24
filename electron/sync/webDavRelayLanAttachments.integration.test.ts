@@ -6,9 +6,11 @@ import { expect, it } from 'vitest';
 
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readWebDavRelayRepair } from '../../lib/core/sync/webDavRelayRepairWire.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { edit, relayFixture, storageKey } from './webDavRelayAttachmentFixture.testSupport.js';
+import { webDavTestGroupKey } from './webDavRelayLan.testSupport.js';
 
 it('delivers an old image after the initial LAN database round left its transfer pending', async () => {
   const fixture = await relayFixture({ mode: 'unlimited' }, { unavailableBaselineAttachment: true });
@@ -58,7 +60,7 @@ it('delivers a newly referenced old file despite the completed LAN attachment ro
   } finally { await fixture.close(); }
 });
 
-it('honors repair demand for an older attachment previously marked done by the time heuristic', async () => {
+it.each([false, true])('repairs an attachment marked done by the old heuristic with a prior request=%s', async requested => {
   const fixture = await relayFixture({ mode: 'unlimited' }, { unavailableBaselineAttachment: true });
   try {
     const [source, target] = fixture.peers;
@@ -70,6 +72,14 @@ it('honors repair demand for an older attachment previously marked done by the t
     await expect(stat(path.join(target.assets, fixture.old))).rejects.toMatchObject({ code: 'ENOENT' });
     await fixture.sync(target);
     expect(fixture.repairUploads).toHaveLength(1);
+    if (requested) {
+      await preserveOldRepairState(fixture);
+      await target.reopen();
+      await fixture.sync(target);
+      expect(fixture.repairUploads).toHaveLength(2);
+      await fixture.sync(target);
+      expect(fixture.repairUploads).toHaveLength(2);
+    }
 
     await source.reopen();
     await fixture.sync(source);
@@ -79,3 +89,20 @@ it('honors repair demand for an older attachment previously marked done by the t
     expect(fixture.uploads).toHaveLength(1);
   } finally { await fixture.close(); }
 });
+
+async function preserveOldRepairState(fixture: Awaited<ReturnType<typeof relayFixture>>) {
+  const [source, target] = fixture.peers;
+  const sourceScope = (await fixture.scope(source.peer))!;
+  const targetScope = (await fixture.scope(target.peer))!;
+  const packet = new URL(fixture.repairUploads[0]!.replace(/\.partial$/u, ''));
+  const id = (await fixture.request(packet, { method: 'GET' }, (_status, body) =>
+    readWebDavRelayRepair({ scope: sourceScope, groupKey: webDavTestGroupKey }, body))).id;
+  const name = path.posix.basename(packet.pathname);
+  // The old sender confirmed the repair packet but erroneously kept the attachment marked done.
+  await source.peer.db.run(`INSERT INTO sync_group_metadata (key, value, updated_at)
+    VALUES (?, 'true', ?), (?, 'true', ?)`,
+  [`${sourceScope.key}:applied:${name}`, new Date().toISOString(),
+    `${sourceScope.key}:repair-received:${id}`, new Date().toISOString()]);
+  await target.peer.db.run("UPDATE sync_group_metadata SET value = json_set(value, '$.policy', ?) WHERE key = ?",
+    [JSON.stringify(targetScope.attachmentPolicy), `${targetScope.key}:repair-outbox`]);
+}

@@ -42,6 +42,10 @@ function directory(scope: WebDavRelayBodyScope) {
   return `${path.slice(0, -64)}${source}`;
 }
 
+function repairPolicy(scope: WebDavRelayBodyScope) {
+  return JSON.stringify([scope.attachmentPolicy, 'verified-lan-receipts']);
+}
+
 async function read(db: DbPort, scope: WebDavRelayBodyScope): Promise<State> {
   const [row] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?', [key(scope)]);
   return row ? stateSchema.parse(JSON.parse(row.value)) : { sent: [], demand: [], policy: '', replace: false, more: false };
@@ -66,7 +70,7 @@ export async function rearmWebDavRelayRepair(db: DbPort, scope: WebDavRelayBodyS
 export async function refreshWebDavRelayRepair(input: Input) {
   const { host, scope, signal } = input;
   const state = await host.readSnapshot(db => read(db, scope), signal);
-  const policy = JSON.stringify(scope.attachmentPolicy);
+  const policy = repairPolicy(scope);
   if (scope.attachmentPolicy.mode === 'off') {
     if (state.demand.length || state.sent.length || state.more) {
       await host.write(db => write(db, scope, { sent: [], demand: [], policy, replace: false, more: false }));
@@ -75,7 +79,11 @@ export async function refreshWebDavRelayRepair(input: Input) {
     return;
   }
   if (input.lanConnected()) return;
-  const sent = state.policy !== policy ? [] : state.sent;
+  // Old requests could be acknowledged without delivering an older file. Recheck their live demand.
+  // A staged request still uses its original suppression set until its publication settles.
+  const stagedLegacy = Boolean(state.packet) && state.policy === JSON.stringify(scope.attachmentPolicy);
+  const activePolicy = stagedLegacy ? state.policy : policy;
+  const sent = state.policy === activePolicy ? state.sent : [];
   const { demand, more } = await collectDemand(input, sent);
   const retained = await host.readSnapshot(async db => {
     const rows = await db.query<{ hash: string }>(`SELECT wanted.value AS hash FROM json_each(?) wanted
@@ -87,7 +95,7 @@ export async function refreshWebDavRelayRepair(input: Input) {
   const sameDemand = JSON.stringify(demand) === JSON.stringify(state.demand);
   const replace = state.replace && (demand.length > 0 || more);
   const packet = sameDemand && replace === state.replace ? state.packet : undefined;
-  const next = { sent: retained.sort(), demand, ...(packet ? { packet } : {}), policy, replace, more };
+  const next = { sent: retained.sort(), demand, ...(packet ? { packet } : {}), policy: activePolicy, replace, more };
   if (JSON.stringify(next) !== JSON.stringify(state)) await host.write(db => write(db, scope, next));
   if (state.packet && !packet) await input.files.remove(directory(scope));
 }
@@ -140,8 +148,10 @@ export async function publishWebDavRelayRepair(input: Input) {
   if (input.lanConnected()) return false;
   await publishWebDavRelayFile(request, new URL(packet.name, scope.outgoing), webDavRelayPacketBytes(files, scope, packet, slot));
   await input.assertScope();
-  await host.write(db => write(db, scope, { sent: [...new Set([...state.sent, ...state.demand.map(([hash]) => hash)])],
-    demand: [], policy: state.policy, replace: state.replace && state.more, more: state.more }));
+  const policy = repairPolicy(scope);
+  const sent = state.policy === policy ? state.sent : [];
+  await host.write(db => write(db, scope, { sent: [...new Set([...sent, ...state.demand.map(([hash]) => hash)])],
+    demand: [], policy, replace: state.replace && state.more, more: state.more }));
   await files.remove(slot);
   return true;
 }
