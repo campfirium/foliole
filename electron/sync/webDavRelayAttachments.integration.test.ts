@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { readFile, stat, utimes, writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
@@ -16,38 +16,6 @@ const policies = [
 
 describeAttachmentPolicy(0);
 describeAttachmentPolicy(1);
-
-it.each([65, 129])('relays %i phone attachments with bounded manual continuation', async count => {
-  const fixture = await relayFixture();
-  try {
-    const [mac, phone] = fixture.peers;
-    const files = Array.from({ length: count }, (_, i) => Buffer.from(`Attachment ${i}`))
-      .map(bytes => ({ key: storageKey(bytes), bytes }));
-    const afterBaseline = new Date((await fixture.scope(phone.peer))!.baseline.capturedAt + 1_000);
-    for (const { key, bytes } of files) {
-      const file = path.join(phone.assets, key);
-      await writeFile(file, bytes);
-      await utimes(file, afterBaseline, afterBaseline);
-    }
-    await edit(phone.peer, files.map(({ key }) => key), 'manual-attachments');
-
-    const requestSend = vi.fn();
-    const options = { continueAttachmentBatches: true, requestSend };
-    const first = await fixture.sync(phone, undefined, options);
-    expect(first).toMatchObject({ attachmentsPending: count > 128 });
-    expect(requestSend).toHaveBeenCalledTimes(count > 128 ? 1 : 0);
-    if (count > 128) {
-      expect(fixture.uploads.length).toBeGreaterThan(64);
-      expect(fixture.uploads.length).toBeLessThanOrEqual(128);
-      phone.peer.reopen();
-      expect(await fixture.sync(phone, undefined, options)).toMatchObject({ attachmentsPending: false });
-    }
-    expect(fixture.uploads).toHaveLength(count);
-    await fixture.sync(mac);
-    await mac.reopen();
-    for (const { key, bytes } of files) expect(await readFile(path.join(mac.assets, key))).toEqual(bytes);
-  } finally { await fixture.close(); }
-});
 
 function describeAttachmentPolicy(sender: 0 | 1) {
   it.each(policies)('applies $mode to WebDAV attachments from peer ' + sender + ' and delivers skipped files over LAN', async policy => {

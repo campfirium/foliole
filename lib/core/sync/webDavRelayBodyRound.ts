@@ -37,7 +37,7 @@ export function runWebDavRelayBodyRound(input: Input) {
     await input.assertScope();
     if (input.foregroundReceive && (input.lanConnected() || !await input.host.readSnapshot(
       db => isWebDavRelayReceiveDue(db, input.scope.receiveScope), input.signal))) {
-      return { ...input.progress, attachmentsPending: false };
+      return { ...input.progress, attachmentsPending: await readPendingAttachments(input) };
     }
     return withWebDavAuthenticationPause(input.host, input.authentication, input.request, input.signal,
       request => runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange({ ...input, request })));
@@ -57,7 +57,7 @@ async function exchange(input: Input) {
     if (repairQueued || await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) {
       input.requestSend?.();
     }
-    return { ...input.progress, attachmentsPending: false };
+    return { ...input.progress, attachmentsPending: await readPendingAttachments(input) };
   }
   let attachmentsPending: boolean;
   try { attachmentsPending = await publishPending(input, attachments); }
@@ -79,10 +79,15 @@ async function publishPending(input: Input, attachments: (Input & { attachments:
   if (attachments && !await resumeWebDavRelayAttachment(attachments)) return true;
   const slotFree = await publishChanges(input);
   if (!attachments) return false;
-  if (slotFree) await publishWebDavRelayAttachments(attachments, input.continueAttachmentBatches);
-  const pending = await input.host.readSnapshot(db => hasWebDavRelayAttachmentsToSend(db, input.scope), input.signal);
-  if (pending && !input.lanConnected() && input.progress.published > publishedBefore) input.requestSend?.();
+  const settled = slotFree && await publishWebDavRelayAttachments(attachments, input.continueAttachmentBatches);
+  const pending = await readPendingAttachments(input);
+  if (pending && !input.lanConnected() && (settled || input.progress.published > publishedBefore)) input.requestSend?.();
   return pending;
+}
+
+async function readPendingAttachments(input: Input) {
+  return Boolean(input.attachments && await input.host.readSnapshot(
+    db => hasWebDavRelayAttachmentsToSend(db, input.scope), input.signal));
 }
 
 async function publishChanges(input: Input) {

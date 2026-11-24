@@ -87,15 +87,16 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
           remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
       },
       async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform,
-        options?: { requestSend?(): void; continueAttachmentBatches?: boolean; observeRows?(rows: DbRow[]): void }) {
+        options?: { requestSend?(): void; continueAttachmentBatches?: boolean; foregroundReceive?: true;
+          observeRows?(rows: DbRow[]): void }) {
         const current = await scope(peer);
         if (!current) throw new Error('webdav_test_baseline_missing');
         const { host } = peer;
         const readSnapshot = options?.observeRows ? observeSnapshotRows(host, options.observeRows) : host.readSnapshot;
         return runWebDavRelayBodyRound({ host: { ...host, readSnapshot, enqueueSearchInvalidations: peer.desktop },
           files: peer.host.files, attachments, scope: current, groupKey: webDavTestGroupKey,
-          ...(options?.requestSend ? { requestSend: options.requestSend,
-            ...(!options.continueAttachmentBatches ? { foregroundReceive: true } : {}) } : {}),
+          ...(options?.requestSend ? { requestSend: options.requestSend } : {}),
+          ...(options?.foregroundReceive ? { foregroundReceive: true } : {}),
           ...(options?.continueAttachmentBatches ? { continueAttachmentBatches: true } : {}),
           request: alter ? alterAttachmentDownload(request, alter) : request, lanConnected: () => false,
           assertScope: async () => {
