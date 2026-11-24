@@ -4,6 +4,10 @@ import { importDemoMarkdown, useDemoRuntimeState, type DemoMarkdownRuntimeEntry 
 
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 
+export function requestDemoFolderImport() {
+  window.dispatchEvent(new CustomEvent(FILE_IMPORT_REQUEST_EVENT, { detail: 'folder' }));
+}
+
 export function useDemoMarkdownRailImport() {
   const demoState = useDemoRuntimeState();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +31,8 @@ export function useDemoMarkdownRailImport() {
     fileInputRef,
     importClipboardMarkdown,
     importMarkdownFiles,
-    isDemo: demoState.isDemo
+    isDemo: demoState.isDemo,
+    openFilePicker: () => openPicker(fileInputRef.current, false)
   };
 }
 
@@ -35,7 +40,9 @@ export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemo
   useEffect(() => {
     if (!controller.isDemo) return undefined;
     const handleClipboardRequest = () => void controller.importClipboardMarkdown();
-    const handleFileRequest = () => controller.fileInputRef.current?.click();
+    const handleFileRequest = (event: Event) => {
+      openPicker(controller.fileInputRef.current, event instanceof CustomEvent && event.detail === 'folder');
+    };
     window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
     window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
     return () => {
@@ -43,6 +50,12 @@ export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemo
       window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
     };
   }, [controller.fileInputRef, controller.importClipboardMarkdown, controller.isDemo]);
+}
+
+function openPicker(input: HTMLInputElement | null, folder: boolean) {
+  if (!input) return;
+  input.toggleAttribute('webkitdirectory', folder);
+  input.click();
 }
 
 async function readDemoMarkdownFiles(files: File[]): Promise<DemoMarkdownRuntimeEntry[]> {

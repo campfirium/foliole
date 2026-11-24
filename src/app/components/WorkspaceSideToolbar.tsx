@@ -74,7 +74,7 @@ function useWorkspaceRailToolbarState({
   function runRailCommand(commandId: string) {
     if (commandId === APP_COMMAND_IDS.importSingleFile) {
       if (demoImport.isDemo) {
-        demoImport.fileInputRef.current?.click();
+        demoImport.openFilePicker();
       } else {
         onStartImport();
       }
