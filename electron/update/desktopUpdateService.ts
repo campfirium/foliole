@@ -56,7 +56,7 @@ export class DesktopUpdateService {
     if (!this.options.isApplicable()) return this.setState(NOT_APPLICABLE_STATE);
     await this.ensureInitialized();
     const normalizedVersion = targetVersion.trim();
-    if (!normalizedVersion) return this.state;
+    if (!normalizedVersion || this.state.phase === 'restarting') return this.state;
     if (normalizedVersion === this.options.getCurrentVersion()) return this.clearTarget();
     if (!this.candidate.accepts(normalizedVersion)) return this.state;
     if (this.downloadPromise) return this.queueTargetAfterDownload(normalizedVersion);
@@ -70,8 +70,10 @@ export class DesktopUpdateService {
     return this.startDownload(this.candidate.operationId, this.candidate.version);
   }
 
-  async install() {
-    if (this.state.phase !== 'ready') return this.setInvalidState();
+  async install(targetVersion: string) {
+    if (this.state.phase !== 'ready' || this.state.version !== targetVersion || this.candidate.version !== targetVersion) {
+      return this.state;
+    }
     const readyState = this.state;
     this.setState({ ...readyState, errorCode: undefined, phase: 'restarting' });
     if (!(await this.options.prepareInstall())) {

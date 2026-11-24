@@ -7,6 +7,10 @@ export function nextNavigationGeneration() {
   return generation;
 }
 
+export function currentNavigationGeneration() {
+  return generation;
+}
+
 export function isNavigationGenerationCurrent(token: number) {
   return generation === token;
 }

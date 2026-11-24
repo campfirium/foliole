@@ -25,7 +25,10 @@ it('lists only the ancestors with capped labels, nearest last, each one clickabl
 it('collapses far levels that do not fit into a leading … that lists the full path', () => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(250);
   vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
-    return this.querySelectorAll('button').length * 100;
+    return this.querySelectorAll(':scope > button').length * 100;
+  });
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return DOMRect.fromRect({ width: this.tagName === 'BUTTON' || this.querySelector('button') ? 100 : 0 });
   });
   const items = buildReviewBreadcrumbItems(createBreadcrumbSnapshot(), 'item-1');
   const select = vi.fn();

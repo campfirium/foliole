@@ -7,8 +7,9 @@ import {
   subscribeDesktopUpdateState
 } from '../../shared/platform/desktopUpdate';
 import { ToolbarActionGroup } from '../../shared/ui';
+import { useDesktopUpdateSyncGate } from '../../shared/ui/useDesktopUpdateSyncGate';
 
-import { useWorkspaceUpdateSyncGate } from './useWorkspaceUpdateSyncGate';
+
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import './WorkspaceUpdateAction.css';
 
@@ -20,7 +21,7 @@ export function WorkspaceUpdateAction() {
   const t = useTranslation();
   const [state, setState] = useState(readDesktopUpdateState);
   const [nudgeSequence, setNudgeSequence] = useState(0);
-  const gate = useWorkspaceUpdateSyncGate(state.version, state.phase === 'ready');
+  const gate = useDesktopUpdateSyncGate(state.version, state.phase === 'ready');
 
   useEffect(() => subscribeDesktopUpdateState(() => setState(readDesktopUpdateState())), []);
   useEffect(() => {

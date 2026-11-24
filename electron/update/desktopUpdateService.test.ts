@@ -203,7 +203,7 @@ it('publishes progress and installs only after preparation succeeds', async () =
   harness.resolveDownload();
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready', version: '0.7.0' }));
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toMatchObject({ phase: 'ready' });
-  await harness.service.install();
+  await harness.service.install('0.7.0');
 
   expect(harness.sender.send).toHaveBeenCalledWith('foliole:desktop-update-state', expect.objectContaining({
     percent: 42.3,
@@ -226,7 +226,7 @@ it('blocks installation when application data cannot be flushed', async () => {
   harness.resolveDownload();
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
 
-  await expect(harness.service.install()).resolves.toEqual({
+  await expect(harness.service.install('0.7.0')).resolves.toEqual({
     errorCode: 'install-preparation-failed',
     percent: 100,
     phase: 'ready',
@@ -241,10 +241,23 @@ it('restores the ready action when Squirrel cannot begin the restart', async () 
   harness.resolveDownload();
   await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
 
-  await harness.service.install();
+  await harness.service.install('0.7.0');
   harness.listeners.get('error')?.(new Error('ShipIt unavailable') as never);
 
   expect(harness.service.getState()).toMatchObject({
     errorCode: 'install-failed', phase: 'ready', version: '0.7.0'
   });
+});
+
+it('leaves the current download ready when installation names a different candidate', async () => {
+  const harness = createHarness();
+  await harness.service.check('0.7.0', harness.sender as never);
+  harness.resolveDownload();
+  await vi.waitFor(() => expect(harness.service.getState()).toMatchObject({ phase: 'ready' }));
+
+  await expect(harness.service.install('0.6.9')).resolves.toMatchObject({
+    phase: 'ready', version: '0.7.0'
+  });
+  expect(harness.prepareInstall).not.toHaveBeenCalled();
+  expect(harness.updater.quitAndInstall).not.toHaveBeenCalled();
 });

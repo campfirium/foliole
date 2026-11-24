@@ -29,7 +29,8 @@ export function handleDesktopUpdateCommand(request: InvokeRequest, context?: Inv
     return desktopUpdateService.download();
   }
   if (request.command === NATIVE_COMMANDS.desktopUpdateInstall) {
-    return desktopUpdateService.install();
+    const targetVersion = typeof request.args?.targetVersion === 'string' ? request.args.targetVersion : '';
+    return desktopUpdateService.install(targetVersion);
   }
   return undefined;
 }

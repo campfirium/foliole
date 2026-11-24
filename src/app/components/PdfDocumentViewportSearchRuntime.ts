@@ -49,27 +49,34 @@ export function usePdfDocumentViewportSearchRuntime(props: PdfDocumentViewportSe
   });
 }
 
+const NO_MATCHES: RuntimePdfDocumentSearchMatch[] = [];
+
 function usePdfDocumentSearchMatches(
   nodeId: string | null,
   pdfIndexStatus: PdfDocumentViewportSearchRuntimeProps['pdfIndexStatus'],
   query: string
 ) {
-  const [matches, setMatches] = useState<RuntimePdfDocumentSearchMatch[]>([]);
+  const [result, setResult] = useState<{
+    nodeId: string;
+    query: string;
+    matches: RuntimePdfDocumentSearchMatch[];
+  } | null>(null);
 
   useEffect(() => {
-    if (!nodeId || !query.trim() || pdfIndexStatus !== 'ready') {
-      setMatches([]);
-      return;
-    }
+    setResult(null);
+    if (!nodeId || !query.trim() || pdfIndexStatus !== 'ready') return;
     let disposed = false;
-    setMatches([]);
-    void searchRuntimePdfDocument(nodeId, query).then((result) => {
-      if (!disposed) setMatches(result?.status === 'ready' ? result.matches : []);
+    void searchRuntimePdfDocument(nodeId, query).then((response) => {
+      if (!disposed && response?.status === 'ready') {
+        setResult({ nodeId, query, matches: response.matches });
+      }
     });
     return () => {
       disposed = true;
     };
   }, [nodeId, pdfIndexStatus, query]);
 
-  return matches;
+  return pdfIndexStatus === 'ready' && result?.nodeId === nodeId && result.query === query
+    ? result.matches
+    : NO_MATCHES;
 }

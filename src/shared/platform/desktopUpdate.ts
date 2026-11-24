@@ -8,14 +8,17 @@ const IDLE_STATE: NativeDesktopUpdateState = { phase: 'idle' };
 const RESTART_FEEDBACK_READABILITY_MS = 1000;
 
 let state = IDLE_STATE;
+let restartFeedbackState: NativeDesktopUpdateState | null = null;
 let publicationRevision = 0;
 let bridgeSubscriptionInstalled = false;
 let hydrationPromise: Promise<NativeDesktopUpdateState> | null = null;
 const subscribers = new Set<() => void>();
 
 function publish(nextState: NativeDesktopUpdateState) {
-  state = nextState;
   publicationRevision += 1;
+  // The main process is still ready for this version while restart feedback paints.
+  if (state === restartFeedbackState && nextState.phase === 'ready' && nextState.version === state.version) return state;
+  state = nextState;
   subscribers.forEach((subscriber) => subscriber());
   return nextState;
 }
@@ -36,14 +39,18 @@ function ensureBridgeSubscription() {
 }
 
 async function invokeUpdateCommand(
-  command: typeof NATIVE_COMMANDS.desktopUpdateDownload | typeof NATIVE_COMMANDS.desktopUpdateInstall
+  ...request: [typeof NATIVE_COMMANDS.desktopUpdateDownload]
+    | [typeof NATIVE_COMMANDS.desktopUpdateInstall, { targetVersion: string }]
 ) {
   await ensureBridgeSubscription();
   const api = getElectronAPI();
   if (!api) return publish(NOT_APPLICABLE_STATE);
   const revision = publicationRevision;
   try {
-    const nextState = await api.invoke(command);
+    const [command, args] = request;
+    const nextState = command === NATIVE_COMMANDS.desktopUpdateInstall
+      ? await api.invoke(command, args)
+      : await api.invoke(command);
     return revision === publicationRevision ? publish(nextState) : state;
   } catch {
     return publish({ errorCode: 'invalid-command-state', phase: 'error', version: state.version });
@@ -91,9 +98,13 @@ function waitForRestartFeedbackPaint() {
   });
 }
 
-export async function installDesktopUpdate() {
-  if (state.phase !== 'ready') return Promise.resolve(state);
-  publish({ ...state, errorCode: undefined, phase: 'restarting' });
+export async function installDesktopUpdate(targetVersion: string) {
+  if (state.phase !== 'ready' || state.version !== targetVersion) return state;
+  const restarting: NativeDesktopUpdateState = { ...state, errorCode: undefined, phase: 'restarting' };
+  restartFeedbackState = restarting;
+  publish(restarting);
   await waitForRestartFeedbackPaint();
-  return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateInstall);
+  if (restartFeedbackState === restarting) restartFeedbackState = null;
+  if (state !== restarting) return state;
+  return invokeUpdateCommand(NATIVE_COMMANDS.desktopUpdateInstall, { targetVersion });
 }
