@@ -90,3 +90,33 @@ it('settles a departed editor after its composition tail writes to the previous 
   expect((await app.current()).parent_version_ids).toHaveLength(2);
   expect(await app.bodies()).toContain(tail);
 });
+
+it('retries a departed topic on blur after its composition tail initially fails to save', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before composition'); expect(await app.drain()).toBe(true); });
+  let completeComposition!: () => void;
+  const composition = new Promise<void>(resolve => { completeComposition = resolve; });
+  act(() => { app.view.result.current.onEditorPendingInput?.(composition); });
+  await act(async () => { app.select('other'); });
+
+  const tail = 'Unsaved composition tail for the previous topic';
+  await act(async () => { app.input('Input for the current topic'); expect(await app.drain()).toBe(true); });
+  transport.failSave = true;
+  await act(async () => {
+    app.view.result.current.onEditorInput?.({ nodeId: 'topic', contentLength: tail.length });
+    app.view.result.current.handleEditorChange(tail, { nodeId: 'topic' });
+    completeComposition();
+  });
+  expect(transport.failSave).toBe(false);
+  expect((await app.current()).body_text).toBe('Before composition');
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+
+  await act(async () => { window.dispatchEvent(new Event('blur')); });
+
+  expect((await app.current()).body_text).toBe(tail);
+  expect(app.store.getState().nodesById.topic?.content).toBe('');
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect(hasContentEditingSession(app.port, 'other')).toBe(false);
+  expect(await app.port.query("SELECT content FROM nodes WHERE id = 'other'"))
+    .toEqual([{ content: 'Input for the current topic' }]);
+});
