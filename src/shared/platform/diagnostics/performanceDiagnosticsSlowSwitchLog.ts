@@ -1,5 +1,5 @@
-import type { NodeSelectionFlow } from './performanceDiagnosticsTypes';
-import { logRuntimeEvent } from './runtimeLogging';
+import type { NodeSelectionFlow } from '../performanceDiagnosticsTypes';
+import { logRuntimeEvent } from '../runtimeLogging';
 
 /**
  * Always-on record of a slow note switch, so a user's diagnostic log shows where the time went without any debug flag.
