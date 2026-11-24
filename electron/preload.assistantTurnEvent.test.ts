@@ -67,3 +67,13 @@ it('drops approval requests without a usable approval and unknown kinds', () => 
   emit({ clientTurnId: 'turn-1', kind: 'unknown' });
   expect(handler).not.toHaveBeenCalled();
 });
+
+it('forwards cancellation for a specific approval through the sandbox bridge', () => {
+  const { emit, handler } = subscribeTurnEvents();
+  emit({ clientTurnId: 'turn-1', kind: 'approval_cancelled' });
+  emit({ approvalId: 'approval-1', clientTurnId: 'turn-1', kind: 'approval_cancelled' });
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler.mock.calls[0]?.[0]).toMatchObject({
+    approvalId: 'approval-1', clientTurnId: 'turn-1', kind: 'approval_cancelled'
+  });
+});

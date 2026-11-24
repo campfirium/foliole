@@ -1,19 +1,16 @@
 import { app, type WebContents } from 'electron';
 
-import { createDefaultAideToolPermissionSettings } from '../../lib/core/assistant/aideToolPermissionSettings.js';
 import type {
   NativeAssistantThreadOpeningLocation,
   NativeAssistantStatusResult,
-  NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { prepareAideAttachedContextForTurn } from '../assistant/aideAttachedContextTurn.js';
 import { readAideCurrentMaterialIds } from '../assistant/aideReadScope.js';
-import { createAideToolSession } from '../assistant/aideToolSession.js';
-import { cancelAideWriteApprovals, requestAideWriteApproval, resolveAideWriteApproval } from '../assistant/aideWriteApprovals.js';
-import { describeAideWriteRequests } from '../assistant/aideWriteChangeDescriptions.js';
+import { createAssistantTurnEventSender, createTurnToolSession } from '../assistant/aideTurnToolSession.js';
+import { resolveAideWriteApproval } from '../assistant/aideWriteApprovals.js';
 import { persistAssistantImages } from '../assistant/assistantImageStorage.js';
 import {
   createAssistantFailure,
@@ -26,12 +23,12 @@ import {
   setFolioleAideProvider
 } from '../assistant/folioleAideByokSettings.js';
 import { loadFolioleAideCustomInstructions } from '../assistant/folioleAideCustomInstructions.js';
-import { loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
 import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { readLibraryConnectionLifetime } from '../database/libraryConnectionLifetime.js';
 
 import {
   disposeAssistantCommandAdapter,
@@ -48,7 +45,6 @@ import { sendAssistantTurn } from './assistantSendTurn.js';
 import { handleAssistantStorageCommand } from './assistantStorageCommands.js';
 import { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
 import { finishAssistantTurn } from './assistantTurnResult.js';
-const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 export { disposeAssistantCommandAdapter, resetAssistantCommandAdapterForTests };
 
 export async function handleAssistantCommand(
@@ -127,9 +123,8 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     clientTurnId, message, modelSelection, openingLocation, provider,
     providerThreadId, validatedImages, workspaceContext
   } = input;
-  if (!await isThreadLocationAllowed(provider, providerThreadId, openingLocation)) {
-    return assistantProtocolFailure(provider);
-  }
+  const library = readLibraryConnectionLifetime();
+  if (!await isThreadLocationAllowed(provider, providerThreadId, openingLocation)) return assistantProtocolFailure(provider);
   const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
   let continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   try {
@@ -141,12 +136,11 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   }
   if (provider === 'openai-compatible' && modelSelection) return assistantProtocolFailure(provider);
   const assistantAdapter = provider === 'codex-app-server' ? readAssistantAdapter() : null;
-  if (provider === 'codex-app-server' && !assistantAdapter) {
-    return createAssistantFailure('failed', 'launch_failed');
-  }
+  if (provider === 'codex-app-server' && !assistantAdapter) return createAssistantFailure('failed', 'launch_failed');
   const images = await persistAssistantImages(validatedImages).catch(() => null);
   if (!images) return assistantProtocolFailure();
-  const customInstructions = await readCustomInstructionsForTurn();
+  const customInstructions = await runWithDatabaseConnectionOwner(loadFolioleAideCustomInstructions)
+    .then(({ text }) => text, () => '');
   const attachedContext = await prepareAideAttachedContextForTurn({ provider, providerThreadId, workspaceContext });
   const result = await sendAssistantTurn({
     agentControl,
@@ -160,7 +154,9 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     message,
     provider,
     ...(sender ? { sender } : {}),
-    toolSession: await createTurnToolSession(clientTurnId, provider, sender, readAideCurrentMaterialIds(workspaceContext)),
+    toolSession: await createTurnToolSession({
+      clientTurnId, provider, sender, library, linkedMaterialIds: readAideCurrentMaterialIds(workspaceContext)
+    }),
     ...(modelSelection ? { modelSelection } : {}),
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext: omitSelection(workspaceContext) } : {})
@@ -175,49 +171,6 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     linkedMaterialIds: input.linkedMaterialIds,
     result
   });
-}
-
-async function readCustomInstructionsForTurn() {
-  try {
-    return (await runWithDatabaseConnectionOwner(loadFolioleAideCustomInstructions)).text;
-  } catch {
-    return '';
-  }
-}
-
-async function readToolPermissionsForTurn() {
-  try {
-    return await runWithDatabaseConnectionOwner(loadFolioleAideToolPermissionSettings);
-  } catch {
-    return createDefaultAideToolPermissionSettings();
-  }
-}
-
-// Changes are put to the person in the conversation that asked for them; without a window nobody can allow them.
-async function createTurnToolSession(
-  clientTurnId: string,
-  provider: import('../../lib/platform/nativeAssistantContract.js').NativeAssistantProviderId,
-  sender?: WebContents,
-  linkedMaterialIds: readonly string[] = []
-) {
-  const settings = await readToolPermissionsForTurn();
-  if (!sender) return createAideToolSession(settings, undefined, linkedMaterialIds);
-  const send = createAssistantTurnEventSender(sender, clientTurnId);
-  return createAideToolSession(settings, async (requests, signal) => {
-    if (sender.isDestroyed()) return false;
-    const cancel = () => cancelAideWriteApprovals(clientTurnId);
-    sender.once('destroyed', cancel);
-    try {
-      return await requestAideWriteApproval({
-        changes: await describeAideWriteRequests(requests),
-        clientTurnId,
-        emit: (approval) => send({ approval, clientTurnId, kind: 'approval_requested', provider }),
-        ...(signal ? { signal } : {})
-      });
-    } finally {
-      sender.removeListener('destroyed', cancel);
-    }
-  }, linkedMaterialIds);
 }
 
 function readAssistantAdapter() {
@@ -235,13 +188,6 @@ function assistantProtocolFailure(
     failure: { category: 'protocol_error' as const },
     provider,
     state: 'failed' as const
-  };
-}
-
-function createAssistantTurnEventSender(sender: WebContents, clientTurnId: string) {
-  return (event: NativeAssistantTurnEvent) => {
-    if (event.clientTurnId !== clientTurnId || sender.isDestroyed()) return;
-    sender.send(IPC_ASSISTANT_TURN_EVENT_CHANNEL, event);
   };
 }
 

@@ -207,7 +207,7 @@ export type NativeAssistantLoginResult = Pick<
   'failure' | 'provider' | 'state'
 >;
 
-export type NativeAssistantTurnEventKind = 'approval_requested' | 'completed' | 'delta' | 'failed' | 'started';
+export type NativeAssistantTurnEventKind = 'approval_cancelled' | 'approval_requested' | 'completed' | 'delta' | 'failed' | 'started';
 
 /** One change Aide wants to make, described for the person who must allow it. */
 export interface NativeAssistantWriteChangeDetail {
@@ -230,6 +230,7 @@ export interface NativeAssistantWriteApproval {
 
 export interface NativeAssistantTurnEvent {
   approval?: NativeAssistantWriteApproval;
+  approvalId?: string;
   clientTurnId: string;
   failure?: NativeAssistantFailure;
   kind: NativeAssistantTurnEventKind;

@@ -4,6 +4,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
 import { isCapabilityEnabled } from './agentControlCapabilities.js';
+import { AGENT_CONTROL_LIBRARY_GENERATION_HEADER, matchesAgentControlLibraryGeneration } from './agentControlLibraryGuard.js';
 import { prepareAgentControlJsonBody } from './agentControlRequestBody.js';
 import {
   capabilityForProtectedPath,
@@ -172,6 +173,12 @@ async function handleRequest(
     await prepareAgentControlJsonBody(request, capability === 'materials.create' || capability === 'materials.update');
   }
   if (capability && await runWithDatabaseConnectionOwner(async () => {
+    const generation = request.headers[AGENT_CONTROL_LIBRARY_GENERATION_HEADER];
+    if (Array.isArray(generation) || !matchesAgentControlLibraryGeneration(generation)) {
+      recordRequest({ capability, errorCategory: 'library_changed', options, request, result: 'failed' });
+      sendJson(response, 409, { error: 'library_changed' });
+      return true;
+    }
     if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) return true;
     return handleAgentControlVirtualFolderRoute(request, response, options, url.pathname);
   })) {

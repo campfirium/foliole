@@ -146,11 +146,15 @@ function subscribe(channel, handler) {
     if (channel === IPC_ASSISTANT_TURN_EVENT_CHANNEL) {
       const kind = payload?.kind;
       if (kind !== 'started' && kind !== 'delta' && kind !== 'completed' && kind !== 'failed'
-        && kind !== 'approval_requested') return;
+        && kind !== 'approval_requested' && kind !== 'approval_cancelled') return;
       const approval = kind === 'approval_requested' ? normalizeAssistantWriteApproval(payload?.approval) : undefined;
       if (kind === 'approval_requested' && !approval) return;
+      const approvalId = kind === 'approval_cancelled' && typeof payload?.approvalId === 'string'
+        ? payload.approvalId : undefined;
+      if (kind === 'approval_cancelled' && !approvalId) return;
       handler({
         ...(approval ? { approval } : {}),
+        ...(approvalId ? { approvalId } : {}),
         clientTurnId: typeof payload?.clientTurnId === 'string' ? payload.clientTurnId : '', kind,
         failure: payload?.failure?.category ? { category: payload.failure.category } : undefined,
         provider: 'codex-app-server', text: typeof payload?.text === 'string' ? payload.text : undefined,
