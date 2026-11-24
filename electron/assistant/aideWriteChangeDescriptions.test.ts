@@ -77,3 +77,14 @@ it('labels a question-only change on an Item and omits absent fields', async () 
     tool: 'update_material'
   }]);
 });
+
+it('does not describe creating a blank Topic as clearing its body', async () => {
+  expect(await describeAideWriteRequests([{
+    arguments: { content: '', kind: 'topic', parent_id: null, title: 'Blank topic' },
+    tool: 'create_material'
+  }])).toEqual([{
+    details: [{ field: 'parent', value: '' }],
+    target: 'Blank topic',
+    tool: 'create_material'
+  }]);
+});

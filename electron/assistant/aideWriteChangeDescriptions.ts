@@ -40,9 +40,10 @@ function describe(request: AideWriteRequest, materialOf: MaterialLookup): Native
   if (Array.isArray(materialIds) && materialIds.length) {
     for (const id of materialIds) details.push({ field: 'materials', value: titleOf(String(id)) });
   }
-  if (typeof args.content === 'string') {
+  const content = snippet(args.content);
+  if (content || (request.tool === 'update_material' && typeof args.content === 'string')) {
     const isQuestion = material?.kind === 'item' || args.kind === 'item' || typeof args.reveal === 'string';
-    details.push({ field: isQuestion ? 'question' : 'content', value: snippet(args.content) ?? '' });
+    details.push({ field: isQuestion ? 'question' : 'content', value: content ?? '' });
   }
   const answer = snippet(args.reveal);
   if (answer) details.push({ field: 'answer', value: answer });
