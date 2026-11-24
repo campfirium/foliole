@@ -61,7 +61,7 @@ function normalizeAssistantWriteApproval(approval) {
   for (const change of approval.changes) {
     if (typeof change?.tool !== 'string') return undefined;
     const details = Array.isArray(change.details) ? change.details
-      .filter((detail) => ['content', 'materials', 'parent', 'title'].includes(detail?.field) && typeof detail.value === 'string')
+      .filter((detail) => ['answer', 'content', 'materials', 'parent', 'question', 'title'].includes(detail?.field) && typeof detail.value === 'string')
       .map((detail) => ({ field: detail.field, value: detail.value })) : [];
     changes.push({ details, ...(typeof change.target === 'string' ? { target: change.target } : {}), tool: change.tool });
   }

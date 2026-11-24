@@ -39,7 +39,7 @@ vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<object>(),
   openDatabaseConnection: () => ({
     driver: {},
-    sqlite: { prepare: () => ({ pluck: () => ({ get: () => 'Draft' }) }) }
+    sqlite: { prepare: () => ({ get: () => ({ kind: 'topic', title: 'Draft' }) }) }
   })
 }));
 vi.mock('../../lib/core/database/syncDeviceIdentity.js', () => ({

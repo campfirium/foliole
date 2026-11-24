@@ -49,11 +49,18 @@ function WriteChangeRow({ change, t }: { change: NativeAssistantWriteChange; t: 
       {groupDetails(change.details).map(([field, values]) => (
         <p className="m-0 break-words text-ui-xs text-foreground/65" key={field}>
           {`${t(`${PREFIX}.field.${field}` as TranslationKey)}: `}
-          {values.map((value) => (field === 'parent' && !value ? t(`${PREFIX}.root` as TranslationKey) : value)).join(', ')}
+          {values.map((value) => formatDetailValue(field, value, t)).join(', ')}
         </p>
       ))}
     </li>
   );
+}
+
+function formatDetailValue(field: NativeAssistantWriteChangeDetail['field'], value: string, t: Translate) {
+  if (value) return value;
+  if (field === 'parent') return t(`${PREFIX}.root`);
+  if (field === 'content' || field === 'question') return t(`${PREFIX}.clear`);
+  return value;
 }
 
 function groupDetails(details: NativeAssistantWriteChangeDetail[]) {

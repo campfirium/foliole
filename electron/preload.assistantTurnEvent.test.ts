@@ -77,3 +77,13 @@ it('forwards cancellation for a specific approval through the sandbox bridge', (
     approvalId: 'approval-1', clientTurnId: 'turn-1', kind: 'approval_cancelled'
   });
 });
+
+it('forwards distinct question and answer details and keeps an explicit empty body', () => {
+  const { emit, handler } = subscribeTurnEvents();
+  const changes = [
+    { details: [{ field: 'question', value: 'New question' }, { field: 'answer', value: 'New answer' }], tool: 'update_material' },
+    { details: [{ field: 'content', value: '' }], tool: 'update_material' }
+  ];
+  emit({ approval: { changes, id: 'approval-2' }, clientTurnId: 'turn-1', kind: 'approval_requested' });
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({ approval: { changes, id: 'approval-2' } }));
+});
