@@ -29,6 +29,7 @@ import { RETIRE_COVERED_NODE_CHILD_STATE } from './nodeTombstoneStateRetirementM
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
+import { migratePdfAttachmentNodeIndex } from './pdfAttachmentNodeIndex.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
 import { retireParentOrderProjection } from './retireParentOrderProjectionMigration.js';
@@ -97,5 +98,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 196, migrate: migrateDailyFlowReadiness },
   { version: 197, migrate: db => {
     for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) db.exec(sql);
-  } }
+  } },
+  { version: 198, migrate: migratePdfAttachmentNodeIndex }
 ];

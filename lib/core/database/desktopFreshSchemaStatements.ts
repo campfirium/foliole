@@ -24,6 +24,7 @@ import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
+import { PDF_ATTACHMENT_NODE_INDEX_SCHEMA } from './pdfAttachmentNodeIndex.js';
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
@@ -52,6 +53,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),
   ...PDF_INDEX_STATE_SCHEMA_STATEMENTS,
+  ...PDF_ATTACHMENT_NODE_INDEX_SCHEMA,
   PDF_TEXT_ARTIFACT_SCHEMA,
   ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
   ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS,
