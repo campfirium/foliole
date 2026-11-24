@@ -88,7 +88,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Readwise से फिर सिंक करें",
   "desktop.nodeList.readwiseResync.confirm.description": "स्रोत की सामग्री तैयार करने का तरीका अभी बेहतर किया जा रहा है। अगर लेआउट गड़बड़ दिखे, तो सामग्री फिर तैयार करके देखें।",
   "desktop.nodeList.readwiseResync.confirm.epub": "कवर, टेक्स्ट के चित्र और विषय सूची भी फिर बनेंगे।",
-  "desktop.nodeList.readwiseResync.confirm.pdf": "इससे Readwise से मूल PDF ली जाएगी और उस पर Readwise के हाइलाइट फिर रखे जाएँगे। विषय की बाकी सामग्री पहले जैसी रहेगी।",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "इस PDF के लिए Readwise के नए और बदले हुए हाइलाइट सिंक किए जाएँगे। ज़रूरत पड़ने पर मूल PDF डाउनलोड की जाएगी।",
   "desktop.nodeList.readwiseResync.confirm.preserve": "मुख्य टेक्स्ट में किए गए बदलाव हट जाएँगे। हाइलाइट, खाली जगह वाले प्रश्न और टिप्पणियाँ बनी रहेंगी। समस्या बनी रहे तो फ़ीडबैक भेजें।",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "इस किताब में अभी EPUB की सामग्री है। फिर सिंक करने पर Readwise की सामग्री वापस आ जाएगी।",
   "desktop.nodeList.readwiseResync.confirm.confirm": "फिर सिंक करें",

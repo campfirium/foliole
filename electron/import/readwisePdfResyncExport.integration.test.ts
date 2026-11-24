@@ -7,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
-import { disconnectReadwiseApi } from './readwiseApiConnection.js';
+import { disconnectReadwiseApi, loadReadwiseApiConnection } from './readwiseApiConnection.js';
 import {
   connectionRef, database, documentId, exportBook, exportPage, hash,
   nodeId, readHighlight, readTopic, remoteFetch, writeLocalPdf
@@ -106,6 +106,37 @@ it('cancels an in-flight export request when the Readwise account disconnects', 
   await expect(result).resolves.toMatchObject({ error_code: 'readwise_pdf_resync_cancelled', status: 'failed' });
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   expect(readHighlight()).toEqual(before);
+});
+
+it('asks for reconnection when an authorized export request receives a current 401', async () => {
+  await writeLocalPdf();
+  const fetchImpl = vi.fn<typeof fetch>(async () => new Response(null, { status: 401 }));
+  const before = loadReadwiseApiImportSource(connectionRef, documentId);
+  await expect(resyncReadwiseSource(nodeId, { fetchImpl, minIntervalMs: 0 }))
+    .resolves.toMatchObject({ error_code: 'readwise_api_reconnect_required', status: 'failed' });
+  expect(loadReadwiseApiConnection().state).toBe('reconnect_required');
+  expect(loadReadwiseApiImportSource(connectionRef, documentId)).toEqual(before);
+});
+
+it('keeps the account disconnected when an in-flight export returns a late unauthorized response', async () => {
+  await writeLocalPdf();
+  const started = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<Response>();
+  const fetchImpl = vi.fn<typeof fetch>(async () => {
+    started.resolve();
+    return response.promise;
+  });
+  const before = loadReadwiseApiImportSource(connectionRef, documentId);
+  const result = resyncReadwiseSource(nodeId, { fetchImpl, minIntervalMs: 0 });
+  try {
+    await Promise.race([started.promise, result.then(value => { throw new Error(JSON.stringify(value)); })]);
+    expect(disconnectReadwiseApi().status).toBe('disconnected');
+  } finally {
+    response.resolve(new Response(null, { status: 401 }));
+  }
+  await expect(result).resolves.toMatchObject({ error_code: 'readwise_pdf_resync_cancelled', status: 'failed' });
+  expect(loadReadwiseApiConnection().state).toBe('disconnected');
+  expect(loadReadwiseApiImportSource(connectionRef, documentId)).toEqual(before);
 });
 
 it('preserves local edits and deleted highlights while adding a new remote highlight', async () => {

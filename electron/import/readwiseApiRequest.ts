@@ -51,7 +51,11 @@ export function createReadwiseRequest(
         continue;
       }
       if (response.status === 401 || response.status === 403) {
-        await runWithDatabaseConnectionOwner(() => saveReconnectRequired(loadStoredReadwiseHostSettings()));
+        await runWithDatabaseConnectionOwner(() => {
+          assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+          const settings = loadStoredReadwiseHostSettings();
+          if (settings.apiConnection.state === 'connected') saveReconnectRequired(settings);
+        });
         throw new Error('readwise_api_reconnect_required');
       }
       if (response.status === 429 && retry < maxRetries) {
