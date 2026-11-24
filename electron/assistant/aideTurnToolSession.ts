@@ -22,7 +22,9 @@ export async function createTurnToolSession(input: {
   const { clientTurnId, library, linkedMaterialIds, provider, sender } = input;
   const settings = await runWithDatabaseConnectionOwner(loadFolioleAideToolPermissionSettings)
     .catch(createDefaultAideToolPermissionSettings);
-  if (!sender) return createAideToolSession(settings, undefined, linkedMaterialIds);
+  if (!sender) {
+    return { ...createAideToolSession(settings, undefined, linkedMaterialIds), writeLibraryGeneration: library.generation };
+  }
   const send = createAssistantTurnEventSender(sender, clientTurnId);
   const session = createAideToolSession(settings, async (requests, turnSignal) => {
     const signal = turnSignal ? AbortSignal.any([library.signal, turnSignal]) : library.signal;
@@ -48,7 +50,7 @@ export async function createTurnToolSession(input: {
       sender.removeListener('destroyed', cancel);
     }
   }, linkedMaterialIds);
-  if (settings.askBeforeWrite || library.signal.aborted) session.writeLibraryGeneration = library.generation;
+  session.writeLibraryGeneration = library.generation;
   return session;
 }
 

@@ -14,6 +14,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { getAgentControlApiSessionDescriptor, stopAgentControlApiServer } from '../agentControl/agentControlServer.js';
 import { executeAideTool, type AideToolRequest } from '../assistant/aideToolExecutor.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
+import { FOLIOLE_AIDE_TOOL_PERMISSIONS_KEY, loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 import { migrateLibraryPathChange, runLibraryHomeMigration } from './libraryPathMigration.js';
@@ -42,6 +43,13 @@ vi.mock('../database/connection.js', async (importOriginal) => ({
     sqlite: { prepare: () => ({ get: () => ({ kind: 'topic', title: 'Draft' }) }) }
   })
 }));
+vi.mock('../database/settingsStore.js', async (importOriginal) => ({
+  ...await importOriginal<object>(),
+  loadJsonSetting: (key: string) => {
+    const row = activeLibrary.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+    return typeof row?.value === 'string' ? JSON.parse(row.value) : null;
+  }
+}));
 vi.mock('../../lib/core/database/syncDeviceIdentity.js', () => ({
   loadDatabaseDeviceId: () => 'test-device'
 }));
@@ -65,7 +73,7 @@ vi.mock('../agentControl/agentControlMaterialMutations.js', async (importOrigina
 
 function seedLibrary(dbPath: string) {
   const db = new DatabaseSync(dbPath);
-  db.exec('CREATE TABLE drafts (title TEXT NOT NULL)');
+  db.exec('CREATE TABLE drafts (title TEXT NOT NULL); CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)');
   return db;
 }
 
@@ -105,7 +113,7 @@ async function switchLibrary(beforeSwitch?: () => Promise<void>) {
   });
 }
 
-function startWrite(request: AideToolRequest, fetcher?: typeof fetch) {
+function startWrite(request: AideToolRequest, options: { beforeWrite?: () => Promise<void>; fetcher?: typeof fetch } = {}) {
   const events: NativeAssistantTurnEvent[] = [];
   const requested = Promise.withResolvers<string>();
   const sender = {
@@ -119,8 +127,10 @@ function startWrite(request: AideToolRequest, fetcher?: typeof fetch) {
   } as unknown as WebContents;
   const write = Promise.withResolvers<Awaited<ReturnType<typeof executeAideTool>>>();
   adapterSendMessage.mockImplementationOnce(async ({ toolSession }: { toolSession: AideToolSession }) => {
+    await options.beforeWrite?.();
     write.resolve(await executeAideTool(request, {
-      descriptor: getAgentControlApiSessionDescriptor(), session: toolSession, ...(fetcher ? { fetcher } : {})
+      descriptor: getAgentControlApiSessionDescriptor(), session: toolSession,
+      ...(options.fetcher ? { fetcher: options.fetcher } : {})
     }));
     return { message: { text: 'Done' }, provider: 'codex-app-server', state: 'ready' };
   });
@@ -180,11 +190,11 @@ it('rechecks a confirmed Dive write after the database owner switches libraries'
 it('refuses a confirmed update that reached Agent Control only after the switch', async () => {
   const dispatched = Promise.withResolvers<void>();
   const deliver = Promise.withResolvers<void>();
-  const pending = startWrite(updateMaterial, async (request, init) => {
+  const pending = startWrite(updateMaterial, { fetcher: async (request, init) => {
     dispatched.resolve();
     await deliver.promise;
     return fetch(request, init);
-  });
+  } });
   await allow(await pending.approvalId);
   await dispatched.promise;
   try {
@@ -207,4 +217,35 @@ it('writes confirmed changes into the same library through local and Agent Contr
   }
   expect(titles(libraryA)).toEqual(['Read later', 'Read later']);
   expect(titles(libraryB)).toEqual([]);
+});
+
+it.each([createDive, updateMaterial])('keeps unprompted $tool writes in their original library', async (request) => {
+  libraryA.prepare('INSERT INTO settings VALUES (?, ?)').run(
+    FOLIOLE_AIDE_TOOL_PERMISSIONS_KEY, JSON.stringify({ askBeforeWrite: false })
+  );
+  expect(loadFolioleAideToolPermissionSettings().askBeforeWrite).toBe(false);
+  const sameLibrary = startWrite(request);
+  expect(await Promise.race([sameLibrary.reply, sameLibrary.approvalId])).toMatchObject({ state: 'ready' });
+  expect(sameLibrary.events).toEqual([]);
+  expect(await sameLibrary.write).toMatchObject({ success: true });
+
+  const started = Promise.withResolvers<void>();
+  const proceed = Promise.withResolvers<void>();
+  const pending = startWrite(request, { beforeWrite: async () => {
+    started.resolve();
+    await proceed.promise;
+  } });
+  expect(await Promise.race([started.promise.then(() => 'started'), pending.reply])).toBe('started');
+  try {
+    await switchLibrary();
+    expect(loadFolioleAideToolPermissionSettings().askBeforeWrite).toBe(true);
+  } finally {
+    proceed.resolve();
+  }
+  expect(await pending.reply).toMatchObject({ state: 'ready' });
+  expect(titles(libraryA)).toEqual(['Read later']);
+  expect(titles(libraryB)).toEqual([]);
+  expect(await pending.write).toEqual({
+    contentItems: [{ text: '{"error":"library_changed"}', type: 'inputText' }], success: false
+  });
 });
