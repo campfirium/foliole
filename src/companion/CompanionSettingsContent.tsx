@@ -1,4 +1,4 @@
-import { Bell, BookOpen, Bug, CalendarDays, Database, FileText, HardDrive, Info, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
+import { Bell, BookOpen, Bug, CalendarDays, Database, FileText, Globe, HardDrive, Info, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { SettingsExperimentalFeaturesSection } from '../features/settings/components/sections/SettingsExperimentalFeaturesSection';
@@ -97,6 +97,7 @@ export function CompanionSettingsList(props: {
   onOpenLearning?(): void;
   onOpenReminders?(): void;
   onOpenClozeGuard?(): void;
+  onOpenWebLookup?(): void;
   onOpenReviewStatistics?(): void;
   onOpenBackup(): void;
   onOpenAttachments(): void;
@@ -128,6 +129,8 @@ export function CompanionSettingsList(props: {
             title={t('settings.category.review.label')} /> : null}
           {props.onOpenClozeGuard ? <SettingsListItem Icon={RectangleEllipsis} detail="" onClick={props.onOpenClozeGuard}
             title={t('settings.editor.clozeGuard.section')} /> : null}
+          {props.onOpenWebLookup ? <SettingsListItem Icon={Globe} detail="" onClick={props.onOpenWebLookup}
+            testId="companion-settings-web-lookup" title={t('companion.settings.webLookup.title')} /> : null}
           <CompanionHighlightPrefixSetting />
           {props.onOpenReviewStatistics ? <SettingsListItem Icon={CalendarDays} detail="" onClick={props.onOpenReviewStatistics}
             title={t('desktop.reviewCalendar.title')} /> : null}

@@ -1,3 +1,6 @@
+import { getStoredAppLocale } from '../localization/appLanguage';
+import { translate } from '../localization/translations';
+
 import { type WebLookupEntry, type WebLookupEntryKind } from './webLookupEntryDefaults';
 import {
   isWebLookupPromptTooLong,
@@ -60,4 +63,41 @@ function resolvePromptAction(
   }
   const url = resolveWebLookupPromptActionUrl(entry, sourceText, titleText);
   return url ? { kind: entry.kind, label: entry.label, url } : null;
+}
+
+interface WebLookupTitleNode { id: string; kind: string; parentNodeId: string | null; title: string }
+
+function normalizeTitle(title: string) {
+  return title.trim() || translate(getStoredAppLocale(), 'desktop.search.context.untitled');
+}
+
+function collectNodePath(activeNodeId: string, nodesById: Record<string, WebLookupTitleNode | undefined>) {
+  const path: WebLookupTitleNode[] = [];
+  const visited = new Set<string>();
+  let cursorId: string | null = activeNodeId;
+  while (cursorId && !visited.has(cursorId)) {
+    visited.add(cursorId);
+    const node: WebLookupTitleNode | undefined = nodesById[cursorId];
+    if (!node) break;
+    path.push(node);
+    cursorId = node.parentNodeId;
+  }
+  return path.reverse();
+}
+
+function isSourceTopic(node: WebLookupTitleNode, nodesById: Record<string, WebLookupTitleNode | undefined>) {
+  if (node.kind !== 'topic') {
+    return false;
+  }
+  const parentNode = node.parentNodeId ? nodesById[node.parentNodeId] : null;
+  return !parentNode || parentNode.kind === 'folder';
+}
+
+export function resolveWebLookupTitle(
+  activeNodeId: string,
+  nodesById: Record<string, WebLookupTitleNode | undefined>
+) {
+  const path = collectNodePath(activeNodeId, nodesById);
+  const sourceTopic = path.find((node) => isSourceTopic(node, nodesById));
+  return normalizeTitle(sourceTopic?.title ?? nodesById[activeNodeId]?.title ?? '');
 }

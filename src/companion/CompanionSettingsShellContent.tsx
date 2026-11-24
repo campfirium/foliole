@@ -28,6 +28,7 @@ import {
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { CompanionTestReviewReset } from './CompanionTestReviewReset';
 import { CompanionTextScaleControl } from './CompanionTextScale';
+import { CompanionWebLookupSettingsContent } from './CompanionWebLookupSettingsContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -88,6 +89,7 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps & { showTest
     <CompanionSettingsList
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
       onOpenClozeGuard={() => props.onOpenSyncSettingsPage('clozeGuard')}
+      onOpenWebLookup={() => props.onOpenSyncSettingsPage('webLookup')}
       {...(['ios-native', 'android-native', 'browser-preview'].includes(getCompanionRuntimeCapability().kind)
         ? { onOpenReminders: () => props.onOpenSyncSettingsPage('reminders') } : {})}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
@@ -128,6 +130,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;
+  if (props.settingsPage === 'webLookup') return <CompanionWebLookupSettingsContent />;
   if (props.settingsPage === 'reminders') return <CompanionReminderSettingsContent onBack={props.onBackToSettingsList}
     snapshot={props.workspaceSync.state.workspace_snapshot} />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;

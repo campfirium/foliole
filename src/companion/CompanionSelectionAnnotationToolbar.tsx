@@ -5,6 +5,7 @@ import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionHighlightRead, CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { getDevanagariSelectionMode } from '../shared/platform/supportLog/androidDevanagariSelectionMode';
+import { resolveWebLookupTitle } from '../shared/platform/webLookupEntries';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 import { AppButton, appFloatingSurfaceClassName } from '../shared/ui';
 
@@ -45,6 +46,10 @@ interface CompanionSelectionAnnotationToolbarProps {
   getExpandedParagraphText?: (() => string | undefined) | undefined;
   resolveSelectionPayload?: () => SelectionCommandPayload | null;
   state: CompanionSelectionAnnotationToolbarState | null;
+}
+
+function resolveToolbarTitle(props: CompanionSelectionAnnotationToolbarProps) {
+  return props.parentNodeId && props.snapshot ? resolveWebLookupTitle(props.parentNodeId, props.snapshot.nodesById) : null;
 }
 
 function resolveApplyPayload(props: CompanionSelectionAnnotationToolbarProps) {
@@ -131,7 +136,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
         disabled={creation.saving || creation.saved} onCancel={creation.cancelGuard} onChoose={creation.confirmGuard}
         status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}
       {!hideDeletedControls ? <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
-        getCopyText={() => resolveCopyText(props)}
+        getCopyText={() => resolveCopyText(props)} titleText={resolveToolbarTitle(props)}
         onSelectParagraph={!isExistingHighlight && props.editor?.setNativeSelection ? props.onSelectParagraph : undefined}
         onCopied={props.onClose} onAddNote={note.open} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
         onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {

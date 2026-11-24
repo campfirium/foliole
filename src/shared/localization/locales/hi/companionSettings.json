@@ -1,6 +1,12 @@
 {
   "companion.settings.highlightPrefix.loadError": "टिप्पणी का उपसर्ग लोड नहीं हो सका। फिर कोशिश करें।",
   "companion.settings.clozeGuard.loadError": "खाली जगह की सुरक्षा वाली सेटिंग लोड नहीं हो सकी। फिर कोशिश करें।",
+  "companion.settings.webLookup.title": "वेब खोज",
+  "companion.settings.webLookup.description": "चालू किए गए आइटम टेक्स्ट चुनने के बाद “और” मेनू में दिखते हैं। लिंक में {selection} चुने गए टेक्स्ट के लिए और {title} मौजूदा टॉपिक के शीर्षक के लिए है। संबंधित ऐप इंस्टॉल हो तो लिंक उसमें खुलता है, वरना ब्राउज़र में।",
+  "companion.settings.webLookup.edit": "{label} संपादित करें",
+  "companion.settings.webLookup.editTitle": "मेनू आइटम संपादित करें",
+  "companion.settings.webLookup.link": "लिंक",
+  "companion.settings.webLookup.invalid": "नाम और {selection} वाला http(s) लिंक दर्ज करें।",
   "companion.settings.storage.clearConfirm": "डेटा मिटाएँ",
   "companion.settings.storage.backupFailedReason": "बैकअप नहीं हो सका: {reason}",
   "companion.settings.storage.backupReselectHint": "बैकअप का फ़ोल्डर फिर से चुनें।",

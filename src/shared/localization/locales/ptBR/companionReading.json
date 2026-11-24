@@ -77,7 +77,6 @@
   "companion.reading.previousTopic": "Tópico anterior",
   "companion.selection.copyText": "Copiar texto",
   "companion.selection.selectParagraph": "Selecionar parágrafo",
-  "companion.selection.askChatGpt": "Perguntar ao ChatGPT",
   "companion.selection.copyError": "Não foi possível copiar o texto. Tente novamente.",
   "companion.reading.shareArticle": "Compartilhar artigo",
   "companion.reading.articleHandoffUnavailable": "Nenhum aplicativo pode abrir o artigo ou o artigo não tem texto disponível.",

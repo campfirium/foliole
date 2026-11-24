@@ -68,6 +68,7 @@ function resolveSettingsTopBar(
 ) {
   if (settingsPage === 'foregroundTime') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
   if (settingsPage === 'reviewStatistics') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
+  if (settingsPage === 'webLookup') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.webLookup.title') };
   if (settingsPage === 'clozeGuard') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.editor.clozeGuard.section') };
   if (settingsPage === 'reminders') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.reminders.title') };
   if (settingsPage === 'learning') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.category.review.label') };

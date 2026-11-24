@@ -77,7 +77,6 @@
   "companion.reading.outline.emptyDescription": "見出しと関連するトピック・項目がここに表示されます。",
   "companion.selection.copyText": "テキストをコピー",
   "companion.selection.selectParagraph": "段落を選択",
-  "companion.selection.askChatGpt": "ChatGPTに質問",
   "companion.selection.copyError": "テキストをコピーできませんでした。再試行してください。",
   "companion.reading.shareArticle": "記事をシェアする",
   "companion.reading.articleHandoffUnavailable": "記事を開けるアプリがないか、記事に利用可能なテキストがありません。",

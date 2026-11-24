@@ -8,6 +8,7 @@ export type CompanionSettingsPage =
   | 'reminders'
   | 'learning'
   | 'clozeGuard'
+  | 'webLookup'
   | 'foregroundTime'
   | 'reviewStatistics'
   | 'list'

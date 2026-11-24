@@ -135,6 +135,7 @@ export function CompanionSelectionToolbarActions(props: {
   isCloze?: boolean;
   disabled?: boolean | undefined;
   getCopyText?: () => string;
+  titleText?: string | null | undefined;
   onSelectParagraph?: (() => void) | undefined;
   onCopied?: () => void;
   onAddNote: () => void;
@@ -181,7 +182,8 @@ export function CompanionSelectionToolbarActions(props: {
       </ToolbarButton>
       {moreMenu ? <CompanionSelectionMoreMenu {...moreMenu}
         onSelectParagraph={props.onSelectParagraph ? () => { props.onSelectParagraph?.(); setMoreMenu(null); } : undefined}
-        onAskedChatGpt={() => setMoreMenu(null)}
+        titleText={props.titleText}
+        onOpenedLookup={() => setMoreMenu(null)}
         onCopied={() => { setMoreMenu(null); props.onCopied?.(); }} /> : null}
     </div>
   );

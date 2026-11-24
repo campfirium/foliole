@@ -16,7 +16,7 @@ import {
 import { isValidUrlTemplate, normalizeTemplatePlaceholder } from './webLookupTemplateResolution';
 
 export { WEB_LOOKUP_PROMPT_MAX_ENCODED_LENGTH, WEB_LOOKUP_QUERY_MAX_LENGTH, type WebLookupEntry } from './webLookupEntryDefaults';
-export { resolveWebLookupAction } from './webLookupActionResolution';
+export { resolveWebLookupAction, resolveWebLookupTitle } from './webLookupActionResolution';
 export { resolveWebLookupUrl } from './webLookupTemplateResolution';
 
 type StoredWebLookupEntry = Partial<WebLookupEntry> & { id?: unknown };

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { resolveWebLookupTitle } from './webLookupTitle';
+import { resolveWebLookupTitle } from './webLookupEntries';
 
 function createNode(id: string, title: string, parentNodeId: string | null, kind: 'folder' | 'item' | 'topic') {
   return { id, kind, parentNodeId, title };
