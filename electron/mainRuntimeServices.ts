@@ -31,7 +31,11 @@ export async function initializeRuntimeServices() {
     }
     // A new library gets its guided sample before any window can read or edit it.
     await seedStartupGuidedSample();
-    await startSearchAliasMirror();
+    try {
+      await startSearchAliasMirror();
+    } catch (error) {
+      appendMainProcessDiagnosticLog('search_alias_mirror_start_failed', { error });
+    }
     refreshGlobalClipShortcutFromSettings();
     await appendBootEvent('database_init_complete');
     startDesktopForegroundTime();

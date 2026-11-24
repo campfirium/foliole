@@ -27,7 +27,6 @@ const PREVIOUS_TEMPLATES = [
 ];
 let watcher: FSWatcher | null = null;
 let timer: NodeJS.Timeout | null = null;
-let boundDatabasePath: string | null = null;
 let lastError: string | null = null;
 let effectiveGroups: string[][] = [];
 let effectiveRevision = 0;
@@ -136,21 +135,25 @@ export function getEffectiveSearchAliases() {
   return { groups: effectiveGroups, revision: effectiveRevision };
 }
 
+function reportMirrorError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (lastError !== message) {
+    void import('electron').then(({ Notification }) => {
+      if (Notification.isSupported()) {
+        new Notification({ title: 'Search synonyms could not be updated', body: message }).show();
+      }
+    }).catch(() => {});
+  }
+  lastError = message;
+  console.error('[search-aliases] mirror failed', error);
+}
+
 export async function reconcileSearchAliasMirror(mode: 'normal' | 'restore' = 'normal') {
   try {
     await reconcileDocument(mode);
     lastError = null;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (lastError !== message) {
-      void import('electron').then(({ Notification }) => {
-        if (Notification.isSupported()) {
-          new Notification({ title: 'Search synonyms could not be updated', body: message }).show();
-        }
-      }).catch(() => {});
-    }
-    lastError = message;
-    console.error('[search-aliases] mirror reconciliation failed', error);
+    reportMirrorError(error);
     throw error;
   }
 }
@@ -174,7 +177,6 @@ export function stopSearchAliasMirror() {
   watcher = null;
   if (timer) clearTimeout(timer);
   timer = null;
-  boundDatabasePath = null;
   effectiveGroups = [];
   effectiveRevision += 1;
 }
@@ -186,17 +188,34 @@ export async function startSearchAliasMirror(mode: 'normal' | 'restore' = 'norma
   } catch {
     // Keep watching so a corrected file can be imported without restarting.
   }
-  const databasePath = openDatabaseConnection().dbPath;
-  const filePath = searchAliasFilePath(databasePath);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  boundDatabasePath = databasePath;
-  watcher = watch(path.dirname(filePath), (_event, name) => {
-    if (name && name.toString() !== path.basename(filePath)) return;
+  const filePath = searchAliasFilePath(openDatabaseConnection().dbPath);
+  try {
+    await startSearchAliasWatcher(filePath);
+  } catch (error) {
+    reportMirrorError(error);
+    throw error;
+  }
+}
+
+async function startSearchAliasWatcher(filePath: string) {
+  const directory = path.dirname(filePath);
+  await fs.mkdir(directory, { recursive: true });
+  const activeWatcher = watch(directory, (_event, name) => {
+    if (watcher !== activeWatcher || (name && name.toString() !== path.basename(filePath))) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
-      if (boundDatabasePath !== databasePath) return;
+      if (watcher !== activeWatcher) return;
       void runWithDatabaseConnectionOwner(() => reconcileSearchAliasMirror()).catch(() => {});
     }, 150);
+  });
+  watcher = activeWatcher;
+  activeWatcher.on('error', (error) => {
+    if (watcher !== activeWatcher) return;
+    activeWatcher.close();
+    watcher = null;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    reportMirrorError(error);
   });
 }
 
