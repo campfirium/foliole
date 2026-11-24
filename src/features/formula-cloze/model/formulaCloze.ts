@@ -26,18 +26,26 @@ export interface FormulaClozePresentationRegion {
   selection: FormulaDomSelectionDescriptor;
 }
 
+/** Desktop nodes and mobile snapshot nodes store anchor links with differently typed locators; only the shape is checked. */
+type FormulaClozeAnchorSource = { id: string; kind: string; locator?: unknown } | null | undefined;
+
 function isFormulaClozeAnchorLink(
-  anchorLink: NodeAnchorLink | null | undefined
-): anchorLink is NodeAnchorLink & { locator: FormulaAnchorLocator } {
-  return anchorLink?.kind === 'cloze' && isFormulaAnchorLocator(anchorLink.locator);
+  anchorLink: FormulaClozeAnchorSource
+): anchorLink is { id: string; kind: 'cloze'; locator: FormulaAnchorLocator } {
+  return anchorLink?.kind === 'cloze' && isFormulaAnchorLocator(anchorLink.locator as NodeAnchorLink['locator']);
 }
 
-export function getFormulaClozeLocator(anchorLink: NodeAnchorLink | null | undefined): FormulaAnchorLocator | null {
+export function getFormulaClozeLocator(anchorLink: FormulaClozeAnchorSource): FormulaAnchorLocator | null {
   return isFormulaClozeAnchorLink(anchorLink) ? anchorLink.locator : null;
 }
 
-export function isFormulaClozeNode(node: Node | null | undefined) {
+export function isFormulaClozeNode(node: Pick<Node, 'anchorLink'> | null | undefined) {
   return Boolean(node && isFormulaClozeAnchorLink(node.anchorLink));
+}
+
+/** Identifies one formula in its source document; desktop and mobile creation must agree on it. */
+export function buildFormulaOccurrenceKey(range: { display: 'block' | 'inline'; from: number; tex: string; to: number }) {
+  return `${range.display}:${range.from}:${range.to}:${range.tex}`;
 }
 
 export function deriveFormulaClozeSelectionLabel(selection: FormulaDomSelectionDescriptor) {
@@ -65,9 +73,9 @@ export function buildFormulaClozeSourcePayload(
   };
 }
 
-export function createFormulaClozePresentationRegion(anchorLink: NodeAnchorLink): FormulaClozePresentationRegion | null {
-  const locator = getFormulaClozeLocator(anchorLink);
-  if (!locator) return null;
+export function createFormulaClozePresentationRegion(anchorLink: FormulaClozeAnchorSource): FormulaClozePresentationRegion | null {
+  if (!isFormulaClozeAnchorLink(anchorLink)) return null;
+  const locator = anchorLink.locator;
   return {
     display: locator.display,
     fallbackRect: locator.fallbackRect,
@@ -80,7 +88,7 @@ export function createFormulaClozePresentationRegion(anchorLink: NodeAnchorLink)
 
 export function deriveFormulaClozeRegionsFromChildren(args: {
   nodeId: string;
-  nodesById: Record<string, Node>;
+  nodesById: Record<string, { anchorLink?: FormulaClozeAnchorSource; id: string; parentNodeId?: string | null }>;
   trashedNodeIds: string[];
 }) {
   const trashedNodeIds = new Set(args.trashedNodeIds);

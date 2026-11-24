@@ -7,7 +7,7 @@ import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 import { resolveAncestorAnchorLink } from '../store/workspaceNavigation';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
-import { CompanionImageClozeLayer } from './CompanionImageClozeLayer';
+import { CompanionReadingClozeLayers } from './CompanionFormulaClozeLayer';
 import { CompanionFlowNextTopicFooter, CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
@@ -150,7 +150,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
 
   return (
     <FlowExitHereContext.Provider value={exitFlowHere}>
-    <CompanionImageClozeLayer activity={activity} nodeId={nodeId} workspaceSync={props.workspaceSync}
+    <CompanionReadingClozeLayers activity={activity} nodeId={nodeId} workspaceSync={props.workspaceSync}
       content={props.surface.readableArticle.content} versionId={props.surface.readableArticle.currentVersionId ?? null}>
     <ImmersiveReadableArticle
       key={props.surface.readableArticle.nodeId}
@@ -178,7 +178,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
       {...resolveNodeMutationProps(props.workspaceSync, activity, props.surface.readableArticle.nodeId)}
     />
-    </CompanionImageClozeLayer>
+    </CompanionReadingClozeLayers>
     </FlowExitHereContext.Provider>
   );
 }

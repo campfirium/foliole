@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "数式の穴埋め",
+  "companion.formulaCloze.help": "隠したい部分をドラッグで囲みます。枠を続けて描くと、枠ごとに問題ができます。",
+  "companion.formulaCloze.region": "穴埋め {number}",
+  "companion.formulaCloze.remove": "選択した穴埋めを削除",
+  "companion.formulaCloze.confirm": "作成",
+  "companion.formulaCloze.saving": "作成中…",
+  "companion.formulaCloze.failed": "数式の穴埋めを作成できませんでした。もう一度お試しください。トピックが変わった場合はキャンセルして数式をもう一度タップしてください。"
+}

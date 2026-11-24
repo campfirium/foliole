@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Luka we wzorze",
+  "companion.formulaCloze.help": "Przeciągnij po części wzoru, którą chcesz ukryć. Narysuj więcej ramek, by utworzyć więcej luk.",
+  "companion.formulaCloze.region": "Luka {number}",
+  "companion.formulaCloze.remove": "Usuń zaznaczoną lukę",
+  "companion.formulaCloze.confirm": "Utwórz",
+  "companion.formulaCloze.saving": "Tworzenie…",
+  "companion.formulaCloze.failed": "Nie udało się utworzyć luki we wzorze. Spróbuj ponownie; jeśli temat się zmienił, anuluj i ponownie stuknij wzór."
+}

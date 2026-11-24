@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Пропуск в формуле",
+  "companion.formulaCloze.help": "Проведите по части формулы, которую нужно скрыть. Нарисуйте ещё рамки, чтобы создать ещё пропуски.",
+  "companion.formulaCloze.region": "Пропуск {number}",
+  "companion.formulaCloze.remove": "Удалить выбранный пропуск",
+  "companion.formulaCloze.confirm": "Создать",
+  "companion.formulaCloze.saving": "Создание…",
+  "companion.formulaCloze.failed": "Не удалось создать пропуск в формуле. Повторите попытку; если тема изменилась, отмените и снова коснитесь формулы."
+}

@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Ocultar en fórmula",
+  "companion.formulaCloze.help": "Arrastra sobre la parte de la fórmula que quieres ocultar. Dibuja más recuadros para crear más huecos.",
+  "companion.formulaCloze.region": "Hueco {number}",
+  "companion.formulaCloze.remove": "Eliminar el hueco seleccionado",
+  "companion.formulaCloze.confirm": "Crear",
+  "companion.formulaCloze.saving": "Creando…",
+  "companion.formulaCloze.failed": "No se pudo crear el hueco en la fórmula. Inténtalo de nuevo; si el tema cambió, cancela y vuelve a tocar la fórmula."
+}

@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Cloze della formula",
+  "companion.formulaCloze.help": "Trascina sulla parte della formula da nascondere. Disegna altri riquadri per creare altre lacune.",
+  "companion.formulaCloze.region": "Lacuna {number}",
+  "companion.formulaCloze.remove": "Rimuovi la lacuna selezionata",
+  "companion.formulaCloze.confirm": "Crea",
+  "companion.formulaCloze.saving": "Creazione…",
+  "companion.formulaCloze.failed": "Impossibile creare la lacuna nella formula. Riprova; se l’argomento è cambiato, annulla e tocca di nuovo la formula."
+}

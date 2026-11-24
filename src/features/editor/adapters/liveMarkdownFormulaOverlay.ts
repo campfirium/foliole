@@ -1,3 +1,4 @@
+import { buildFormulaOccurrenceKey } from '../../formula-cloze/model/formulaCloze';
 import { FORMULA_CLOZE_CREATE_EVENT, type FormulaClozeCreateEventDetail } from '../../formula-cloze/model/formulaClozeEvents';
 import type { FormulaClozeEditorPresentation } from '../../formula-cloze/model/formulaClozePresentation';
 import { createFormulaDomSelectionDescriptor } from '../model/formulaDomSelection';
@@ -176,10 +177,6 @@ function dispatchFormulaSelection(
       selection: descriptor
     }
   }));
-}
-
-function buildFormulaOccurrenceKey(mathRange: MarkdownMathRange) {
-  return `${mathRange.display}:${mathRange.from}:${mathRange.to}:${mathRange.tex}`;
 }
 
 function setRegionRectStyle(element: HTMLElement, rect: { height: number; width: number; x: number; y: number }) {

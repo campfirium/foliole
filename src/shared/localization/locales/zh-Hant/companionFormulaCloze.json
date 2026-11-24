@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "公式挖空",
+  "companion.formulaCloze.help": "在公式上拖出要遮住的部分；可以連續畫多個框，每個框生成一道題。",
+  "companion.formulaCloze.region": "挖空 {number}",
+  "companion.formulaCloze.remove": "刪除選取的挖空",
+  "companion.formulaCloze.confirm": "建立",
+  "companion.formulaCloze.saving": "正在建立…",
+  "companion.formulaCloze.failed": "未能建立公式挖空。請重試；若文章已變更，請取消後重新點公式。"
+}

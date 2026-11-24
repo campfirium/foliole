@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Formel-Lückentext",
+  "companion.formulaCloze.help": "Ziehe über den Teil der Formel, der verdeckt werden soll. Weitere Rahmen ergeben weitere Lücken.",
+  "companion.formulaCloze.region": "Lücke {number}",
+  "companion.formulaCloze.remove": "Ausgewählte Lücke entfernen",
+  "companion.formulaCloze.confirm": "Erstellen",
+  "companion.formulaCloze.saving": "Wird erstellt…",
+  "companion.formulaCloze.failed": "Formel-Lückentext konnte nicht erstellt werden. Versuche es erneut; wenn sich das Thema geändert hat, brich ab und tippe erneut auf die Formel."
+}

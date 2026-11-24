@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "सूत्र क्लोज़",
+  "companion.formulaCloze.help": "सूत्र के जिस हिस्से को छिपाना है उस पर खींचें। और बॉक्स बनाकर और क्लोज़ बनाएं।",
+  "companion.formulaCloze.region": "क्लोज़ {number}",
+  "companion.formulaCloze.remove": "चुना गया क्लोज़ हटाएं",
+  "companion.formulaCloze.confirm": "बनाएं",
+  "companion.formulaCloze.saving": "बनाया जा रहा है…",
+  "companion.formulaCloze.failed": "सूत्र क्लोज़ नहीं बन सका। फिर से कोशिश करें; अगर विषय बदल गया है, तो रद्द करें और सूत्र पर फिर टैप करें।"
+}

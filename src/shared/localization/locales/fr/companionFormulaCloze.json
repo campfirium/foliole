@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Texte à trous de formule",
+  "companion.formulaCloze.help": "Faites glisser sur la partie de la formule à masquer. Tracez d’autres cadres pour créer d’autres trous.",
+  "companion.formulaCloze.region": "Trou {number}",
+  "companion.formulaCloze.remove": "Supprimer le trou sélectionné",
+  "companion.formulaCloze.confirm": "Créer",
+  "companion.formulaCloze.saving": "Création…",
+  "companion.formulaCloze.failed": "Impossible de créer le trou de formule. Réessayez ; si le sujet a changé, annulez et touchez de nouveau la formule."
+}

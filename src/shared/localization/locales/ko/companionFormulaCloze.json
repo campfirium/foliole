@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "수식 빈칸",
+  "companion.formulaCloze.help": "가릴 부분을 드래그해 표시하세요. 상자를 여러 개 그리면 상자마다 문제가 만들어집니다.",
+  "companion.formulaCloze.region": "빈칸 {number}",
+  "companion.formulaCloze.remove": "선택한 빈칸 삭제",
+  "companion.formulaCloze.confirm": "만들기",
+  "companion.formulaCloze.saving": "만드는 중…",
+  "companion.formulaCloze.failed": "수식 빈칸을 만들지 못했습니다. 다시 시도하세요. 주제가 바뀌었다면 취소한 뒤 수식을 다시 탭하세요."
+}

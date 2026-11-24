@@ -3,6 +3,7 @@ import backupRestoreSync from './fr/backupRestoreSync.json';
 import d0 from './fr/companion.json';
 import d1 from './fr/companionApp.json';
 import d2 from './fr/companionCapture.json';
+import companionFormulaCloze from './fr/companionFormulaCloze.json';
 import companionImageCloze from './fr/companionImageCloze.json';
 import d3 from './fr/companionReading.json';
 import d4 from './fr/companionReadingTypography.json';
@@ -98,6 +99,7 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...d38,
   ...d39,
   ...backupRestoreSync,
+  ...companionFormulaCloze,
   ...companionImageCloze,
   ...desktopFormatCleanup,
   ...desktopReadwiseConnection,

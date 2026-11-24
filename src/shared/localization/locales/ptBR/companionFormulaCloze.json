@@ -1,0 +1,9 @@
+{
+  "companion.formulaCloze.title": "Lacuna em fórmula",
+  "companion.formulaCloze.help": "Arraste sobre a parte da fórmula que deve ficar oculta. Desenhe mais caixas para criar mais lacunas.",
+  "companion.formulaCloze.region": "Lacuna {number}",
+  "companion.formulaCloze.remove": "Remover a lacuna selecionada",
+  "companion.formulaCloze.confirm": "Criar",
+  "companion.formulaCloze.saving": "Criando…",
+  "companion.formulaCloze.failed": "Não foi possível criar a lacuna na fórmula. Tente novamente; se o tópico mudou, cancele e toque na fórmula outra vez."
+}
