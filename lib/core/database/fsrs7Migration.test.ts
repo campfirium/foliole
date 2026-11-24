@@ -3,14 +3,18 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
 import { expect, it } from 'vitest';
 
+import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
-import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
+import { bootstrapCompanionDatabase } from './companionDatabaseLifecycle.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
 const due = '2026-03-10T12:00:00.000Z';
 const invalidAt = '2026-02-30T12:00:00Z';
+const validAt = '2026-03-02T12:00:00Z';
+const hosts = ['desktop', 'companion'] as const;
+const bootstrapRequest = { now: due, expectedHostName: 'host', allowCreate: true };
 
 function desktopMigrationTarget(sqlite: DatabaseSync): DatabaseMigrationTarget {
   return {
@@ -80,46 +84,62 @@ function seedHistory(sqlite: DatabaseSync, version: number, reviewedAt: string) 
     VALUES ('legacy', 'legacy-review', 'host', 'z-legacy-card', 3, 'fsrs-6', ?)`).run(reviewedAt);
 }
 
-it.each(['desktop', 'companion'] as const)(
-  'identifies a legacy review that blocks the %s upgrade and rolls back, while valid history migrates',
-  async host => {
-    const sqlite = new DatabaseSync(':memory:');
-    try {
-      const desktop = desktopMigrationTarget(sqlite);
-      const companion = companionPort(sqlite);
-      const version = host === 'desktop' ? 183 : 112;
-      const target = host === 'desktop' ? DATABASE_SCHEMA_VERSION : 113;
-      const upgrade = async () => {
-        if (host === 'desktop') initializeDatabaseSchema(desktop);
-        else await companion.transaction(tx => migrateCompanionDatabase(tx, version, target));
-      };
+async function withReviewHistory(host: typeof hosts[number], reviewedAt: string, run: (fixture: {
+  sqlite: DatabaseSync;
+  open: (allowCreate: boolean) => Promise<void>;
+  version: number;
+  target: number;
+}) => Promise<void>) {
+  // A SQLite temporary file uses the rollback journal expected by companion bootstrap.
+  const sqlite = new DatabaseSync('');
+  try {
+    const desktop = desktopMigrationTarget(sqlite);
+    const companion = companionPort(sqlite);
+    const version = host === 'desktop' ? 183 : 112;
+    const target = host === 'desktop' ? DATABASE_SCHEMA_VERSION : COMPANION_DATABASE_VERSION;
+    const open = async (allowCreate: boolean) => {
       if (host === 'desktop') initializeDatabaseSchema(desktop);
-      else await createCompanionDatabase(companion, target);
-      const facts = () => sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-      const cards = () => sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
-      const schemaVersion = () => sqlite.prepare('PRAGMA user_version').get()?.user_version;
-      seedHistory(sqlite, version, invalidAt);
-      const oldFacts = facts(), oldCards = cards();
-
-      await expect(upgrade()).rejects.toThrow(
-        /FSRS-7.*invalid_review_timestamp.*node_id="z-legacy-card".*op_id="legacy-review"/u
-      );
-      expect(schemaVersion()).toBe(version);
-      expect(facts()).toEqual(oldFacts);
-      expect(cards()).toEqual(oldCards);
-
-      // In this isolated fixture, supplying a verified timestamp lets the same upgrade resume.
-      sqlite.prepare("UPDATE review_log SET reviewed_at = ? WHERE op_id = 'legacy-review'").run('2026-03-02T12:00:00Z');
-      const repairedFacts = facts();
-      await upgrade();
-      expect(schemaVersion()).toBe(target);
-      expect(facts()).toEqual(repairedFacts);
-      expect(cards()).toEqual([
-        expect.objectContaining({ node_id: 'a-valid-card', due, reps: 1, stability_fast: expect.any(Number) }),
-        expect.objectContaining({ node_id: 'z-legacy-card', due, reps: 1, stability_fast: expect.any(Number) })
-      ]);
-    } finally {
-      sqlite.close();
-    }
+      else await bootstrapCompanionDatabase(companion, { ...bootstrapRequest, allowCreate });
+    };
+    await open(true);
+    seedHistory(sqlite, version, reviewedAt);
+    await run({ sqlite, open, version, target });
+  } finally {
+    sqlite.close();
   }
+}
+
+const readFacts = (sqlite: DatabaseSync) => sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all();
+const readCards = (sqlite: DatabaseSync) => sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
+const readSchemaVersion = (sqlite: DatabaseSync) => sqlite.prepare('PRAGMA user_version').get()?.user_version;
+
+it.each(hosts)('identifies an invalid legacy review on %s startup and rolls back', host =>
+  withReviewHistory(host, invalidAt, async ({ sqlite, open, version }) => {
+    const oldFacts = readFacts(sqlite);
+    const oldCards = readCards(sqlite);
+
+    const upgrade = open(false);
+    await expect(upgrade).rejects.toThrow(
+      /FSRS-7.*invalid_review_timestamp.*node_id="z-legacy-card".*op_id="legacy-review"/u
+    );
+    await expect(upgrade).rejects.toThrow(/Keep the original library and its backups\. Contact Foliole support/u);
+    expect(readSchemaVersion(sqlite)).toBe(version);
+    expect(readFacts(sqlite)).toEqual(oldFacts);
+    expect(readCards(sqlite)).toEqual(oldCards);
+    expect(sqlite.prepare(`SELECT name FROM sqlite_schema
+      WHERE type = 'trigger' AND name = 'daily_flow_node_review_update'`).get()).toBeUndefined();
+  })
+);
+
+it.each(hosts)('keeps the original review facts and due dates when %s upgrades valid history', host =>
+  withReviewHistory(host, validAt, async ({ sqlite, open, target }) => {
+    const facts = readFacts(sqlite);
+    await open(false);
+    expect(readSchemaVersion(sqlite)).toBe(target);
+    expect(readFacts(sqlite)).toEqual(facts);
+    expect(readCards(sqlite)).toEqual([
+      expect.objectContaining({ node_id: 'a-valid-card', due, reps: 1, stability_fast: expect.any(Number) }),
+      expect.objectContaining({ node_id: 'z-legacy-card', due, reps: 1, stability_fast: expect.any(Number) })
+    ]);
+  })
 );

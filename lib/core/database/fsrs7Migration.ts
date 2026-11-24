@@ -33,7 +33,7 @@ function rebuild(row: unknown, events: unknown[], settings: unknown[], ancestors
     if (!(error instanceof InvalidReviewTimestampError) || error.opId === undefined) throw error;
     throw new Error(
       `FSRS-7 upgrade blocked by invalid_review_timestamp (node_id=${JSON.stringify(id)}, op_id=${JSON.stringify(error.opId)}). ` +
-      'Keep the original library and its backups while repairing this review record before retrying.',
+      'Keep the original library and its backups. Contact Foliole support with these IDs for help recovering your library.',
       { cause: error }
     );
   }
