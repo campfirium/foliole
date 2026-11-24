@@ -1,10 +1,12 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { renderSelectionOverlay } from './PdfPageOverlays';
-import { usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
+import { PdfSelectionContextMenu, usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
 
 function SelectionSurface() {
   const menu = usePdfSelectionContextMenu({ nodeId: 'pdf-node', onCreateHighlightFromSelection: vi.fn() });
@@ -69,4 +71,52 @@ it('keeps a PDF text selection visible while its annotation toolbar is open', ()
 
   act(() => result.current.closeSelectionMenu());
   expect(result.current.selectionOverlayLocator).toBeUndefined();
+});
+
+function PdfNoteHarness() {
+  const menu = usePdfSelectionContextMenu({ nodeId: 'pdf-node', onCreateHighlightFromSelection: undefined });
+  return (
+    <>
+      <button onClick={() => {
+        menu.openSelectionToolbar({
+          locator: { page: 1, x: 0.25, y: 0.5 },
+          selectionText: 'Selected PDF text'
+        }, { left: 100, top: 80 });
+        menu.setNoteOpen(true);
+      }}>Draft note</button>
+      <PdfSelectionContextMenu
+        noteDraft={menu.noteDraft}
+        noteOpen={menu.noteOpen}
+        noteSaving={menu.noteSaving}
+        onCreateCloze={menu.handleCreateCloze}
+        onCreateHighlight={menu.handleCreateHighlight}
+        onCreateNote={menu.handleCreateNote}
+        setNoteDraft={menu.setNoteDraft}
+        setNoteOpen={menu.setNoteOpen}
+        state={menu.selectionMenuState}
+      />
+    </>
+  );
+}
+
+it('keeps a PDF text annotation read-only until the submitted note is acknowledged', async () => {
+  const createHighlight = useWorkspaceStore.getState().createHighlightNodeFromSelection;
+  const receipt = Promise.withResolvers<string>();
+  const write = vi.fn(() => receipt.promise);
+  useWorkspaceStore.setState({ createHighlightNodeFromSelection: write });
+  try {
+    renderWithLocalization(<PdfNoteHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Draft note' }));
+    const input = screen.getByRole('textbox');
+    expect(input).toHaveProperty('readOnly', false);
+    fireEvent.change(input, { target: { value: 'PDF note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(write).toHaveBeenCalledExactlyOnceWith('pdf-node', expect.stringContaining('PDF note'), expect.any(String), expect.anything());
+    expect(input).toHaveProperty('readOnly', true);
+    receipt.resolve('created-note');
+    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+  } finally {
+    useWorkspaceStore.setState({ createHighlightNodeFromSelection: createHighlight });
+  }
 });

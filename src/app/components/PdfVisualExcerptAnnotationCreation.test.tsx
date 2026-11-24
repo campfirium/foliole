@@ -154,6 +154,8 @@ it('starts visual selection when only an old preserved text selection remains', 
 });
 
 it('creates one annotated image excerpt only after the PDF region note is saved', async () => {
+  const receipt = Promise.withResolvers<string>();
+  createPdfImageExcerpt.mockReturnValueOnce(receipt.promise);
   render(<AnnotationHarness />);
   preparePageRoot();
   const digest = vi.spyOn(crypto.subtle, 'digest').mockResolvedValue(new Uint8Array(32).buffer);
@@ -172,6 +174,8 @@ it('creates one annotated image excerpt only after the PDF region note is saved'
     '0'.repeat(64), 'AQID',
     `![Image excerpt](asset://${'0'.repeat(64)}.png)\n※ Diagram thought`
   ));
+  expect(input).toHaveProperty('readOnly', true);
+  receipt.resolve('created-excerpt');
   await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
   digest.mockRestore();
 });

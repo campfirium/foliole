@@ -9,7 +9,6 @@ interface BackupSearchSchema {
 }
 
 interface BackupSearchRow {
-  content: Buffer | string | null;
   deleted_at: string | null;
   id: string;
   parent_id: string | null;
@@ -41,18 +40,22 @@ function contentExpression(schema: BackupSearchSchema) {
     : "CAST(COALESCE(n.content, '') AS TEXT)";
 }
 
+function nodeContentSource(schema: BackupSearchSchema) {
+  return `FROM nodes n ${schema.hasBlobContent
+    ? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash'
+    : ''}`;
+}
+
 function selectMatchSql(schema: BackupSearchSchema) {
   const content = contentExpression(schema);
   return `SELECT n.id, ${schema.hasParentId ? 'n.parent_id' : 'NULL'} AS parent_id,
-      n.title, ${content} AS content,
+      n.title,
       ${schema.hasDeletedAt ? 'n.deleted_at' : 'NULL'} AS deleted_at
-    FROM nodes n
-    ${schema.hasBlobContent ? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash' : ''}
+    ${nodeContentSource(schema)}
     WHERE instr(lower(CAST(COALESCE(n.title, '') AS TEXT)), lower(?)) > 0
        OR instr(lower(${content}), lower(?)) > 0
     ORDER BY CASE WHEN instr(lower(CAST(COALESCE(n.title, '') AS TEXT)), lower(?)) > 0 THEN 0 ELSE 1 END,
-      lower(CAST(COALESCE(n.title, '') AS TEXT)) ASC, n.id ASC
-    LIMIT 1 OFFSET ?`;
+      lower(CAST(COALESCE(n.title, '') AS TEXT)) ASC, n.id ASC`;
 }
 
 function stringContent(value: Buffer | string | null) {
@@ -76,24 +79,26 @@ function nodePath(sqlite: SqliteDatabase, row: BackupSearchRow, schema: BackupSe
   return titles.slice(1).join(' / ');
 }
 
-export function findBackupSearchMatch(args: {
+export function* iterateBackupSearchMatches(args: {
   backupName: string;
   backupUpdatedAt: string;
-  offset: number;
   query: string;
   schema: BackupSearchSchema;
   sqlite: SqliteDatabase;
-}): NativeBackupSearchMatch | null {
-  const row = args.sqlite.prepare(selectMatchSql(args.schema))
-    .get(args.query, args.query, args.query, args.offset) as BackupSearchRow | undefined;
-  if (!row) return null;
-  return {
-    backup_name: args.backupName,
-    backup_updated_at: args.backupUpdatedAt,
-    content: stringContent(row.content),
-    deleted: Boolean(row.deleted_at),
-    node_id: row.id,
-    path: nodePath(args.sqlite, row, args.schema),
-    title: row.title?.trim() || row.id
-  };
+}): Generator<NativeBackupSearchMatch, void, unknown> {
+  const matchStatement = args.sqlite.prepare<[string, string, string], BackupSearchRow>(selectMatchSql(args.schema));
+  const bodyStatement = args.sqlite.prepare<[string], { content: Buffer | string | null }>(
+    `SELECT ${contentExpression(args.schema)} AS content ${nodeContentSource(args.schema)} WHERE n.id = ?`
+  );
+  for (const row of matchStatement.iterate(args.query, args.query, args.query)) {
+    yield {
+      backup_name: args.backupName,
+      backup_updated_at: args.backupUpdatedAt,
+      content: stringContent(bodyStatement.get(row.id)?.content ?? null),
+      deleted: Boolean(row.deleted_at),
+      node_id: row.id,
+      path: nodePath(args.sqlite, row, args.schema),
+      title: row.title?.trim() || row.id
+    };
+  }
 }

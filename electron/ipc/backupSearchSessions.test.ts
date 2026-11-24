@@ -153,3 +153,22 @@ it('removes only private orphan session directories', async () => {
   await expect(fs.stat(path.join(root, 'session-12345678-1234-1234-1234-123456789abc'))).rejects.toThrow();
   await expect(fs.stat(path.join(root, 'keep-me'))).resolves.toBeDefined();
 });
+
+it('removes previous and current worker directories after losing the active session registry', async () => {
+  const root = path.join(tempRoot, 'backup-search-sessions');
+  await startBackupSearchSession('needle', owner(7));
+  const activeDirectory = (mocks.clients[0]?.input as { sessionDirectory: string }).sessionDirectory;
+  await fs.writeFile(path.join(activeDirectory, 'backup-copy.db'), 'private copy');
+
+  await cleanupOrphanedBackupSearchSessions();
+  await expect(fs.stat(activeDirectory)).resolves.toBeDefined();
+
+  const legacyDirectory = await fs.mkdtemp(path.join(root, 'session-'));
+  await fs.writeFile(path.join(legacyDirectory, 'backup-copy.db'), 'old private copy');
+  vi.resetModules();
+  const restarted = await import('./backupSearchSessions.js');
+  await restarted.cleanupOrphanedBackupSearchSessions();
+
+  await expect(fs.stat(activeDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.stat(legacyDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+});

@@ -100,6 +100,7 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
   const createCloze = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const { menu } = args;
   const savingRef = useRef(false);
+  const [noteSaving, setNoteSaving] = useState(false);
   const finishCreation = (created: boolean) => {
     if (created) {
       window.getSelection()?.removeAllRanges();
@@ -111,6 +112,7 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
     const selection = menu.selectionMenuState ?? resolveContextMenuSelection(menu.surfaceRef.current, menu.preservedSelectionRef.current);
     if (!selection?.selectionText || !args.nodeId || savingRef.current) return false;
     savingRef.current = true;
+    if (kind === 'note') setNoteSaving(true);
     const anchorId = `pdf-${crypto.randomUUID()}`;
     const anchorLink = {
       id: anchorId,
@@ -131,7 +133,10 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
         finishCreation(Boolean(await createHighlight(args.nodeId, content, anchorId, anchorLink)));
       }
       return true;
-    } finally { savingRef.current = false; }
+    } finally {
+      savingRef.current = false;
+      if (kind === 'note') setNoteSaving(false);
+    }
   };
   const requestAnnotation = (kind: PdfSelectionAnnotationKind) => {
     const selection = resolvePdfSelectionSnapshot(menu.surfaceRef.current) ?? menu.selectionMenuState;
@@ -144,7 +149,7 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
     setPdfVisualSelectionKind(kind);
     return true;
   };
-  return { applySelectionAnnotation, requestAnnotation };
+  return { applySelectionAnnotation, noteSaving, requestAnnotation };
 }
 
 export function usePdfSelectionContextMenu(args: { nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfSelectionLocator) => boolean | Promise<boolean>) | undefined }) {
@@ -153,6 +158,7 @@ export function usePdfSelectionContextMenu(args: { nodeId: string | null; onCrea
 
   return {
     ...menu,
+    noteSaving: annotations.noteSaving,
     handleCreateCloze: () => annotations.applySelectionAnnotation('cloze'),
     handleCreateHighlight: () => annotations.applySelectionAnnotation('highlight'),
     handleCreateNote: () => annotations.applySelectionAnnotation('note', menu.noteDraft.trim()),
@@ -166,6 +172,7 @@ export function PdfSelectionContextMenu({
   onCreateNote,
   noteDraft,
   noteOpen,
+  noteSaving,
   setNoteDraft,
   setNoteOpen,
   state
@@ -175,6 +182,7 @@ export function PdfSelectionContextMenu({
   onCreateNote: () => void;
   noteDraft: string;
   noteOpen: boolean;
+  noteSaving: boolean;
   setNoteDraft: (value: string) => void;
   setNoteOpen: (open: boolean) => void;
   state: { left: number; top: number } | null;
@@ -199,7 +207,17 @@ export function PdfSelectionContextMenu({
           </AnnotationToolbarButton>
         </div>
       </div>
-      {noteOpen ? <AnnotationNotePanel draft={noteDraft} left={state.left} onCancel={() => setNoteOpen(false)} onChange={setNoteDraft} onSave={onCreateNote} top={state.top + 42} /> : null}
+      {noteOpen ? (
+        <AnnotationNotePanel
+          draft={noteDraft}
+          left={state.left}
+          onCancel={() => setNoteOpen(false)}
+          onChange={setNoteDraft}
+          onSave={onCreateNote}
+          saving={noteSaving}
+          top={state.top + 42}
+        />
+      ) : null}
     </>,
     document.body
   );

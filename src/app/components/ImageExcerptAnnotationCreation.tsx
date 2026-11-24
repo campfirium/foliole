@@ -144,6 +144,7 @@ export function ImageExcerptAnnotationCreation(props: {
       onCancel={close}
       onChange={setDraft}
       onSave={() => void save()}
+      saving={saving}
       top={position.top}
     />
   );

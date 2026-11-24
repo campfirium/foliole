@@ -35,10 +35,11 @@ function useClearBackupSearchSession(
   sessionIdRef: MutableCell<string | null>
 ) {
   return useCallback(async () => {
-    generationRef.current += 1;
+    const generation = ++generationRef.current;
     const sessionId = sessionIdRef.current;
     sessionIdRef.current = null;
     if (sessionId) await cancelDatabaseBackupSearch(sessionId).catch(() => undefined);
+    return generation;
   }, [generationRef, sessionIdRef]);
 }
 
@@ -68,7 +69,7 @@ function useLoadNextBackupMatch(model: ReturnType<typeof useBackupSearchModel>) 
 
 function useSubmitBackupSearch(
   model: ReturnType<typeof useBackupSearchModel>,
-  clearSession: () => Promise<void>,
+  clearSession: () => Promise<number>,
   loadNext: (sessionId: string, generation: number) => Promise<void>
 ) {
   const {
@@ -78,14 +79,14 @@ function useSubmitBackupSearch(
   return useCallback(async () => {
     const normalized = query.trim();
     if (!normalized) return;
-    await clearSession();
-    const generation = generationRef.current;
+    setStatus('starting');
+    const generation = await clearSession();
+    if (generationRef.current !== generation) return;
     setError('');
     setHistory([]);
     setCurrentIndex(-1);
     setSkippedBackupCount(0);
     setSubmittedQuery(normalized);
-    setStatus('starting');
     try {
       const sessionId = await startDatabaseBackupSearch(normalized);
       if (generationRef.current !== generation) return void cancelDatabaseBackupSearch(sessionId).catch(() => undefined);
@@ -116,7 +117,7 @@ function useContinueBackupSearch(
 function useBackupSearchLifecycle(
   open: boolean,
   model: ReturnType<typeof useBackupSearchModel>,
-  clearSession: () => Promise<void>
+  clearSession: () => Promise<number>
 ) {
   const {
     setCurrentIndex, setError, setHistory, setQuery, setSkippedBackupCount, setStatus, setSubmittedQuery
@@ -143,18 +144,19 @@ export function useBackupSearchSession(open: boolean) {
   const submit = useSubmitBackupSearch(model, clearSession, loadNext);
   const continueSearch = useContinueBackupSearch(model, loadNext);
   useBackupSearchLifecycle(open, model, clearSession);
-  const { setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery } = model;
+  const { generationRef, setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery } = model;
   const select = useCallback((index: number) => {
     if (index >= 0 && index < model.history.length) setCurrentIndex(index);
   }, [model.history.length, setCurrentIndex]);
   const cancel = useCallback(async () => {
-    await clearSession();
+    const generation = await clearSession();
+    if (generationRef.current !== generation) return;
     setHistory([]);
     setCurrentIndex(-1);
     setSkippedBackupCount(0);
     setSubmittedQuery('');
     setStatus('cancelled');
-  }, [clearSession, setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery]);
+  }, [clearSession, generationRef, setCurrentIndex, setHistory, setSkippedBackupCount, setStatus, setSubmittedQuery]);
   return {
     cancel,
     continueSearch,

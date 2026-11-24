@@ -157,6 +157,7 @@ function renderPdfSelectionMenu(selectionState: ReturnType<typeof usePdfSelectio
       onCreateNote={selectionState.handleCreateNote}
       noteDraft={selectionState.noteDraft}
       noteOpen={selectionState.noteOpen}
+      noteSaving={selectionState.noteSaving}
       setNoteDraft={selectionState.setNoteDraft}
       setNoteOpen={selectionState.setNoteOpen}
       state={selectionState.selectionMenuState}

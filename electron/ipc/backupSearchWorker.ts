@@ -5,7 +5,7 @@ import path from 'node:path';
 import { parentPort, workerData } from 'node:worker_threads';
 
 import type { NativeBackupSearchNextResult } from '../../lib/platform/nativeBackupSearchContract.js';
-import { findBackupSearchMatch, inspectBackupSearchSchema } from '../database/backupSearchQueries.js';
+import { inspectBackupSearchSchema, iterateBackupSearchMatches } from '../database/backupSearchQueries.js';
 import { materializeCompressedSqliteBackup } from '../database/compressedSqliteBackup.js';
 
 const require = createRequire(import.meta.url);
@@ -18,12 +18,9 @@ export interface BackupSearchWorkerInput {
 }
 
 interface ActiveBackup {
-  backupName: string;
   databasePath: string;
-  offset: number;
-  schema: ReturnType<typeof inspectBackupSearchSchema>;
+  matches: ReturnType<typeof iterateBackupSearchMatches>;
   sqlite: import('better-sqlite3').Database;
-  updatedAt: string;
 }
 
 async function removeSqliteGroup(databasePath: string) {
@@ -88,9 +85,13 @@ export class BackupSearchWorkerEngine {
     this.active = null;
     if (!active) return;
     try {
-      active.sqlite.close();
+      active.matches.return(undefined);
     } finally {
-      await removeSqliteGroup(active.databasePath);
+      try {
+        active.sqlite.close();
+      } finally {
+        await removeSqliteGroup(active.databasePath);
+      }
     }
   }
 
@@ -106,12 +107,15 @@ export class BackupSearchWorkerEngine {
           sqlite.pragma('query_only = ON');
           const schema = inspectBackupSearchSchema(sqlite);
           this.active = {
-            backupName: entry.fileName,
             databasePath,
-            offset: 0,
-            schema,
-            sqlite,
-            updatedAt: entry.updatedAt
+            matches: iterateBackupSearchMatches({
+              backupName: entry.fileName,
+              backupUpdatedAt: entry.updatedAt,
+              query: this.input.query,
+              schema,
+              sqlite
+            }),
+            sqlite
           };
           return true;
         } catch (error) {
@@ -130,26 +134,19 @@ export class BackupSearchWorkerEngine {
     while (this.active || await this.openNextBackup()) {
       const active = this.active;
       if (!active) continue;
-      let match;
+      let next;
       try {
-        match = findBackupSearchMatch({
-          backupName: active.backupName,
-          backupUpdatedAt: active.updatedAt,
-          offset: active.offset,
-          query: this.input.query,
-          schema: active.schema,
-          sqlite: active.sqlite
-        });
+        next = active.matches.next();
       } catch {
         this.skippedBackupCount += 1;
         await this.closeActive();
         continue;
       }
-      active.offset += 1;
-      if (!match) {
+      if (next.done) {
         await this.closeActive();
         continue;
       }
+      const match = next.value;
       const duplicateKey = `${match.node_id}\0${match.content}`;
       if (this.returned.has(duplicateKey)) continue;
       this.returned.add(duplicateKey);

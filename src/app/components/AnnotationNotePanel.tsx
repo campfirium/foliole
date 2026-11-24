@@ -74,6 +74,7 @@ export function AnnotationNotePanel(props: {
         )}
         onChange={(event) => props.onChange(event.target.value)}
         placeholder={t('desktop.annotation.comment.placeholder')}
+        readOnly={props.saving}
         value={props.draft}
       />
       {props.error ? <p className="px-3.5 text-ui-sm text-destructive" role="alert">{props.error}</p> : null}

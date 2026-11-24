@@ -69,7 +69,18 @@ function PdfVisualExcerptNotePanel(props: { onClose: () => void; request: PdfVis
     runtime.clearCreationError();
     props.onClose();
   };
-  return createPortal(<AnnotationNotePanel draft={draft} left={position.left} onCancel={close} onChange={setDraft} onSave={() => void save()} top={position.top} />, document.body);
+  return createPortal(
+    <AnnotationNotePanel
+      draft={draft}
+      left={position.left}
+      onCancel={close}
+      onChange={setDraft}
+      onSave={() => void save()}
+      saving={runtime.creating}
+      top={position.top}
+    />,
+    document.body
+  );
 }
 
 function PdfVisualExcerptPageLayerContent(props: { pageNumber: number }) {
