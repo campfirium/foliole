@@ -54,6 +54,27 @@ it('protects copied old files at capacity and expires them without joining the w
   expect(notices.show).not.toHaveBeenCalled();
 });
 
+it.each([false, true])('preserves old primary restore points across cleanup (existing registry: %s)', async (hasRegistry) => {
+  await writeBackup(copiedName, false);
+  if (hasRegistry) {
+    await fs.writeFile(path.join(directory, BACKUP_MANAGEMENT_FILE), JSON.stringify({
+      version: 1, whitelist: [], temporary: { [copiedName]: discoveredAt - 1 }
+    }));
+  }
+  await writeBackup(ordinaryName, false);
+  registerGeneratedBackup(path.join(directory, ordinaryName), { preserveExisting: true });
+
+  await prune(discoveredAt);
+  const laterCopy = 'foliole-auto-250102-100000.db';
+  await writeBackup(laterCopy, false);
+  await prune(discoveredAt + 1);
+  const expired = await prune(discoveredAt + day + 1);
+
+  expect(expired).toMatchObject({ deletedCount: 1, temporaryDeletedCount: 1 });
+  expect(await names()).toEqual([ordinaryName, copiedName]);
+  expect((await record()).whitelist).toEqual([ordinaryName]);
+});
+
 it('does not give generated hourly backups a grace period', async () => {
   await writeBackup(copiedName, true);
   await writeBackup(ordinaryName, true);

@@ -98,7 +98,7 @@ async function createAutomaticBackup(
     })
   });
   if (!result) return false;
-  registerGeneratedBackup(result.destinationPath);
+  registerGeneratedBackup(result.destinationPath, { preserveExisting: true });
   await fs.utimes(result.destinationPath, now, now);
   await copyExtraBackup({
     disposeFile: moveManagedBackupToTrash,
@@ -169,7 +169,7 @@ export async function createApplicationDatabaseBackup(
     await verifySqliteDatabaseFileOffMainThread(result.destinationPath);
   }
   if (path.resolve(path.dirname(result.destinationPath)) === path.resolve(backupDirectory)) {
-    registerGeneratedBackup(result.destinationPath);
+    registerGeneratedBackup(result.destinationPath, { preserveExisting: true });
   }
   const extraBackup = options.destinationPath
     ? disabledExtraBackupResult()
