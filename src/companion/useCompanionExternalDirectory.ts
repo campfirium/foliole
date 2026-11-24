@@ -1,8 +1,8 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import {
-  getCompanionExternalVisibilityRevision, subscribeCompanionExternalVisibility
+  getCompanionExternalVisibility, subscribeCompanionExternalVisibility, wasCompanionExternalFolderHidden
 } from '../shared/platform/companion/sync/companionExternalVisibility';
 import {
   loadCompanionExternalDirectory,
@@ -11,20 +11,19 @@ import {
   type CompanionExternalDocument
 } from '../shared/platform/companionExternalDocuments';
 
-import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
-
 const emptyDirectory: CompanionExternalDirectory = { entries: [], folders: [] };
 type LibraryRevision = { scope: object; revision: number };
 
 function useExternalLibraryRevision() {
   return {
     scope: useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope),
-    revision: useSyncExternalStore(subscribeCompanionExternalVisibility, getCompanionExternalVisibilityRevision)
+    visibility: useSyncExternalStore(subscribeCompanionExternalVisibility, getCompanionExternalVisibility)
   };
 }
 
 export function useCompanionExternalDirectory() {
-  const { scope, revision } = useExternalLibraryRevision();
+  const { scope, visibility } = useExternalLibraryRevision();
+  const { revision } = visibility;
   const [loaded, setLoaded] = useState<(LibraryRevision & { directory: CompanionExternalDirectory }) | null>(null);
 
   useEffect(() => {
@@ -37,12 +36,20 @@ export function useCompanionExternalDirectory() {
     return () => { cancelled = true; };
   }, [scope, revision]);
 
-  return loaded?.scope === scope && loaded.revision === revision ? loaded.directory : emptyDirectory;
+  return useMemo(() => {
+    if (loaded?.scope !== scope) return emptyDirectory;
+    if (loaded.revision === revision) return loaded.directory;
+    const visible = (id: string) => !wasCompanionExternalFolderHidden(id, loaded.revision, visibility);
+    return {
+      entries: loaded.directory.entries.filter(entry => visible(entry.folderId)),
+      folders: loaded.directory.folders.filter(folder => visible(folder.id))
+    };
+  }, [loaded, scope, revision, visibility]);
 }
 
-export function useCompanionExternalDocument(selection: CompanionDirectorySelection) {
-  const { scope, revision } = useExternalLibraryRevision();
-  const id = selection.kind === 'externalDocument' ? selection.documentId : null;
+export function useCompanionExternalDocument(id: string | null) {
+  const { scope, visibility } = useExternalLibraryRevision();
+  const { revision } = visibility;
   const [loaded, setLoaded] = useState<(LibraryRevision & { id: string; document: CompanionExternalDocument | null }) | null>(null);
 
   useEffect(() => {
@@ -56,5 +63,7 @@ export function useCompanionExternalDocument(selection: CompanionDirectorySelect
     return () => { cancelled = true; };
   }, [scope, revision, id]);
 
-  return loaded?.scope === scope && loaded.revision === revision && loaded.id === id ? loaded.document : undefined;
+  if (loaded?.scope !== scope || loaded.id !== id) return undefined;
+  if (loaded.document && wasCompanionExternalFolderHidden(loaded.document.folder_id, loaded.revision, visibility)) return null;
+  return loaded.document;
 }

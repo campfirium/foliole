@@ -1,32 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
+import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import {
+  getCompanionExternalVisibility, subscribeCompanionExternalVisibility, wasCompanionExternalFolderHidden
+} from '../shared/platform/companion/sync/companionExternalVisibility';
 import { searchCompanionFullTextSnapshot, type CompanionFullTextSearchResults } from '../shared/platform/companionFullTextSearch';
 
 const PAGE_SIZE = 20;
 type Status = 'idle' | 'loading' | 'ready' | 'error';
+type Snapshot = { scope: object; revision: number; results: CompanionFullTextSearchResults };
 
 export function useCompanionSearch(query: string) {
-  const [snapshot, setSnapshot] = useState<CompanionFullTextSearchResults | null>(null);
+  const scope = useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope);
+  const visibility = useSyncExternalStore(subscribeCompanionExternalVisibility, getCompanionExternalVisibility);
+  const [loaded, setLoaded] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [count, setCount] = useState(PAGE_SIZE);
   const [refresh, setRefresh] = useState(0);
   const normalizedQuery = query.trim();
   useEffect(() => {
-    setSnapshot(null);
+    setLoaded(null);
     setCount(PAGE_SIZE);
     setStatus(normalizedQuery ? 'loading' : 'idle');
     if (!normalizedQuery) return;
     const controller = new AbortController();
+    const { revision } = getCompanionExternalVisibility();
     searchCompanionFullTextSnapshot(normalizedQuery, controller.signal).then((next) => {
       if (controller.signal.aborted) return;
-      setSnapshot(next);
+      setLoaded({ scope, revision, results: next });
       setStatus('ready');
     }).catch(() => {
       if (!controller.signal.aborted) setStatus('error');
     });
     return () => controller.abort();
-  }, [normalizedQuery, refresh]);
+  }, [normalizedQuery, refresh, scope]);
 
+  const snapshot = useMemo(() => {
+    if (loaded?.scope !== scope) return null;
+    if (loaded.revision === visibility.revision) return loaded.results;
+    return { ...loaded.results, external: loaded.results.external.filter(result =>
+      !wasCompanionExternalFolderHidden(result.folder_id, loaded.revision, visibility)) };
+  }, [loaded, scope, visibility]);
   const results = snapshot ? {
     ...snapshot,
     topics: snapshot.topics.slice(0, count),
