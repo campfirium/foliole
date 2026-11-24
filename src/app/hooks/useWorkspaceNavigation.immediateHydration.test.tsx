@@ -77,6 +77,12 @@ function createPrefetchHookHarness(callOrder: string[]) {
   return { openNode, view };
 }
 
+function createPendingBodyInvoke(capture: (resolve: (value: unknown) => void) => void) {
+  return vi.fn((...[command]: [string, unknown?]) => (
+    command === 'load_node_document' ? new Promise((resolve) => capture(resolve)) : Promise.resolve(undefined)
+  ));
+}
+
 async function runImmediateHydrationCase() {
   seedPrefetchTestState();
   const invoke = createPrefetchInvokeMock();
@@ -170,5 +176,64 @@ describe('useWorkspaceNavigation immediate hydration', () => {
       await pending;
     });
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
+});
+
+describe('useWorkspaceNavigation cold open interleaving', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetWorkspaceNavigationTestState();
+    resetWorkspaceNodeDocumentLoaderForTest();
+    for (const nodeId of ['node-1', 'node-2', 'pdf-parent']) removeCachedWorkspaceNodeDocument(nodeId);
+  });
+
+  it('does not pull the view back when another entry navigates away during the read', async () => {
+    seedPrefetchTestState();
+    useWorkspaceStore.setState((state) => ({
+      nodeOrder: [...state.nodeOrder, 'pdf-parent'],
+      nodesById: { ...state.nodesById, 'pdf-parent': { ...state.nodesById['pdf-parent']!, content: 'Hot body', hasContent: true, hasReveal: false } }
+    }));
+    let resolveBody: (value: unknown) => void = () => undefined;
+    vi.mocked(getRuntimeInvoke).mockReturnValue(createPendingBodyInvoke((resolve) => { resolveBody = resolve; }));
+    const { openNode, view } = createPrefetchHookHarness([]);
+
+    let cold: unknown;
+    await act(async () => {
+      cold = view.result.current.handleSelectNode('node-2');
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await view.result.current.handleSelectNode('pdf-parent');
+    });
+    await act(async () => {
+      resolveBody({ content: 'Body', hideTitleHeading: false, kind: 'topic', reveal: null, virtualFilter: null });
+      await cold;
+    });
+
+    expect(openNode.mock.calls.map(([nodeId]) => nodeId)).toEqual(['pdf-parent']);
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('pdf-parent');
+  });
+
+  it('drops the pending cold open when the current note is selected again', async () => {
+    seedPrefetchTestState();
+    let resolveBody: (value: unknown) => void = () => undefined;
+    vi.mocked(getRuntimeInvoke).mockReturnValue(createPendingBodyInvoke((resolve) => { resolveBody = resolve; }));
+    const { openNode, view } = createPrefetchHookHarness([]);
+
+    let cold: unknown;
+    await act(async () => {
+      cold = view.result.current.handleSelectNode('node-2');
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await view.result.current.handleSelectNode('node-1');
+    });
+    await act(async () => {
+      resolveBody({ content: 'Body', hideTitleHeading: false, kind: 'topic', reveal: null, virtualFilter: null });
+      await cold;
+    });
+
+    expect(openNode.mock.calls.map(([nodeId]) => nodeId)).toEqual(['node-1']);
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
   });
 });

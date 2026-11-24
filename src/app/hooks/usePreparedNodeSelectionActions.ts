@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
@@ -13,6 +13,7 @@ import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
+import { isNavigationGenerationCurrent, nextNavigationGeneration } from './navigationRequestGeneration';
 
 // The target is not active yet, so without keepWarm the renderer boundary would drop its body again.
 function createPreparedLoadOptions(nodeId: string, isCurrent: () => boolean) {
@@ -39,15 +40,14 @@ export function usePreparedOpenNodeAction(
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void
 ) {
-  const requestTokenRef = useRef(0);
-
   return useCallback(
     async (
       nodeId: string,
       focusAnchor: NodeNavigationResult['focusAnchor'] = null,
       browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
     ) => {
-      const requestToken = ++requestTokenRef.current;
+      const requestToken = nextNavigationGeneration();
+      const sourceNodeId = useWorkspaceStore.getState().activeNodeId;
       markRequested(nodeId);
       const flushDraft = () => {
         if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
@@ -71,9 +71,10 @@ export function usePreparedOpenNodeAction(
       // for a loading placeholder. Only the newest request may switch; a failed read still opens the target so its
       // own retry state is shown.
       void flushPendingEditorDraftImmediately();
-      const isCurrent = () => requestTokenRef.current === requestToken;
+      const isCurrent = () => isNavigationGenerationCurrent(requestToken)
+        && useWorkspaceStore.getState().activeNodeId === sourceNodeId;
       await loadDesktopNodeDocument(nodeId, createPreparedLoadOptions(nodeId, isCurrent), isCurrent);
-      if (requestTokenRef.current !== requestToken) return;
+      if (!isCurrent()) return;
       // Typing may have continued in the old note while the body loaded.
       flushDraft();
       openTarget();
@@ -117,6 +118,7 @@ export function useBreadcrumbSelectionAction(
         return;
       }
 
+      nextNavigationGeneration();
       markSelectionRequested(nodeId);
       if (!flushActiveEditorTransaction(activeNodeId)) {
         flushPendingEditorDraft();

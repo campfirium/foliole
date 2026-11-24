@@ -8,6 +8,8 @@ import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { nextNavigationGeneration } from './navigationRequestGeneration';
+
 export function useNavigationAction(
   action: () => NodeNavigationResult | null,
   flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
@@ -20,6 +22,7 @@ export function useNavigationAction(
   ensureNodeReady: (nodeId: string) => Promise<void>
 ) {
   return useCallback(async () => {
+    nextNavigationGeneration();
     const sourceNodeId = useWorkspaceStore.getState().activeNodeId;
     if (!resolveTargetNodeId()) {
       action();
@@ -79,6 +82,7 @@ export function useSelectNodeAction(
       focusAnchor: NodeAnchorLink | null = null,
       browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
     ) => {
+      nextNavigationGeneration();
       if (focusAnchor && activeNodeId === nodeId) {
         markRequested(nodeId);
         if (!flushActiveEditorTransaction(activeNodeId)) {
