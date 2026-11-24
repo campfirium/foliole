@@ -12,7 +12,7 @@ import { isNodeMutationPatchResult } from './workspaceRuntimeMutationResults';
 export type ManagedInboxUpdateUnlisten = (() => void) | null;
 export type GlobalCaptureNavigateUnlisten = (() => void) | null;
 export type ReadwiseReaderImportProgressUnlisten = (() => void) | null;
-export type { ReadwiseReaderImportProgressPayload };
+export type { ReadwiseReaderImportProgressPayload, WorkspaceContentChangedPayload };
 export type WorkspaceContentChangedUnlisten = (() => void) | null;
 export type WorkspaceSyncAppliedUnlisten = (() => void) | null;
 

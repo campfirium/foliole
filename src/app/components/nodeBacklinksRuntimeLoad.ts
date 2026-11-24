@@ -1,7 +1,11 @@
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
-import { getElectronAPI, type ElectronAPI, type WorkspaceContentChangedPayload } from '../../shared/platform/electronApi';
 import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
-import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
+import { getRuntimeBridgeIdentity } from '../../shared/platform/runtime/bridgeIdentity';
+import {
+  onWorkspaceContentChanged,
+  onWorkspaceSyncApplied,
+  type WorkspaceContentChangedPayload
+} from '../../shared/platform/runtimeShellEvents';
 
 export interface RuntimeBacklinksState {
   errorMessage: string;
@@ -18,11 +22,11 @@ export const EMPTY_RUNTIME_BACKLINKS_STATE: RuntimeBacklinksState = {
 type Subscriber = (state: RuntimeBacklinksState) => void;
 type RequestGroup = ReturnType<typeof startBacklinksRequest>;
 type BacklinkNotification = Pick<WorkspaceContentChangedPayload, 'libraryScope' | 'workspaceScope' | 'backlinkSourceChange'>;
-const activeRequests = new WeakMap<ElectronAPI, Map<string, RequestGroup>>();
+const activeRequests = new WeakMap<object, Map<string, RequestGroup>>();
 const requestsWithoutBridge = new Map<string, RequestGroup>();
 
 function requestGroups() {
-  const bridge = getElectronAPI();
+  const bridge = getRuntimeBridgeIdentity();
   if (!bridge) return requestsWithoutBridge;
   let requests = activeRequests.get(bridge);
   if (!requests) {
