@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Positionner l’image",
   "companion.imageCloze.add": "Nouveau masque",
   "companion.imageCloze.deleteFailed": "Impossible de terminer la suppression de l’élément. Veuillez réessayer.",
-  "companion.imageCloze.remove": "Supprimer le masque sélectionné"
+  "companion.imageCloze.remove": "Supprimer le masque sélectionné",
+  "companion.imageCloze.mode": "Outil d’image",
+  "companion.imageCloze.modeCloze": "Texte à trous",
+  "companion.imageCloze.modeFocus": "Cadrage",
+  "companion.imageCloze.modeCrop": "Recadrer",
+  "companion.imageCloze.focusTitle": "Cadrage de l’image",
+  "companion.imageCloze.cropTitle": "Recadrer l’image",
+  "companion.imageCloze.focusHelp": "Faites glisser sur l’image pour tracer la zone de cadrage ; le reste est assombri. Faites glisser le cadre ou ses coins pour l’ajuster.",
+  "companion.imageCloze.cropHelp": "Faites glisser sur l’image pour tracer la zone à afficher. L’image d’origine est conservée. Faites glisser le cadre ou ses coins pour l’ajuster.",
+  "companion.imageCloze.focusRegion": "Zone de cadrage",
+  "companion.imageCloze.cropRegion": "Zone de recadrage",
+  "companion.imageCloze.removeFocus": "Retirer le cadrage",
+  "companion.imageCloze.removeCrop": "Retirer le recadrage",
+  "companion.imageCloze.savingRect": "Enregistrement…",
+  "companion.imageCloze.rectFailed": "Impossible d’enregistrer. Vos modifications sont conservées ; réessayez. Si l’article a changé, annulez puis rouvrez l’image."
 }

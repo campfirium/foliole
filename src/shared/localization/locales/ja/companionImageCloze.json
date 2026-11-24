@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "画像の位置を調整",
   "companion.imageCloze.add": "新しいマスク",
   "companion.imageCloze.deleteFailed": "項目の削除を完了できませんでした。再試行してください。",
-  "companion.imageCloze.remove": "選択したマスクを削除"
+  "companion.imageCloze.remove": "選択したマスクを削除",
+  "companion.imageCloze.mode": "画像ツール",
+  "companion.imageCloze.modeCloze": "穴埋め",
+  "companion.imageCloze.modeFocus": "フォーカス",
+  "companion.imageCloze.modeCrop": "トリミング",
+  "companion.imageCloze.focusTitle": "画像フォーカス",
+  "companion.imageCloze.cropTitle": "画像をトリミング",
+  "companion.imageCloze.focusHelp": "画像上をドラッグしてフォーカス領域を描きます。それ以外は暗くなります。枠や四隅をドラッグすると調整できます。",
+  "companion.imageCloze.cropHelp": "画像上をドラッグして表示する領域を描きます。元の画像は保持されます。枠や四隅をドラッグすると調整できます。",
+  "companion.imageCloze.focusRegion": "フォーカス領域",
+  "companion.imageCloze.cropRegion": "トリミング領域",
+  "companion.imageCloze.removeFocus": "フォーカスを解除",
+  "companion.imageCloze.removeCrop": "トリミングを解除",
+  "companion.imageCloze.savingRect": "保存中…",
+  "companion.imageCloze.rectFailed": "保存できませんでした。変更は保持されています。もう一度お試しください。記事が変更された場合は、キャンセルして画像を開き直してください。"
 }

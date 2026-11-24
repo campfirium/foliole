@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Bild positionieren",
   "companion.imageCloze.add": "Neue Maske",
   "companion.imageCloze.deleteFailed": "Das Löschen des Lernelements konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
-  "companion.imageCloze.remove": "Ausgewählte Maske löschen"
+  "companion.imageCloze.remove": "Ausgewählte Maske löschen",
+  "companion.imageCloze.mode": "Bildwerkzeug",
+  "companion.imageCloze.modeCloze": "Lückentext",
+  "companion.imageCloze.modeFocus": "Fokus",
+  "companion.imageCloze.modeCrop": "Zuschneiden",
+  "companion.imageCloze.focusTitle": "Bildfokus",
+  "companion.imageCloze.cropTitle": "Bild zuschneiden",
+  "companion.imageCloze.focusHelp": "Ziehe auf dem Bild, um den Fokusbereich festzulegen; der Rest wird abgedunkelt. Ziehe den Rahmen oder seine Ecken, um ihn anzupassen.",
+  "companion.imageCloze.cropHelp": "Ziehe auf dem Bild, um den angezeigten Bereich festzulegen. Das Originalbild bleibt erhalten. Ziehe den Rahmen oder seine Ecken, um ihn anzupassen.",
+  "companion.imageCloze.focusRegion": "Fokusbereich",
+  "companion.imageCloze.cropRegion": "Zuschnittbereich",
+  "companion.imageCloze.removeFocus": "Fokus entfernen",
+  "companion.imageCloze.removeCrop": "Zuschnitt entfernen",
+  "companion.imageCloze.savingRect": "Speichern…",
+  "companion.imageCloze.rectFailed": "Speichern nicht möglich. Deine Änderungen bleiben erhalten; versuche es erneut. Falls sich der Artikel geändert hat, brich ab und öffne das Bild erneut."
 }

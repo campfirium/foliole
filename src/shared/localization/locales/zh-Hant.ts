@@ -1,8 +1,10 @@
 import type { TranslationCatalog } from './catalogTypes';
+import assistantWriteApproval from './zh-Hant/assistantWriteApproval.json';
 import backupRestoreSync from './zh-Hant/backupRestoreSync.json';
 import d0 from './zh-Hant/companion.json';
 import d1 from './zh-Hant/companionApp.json';
 import d2 from './zh-Hant/companionCapture.json';
+import companionDirectory from './zh-Hant/companionDirectory.json';
 import companionFormulaCloze from './zh-Hant/companionFormulaCloze.json';
 import companionImageCloze from './zh-Hant/companionImageCloze.json';
 import d3 from './zh-Hant/companionReading.json';
@@ -38,6 +40,8 @@ import reminders from './zh-Hant/reminders.json';
 import d27 from './zh-Hant/settings.json';
 import d28 from './zh-Hant/settingsAbout.json';
 import settingsAide from './zh-Hant/settingsAide.json';
+import settingsAideContext from './zh-Hant/settingsAideContext.json';
+import settingsAidePermissions from './zh-Hant/settingsAidePermissions.json';
 import d29 from './zh-Hant/settingsAppearance.json';
 import settingsAttachments from './zh-Hant/settingsAttachments.json';
 import settingsBackups from './zh-Hant/settingsBackups.json';
@@ -54,6 +58,7 @@ import d37 from './zh-Hant/settingsStorage.json';
 import syncGroup from './zh-Hant/settingsSyncGroup.json';
 import d38 from './zh-Hant/settingsSystem.json';
 import d39 from './zh-Hant/sharedUi.json';
+import superMemoConfirm from './zh-Hant/superMemoConfirm.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -110,5 +115,10 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...settingsAttachments,
   ...settingsBackups,
   ...settingsDatabaseMaintenance,
-  ...settingsEditor
+  ...settingsEditor,
+  ...assistantWriteApproval,
+  ...companionDirectory,
+  ...settingsAideContext,
+  ...settingsAidePermissions,
+  ...superMemoConfirm
 };

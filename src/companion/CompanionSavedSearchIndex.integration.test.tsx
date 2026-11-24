@@ -47,9 +47,9 @@ it('saves a mobile keyword search as an index, renames it and moves it to Trash 
       FROM nodes WHERE virtual_filter LIKE '%"text"%'`).all() as Array<Record<string, unknown> & { virtual_filter: string }>;
 
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()}><CompanionSearchContent /></BatchDirectoryFixture>);
-    expect(screen.queryByRole('button', { name: 'Save search as index' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save search to Virtual' })).toBeNull();
     fireEvent.change(screen.getByTestId('companion-search-input'), { target: { value: '  Primer ' } });
-    click('Save search as index');
+    click('Save search to Virtual');
     expect(await screen.findByText('Saved to Virtual')).toBeVisible();
     await screen.findByRole('button', { name: 'Open folder Primer' });
 

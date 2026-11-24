@@ -109,5 +109,8 @@
   "companion.index.noSources": "Brak pasujących źródeł",
   "companion.index.addSourceFailed": "Nie udało się dodać źródła do folderu wirtualnego.",
   "companion.index.removeSourceFailed": "Nie udało się usunąć źródła z folderu wirtualnego.",
+  "companion.index.addSources": "Dodaj źródła: {count}",
+  "companion.index.removeSources": "Usuń źródła: {count}",
+  "companion.workspace.failure.relearn": "Nie udało się nauczyć wybranych tematów na nowo.",
   "companion.reading.queue": "Kolejka"
 }

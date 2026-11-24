@@ -109,5 +109,8 @@
   "companion.index.noSources": "Nenhuma fonte correspondente",
   "companion.index.addSourceFailed": "Não foi possível adicionar a fonte à pasta virtual.",
   "companion.index.removeSourceFailed": "Não foi possível remover a fonte da pasta virtual.",
+  "companion.index.addSources": "Adicionar {count} fontes",
+  "companion.index.removeSources": "Remover {count} fontes",
+  "companion.workspace.failure.relearn": "Não foi possível reaprender os tópicos selecionados.",
   "companion.reading.queue": "Fila"
 }

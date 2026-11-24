@@ -23,6 +23,7 @@ const now = '2026-11-24T08:00:00.000Z';
 let close: (() => Promise<void>) | null = null;
 
 afterEach(async () => {
+  vi.useRealTimers();
   await close?.();
   close = null;
   runtime.owner = null;
@@ -66,6 +67,18 @@ it.each(['android', 'ios'] as const)('%s opens Flow on the phone guided sample i
 
   await openCompanionDailyFlowForDisplay({ now, mode: 'recommended' });
   expect(await userNodes(owner)).toHaveLength(nodes.length);
+});
+
+it('stamps the sample no later than the time Flow opens at, so that open holds all of it', async () => {
+  // Writing the sample takes time: by the time it lands, the clock is past the time the open was asked for.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(Date.parse(now) + 60_000));
+  const owner = await openLibrary('android');
+  const flow = await openCompanionDailyFlowForDisplay({ now, mode: 'recommended' });
+  const nodes = await userNodes(owner);
+  expect(nodes).toHaveLength(1 + getMobileGuidedSampleContent('zh-Hans').children.length);
+  expect(flow.session.currentNodeId).toBe(nodes[0]!.id);
+  expect(flow.session.cycle).toMatchObject({ clearedAt: null, remaining: nodes.length });
 });
 
 it('leaves a library that already holds the user’s own material untouched', async () => {

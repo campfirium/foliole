@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Posiziona immagine",
   "companion.imageCloze.add": "Nuova maschera",
   "companion.imageCloze.deleteFailed": "Impossibile completare l’eliminazione dell’elemento. Riprova.",
-  "companion.imageCloze.remove": "Elimina maschera selezionata"
+  "companion.imageCloze.remove": "Elimina maschera selezionata",
+  "companion.imageCloze.mode": "Strumento immagine",
+  "companion.imageCloze.modeCloze": "Cloze",
+  "companion.imageCloze.modeFocus": "Messa a fuoco",
+  "companion.imageCloze.modeCrop": "Ritaglia",
+  "companion.imageCloze.focusTitle": "Messa a fuoco dell’immagine",
+  "companion.imageCloze.cropTitle": "Ritaglia immagine",
+  "companion.imageCloze.focusHelp": "Trascina sull’immagine per tracciare l’area di messa a fuoco; il resto viene scurito. Trascina la cornice o i suoi angoli per regolarla.",
+  "companion.imageCloze.cropHelp": "Trascina sull’immagine per tracciare l’area da mostrare. L’immagine originale viene conservata. Trascina la cornice o i suoi angoli per regolarla.",
+  "companion.imageCloze.focusRegion": "Area di messa a fuoco",
+  "companion.imageCloze.cropRegion": "Area di ritaglio",
+  "companion.imageCloze.removeFocus": "Rimuovi messa a fuoco",
+  "companion.imageCloze.removeCrop": "Rimuovi ritaglio",
+  "companion.imageCloze.savingRect": "Salvataggio…",
+  "companion.imageCloze.rectFailed": "Impossibile salvare. Le modifiche sono conservate; riprova. Se l’articolo è cambiato, annulla e riapri l’immagine."
 }

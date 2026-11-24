@@ -1,8 +1,10 @@
 import type { TranslationCatalog } from './catalogTypes';
+import assistantWriteApproval from './ko/assistantWriteApproval.json';
 import backupRestoreSync from './ko/backupRestoreSync.json';
 import d0 from './ko/companion.json';
 import d1 from './ko/companionApp.json';
 import d2 from './ko/companionCapture.json';
+import companionDirectory from './ko/companionDirectory.json';
 import companionFormulaCloze from './ko/companionFormulaCloze.json';
 import companionImageCloze from './ko/companionImageCloze.json';
 import d3 from './ko/companionReading.json';
@@ -38,6 +40,8 @@ import reminders from './ko/reminders.json';
 import d27 from './ko/settings.json';
 import d28 from './ko/settingsAbout.json';
 import settingsAide from './ko/settingsAide.json';
+import settingsAideContext from './ko/settingsAideContext.json';
+import settingsAidePermissions from './ko/settingsAidePermissions.json';
 import d29 from './ko/settingsAppearance.json';
 import settingsAttachments from './ko/settingsAttachments.json';
 import settingsBackups from './ko/settingsBackups.json';
@@ -54,6 +58,7 @@ import d37 from './ko/settingsStorage.json';
 import syncGroup from './ko/settingsSyncGroup.json';
 import d38 from './ko/settingsSystem.json';
 import d39 from './ko/sharedUi.json';
+import superMemoConfirm from './ko/superMemoConfirm.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -110,5 +115,10 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...settingsAttachments,
   ...settingsBackups,
   ...settingsDatabaseMaintenance,
-  ...settingsEditor
+  ...settingsEditor,
+  ...assistantWriteApproval,
+  ...companionDirectory,
+  ...settingsAideContext,
+  ...settingsAidePermissions,
+  ...superMemoConfirm
 };

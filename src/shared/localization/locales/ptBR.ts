@@ -1,8 +1,10 @@
 import type { TranslationCatalog } from './catalogTypes';
+import assistantWriteApproval from './ptBR/assistantWriteApproval.json';
 import backupRestoreSync from './ptBR/backupRestoreSync.json';
 import d0 from './ptBR/companion.json';
 import d1 from './ptBR/companionApp.json';
 import d2 from './ptBR/companionCapture.json';
+import companionDirectory from './ptBR/companionDirectory.json';
 import companionFormulaCloze from './ptBR/companionFormulaCloze.json';
 import companionImageCloze from './ptBR/companionImageCloze.json';
 import d3 from './ptBR/companionReading.json';
@@ -38,6 +40,8 @@ import reminders from './ptBR/reminders.json';
 import d27 from './ptBR/settings.json';
 import d28 from './ptBR/settingsAbout.json';
 import settingsAide from './ptBR/settingsAide.json';
+import settingsAideContext from './ptBR/settingsAideContext.json';
+import settingsAidePermissions from './ptBR/settingsAidePermissions.json';
 import d29 from './ptBR/settingsAppearance.json';
 import settingsAttachments from './ptBR/settingsAttachments.json';
 import settingsBackups from './ptBR/settingsBackups.json';
@@ -54,6 +58,7 @@ import d37 from './ptBR/settingsStorage.json';
 import syncGroup from './ptBR/settingsSyncGroup.json';
 import d38 from './ptBR/settingsSystem.json';
 import d39 from './ptBR/sharedUi.json';
+import superMemoConfirm from './ptBR/superMemoConfirm.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -110,5 +115,10 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...settingsAttachments,
   ...settingsBackups,
   ...settingsDatabaseMaintenance,
-  ...settingsEditor
+  ...settingsEditor,
+  ...assistantWriteApproval,
+  ...companionDirectory,
+  ...settingsAideContext,
+  ...settingsAidePermissions,
+  ...superMemoConfirm
 };

@@ -7,6 +7,8 @@ import { chromium } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { createServer } from 'vite';
 
+import { removeGuidedSample } from './companionClozeGuard.test-support.mjs';
+
 const title = 'Integrated FSRS Scheduling';
 const answer = 'Free Spaced Repetition Scheduler';
 const content = `# ${title}\n\nIntegrates FSRS (${answer}), an open review scheduler`;
@@ -22,12 +24,9 @@ function seedTopic(databaseFile) {
   const db = new Database(databaseFile);
   try {
     const now = new Date().toISOString();
+    removeGuidedSample(db);
     db.prepare("INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at) VALUES('cloze-source','topic',?,?,5,?,?)")
       .run(title, content, now, now);
-    for (const { name } of db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'daily_flow_%'").all()) {
-      db.prepare(`DELETE FROM "${name}"`).run();
-    }
-    db.prepare("DELETE FROM companion_meta WHERE key LIKE 'flow_resume:%'").run();
   } finally { db.close(); }
 }
 

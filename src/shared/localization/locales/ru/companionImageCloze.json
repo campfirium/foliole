@@ -15,5 +15,19 @@
   "companion.imageCloze.position": "Расположить изображение",
   "companion.imageCloze.add": "Новая маска",
   "companion.imageCloze.deleteFailed": "Не удалось завершить удаление элемента. Повторите попытку.",
-  "companion.imageCloze.remove": "Удалить выбранную маску"
+  "companion.imageCloze.remove": "Удалить выбранную маску",
+  "companion.imageCloze.mode": "Инструмент изображения",
+  "companion.imageCloze.modeCloze": "Пропуски",
+  "companion.imageCloze.modeFocus": "Фокус",
+  "companion.imageCloze.modeCrop": "Обрезка",
+  "companion.imageCloze.focusTitle": "Фокус изображения",
+  "companion.imageCloze.cropTitle": "Обрезать изображение",
+  "companion.imageCloze.focusHelp": "Проведите по изображению, чтобы выделить область фокуса; остальное затемняется. Перетащите рамку или её углы, чтобы изменить её.",
+  "companion.imageCloze.cropHelp": "Проведите по изображению, чтобы выделить показываемую область. Исходное изображение сохраняется. Перетащите рамку или её углы, чтобы изменить её.",
+  "companion.imageCloze.focusRegion": "Область фокуса",
+  "companion.imageCloze.cropRegion": "Область обрезки",
+  "companion.imageCloze.removeFocus": "Убрать фокус",
+  "companion.imageCloze.removeCrop": "Убрать обрезку",
+  "companion.imageCloze.savingRect": "Сохранение…",
+  "companion.imageCloze.rectFailed": "Не удалось сохранить. Ваши изменения не потеряны; повторите попытку. Если статья изменилась, отмените и снова откройте изображение."
 }

@@ -109,5 +109,8 @@
   "companion.index.noSources": "Нет подходящих источников",
   "companion.index.addSourceFailed": "Не удалось добавить источник в виртуальную папку.",
   "companion.index.removeSourceFailed": "Не удалось удалить источник из виртуальной папки.",
+  "companion.index.addSources": "Добавить источники: {count}",
+  "companion.index.removeSources": "Удалить источники: {count}",
+  "companion.workspace.failure.relearn": "Не удалось переучить выбранные темы.",
   "companion.reading.queue": "Очередь"
 }
