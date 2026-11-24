@@ -1,11 +1,12 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildSplitTopicPreview } from '../../../lib/core/nodes/splitTopicModel';
+import type { NativeSplitTopicPreview } from '../../../lib/platform/nativeNodeMutationContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
+import { loadSplitTopicWorkspacePreview } from '../../shared/platform/workspaceRuntimeRepository';
 import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 import { recordSplitTopicTrace } from '../splitTopicTrace';
 
 import { confirmSplitTopic } from './SplitTopicDialogMutation';
@@ -25,14 +26,6 @@ function useDialogRequest() {
     return () => window.removeEventListener(SPLIT_TOPIC_DIALOG_REQUEST_EVENT, receive);
   }, []);
   return { request, setRequest };
-}
-
-function readSource(request: SplitTopicDialogRequest | null) {
-  if (!request) return null;
-  const state = useWorkspaceStore.getState();
-  const source = state.nodesById[request.sourceNodeId];
-  if (!source || source.kind !== 'topic' || state.trashedNodeIds.includes(source.id)) return null;
-  return { source, state };
 }
 
 function useSplitTopicDialogTrace(args: {
@@ -96,53 +89,70 @@ function useSplitTopicForm(request: SplitTopicDialogRequest | null) {
   const [form, setForm] = useState<SplitTopicFormState>(DEFAULT_SPLIT_TOPIC_FORM);
   const [busy, setBusy] = useState<Busy>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [preferencesReadyFor, setPreferencesReadyFor] = useState<SplitTopicDialogRequest | null>(null);
+  const [previewFor, setPreviewFor] = useState<{
+    request: SplitTopicDialogRequest;
+    source: NativeSplitTopicPreview | null;
+  } | null>(null);
 
   useEffect(() => {
+    setPreviewFor(null);
     if (!request) return;
     let active = true;
     setForm(DEFAULT_SPLIT_TOPIC_FORM);
     setError(null);
     setBusy('loading');
-    void loadSplitTopicPreferences()
-      .then((preferences) => active && setForm({ ...DEFAULT_SPLIT_TOPIC_FORM, ...preferences }))
-      .catch(() => {
-        if (active) recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'preferences-load-failed' });
-      })
-      .finally(() => {
+    void Promise.allSettled([loadSplitTopicPreferences(), loadSplitTopicWorkspacePreview(request.sourceNodeId)])
+      .then(([preferences, source]) => {
         if (!active) return;
-        if (request.trace) setPreferencesReadyFor(request);
+        if (preferences.status === 'fulfilled') {
+          setForm({ ...DEFAULT_SPLIT_TOPIC_FORM, ...preferences.value });
+        } else {
+          recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'preferences-load-failed' });
+        }
+        setPreviewFor(source.status === 'fulfilled' ? { request, source: source.value } : null);
         setBusy('idle');
       });
     return () => { active = false; };
   }, [request]);
 
-  return { form, setForm, busy, setBusy, error, setError, preferencesReady: request === preferencesReadyFor };
+  return { form, setForm, busy, setBusy, error, setError, setPreviewFor, current: previewFor?.request === request ? previewFor : null };
 }
 
 export function SplitTopicDialogHost() {
   const t = useTranslation();
   const { request, setRequest } = useDialogRequest();
-  const { form, setForm, busy, setBusy, error, setError, preferencesReady } = useSplitTopicForm(request);
-  const sourceContext = readSource(request);
-  const preview = useMemo(() => sourceContext && form.delimiter ? buildSplitTopicPreview({ content: sourceContext.source.content, delimiter: form.delimiter, footerText: form.footerText, headerText: form.headerText, keepDelimiter: form.keepDelimiter }) : [], [form, sourceContext]);
+  const { form, setForm, busy, setBusy, error, setError, setPreviewFor, current } = useSplitTopicForm(request);
+  const content = current?.source?.content;
+  const { delimiter, footerText, headerText, keepDelimiter } = form;
+  const preview = useMemo(() => content !== undefined && delimiter
+    ? buildSplitTopicPreview({ content, delimiter, footerText, headerText, keepDelimiter })
+    : [], [content, delimiter, footerText, headerText, keepDelimiter]);
   useSplitTopicDialogTrace({
-    request, preferencesReady, content: sourceContext?.source.content, delimiter: form.delimiter, parts: preview.length
+    request, preferencesReady: current !== null, content, delimiter, parts: preview.length
   });
 
-  if (!request || !sourceContext) return null;
+  if (!request) return null;
+  const loadError = busy === 'idle' && !current?.source
+    ? t(current ? 'desktop.splitTopic.sourceUnavailable' : 'desktop.splitTopic.failed')
+    : null;
   const close = () => {
     if (busy !== 'idle') return;
     recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'canceled' });
     setRequest(null);
   };
   const confirm = async () => {
-    if (preview.length === 0) return;
+    if (busy !== 'idle' || !current?.source || preview.length === 0) return;
     recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'confirmed' });
     setBusy('splitting');
     setError(null);
     try {
-      const preferencesSaved = await confirmSplitTopic({ form, preview, ...sourceContext });
+      const preferencesSaved = await confirmSplitTopic({ form, preview, source: current.source, sourceNodeId: request.sourceNodeId });
+      if (typeof preferencesSaved !== 'boolean') {
+        recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'confirm-failed' });
+        setPreviewFor({ request, source: preferencesSaved.preview });
+        if (preferencesSaved.preview) setError(t('desktop.splitTopic.sourceChanged'));
+        return;
+      }
       recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'saved' });
       if (!preferencesSaved) {
         recordSplitTopicTrace(request.trace, { event: 'split.topic.stage', stage: 'preferences-save-failed' });
@@ -162,7 +172,7 @@ export function SplitTopicDialogHost() {
     <AppDialog open onOpenChange={(open) => !open && close()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <SplitTopicDialogSurface busy={busy} close={close} confirm={confirm} error={error} form={form} preview={preview} setForm={setForm} />
+        <SplitTopicDialogSurface busy={busy} close={close} confirm={confirm} error={error ?? loadError} form={form} preview={preview} setForm={setForm} />
       </AppDialogPortal>
     </AppDialog>
   );

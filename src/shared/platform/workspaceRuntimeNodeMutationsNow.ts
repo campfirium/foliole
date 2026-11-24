@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeSplitTopicOptions } from '../../../lib/platform/nativeNodeMutationContract';
+import type { NativeSplitTopicOptions, NativeSplitTopicPreview, NativeSplitTopicSourceChanged } from '../../../lib/platform/nativeNodeMutationContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
@@ -160,13 +160,22 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
 
 type SaveSplitTopicWorkspaceMutationArgs = {
   activeNodeId: string;
+  expectedSourceRevision: string;
   generatedNodes: WorkspaceRuntimeNode[];
   nodeOrder: string[];
   sourceNodeId: string;
   sourceParentNodeId: string | null;
-} & ({ deletedAt: string; disposition: 'replace'; splitOptions?: NativeSplitTopicOptions } | { disposition: 'keep-as-parent' });
+} & ({ deletedAt: string; disposition: 'replace'; splitOptions: NativeSplitTopicOptions } | { disposition: 'keep-as-parent' });
 
-export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorkspaceMutationArgs): Promise<WorkspaceNodeMutationPatchResult | null> {
+export async function loadSplitTopicWorkspacePreview(sourceNodeId: string): Promise<NativeSplitTopicPreview | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('split topic runtime unavailable');
+  return invoke(NATIVE_COMMANDS.loadSplitTopicPreview, { sourceNodeId });
+}
+
+export async function saveSplitTopicWorkspaceMutation(
+  args: SaveSplitTopicWorkspaceMutationArgs
+): Promise<WorkspaceNodeMutationPatchResult | NativeSplitTopicSourceChanged | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
@@ -174,7 +183,8 @@ export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorksp
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, {
       activeNodeId: args.activeNodeId,
-      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt, ...(args.splitOptions ? { splitOptions: args.splitOptions } : {}) } : {}),
+      expectedSourceRevision: args.expectedSourceRevision,
+      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt, splitOptions: args.splitOptions } : {}),
       disposition: args.disposition,
       generatedNodes: args.generatedNodes.map((node) =>
         createWorkspaceRuntimeNodeSnapshot(node, args.nodeOrder.indexOf(node.id))
@@ -183,6 +193,7 @@ export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorksp
       sourceNodeId: args.sourceNodeId,
       sourceParentNodeId: args.sourceParentNodeId
     });
+    if (result && 'status' in result && result.status === 'source-changed') return result;
     return isNodeMutationPatchResult(result) ? result : null;
   } catch (error) {
     logRuntimeError('runtime sync failed', {

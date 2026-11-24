@@ -10,6 +10,7 @@ import { NATIVE_FOLDER_LIST_SORT_COMMAND_REGISTRY } from './nativeFolderListSort
 import { NATIVE_IMPORT_FILE_COMMAND_REGISTRY } from './nativeImportFileCommandRegistry.js';
 import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
+import { NATIVE_SPLIT_TOPIC_COMMAND_REGISTRY } from './nativeSplitTopicCommandRegistry.js';
 import { NATIVE_WEBDAV_COMMAND_REGISTRY } from './nativeWebDavCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
@@ -24,6 +25,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   ...NATIVE_ARTICLE_TARGET_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   ...NATIVE_BACKUP_COMMAND_REGISTRY,
+  ...NATIVE_SPLIT_TOPIC_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.loadReviewTrainingPlan, route: 'review', capability: 'read' },
   { command: NATIVE_COMMANDS.loadReviewTrainingInput, route: 'review', capability: 'read' },
   { command: NATIVE_COMMANDS.saveReviewTrainingModel, route: 'review', capability: 'settingsMutation' },
@@ -40,7 +42,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadInitialLibrarySetup, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadDatabaseUpgradeStatus, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadLoginItemSettings, route: 'windowAndUtility', capability: 'read' },
-  { command: NATIVE_COMMANDS.loadSplitTopicPreferences, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.openExternalUrl, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openImportPermissionSettings, route: 'windowAndUtility', capability: 'externalOpen' },
@@ -243,11 +244,9 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.restoreSourceDispositions, route: 'storage', capability: 'restoreMutation' },
   { command: NATIVE_COMMANDS.resetSourceDispositions, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.saveLoginItemSettings, route: 'windowAndUtility', capability: 'settingsMutation' },
-  { command: NATIVE_COMMANDS.saveSplitTopicPreferences, route: 'windowAndUtility', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.createFolder, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.createTopic, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.createPdfImageExcerpt, route: 'storage', capability: 'dataMutation' },
-  { command: NATIVE_COMMANDS.splitTopic, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.createItem, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.updateNodeContent, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.updateNodeContentWithAnchors, route: 'storage', capability: 'dataMutation' },

@@ -1,9 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadSplitTopicPreferences, saveSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
-import { saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
+import { loadSplitTopicWorkspacePreview, saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { SplitTopicDialogHost } from './SplitTopicDialogHost';
@@ -11,6 +11,7 @@ import { requestSplitTopicDialog } from './SplitTopicDialogRequest';
 
 vi.mock('../../shared/platform/workspaceRuntimeRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../shared/platform/workspaceRuntimeRepository')>()),
+  loadSplitTopicWorkspacePreview: vi.fn(),
   saveSplitTopicWorkspaceMutation: vi.fn()
 }));
 
@@ -69,7 +70,14 @@ function seedWorkspace() {
   });
 }
 
+const sourcePreview = { content: 'Alpha\n---\n# Beta\nBody', parentNodeId: 'folder-1', revision: 'a'.repeat(64) };
+
+beforeEach(() => {
+  vi.mocked(loadSplitTopicWorkspacePreview).mockResolvedValue(sourcePreview);
+});
+
 afterEach(() => {
+  vi.mocked(loadSplitTopicWorkspacePreview).mockReset();
   vi.mocked(saveSplitTopicWorkspaceMutation).mockReset();
   vi.mocked(loadSplitTopicPreferences).mockReset();
   vi.mocked(saveSplitTopicPreferences).mockReset();
@@ -133,7 +141,7 @@ it('confirms through the Split Topic native mutation and applies the returned pa
 
   await waitFor(() => expect(saveSplitTopicWorkspaceMutation).toHaveBeenCalledTimes(1));
   const payload = vi.mocked(saveSplitTopicWorkspaceMutation).mock.calls[0]![0];
-  expect(payload.sourceNodeId).toBe('source-topic');
+  expect(payload).toMatchObject({ sourceNodeId: 'source-topic', expectedSourceRevision: sourcePreview.revision });
   expect(payload.generatedNodes.map((node) => node.content)).toEqual(['Alpha\n', '\n# Beta\nBody']);
   const sourceIndex = payload.nodeOrder.indexOf('source-topic');
   expect(payload.nodeOrder.slice(sourceIndex, sourceIndex + 3)).toEqual([
@@ -213,4 +221,32 @@ it('closes after a successful mutation when preference saving fails', async () =
   expect(saveSplitTopicWorkspaceMutation).toHaveBeenCalledTimes(1);
   expect(saveSplitTopicPreferences).toHaveBeenCalledTimes(1);
   expect(useWorkspaceStore.getState().activeNodeId).not.toBe('source-topic');
+});
+
+it('keeps the dialog open and shows the refreshed Topic after a stale confirmation', async () => {
+  seedWorkspace();
+  vi.mocked(loadSplitTopicPreferences).mockResolvedValue({ delimiter: '---', disposition: 'replace', keepDelimiter: false });
+  const preview = { content: 'Revised Alpha\n---\n# Beta\nRefreshed body', parentNodeId: 'folder-1', revision: 'b'.repeat(64) };
+  vi.mocked(saveSplitTopicWorkspaceMutation).mockResolvedValue({
+    status: 'source-changed', preview
+  });
+  renderWithLocalization(<SplitTopicDialogHost />);
+
+  act(() => requestSplitTopicDialog('source-topic'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Split Topic' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('switch', { name: /^Keep delimiter/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Split Topic' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/changed.*preview/i);
+  const region = within(screen.getByRole('region', { name: 'Preview' }));
+  expect(region.getByText('Refreshed body')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: /^Keep delimiter/ })).toBeChecked();
+  expect(saveSplitTopicPreferences).not.toHaveBeenCalled();
+  expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('source-topic');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Split Topic' }));
+  await waitFor(() => expect(saveSplitTopicWorkspaceMutation).toHaveBeenCalledTimes(2));
+  const retry = vi.mocked(saveSplitTopicWorkspaceMutation).mock.calls[1]![0];
+  expect(retry).toMatchObject({ expectedSourceRevision: preview.revision });
+  expect(retry.generatedNodes[1]?.content).toContain('Refreshed body');
 });

@@ -21,7 +21,7 @@ import type { NativeInitialLibrarySetupCommandMap } from './nativeInitialLibrary
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeLocalFileCommandMap } from './nativeLocalFileCommandMap.js';
 import type { NativeMoveCommandMap } from './nativeMoveCommandMap.js';
-import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec, NativePdfImageExcerptCreationMutationSpec, NativeSplitTopicMutationSpec } from './nativeNodeMutationContract.js';
+import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec, NativePdfImageExcerptCreationMutationSpec, NativeSplitTopicMutationSpec, NativeSplitTopicPreview } from './nativeNodeMutationContract.js';
 import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './nativeNodeOpenStateContract.js';
 import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
 import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
@@ -225,6 +225,7 @@ export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommand
   [NATIVE_COMMANDS.createTopic]: NativeNodeCreationMutationSpec;
   [NATIVE_COMMANDS.createPdfImageExcerpt]: NativePdfImageExcerptCreationMutationSpec;
   [NATIVE_COMMANDS.splitTopic]: NativeSplitTopicMutationSpec;
+  [NATIVE_COMMANDS.loadSplitTopicPreview]: { args: { sourceNodeId: string }; result: NativeSplitTopicPreview | null };
   [NATIVE_COMMANDS.createItem]: NativeNodeCreationMutationSpec;
   [NATIVE_COMMANDS.updateNodeContent]: NativeNodeSnapshotMutationSpec;
   [NATIVE_COMMANDS.updateNodeContentWithAnchors]: NativeNodeSnapshotBatchMutationSpec;

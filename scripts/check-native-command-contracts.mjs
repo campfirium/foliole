@@ -40,7 +40,8 @@ const REGISTRY_FILES = [
   'electron/ipc/nativeBackupCommandRegistry.ts',
   'electron/ipc/nativeArticleTargetCommandRegistry.ts',
   'electron/ipc/nativeDiveCommandRegistry.ts',
-  'electron/ipc/nativeFolderListSortCommandRegistry.ts'
+  'electron/ipc/nativeFolderListSortCommandRegistry.ts',
+  'electron/ipc/nativeSplitTopicCommandRegistry.ts'
 ];
 
 function resolveRepoRoot() {

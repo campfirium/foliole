@@ -33,7 +33,6 @@ function assertUniqueNodeIds(nodeIds: string[], field: string) {
 }
 
 function parseSplitOptions(value: unknown) {
-  if (value === undefined) return undefined;
   const options = readObject(value, 'splitOptions');
   if (typeof options.keepDelimiter !== 'boolean') throw new Error('invalid argument: splitOptions.keepDelimiter');
   const delimiter = asString(options.delimiter, 'splitOptions.delimiter');
@@ -82,8 +81,11 @@ export function parseSplitTopicArgs(args: Record<string, unknown>): NativeSplitT
   if (generatedNodes.some((node) => node.position !== nodeOrder.indexOf(node.nodeId))) {
     throw new Error('invalid argument: generatedNodes.position');
   }
+  const expectedSourceRevision = asString(args.expectedSourceRevision, 'expectedSourceRevision');
+  if (!/^[a-f0-9]{64}$/.test(expectedSourceRevision)) throw new Error('invalid argument: expectedSourceRevision');
   const base = {
     activeNodeId,
+    expectedSourceRevision,
     generatedNodes,
     nodeOrder,
     sourceNodeId,
@@ -91,7 +93,7 @@ export function parseSplitTopicArgs(args: Record<string, unknown>): NativeSplitT
   };
   if (disposition === 'replace') {
     const splitOptions = parseSplitOptions(args.splitOptions);
-    return { ...base, deletedAt: asTimestamp(args.deletedAt, 'deletedAt'), disposition, ...(splitOptions ? { splitOptions } : {}) };
+    return { ...base, deletedAt: asTimestamp(args.deletedAt, 'deletedAt'), disposition, splitOptions };
   }
   if (disposition === 'keep-as-parent' && args.deletedAt === undefined && args.splitOptions === undefined) return { ...base, disposition };
   throw new Error('invalid argument: disposition');

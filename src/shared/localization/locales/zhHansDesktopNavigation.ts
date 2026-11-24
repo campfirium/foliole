@@ -92,6 +92,8 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.splitTopic.description': '先预览将要生成的新主题，确认后当前主题会被拆分结果替代。',
   'desktop.splitTopic.enterDelimiter': '输入分隔符后预览新主题。',
   'desktop.splitTopic.failed': '拆分主题失败。',
+  'desktop.splitTopic.sourceChanged': '主题已变化，请检查更新后的预览，再确认拆分。',
+  'desktop.splitTopic.sourceUnavailable': '此主题已无法拆分。',
   'desktop.splitTopic.footerText': '之后添加',
   'desktop.splitTopic.headerText': '之前添加',
   'desktop.splitTopic.keepDelimiter': '保留分隔符',
