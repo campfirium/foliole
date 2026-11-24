@@ -14,6 +14,13 @@ export type FolderListSortMemoryKey = (typeof FOLDER_LIST_SORT_MEMORY_KEYS)[numb
 export type FolderListSortMemoryDirection = 'asc' | 'desc';
 export type FolderListSortMemoryEntry = { direction: FolderListSortMemoryDirection; key: FolderListSortMemoryKey };
 
+export type FolderListSortMemoryEdit = {
+  choice: FolderListSortMemoryEntry;
+  fallback: FolderListSortMemoryEntry;
+  libraryScope: string;
+  listId: string;
+};
+
 export type FolderListSortMemoryPayload = {
   sortByListId: Record<string, FolderListSortMemoryEntry>;
   version: typeof FOLDER_LIST_SORT_MEMORY_PAYLOAD_VERSION;

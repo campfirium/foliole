@@ -3,17 +3,20 @@ import { registerCompanionWorkspaceRefresh } from '../companionWorkspaceSnapshot
 
 import { publishCompanionSyncMutationRevision } from './mutation/companionSyncMutationRevision.js';
 
-const listeners = new Set<() => void>();
+type SyncAppliedSettings = { folderListSortChanged?: boolean };
+const listeners = new Set<(settings: SyncAppliedSettings) => void>();
 
-export function subscribeCompanionSyncApplied(listener: () => void) {
+export function subscribeCompanionSyncApplied(listener: (settings: SyncAppliedSettings) => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }
 
-export function publishCompanionSyncApplied(scope: WorkspaceRefreshScope = { kind: 'full' }) {
+export function publishCompanionSyncApplied(
+  scope: WorkspaceRefreshScope = { kind: 'full' }, settings: SyncAppliedSettings = {}
+) {
   registerCompanionWorkspaceRefresh(scope);
   for (const listener of listeners) {
-    try { listener(); }
+    try { listener(settings); }
     catch { /* A view observer cannot invalidate an already committed object. */ }
   }
 }
@@ -24,7 +27,7 @@ export function publishCompanionSyncApplied(scope: WorkspaceRefreshScope = { kin
  */
 export function publishCompanionSyncMembershipChanged() {
   publishCompanionSyncMutationRevision({ kind: 'full' });
-  publishCompanionSyncApplied({ kind: 'full' });
+  publishCompanionSyncApplied({ kind: 'full' }, { folderListSortChanged: true });
 }
 
 const readingResumeListeners = new Set<(nodeId: string) => void>();

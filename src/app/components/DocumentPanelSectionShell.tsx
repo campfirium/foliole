@@ -5,7 +5,7 @@ import {
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { resolveNodePrioritySetting } from '../../features/nodes/model/nodeReviewSettings';
-import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { TRASH_NODE_ID, VIRTUAL_PUBLISHED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
@@ -206,6 +206,15 @@ export function DocumentPanelSectionShell({
 
 function useShellFolderSort(props: DocumentPanelSectionProps, isFolderListView: boolean) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
-  return useDocumentPanelFolderListSort(props.activeNodeId,
-    Boolean(isFolderListView && activeNode?.kind === 'folder' && activeNode.manualChildOrder?.length));
+  let listId = props.activeNodeId;
+  let defaultKey: FolderListSortKey = 'dateSaved';
+  if (!activeNode && props.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID) {
+    listId = VIRTUAL_PUBLISHED_NODE_ID;
+  } else if (isFolderListView && props.isTrashViewOpen) {
+    listId = activeNode ? `trash:${activeNode.id}` : TRASH_NODE_ID;
+    defaultKey = 'dateDeleted';
+  } else if (isFolderListView && activeNode?.kind === 'folder' && activeNode.manualChildOrder?.length) {
+    defaultKey = 'manual';
+  }
+  return useDocumentPanelFolderListSort(listId, defaultKey);
 }
