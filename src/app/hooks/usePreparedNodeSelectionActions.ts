@@ -15,6 +15,20 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
 import { isNavigationGenerationCurrent, nextNavigationGeneration } from './navigationRequestGeneration';
 
+// A slow or stuck read must not leave the click without any response: past this wait the target opens as before and
+// shows its loading state while the read continues.
+export const PREPARED_OPEN_MAX_WAIT_MS = 400;
+
+async function waitForPreparedBody(load: Promise<unknown>) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => { timer = setTimeout(resolve, PREPARED_OPEN_MAX_WAIT_MS); });
+  try {
+    await Promise.race([load, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // The target is not active yet, so without keepWarm the renderer boundary would drop its body again.
 function createPreparedLoadOptions(nodeId: string, isCurrent: () => boolean) {
   return {
@@ -73,7 +87,7 @@ export function usePreparedOpenNodeAction(
       void flushPendingEditorDraftImmediately();
       const isCurrent = () => isNavigationGenerationCurrent(requestToken)
         && useWorkspaceStore.getState().activeNodeId === sourceNodeId;
-      await loadDesktopNodeDocument(nodeId, createPreparedLoadOptions(nodeId, isCurrent), isCurrent);
+      await waitForPreparedBody(loadDesktopNodeDocument(nodeId, createPreparedLoadOptions(nodeId, isCurrent), isCurrent));
       if (!isCurrent()) return;
       // Typing may have continued in the old note while the body loaded.
       flushDraft();

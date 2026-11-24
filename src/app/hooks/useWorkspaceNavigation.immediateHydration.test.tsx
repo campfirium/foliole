@@ -6,6 +6,7 @@ import { removeCachedWorkspaceNodeDocument } from '../../store/workspaceNodeDocu
 import { resetWorkspaceNodeDocumentLoaderForTest } from '../../store/workspaceNodeDocumentLoader';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { PREPARED_OPEN_MAX_WAIT_MS } from './usePreparedNodeSelectionActions';
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import {
   createPrefetchInvokeMock,
@@ -235,5 +236,39 @@ describe('useWorkspaceNavigation cold open interleaving', () => {
 
     expect(openNode.mock.calls.map(([nodeId]) => nodeId)).toEqual(['node-1']);
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+  });
+});
+
+describe('useWorkspaceNavigation slow cold open', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetWorkspaceNavigationTestState();
+    resetWorkspaceNodeDocumentLoaderForTest();
+    for (const nodeId of ['node-1', 'node-2']) removeCachedWorkspaceNodeDocument(nodeId);
+  });
+
+  it('opens the target with its loading state when the read takes too long', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      seedPrefetchTestState();
+      vi.mocked(getRuntimeInvoke).mockReturnValue(createPendingBodyInvoke(() => undefined));
+      const { openNode, view } = createPrefetchHookHarness([]);
+
+      let pending: unknown;
+      await act(async () => {
+        pending = view.result.current.handleSelectNode('node-2');
+        await vi.advanceTimersByTimeAsync(PREPARED_OPEN_MAX_WAIT_MS - 1);
+      });
+      expect(openNode).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2);
+        await pending;
+      });
+      expect(openNode).toHaveBeenCalledTimes(1);
+      expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
