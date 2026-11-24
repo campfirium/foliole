@@ -62,10 +62,13 @@ export type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
 const reconciledCadenceBuckets = new Map<string, string>();
 
-async function pruneBackupsNow() {
+async function pruneBackupsNow(backupDirectory: string) {
   await waitForManagedSafetySnapshotSettlements();
-  const settings = await runWithDatabaseConnectionOwner(loadBackupSettings);
-  const backupDirectory = resolveManagedBackupDirectory(settings);
+  const { settings, currentDirectory } = await runWithDatabaseConnectionOwner(() => {
+    const settings = loadBackupSettings();
+    return { settings, currentDirectory: resolveManagedBackupDirectory(settings) };
+  });
+  if (path.resolve(currentDirectory) !== path.resolve(backupDirectory)) return;
   const result = await pruneManagedDatabaseBackups(backupDirectory, settings, {
     disposeFile: moveManagedBackupToTrash
   });
@@ -183,7 +186,7 @@ export async function createApplicationDatabaseBackup(
   if (!options.destinationPath) {
     const sidecarCleanup = await cleanupOrphanedBackupSidecars(backupDirectory);
     reportSidecarCleanup(sidecarCleanup);
-    await pruneBackupsNow();
+    await pruneBackupsNow(backupDirectory);
     return { ...result, extraBackup, sidecarCleanup };
   }
   return {
