@@ -100,7 +100,8 @@ function notifyTrashReadingChanged(readingNodeIds: readonly string[] | undefined
 function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseSplitTopicArgs(args);
   const result = splitTopic(parsed);
-  scheduleMirrorSync([parsed.sourceNodeId, ...(result.createdNodeIds ?? []), ...('updatedNodeIds' in result ? result.updatedNodeIds : [])]);
+  if ('status' in result) return result;
+  scheduleMirrorSync([parsed.sourceNodeId, ...(result.createdNodeIds ?? []), ...(result.updatedNodeIds ?? [])]);
   return completeWorkspaceMutation(result, originWindow);
 }
 

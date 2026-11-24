@@ -9,6 +9,7 @@ import {
   promoteNodeTextAlternative
 } from '../database/nodeTextAlternatives.js';
 import { searchCurrentPdfDocument } from '../database/pdfDocumentSearch.js';
+import { loadSplitTopicPreview } from '../database/splitTopicPreview.js';
 import { beginWorkspaceSearch, loadWorkspaceSearchBatch, releaseWorkspaceSearch } from '../database/workspaceSearchSnapshot.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import {
@@ -108,6 +109,9 @@ export async function handleStorageCommand(
 }
 
 async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadSplitTopicPreview) {
+    return loadSplitTopicPreview(asString(args.sourceNodeId, 'sourceNodeId'));
+  }
   if (command === NATIVE_COMMANDS.searchWorkspace) {
     return beginWorkspaceSearch(asString(args.query, 'query'));
   }

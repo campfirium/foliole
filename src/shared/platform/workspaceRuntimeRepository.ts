@@ -32,6 +32,7 @@ export {
   saveWorkspaceNodeRevealSnapshot
 } from './workspaceRuntimeNodeRepository';
 export {
+  loadSplitTopicWorkspacePreview,
   saveCreatedWorkspaceNodeMutationSnapshot,
   savePdfImageExcerptNodeMutation,
   saveSplitTopicWorkspaceMutation,

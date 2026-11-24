@@ -35,6 +35,7 @@ export const NATIVE_COMMANDS = {
   loadInitialLibrarySetup: 'load_initial_library_setup',
   loadLoginItemSettings: 'load_login_item_settings',
   loadSplitTopicPreferences: 'load_split_topic_preferences',
+  loadSplitTopicPreview: 'load_split_topic_preview',
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',
   openImportPermissionSettings: 'open_import_permission_settings',

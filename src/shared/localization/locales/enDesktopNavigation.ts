@@ -92,6 +92,8 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
     'Preview the new Topics before replacing the current Topic with split results.',
   'desktop.splitTopic.enterDelimiter': 'Enter a delimiter to preview the new Topics.',
   'desktop.splitTopic.failed': 'Split Topic failed.',
+  'desktop.splitTopic.sourceChanged': 'The topic changed. Review the refreshed preview before splitting.',
+  'desktop.splitTopic.sourceUnavailable': 'This topic is no longer available to split.',
   'desktop.splitTopic.footerText': 'After',
   'desktop.splitTopic.headerText': 'Before',
   'desktop.splitTopic.keepDelimiter': 'Keep delimiter',

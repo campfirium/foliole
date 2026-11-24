@@ -12,6 +12,11 @@ export interface SplitTopicAnchorTarget {
 }
 
 interface AnchoredChildRow {
+  anchor_resolution_status: string | null;
+  anchor_source_version_id: string | null;
+  current_version_id: string | null;
+  image_regions: string | null;
+  updated_at: string;
   id: string;
   anchor_link: string;
   [key: string]: unknown;
@@ -72,6 +77,14 @@ function relocateAnchor(anchorLink: string, sourceContent: string, targets: read
   return null;
 }
 
+export function readSplitTopicAnchors(driver: DatabaseDriver, sourceNodeId: string) {
+  return driver.queryAll<AnchoredChildRow>(
+    `SELECT id, anchor_link, image_regions, anchor_resolution_status, anchor_source_version_id, current_version_id, updated_at
+     FROM nodes WHERE parent_id = ? AND deleted_at IS NULL AND anchor_link IS NOT NULL ORDER BY id`,
+    [sourceNodeId]
+  );
+}
+
 /**
  * Moves text-anchored children (highlights, clozes) of a replaced split source onto the generated part that now
  * holds their text. Anchors that cannot be placed stay with the source. Returns the moved node ids.
@@ -79,14 +92,10 @@ function relocateAnchor(anchorLink: string, sourceContent: string, targets: read
 export function migrateSplitTopicAnchors(driver: DatabaseDriver, input: {
   now: string;
   sourceContent: string;
-  sourceNodeId: string;
+  children: readonly AnchoredChildRow[];
   targets: readonly SplitTopicAnchorTarget[];
 }) {
-  const children = driver.queryAll<AnchoredChildRow>(
-    'SELECT id, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL AND anchor_link IS NOT NULL',
-    [input.sourceNodeId]
-  );
-  const moves = children.flatMap((child) => {
+  const moves = input.children.flatMap((child) => {
     let relocated: ReturnType<typeof relocateAnchor>;
     try {
       relocated = relocateAnchor(child.anchor_link, input.sourceContent, input.targets);

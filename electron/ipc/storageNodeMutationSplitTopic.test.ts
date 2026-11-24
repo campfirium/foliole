@@ -2,11 +2,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { splitTopic } from '../database/splitTopicMutation.js';
+import { loadSplitTopicPreview } from '../database/splitTopicPreview.js';
+import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { handleInvokeRequest } from './commands.js';
 
 vi.mock('../database/connection.js', async (importOriginal) => ({
-  ...await importOriginal<typeof import('../database/connection.js')>(),
+  ...await importOriginal<Record<string, unknown>>(),
   runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
 }));
 
@@ -30,6 +32,7 @@ vi.mock('./paths.js', () => ({
   })
 }));
 vi.mock('../database/splitTopicMutation.js', () => ({ splitTopic: vi.fn() }));
+vi.mock('../database/splitTopicPreview.js', () => ({ loadSplitTopicPreview: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
 beforeEach(() => {
@@ -42,6 +45,9 @@ beforeEach(() => {
     nodes: []
   });
 });
+
+const revision = 'a'.repeat(64);
+const splitOptions = { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false };
 
 function topicArgs(nodeId: string, position: number) {
   return {
@@ -66,6 +72,8 @@ it('handles split Topic mutation command with a typed atomic payload', async () 
       activeNodeId: 'part-a',
       deletedAt: '2026-07-28T00:01:00.000Z',
       disposition: 'replace',
+      expectedSourceRevision: revision,
+      splitOptions,
       generatedNodes: [topicArgs('part-a', 1), topicArgs('part-b', 2)],
       nodeOrder: ['source', 'part-a', 'part-b'],
       sourceNodeId: 'source',
@@ -82,6 +90,8 @@ it('handles split Topic mutation command with a typed atomic payload', async () 
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
     disposition: 'replace',
+    expectedSourceRevision: revision,
+    splitOptions,
     generatedNodes: [expect.objectContaining({ nodeId: 'part-a' }), expect.objectContaining({ nodeId: 'part-b' })],
     nodeOrder: ['source', 'part-a', 'part-b'],
     sourceNodeId: 'source',
@@ -96,6 +106,8 @@ it('rejects split Topic payloads with an active Topic outside generated nodes', 
       activeNodeId: 'missing',
       deletedAt: '2026-07-28T00:01:00.000Z',
       disposition: 'replace',
+      expectedSourceRevision: revision,
+      splitOptions,
       generatedNodes: [topicArgs('part-a', 1)],
       nodeOrder: ['source', 'part-a'],
       sourceNodeId: 'source',
@@ -112,6 +124,7 @@ it('accepts Keep without deletedAt and rejects disposition parent mismatches', a
     args: {
       activeNodeId: 'part-a',
       disposition: 'keep-as-parent',
+      expectedSourceRevision: revision,
       generatedNodes: [{ ...topicArgs('part-a', 1), parentNodeId: 'source' }],
       nodeOrder: ['source', 'part-a'],
       sourceNodeId: 'source',
@@ -125,10 +138,41 @@ it('accepts Keep without deletedAt and rejects disposition parent mismatches', a
       activeNodeId: 'part-a',
       deletedAt: '2026-07-28T00:01:00.000Z',
       disposition: 'keep-as-parent',
+      expectedSourceRevision: revision,
       generatedNodes: [{ ...topicArgs('part-a', 1), parentNodeId: null }],
       nodeOrder: ['source', 'part-a'],
       sourceNodeId: 'source',
       sourceParentNodeId: null
     }
   })).rejects.toThrow();
+});
+
+it('returns the persisted preview over the read command', async () => {
+  const preview = { content: 'Alpha---Beta', parentNodeId: null, revision };
+  vi.mocked(loadSplitTopicPreview).mockReturnValue(preview);
+  await expect(handleInvokeRequest({ command: 'load_split_topic_preview', args: { sourceNodeId: 'source' } }))
+    .resolves.toEqual(preview);
+  expect(loadSplitTopicPreview).toHaveBeenCalledWith('source');
+  expect(splitTopic).not.toHaveBeenCalled();
+});
+
+it('returns a conflict without scheduling mirror sync', async () => {
+  const conflict = { status: 'source-changed' as const, preview: { content: 'Edited---Beta', parentNodeId: null, revision } };
+  vi.mocked(splitTopic).mockReturnValue(conflict);
+  const args = {
+    activeNodeId: 'part-a', deletedAt: '2026-07-28T00:01:00.000Z', disposition: 'replace',
+    expectedSourceRevision: 'b'.repeat(64), splitOptions, generatedNodes: [topicArgs('part-a', 1)],
+    nodeOrder: ['source', 'part-a'], sourceNodeId: 'source', sourceParentNodeId: null
+  };
+  await expect(handleInvokeRequest({ command: 'split_topic', args })).resolves.toEqual(conflict);
+  expect(scheduleMirrorSync).not.toHaveBeenCalled();
+  vi.mocked(splitTopic).mockClear();
+  for (const invalid of [
+    { ...args, expectedSourceRevision: undefined },
+    { ...args, expectedSourceRevision: 'invalid' },
+    { ...args, splitOptions: undefined }
+  ]) {
+    await expect(handleInvokeRequest({ command: 'split_topic', args: invalid })).rejects.toThrow(/expectedSourceRevision|splitOptions/);
+  }
+  expect(splitTopic).not.toHaveBeenCalled();
 });

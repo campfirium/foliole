@@ -30,7 +30,19 @@ export type NativeNodeCreationMutationArgs = NativeNodeSnapshotArgs & {
   activeNodeId?: string | null;
 };
 
+export interface NativeSplitTopicPreview {
+  content: string;
+  parentNodeId: string | null;
+  revision: string;
+}
+
+export interface NativeSplitTopicSourceChanged {
+  status: 'source-changed';
+  preview: NativeSplitTopicPreview | null;
+}
+
 interface NativeSplitTopicMutationBaseArgs {
+  expectedSourceRevision: string;
   activeNodeId: string;
   generatedNodes: NativeNodeSnapshotArgs[];
   nodeOrder: string[];
@@ -54,7 +66,7 @@ export interface NativeSplitTopicOptions {
 }
 
 export type NativeSplitTopicMutationArgs = NativePartitionBodyMutationArgs | NativeSplitTopicMutationBaseArgs & (
-  | { deletedAt: string; disposition: 'replace'; splitOptions?: NativeSplitTopicOptions }
+  | { deletedAt: string; disposition: 'replace'; splitOptions: NativeSplitTopicOptions }
   | { disposition: 'keep-as-parent' }
 );
 
@@ -79,7 +91,7 @@ export type NativePdfImageExcerptCreationMutationSpec = {
 
 export type NativeSplitTopicMutationSpec = {
   args: NativeSplitTopicMutationArgs;
-  result: NativeNodeMutationPatchResult;
+  result: NativeNodeMutationPatchResult | NativeSplitTopicSourceChanged;
 };
 
 export type NativeNodeSnapshotBatchMutationSpec = {

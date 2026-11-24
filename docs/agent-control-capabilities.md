@@ -224,4 +224,4 @@ Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary.
 
 The desktop command palette searches the settings index and opens the selected category or setting. The palette matches English and localized labels and descriptions, and shows matching action tips inline. These desktop UI behaviors have no Agent Control API or CLI route.
 
-The desktop editor menu disables Split Topic when the current document cannot be split and explains the reason in the menu. This menu action has no Agent Control API or CLI route.
+The desktop editor menu disables Split Topic when the current document cannot be split and explains the reason in the menu. If the topic text or its annotations change before confirmation, the dialog refreshes its preview and waits for another confirmation. This menu action has no Agent Control API or CLI route.

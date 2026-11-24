@@ -6,8 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
-import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { readParentChildOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import type { NativeSplitTopicMutationArgs } from '../../lib/platform/nativeNodeMutationContract.js';
 
 let mockedAppDataDir = '/tmp/foliole-split-topic-tests';
 const publishGuardMocks = vi.hoisted(() => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
@@ -26,7 +26,18 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDatabase } from './migrate.js';
 import { replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
-import { splitTopic } from './splitTopicMutation.js';
+import { splitTopic as commitSplitTopic } from './splitTopicMutation.js';
+import { loadSplitTopicPreview } from './splitTopicPreview.js';
+
+type DialogSplit = Exclude<NativeSplitTopicMutationArgs, { disposition: 'partition-body' }>;
+type SplitInput = Omit<Extract<DialogSplit, { disposition: 'replace' }>, 'expectedSourceRevision' | 'splitOptions'> |
+  Omit<Extract<DialogSplit, { disposition: 'keep-as-parent' }>, 'expectedSourceRevision'>;
+
+function splitTopic(input: SplitInput, expectedSourceRevision = loadSplitTopicPreview(input.sourceNodeId)!.revision) {
+  const args = { expectedSourceRevision };
+  const splitOptions = { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false };
+  return commitSplitTopic(input.disposition === 'replace' ? { ...input, ...args, splitOptions } : { ...input, ...args });
+}
 
 let tempRoot = '';
 
@@ -82,7 +93,7 @@ function mutationState() {
 
 it('atomically creates root sibling Topics, updates order, trashes the source, and returns a patch', () => {
   seedNode('root-a', null, 0);
-  seedNode('source', null, 1);
+  seedTopic('source', null, 1, '# part-a---# part-b');
   seedNode('root-b', null, 2);
 
   const result = splitTopic({
@@ -113,7 +124,7 @@ it('atomically creates root sibling Topics, updates order, trashes the source, a
 
 it('creates generated Topics as folder siblings without hiding them when the source is restored', () => {
   seedNode('folder', null, 0);
-  seedNode('source', 'folder', 1);
+  seedTopic('source', 'folder', 1, '# part-a---# part-b');
   seedNode('sibling', 'folder', 2);
 
   splitTopic({
@@ -136,7 +147,7 @@ it('creates generated Topics as folder siblings without hiding them when the sou
 
 it('keeps the source and inserts generated Topics as its first direct children', () => {
   seedNode('folder', null, 0);
-  seedNode('source', 'folder', 1);
+  seedTopic('source', 'folder', 1, '# part-a---# part-b');
   seedNode('old-child', 'source', 2);
   seedNode('grandchild', 'old-child', 3);
   seedNode('sibling', 'folder', 4);
@@ -150,7 +161,7 @@ it('keeps the source and inserts generated Topics as its first direct children',
     sourceParentNodeId: 'folder'
   });
 
-  expect(result.deletedNodeIds).toEqual([]);
+  expect(result).toHaveProperty('deletedNodeIds', []);
   expect(getNodeRow('source')?.deleted_at).toBeNull();
   expect(getNodeRow('part-a')?.parent_id).toBe('source');
   expect(getNodeRow('old-child')?.parent_id).toBe('source');
@@ -163,7 +174,7 @@ it('keeps the source and inserts generated Topics as its first direct children',
 });
 
 it('rolls back generated Topics, order, and source Trash when any write fails', () => {
-  seedNode('source', null, 0);
+  seedTopic('source', null, 0, '# part-a---# part-b');
   seedNode('sibling', null, 1);
   replaceNodeOrder(['source', 'sibling']);
   const before = mutationState();
@@ -219,8 +230,7 @@ it('moves source highlights onto the generated part that now holds their text', 
     ],
     nodeOrder: ['source', 'part-a', 'part-b', 'hl-alpha', 'hl-beta', 'hl-cross', 'hl-child'],
     sourceNodeId: 'source',
-    sourceParentNodeId: null,
-    splitOptions: { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false }
+    sourceParentNodeId: null
   });
 
   expect(getNodeRow('hl-alpha')?.parent_id).toBe('part-a');
@@ -232,17 +242,20 @@ it('moves source highlights onto the generated part that now holds their text', 
   });
   expect(getNodeRow('hl-child')?.parent_id).toBe('hl-beta');
   expect(getNodeRow('hl-cross')?.parent_id).toBe('source');
+  if ('status' in result) throw new Error('split preview unexpectedly changed');
   expect(result.updatedNodeIds).toEqual(['hl-alpha', 'hl-beta']);
   expect(result.nodes.map((node) => node.nodeId)).toEqual(['part-a', 'part-b', 'hl-alpha', 'hl-beta']);
   expect(childIds('part-b')).toEqual(['hl-beta']);
   expect(readSyncDirty('hl-beta')?.sync_dirty).toBe(0);
 });
 
-it('leaves highlights with the trashed source when the stored body no longer matches the split', () => {
+it('leaves highlights with the active source when the stored body no longer matches the split', () => {
+  seedTopic('source', null, 0, 'Edited---Beta');
+  const shown = loadSplitTopicPreview('source')!;
   seedTopic('source', null, 0, 'Alpha---Beta');
   seedTopic('hl-alpha', 'source', 0, 'Alpha', highlightAnchor('a', 0, 5, 'Alpha'));
 
-  splitTopic({
+  const result = splitTopic({
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
     disposition: 'replace',
@@ -252,9 +265,10 @@ it('leaves highlights with the trashed source when the stored body no longer mat
     ],
     nodeOrder: ['source', 'part-a', 'part-b', 'hl-alpha'],
     sourceNodeId: 'source',
-    sourceParentNodeId: null,
-    splitOptions: { delimiter: '---', footerText: '', headerText: '', keepDelimiter: false }
-  });
+    sourceParentNodeId: null
+  }, shown.revision);
 
+  expect(result).toMatchObject({ status: 'source-changed' });
+  expect(getNodeRow('source')?.deleted_at).toBeNull();
   expect(getNodeRow('hl-alpha')?.parent_id).toBe('source');
 });
