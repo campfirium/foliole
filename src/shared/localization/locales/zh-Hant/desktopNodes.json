@@ -66,6 +66,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "從 EPUB 重建——請先重新連接 Readwise",
   "desktop.nodeList.menu.useOriginalEpub.running": "正在從 EPUB 重建…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "從 EPUB 重建——這台裝置不負責 Readwise 匯入",
+  "desktop.nodeList.originalEpub.downloadCancelled": "EPUB 下載已取消。",
   "desktop.nodeList.originalEpub.confirm.title": "要從 EPUB 重建嗎？",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole 將從 Readwise 取得 EPUB，並重建這本書的內文、圖片和目錄。現有的螢光標示、挖空和註記會保留並重新定位。",
   "desktop.nodeList.originalEpub.confirm.confirm": "重建",

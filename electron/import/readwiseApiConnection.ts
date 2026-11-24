@@ -28,6 +28,7 @@ import {
   readReadwiseApiSecret,
   writeReadwiseApiSecret
 } from './readwiseApiSecret.js';
+import { cancelReadwiseOriginalEpubDownloads } from './readwiseOriginalEpubDisconnect.js';
 import { invalidateIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
 
 const READWISE_AUTH_URL = 'https://readwise.io/api/v2/auth/';
@@ -161,5 +162,6 @@ export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
     if (secretRef && previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     throw error;
   }
+  cancelReadwiseOriginalEpubDownloads();
   return result('disconnected');
 }

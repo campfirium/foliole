@@ -44,8 +44,9 @@ it('downloads the selected Readwise book only after the save destination is chos
     node_id: 'topic-1', path: destination, status: 'saved'
   });
   expect(mocks.showSaveDialog).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'Book.epub' }));
-  expect(mocks.fetchRoot).toHaveBeenCalledWith({ documentId: 'reader-book' });
-  expect(mocks.download).toHaveBeenCalledWith('https://s3.amazonaws.com/book', 'epub');
+  const dependencies = { signal: expect.any(AbortSignal) };
+  expect(mocks.fetchRoot).toHaveBeenCalledWith({ dependencies, documentId: 'reader-book' });
+  expect(mocks.download).toHaveBeenCalledWith('https://s3.amazonaws.com/book', 'epub', dependencies);
   expect(await fs.readFile(destination)).toEqual(Buffer.from([80, 75, 3, 4]));
 });
 

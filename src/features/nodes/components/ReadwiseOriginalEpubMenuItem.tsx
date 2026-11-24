@@ -73,6 +73,10 @@ export function ReadwiseOriginalEpubMenuItem(props: {
       showAppRuntimeNotice(t('desktop.nodeList.originalEpub.success'));
       return;
     }
+    if (result?.status === 'cancelled') {
+      showAppRuntimeNotice(t('desktop.nodeList.originalEpub.downloadCancelled'), 'info');
+      return;
+    }
     const missing = result?.error_code === 'original_epub_not_distributed';
     showAppRuntimeNotice(t(missing
       ? 'desktop.nodeList.originalEpub.missing'

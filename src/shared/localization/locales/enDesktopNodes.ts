@@ -63,6 +63,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.useOriginalEpub.reconnect': 'Rebuild from EPUB — reconnect Readwise first',
   'desktop.nodeList.menu.useOriginalEpub.running': 'Rebuilding from EPUB…',
   'desktop.nodeList.menu.useOriginalEpub.sourceInactive': 'Rebuild from EPUB — this device does not handle Readwise imports',
+  'desktop.nodeList.originalEpub.downloadCancelled': 'EPUB download cancelled.',
   'desktop.nodeList.originalEpub.confirm.title': 'Rebuild from EPUB?',
   'desktop.nodeList.originalEpub.confirm.description': 'Foliole will get the EPUB from Readwise and rebuild this book’s text, images, and table of contents. Existing highlights, clozes, and annotations will be kept and located again.',
   'desktop.nodeList.originalEpub.confirm.confirm': 'Rebuild',

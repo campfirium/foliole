@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "EPUB से फिर बनाएँ — पहले Readwise दोबारा कनेक्ट करें",
   "desktop.nodeList.menu.useOriginalEpub.running": "EPUB से फिर बनाया जा रहा है…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "EPUB से फिर बनाएँ — यह डिवाइस Readwise से इंपोर्ट नहीं करता",
+  "desktop.nodeList.originalEpub.downloadCancelled": "EPUB डाउनलोड रद्द किया गया।",
   "desktop.nodeList.originalEpub.confirm.title": "EPUB से फिर बनाएँ?",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole Readwise से EPUB लेकर इस किताब का टेक्स्ट, चित्र और विषय सूची फिर बनाएगा। मौजूदा हाइलाइट, खाली जगह वाले प्रश्न और टिप्पणियाँ बनी रहेंगी और उनकी जगह फिर से ढूँढी जाएगी।",
   "desktop.nodeList.originalEpub.confirm.confirm": "फिर बनाएँ",

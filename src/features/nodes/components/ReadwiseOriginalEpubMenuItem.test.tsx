@@ -104,3 +104,15 @@ it('runs the existing action once after confirmation and reports the committed r
   expect(notice).toHaveBeenNthCalledWith(2, 'Downloading EPUB…');
   await waitFor(() => expect(notice).toHaveBeenNthCalledWith(3, 'Rebuilt from EPUB.'));
 });
+
+it('reports a cancelled download after rebuilding is interrupted by disconnect', async () => {
+  state.status = 'ready';
+  confirmation.mockResolvedValue(true);
+  useOriginal.mockResolvedValue({ node_id: 'book', status: 'cancelled' });
+  renderWithLocalization(<Menu nodeId="book" />);
+
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Rebuild from EPUB' }));
+
+  await waitFor(() => expect(notice).toHaveBeenLastCalledWith('EPUB download cancelled.', 'info'));
+  expect(progress.handler).toBeNull();
+});

@@ -41,6 +41,7 @@ export function createReadwiseRequest(
           headers: { Authorization: `Token ${token}` }, method: 'GET', redirect: 'error', signal: requestSignal
         });
       } catch (error) {
+        dependencies.signal?.throwIfAborted();
         if (retry >= maxRetries) {
           if (dependencies.allowFolderModeForCutover) throw new Error('readwise_api_network_failed', { cause: error });
           throw error;
@@ -48,8 +49,12 @@ export function createReadwiseRequest(
         await abortableDelay(transientRetryDelay(retry, dependencies), dependencies.signal);
         continue;
       }
+      dependencies.signal?.throwIfAborted();
       if (response.status === 401 || response.status === 403) {
-        await runWithDatabaseConnectionOwner(() => saveReconnectRequired(loadStoredReadwiseHostSettings()));
+        await runWithDatabaseConnectionOwner(() => {
+          dependencies.signal?.throwIfAborted();
+          saveReconnectRequired(loadStoredReadwiseHostSettings());
+        });
         throw new Error('readwise_api_reconnect_required');
       }
       if (response.status === 429 && retry < maxRetries) {
