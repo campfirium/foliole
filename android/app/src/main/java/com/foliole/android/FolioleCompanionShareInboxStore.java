@@ -10,11 +10,14 @@ import org.json.JSONObject;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 final class FolioleCompanionShareInboxStore {
     private static final String DELIVERY_ID_EXTRA = "com.foliole.android.SHARE_DELIVERY_ID";
     private static final String ITEMS_KEY = "items";
     private static final String PREFERENCES = "foliole_companion_share_inbox";
+    // Match String.prototype.trim() in the companion renderer.
+    private static final Pattern COMPANION_WHITESPACE = Pattern.compile("[\\t-\\r\\p{Z}\\uFEFF]*");
 
     private FolioleCompanionShareInboxStore() {}
 
@@ -74,8 +77,14 @@ final class FolioleCompanionShareInboxStore {
     }
 
     private static void append(JSONArray parts, String kind, CharSequence value) throws Exception {
-        if (value == null || value.toString().trim().isEmpty()) return;
-        parts.put(new JSONObject().put("kind", kind).put("value", value.toString()));
+        if (value == null) return;
+        String text = value.toString();
+        if (isBlankSharePart(text)) return;
+        parts.put(new JSONObject().put("kind", kind).put("value", text));
+    }
+
+    static boolean isBlankSharePart(String text) {
+        return text.trim().isEmpty() || COMPANION_WHITESPACE.matcher(text).matches();
     }
 
     private static boolean contains(JSONArray items, String deliveryId) throws Exception {

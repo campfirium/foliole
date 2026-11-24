@@ -26,7 +26,8 @@ export async function selectFramedExternalDocumentBody(db: DbPort, payload: stri
     'SELECT content FROM external_documents WHERE document_id = ?', [document.document_id]);
   if (!row) throw new Error('framed_sync_external_document_body_invalid');
   const data = new TextEncoder().encode(row.content);
-  if (data.byteLength > TEXT_BODY_MAX_BYTES || bytesToHex(sha256(data)) !== document.body_blob_hash) {
+  if (data.byteLength > TEXT_BODY_MAX_BYTES) throw new Error('request_sync_body_too_large');
+  if (bytesToHex(sha256(data)) !== document.body_blob_hash) {
     throw new Error('framed_sync_external_document_body_invalid');
   }
   return [{ byteLength: BigInt(data.byteLength), required: true, role: 5, sha256: hexToBytes(document.body_blob_hash) }];

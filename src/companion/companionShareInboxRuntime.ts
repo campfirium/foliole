@@ -29,10 +29,21 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
   // installed app is an accepted quick-capture tradeoff. Do not add confirmation solely
   // for this exposure. Keep payload validation, collision checks and resource limits;
   // reassess the decision if evidence establishes broader impact.
+  let blankAcknowledgementFailure: { error: unknown } | undefined;
   let snapshot = workspace.state.workspace_snapshot;
   let oversizedShare: TextBodyTooLargeError | undefined;
   for (const item of await loadPendingCompanionShares()) {
     const text = combineNativeCompanionShareParts(item.parts);
+    if (!text) {
+      // Older hosts could queue text that trims to empty. Retry failed acknowledgements
+      // without holding up valid deliveries.
+      try {
+        await acknowledgeCompanionShare(item.delivery_id);
+      } catch (error) {
+        blankAcknowledgementFailure ??= { error };
+      }
+      continue;
+    }
     try {
       assertTextBodyWithinBudget(text);
     } catch (error) {
@@ -56,6 +67,7 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
     await acknowledgeCompanionShare(item.delivery_id);
   }
   if (oversizedShare) throw oversizedShare;
+  if (blankAcknowledgementFailure) throw blankAcknowledgementFailure.error;
 }
 
 export function listenForCompanionShares(listener: () => void) {

@@ -26,27 +26,35 @@ async function consume() {
   });
 }
 
-it('keeps the oversized original and saves later shares once across reopen', async () => {
+it('keeps the oversized original, retries blank acknowledgement, and saves later shares once across reopen', async () => {
   const library = companionNodeSqliteLibrary();
   const now = '2026-10-03T00:00:00Z';
   const oversized = { delivery_id: '00000000-0000-4000-8000-000000000001', received_at: now,
     parts: [{ kind: 'text', value: '中'.repeat(349_526) }] };
   const valid = { ...oversized, delivery_id: '00000000-0000-4000-8000-000000000002',
     parts: [{ kind: 'text', value: 'Short note' }] };
-  let items = [oversized, valid];
+  const blank = { ...oversized, delivery_id: '00000000-0000-4000-8000-000000000003',
+    parts: [{ kind: 'text', value: '  ' }] };
+  let items = [oversized, blank, valid];
+  let blankFailed = false;
   native.loadPendingShares.mockImplementation(async () => ({ items: [...items] }));
   native.acknowledgeShare.mockImplementation(async ({ delivery_id }) => {
+    if (delivery_id === blank.delivery_id && !blankFailed) {
+      blankFailed = true;
+      throw new Error('temporary acknowledgement failure');
+    }
     items = items.filter(item => item.delivery_id !== delivery_id);
   });
   try {
     await library.open();
     await expect(consume()).rejects.toThrow('text_body_too_large');
-    expect(items).toEqual([oversized]);
+    expect(items).toEqual([oversized, blank]);
 
     await closeIosCompanionDatabase();
     const reopened = await library.open();
     await expect(consume()).rejects.toThrow('text_body_too_large');
     expect(items).toEqual([oversized]);
+    expect(await loadCompanionWorkspaceNode(`node-share-${blank.delivery_id}`)).toBeNull();
     expect((await loadCompanionWorkspaceNode(`node-share-${valid.delivery_id}`))?.content).toBe('Short note');
     expect(await reopened.read(db => db.query("SELECT version_id FROM node_sync_versions WHERE object_id LIKE 'node-share-%'")))
       .toEqual([{ version_id: `ver_share_${valid.delivery_id}` }]);
