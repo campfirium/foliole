@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { nextExternalResourceSyncTimestamp, upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
@@ -45,8 +45,7 @@ export function migrateLegacyExternalFolderIdentity(
     for (const folder of folders) {
       if (normalizeDesktopSyncGroupPlatform(folder.host_platform) !== process.platform ||
           !path.isAbsolute(folder.root_path)) continue;
-      const previousTime = Date.parse(folder.sync_updated_at ?? '');
-      const updatedAt = previousTime >= Date.parse(now) ? new Date(previousTime + 1).toISOString() : now;
+      const updatedAt = nextExternalResourceSyncTimestamp(now, folder.sync_updated_at);
       tx.execute(`UPDATE desktop_sources SET type_settings_json = json_set(type_settings_json,
         '$.ownerDeviceIdentityKey', ?), updated_at = ? WHERE source_ref = ?`, [owner, updatedAt, folder.source_ref]);
       const row = tx.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, [folder.id]);

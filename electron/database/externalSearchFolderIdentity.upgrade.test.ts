@@ -6,12 +6,14 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { reconnectExternalSearchFolder } from './externalSearchFolderConnection.js';
 import { loadExternalSearchFolders, loadRefreshableExternalSearchFolders } from './externalSearchFolders.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
+import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import { textDevice } from './topicTextState.testSupport.js';
 
 const database = vi.hoisted(() => ({ open: vi.fn() }));
@@ -122,6 +124,34 @@ it('recognizes a local folder upgraded from a schema without a connection status
     expect(loadRefreshableExternalSearchFolders().map(folder => folder.id)).toEqual(['older-local']);
   } finally {
     sqlite.close();
+  }
+});
+
+it('publishes the legacy owner to a mirror when upgrading after a host rename and clock rollback', async () => {
+  const { sqlite } = textDevice();
+  const peer = textDevice();
+  try {
+    const driver = createBetterSqlite3Driver(sqlite);
+    const connection = { driver, sqlite } as Parameters<typeof migrateDesktopHostProfile>[0];
+    database.open.mockReturnValue(connection);
+    driver.execute("INSERT INTO settings VALUES ('host_name', ?, ?), ('standalone_device_uuid', ?, ?)",
+      [JSON.stringify(host), oldTime, JSON.stringify(localId), oldTime]);
+    seedLegacyFolder(driver, 'renamed', path.resolve('Local documents'), 'connected');
+    driver.execute(`UPDATE sync_object_state SET updated_at = '2026-12-01T00:00:00.000Z'
+      WHERE object_type = 'external_folder' AND object_id = 'renamed'`);
+    const folderRecords = () => loadSyncObjectsFromDriver(driver, ['renamed'], ['external_folder']);
+    await applySyncObjectsWithDbPort(peer.db, folderRecords());
+
+    migrateDesktopHostProfile(connection, 'New desktop name', upgradeTime);
+    await applySyncObjectsWithDbPort(peer.db, folderRecords());
+
+    expect(loadRefreshableExternalSearchFolders().map(folder => folder.id)).toEqual(['renamed']);
+    expect(await peer.db.query(`SELECT host_name, root_path,
+      json_extract(type_settings_json, '$.ownerDeviceIdentityKey') AS owner FROM desktop_sources
+      WHERE config_ref = 'renamed'`)).toEqual([{ host_name: 'New desktop name', root_path: '', owner: localId }]);
+  } finally {
+    sqlite.close();
+    peer.sqlite.close();
   }
 });
 
