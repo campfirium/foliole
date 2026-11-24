@@ -5,6 +5,7 @@ import path from 'node:path';
 import { expect } from 'vitest';
 
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
+import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import { readRequestSyncAttachmentNeedsSlice } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { WEB_DAV_ATTACHMENT_SUFFIX } from '../../lib/core/sync/webDavRelayAttachmentWire.js';
@@ -86,10 +87,12 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
           remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
       },
       async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform,
-        options?: { requestSend?(): void; continueAttachmentBatches?: boolean }) {
+        options?: { requestSend?(): void; continueAttachmentBatches?: boolean; observeRows?(rows: DbRow[]): void }) {
         const current = await scope(peer);
         if (!current) throw new Error('webdav_test_baseline_missing');
-        return runWebDavRelayBodyRound({ host: { ...peer.host, enqueueSearchInvalidations: peer.desktop },
+        const { host } = peer;
+        const readSnapshot = options?.observeRows ? observeSnapshotRows(host, options.observeRows) : host.readSnapshot;
+        return runWebDavRelayBodyRound({ host: { ...host, readSnapshot, enqueueSearchInvalidations: peer.desktop },
           files: peer.host.files, attachments, scope: current, groupKey: webDavTestGroupKey,
           ...(options?.requestSend ? { requestSend: options.requestSend,
             ...(!options.continueAttachmentBatches ? { foregroundReceive: true } : {}) } : {}),
@@ -102,6 +105,17 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
       }
     };
   } catch (error) { await close(); throw error; }
+}
+
+function observeSnapshotRows(host: RestorePeer['host'], observe: (rows: DbRow[]) => void) {
+  return <T>(read: (db: DbPort) => Promise<T>) => host.readSnapshot(db => read({
+    ...db,
+    async query<Row extends DbRow>(sql: string, params?: DbParams) {
+      const rows = await db.query<Row>(sql, params);
+      observe(rows);
+      return rows;
+    }
+  }));
 }
 
 async function writeBaselineAttachment(peers: readonly { assets: string }[]) {
@@ -120,12 +134,12 @@ function testTransport() {
   const repairUploads: string[] = [];
   const attachmentReads: string[] = [];
   let loseAttachmentPublicationResponse = false;
-  let rejectNextDelete = false;
+  let rejectedDelete: string | true | undefined;
   let attachmentPutFault: 'interrupt' | 'short' | undefined;
   const http = createDesktopWebDavRelayHttp({ requests: {}, responses: 0, downloadedBytes: 0, uploadedBytes: 0 });
   const request: WebDavRelayRequest = (url, input, consume) => {
-    if (input.method === 'DELETE' && rejectNextDelete) {
-      rejectNextDelete = false;
+    if (input.method === 'DELETE' && (rejectedDelete === true || rejectedDelete === url.pathname)) {
+      rejectedDelete = undefined;
       throw new Error('test_delete_connection_reset');
     }
     if (input.method === 'PUT' && url.pathname.endsWith('.repair.dat.partial')) repairUploads.push(url.href);
@@ -159,7 +173,7 @@ function testTransport() {
     });
   };
   return { uploads, attachmentReads, repairUploads, request, faultNextAttachmentPut: (fault: typeof attachmentPutFault) => { attachmentPutFault = fault; },
-    rejectNextDelete: () => { rejectNextDelete = true; },
+    rejectNextDelete: (url?: URL) => { rejectedDelete = url?.pathname ?? true; },
     loseAttachmentPublicationResponse: () => { loseAttachmentPublicationResponse = true; } };
 }
 

@@ -10,6 +10,7 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection, readRelayCollections, relayCollectionOffer, relayCollectionUrl, relayGenerationRoot,
   writeRelayCollections, type RelayCollectionOffer } from './webDavRelayCollections.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { pruneWebDavRelayPacketReceipts } from './webDavRelayReceipts.js';
 
 type Runtime = {
   host: RequestSyncDatabaseHost;
@@ -56,12 +57,8 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       });
     },
     async delete(offer: RelayCollectionOffer, direction: 'incoming' | 'outgoing') {
-      await assertCurrent();
-      if (!await hasFiles(input, offer)) return;
-      await assertCurrent();
-      const target = direction === 'incoming' ? scope.incoming : scope.outgoingDirection;
-      const status = await input.request(relayCollectionUrl(target, offer.generation), { method: 'DELETE' }, webDavRelayStatus);
-      if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
+      const remove = () => deleteRelayCollection(input, scope, offer, direction, assertCurrent);
+      return direction === 'incoming' ? input.files.exclusive(webDavRelayPacketDirectory(scope), remove) : remove();
     },
     async forgetDeleted() {
       if (!captured?.retired) return;
@@ -76,6 +73,21 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       });
     }
   };
+}
+
+async function deleteRelayCollection(input: Runtime, scope: WebDavRelayBodyScope, offer: RelayCollectionOffer,
+  direction: 'incoming' | 'outgoing', assertCurrent: () => Promise<void>) {
+  await assertCurrent();
+  if (!await hasFiles(input, offer)) return;
+  await assertCurrent();
+  const target = direction === 'incoming' ? scope.incoming : scope.outgoingDirection;
+  const status = await input.request(relayCollectionUrl(target, offer.generation), { method: 'DELETE' }, webDavRelayStatus);
+  if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
+  if (direction === 'incoming') await input.host.write(async db => {
+    input.signal.throwIfAborted();
+    if ((await input.loadScope(db))?.key !== scope.key) throw new Error('webdav_relay_scope_changed');
+    await pruneWebDavRelayPacketReceipts(db, scope.key, offer.generation);
+  });
 }
 
 async function readCandidate(db: DbPort, scope: WebDavRelayBodyScope): Promise<Candidate | undefined> {
