@@ -142,7 +142,9 @@ export function measureFormulaDomSelectionDescriptor(
   const selectedRects = selection.leaves
     .map((leaf) => resolveLeafByPath(visualRoot, leaf.path))
     .filter((leaf, index): leaf is HTMLElement => Boolean(leaf && leafMatchesDescriptor(leaf, selection.leaves[index]!)))
-    .map(getBox);
+    .map(getBox)
+    // KaTeX struts are empty, zero-width and much taller than the glyphs; they would stretch the region past what the reader sees.
+    .filter((rect) => rect.width > 0 && rect.height > 0);
   if (selectedRects.length === 0) return null;
   return toRelativeRect(unionRects(selectedRects), rootRect);
 }

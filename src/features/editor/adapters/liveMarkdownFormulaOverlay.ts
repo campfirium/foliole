@@ -1,7 +1,7 @@
 import { buildFormulaOccurrenceKey } from '../../formula-cloze/model/formulaCloze';
 import { FORMULA_CLOZE_CREATE_EVENT, type FormulaClozeCreateEventDetail } from '../../formula-cloze/model/formulaClozeEvents';
 import type { FormulaClozeEditorPresentation } from '../../formula-cloze/model/formulaClozePresentation';
-import { createFormulaDomSelectionDescriptor } from '../model/formulaDomSelection';
+import { createFormulaDomSelectionDescriptor, measureFormulaDomSelectionDescriptor } from '../model/formulaDomSelection';
 import type { MarkdownMathRange } from '../model/markdownMathExtension';
 
 export function configureFormulaOverlay(
@@ -27,6 +27,7 @@ function addSavedFormulaRegions(
 ) {
   if (!presentation) return;
   const occurrenceKey = buildFormulaOccurrenceKey(mathRange);
+  const placements: Array<() => void> = [];
   for (const region of presentation.regions) {
     if (!doesRegionMatchMathRange(region, mathRange, occurrenceKey, presentation)) continue;
     const mask = document.createElement('span');
@@ -34,10 +35,40 @@ function addSavedFormulaRegions(
     mask.dataset.mdFormulaRegionId = region.id;
     mask.dataset.mdFormulaRegionHidden = presentation?.hiddenRegionIds.includes(region.id) ? 'true' : 'false';
     mask.dataset.mdFormulaRegionOutlined = presentation?.outlinedRegionIds.includes(region.id) ? 'true' : 'false';
-    const fallbackRect = getWrapperRectFromVisualRect(wrapper, region.fallbackRect);
-    setRegionRectStyle(mask, isUsableFormulaRect(fallbackRect) ? fallbackRect : region.fallbackRect);
+    const place = () => setRegionRectStyle(mask, resolveSavedRegionRect(wrapper, region));
+    place();
+    placements.push(place);
     overlay.append(mask);
   }
+  if (placements.length) followFormulaLayout(wrapper, () => placements.forEach(place => place()));
+}
+
+/** The saved leaves locate a region on any formula width; the stored rectangle is only kept for formulas whose leaves changed. */
+function resolveSavedRegionRect(wrapper: HTMLElement, region: FormulaClozeEditorPresentation['regions'][number]) {
+  const measured = measureFormulaDomSelectionDescriptor(wrapper, region.selection, boxOf);
+  if (isUsableFormulaRect(measured)) return measured!;
+  const fallbackRect = getWrapperRectFromVisualRect(wrapper, region.fallbackRect);
+  return isUsableFormulaRect(fallbackRect) ? fallbackRect : region.fallbackRect;
+}
+
+function boxOf(element: HTMLElement) {
+  const box = element.getBoundingClientRect();
+  return { height: box.height, width: box.width, x: box.left, y: box.top };
+}
+
+/** Widgets are built before they are laid out, so regions are placed again once the formula has a size and whenever it changes. */
+function followFormulaLayout(wrapper: HTMLElement, place: () => void) {
+  if (typeof ResizeObserver === 'undefined') return;
+  let attached = false;
+  const observer = new ResizeObserver(() => {
+    if (!wrapper.isConnected) {
+      if (attached) observer.disconnect();
+      return;
+    }
+    attached = true;
+    place();
+  });
+  observer.observe(wrapper);
 }
 
 function isUsableFormulaRect(rect: { height: number; width: number; x: number; y: number } | null) {
@@ -163,10 +194,7 @@ function dispatchFormulaSelection(
   if (selectionRect.width < 3 || selectionRect.height < 3) return;
   const visualRoot = findFormulaVisualRoot(wrapper);
   if (!visualRoot) return;
-  const descriptor = createFormulaDomSelectionDescriptor(visualRoot, selectionRect, (element) => {
-    const box = element.getBoundingClientRect();
-    return { height: box.height, width: box.width, x: box.left, y: box.top };
-  });
+  const descriptor = createFormulaDomSelectionDescriptor(visualRoot, selectionRect, boxOf);
   if (!descriptor) return;
   window.dispatchEvent(new CustomEvent<FormulaClozeCreateEventDetail>(FORMULA_CLOZE_CREATE_EVENT, {
     detail: {

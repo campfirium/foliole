@@ -4,7 +4,7 @@ import katex from 'katex';
 import { Check, Trash2, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
 
-import { createFormulaDomSelectionDescriptor } from '../features/editor/model/formulaDomSelection';
+import { createFormulaDomSelectionDescriptor, measureFormulaDomSelectionDescriptor } from '../features/editor/model/formulaDomSelection';
 import type { FormulaClozePresentationRegion } from '../features/formula-cloze/model/formulaCloze';
 import type { FormulaDomSelectionDescriptor, FormulaRegionRect } from '../features/nodes/model/nodeTypes';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -37,6 +37,12 @@ function regionStyle(rect: FormulaRegionRect, state: 'saved' | 'draft' | 'select
 }
 
 type Box = { left: number; top: number; width: number; height: number };
+
+/** A saved region follows its KaTeX leaves, because the stored rectangle depends on the width the formula was drawn at. */
+function savedRect(root: HTMLElement | null, region: FormulaClozePresentationRegion) {
+  const measured = root ? measureFormulaDomSelectionDescriptor(root, region.selection, boxOf) : null;
+  return measured && measured.width > 0 && measured.height > 0 ? measured : region.fallbackRect;
+}
 
 /** Renders the formula exactly as the article does, so the KaTeX leaf paths of a selection match on every device. */
 function useRenderedFormula(tex: string, display: 'block' | 'inline') {
@@ -161,7 +167,7 @@ export function CompanionFormulaClozeEditor(props: EditorProps) {
           <div ref={surface} data-testid="formula-cloze-surface" className="relative touch-none select-none py-6" style={{ fontSize: `${fontSize}em` }} {...handlers}>
             <div ref={formula} />
             {rootBox ? <div data-testid="formula-cloze-regions" className="absolute" style={rootBox}>
-              {props.savedRegions.map(region => <span key={region.id} data-formula-saved={region.id} style={regionStyle(region.fallbackRect, 'saved')} />)}
+              {props.savedRegions.map(region => <span key={region.id} data-formula-saved={region.id} style={regionStyle(savedRect(visualRoot(), region), 'saved')} />)}
               {drafts.map((draft, index) => <button key={draft.id} type="button" data-formula-draft={draft.id}
                 aria-label={t('companion.formulaCloze.region', { number: props.savedRegions.length + index + 1 })}
                 aria-pressed={selected === draft.id} style={regionStyle(draft.selection.fallbackRect, selected === draft.id ? 'selected' : 'draft')}

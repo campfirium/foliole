@@ -80,3 +80,19 @@ describe('formulaDomSelection', () => {
     expect(descriptor).toBeNull();
   });
 });
+
+it('measures only what the reader sees, skipping the empty tall struts KaTeX places beside superscripts', () => {
+  const root = renderFormula('x^{2}');
+  const leaves = listFormulaSelectionLeaves(root);
+  const x = leaves.find(leaf => leaf.textContent === 'x')!;
+  const exponent = leaves.find(leaf => leaf.textContent === '2')!;
+  const strut = leaves.find(leaf => leaf.classList.contains('pstrut'))!;
+  expect([x, exponent, strut].every(Boolean)).toBe(true);
+  const boxes = new Map<Element, FormulaRegionRect>([
+    [root, rect(0, 0, 100, 100)], [x, rect(10, 40, 10, 10)], [exponent, rect(22, 30, 8, 8)], [strut, rect(22, 0, 0, 90)]
+  ]);
+  const box = (element: Element) => boxes.get(element) ?? rect(0, 0, 0, 0);
+  const descriptor = createFormulaDomSelectionDescriptor(root, rect(5, 0, 40, 90), box);
+  expect(descriptor?.leaves).toHaveLength(3);
+  expect(measureFormulaDomSelectionDescriptor(root, descriptor!, box)).toEqual({ height: 0.2, width: 0.2, x: 0.1, y: 0.3 });
+});
