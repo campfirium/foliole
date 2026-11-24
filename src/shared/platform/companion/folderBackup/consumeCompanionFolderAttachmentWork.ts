@@ -26,12 +26,18 @@ export async function consumeCompanionFolderAttachmentWork(port: CompanionFolder
     if (stopped()) return port.finishAttachments({ requestId: input.requestId, copied, pending, errorMessage });
     if (!input.profile) throw new Error('Backup folder identity is missing.');
     const initialized = await source.write(db => configureFolderAttachmentProfile(db, input.profile));
-    if (!initialized) {
+    const request = { requestId: input.requestId, sourceEpoch: input.sourceEpoch };
+    const directory = await port.prepareAttachmentDirectory({ ...request, create: false });
+    if (typeof directory?.exists !== 'boolean') throw new Error('Cannot verify the attachment backup folder.');
+    if (!initialized || !directory.exists) {
       const inventory = await source.inventory();
       if (!inventory.files) throw new Error('Cannot read the attachment directory.');
       await source.write(db => seedFolderAttachmentBaseline(db, input.profile, inventory.files!.map(file => file.storageKey)));
     }
-    await port.prepareAttachmentDirectory(input);
+    // Keep a missing folder observable until the entire inventory can be retried from durable work.
+    if (!directory.exists && !(await port.prepareAttachmentDirectory({ ...request, create: true })).exists) {
+      throw new Error('Cannot create the attachment backup folder.');
+    }
     const work = await source.write(db => readFolderAttachmentWork(db, input.profile));
     const copies = work.filter(entry => entry.action === 'copy');
     for (let start = 0; start < copies.length; start += COMPANION_FOLDER_ATTACHMENT_COPY_BATCH) {

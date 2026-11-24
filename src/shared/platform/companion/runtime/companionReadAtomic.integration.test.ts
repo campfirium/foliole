@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { companionDailyFlowSettings, openCompanionDailyFlow } from './companionDailyFlow';
+import { seedCompanionReviewHistory } from '../../../../companion/companionFlowHistory.testSupport';
+import { persistFlowMutation } from '../../../../companion/companionFlowMutation';
+import { loadCompanionWorkspaceSyncState } from '../../companionWorkspaceSync';
+
+import { companionDailyFlowSettings, loadCompanionDailySession, openCompanionDailyFlow } from './companionDailyFlow';
 import { prepareAdmittedRead } from './companionReadAdmissionCommand';
 import { getCompanionReadIntents } from './companionReadIntents';
 import { createSearchLibrary, reopenSearchLibrary } from './companionSearchSnapshot.testSupport';
@@ -111,4 +115,47 @@ it('keeps a newer reading position while committing the frozen learning result',
     expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get('000000'))
       .toEqual({ repetition_count: 2 });
   } finally { release(); await held; await position; }
+});
+
+it('resumes the ready queue after a prefetched Read takes a due card out of order', async () => {
+  library = await createSearchLibrary(3, 16);
+  const beforeDue = '2026-10-25T08:00:00.000Z';
+  const due = '2026-10-25T08:01:00.000Z';
+  const now = '2026-10-25T08:02:00.000Z';
+  const [a, b, c, review] = ['000000', '000001', '000002', 'review'] as const;
+  const mode = 'recommended';
+  const key = 'flow_history:timed-read';
+  await seedCompanionReviewHistory({ due, lastReviewAt: '2026-09-28T00:00:00.000Z',
+    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 0, reps: 2, lapses: 0 },
+  beforeDue, [review]);
+  library.database.prepare('UPDATE nodes SET enable_short_term=1 WHERE id=?').run(review);
+  library.database.prepare('UPDATE node_review SET due=?, scheduled_days=0 WHERE node_id=?').run(due, review);
+  const { session } = await openCompanionDailyFlow({ now: beforeDue, mode, preferredNodeId: a });
+  expect(session.currentNodeId).toBe(a);
+  expect(library.database.prepare('SELECT ready_at_ms FROM daily_flow_entry_readiness WHERE node_id=?').get(review))
+    .toEqual({ ready_at_ms: Date.parse(due) });
+  // Fixture order puts the waiting card past the ready successor, with one more topic after it.
+  library.database.transaction(() => {
+    library.database.prepare('UPDATE daily_flow_entries SET order_key=order_key+10').run();
+    const place = library.database.prepare('UPDATE daily_flow_entries SET order_key=? WHERE node_id=?');
+    [a, b, review, c].forEach((id, index) => place.run(index + 1, id));
+  })();
+
+  const engine = await getCompanionReadIntents();
+  const preparation = await engine.displayPreparation.prepare({ session, now, mode });
+  expect(preparation.session.currentNodeId).toBe(review);
+  const accepted = await engine.accept({ session, now, mode, historyKey: key });
+  await engine.drain();
+  expect(accepted.session.currentNodeId).toBe(review);
+  const saved = await loadCompanionDailySession();
+  expect(saved?.currentNodeId).toBe(review);
+  expect.soft(accepted.session.cycle?.timedResume).toEqual({ key: 3, after: 1 });
+  expect.soft(saved?.cycle?.timedResume).toEqual({ key: 3, after: 1 });
+
+  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  const graded = await persistFlowMutation({ action: 'grade', grade: 3, nodeId: review, now, snapshot,
+    history: { key, mode, session: { ...engine.result!.session, isAnswerRevealed: true } } });
+  expect(graded.session?.currentNodeId).toBe(b);
+  expect(await loadCompanionDailySession()).toMatchObject({ currentNodeId: b, cycle: { scanAfter: 2 } });
+  expect(graded.session?.cycle?.timedResume).toBeUndefined();
 });

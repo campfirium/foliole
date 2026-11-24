@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Properties;
 
 public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
@@ -101,6 +102,59 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
         try { fixture.run(before); } catch (Exception expected) { return; }
         throw new AssertionError("Expected the interrupted or foreign operation to fail");
     }
+    private static void replace(FolderDocumentsFixture first, Path target, Path external, Path candidate, String scenario) throws Exception {
+        byte[] previousBytes = Files.readAllBytes(external);
+        byte[] candidateBytes = Files.readAllBytes(candidate);
+        Path journal = target.resolveSibling("Foliole.sqlite-journal");
+        Files.write(target, previousBytes);
+        Files.write(journal, new byte[] { 7 });
+        Properties properties = first.load();
+        FolioleFolderBackupReplacement replacement = first.replacement("test");
+        replacement.requireEmptySlots();
+        Uri previous = first.foreignTarget(false, false);
+        if (scenario.endsWith("create-failed")) {
+            DocumentsContract.failBeforeCreate = true;
+            expectFailure(first, replacement::begin);
+        } else {
+            replacement.begin();
+            Path stage = target.resolveSibling("Foliole.sqlite.partial-test.sqlite");
+            if (!Files.exists(stage) || Files.size(stage) != 0) throw new AssertionError("The new target was not empty before the snapshot");
+            if (!Arrays.equals(previousBytes, Files.readAllBytes(target))) throw new AssertionError("Staging altered the previous backup");
+            Files.write(stage, scenario.endsWith("write-failed") ? Arrays.copyOf(candidateBytes, 32) : candidateBytes);
+            if (scenario.endsWith("publish-failed") || scenario.endsWith("provider-failed")) {
+                if (scenario.endsWith("provider-failed")) DocumentsContract.changeNextRenameTo = replacement.recoveryName();
+                else DocumentsContract.failNextRenameTo = "Foliole.sqlite";
+                expectFailure(first, () -> replacement.publish(previous, () -> first.save("owned")));
+            } else if (scenario.endsWith("metadata-failed")) {
+                expectFailure(first, () -> replacement.publish(previous, () -> { throw new IllegalStateException("Cannot save profile"); }));
+                Path retained = target.resolveSibling(replacement.recoveryName());
+                if (!Arrays.equals(previousBytes, Files.readAllBytes(retained))) throw new AssertionError("Previous backup was discarded before ownership was recorded");
+                if (!Arrays.equals(candidateBytes, Files.readAllBytes(target))) throw new AssertionError("Published backup was lost");
+                if (!new FolderDocumentsFixture(first.root).replacement("test").recover()) throw new AssertionError("Published backup was not recognized on retry");
+                System.out.println("both backups survive metadata failure");
+                return;
+            } else if (!scenario.endsWith("write-failed")) {
+                replacement.publish(previous, () -> first.save("owned"));
+                replacement.discardPrevious();
+                if (!Arrays.equals(candidateBytes, Files.readAllBytes(target))) throw new AssertionError("Other backup was not replaced");
+                if (Files.exists(journal)) throw new AssertionError("Other backup journal kept");
+                if (!Boolean.parseBoolean(first.load().getProperty("owned")) || properties.getProperty("owned") != null) {
+                    throw new AssertionError("Replaced backup is not owned");
+                }
+                System.out.println("other backup replaced");
+                return;
+            }
+        }
+        // A fresh instance can find and restore the retained original after an interrupted publication.
+        if (new FolderDocumentsFixture(first.root).replacement("test").recover()) throw new AssertionError("Failed replacement was published");
+        if (!Files.exists(target) || !Arrays.equals(previousBytes, Files.readAllBytes(target))) {
+            throw new AssertionError("Failed replacement lost the previous backup");
+        }
+        if (!Arrays.equals(new byte[] { 7 }, Files.readAllBytes(journal))) throw new AssertionError("Failed replacement lost the journal");
+        if (first.load().getProperty("owned") != null) throw new AssertionError("Failed replacement claimed ownership");
+        System.out.println("old backup survives replacement failure");
+    }
+
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[1]);
         Files.createDirectories(root);
@@ -130,22 +184,14 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
             case "owned-missing-interrupted":
                 recreateRemovedBackup(root, file, args[0].endsWith("interrupted"));
                 return;
-            case "foreign-replaced": {
-                Files.write(file, Files.readAllBytes(Path.of(args[2])));
-                Files.write(root.resolve("Foliole.sqlite-journal"), new byte[] { 7 });
-                Properties properties = first.load();
-                FolioleFolderBackupDocuments.class.getDeclaredMethod("prepare", boolean.class, boolean.class,
-                    Runnable.class, Runnable.class, Runnable.class, boolean.class)
-                    .invoke(first, false, false, (Runnable) () -> first.save("pending"), (Runnable) () -> first.save("owned"),
-                        (Runnable) () -> { throw new AssertionError("Forgot an identity it never owned"); }, true);
-                if (!Files.exists(file) || Files.size(file) != 0) throw new AssertionError("Other backup was not replaced");
-                if (Files.exists(root.resolve("Foliole.sqlite-journal"))) throw new AssertionError("Other backup journal kept");
-                if (!Boolean.parseBoolean(first.load().getProperty("owned")) || properties.getProperty("owned") != null) {
-                    throw new AssertionError("Replaced backup is not owned");
-                }
-                System.out.println("other backup replaced");
+            case "foreign-replace-create-failed":
+            case "foreign-replace-write-failed":
+            case "foreign-replace-publish-failed":
+            case "foreign-replace-provider-failed":
+            case "foreign-replace-metadata-failed":
+            case "foreign-replaced":
+                replace(first, file, Path.of(args[2]), Path.of(args[3]), args[0]);
                 return;
-            }
             case "pending-foreign":
                 expectFailure(first, true);
                 Files.write(file, Files.readAllBytes(Path.of(args[2])));

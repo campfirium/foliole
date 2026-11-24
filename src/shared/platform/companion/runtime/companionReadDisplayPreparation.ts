@@ -1,3 +1,4 @@
+import { copyCycleNavigation } from '../../../../../lib/core/flow/cycleFlowState';
 import type { DailyFlowSettings, DailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowContract';
 import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
@@ -30,7 +31,8 @@ export class CompanionReadDisplayPreparation {
   private key(input: Input, settings: DailyFlowSettings) {
     return JSON.stringify([this.generation, input.mode, flowDay(input.now, settings), settings,
       input.session.daily?.scope, input.session.daily?.dayKey, input.session.currentNodeId,
-      input.session.cycle?.scanAfter, input.session.cycle?.lapLimit]);
+      input.session.cycle?.scanAfter, input.session.cycle?.lapLimit,
+      input.session.cycle?.timedResume?.key, input.session.cycle?.timedResume?.after]);
   }
 
   prepare(input: Input, signal?: AbortSignal, timing?: FlowTiming) {
@@ -80,8 +82,8 @@ export class CompanionReadDisplayPreparation {
     this.prepared = null;
     const next = result.session;
     if (!input.session.cycle || !next.cycle) throw new Error('daily_flow_display_changed');
-    const cycle = { ...input.session.cycle, scanAfter: next.cycle.scanAfter,
-      lapLimit: next.cycle.lapLimit, clearedAt: next.cycle.clearedAt };
+    const cycle = { ...input.session.cycle };
+    copyCycleNavigation(cycle, next.cycle);
     delete cycle.change;
     // A local receipt may advance counters/token while retaining this exact display cursor.
     // Keep those acknowledgements and consume only the prepared navigation state.

@@ -39,7 +39,7 @@ const runBackup = () => consumeCompanionFolderAttachmentWork({
   addListener: unusedBackupMethod, openSource: unusedBackupMethod, closeSource: unusedBackupMethod,
   getState: unusedBackupMethod, clearDirectory: unusedBackupMethod, backupDatabase: unusedBackupMethod,
   deleteAttachment: unusedBackupMethod, cancelDatabase: unusedBackupMethod,
-  prepareAttachmentDirectory: async () => {}, ...folderAttachmentCopyPort(input => copy(input)),
+  prepareAttachmentDirectory: async () => ({ exists: true }), ...folderAttachmentCopyPort(input => copy(input)),
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
     directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending' as const, attachmentFilesPending: pending, errorMessage })
 } satisfies CompanionFolderBackupPort, {

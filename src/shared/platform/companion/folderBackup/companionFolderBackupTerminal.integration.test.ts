@@ -39,7 +39,7 @@ async function nativeRound() {
   const fail = (message: string) => { native.phase = 'failed'; native.error = message; native.open = null; };
   const backupDatabase = vi.fn(async ({ requestId }: { requestId: string }) => {
     native.open = requestId; native.phase = 'working'; native.error = null;
-    await f.sqlite.backup(path.join(f.target, 'Foliole.sqlite'));
+    await f.sqlite.backup(path.join(f.backup, 'Foliole.sqlite'));
     native.savedAt = `commit ${++native.commits}`;
     return { requestId, cancelled: false, databaseCommitted: true, sourcePages: 1, changedPages: 1, state: state() };
   });

@@ -11,17 +11,19 @@ class FolioleFolderBackupDocuments {
     private final Context context;
     final Uri tree;
     private final String filename;
+    private volatile String snapshotName;
 
     FolioleFolderBackupDocuments(Context context, Uri tree) throws Exception {
         this.context = context;
         this.tree = tree;
         filename = FolioleCompanionBridgeContractDefinitions.hostApiString(context, "folderBackup", "databaseFileName");
+        snapshotName = filename;
     }
     private Uri root() {
         return DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
     }
     private String name(String virtualPath) {
-        return FolioleFolderBackupDocumentNames.resolve(virtualPath, filename);
+        return FolioleFolderBackupDocumentNames.resolve(virtualPath, snapshotName);
     }
     Uri find(String name) throws Exception {
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
@@ -36,31 +38,24 @@ class FolioleFolderBackupDocuments {
         }
         return found;
     }
+    FolioleFolderBackupReplacement replacement(String profileId) {
+        return new FolioleFolderBackupReplacement(this, filename, profileId);
+    }
+    Uri foreignTarget(boolean owned, boolean creationPending) throws Exception {
+        if (owned) return null;
+        Uri target = find(filename);
+        return target != null && (!creationPending || !isEmpty(target)) ? target : null;
+    }
+    void useSnapshotName(String next) { snapshotName = next == null ? filename : next; }
+
     void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership,
         Runnable forgetMissingTarget) throws Exception {
-        prepare(owned, creationPending, persistCreation, persistOwnership, forgetMissingTarget, false);
-    }
-    /**
-     * {@code replaceExisting} is the user's confirmation that a backup this profile does not own
-     * (for example the backup of a library a restore replaced) may be removed and written anew.
-     */
-    void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership,
-        Runnable forgetMissingTarget, boolean replaceExisting) throws Exception {
         Uri document = find(filename);
         if (document != null && !owned) {
             if (!creationPending || !isEmpty(document)) {
-                if (!replaceExisting) {
-                    throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
-                }
-                Uri journal = find(filename + "-journal");
-                if (journal != null && !DocumentsContract.deleteDocument(context.getContentResolver(), journal)) {
-                    throw new IllegalStateException("Cannot remove the other backup.");
-                }
-                if (!DocumentsContract.deleteDocument(context.getContentResolver(), document)) {
-                    throw new IllegalStateException("Cannot remove the other backup.");
-                }
-                document = null;
-            } else persistOwnership.run();
+                throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
+            }
+            persistOwnership.run();
         }
         if (document == null) {
             // The retained backup was removed from its folder. Nothing is left to protect, so forget its
@@ -68,13 +63,53 @@ class FolioleFolderBackupDocuments {
             // create a new full backup in the same folder.
             if (owned) forgetMissingTarget.run();
             persistCreation.run();
-            if (DocumentsContract.createDocument(context.getContentResolver(), root(), "application/octet-stream", filename) == null) {
-                throw new IllegalStateException("Cannot create backup database.");
-            }
+            create(filename);
             persistOwnership.run();
         }
     }
-    private boolean isEmpty(Uri document) throws Exception {
+    Uri create(String name) throws Exception {
+        Uri created = DocumentsContract.createDocument(context.getContentResolver(), root(), "application/octet-stream", name);
+        if (!isNamedDocument(created, name)) throw new IllegalStateException("Cannot create backup document " + name + ".");
+        return created;
+    }
+    void rename(Uri document, String from, String to) throws Exception {
+        requireFile(document);
+        if (find(to) != null) throw new IllegalStateException("Backup document already exists: " + to);
+        Uri moved = DocumentsContract.renameDocument(context.getContentResolver(), document, to);
+        try {
+            if (isNamedDocument(moved, to)) return;
+            throw new IllegalStateException("Cannot rename backup document to " + to + ".");
+        } catch (Exception failure) {
+            try { restoreUnexpectedRename(moved, from); }
+            catch (Exception recovery) { failure.addSuppressed(recovery); }
+            throw failure;
+        }
+    }
+    private void restoreUnexpectedRename(Uri moved, String from) throws Exception {
+        if (moved == null || isNamedDocument(moved, from)) return;
+        if (find(from) != null) throw new IllegalStateException("Backup document already exists: " + from);
+        Uri restored = DocumentsContract.renameDocument(context.getContentResolver(), moved, from);
+        if (!isNamedDocument(restored, from)) throw new IllegalStateException("Cannot restore backup document " + from + ".");
+    }
+    private boolean isNamedDocument(Uri document, String name) throws Exception {
+        Uri found = document == null ? null : find(name);
+        return found != null && DocumentsContract.getDocumentId(document).equals(DocumentsContract.getDocumentId(found));
+    }
+    void delete(String name) throws Exception {
+        Uri found = find(name);
+        if (found == null) return;
+        requireFile(found);
+        if (!DocumentsContract.deleteDocument(context.getContentResolver(), found)) {
+            throw new IllegalStateException("Cannot remove backup document " + name + ".");
+        }
+    }
+    private void requireFile(Uri document) {
+        String type = context.getContentResolver().getType(document);
+        if (type == null || DocumentsContract.Document.MIME_TYPE_DIR.equals(type)) {
+            throw new IllegalStateException("Invalid backup document type.");
+        }
+    }
+    boolean isEmpty(Uri document) throws Exception {
         try (ParcelFileDescriptor descriptor = context.getContentResolver().openFileDescriptor(document, "r")) {
             return descriptor != null && descriptor.getStatSize() == 0;
         }

@@ -179,13 +179,12 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     }
     @PluginMethod public synchronized void prepareAttachmentDirectory(PluginCall call) {
         try {
-            requireAttachmentRequest(call);
             JSONObject profile = store.load();
-            attachmentWork.execute(() -> {
-                try {
-                    FolioleFolderBackupAttachmentTarget.prepareDirectory(getContext(), profile);
-                    call.resolve();
-                } catch (Exception error) { call.reject(error.getMessage(), error); }
+            boolean create = call.getBoolean("create", false);
+            processAttachment(call, () -> {
+                if (attachmentStopped(call)) throw new IllegalStateException("Backup cancelled.");
+                boolean exists = FolioleFolderBackupAttachmentTarget.prepareDirectory(getContext(), profile, create);
+                return new JSObject().put("exists", exists);
             });
         } catch (Exception error) { call.reject(error.getMessage(), error); }
     }

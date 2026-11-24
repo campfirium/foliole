@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
@@ -23,10 +23,9 @@ import { CompanionFormulaClozeLayer } from './CompanionFormulaClozeLayer';
 import { installImageClozePointerEvents } from './companionImageCloze.testSupport';
 import { CompanionReadingActivity } from './companionReadingActivity';
 import { installReadingRangeGeometry } from './companionReadingPages.testSupport';
+import { useCompanionFormulaClozePresentation } from './useCompanionFormulaClozePresentation';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-const formula = '$$\nE = mc^2\n$$';
-const content = `Energy\n\n${formula}\n\nEnd`;
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let restoreGeometry: () => void;
 beforeEach(async () => {
@@ -36,10 +35,13 @@ beforeEach(async () => {
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, x: 0, y: 0, width: 400, height: 300, right: 400, bottom: 300, toJSON() {} });
   library = await createSearchLibrary(0);
-  const version = await toWorkspaceNativeNodeVersion(editableNode({ content }), 'source', 'parent-version');
-  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
 });
 afterEach(async () => { await library.close(); restoreGeometry(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+async function seedTopic(content: string) {
+  const version = await toWorkspaceNativeNodeVersion(editableNode({ content }), 'source', 'parent-version');
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }), { kind: 'business' });
+}
 
 function drawRegion() {
   const surface = screen.getByTestId('formula-cloze-surface');
@@ -48,7 +50,13 @@ function drawRegion() {
   fireEvent.pointerUp(surface, { pointerId: 7, clientX: 200, clientY: 200 });
 }
 
-it('opens from a tapped reading formula, saves drawn regions as Items, outlines them on the source and masks the Item prompt', async () => {
+it.each([
+  { formula: '$$\nE = mc^2\n$$', display: 'block', occurrences: 1 },
+  { formula: '$E = mc^2$', display: 'inline', occurrences: 2 },
+])('saves and presents $display formula clozes at the selected occurrence', async ({ formula, display, occurrences }) => {
+  const content = display === 'block' ? `Energy\n\n${formula}\n\nEnd` : `Energy ${formula} and ${formula}.`;
+  await seedTopic(content);
+  const selector = `.cm-md-math-widget-${display}`;
   const refresh = vi.fn().mockResolvedValue(undefined);
   const workspace = { state: await loadCompanionWorkspaceSyncState(), refreshAfterMutation: refresh } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
   const activity = new CompanionReadingActivity('topic', () => {});
@@ -59,7 +67,7 @@ it('opens from a tapped reading formula, saves drawn regions as Items, outlines 
   </CompanionFormulaClozeLayer></MouseGestureSettingsProvider>;
   const view = renderWithLocalization(renderArticle());
   const widget = await waitFor(() => {
-    const value = view.container.querySelector<HTMLElement>('.cm-md-math-widget-block .katex');
+    const value = view.container.querySelector<HTMLElement>(`${selector} .katex`);
     expect(value).toBeTruthy(); return value!;
   });
   fireEvent.click(widget);
@@ -81,8 +89,16 @@ it('opens from a tapped reading formula, saves drawn regions as Items, outlines 
 
   workspace.state = await loadCompanionWorkspaceSyncState();
   view.rerender(renderArticle());
-  await waitFor(() => expect(view.container.querySelector('[data-md-formula-region-outlined="true"]')).toBeTruthy());
-  fireEvent.click(view.container.querySelector('.cm-md-math-widget-block .katex')!);
+  const [sourceFormula, repeatedFormula] = await waitFor(() => {
+    const widgets = view.container.querySelectorAll(selector);
+    expect(widgets).toHaveLength(occurrences);
+    expect(widgets[0]!.querySelector('[data-md-formula-region-outlined="true"]')).toBeTruthy();
+    return Array.from(widgets);
+  });
+  if (occurrences === 2) {
+    expect(repeatedFormula!.querySelector('[data-md-formula-region-outlined="true"]')).toBeNull();
+  }
+  fireEvent.click(sourceFormula!.querySelector('.katex')!);
   expect((await screen.findByRole('dialog')).querySelectorAll('[data-formula-saved]')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -90,6 +106,29 @@ it('opens from a tapped reading formula, saves drawn regions as Items, outlines 
   await waitFor(() => expect(view.container.querySelector('[data-md-formula-region-hidden="true"]')).toBeTruthy());
   expect(view.container.querySelector('[data-md-formula-region-outlined="true"]')).toBeTruthy();
   // An Item is not a source: tapping its formula does not open the sheet.
-  await act(async () => { fireEvent.click(view.container.querySelector('.cm-md-math-widget-block .katex')!); });
+  await act(async () => { fireEvent.click(view.container.querySelector(`${selector} .katex`)!); });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it.each([0, 250])('does not traverse the library when changing articles with %i unrelated nodes', async (unrelatedCount) => {
+  await seedTopic('One ordinary article.');
+  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  const topic = snapshot.nodesById.topic!;
+  const nodes: typeof snapshot.nodesById = { ...snapshot.nodesById, other: { ...topic, id: 'other' } };
+  for (let index = 0; index < unrelatedCount; index++) {
+    const id = `unrelated-${index}`;
+    nodes[id] = { ...topic, id };
+  }
+  const enumerate = vi.fn(Reflect.ownKeys);
+  const source = { ...snapshot, nodesById: new Proxy(nodes, { ownKeys: enumerate }) };
+  const presentation = renderHook(({ nodeId }) => useCompanionFormulaClozePresentation(source, nodeId),
+    { initialProps: { nodeId: 'topic' } });
+  expect(presentation.result.current).toEqual([]);
+
+  enumerate.mockClear();
+  presentation.rerender({ nodeId: 'other' });
+  expect(presentation.result.current).toEqual([]);
+  presentation.rerender({ nodeId: 'topic' });
+  expect(presentation.result.current).toEqual([]);
+  expect(enumerate).not.toHaveBeenCalled();
 });

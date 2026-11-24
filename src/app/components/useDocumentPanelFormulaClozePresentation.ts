@@ -35,6 +35,7 @@ function registerFocusedFormulaPresentation(editorNodeId: string, activeNode: No
   if (!region || !locator) return [];
   registerFormulaClozeEditorPresentation(editorNodeId, {
     canCreate: false,
+    matchByFormulaText: true,
     hiddenRegionIds: [region.id],
     outlinedRegionIds: [],
     regions: [region]
@@ -42,6 +43,7 @@ function registerFocusedFormulaPresentation(editorNodeId: string, activeNode: No
   if (!showAnswerNodeId) return [editorNodeId];
   registerFormulaClozeEditorPresentation(showAnswerNodeId, {
     canCreate: false,
+    matchByFormulaText: true,
     hiddenRegionIds: [],
     outlinedRegionIds: [region.id],
     regions: [region]

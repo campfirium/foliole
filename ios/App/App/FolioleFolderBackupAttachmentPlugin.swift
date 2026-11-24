@@ -3,9 +3,10 @@ import Foundation
 
 extension FolioleCompanionFolderBackupPlugin {
     @objc func prepareAttachmentDirectory(_ call: CAPPluginCall) {
+        let create = call.getBool("create") ?? false
         attachmentTask(call) { root, _, _ in
-            _ = try FolioleFolderBackupAttachments.prepare(root)
-            return [:]
+            let exists = try FolioleFolderBackupAttachments.prepare(root, create: create) != nil
+            return ["exists": exists]
         }
     }
 

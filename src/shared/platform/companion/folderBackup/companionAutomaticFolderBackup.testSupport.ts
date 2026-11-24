@@ -52,7 +52,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
   });
   const forget = vi.fn(async () => { state.configured = false; state.directoryId = ''; return { ...state }; });
   runtime.port = { clearDirectory: forget, getState: async () => ({ ...state }), openSource: async () => {}, closeSource: async () => {},
-    backupDatabase: backup, prepareAttachmentDirectory: async () => {}, ...folderAttachmentCopyPort(copy), finishAttachments: finish,
+    backupDatabase: backup, prepareAttachmentDirectory: async () => ({ exists: true }), ...folderAttachmentCopyPort(copy), finishAttachments: finish,
     cancelDatabase: async () => {} } as unknown as CompanionFolderBackupPort;
   runtime.inventory.mockImplementation(async ({ trash }: { trash: boolean }) => ({ files: trash ? [] :
     (await readdir(source)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));

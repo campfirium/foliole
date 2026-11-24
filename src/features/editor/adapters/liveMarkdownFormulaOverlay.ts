@@ -91,7 +91,7 @@ function doesRegionMatchMathRange(
 ) {
   if (region.occurrenceKey === occurrenceKey) return true;
   return (
-    !presentation.canCreate &&
+    presentation.matchByFormulaText === true &&
     region.display === mathRange.display &&
     getFormulaSourceTex(region.formulaSource) === normalizeFormulaText(mathRange.tex)
   );
