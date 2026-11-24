@@ -11,6 +11,9 @@ import { validateMobilePlatformVersions } from './mobile-store-identity-contract
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
+import {
+  SYNC_PROTOCOL_SOURCE_PATH, parseSyncProtocolVersion, readSyncProtocolAtTag, syncProtocolChanged
+} from './release-sync-protocol-contract.mjs';
 
 function requireLockVersion(packageLock, packageVersion) {
   const rootVersion = packageLock?.packages?.['']?.version;
@@ -107,6 +110,23 @@ export function formatFeaturePreviewReport(previews) {
   });
 }
 
+async function reportSyncProtocolChange(read, version) {
+  const previousVersion = JSON.parse(await read('releases/update-manifest.json')).latest;
+  if (!previousVersion || previousVersion === version) return;
+  try {
+    const current = parseSyncProtocolVersion(await read(SYNC_PROTOCOL_SOURCE_PATH));
+    const previous = readSyncProtocolAtTag(`v${previousVersion}`);
+    if (syncProtocolChanged(previous, current)) {
+      console.log(
+        `[release-candidate] SYNC PROTOCOL ${previous} (v${previousVersion}) -> ${current}: ` +
+        `the post-public manifest entry for ${version} must set "syncBreaking": true.`
+      );
+    }
+  } catch (error) {
+    console.log(`[release-candidate] sync protocol comparison unavailable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 async function main() {
   assertQualityCommandAllowed('check:release-candidate');
   const { values } = parseArgs({ options: { commit: { type: 'string' } } });
@@ -114,6 +134,7 @@ async function main() {
   const result = await validateCandidate(read);
   const previews = JSON.parse(await read('src/shared/config/featurePreviews.json'));
   for (const line of formatFeaturePreviewReport(previews)) console.log(line);
+  await reportSyncProtocolChange(read, result.version);
   console.log(
     `[release-candidate] status: OK version=${result.version} ` +
     `mode=${result.publicationMode} platforms=${result.selectedPlatforms.join(',')}`

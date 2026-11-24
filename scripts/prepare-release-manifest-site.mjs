@@ -21,6 +21,7 @@ import {
   listPlatformDownloadVersions
 } from './release-download-directory.mjs';
 import { assertLocalizedReleaseNotesScope } from './release-notes-contract.mjs';
+import { assertSyncBreakingMarked, readSyncProtocolAtTag } from './release-sync-protocol-contract.mjs';
 
 const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -30,7 +31,9 @@ function required(value, name) {
   return normalized;
 }
 
-export function validateReleaseManifestPublication({ enNotes, intent, manifest, previousManifest, registry, release, repository, zhNotes }) {
+export function validateReleaseManifestPublication({
+  enNotes, intent, manifest, previousManifest, readSyncProtocol, registry, release, repository, zhNotes
+}) {
   const version = required(manifest?.latest, 'manifest latest');
   if (!VERSION.test(version)) throw new Error('manifest latest must be a valid version.');
   const entry = Array.isArray(manifest?.releases)
@@ -49,6 +52,16 @@ export function validateReleaseManifestPublication({ enNotes, intent, manifest, 
   assertPublishedReleaseAssets(identity, (release.assets ?? []).map((asset) => asset?.name ?? ''));
   assertLocalizedReleaseNotesScope({ en: enNotes, 'zh-Hans': zhNotes }, identity, version);
   if (previousManifest) assertPublishedReleaseHistoryImmutable(previousManifest, manifest);
+  const previousVersion = previousManifest?.latest;
+  if (readSyncProtocol && previousVersion && previousVersion !== version) {
+    assertSyncBreakingMarked({
+      currentProtocol: readSyncProtocol(expectedTag),
+      entry,
+      previousProtocol: readSyncProtocol(`v${previousVersion}`),
+      previousVersion,
+      version
+    });
+  }
   const pendingFirstBaseline = version === '0.7.1' &&
     manifest.desktopUpdater?.firstCapableVersion === null &&
     manifest.desktopUpdater?.verifiedBaselineVersion === null;
@@ -99,7 +112,8 @@ export async function prepareReleaseManifestSite({
     version: required(manifest.latest, 'manifest latest')
   });
   const publication = validateReleaseManifestPublication({
-    enNotes, intent, manifest, previousManifest, registry, release, repository: normalizedRepository, zhNotes
+    enNotes, intent, manifest, previousManifest, readSyncProtocol: (tag) => readSyncProtocolAtTag(tag),
+    registry, release, repository: normalizedRepository, zhNotes
   });
   const { androidApk, changelogRevision } = await readPublicReleaseInventory({
     fetchImpl, repository: normalizedRepository, token

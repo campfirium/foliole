@@ -28,6 +28,7 @@ import {
   assertT7Publication
 } from './release-publication-contract.mjs';
 import { checkReleaseMetadata } from './release-doctor-metadata.mjs';
+import { assertSyncBreakingMarked, readSyncProtocolAtTag } from './release-sync-protocol-contract.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
 
@@ -146,6 +147,27 @@ function checkReleasePublication(identity, manifest) {
   }
 }
 
+export function checkSyncBreakingMark(manifest, version, readSyncProtocol = readSyncProtocolAtTag) {
+  const releases = Array.isArray(manifest?.releases) ? manifest.releases : [];
+  const index = releases.findIndex((release) => release?.version === version);
+  const previousVersion = index >= 0 ? releases[index + 1]?.version : undefined;
+  if (!previousVersion) return createCheck('PASS', 'manifest syncBreaking', 'no previous public release to compare.');
+  try {
+    const result = assertSyncBreakingMarked({
+      currentProtocol: readSyncProtocol(`v${version}`),
+      entry: releases[index],
+      previousProtocol: readSyncProtocol(`v${previousVersion}`),
+      previousVersion,
+      version
+    });
+    return createCheck('PASS', 'manifest syncBreaking', result.changed
+      ? 'sync protocol changed and the entry is marked syncBreaking.'
+      : 'sync protocol is unchanged.');
+  } catch (error) {
+    return createCheck('FAIL', 'manifest syncBreaking', error instanceof Error ? error.message : String(error));
+  }
+}
+
 async function collectPostPublicMetadataChecks(rootDir, version, identity) {
   const [manifest, enNotes, zhNotes] = await Promise.all([
     readJsonFile(rootDir, 'releases/update-manifest.json'),
@@ -154,7 +176,8 @@ async function collectPostPublicMetadataChecks(rootDir, version, identity) {
   ]);
   return [
     ...(await checkReleaseMetadata({ enNotes, identity, rootDir, version, zhNotes })),
-    ...checkManifest(manifest, version, identity)
+    ...checkManifest(manifest, version, identity),
+    checkSyncBreakingMark(manifest, version)
   ];
 }
 

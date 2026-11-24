@@ -20,6 +20,7 @@ on:
       - ".github/release-platforms.json"
       - ".github/workflows/deploy-release-manifest.yml"
       - "scripts/prepare-release-manifest-site.mjs"
+      - "scripts/release-sync-protocol-contract.mjs"
       - "scripts/release-download-directory.mjs"
       - "scripts/mobile/site-store-status.mjs"
       - "scripts/mobile/testflight-review-registry.mjs"
