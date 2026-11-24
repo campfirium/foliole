@@ -115,28 +115,44 @@ export async function resumeWebDavRelayAttachment(input: Input) {
   }
 }
 
-export async function publishWebDavRelayAttachments(input: Input) {
+export async function publishWebDavRelayAttachments(input: Input, continueBatches = false) {
   const { host, scope } = input;
   if (scope.attachmentPolicy.mode === 'off') {
     await host.write(db => db.run(`UPDATE sync_group_metadata SET value = 'lan', updated_at = ?
       WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{')`,
     [new Date().toISOString(), prefix(scope), `${scope.key}:attachment;`]));
-    return;
+    return false;
   }
+  const batchLimit = continueBatches ? 2 : 1;
+  let advanced = false;
+  for (let batch = 0; batch < batchLimit; batch++) {
+    const { full, settled } = await publishAttachmentBatch(input);
+    advanced ||= settled;
+    if (!full) break;
+  }
+  return advanced;
+}
+
+async function publishAttachmentBatch(input: Input) {
+  const { host, scope } = input;
   const keys = await readAttachmentBatch(input);
+  let settled = false;
   for (const row of keys) {
-    if (input.lanConnected()) return;
+    input.signal?.throwIfAborted();
+    if (input.lanConnected()) return { full: false, settled };
     await input.assertScope();
     const key = attachmentBlockResourceSchema.shape.storageKey.parse(row.key.slice(prefix(scope).length));
     const repair = await readRepair(input, key);
     if (repair && !await isAuthorizedRepair(input, key, repair)) {
       await host.write(db => markWebDavRelayAttachment(db, scope, key, 'lan'));
-      continue;
+    } else {
+      const pending = await freeze(input, key, repair);
+      if (pending === undefined) continue;
+      if (pending && !await publish(input, pending, repair)) return { full: false, settled };
     }
-    const pending = await freeze(input, key, repair);
-    if (!pending) continue;
-    if (!await publish(input, pending, repair)) return;
+    settled = true;
   }
+  return { full: keys.length === ATTACHMENT_BATCH_SIZE, settled };
 }
 
 function readAttachmentBatch({ host, scope, signal }: Input) {
@@ -180,7 +196,7 @@ async function freeze(input: Input, key: string, repair?: RepairRequest) {
     await host.write(db => db.run(`UPDATE sync_group_metadata SET updated_at = ?
       WHERE key = ? AND (value = 'pending' OR substr(value, 1, 1) = '{')`,
     [new Date().toISOString(), prefix(scope) + key]));
-    return null;
+    return undefined;
   }
 }
 

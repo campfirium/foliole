@@ -2,7 +2,7 @@ export type CompanionManualSyncAction = {
   runId: string;
   started: boolean;
   status: 'running' | 'starting' | 'terminal';
-  terminalResult: 'completed' | 'failed' | null;
+  terminalResult: 'completed' | 'failed' | 'pending' | null;
 };
 
 export function startCompanionManualSyncAction(runId: string): CompanionManualSyncAction {

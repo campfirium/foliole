@@ -12,7 +12,7 @@ import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
-export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'pending' | 'session-ended' | 'skipped';
+export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'pending' | 'relay-pending' | 'session-ended' | 'skipped';
 export type ForegroundSyncReason =
   | 'endpoint-ready' | 'foreground' | 'freshness' | 'mutation' | 'retry';
 export type CompanionSyncContinuationMode = 'full' | 'resources-only';

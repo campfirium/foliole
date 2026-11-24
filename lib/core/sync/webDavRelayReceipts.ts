@@ -39,6 +39,11 @@ export function recordRelayPacketReceipt(db: DbPort, scope: WebDavRelayBodyScope
     [receiptKey(scope, packet), damaged ? 'damaged' : 'true', new Date().toISOString()]);
 }
 
+export async function hasRelayCollectionReceipts(db: DbPort, scope: WebDavRelayBodyScope, generation: string) {
+  return (await db.query('SELECT 1 FROM sync_group_metadata WHERE key >= ? AND key < ? LIMIT 1',
+    generationReceiptRange(scope, generation))).length > 0;
+}
+
 export function rememberRelayCollectionCleanup(db: DbPort, scope: WebDavRelayBodyScope, generation: string) {
   return db.run(`INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at)
     SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM sync_group_metadata WHERE key >= ? AND key < ?)`,

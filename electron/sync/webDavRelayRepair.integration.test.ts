@@ -68,7 +68,7 @@ it('withdraws unsent repair demand when LAN supplies the file first', async () =
     await target.peer.db.run("DELETE FROM sync_group_metadata WHERE key LIKE 'webdav_relay_last_receive:%'");
     const priorRequests = fixture.repairUploads.length;
     const requestSend = vi.fn();
-    await fixture.sync(target, undefined, { requestSend });
+    await fixture.sync(target, undefined, { requestSend, foregroundReceive: true });
     expect(requestSend).toHaveBeenCalledOnce();
     expect(await hasWebDavRelayRepairToSend(target.peer.db, (await fixture.scope(target.peer))!)).toBe(true);
     await expect(stat(path.join(target.assets, key))).rejects.toMatchObject({ code: 'ENOENT' });

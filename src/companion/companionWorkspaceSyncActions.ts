@@ -86,7 +86,7 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
       }
       await loadCompanionSyncNodeConflicts().then(conflicts => args.setSyncConflictCount(conflicts.length))
         .catch(() => args.setError('sync_display_unavailable'));
-      args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'completed'));
+      args.setManualSyncAction?.(finishCompanionManualSyncAction(action, outcome === 'relay-pending' ? 'pending' : 'completed'));
     } catch (error) {
       args.setStatus('idle');
       args.setSyncProgress(null);

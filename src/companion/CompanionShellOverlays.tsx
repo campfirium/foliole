@@ -21,7 +21,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
   isNavigationVisible: boolean;
   onCaptureSave: ComponentProps<typeof CompanionCaptureSheet>['onSave'];
   onCaptureImportFile?: ComponentProps<typeof CompanionCaptureSheet>['onImportFile'];
-  onCaptureSheetOpenChange(open: boolean): void;
+  onCaptureSheetOpenChange: ComponentProps<typeof CompanionCaptureSheet>['onOpenChange'];
   onCaptureClipboardCreated?(nodeId: string): void;
   onDismissReviewTopic: Surface['handleDismissReviewTopic'];
   onGradeReview: Surface['handleGradeReview'];

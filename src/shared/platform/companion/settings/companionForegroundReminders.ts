@@ -8,25 +8,36 @@ import { COMPANION_REMINDER_NOTIFICATION_OWNER } from './companionReminderNotifi
 import { loadCompanionReminderDevice, loadCompanionReminderRules, onCompanionReminderChange } from './companionReminderRepository';
 
 type ForegroundRule = ReminderRule & { trigger: { kind: 'foreground'; minutes: number } };
+type ForegroundTimer = { revision: string; timer: ReturnType<typeof setTimeout> };
 
-async function showReminder(rule: ForegroundRule, valid: () => boolean) {
+async function showReminder(rule: ForegroundRule, valid: () => boolean, readRefresh: () => Promise<boolean>) {
   const { display } = await LocalNotifications.checkPermissions();
+  if (display !== 'granted' || !valid()) return;
   const { notifications } = await LocalNotifications.getPending();
-  if (display !== 'granted' || !valid() || !await readNativeAppActiveState() || !valid()) return;
+  if (!valid() || !await readNativeAppActiveState()) return;
   const used = new Set(notifications.map(item => item.id));
   let id = 510_000_000;
   while (used.has(id)) id += 1;
-  await LocalNotifications.schedule({ notifications: [{
-    id, title: 'Foliole', body: rule.message,
-    extra: { owner: COMPANION_REMINDER_NOTIFICATION_OWNER, ruleId: rule.id, revision: rule.revision }
-  }] });
+  while (valid()) {
+    // Only the current rule and foreground session can invalidate a due countdown.
+    const refresh = readRefresh();
+    const refreshed = await refresh;
+    if (refresh !== readRefresh()) continue;
+    if (!refreshed || !valid()) return;
+    await LocalNotifications.schedule({ notifications: [{
+      id, title: 'Foliole', body: rule.message,
+      extra: { owner: COMPANION_REMINDER_NOTIFICATION_OWNER, ruleId: rule.id, revision: rule.revision }
+    }] });
+    return;
+  }
 }
 
 export function startCompanionForegroundReminders() {
   let disposed = false;
   let active = false;
   let generation = 0;
-  const timers = new Map<string, { revision: string; timer: ReturnType<typeof setTimeout> }>();
+  let pendingRefresh = Promise.resolve(true);
+  const timers = new Map<string, ForegroundTimer>();
   const report = (error: unknown) => logRuntimeError('Foreground reminder failed', {
     area: 'native', action: 'foreground-reminders', error
   });
@@ -47,20 +58,25 @@ export function startCompanionForegroundReminders() {
     }
     for (const rule of desired) {
       if (timers.has(rule.id)) continue;
-      const timer = setTimeout(() => {
-        const versionAtFire = generation;
-        void showReminder(rule, () => active && !disposed && timers.get(rule.id)?.timer === timer && generation === versionAtFire).catch(report);
-      }, rule.trigger.minutes * 60_000);
-      timers.set(rule.id, { revision: rule.revision, timer });
+      const entry: ForegroundTimer = { revision: rule.revision, timer: setTimeout(() => {
+        void showReminder(rule, () => active && !disposed && timers.get(rule.id) === entry, () => pendingRefresh).catch(report);
+      }, rule.trigger.minutes * 60_000) };
+      timers.set(rule.id, entry);
     }
+  }
+  function requestRefresh() {
+    pendingRefresh = refresh().then(() => true, error => {
+      report(error);
+      return false;
+    });
   }
   function setActive(next: boolean) {
     if (active === next || disposed) return;
     active = next;
     if (!active) for (const id of timers.keys()) clear(id);
-    void refresh().catch(report);
+    requestRefresh();
   }
-  const stopChanges = onCompanionReminderChange(() => { void refresh().catch(report); });
+  const stopChanges = onCompanionReminderChange(requestRefresh);
   let sawLifecycleEvent = false;
   const lifecycle = subscribeNativeAppActiveState(next => { sawLifecycleEvent = true; setActive(next); });
   void lifecycle.then(async () => {

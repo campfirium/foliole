@@ -7,6 +7,7 @@ import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextCon
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 import { createCompanionFileImportHandler } from './companionFileImportActions';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import type { CompanionCaptureOpenChange } from './useCompanionCaptureDraft';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export function useCompanionCaptureController(args: {
@@ -18,10 +19,12 @@ export function useCompanionCaptureController(args: {
 }) {
   const [isCaptureSheetOpen, setOpen] = useState(false);
   const [parentNodeId, setParentNodeId] = useState(INBOX_NODE_ID);
+  const preserveParent = useRef(false);
   const latest = useRef(args);
   latest.current = args;
-  const setIsCaptureSheetOpen = (open: boolean) => {
-    if (open && !isCaptureSheetOpen) {
+  const setIsCaptureSheetOpen: CompanionCaptureOpenChange = (open, reason) => {
+    if (!open && reason !== 'preserve-draft') preserveParent.current = reason === 'saving-draft';
+    if (open && !isCaptureSheetOpen && !preserveParent.current) {
       const candidate = args.isBrowseDirectoryOpen
         ? args.directorySelection.kind === 'internal' ? args.directorySelection.nodeId : null
         : args.surface.browsedFolder?.nodeId ?? null;
