@@ -1,21 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 
 import Database from 'better-sqlite3';
 
 import { bootstrapCompanionDatabase, CompanionDatabaseBlockedError } from '../../lib/core/database/companionDatabaseLifecycle.js';
-import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { NodeAnchorLinkPayload, NodeImageRegionGroupPayload, UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutationPayloads.js';
 import { runLibraryMerge, type LibraryMergeHost, type LibraryMergeReport, type LibraryMergeSourceNode } from '../../lib/core/import/libraryMerge.js';
 import { NODE_KINDS, type NodeKind } from '../../lib/core/nodes/nodeKind.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import { hashAttachmentFile, stageManagedAttachmentFileCopy } from '../attachments/managedAttachmentFileCopy.js';
-import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { snapshotBackupRestoreSource } from '../database/backupRestoreSourceSnapshot.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -23,6 +18,7 @@ import { createDatabaseRestoreArtifacts } from '../database/databaseRestoreArtif
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { verifySqliteDatabaseFileOffMainThread } from '../database/sqliteFileOffMainThread.js';
 
+import { copyLibraryMergeAttachments } from './desktopLibraryMergeAttachments.js';
 import { stageMobileLibrarySource } from './mobileLibraryMergeSource.js';
 
 export interface DesktopLibraryMergeResult extends Omit<LibraryMergeReport, 'attachmentKeys'> {
@@ -114,28 +110,6 @@ function ownedPort(port: DbPort): DbPort {
   return { ...port, transaction: run => runWithDatabaseConnectionOwner(() => port.transaction(run)) } as DbPort;
 }
 
-async function copyAttachments(keys: readonly string[], directory: string | null) {
-  let copied = 0;
-  let missing = 0;
-  for (const key of keys) {
-    const parsed = parseCanonicalAttachmentStorageKey(key);
-    if (!parsed) { missing += 1; continue; }
-    const target = resolveAttachmentStoragePath(parsed.contentHash, undefined, parsed.mimeType);
-    if (await access(target).then(() => true, () => false)) continue;
-    const source = directory ? path.join(directory, key) : null;
-    if (!source || !await access(source).then(() => true, () => false) || await hashAttachmentFile(source) !== parsed.contentHash) {
-      missing += 1;
-      continue;
-    }
-    await stageManagedAttachmentFileCopy({ sourcePath: source, contentHash: parsed.contentHash,
-      mimeType: parsed.mimeType, originalName: key });
-    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.execute(
-      FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [parsed.contentHash, 1]));
-    copied += 1;
-  }
-  return { copied, missing };
-}
-
 function sourceTables(sqlite: Database.Database) {
   return new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[])
     .map(row => row.name));
@@ -185,7 +159,7 @@ export async function mergeDesktopLibrary(input: {
       const report = await runLibraryMerge({ source: createBetterSqliteDbPort(sqlite), now,
         target: ownedPort(createBetterSqliteDbPort(connection.sqlite)), host,
         ...(input.batchSize ? { batchSize: input.batchSize } : {}) });
-      const attachments = await copyAttachments(report.attachmentKeys, mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory);
+      const attachments = await copyLibraryMergeAttachments(report.attachmentKeys, mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory);
       return { added: report.added, alternatives: report.alternatives, unchanged: report.unchanged,
         skippedDeleted: report.skippedDeleted, reviewsAdded: report.reviewsAdded, attachmentsCopied: attachments.copied, attachmentsMissing: attachments.missing,
         folderId: host.folderId() };
