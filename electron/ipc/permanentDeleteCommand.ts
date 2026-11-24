@@ -1,5 +1,7 @@
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
-import { isCurrentDatabaseConnection, openDatabaseConnection, type DatabaseConnection } from '../database/connection.js';
+import {
+  getOpenDatabaseConnection, isCurrentDatabaseConnection, openDatabaseConnection, type DatabaseConnection
+} from '../database/connection.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import {
   deletePermanentDeleteChunk,
@@ -37,8 +39,10 @@ function loadChunkParents(connection: DatabaseConnection, nodeIds: string[]) {
 export async function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseDeleteNodesPermanentlyArgs(args);
   const libraryScope = parsed.libraryScope ?? currentLibraryScope();
+  const connectionAtDispatch = getOpenDatabaseConnection();
   const { plan, connection } = await runDesktopDatabaseWrite('foreground', () => {
     if (currentLibraryScope() !== libraryScope) throw new Error('permanent_delete_library_changed');
+    if (connectionAtDispatch) assertPermanentDeleteConnection(connectionAtDispatch);
     return { connection: openDatabaseConnection(), plan: preparePermanentDelete(parsed.nodeIds) };
   });
   const removed: string[] = [];

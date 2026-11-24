@@ -45,7 +45,7 @@ vi.mock('../database/releasedBodyCollectionTask.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { markDatabaseReady } from '../database/databaseReadiness.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { restoreNodes, softDeleteNodes } from '../database/nodeMutations.js';
@@ -55,6 +55,7 @@ import * as mirrorRetirements from '../mirror/mirrorPermanentDelete.js';
 
 import { handleInvokeRequest } from './commands.js';
 import { saveCurrentLibraryHome } from './libraryPathBootstrap.js';
+import { handlePermanentDeleteNodeCommand } from './permanentDeleteCommand.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 const NOW = '2026-10-23T00:00:00.000Z';
@@ -267,4 +268,30 @@ it('rejects a request from the previous library before planning its first batch'
   expect(readSharedNodes(ids)).toEqual([{ id: ids[0], deleted_at: null }]);
   expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', ids)).toBe(0);
   expect(outcome).toEqual({ error: expect.objectContaining({ message: expect.stringContaining('permanent_delete_library_changed') }) });
+});
+
+
+it('rejects a queued delete after the original database connection is replaced at the same path', async () => {
+  const ids = ['queued-topic'];
+  await handleInvokeRequest({ command: 'create_topic', args: nodeArgs(ids[0]!, null, 'topic', 'Keep this') });
+  softDeleteNodes({ nodeIds: ids, deletedAt: NOW });
+  const libraryScope = currentLibraryScope();
+  let finishReplacement!: () => void;
+  const pendingReplacement = new Promise<void>(resolve => { finishReplacement = resolve; });
+  const replace = runWithDatabaseConnectionMaintenance(async () => {
+    await pendingReplacement;
+    closeDatabaseConnection();
+    initializeDatabase();
+    restoreNodes({ nodeIds: ids });
+  });
+
+  const deletion = handlePermanentDeleteNodeCommand({ nodeIds: ids, libraryScope }, null);
+  const outcome = deletion.then(value => ({ value }), error => ({ error }));
+  finishReplacement();
+  await replace;
+
+  expect(currentLibraryScope()).toBe(libraryScope);
+  expect(await outcome).toEqual({ error: expect.objectContaining({ message: 'permanent_delete_library_changed' }) });
+  expect(readSharedNodes(ids)).toEqual([{ id: ids[0], deleted_at: null }]);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', ids)).toBe(0);
 });
