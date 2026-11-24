@@ -31,7 +31,8 @@ async function prepareBody(
   content: string,
   embeddedImages: RawEpubBook['rootEmbeddedImages'],
   now: string,
-  stages: Map<string, StagedManagedAttachment>
+  stages: Map<string, StagedManagedAttachment>,
+  signal?: AbortSignal
 ): Promise<PreparedBody> {
   const byDestination = new Map(embeddedImages.map((image) => [image.destination, image]));
   const attachmentIds = new Set<string>();
@@ -39,6 +40,7 @@ async function prepareBody(
   let rewritten = '';
   let cursor = 0;
   for (const reference of collectMarkdownImageReferences(content)) {
+    signal?.throwIfAborted();
     rewritten += content.slice(cursor, reference.start);
     cursor = reference.end;
     const parsed = parseMarkdownImageTarget(reference.rawTarget);
@@ -54,6 +56,7 @@ async function prepareBody(
     references.set(canonical.storageKey, { storage_key: canonical.storageKey, original_name: image.originalName, role: 'image' });
     let stage = stages.get(canonical.hash);
     if (!stage) {
+      signal?.throwIfAborted();
       stage = filePath ? await stageManagedAttachmentFileCopy({
         sourcePath: filePath, contentHash: canonical.hash, mimeType: canonical.mimeType,
         now, originalName: image.originalName
@@ -93,19 +96,22 @@ export async function prepareOriginalEpubCandidate(input: {
   bytes?: Uint8Array;
   filePath?: string;
   now: string;
+  signal?: AbortSignal;
   title: string;
 }): Promise<PreparedOriginalEpubCandidate> {
+  input.signal?.throwIfAborted();
   if (!input.filePath && !input.bytes) throw new Error('original_epub_source_missing');
   const book = input.filePath ? await readRawEpubBook({
     adapterId: 'text_file', kind: 'epub', filePath: input.filePath, sourceName: `${input.title}.epub`
   }) : await readRawEpubBookBytes(input.bytes!, `${input.title}.epub`);
   const stages = new Map<string, StagedManagedAttachment>();
   try {
+    input.signal?.throwIfAborted();
     if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
-    const root = await prepareBody(book.rootContent, book.rootEmbeddedImages, input.now, stages);
+    const root = await prepareBody(book.rootContent, book.rootEmbeddedImages, input.now, stages, input.signal);
     const preparedNodes: PreparedReadwiseApiEpubImages['sections'] = [];
     for (const node of book.nodes) {
-      const prepared = await prepareBody(node.content, node.embeddedImages, input.now, stages);
+      const prepared = await prepareBody(node.content, node.embeddedImages, input.now, stages, input.signal);
       preparedNodes.push({
         resourceReferences: prepared.resourceReferences,
         attachmentIds: prepared.attachmentIds,
@@ -135,7 +141,7 @@ export async function prepareOriginalEpubCandidate(input: {
       stages: [...stages.values()]
     };
   } catch (error) {
-    await cleanCreatedManagedAttachmentFiles([...stages.values()]);
+    if (!input.signal?.aborted) await cleanCreatedManagedAttachmentFiles([...stages.values()]);
     throw error;
   } finally {
     await book.dispose?.();

@@ -1,106 +1,35 @@
 // @vitest-environment node
+import './readwiseOriginalEpubDisconnect.testSupport.js';
 
+import { readFileSync } from 'node:fs';
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
-import { saveReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
-import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
-import { closeLibraries, createPeer, root, startLibraries } from '../database/syncLibrary.testSupport.js';
+import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
+import { setAttachmentPublishedListener } from '../attachments/attachmentPublishedEvents.js';
+import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { persistNodeResourceReference } from '../database/nodeResources.js';
+import { root } from '../database/syncLibrary.testSupport.js';
 
 import { disconnectReadwiseApi, loadReadwiseApiConnection } from './readwiseApiConnection.js';
-import { writeReadwiseApiSecret } from './readwiseApiSecret.js';
 import { loadReadwiseOriginalEpubActionState, useReadwiseOriginalEpub } from './readwiseOriginalEpubAction.js';
 import { headingCoverEpubBytes } from './readwiseOriginalEpubCommitTestFixtures.js';
+import {
+  connectFixture, coordinator, destination, library, mockDownload, pauseDownload, showSaveDialog
+} from './readwiseOriginalEpubDisconnect.testSupport.js';
 import { exportReadwiseOriginalEpub } from './readwiseOriginalEpubExport.js';
 
-const showSaveDialog = vi.hoisted(() => vi.fn());
-let library: ReturnType<typeof createPeer>;
-let destination: string;
-vi.mock('electron', () => ({
-  app: { getPath: () => path.join(root, 'user-data') },
-  dialog: { showSaveDialog },
-  safeStorage: {
-    decryptString: (data: Buffer) => data.toString(),
-    encryptString: (value: string) => Buffer.from(value),
-    getSelectedStorageBackend: () => 'test',
-    isEncryptionAvailable: () => true
-  }
+// Supply the parser worker's result while exercising production image staging and rollback.
+vi.mock('../ipc/epubImportBook.js', () => ({
+  readRawEpubBook: async () => ({
+    nodes: [{ key: 'chapter', title: 'Chapter', content: 'Chapter body', embeddedImages: [] }],
+    rootContent: '![Cover](cover.png)',
+    rootEmbeddedImages: [{ destination: 'cover.png', originalName: 'cover.png',
+      bytes: Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) }]
+  })
 }));
-vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ driver: library.driver, sqlite: library.db }),
-  runWithDatabaseConnectionOwner: async (run: () => unknown) => run()
-}));
-vi.mock('../database/readwiseHostAssignment.js', () => ({ canCurrentHostRunReadwise: () => true }));
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({ app_config_dir: path.join(root, 'config') })
-}));
-
-const now = '2026-11-24T00:00:00.000Z';
-const secretRef = 'readwise-api-00000000-0000-0000-0000-000000000001.bin';
-const originalUrl = 'https://bucket.s3.amazonaws.com/book.epub';
-
-function connectFixture() {
-  writeReadwiseApiSecret(secretRef, 'test-token');
-  saveReadwiseDeviceConnection({ secretRef, state: 'connected', verifiedAt: now });
-}
-
-beforeEach(async () => {
-  await startLibraries();
-  library = createPeer('desktop');
-  destination = path.join(root, 'exports', 'Book.epub');
-  await fs.mkdir(path.dirname(destination));
-  showSaveDialog.mockResolvedValue({ canceled: false, filePath: destination });
-  vi.spyOn(os, 'tmpdir').mockReturnValue(root);
-
-  const { connectionRef } = ensureReadwiseRemoteSource(false, now);
-  connectFixture();
-  library.driver.execute(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-    VALUES ('book', 'topic', 'Book', 'Reader body', ?, ?)`, [now, now]);
-  library.driver.execute(`INSERT INTO import_sources
-    (source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at, last_imported_at,
-     last_content_fingerprint, latest_node_id, remote_provider, remote_connection_ref, remote_document_id, remote_import_state_json)
-    VALUES ('fingerprint', 'desktop_text_file', 'epub', 'Book', 'book', ?, ?, 'hash', 'book', 'readwise', ?, 'book', ?)`,
-  [now, now, connectionRef, JSON.stringify({ metadata: { category: 'epub' }, bodyAuthority: 'reader_html' })]);
-});
-
-afterEach(async () => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-  await closeLibraries();
-});
-
-function mockDownload(original: (signal?: AbortSignal | null) => Response) {
-  vi.stubGlobal('fetch', vi.fn(async (input: URL | string, init?: RequestInit) => {
-    if (String(input) === originalUrl) return original(init?.signal);
-    expect(String(input)).toBe('https://readwise.io/api/v3/list/?id=book&withRawSourceUrl=true');
-    return Response.json({ results: [{ category: 'epub', id: 'book', raw_source_url: originalUrl, title: 'Book' }] });
-  }));
-}
-
-function pauseDownload() {
-  const bytes = headingCoverEpubBytes();
-  const bodyRead = Promise.withResolvers<void>();
-  let stop: (() => void) | undefined;
-  let signal: AbortSignal | null | undefined;
-  mockDownload((downloadSignal) => {
-    signal = downloadSignal;
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(bytes.subarray(0, 32));
-        signal?.addEventListener('abort', () => controller.error(signal?.reason), { once: true });
-        stop = () => {
-          if (!signal?.aborted) controller.error(new Error('test download released'));
-        };
-      },
-      pull() { bodyRead.resolve(); }
-    });
-    return new Response(body, { headers: { 'content-type': 'application/epub+zip' } });
-  });
-  return { bodyRead: bodyRead.promise, stop: () => stop?.() };
-}
 
 it.each([false, true])('cancels a running export on disconnect (existing destination: %s)', async (existing) => {
   if (existing) await fs.writeFile(destination, 'existing book');
@@ -162,7 +91,7 @@ it('cancels a rebuild after EPUB bytes reach disk and preserves the stored Reade
       expect(entry).toBeDefined();
       expect((await fs.stat(path.join(root, entry!, 'original.epub'))).size).toBe(32);
     });
-    expect(loadReadwiseOriginalEpubActionState('book')).toMatchObject({ status: 'running' });
+    await expect(loadReadwiseOriginalEpubActionState('book')).resolves.toMatchObject({ status: 'running' });
     expect(disconnectReadwiseApi()).toMatchObject({ status: 'disconnected' });
     await vi.waitFor(() => expect(operation).resolves.toMatchObject({ status: 'cancelled' }));
   } finally {
@@ -172,7 +101,7 @@ it('cancels a rebuild after EPUB bytes reach disk and preserves the stored Reade
   expect((await fs.readdir(root)).filter((name) => name.startsWith('foliole-readwise-epub-'))).toEqual([]);
   expect(library.driver.queryAll('SELECT * FROM import_sources')).toEqual(previousSources);
   expect(library.driver.queryAll('SELECT * FROM nodes')).toEqual(previousNodes);
-  expect(loadReadwiseOriginalEpubActionState('book')).toMatchObject({ status: 'reconnect_required' });
+  await expect(loadReadwiseOriginalEpubActionState('book')).resolves.toMatchObject({ status: 'reconnect_required' });
 });
 
 it('keeps Readwise disconnected when an in-flight lookup returns an authorization error', async () => {
@@ -193,4 +122,104 @@ it('keeps Readwise disconnected when an in-flight lookup returns an authorizatio
   await expect(operation).resolves.toMatchObject({ path: null, status: 'cancelled' });
   expect(loadReadwiseApiConnection()).toMatchObject({ has_credential: false, state: 'disconnected' });
   expect(await fs.readdir(path.dirname(destination))).toEqual([]);
+});
+
+
+it('rechecks the export after a busy database releases its connection while closing the save dialog', async () => {
+  const bytes = headingCoverEpubBytes();
+  const dialogOpened = Promise.withResolvers<void>();
+  const selection = Promise.withResolvers<{ canceled: boolean; filePath: string }>();
+  const release = Promise.withResolvers<void>();
+  showSaveDialog.mockImplementationOnce(() => {
+    dialogOpened.resolve();
+    return selection.promise;
+  });
+  mockDownload(() => new Response(new Uint8Array(bytes)));
+  const operation = exportReadwiseOriginalEpub('book', null);
+  await dialogOpened.promise;
+  const owner = coordinator.runExclusive(() => release.promise);
+  try {
+    selection.resolve({ canceled: false, filePath: destination });
+    await new Promise<void>(resolve => setImmediate(resolve));
+  } finally {
+    release.resolve();
+    await owner;
+  }
+  await expect(operation).resolves.toMatchObject({ path: destination, status: 'saved' });
+  expect(await fs.readFile(destination)).toEqual(bytes);
+});
+
+it('keeps the existing destination if disconnect wins the final replacement race', async () => {
+  const bytes = headingCoverEpubBytes();
+  const previous = Buffer.from('existing book');
+  await fs.writeFile(destination, previous);
+  mockDownload(() => new Response(new Uint8Array(bytes)));
+  let atDisconnect: Buffer | undefined;
+  const disconnectAndRead = () => {
+    expect(disconnectReadwiseApi()).toMatchObject({ status: 'disconnected' });
+    atDisconnect = readFileSync(destination);
+  };
+  const rename = fs.rename.bind(fs);
+  vi.spyOn(fs, 'rename').mockImplementationOnce(async (from, to) => {
+    disconnectAndRead();
+    await rename(from, to);
+  });
+
+  const result = await exportReadwiseOriginalEpub('book', null);
+  if (!atDisconnect) disconnectAndRead();
+  expect((await fs.readFile(destination)).equals(atDisconnect!)).toBe(true);
+  expect(result.status).toBe(atDisconnect!.equals(previous) ? 'cancelled' : 'saved');
+  expect(await fs.readdir(path.dirname(destination))).toEqual(['Book.epub']);
+});
+
+it('waits for a busy database before starting a rebuild that can still be cancelled', async () => {
+  const download = pauseDownload();
+  const release = Promise.withResolvers<void>();
+  const owner = coordinator.runExclusive(() => release.promise);
+  const operation = useReadwiseOriginalEpub('book');
+  release.resolve();
+  await owner;
+  try {
+    await Promise.race([download.bodyRead, operation]);
+    await expect(loadReadwiseOriginalEpubActionState('book')).resolves.toMatchObject({ status: 'running' });
+    expect(disconnectReadwiseApi()).toMatchObject({ status: 'disconnected' });
+    await expect(operation).resolves.toMatchObject({ status: 'cancelled' });
+  } finally {
+    download.stop();
+    await operation;
+  }
+});
+
+
+it('preserves a published cover that another topic adopts before the rebuild is cancelled', async () => {
+  const assetsDir = path.join(root, 'assets');
+  publishAttachmentLibraryPathSnapshot({ assetsDir, libraryScope: root });
+  mockDownload(() => new Response(new Uint8Array(headingCoverEpubBytes())));
+  library.driver.execute(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+    VALUES ('other', 'topic', 'Other', '', 'now', 'now')`);
+  let coverKey = '';
+  setAttachmentPublishedListener(storageKey => {
+    coverKey = storageKey;
+    persistNodeResourceReference('other', { storage_key: storageKey, role: 'image', original_name: 'cover.png' });
+    expect(disconnectReadwiseApi()).toMatchObject({ status: 'disconnected' });
+  });
+  try {
+    await expect(useReadwiseOriginalEpub('book')).resolves.toMatchObject({ status: 'cancelled' });
+    expect(library.driver.queryOne("SELECT content FROM nodes WHERE id = 'book'")).toEqual({ content: 'Reader body' });
+    expect(await resolveAttachmentFile(coverKey)).toMatchObject({ status: 'ready' });
+    expect(await fs.readdir(assetsDir)).toEqual([coverKey]);
+  } finally {
+    setAttachmentPublishedListener(null);
+    clearAttachmentLibraryPathSnapshot();
+  }
+});
+
+
+it('keeps EPUB actions available when their menu state is requested during a database write', async () => {
+  const release = Promise.withResolvers<void>();
+  const owner = coordinator.runExclusive(() => release.promise);
+  const request = Promise.resolve().then(() => loadReadwiseOriginalEpubActionState('book'));
+  release.resolve();
+  await owner;
+  await expect(request).resolves.toEqual({ node_id: 'book', status: 'ready' });
 });
