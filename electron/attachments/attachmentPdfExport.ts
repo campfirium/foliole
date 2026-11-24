@@ -16,6 +16,17 @@ function suggestedPdfName(originalName: string | null) {
   return safeName.toLowerCase().endsWith('.pdf') ? safeName : `${safeName}.pdf`;
 }
 
+async function savePdfFile(destination: string, bytes: Buffer) {
+  const directory = await fs.mkdtemp(path.join(path.dirname(destination), '.foliole-pdf-export-'));
+  const temporaryPath = path.join(directory, 'document.pdf');
+  try {
+    await fs.writeFile(temporaryPath, bytes, { flag: 'wx', flush: true });
+    await fs.rename(temporaryPath, destination);
+  } finally {
+    await fs.rm(directory, { force: true, recursive: true }).catch(() => {});
+  }
+}
+
 export async function exportNodePdf(
   nodeId: string,
   window: BrowserWindow | null
@@ -43,7 +54,7 @@ export async function exportNodePdf(
   }
 
   try {
-    await fs.writeFile(selection.filePath, resolved.bytes);
+    await savePdfFile(selection.filePath, resolved.bytes);
     return { path: selection.filePath, status: 'saved' };
   } catch {
     return { path: null, status: 'save_failed' };
