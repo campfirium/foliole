@@ -10,6 +10,7 @@ import {
 } from '../import/readwiseApiIndexPlan.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { clearReadwiseApiTagReplayMatches } from './readwiseApiIndexStage.js';
 
 const LEDGER_KIND = 'candidate-scope-v3';
 
@@ -25,7 +26,7 @@ export function loadOrCreateReadwiseApiScopeLedgers(
     const current = loadScope(connectionRef, scope);
     if (current?.policySignature === signature) {
       if (current.runStartedAt === runStartedAt) return current;
-      return saveScope(connectionRef, { ...current, cursor: null, runStartedAt, status: 'running' });
+      return saveScope(connectionRef, { ...current, cursor: null, replayedTagCursor: false, runStartedAt, status: 'running' });
     }
     return saveScope(connectionRef, {
       checkpoint: null,
@@ -78,7 +79,12 @@ export function saveReadwiseApiScopeCursor(
 }
 
 export function restartReadwiseApiScope(connectionRef: string, ledger: ReadwiseApiScopeLedger) {
-  return saveScope(connectionRef, { ...ledger, cursor: null, status: 'running' });
+  const restart = { ...ledger, cursor: null, status: 'running' as const };
+  if (ledger.scope !== 'reader:tag') return saveScope(connectionRef, restart);
+  return openDatabaseConnection().driver.transaction(driver => {
+    clearReadwiseApiTagReplayMatches(driver, connectionRef);
+    return saveScope(connectionRef, { ...restart, replayedTagCursor: true }, driver);
+  });
 }
 
 export function finalizeReadwiseApiScopeLedgers(connectionRef: string) {

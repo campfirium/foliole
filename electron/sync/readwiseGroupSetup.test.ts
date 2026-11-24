@@ -13,10 +13,10 @@ const state = vi.hoisted(() => ({
 }));
 const calls = vi.hoisted(() => ({ activate: vi.fn(), post: vi.fn(), write: vi.fn() }));
 
-vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ driver: { transaction: (run: (driver: unknown) => unknown) => run({}) } }),
-  runWithDatabaseConnectionOwner: async (run: () => unknown) => run()
-}));
+vi.mock('../database/connection.js', () => {
+  const connection = { driver: { transaction: (run: (driver: unknown) => unknown) => run({}) } };
+  return { openDatabaseConnection: () => connection, runWithDatabaseConnectionOwner: async (run: () => unknown) => run() };
+});
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   canPrepareReadwiseOnThisHost: () => state.localReady,
   loadReadwiseHostAssignment: () => ({ legacy_unassigned: state.owner === null,

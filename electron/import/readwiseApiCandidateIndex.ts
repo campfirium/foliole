@@ -1,7 +1,8 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
-import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { bindReadwiseApiAnnotationParents } from '../database/readwiseApiAnnotationLedger.js';
 import { loadOrCreateReadwiseApiCandidateRun, saveReadwiseApiCandidateCursor } from '../database/readwiseApiCandidateRun.js';
 import { saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
@@ -10,11 +11,14 @@ import {
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex,
   loadReadwiseApiReaderIndex,
+  loadReadwiseApiTagReplayMatches,
   saveReadwiseApiExportIndexPage,
-  saveReadwiseApiReaderIndexPage
+  saveReadwiseApiReaderIndexPage,
+  saveReadwiseApiTagReplayMatches
 } from '../database/readwiseApiIndexStage.js';
 import {
   loadOrCreateReadwiseApiScopeLedgers,
+  loadReadwiseApiScopeLedgers,
   restartReadwiseApiScope,
   saveReadwiseApiScopeCursor
 } from '../database/readwiseApiScopeLedger.js';
@@ -26,7 +30,8 @@ import { createReadwiseApiCandidateRecord } from './readwiseApiCandidateRecord.j
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import {
   READER_PARENT_CATEGORIES,
-  type ReaderParentCategory
+  type ReaderParentCategory,
+  type ReadwiseApiScopeLedger
 } from './readwiseApiCandidateTypes.js';
 import {
   createReadwiseApiRequest,
@@ -95,32 +100,32 @@ async function fetchScope(
       throw error;
     }
     const { results, cursor } = parsePage(payload);
-    ledger = await runWithDatabaseConnectionOwner(() => {
-      savePage(input.connectionRef, ledger.scope, results, ledger.runStartedAt);
+    ledger = await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(driver => {
+      savePage(driver, input.connectionRef, ledger, results, input.settings.readwiseAutoImportPolicy.importTag);
       input.dependencies.onPage?.({
         phase: ledger.scope === 'export' ? 'export' : 'reader',
         recordCount: results.length
       });
       reportIndexProgress(input.connectionRef, input.onProgress);
       return saveReadwiseApiScopeCursor(input.connectionRef, ledger, cursor);
-    });
+    }));
     if (!cursor) return;
   }
 }
 
 function savePage(
-  connectionRef: string,
-  scope: string,
-  results: unknown[],
-  seenInRun: string
+  driver: DatabaseDriver, connectionRef: string, ledger: ReadwiseApiScopeLedger, results: unknown[], importTag: string
 ) {
-  if (scope === 'export') {
+  if (ledger.scope === 'export') {
     saveReadwiseApiExportIndexPage(connectionRef,
       results.map(normalizeExportBook).filter((item) => item !== null));
-  } else {
-    saveReadwiseApiReaderIndexPage(connectionRef,
-      results.map(normalizeReaderDocument).filter((item) => item !== null),
-      seenInRun);
+    return;
+  }
+  const documents = results.map(normalizeReaderDocument).filter(item => item !== null);
+  saveReadwiseApiReaderIndexPage(connectionRef, documents, ledger.runStartedAt);
+  if (ledger.replayedTagCursor) {
+    const matches = documents.filter(doc => matchesReadwiseDocumentImportTag(doc.tags, importTag)).map(doc => doc.id);
+    saveReadwiseApiTagReplayMatches(driver, connectionRef, matches);
   }
 }
 
@@ -139,7 +144,7 @@ async function assembleCandidates(
     request,
     runStartedAt: run.roundStartedAt
   });
-  const { byId, exportIdsByParent, graph, parentIds } = await loadCandidateAssemblyFacts(
+  const { byId, exportIdsByParent, graph, parentIds, replayedTagMatches } = await loadCandidateAssemblyFacts(
     connectionRef, run.roundStartedAt
   );
   for (const parentId of parentIds) {
@@ -159,7 +164,8 @@ async function assembleCandidates(
       byId.set(parent.id, parent);
     }
     if (!parent || !isParentCategory(parent.category)) continue;
-    const matchedImportTag = matchesReadwiseDocumentImportTag(
+    // Cached documents still supply metadata, but only replayed pages may route a document by tag.
+    const matchedImportTag = (replayedTagMatches === null || replayedTagMatches.has(parentId)) && matchesReadwiseDocumentImportTag(
       parent.tags,
       settings.readwiseAutoImportPolicy.importTag
     );
@@ -194,7 +200,9 @@ function loadCandidateAssemblyFacts(connectionRef: string, runStartedAt: string)
       ...graph.affectedParents,
       ...exportIdsByParent.keys()
     ]);
-    return { byId, exportIdsByParent, graph, parentIds };
+    const tagScope = loadReadwiseApiScopeLedgers(connectionRef).find(ledger => ledger.scope === 'reader:tag');
+    const replayedTagMatches = tagScope?.replayedTagCursor ? loadReadwiseApiTagReplayMatches(connectionRef) : null;
+    return { byId, exportIdsByParent, graph, parentIds, replayedTagMatches };
   });
 }
 

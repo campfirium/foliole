@@ -43,6 +43,7 @@ export interface ReadwiseApiScopeLedger {
   policySignature: string;
   runStartedAt: string;
   scope: ReadwiseApiIndexScope;
+  replayedTagCursor?: boolean;
   status: 'complete' | 'running';
 }
 
