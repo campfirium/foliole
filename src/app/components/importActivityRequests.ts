@@ -16,3 +16,7 @@ export function requestClipboardImport(detail?: ClipboardImportRequestDetail) {
 export function requestFileImport() {
   dispatchImportRequest(FILE_IMPORT_REQUEST_EVENT);
 }
+
+export function requestDemoFolderImport() {
+  window.dispatchEvent(new CustomEvent(FILE_IMPORT_REQUEST_EVENT, { detail: 'folder' }));
+}

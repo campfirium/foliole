@@ -4,15 +4,9 @@ import { importDemoMarkdown, useDemoRuntimeState, type DemoMarkdownRuntimeEntry 
 
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 
-export function useDemoMarkdownRailImport() {
-  const demoState = useDemoRuntimeState();
+export function WorkspaceDemoImport() {
+  const { isDemo } = useDemoRuntimeState();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  async function importClipboardMarkdown() {
-    const markdown = (await navigator.clipboard?.readText?.())?.trim();
-    if (!markdown) return;
-    await importDemoMarkdown([{ markdown, sourceName: 'Clipboard Markdown' }]);
-  }
 
   async function importMarkdownFiles(files: FileList | null) {
     if (!files) return;
@@ -23,26 +17,36 @@ export function useDemoMarkdownRailImport() {
     }
   }
 
-  return {
-    fileInputRef,
-    importClipboardMarkdown,
-    importMarkdownFiles,
-    isDemo: demoState.isDemo
-  };
-}
-
-export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemoMarkdownRailImport>) {
   useEffect(() => {
-    if (!controller.isDemo) return undefined;
-    const handleClipboardRequest = () => void controller.importClipboardMarkdown();
-    const handleFileRequest = () => controller.fileInputRef.current?.click();
+    if (!isDemo) return undefined;
+    const handleClipboardRequest = () => void importClipboardMarkdown();
+    const handleFileRequest = (event: Event) => {
+      openPicker(fileInputRef.current, event instanceof CustomEvent && event.detail === 'folder');
+    };
     window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
     window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
     return () => {
       window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
       window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
     };
-  }, [controller.fileInputRef, controller.importClipboardMarkdown, controller.isDemo]);
+  }, [isDemo]);
+
+  return isDemo ? (
+    <input accept=".md,text/markdown,text/plain" hidden multiple type="file"
+      onChange={event => void importMarkdownFiles(event.target.files)} ref={fileInputRef} />
+  ) : null;
+}
+
+async function importClipboardMarkdown() {
+  const markdown = (await navigator.clipboard?.readText?.())?.trim();
+  if (!markdown) return;
+  await importDemoMarkdown([{ markdown, sourceName: 'Clipboard Markdown' }]);
+}
+
+function openPicker(input: HTMLInputElement | null, folder: boolean) {
+  if (!input) return;
+  input.toggleAttribute('webkitdirectory', folder);
+  input.click();
 }
 
 async function readDemoMarkdownFiles(files: File[]): Promise<DemoMarkdownRuntimeEntry[]> {

@@ -7,7 +7,7 @@ import { buildCycle } from './cycleFlowBuild.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
-import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
+import { dailyFlowSettingsForInstant, differsFromStoredFlowWindow } from './dailyFlowDayWindow.js';
 import { applyLocalDailyFlowOperations } from './dailyFlowLocalApplication.js';
 import { dailyFlowMembershipHash } from './dailyFlowMembership.js';
 import { flowDay, prepareDailyFlowCandidates, prepareDailyFlowPlans } from './dailyFlowPlanning.js';
@@ -21,7 +21,7 @@ export function refreshDailyFlowMembership(db: DbPort, now: string, settings: Da
   return db.transaction(async tx => {
     const config = await dailyFlowSettingsForInstant(tx, settings, now);
     const before = await readDailyFlow(tx);
-    if (!before || before.day_key !== flowDay(now, config)) return false;
+    if (!before || before.day_key !== flowDay(now, config) || differsFromStoredFlowWindow(before, config)) return false;
     await applyLocalDailyFlowOperations(tx, now);
     const stored = (await readDailyFlow(tx))!;
     const snapshot = await persistence.learningSnapshot(tx);

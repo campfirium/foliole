@@ -57,6 +57,8 @@ The desktop file import picker imports every selected file, with a separate post
 
 On desktop, disconnecting Readwise cancels an EPUB download in progress for exporting the original file or rebuilding a book. A cancelled export preserves any existing destination, and a cancelled rebuild preserves the current book. These actions are available in the desktop app.
 
+The browser Demo’s **Import Folder** command adds Markdown and plain-text files under Inbox and preserves their relative folder hierarchy. Browser file selection stays inside the Demo.
+
 The desktop search panel remembers its preview line limit, separate font sizes for result titles, previews, and metadata, and whether to show each result's date and time. These are desktop display preferences. Agent Control search returns bounded excerpts independently of the panel's preview line limit.
 
 ### Retrying material creation
@@ -91,6 +93,8 @@ Send `reading_schedule` on a Topic `materials/create` request. With the CLI, pas
 Priority is a Foliole integer from 0 to 9. Timestamps require an offset and are stored in UTC, with the next date at or after the last handled date. Interval milliseconds and repetition count are nonnegative safe integers. Growth factor is at least 1. All six fields are required. The Topic and its active schedule are committed together and use Foliole's existing queue and sync. A malformed schedule or a schedule on a Folder or Item returns HTTP 400 when the permission is on. As with ordinary creation, repeating a successful request creates another material.
 
 The mobile Flow progress indicator uses the current learning session. Its display stays in the app UI because it adds no new learning action or stored data. When the current Topic is already in Soon and no other material is ready in Flow, repeating Soon shows a notice and creates no queue change or history entry. Flow navigation stays in the app UI.
+
+After a user saves a new learning-day start hour, reopening Flow on desktop or mobile builds the list for the new interval and counts completed actions in that interval. The library-wide setting and Flow session stay in the app UI.
 
 ### Importing an Item first review date
 

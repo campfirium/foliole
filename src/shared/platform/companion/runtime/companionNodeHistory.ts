@@ -3,7 +3,9 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import { buildWorkspaceSnapshotNode, type WorkspaceNodeRowShape, type WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { openCycleFlow } from '../../../../../lib/core/flow/cycleFlowOpen';
-import { dailyFlowSettingsForInstant } from '../../../../../lib/core/flow/dailyFlowDayWindow';
+import { dailyFlowSettingsForInstant, differsFromStoredFlowWindow } from '../../../../../lib/core/flow/dailyFlowDayWindow';
+import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
+import { openDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalNodeVersionsWithDbPort, nodeColumns, readLocalNodeVersionStates } from '../../../../../lib/core/sync/localNodeVersionApply';
@@ -34,7 +36,9 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   const now = records[0]!.snapshot.updated_at;
   const flowArgs = { now, mode: daily?.mode as 'recommended' | 'review-first' | 'reading-only' };
   const settings = await dailyFlowSettingsForInstant(db, companionDailyFlowSettings(), now, false, daily);
-  const flowBefore = daily ? (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence)).session : null;
+  const flowBefore = daily ? (await (daily.day_key !== flowDay(now, settings) || differsFromStoredFlowWindow(daily, settings)
+    ? openDailyFlow(db, flowArgs, settings, companionDailyFlowPersistence)
+    : openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence))).session : null;
   // One read gives the nodes as they are and what the local write path checks before storing the records.
   const states = await readLocalNodeVersionStates(db, records);
   const before = records.map(record => {

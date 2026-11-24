@@ -50,8 +50,10 @@ vi.mock('./useImmersiveReadingMode', () => ({
   })
 }));
 
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { installDemoRuntimeController } from '../../shared/platform/runtime/demoRuntime';
 import { clearAppRuntimeNotice, showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { runDemoCommandPreview } from '../hooks/appPaletteDemoCommand';
 
 import {
   requestClipboardImport,
@@ -142,6 +144,22 @@ it('leaves Demo import requests for the browser import adapter', async () => {
 
   expect(onRunImportFile).not.toHaveBeenCalled();
   expect(onStartClipboardImport).not.toHaveBeenCalled();
+});
+
+it('opens the Demo directory picker in immersive reading without the rail', () => {
+  installDemoRuntime(true);
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({ isImmersiveMode: true })} />);
+  const openedInputs: HTMLInputElement[] = [];
+  const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (this: HTMLInputElement) {
+    openedInputs.push(this);
+  });
+  try {
+    expect(runDemoCommandPreview(APP_COMMAND_IDS.importFolder, key => key)).toBe(true);
+    expect(openedInputs).toHaveLength(1);
+    expect(openedInputs[0]).toHaveAttribute('webkitdirectory');
+  } finally {
+    click.mockRestore();
+  }
 });
 
 it('opens the imported clipboard topic after the import resolves', async () => {

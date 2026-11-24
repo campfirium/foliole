@@ -11,7 +11,7 @@ import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { flowProgressDelta } from './dailyFlowSyncMerge.js';
 
 export async function writeDailyFlowSync(db: DbPort, fact: DailyFlowSyncFact, result: DailyFlowResult,
-  before?: CycleRow[], history = false) {
+  before?: CycleRow[], history = false, resetLocalRows = false) {
   const dayKey = result.session.daily!.dayKey;
   const statements: DbStatement[] = [];
   if (fact.nodeId) {
@@ -27,7 +27,7 @@ export async function writeDailyFlowSync(db: DbPort, fact: DailyFlowSyncFact, re
     ON CONFLICT(id) DO UPDATE SET merged=CASE WHEN root_id=excluded.root_id THEN merged ELSE 0 END,
     root_id=excluded.root_id, head_id=excluded.head_id`, params: [fact.rootId, fact.id] });
   if (fact.kind === 'create') statements.push(
-    { sql: 'DELETE FROM daily_flow_local_operation_rows WHERE day_key!=?', params: [dayKey] },
+    { sql: 'DELETE FROM daily_flow_local_operation_rows WHERE day_key!=? OR ?=1', params: [dayKey, resetLocalRows ? 1 : 0] },
     { sql: 'DELETE FROM daily_flow_local_operation_state WHERE day_key!=?', params: [dayKey] },
     { sql: 'INSERT OR IGNORE INTO daily_flow_local_operation_state(day_key,base_json) VALUES(?,?)',
       params: [dayKey, JSON.stringify(flowProgressDelta(undefined, result.session))] },
