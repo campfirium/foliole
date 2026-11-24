@@ -10,7 +10,7 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection, readRelayCollections, relayCollectionOffer, relayCollectionUrl, relayGenerationRoot,
   writeRelayCollections, type RelayCollectionOffer } from './webDavRelayCollections.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
-import { removeRelayCollectionReceipts } from './webDavRelayReceipts.js';
+import { rememberRelayCollectionCleanup, removeRelayCollectionReceipts } from './webDavRelayReceipts.js';
 
 type Runtime = {
   host: RequestSyncDatabaseHost;
@@ -43,6 +43,10 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       await assertCurrent();
       const covered = await hasFiles(input, offer);
       await assertCurrent();
+      if (covered) await input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
+        await assertCurrent();
+        await input.host.write(db => rememberRelayCollectionCleanup(db, scope, offer.generation));
+      });
       return covered;
     },
     async retire() {
@@ -65,7 +69,7 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
       if (direction === 'incoming') await input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
         await assertCurrent();
-        await input.host.write(db => removeRelayCollectionReceipts(db, scope, offer.generation));
+        await input.host.write(db => db.transaction(tx => removeRelayCollectionReceipts(tx, scope, offer.generation)));
       });
     },
     async forgetDeleted() {

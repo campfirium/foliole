@@ -130,12 +130,18 @@ function testTransport() {
   const attachmentReads: string[] = [];
   let loseAttachmentPublicationResponse = false;
   let rejectNextDelete = false;
+  let delayNextBodyMove = false;
   let attachmentPutFault: 'interrupt' | 'short' | undefined;
   const http = createDesktopWebDavRelayHttp({ requests: {}, responses: 0, downloadedBytes: 0, uploadedBytes: 0 });
   const request: WebDavRelayRequest = (url, input, consume) => {
     if (input.method === 'DELETE' && rejectNextDelete) {
       rejectNextDelete = false;
       throw new Error('test_delete_connection_reset');
+    }
+    if (input.method === 'MOVE' && delayNextBodyMove && url.pathname.endsWith('.dat.partial') &&
+        !url.pathname.endsWith('.asset.dat.partial') && !url.pathname.endsWith('.repair.dat.partial')) {
+      delayNextBodyMove = false;
+      throw new Error('test_body_move_delayed');
     }
     if (input.method === 'PUT' && url.pathname.endsWith('.repair.dat.partial')) repairUploads.push(url.href);
     if (input.method === 'PUT' && url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) {
@@ -168,6 +174,7 @@ function testTransport() {
     });
   };
   return { uploads, attachmentReads, repairUploads, request, faultNextAttachmentPut: (fault: typeof attachmentPutFault) => { attachmentPutFault = fault; },
+    delayNextBodyMove: () => { delayNextBodyMove = true; },
     rejectNextDelete: () => { rejectNextDelete = true; },
     loseAttachmentPublicationResponse: () => { loseAttachmentPublicationResponse = true; } };
 }

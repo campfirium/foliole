@@ -91,6 +91,39 @@ it('honors an unscoped receipt left by an older library for a still-visible pack
   });
 });
 
+it('reclaims the responder receipts after the LAN initiator deletes its retired collection', async () => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    await edit(source.peer, [fixture.old], 'legacy-before-retirement');
+    expect(await fixture.sync(source)).toMatchObject({ published: 1 });
+    expect(await fixture.lan()).toMatchObject({ complete: true, attachments: { pending: 0 } });
+
+    await edit(source.peer, [fixture.old], 'scoped-before-retirement');
+    expect(await fixture.sync(source)).toMatchObject({ published: 1 });
+    expect(await fixture.sync(target)).toMatchObject({ applied: 1 });
+    const scope = (await fixture.scope(source.peer))!;
+    const { key } = (await fixture.scope(target.peer))!;
+    const receipts = () => target.peer.db.query('SELECT key FROM sync_group_metadata WHERE key >= ? AND key < ?',
+      [`${key}:applied:`, `${key}:applied;`]);
+    expect(await receipts()).toHaveLength(1);
+
+    fixture.rejectNextDelete();
+    expect(await fixture.lan()).toMatchObject({ complete: true, attachments: { pending: 0 } });
+    expect(await fixture.request(scope.outgoing, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus)).toBe(207);
+    await target.reopen();
+    expect(await fixture.sync(target)).toMatchObject({ applied: 0 });
+    expect(await receipts()).toHaveLength(1);
+
+    expect(await fixture.lan()).toMatchObject({ complete: true, attachments: { pending: 0 } });
+    expect(fixture.dav.deletions).toContain(scope.outgoing.pathname);
+    expect(await fixture.request(scope.outgoing, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus)).toBe(404);
+    await target.reopen();
+    expect(await fixture.sync(target)).toMatchObject({ applied: 0 });
+    expect(await receipts()).toEqual([]);
+  } finally { await fixture.close(); }
+});
+
 async function seedHistoricalReceipts(peer: RestorePeer, scopeKey: string) {
   const keys = Array.from({ length: 256 }, () =>
     `${scopeKey}:applied:20261001T120000.000Z-${crypto.randomUUID()}.bin`).sort();

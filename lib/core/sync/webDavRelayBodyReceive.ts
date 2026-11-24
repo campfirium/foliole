@@ -10,7 +10,8 @@ import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBo
 import { relayCollectionUrl, relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
 import { readWebDavRelayPacket } from './webDavRelayPacketRead.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
-import { readUnappliedRelayPackets, recordRelayPacketReceipt } from './webDavRelayReceipts.js';
+import { readMissingRelayReceiptGenerations, readUnappliedRelayPackets, recordRelayPacketReceipt,
+  removeRelayCollectionReceipts } from './webDavRelayReceipts.js';
 import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
 import { readWebDavRelayRepair } from './webDavRelayRepairWire.js';
 
@@ -29,7 +30,8 @@ type Input = {
 };
 
 export async function receiveWebDavRelayBodyPackets(input: Input) {
-  const packets = await listIncomingPackets(input.request, input.scope.incoming);
+  const { packets, present } = await listIncomingPackets(input.request, input.scope.incoming);
+  await reclaimReceipts(input, present);
   if (!packets.length) return { repairQueued: false, bodyPending: false };
   const pending = await input.host.readSnapshot(db => readUnappliedRelayPackets(db, input.scope, packets), input.signal);
   let remaining = pending.filter(packet => !packet.kind);
@@ -60,6 +62,15 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
 
 type Packet = { name: string; generation: string; kind: string | undefined; url: URL };
 
+async function reclaimReceipts({ host, scope, signal, assertScope }: Input, present: ReadonlySet<string>) {
+  const missing = await host.readSnapshot(db => readMissingRelayReceiptGenerations(db, scope, present), signal);
+  if (!missing.length) return;
+  await assertScope();
+  await host.write(db => db.transaction(async tx => {
+    for (const generation of missing) await removeRelayCollectionReceipts(tx, scope, generation);
+  }));
+}
+
 async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) {
   const list = (directory: URL) => request(directory, { method: 'PROPFIND', headers: { Depth: '1' } },
     (status, body) => listChildren(directory, status, body));
@@ -74,14 +85,19 @@ async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) 
     const match = packetName.exec(name);
     return match ? [{ name, generation, kind: match[1], url: new URL(name, directory) }] : [];
   });
+  const present = new Set<string>();
+  if (legacy) present.add('legacy');
   const result = packets('legacy', direction, legacy ?? []);
   for (const name of generations ?? []) {
     const generation = relayGeneration.safeParse(name.replace(/\/$/u, ''));
     if (!generation.success) continue;
     const directory = relayCollectionUrl(direction, generation.data);
-    result.push(...packets(generation.data, directory, await list(directory) ?? []));
+    const children = await list(directory);
+    if (!children) continue;
+    present.add(generation.data);
+    result.push(...packets(generation.data, directory, children));
   }
-  return result.sort((a, b) => a.name.localeCompare(b.name));
+  return { packets: result.sort((a, b) => a.name.localeCompare(b.name)), present };
 }
 
 async function listChildren(directory: URL, status: number, body: AsyncIterable<Uint8Array>) {
@@ -163,7 +179,7 @@ async function receiveRepair(input: Input, packet: Packet) {
   await host.write(db => db.transaction(async tx => {
     if (result.value) {
       const receipt = await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-        [`${scope.key}:repair-received:${result.value.id}`, 'true', new Date().toISOString()]);
+        [`${scope.key}:repair-received:v2:${result.value.id}`, 'true', new Date().toISOString()]);
       if (receipt.changes) await enqueueWebDavRelayAttachmentRepairs(tx, scope, result.value);
     }
     await recordRelayPacketReceipt(tx, scope, packet, result.damaged);

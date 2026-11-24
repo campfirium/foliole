@@ -104,12 +104,19 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
   };
   const { key } = webDavRelayBodyIdentity({ ...scope, sourceEpoch: captured.sourceEpoch });
   return Object.assign(confirmBaseline, {
-    confirmAttachment: (storageKey: string) => host.write(db => db.transaction(async tx => {
+    async confirmAttachment(storageKey: string) {
       signal?.throwIfAborted();
-      if ((await readPosition(tx, scope))?.sourceEpoch === captured.sourceEpoch) {
-        await recordWebDavRelayLanAttachment(tx, { key }, storageKey);
+      try {
+        await host.write(db => db.transaction(async tx => {
+          if ((await readPosition(tx, scope))?.sourceEpoch === captured.sourceEpoch) {
+            await recordWebDavRelayLanAttachment(tx, { key }, storageKey);
+          }
+        }));
+      } catch (error) {
+        signal?.throwIfAborted();
+        console.warn('[sync] WebDAV LAN attachment receipt deferred', error);
       }
-    }))
+    }
   });
 }
 

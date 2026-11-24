@@ -68,8 +68,10 @@ export async function enqueueWebDavRelayAttachmentRepairs(db: DbPort, scope: Web
   if (scope.attachmentPolicy.mode === 'off') return;
   const keys = await resolveWebDavRelayRepairKeys(db, repair.demand);
   for (const key of keys) {
-    await db.run(`UPDATE sync_group_metadata SET value = ?, updated_at = ? WHERE key = ?`,
-      [JSON.stringify({ ...repair, demand: repair.demand.filter(([hash]) => key.startsWith(hash)) }), new Date().toISOString(), prefix(scope) + key]);
+    const demand = repair.demand.filter(([hash]) => key.startsWith(hash));
+    await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [prefix(scope) + key, JSON.stringify({ ...repair, demand }), new Date().toISOString()]);
   }
 }
 
