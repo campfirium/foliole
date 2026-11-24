@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import type { SuperMemoMigrationSnapshot, SuperMemoMigrationStep } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { resolveDatabasePath } from '../database/connection.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { superMemoSourceFormatSchema } from './superMemoSourceFormatSchema.js';
 
@@ -116,7 +117,9 @@ export async function readMigrationPanelStep(file: string, source: PanelIdentity
     // A new source snapshot or import result supplies a new initial step.
     if (saved.panelRevision === (source.panelRevision ?? null)) return saved.step;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    if (!(error instanceof SyntaxError || error instanceof z.ZodError)) throw error;
+    appendMainProcessDiagnosticLog('supermemo_migration_step_invalid', {}, 'warn');
   }
   return undefined;
 }

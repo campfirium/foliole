@@ -1,6 +1,6 @@
 // @vitest-environment node
 import fs from 'node:fs';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -122,4 +122,21 @@ it('remembers separate steps when two libraries use the same XML path', async ()
   expect(await getSuperMemoSourceSelection()).toMatchObject({ filePath: first, panel: { step: 'schedule' } });
   location.database = secondLibrary;
   expect(await getSuperMemoSourceSelection()).toMatchObject({ filePath: first, panel: { step: 'grades' } });
+});
+
+it.each(['{', '{"panelRevision":null,"step":"unknown"}'])('restores the draft and repairs an invalid step record (%s)', async (invalidRecord) => {
+  const { existing, file } = await seedDrafts();
+  await getSuperMemoSourceSelection();
+  await savePanel(first, { step: 'schedule' });
+  const stepDirectory = `${file}.steps`;
+  const [stepFile] = await readdir(stepDirectory);
+  expect(stepFile).toBeDefined();
+  await writeFile(path.join(stepDirectory, stepFile!), invalidRecord);
+
+  expect(await getSuperMemoSourceSelection()).toMatchObject({
+    filePath: first, panel: { elementCount: 20, step: 'structure' }, savedForm: { percent: 75 }, snapshot
+  });
+  await savePanel(first, { step: 'grades' });
+  expect(await getSuperMemoSourceSelection()).toMatchObject({ panel: { step: 'grades' } });
+  expect(await readFile(file, 'utf8')).toBe(existing);
 });

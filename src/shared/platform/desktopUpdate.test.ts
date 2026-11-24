@@ -150,3 +150,32 @@ it('keeps restart feedback readable before the native command exits the app', as
   await vi.runAllTimersAsync();
   await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith('desktop_update_install', { targetVersion: '0.7.3' }));
 });
+
+it.each([false, true])('keeps install approval only for the confirmed version during restart feedback (superseded: %s)', async (superseded) => {
+  vi.useFakeTimers();
+  const approved = { phase: 'ready', version: '0.7.3' } as const;
+  const checked = { ...approved, version: superseded ? '0.7.4' : approved.version };
+  const invoke = vi.fn(async (command: string, args?: { targetVersion?: string }) => {
+    if (command === 'desktop_update_install') return { ...approved, phase: 'restarting' };
+    return args?.targetVersion ? { ...checked } : approved;
+  });
+  window.electronAPI = {
+    invoke: invoke as unknown as NativeInvoke,
+    onDesktopUpdateState: () => () => undefined,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
+  const runtime = await import('./desktopUpdate');
+  await runtime.checkDesktopUpdate('');
+  expect(runtime.readDesktopUpdateState()).toEqual(approved);
+
+  const install = runtime.installDesktopUpdate(approved.version);
+  await runtime.checkDesktopUpdate(checked.version);
+  await vi.runAllTimersAsync();
+  await install;
+
+  const installs = invoke.mock.calls.filter(([command]) => command === 'desktop_update_install');
+  expect(installs).toEqual(superseded ? [] : [['desktop_update_install', { targetVersion: approved.version }]]);
+  expect(runtime.readDesktopUpdateState()).toEqual(superseded ? checked : { ...approved, phase: 'restarting' });
+});

@@ -67,11 +67,13 @@ it('keeps the second match as the reading position when a refined query has no m
     expect.objectContaining({ selection: expect.objectContaining({ from: 2 }) }), resumeContext
   );
 
+  const writesBeforeRefining = persist.mock.calls.length;
   fireEvent.change(input, { target: { value: 'keyword-never-occurs' } });
   expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.searchPdfDocument, { node_id: 'reader', query: 'keyword-never-occurs' });
   await act(async () => finishSearch({ matches: [], status: 'ready' }));
 
   expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
+  expect(persist).toHaveBeenCalledTimes(writesBeforeRefining);
   expect(persist).toHaveBeenLastCalledWith(
     expect.objectContaining({ selection: expect.objectContaining({ from: 2 }) }), resumeContext
   );

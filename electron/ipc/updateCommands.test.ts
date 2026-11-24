@@ -46,3 +46,18 @@ it('rejects an update command from embedded or unregistered web contents', () =>
   }, { sender: sender as never })).toThrow('non-main-window sender');
   expect(mocks.service.download).not.toHaveBeenCalled();
 });
+
+it('passes only the confirmed installation version to the native updater', async () => {
+  const sender = {};
+  const mainWindow = { isDestroyed: () => false, webContents: sender };
+  mocks.getMainWindow.mockReturnValue(mainWindow);
+  mocks.fromWebContents.mockReturnValue(mainWindow);
+  mocks.service.install.mockResolvedValue({ phase: 'restarting', version: '0.7.3' });
+
+  await expect(handleDesktopUpdateCommand({
+    args: { targetVersion: '0.7.3' },
+    command: NATIVE_COMMANDS.desktopUpdateInstall
+  }, { sender: sender as never })).resolves.toEqual({ phase: 'restarting', version: '0.7.3' });
+
+  expect(mocks.service.install).toHaveBeenCalledExactlyOnceWith('0.7.3');
+});
