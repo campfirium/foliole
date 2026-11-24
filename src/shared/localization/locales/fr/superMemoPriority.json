@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Correspondance des priorités",
+  "desktop.superMemoDrafts.priorityScale": "Priorité SuperMemo (%)",
+  "desktop.superMemoDrafts.priorityReset": "Rétablir les valeurs par défaut",
+  "desktop.superMemoDrafts.priorityBoundary": "Limite entre P{left} et P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Associez la collection SuperMemo à l’étape « Charger les données » pour utiliser ses valeurs de priorité.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Ordre d’apprentissage",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Intervalles de lecture",
+  "desktop.superMemoDrafts.priorityManaging": "Gestion des priorités",
+  "desktop.superMemoDrafts.prioritySourceOrder": "Les matériels arrivés à échéance sont placés dans une seule file d’attente, par ordre décroissant de priorité. Chaque jour, de nouveaux matériels arrivent à échéance et peuvent repousser à nouveau les moins prioritaires. L’ordre aléatoire et le report automatique aident à gérer cette accumulation.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Augmenter la priorité d’un sujet ralentit aussi la progression de ses intervalles de lecture. Le sujet apparaît donc plus souvent.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "Les matériels arrivés à échéance sont répartis dans dix files d’attente, une par niveau de priorité. La file P0 doit être vide avant qu’une autre file puisse être sélectionnée. Pour les files P1–P9, plus la priorité d’une file est élevée, plus le prochain matériel a de chances d’en provenir.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Avec le rapport de priorité par défaut de 5, si les neuf files ordinaires contiennent toutes des matériels arrivés à échéance, les probabilités sont les suivantes :",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "Les files vides sont exclues. Si seules P1 et P9 contiennent des matériels arrivés à échéance, leurs probabilités sont respectivement de 83.3% et de 16.7%.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Plus la priorité est élevée, plus les intervalles de lecture augmentent lentement. Par exemple, avec les paramètres par défaut, un intervalle de lecture de 10 jours passe à 11 jours en P1, à 13 jours en P5 et à 15 jours en P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "Dans Foliole, les matériels héritent de la priorité de leur dossier parent, sauf si une priorité leur a été explicitement attribuée. Nous recommandons de gérer les priorités principalement par dossier pour éviter de devoir les ajuster souvent matériel par matériel."
+}

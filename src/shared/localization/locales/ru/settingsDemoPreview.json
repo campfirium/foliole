@@ -17,7 +17,7 @@
   "settings.demoPreview.note.externalFolders": "В этой демонстрации упрощены функции внешних папок. Настольное приложение включает в себя все возможности.",
   "settings.demoPreview.rail.readwise": "Импорт из Readwise Reader",
   "settings.demoPreview.superMemo.sample.title": "Пример коллекции",
-  "settings.demoPreview.superMemo.sample.description": "Встроенный пример только для чтения: тем — {topics}, элементов — {items}. Ваши файлы не читаются.",
+  "settings.demoPreview.superMemo.sample.description": "Встроенный пример в режиме «только чтение». Тем: {topics}. Карточек: {items}. Ваши файлы не читаются.",
   "settings.demoPreview.superMemo.footnote": "Только демонстрация. Ничего не импортируется и не сохраняется.",
   "settings.demoPreview.superMemo.finish": "Завершить демонстрацию",
   "settings.demoPreview.superMemo.done.title": "Конец демонстрации",

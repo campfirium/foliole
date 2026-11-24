@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Prioritäten zuordnen",
+  "desktop.superMemoDrafts.priorityScale": "SuperMemo-Priorität (%)",
+  "desktop.superMemoDrafts.priorityReset": "Auf Standardwerte zurücksetzen",
+  "desktop.superMemoDrafts.priorityBoundary": "Grenze zwischen P{left} und P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Ordne die SuperMemo-Sammlung unter „Daten laden“ zu, um ihre Prioritätswerte zu verwenden.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Lernreihenfolge",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Leseintervalle",
+  "desktop.superMemoDrafts.priorityManaging": "Prioritäten verwalten",
+  "desktop.superMemoDrafts.prioritySourceOrder": "Fällige Materialien landen in einer einzigen Warteschlange. Materialien mit höherer Priorität stehen vor denen mit niedrigerer Priorität. Da täglich neue Materialien fällig werden, können Materialien mit niedrigerer Priorität immer wieder nach hinten rücken. Eine zufällige Reihenfolge und automatisches Verschieben auf einen späteren Zeitpunkt helfen, den Rückstand zu bewältigen.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Wenn du die Priorität eines Themas erhöhst, wachsen auch seine Leseintervalle langsamer. Dadurch erscheint das Thema häufiger.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "Fällige Materialien verteilen sich auf zehn Warteschlangen, eine pro Prioritätsstufe. Erst wenn die Warteschlange P0 leer ist, wird eine andere Warteschlange ausgewählt. Bei P1–P9 gilt: Je höher die Priorität einer Warteschlange, desto wahrscheinlicher kommt das nächste Material aus ihr.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Mit dem Standard-Prioritätsverhältnis von 5 gelten die folgenden Wahrscheinlichkeiten, wenn in allen neun regulären Warteschlangen fällige Materialien liegen:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "Leere Warteschlangen werden bei der Auswahl nicht berücksichtigt. Sind nur in P1 und P9 Materialien fällig, liegen die Auswahlwahrscheinlichkeiten bei 83.3% beziehungsweise 16.7%.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Je höher die Priorität, desto langsamer wachsen die Leseintervalle. Bei den Standardeinstellungen wird aus einem Leseintervall von 10 Tagen beispielsweise ein Intervall von 11 Tagen bei P1, 13 Tagen bei P5 und 15 Tagen bei P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "In Foliole übernehmen Materialien die Priorität ihres übergeordneten Ordners, sofern ihnen keine eigene zugewiesen wurde. Wir empfehlen, Prioritäten hauptsächlich auf Ordnerebene zu verwalten um häufige Änderungen an einzelnen Materialien zu vermeiden."
+}

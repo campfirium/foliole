@@ -17,10 +17,10 @@
   "settings.demoPreview.note.externalFolders": "Las funciones de las carpetas externas se simplifican en esta demostración. La aplicación de escritorio incluye la experiencia completa.",
   "settings.demoPreview.rail.readwise": "Importar desde Readwise Reader",
   "settings.demoPreview.superMemo.sample.title": "Colección de ejemplo",
-  "settings.demoPreview.superMemo.sample.description": "Un ejemplo integrado de solo lectura con {topics} temas y {items} elementos. No se leen tus archivos.",
+  "settings.demoPreview.superMemo.sample.description": "Un ejemplo integrado de solo lectura con {topics} temas y {items} ítems. No se leen tus archivos.",
   "settings.demoPreview.superMemo.footnote": "Solo es una demo. No se importa ni se guarda nada.",
   "settings.demoPreview.superMemo.finish": "Finalizar demo",
   "settings.demoPreview.superMemo.done.title": "Fin de la demo",
-  "settings.demoPreview.superMemo.done.description": "Esto era una demo. No se ha importado nada y tu espacio de trabajo no ha cambiado. Usa la aplicación de escritorio para migrar tu propia colección.",
+  "settings.demoPreview.superMemo.done.description": "Esto ha sido una demo. No se ha importado nada y tu espacio de trabajo no ha cambiado. Usa la aplicación de escritorio para migrar tu propia colección.",
   "settings.demoPreview.superMemo.close": "Cerrar demo"
 }

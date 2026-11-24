@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Asignación de prioridades",
+  "desktop.superMemoDrafts.priorityScale": "Prioridad de SuperMemo (%)",
+  "desktop.superMemoDrafts.priorityReset": "Restablecer valores predeterminados",
+  "desktop.superMemoDrafts.priorityBoundary": "Límite entre P{left} y P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Empareja la colección de SuperMemo en «Cargar datos» para usar sus valores de prioridad.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Orden de aprendizaje",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Intervalos de lectura",
+  "desktop.superMemoDrafts.priorityManaging": "Gestión de prioridades",
+  "desktop.superMemoDrafts.prioritySourceOrder": "Los materiales que ya toca estudiar se colocan en una sola cola, con los de mayor prioridad por delante de los de menor prioridad. Como cada día toca estudiar nuevos materiales, los de menor prioridad pueden quedar relegados una y otra vez. El orden aleatorio y el aplazamiento automático ayudan a gestionar esa acumulación.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Al aumentar la prioridad de un tema, sus intervalos de lectura también aumentan más despacio, de modo que el tema aparece con más frecuencia.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "Los materiales que ya toca estudiar se reparten en diez colas, una por nivel de prioridad. La cola P0 debe quedar vacía antes de seleccionar cualquier otra. En P1–P9, cuanto mayor sea la prioridad de una cola, más probable es que el próximo material salga de ella.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Con la proporción de prioridad predeterminada de 5, si las nueve colas normales tienen materiales pendientes de estudio, las probabilidades son las siguientes:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "Las colas vacías quedan excluidas. Si solo P1 y P9 tienen materiales pendientes de estudio, sus probabilidades son del 83.3% y del 16.7%, respectivamente.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Cuanto mayor es la prioridad, más despacio aumentan los intervalos de lectura. Por ejemplo, con la configuración predeterminada, un intervalo de lectura de 10 días pasa a 11 días en P1, 13 días en P5 y 15 días en P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "En Foliole, los materiales heredan la prioridad de la carpeta que los contiene, salvo que tengan una asignada explícitamente. Recomendamos gestionar las prioridades principalmente por carpeta para evitar ajustes frecuentes en materiales individuales."
+}

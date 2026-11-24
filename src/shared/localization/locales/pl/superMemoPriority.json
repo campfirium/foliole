@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Mapowanie priorytetów",
+  "desktop.superMemoDrafts.priorityScale": "Priorytet SuperMemo (%)",
+  "desktop.superMemoDrafts.priorityReset": "Przywróć wartości domyślne",
+  "desktop.superMemoDrafts.priorityBoundary": "Granica między P{left} a P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Sparuj kolekcję SuperMemo w kroku „Wczytaj dane”, aby użyć zapisanych w niej wartości priorytetów.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Kolejność nauki",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Odstępy między czytaniami",
+  "desktop.superMemoDrafts.priorityManaging": "Zarządzanie priorytetami",
+  "desktop.superMemoDrafts.prioritySourceOrder": "Materiały, których termin nadszedł, trafiają do jednej kolejki. Te o wyższym priorytecie są przed tymi o niższym. Każdego dnia nadchodzi termin kolejnych materiałów, więc te o niższym priorytecie mogą wielokrotnie przesuwać się w tył kolejki. Losowa kolejność i automatyczne odkładanie pomagają radzić sobie z zaległościami.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Podniesienie priorytetu tematu spowalnia też wydłużanie się odstępów między jego czytaniami. Dzięki temu temat pojawia się częściej.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "Materiały, których termin nadszedł, trafiają do dziesięciu kolejek, po jednej na każdy poziom priorytetu. Kolejka P0 musi się opróżnić, zanim będzie można wybrać inną kolejkę. W zakresie P1–P9 im wyższy priorytet kolejki, tym większa szansa, że następny materiał zostanie z niej wybrany.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Przy domyślnym stosunku priorytetów wynoszącym 5, jeśli we wszystkich dziewięciu zwykłych kolejkach są materiały, których termin nadszedł, prawdopodobieństwa wyboru są następujące:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "Puste kolejki są pomijane. Jeśli tylko w P1 i P9 są materiały, których termin nadszedł, prawdopodobieństwa wyboru tych kolejek wynoszą odpowiednio 83.3% i 16.7%.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Im wyższy priorytet, tym wolniej wydłużają się odstępy między czytaniami. Na przykład przy ustawieniach domyślnych odstęp wynoszący 10 dni wydłuża się do 11 dni przy P1, 13 dni przy P5 i 15 dni przy P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "W Foliole materiały dziedziczą priorytet folderu nadrzędnego, chyba że jawnie przypisano im inny priorytet. Zalecamy zarządzanie priorytetami przede wszystkim na poziomie folderów, aby uniknąć częstego zmieniania priorytetów pojedynczych materiałów."
+}

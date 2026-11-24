@@ -59,6 +59,7 @@ import syncGroup from './ptBR/settingsSyncGroup.json';
 import d38 from './ptBR/settingsSystem.json';
 import d39 from './ptBR/sharedUi.json';
 import superMemoConfirm from './ptBR/superMemoConfirm.json';
+import superMemoPriority from './ptBR/superMemoPriority.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -120,5 +121,6 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...companionDirectory,
   ...settingsAideContext,
   ...settingsAidePermissions,
+  ...superMemoPriority,
   ...superMemoConfirm
 };

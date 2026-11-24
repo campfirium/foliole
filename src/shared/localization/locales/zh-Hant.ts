@@ -59,6 +59,7 @@ import syncGroup from './zh-Hant/settingsSyncGroup.json';
 import d38 from './zh-Hant/settingsSystem.json';
 import d39 from './zh-Hant/sharedUi.json';
 import superMemoConfirm from './zh-Hant/superMemoConfirm.json';
+import superMemoPriority from './zh-Hant/superMemoPriority.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -120,5 +121,6 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...companionDirectory,
   ...settingsAideContext,
   ...settingsAidePermissions,
+  ...superMemoPriority,
   ...superMemoConfirm
 };

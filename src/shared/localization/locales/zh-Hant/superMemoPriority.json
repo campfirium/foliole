@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "優先級對應",
+  "desktop.superMemoDrafts.priorityScale": "SuperMemo 優先級（%）",
+  "desktop.superMemoDrafts.priorityReset": "還原預設值",
+  "desktop.superMemoDrafts.priorityBoundary": "P{left} 與 P{right} 的分界",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "請在「載入資料」中配對 SuperMemo 資料庫，以使用其中的優先級數值。",
+  "desktop.superMemoDrafts.priorityLearningOrder": "學習順序",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "閱讀間隔",
+  "desktop.superMemoDrafts.priorityManaging": "優先級管理",
+  "desktop.superMemoDrafts.prioritySourceOrder": "到期的材料排在同一個佇列中，優先級高的排在優先級低的前面。每天都有新材料到期，優先級低的材料可能一再往後排。隨機排序和自動延後有助於處理積壓。",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "提高主題的優先級也會讓閱讀間隔增加得更慢，因此這個主題會更常出現。",
+  "desktop.superMemoDrafts.priorityTargetOrder": "到期的材料分在十個佇列中，每個優先級各有一個佇列。必須先處理完 P0 佇列，才會從其他佇列中選擇。對於 P1–P9，佇列的優先級越高，下一項材料就越可能從該佇列中選出。",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "採用預設優先級比率 5 時，如果九個一般佇列都有到期材料，各佇列被選中的機率如下：",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "空佇列不參與選擇。如果只有 P1 和 P9 有到期材料，兩者被選中的機率依序為 83.3% 和 16.7%。",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "優先級越高，閱讀間隔增加得越慢。例如，依預設設定，10 天的閱讀間隔在 P1 會變成 11 天，在 P5 會變成 13 天，在 P9 會變成 15 天。",
+  "desktop.superMemoDrafts.priorityInheritance": "在 Foliole 中，未個別設定優先級的材料會沿用上一層資料夾的優先級。建議主要在資料夾層級管理優先級，減少頻繁調整個別材料。"
+}

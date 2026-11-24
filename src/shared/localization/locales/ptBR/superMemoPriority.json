@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Mapeamento de prioridades",
+  "desktop.superMemoDrafts.priorityScale": "Prioridade do SuperMemo (%)",
+  "desktop.superMemoDrafts.priorityReset": "Restaurar valores padrão",
+  "desktop.superMemoDrafts.priorityBoundary": "Limite entre P{left} e P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Associe a coleção do SuperMemo na etapa “Carregar dados” para usar os valores de prioridade dela.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Ordem de aprendizado",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Intervalos de leitura",
+  "desktop.superMemoDrafts.priorityManaging": "Gerenciamento de prioridades",
+  "desktop.superMemoDrafts.prioritySourceOrder": "Os materiais já pendentes de estudo entram em uma única fila, com os de prioridade mais alta à frente dos de prioridade mais baixa. Como novos materiais ficam pendentes todos os dias, os de prioridade mais baixa podem ser empurrados para trás repetidamente. A ordem aleatória e o adiamento automático ajudam a lidar com esse acúmulo.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Aumentar a prioridade de um tópico também faz com que seus intervalos de leitura aumentem mais devagar, o que faz o tópico aparecer com mais frequência.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "Os materiais já pendentes de estudo são distribuídos em dez filas, uma para cada nível de prioridade. A fila P0 precisa ficar vazia antes que qualquer outra fila seja selecionada. Nas filas P1–P9, quanto maior a prioridade da fila, maior a chance de o próximo material sair dela.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Com a razão de prioridade padrão de 5, se todas as nove filas regulares tiverem materiais já pendentes de estudo, as probabilidades de seleção são as seguintes:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "As filas vazias ficam de fora da seleção. Se apenas P1 e P9 tiverem materiais já pendentes de estudo, suas probabilidades são de 83.3% e 16.7%, respectivamente.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Quanto maior a prioridade, mais devagar aumentam os intervalos de leitura. Por exemplo, nas configurações padrão, um intervalo de leitura de 10 dias passa para 11 dias em P1, 13 dias em P5 e 15 dias em P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "No Foliole, os materiais herdam a prioridade da pasta que os contém, a menos que tenham uma prioridade atribuída explicitamente. Recomendamos gerenciar as prioridades principalmente por pasta para evitar ajustes frequentes em materiais individuais."
+}

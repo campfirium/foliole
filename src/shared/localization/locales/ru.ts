@@ -59,6 +59,7 @@ import syncGroup from './ru/settingsSyncGroup.json';
 import d38 from './ru/settingsSystem.json';
 import d39 from './ru/sharedUi.json';
 import superMemoConfirm from './ru/superMemoConfirm.json';
+import superMemoPriority from './ru/superMemoPriority.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -120,5 +121,6 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...companionDirectory,
   ...settingsAideContext,
   ...settingsAidePermissions,
+  ...superMemoPriority,
   ...superMemoConfirm
 };

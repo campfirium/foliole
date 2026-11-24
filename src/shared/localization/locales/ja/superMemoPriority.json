@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "優先度の対応付け",
+  "desktop.superMemoDrafts.priorityScale": "SuperMemo の優先度（%）",
+  "desktop.superMemoDrafts.priorityReset": "デフォルト値に戻す",
+  "desktop.superMemoDrafts.priorityBoundary": "P{left} と P{right} の境界",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "優先度の値を使用するには、「データを読み込む」で SuperMemo コレクションをペアリングしてください。",
+  "desktop.superMemoDrafts.priorityLearningOrder": "学習順序",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "読書間隔",
+  "desktop.superMemoDrafts.priorityManaging": "優先度の管理",
+  "desktop.superMemoDrafts.prioritySourceOrder": "期限を迎えた資料は、優先度の高いものから順に1つのキューに並びます。毎日新たに期限を迎える資料があるため、優先度の低い資料は繰り返し後回しになることがあります。順序のランダム化と自動延期は、こうした資料の滞留を抑えるのに役立ちます。",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "トピックの優先度を上げると、読書間隔の伸びも緩やかになり、そのトピックがより頻繁に表示されます。",
+  "desktop.superMemoDrafts.priorityTargetOrder": "期限を迎えた資料は、優先度ごとに10個のキューに分かれます。P0 のキューが空になってから、他のキューが選ばれます。P1–P9 では、優先度が高いキューほど、次の資料がそこから選ばれる確率が高くなります。",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "優先度の比率がデフォルトの 5 で、通常の9つのキューすべてに期限を迎えた資料がある場合、各キューが選ばれる確率は次のとおりです。",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "空のキューは選択の対象外です。P1 と P9 にだけ期限を迎えた資料がある場合、選ばれる確率はそれぞれ 83.3% と 16.7% です。",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "優先度が高いほど、読書間隔は緩やかに伸びます。たとえば、デフォルト設定では、10 日の読書間隔は P1 で 11 日、P5 で 13 日、P9 で 15 日になります。",
+  "desktop.superMemoDrafts.priorityInheritance": "Foliole では、優先度を個別に設定していない資料は、親フォルダーの優先度を引き継ぎます。個々の資料を頻繁に調整するよりも、主にフォルダー単位で優先度を管理することをおすすめします。"
+}

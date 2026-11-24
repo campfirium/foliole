@@ -59,6 +59,7 @@ import syncGroup from './ko/settingsSyncGroup.json';
 import d38 from './ko/settingsSystem.json';
 import d39 from './ko/sharedUi.json';
 import superMemoConfirm from './ko/superMemoConfirm.json';
+import superMemoPriority from './ko/superMemoPriority.json';
 
 export const TRANSLATIONS: TranslationCatalog = {
   ...d0,
@@ -120,5 +121,6 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...companionDirectory,
   ...settingsAideContext,
   ...settingsAidePermissions,
+  ...superMemoPriority,
   ...superMemoConfirm
 };

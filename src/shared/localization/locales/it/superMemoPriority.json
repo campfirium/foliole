@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "Mappatura delle priorità",
+  "desktop.superMemoDrafts.priorityScale": "Priorità di SuperMemo (%)",
+  "desktop.superMemoDrafts.priorityReset": "Ripristina i valori predefiniti",
+  "desktop.superMemoDrafts.priorityBoundary": "Limite tra P{left} e P{right}",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "Abbina la collezione SuperMemo in «Carica i dati» per usarne i valori di priorità.",
+  "desktop.superMemoDrafts.priorityLearningOrder": "Ordine di apprendimento",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "Intervalli di lettura",
+  "desktop.superMemoDrafts.priorityManaging": "Gestione delle priorità",
+  "desktop.superMemoDrafts.prioritySourceOrder": "I materiali in scadenza vengono inseriti in un’unica coda, con quelli a priorità più alta prima di quelli a priorità più bassa. Ogni giorno arrivano a scadenza nuovi materiali e quelli a priorità più bassa possono finire ripetutamente più indietro nella coda. L’ordine casuale e il rinvio automatico aiutano a gestire i materiali arretrati.",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "Aumentare la priorità di un argomento rallenta anche la crescita dei suoi intervalli di lettura. L’argomento compare quindi più spesso.",
+  "desktop.superMemoDrafts.priorityTargetOrder": "I materiali in scadenza sono distribuiti in dieci code, una per ogni livello di priorità. La coda P0 deve essere svuotata prima di poter selezionare un’altra coda. Per le code P1–P9, più alta è la priorità, più è probabile che il materiale successivo provenga da quella coda.",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "Con il rapporto di priorità predefinito di 5, se tutte e nove le code ordinarie contengono materiali in scadenza, le probabilità sono le seguenti:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "Le code vuote sono escluse. Se solo P1 e P9 contengono materiali in scadenza, le loro probabilità sono rispettivamente 83.3% e 16.7%.",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "Più alta è la priorità, più lentamente aumentano gli intervalli di lettura. Ad esempio, con le impostazioni predefinite, un intervallo di lettura di 10 giorni passa a 11 giorni con P1, a 13 giorni con P5 e a 15 giorni con P9.",
+  "desktop.superMemoDrafts.priorityInheritance": "In Foliole i materiali ereditano la priorità della cartella che li contiene, a meno che non ne sia assegnata una esplicitamente. Consigliamo di gestire le priorità soprattutto a livello di cartella per evitare ritocchi frequenti ai singoli materiali."
+}

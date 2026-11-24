@@ -16,11 +16,11 @@
   "settings.demoPreview.note.label": "Accesso alle cartelle",
   "settings.demoPreview.note.externalFolders": "Le funzionalità delle cartelle esterne sono semplificate in questa demo. L'app desktop include l'esperienza completa.",
   "settings.demoPreview.rail.readwise": "Importa da Readwise Reader",
-  "settings.demoPreview.superMemo.sample.title": "Raccolta di esempio",
+  "settings.demoPreview.superMemo.sample.title": "Collezione di esempio",
   "settings.demoPreview.superMemo.sample.description": "Un esempio integrato di sola lettura con {topics} argomenti e {items} elementi. I tuoi file non vengono letti.",
   "settings.demoPreview.superMemo.footnote": "Solo una demo. Nulla viene importato o salvato.",
   "settings.demoPreview.superMemo.finish": "Termina demo",
   "settings.demoPreview.superMemo.done.title": "Fine della demo",
-  "settings.demoPreview.superMemo.done.description": "Questa era una demo. Non è stato importato nulla e il tuo spazio di lavoro non è cambiato. Usa l’app desktop per migrare la tua raccolta.",
+  "settings.demoPreview.superMemo.done.description": "Questa era una demo. Non è stato importato nulla e il tuo spazio di lavoro non è cambiato. Usa l’app desktop per migrare la tua collezione.",
   "settings.demoPreview.superMemo.close": "Chiudi demo"
 }

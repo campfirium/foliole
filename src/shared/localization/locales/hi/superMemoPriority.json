@@ -1,0 +1,17 @@
+{
+  "desktop.superMemoDrafts.priorityStep": "प्राथमिकता मैपिंग",
+  "desktop.superMemoDrafts.priorityScale": "SuperMemo प्राथमिकता (%)",
+  "desktop.superMemoDrafts.priorityReset": "डिफ़ॉल्ट पर रीसेट करें",
+  "desktop.superMemoDrafts.priorityBoundary": "P{left} और P{right} के बीच की सीमा",
+  "desktop.superMemoDrafts.priorityNeedsCollection": "प्राथमिकता के मान इस्तेमाल करने के लिए “डेटा लोड करें” में SuperMemo कलेक्शन जोड़ें।",
+  "desktop.superMemoDrafts.priorityLearningOrder": "सीखने का क्रम",
+  "desktop.superMemoDrafts.priorityReadingIntervals": "पढ़ने के बीच के अंतराल",
+  "desktop.superMemoDrafts.priorityManaging": "प्राथमिकताएँ तय करना",
+  "desktop.superMemoDrafts.prioritySourceOrder": "जिस सामग्री को पढ़ने या दोहराने का समय आ गया है, उसे एक ही कतार में रखा जाता है। ज़्यादा प्राथमिकता वाली सामग्री कम प्राथमिकता वाली सामग्री से आगे रहती है। हर दिन नई सामग्री का समय आने पर कम प्राथमिकता वाली सामग्री बार-बार पीछे जा सकती है। कतार का क्रम रैंडम करने और सामग्री को अपने आप बाद के लिए टालने से जमा हुई सामग्री को संभालने में मदद मिलती है।",
+  "desktop.superMemoDrafts.prioritySourceIntervals": "किसी विषय की प्राथमिकता बढ़ाने पर उसके पढ़ने के अंतराल भी धीमी गति से बढ़ते हैं। इससे वह विषय ज़्यादा बार दिखाई देता है।",
+  "desktop.superMemoDrafts.priorityTargetOrder": "जिस सामग्री का समय आ गया है, उसे दस कतारों में बाँटा जाता है। हर प्राथमिकता स्तर की अपनी कतार है। कोई दूसरी कतार चुनने से पहले P0 की कतार खाली होनी चाहिए। P1–P9 में जिस कतार की प्राथमिकता ज़्यादा है, अगली सामग्री उसी से चुने जाने की संभावना उतनी ही ज़्यादा है।",
+  "desktop.superMemoDrafts.priorityProbabilityIntro": "डिफ़ॉल्ट प्राथमिकता अनुपात 5 पर, अगर सभी नौ सामान्य कतारों में ऐसी सामग्री है जिसका समय आ गया है, तो उनके चुने जाने की संभावनाएँ ये हैं:",
+  "desktop.superMemoDrafts.priorityEmptyQueues": "खाली कतारें नहीं चुनी जातीं। अगर सिर्फ़ P1 और P9 में ऐसी सामग्री है जिसका समय आ गया है, तो उनके चुने जाने की संभावनाएँ क्रमशः 83.3% और 16.7% हैं।",
+  "desktop.superMemoDrafts.priorityTargetIntervals": "प्राथमिकता जितनी ज़्यादा होती है, पढ़ने का अंतराल उतनी ही धीमी गति से बढ़ता है। उदाहरण के लिए, डिफ़ॉल्ट सेटिंग में 10 दिन का पढ़ने का अंतराल P1 पर 11 दिन, P5 पर 13 दिन और P9 पर 15 दिन हो जाता है।",
+  "desktop.superMemoDrafts.priorityInheritance": "Foliole में अगर किसी सामग्री के लिए अलग से प्राथमिकता तय नहीं की गई है, तो उसे उस फ़ोल्डर की प्राथमिकता मिलती है जिसमें वह है। हमारा सुझाव है कि प्राथमिकताएँ मुख्य रूप से फ़ोल्डर के स्तर पर तय करें, ताकि हर सामग्री की प्राथमिकता बार-बार न बदलनी पड़े।"
+}
