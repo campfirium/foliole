@@ -27,15 +27,21 @@ export function migrateLegacyExternalFolderIdentity(
   const owner = previousDeviceId ?? loadDatabaseDeviceId(driver);
   if (!owner) return;
   driver.transaction((tx) => {
+    const member = tx.queryOne<{ device_name: string }>(`SELECT device.device_name
+      FROM sync_group_local_state local JOIN sync_group_devices device ON device.group_id = local.group_id
+      WHERE local.singleton_id = 1 AND local.state = 'active'
+        AND device.device_identity_key = ? AND device.state = 'active'`, [owner]);
+    // Synced mirrors have no local root. Legacy disconnects retain the configured root.
     const folders = tx.queryAll<{ id: string; source_ref: string; host_platform: string;
       root_path: string; sync_updated_at: string | null }>(
       `SELECT f.id, s.source_ref, s.host_platform, s.root_path, state.updated_at AS sync_updated_at
        FROM desktop_sources s JOIN external_search_folders f ON f.source_ref = s.source_ref
        LEFT JOIN sync_object_state state ON state.object_type = 'external_folder' AND state.object_id = f.id
-       WHERE s.source_type = 'external' AND s.host_name = ? AND state.deleted_at IS NULL
+       WHERE s.source_type = 'external' AND s.host_name IN (?, ?) AND state.deleted_at IS NULL
          AND s.root_path = f.folder_path AND CASE WHEN json_valid(s.type_settings_json) THEN
-           json_type(s.type_settings_json, '$.ownerDeviceIdentityKey') IS NULL
-           AND json_extract(s.type_settings_json, '$.connectionStatus') = 'connected' ELSE 0 END`, [hostName]);
+           json_type(s.type_settings_json) = 'object' AND json_type(s.type_settings_json, '$.ownerDeviceIdentityKey') IS NULL
+           AND COALESCE(json_extract(s.type_settings_json, '$.connectionStatus'), 'connected') IN ('connected', 'needs-folder')
+           ELSE 0 END`, [hostName, member?.device_name ?? hostName]);
     for (const folder of folders) {
       if (normalizeDesktopSyncGroupPlatform(folder.host_platform) !== process.platform ||
           !path.isAbsolute(folder.root_path)) continue;
