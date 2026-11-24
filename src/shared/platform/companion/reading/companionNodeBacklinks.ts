@@ -1,15 +1,24 @@
 import {
   collectNodeBacklinkRecords,
   NODE_BACKLINK_TARGET_SQL,
-  nodeBacklinkSourcesQuery
+  nodeBacklinkSourcesQuery,
+  type NodeBacklinkRecord
 } from '../../../../../lib/core/database/nodeBacklinks';
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { BacklinkItem } from '../../../../features/nodes/model/internalLinks';
-import { toRuntimeNodeBacklinks } from '../../nodeBacklinksRuntimePayloads';
 import { readIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
 
 interface TargetRow extends DbRow { id: string; title: string | null }
 interface SourceRow extends DbRow { id: string; title: string | null; content: string | null }
+
+function toBacklinkItem(record: NodeBacklinkRecord): BacklinkItem {
+  return {
+    sourceNodeId: record.source_node_id,
+    sourceTitle: record.source_title,
+    context: record.context,
+    matchCount: record.match_count
+  };
+}
 
 /** Same backlink rules as the desktop runtime, read from the companion database. */
 export function loadCompanionNodeBacklinks(nodeId: string): Promise<BacklinkItem[]> {
@@ -23,6 +32,6 @@ export function loadCompanionNodeBacklinks(nodeId: string): Promise<BacklinkItem
       title: String(row.title ?? ''),
       content: String(row.content ?? '')
     }));
-    return toRuntimeNodeBacklinks(collectNodeBacklinkRecords({ title }, sources)) ?? [];
+    return collectNodeBacklinkRecords({ title }, sources).map(toBacklinkItem);
   });
 }
