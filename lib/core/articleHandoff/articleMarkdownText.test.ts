@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderArticleMarkdownText } from './articleMarkdownText';
+import { renderArticleMarkdownText } from './articleMarkdownText.js';
 
 describe('article Markdown text', () => {
   it('adds the title after frontmatter when the body has no level-one heading', () => {
