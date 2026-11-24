@@ -57,8 +57,8 @@ beforeEach(() => {
   mocks.buildDocument.mockReturnValue({ id: 'document' });
 });
 
-it('keeps an existing original EPUB book ready for another rebuild', () => {
-  expect(loadReadwiseOriginalEpubActionState('book')).toEqual({ node_id: 'book', status: 'ready' });
+it('keeps an existing original EPUB book ready for another rebuild', async () => {
+  await expect(loadReadwiseOriginalEpubActionState('book')).resolves.toEqual({ node_id: 'book', status: 'ready' });
 });
 
 it('runs the existing EPUB pipeline again on every confirmed request', async () => {

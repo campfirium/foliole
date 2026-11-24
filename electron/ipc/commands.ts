@@ -152,6 +152,7 @@ const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
   NATIVE_COMMANDS.deleteNodesPermanently,
   NATIVE_COMMANDS.flushDirtyNodeSyncVersions,
   NATIVE_COMMANDS.resolveAttachmentResource,
+  NATIVE_COMMANDS.exportNodePdf,
   NATIVE_COMMANDS.activateReadwiseOnThisHost,
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.importRemoteImageAttachment,

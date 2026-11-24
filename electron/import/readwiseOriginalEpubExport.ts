@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import { renameSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { dialog, type BrowserWindow } from 'electron';
 
 import type { NativeReadwiseOriginalEpubExportResult } from '../../lib/platform/nativeReadwiseContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
+import { readReadwiseOriginalEpubDisconnectSignal } from './readwiseOriginalEpubDisconnect.js';
 import { fetchOriginalEpubRemoteRoot } from './readwiseOriginalEpubRemote.js';
 import {
   loadReadwiseOriginalEpubTarget,
@@ -27,9 +30,13 @@ export async function exportReadwiseOriginalEpub(
   nodeId: string,
   window: BrowserWindow | null
 ): Promise<NativeReadwiseOriginalEpubExportResult> {
-  const target = loadReadwiseOriginalEpubTarget(nodeId);
-  if (!target) return { node_id: nodeId, path: null, status: 'not_applicable' };
-  if (readReadwiseOriginalEpubRuntimeStatus(target) !== 'ready') {
+  const source = await runWithDatabaseConnectionOwner(() => {
+    const target = loadReadwiseOriginalEpubTarget(nodeId);
+    return target ? { target, status: readReadwiseOriginalEpubRuntimeStatus(target) } : null;
+  });
+  if (!source) return { node_id: nodeId, path: null, status: 'not_applicable' };
+  const { target } = source;
+  if (source.status !== 'ready') {
     return { node_id: nodeId, path: null, status: 'source_inactive' };
   }
 
@@ -44,22 +51,34 @@ export async function exportReadwiseOriginalEpub(
     return { node_id: nodeId, path: null, status: 'cancelled' };
   }
 
+  const signal = readReadwiseOriginalEpubDisconnectSignal();
   try {
-    if (readReadwiseOriginalEpubRuntimeStatus(target) !== 'ready') {
+    const status = await runWithDatabaseConnectionOwner(() => {
+      signal.throwIfAborted();
+      return readReadwiseOriginalEpubRuntimeStatus(target);
+    });
+    if (status !== 'ready') {
       return { node_id: nodeId, path: null, status: 'source_inactive' };
     }
-    const remote = await fetchOriginalEpubRemoteRoot({ documentId: target.documentId });
-    const bytes = await downloadReadwiseOriginalFile(remote.rawSourceUrl, 'epub');
-    const destination = selection.filePath;
-    const temporaryPath = path.join(path.dirname(destination), `.${path.basename(destination)}.${randomUUID()}.tmp`);
-    try {
-      await fs.writeFile(temporaryPath, bytes, { flag: 'wx' });
-      await fs.rename(temporaryPath, destination);
-    } finally {
-      await fs.rm(temporaryPath, { force: true });
-    }
+    const remote = await fetchOriginalEpubRemoteRoot({ dependencies: { signal }, documentId: target.documentId });
+    signal.throwIfAborted();
+    const bytes = await downloadReadwiseOriginalFile(remote.rawSourceUrl, 'epub', { signal });
+    await saveOriginalEpub(selection.filePath, bytes, signal);
     return { node_id: nodeId, path: selection.filePath, status: 'saved' };
   } catch (error) {
+    if (signal.aborted) return { error_code: 'readwise_disconnected', node_id: nodeId, path: null, status: 'cancelled' };
     return { error_code: errorCode(error), node_id: nodeId, path: null, status: 'failed' };
+  }
+}
+
+async function saveOriginalEpub(destination: string, bytes: Uint8Array, signal: AbortSignal) {
+  const temporaryPath = path.join(path.dirname(destination), `.${path.basename(destination)}.${randomUUID()}.tmp`);
+  try {
+    await fs.writeFile(temporaryPath, bytes, { flag: 'wx', signal });
+    signal.throwIfAborted();
+    // Keep the final check and replacement in the same main-process turn as disconnect.
+    renameSync(temporaryPath, destination);
+  } finally {
+    await fs.rm(temporaryPath, { force: true });
   }
 }

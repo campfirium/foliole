@@ -28,6 +28,7 @@ import {
   readReadwiseApiSecret,
   writeReadwiseApiSecret
 } from './readwiseApiSecret.js';
+import { cancelReadwiseOriginalEpubDownloads } from './readwiseOriginalEpubDisconnect.js';
 import { invalidateIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
 import { cancelReadwiseSourceOperations } from './readwiseSourceOperationLock.js';
 
@@ -167,5 +168,6 @@ export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
     throw error;
   }
   cancelReadwiseSourceOperations();
+  cancelReadwiseOriginalEpubDownloads();
   return result('disconnected');
 }

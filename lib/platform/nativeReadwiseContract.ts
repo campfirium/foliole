@@ -46,14 +46,17 @@ export interface NativeReadwiseOriginalEpubActionState {
   status: 'not_applicable' | 'ready' | 'reconnect_required' | 'running' | 'source_inactive';
 }
 
-export interface NativeReadwiseOriginalEpubResult {
+interface NativeReadwiseOriginalFileResult {
   error_code?: string | null;
   node_id: string;
   status: 'completed' | 'failed' | 'not_applicable' | 'source_inactive';
 }
 
 export type NativeReadwisePdfOriginalActionState = NativeReadwiseOriginalEpubActionState;
-export type NativeReadwisePdfOriginalResult = NativeReadwiseOriginalEpubResult;
+export type NativeReadwiseOriginalEpubResult =
+  | NativeReadwiseOriginalFileResult
+  | { error_code?: never; node_id: string; status: 'cancelled' };
+export type NativeReadwisePdfOriginalResult = NativeReadwiseOriginalFileResult;
 
 export type NativeReadwiseOriginalEpubExportResult =
   | { node_id: string; path: string; status: 'saved' }

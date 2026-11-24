@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "Пересобрать из EPUB — сначала заново подключите Readwise",
   "desktop.nodeList.menu.useOriginalEpub.running": "Пересборка из EPUB…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "Пересобрать из EPUB — это устройство не выполняет импорт из Readwise",
+  "desktop.nodeList.originalEpub.downloadCancelled": "Загрузка EPUB отменена.",
   "desktop.nodeList.originalEpub.confirm.title": "Пересобрать из EPUB?",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole получит EPUB из Readwise и пересоберёт текст, изображения и оглавление этой книги. Существующие выделения, пропуски и примечания будут сохранены и заново привязаны.",
   "desktop.nodeList.originalEpub.confirm.confirm": "Пересобрать",

@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "Reconstruir desde EPUB: primero vuelve a conectar Readwise",
   "desktop.nodeList.menu.useOriginalEpub.running": "Reconstruyendo desde EPUB…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "Reconstruir desde EPUB: este dispositivo no gestiona las importaciones de Readwise",
+  "desktop.nodeList.originalEpub.downloadCancelled": "Se canceló la descarga del EPUB.",
   "desktop.nodeList.originalEpub.confirm.title": "¿Reconstruir desde EPUB?",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole obtendrá el EPUB de Readwise y reconstruirá el texto, las imágenes y el índice de este libro. Los destacados, huecos y anotaciones existentes se conservarán y se volverán a ubicar.",
   "desktop.nodeList.originalEpub.confirm.confirm": "Reconstruir",

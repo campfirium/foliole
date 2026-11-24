@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "Odbuduj z EPUB — najpierw połącz ponownie Readwise",
   "desktop.nodeList.menu.useOriginalEpub.running": "Odbudowywanie z EPUB…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "Odbuduj z EPUB — to urządzenie nie obsługuje importów z Readwise",
+  "desktop.nodeList.originalEpub.downloadCancelled": "Anulowano pobieranie pliku EPUB.",
   "desktop.nodeList.originalEpub.confirm.title": "Odbudować z EPUB?",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole pobierze EPUB z Readwise i odbuduje tekst, obrazy oraz spis treści tej książki. Istniejące wyróżnienia, luki i adnotacje zostaną zachowane i ponownie umiejscowione.",
   "desktop.nodeList.originalEpub.confirm.confirm": "Odbuduj",

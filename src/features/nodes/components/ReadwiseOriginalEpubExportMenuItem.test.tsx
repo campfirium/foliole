@@ -70,3 +70,13 @@ it('places EPUB export after Readwise resync with one divider before Delete', as
   ]);
   expect(within(menu).getAllByRole('separator')).toHaveLength(2);
 });
+
+it('replaces the export progress notice with download cancellation after disconnect', async () => {
+  mocks.exportEpub.mockResolvedValue({
+    error_code: 'readwise_disconnected', node_id: 'book', path: null, status: 'cancelled'
+  });
+  renderWithLocalization(<Menu />);
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Export original EPUB…' }));
+  await waitFor(() => expect(mocks.showNotice).toHaveBeenCalledWith('EPUB download cancelled.', 'info'));
+  expect(mocks.clearNotice).toHaveBeenCalledWith(1);
+});

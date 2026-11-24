@@ -92,12 +92,12 @@ export function saveReadwiseApiExportIndexPage(connectionRef: string, books: Exp
   });
 }
 
-export function loadReadwiseApiReaderIndex(connectionRef: string) {
-  return loadKind<ReaderDocumentContract>(connectionRef, INDEX_READER_KIND);
+export function loadReadwiseApiReaderIndex(connectionRef: string, remoteIds?: readonly string[]) {
+  return loadKind<ReaderDocumentContract>(connectionRef, INDEX_READER_KIND, remoteIds);
 }
 
-export function loadReadwiseApiExportIndex(connectionRef: string) {
-  return loadKind<ExportBookContract>(connectionRef, INDEX_EXPORT_KIND);
+export function loadReadwiseApiExportIndex(connectionRef: string, remoteIds?: readonly string[]) {
+  return loadKind<ExportBookContract>(connectionRef, INDEX_EXPORT_KIND, remoteIds);
 }
 
 export function loadReadwiseApiAnnotationLedger(connectionRef: string) {
@@ -114,14 +114,22 @@ export function countReadwiseApiIndexedRecords(connectionRef: string) {
 
 export function loadReadwiseApiAnnotationLedgerDocuments(
   connectionRef: string,
-  documentId: string
+  documentId: string,
+  remoteIds: readonly string[]
 ): ReaderDocumentContract[] {
-  const facts = loadReadwiseApiAnnotationLedger(connectionRef);
-  const highlights = facts.filter((item) =>
-    item.category === 'highlight' && (item.parentId === documentId || item.documentId === documentId));
-  const highlightIds = new Set(highlights.map((item) => item.remoteId));
+  const facts = loadKind<ReadwiseAnnotationLedgerFact>(connectionRef, ANNOTATION_LEDGER_KIND, remoteIds);
+  const knownIds = new Set(remoteIds);
+  // Older manifests can include a note without listing its parent highlight.
+  const parentIds = [...new Set(facts.flatMap(item =>
+    item.category === 'note' && item.parentId && !knownIds.has(item.parentId) ? [item.parentId] : []))];
+  const parents = parentIds.length
+    ? loadKind<ReadwiseAnnotationLedgerFact>(connectionRef, ANNOTATION_LEDGER_KIND, parentIds) : [];
+  const belongsToDocument = (item: ReadwiseAnnotationLedgerFact) =>
+    item.category === 'highlight' && (item.parentId === documentId || item.documentId === documentId);
+  const highlights = facts.filter(belongsToDocument);
+  const highlightIds = new Set([...highlights, ...parents.filter(belongsToDocument)].map(item => item.remoteId));
   const notes = facts.filter((item) => item.category === 'note' && item.parentId && highlightIds.has(item.parentId));
-  return [...highlights, ...notes].map((item) => normalizeLedgerDocument(item));
+  return [...highlights, ...notes].map(normalizeLedgerDocument);
 }
 
 export function clearReadwiseApiTransientIndex(connectionRef: string) {
@@ -150,11 +158,12 @@ function loadExportBook(connectionRef: string, documentId: string) {
   return row ? parse<ExportBookContract>(row.payload_json) : null;
 }
 
-function loadKind<T>(connectionRef: string, kind: string) {
+function loadKind<T>(connectionRef: string, kind: string, remoteIds?: readonly string[]) {
+  const exactIds = 'AND remote_id IN (SELECT value FROM json_each(?)) ORDER BY remote_id';
   return openDatabaseConnection().driver.queryAll<{ payload_json: string }>(
     `SELECT payload_json FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind = ?`,
-    [connectionRef, kind]
+     WHERE connection_ref = ? AND record_kind = ? ${remoteIds ? exactIds : ''}`,
+    remoteIds ? [connectionRef, kind, JSON.stringify(remoteIds)] : [connectionRef, kind]
   ).flatMap((row) => {
     const parsed = parse<T>(row.payload_json);
     return parsed ? [parsed] : [];

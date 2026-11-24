@@ -1,5 +1,4 @@
 import type { DatabaseDriver } from './driver.js';
-import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { requestSearchIndexInvalidationProcessing } from './searchIndexInvalidationRuntime.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL, INSERT_NODE_SEARCH_PENDING_SQL, normalizeSearchPendingStates } from './searchPendingState.js';
 import { syncStoredSourceSearchIndexForTargets } from './storedSourceSearchBodyIndex.js';
@@ -74,7 +73,7 @@ export function enqueueSearchIndexInvalidations(
     for (const input of uniqueInputs) {
       if (input.type === 'attachment_pdf') {
         driver.queryAll<{ node_id: string }>(
-          `SELECT DISTINCT node_id FROM (${NODE_PDF_RESOURCES_SQL}) WHERE id = ?`, [input.targetId]
+          'SELECT node_id FROM pdf_attachment_nodes WHERE storage_key = ?', [`${input.targetId}.pdf`]
         ).forEach((row) => nodeIds.add(row.node_id));
       } else nodeIds.add(input.targetId);
     }

@@ -91,6 +91,14 @@ export function reopenDatabase() {
   publishAttachmentLibraryPathSnapshot({ assetsDir, libraryScope: mockExtraction.root });
 }
 
+export function seedPdfTopic(id: string, attached = true) {
+  const references = JSON.stringify(attached ? [
+    { storage_key: `${pdfId}.pdf`, original_name: 'sample.pdf', role: 'reference' }
+  ] : []);
+  openDatabaseConnection().driver.execute(`INSERT INTO nodes (id, title, resource_references, created_at, updated_at)
+    VALUES (?, 'PDF', ?, '2026-10-01', '2026-10-01')`, [id, references]);
+}
+
 beforeEach(() => {
   fs.mkdirSync(path.resolve('.tmp/artifacts/T268'), { recursive: true });
   mockExtraction.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/T268/library-'));
@@ -107,9 +115,7 @@ beforeEach(() => {
   fs.mkdirSync(assetsDir);
   fs.writeFileSync(path.join(assetsDir, `${pdfId}.pdf`), pdfBytes);
   publishAttachmentLibraryPathSnapshot({ assetsDir, libraryScope: mockExtraction.root });
-  const reference = JSON.stringify([{ storage_key: `${pdfId}.pdf`, original_name: 'sample.pdf', role: 'reference' }]);
-  connection.driver.execute(`INSERT INTO nodes (id, title, resource_references, created_at, updated_at)
-    VALUES ('pdf-topic', 'PDF', ?, '2026-10-01', '2026-10-01')`, [reference]);
+  seedPdfTopic('pdf-topic');
   markPdfAttachmentIndexPending(pdfId);
   observer = new BetterSqlite3(connection.dbPath, { readonly: true });
   const submit = desktopTaskScheduler.submit.bind(desktopTaskScheduler);

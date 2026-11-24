@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "Aus EPUB neu aufbauen – zuerst Readwise erneut verbinden",
   "desktop.nodeList.menu.useOriginalEpub.running": "Wird aus EPUB neu aufgebaut…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "Aus EPUB neu aufbauen – dieses Gerät übernimmt keine Readwise-Importe",
+  "desktop.nodeList.originalEpub.downloadCancelled": "EPUB-Download abgebrochen.",
   "desktop.nodeList.originalEpub.confirm.title": "Aus EPUB neu aufbauen?",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole holt das EPUB von Readwise und baut Text, Bilder und Inhaltsverzeichnis dieses Buches neu auf. Vorhandene Markierungen, Lücken und Anmerkungen bleiben erhalten und werden neu verortet.",
   "desktop.nodeList.originalEpub.confirm.confirm": "Neu aufbauen",

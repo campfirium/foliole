@@ -61,6 +61,7 @@
   "desktop.nodeList.menu.useOriginalEpub.reconnect": "EPUB から再構築 — 先に Readwise を再接続してください",
   "desktop.nodeList.menu.useOriginalEpub.running": "EPUB から再構築しています…",
   "desktop.nodeList.menu.useOriginalEpub.sourceInactive": "EPUB から再構築 — このデバイスは Readwise のインポートを担当していません",
+  "desktop.nodeList.originalEpub.downloadCancelled": "EPUB のダウンロードをキャンセルしました。",
   "desktop.nodeList.originalEpub.confirm.title": "EPUB から再構築しますか？",
   "desktop.nodeList.originalEpub.confirm.description": "Foliole は Readwise から EPUB を取得し、この本の本文・画像・目次を再構築します。既存のハイライト、穴埋め、注釈は保持され、位置が再設定されます。",
   "desktop.nodeList.originalEpub.confirm.confirm": "再構築",

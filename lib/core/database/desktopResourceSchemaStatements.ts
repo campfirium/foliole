@@ -1,3 +1,5 @@
+import { WATCHED_HISTORY_PATH_INDEX } from './watchedHistoryPathIndex.js';
+
 import { IMPORT_RUN_SCHEMA } from './importRunSchema.js';
 
 export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
@@ -151,6 +153,7 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     ON import_sources (watched_binding_id, watched_relative_path)`,
   `CREATE INDEX IF NOT EXISTS idx_import_sources_location
     ON import_sources (source_ref, source_location)`,
+  WATCHED_HISTORY_PATH_INDEX,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_import_sources_readwise_remote_document
     ON import_sources (remote_connection_ref, remote_document_id)
     WHERE remote_provider = 'readwise' AND remote_connection_ref IS NOT NULL AND remote_document_id IS NOT NULL`,

@@ -7,6 +7,7 @@ import {
 } from '../database/readwiseApiCandidateRun.js';
 import {
   loadPreparedReadwiseApiCandidate,
+  loadReadwiseApiCandidate,
   loadReadwiseApiCandidates,
   setReadwiseApiCandidateStatus
 } from '../database/readwiseApiCandidateStage.js';
@@ -177,8 +178,7 @@ function loadCandidateForCommit(input: ReadwiseApiCandidatePipelineInput, docume
   return runWithDatabaseConnectionOwner(() => {
     input.assertEligible();
     return {
-      candidate: loadReadwiseApiCandidates(input.connectionRef)
-        .find((item) => item.documentId === documentId),
+      candidate: loadReadwiseApiCandidate(input.connectionRef, documentId),
       document: loadPreparedReadwiseApiCandidate(input.connectionRef, documentId)
     };
   });

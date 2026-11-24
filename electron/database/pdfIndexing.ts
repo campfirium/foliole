@@ -37,10 +37,9 @@ function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: nu
   const firstUsablePage = pages.find((page) => page.text.trim().length > 0);
   const connection = openDatabaseConnection();
   const linkedNodes = connection.driver.queryAll<{ node_id: string; title: string }>(
-    `SELECT n.id AS node_id, n.title
-     FROM nodes n, json_each(n.resource_references) resource
-     WHERE json_extract(resource.value, '$.storage_key') = ?
-       AND json_extract(resource.value, '$.role') = 'reference'`,
+    `SELECT mount.node_id, n.title
+     FROM pdf_attachment_nodes mount JOIN nodes n ON n.id = mount.node_id
+     WHERE mount.storage_key = ?`,
     [`${attachmentId}.pdf`]
   );
   for (const node of linkedNodes) {

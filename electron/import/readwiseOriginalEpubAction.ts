@@ -15,6 +15,7 @@ import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { downloadReadwiseOriginalEpubFile } from './readwiseApiOriginalFile.js';
 import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
+import { readReadwiseOriginalEpubDisconnectSignal } from './readwiseOriginalEpubDisconnect.js';
 import { prepareOriginalEpubCandidate, type PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 import { fetchOriginalEpubRemoteRoot } from './readwiseOriginalEpubRemote.js';
 import {
@@ -43,13 +44,28 @@ function publish(
   });
 }
 
-export function loadReadwiseOriginalEpubActionState(nodeId: string): NativeReadwiseOriginalEpubActionState {
+export function loadReadwiseOriginalEpubActionState(nodeId: string) {
+  return runWithDatabaseConnectionOwner((): NativeReadwiseOriginalEpubActionState => {
+    const target = loadReadwiseOriginalEpubTarget(nodeId);
+    if (!target) return { node_id: nodeId, status: 'not_applicable' };
+    if (isReadwiseSourceOperationRunning(nodeId)) return { node_id: nodeId, status: 'running' };
+    return { node_id: nodeId, status: readReadwiseOriginalEpubRuntimeStatus(target) };
+  });
+}
+
+function beginRebuild(nodeId: string) {
   const target = loadReadwiseOriginalEpubTarget(nodeId);
-  if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (isReadwiseSourceOperationRunning(nodeId)) return { node_id: nodeId, status: 'running' };
-  const runtimeStatus = readReadwiseOriginalEpubRuntimeStatus(target);
-  if (runtimeStatus !== 'ready') return { node_id: nodeId, status: runtimeStatus };
-  return { node_id: nodeId, status: 'ready' };
+  if (!target) return { status: 'not_applicable' } as const;
+  if (!isReadwiseOriginalEpubRuntimeReady(target) || !beginReadwiseSourceOperation(nodeId)) {
+    return { status: 'source_inactive' } as const;
+  }
+  try {
+    const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(target);
+    return { status: 'ready', target, expectedSnapshot, disconnected: readReadwiseOriginalEpubDisconnectSignal() } as const;
+  } catch (error) {
+    finishReadwiseSourceOperation(nodeId);
+    throw error;
+  }
 }
 
 export async function useReadwiseOriginalEpub(
@@ -57,44 +73,57 @@ export async function useReadwiseOriginalEpub(
   window: BrowserWindow | null = null,
   dependencies?: ReadwiseApiFetchDependencies
 ): Promise<NativeReadwiseOriginalEpubResult> {
-  const target = loadReadwiseOriginalEpubTarget(nodeId);
-  if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (!isReadwiseOriginalEpubRuntimeReady(target) || !beginReadwiseSourceOperation(nodeId)) {
-    return { node_id: nodeId, status: 'source_inactive' };
-  }
   const operationId = randomUUID();
+  let disconnected: AbortSignal | undefined;
   let candidate: PreparedOriginalEpubCandidate | null = null;
   try {
-    const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(target);
+    const start = await runWithDatabaseConnectionOwner(() => beginRebuild(nodeId));
+    if (start.status !== 'ready') return { node_id: nodeId, status: start.status };
+    const { target, expectedSnapshot } = start;
+    disconnected = start.disconnected;
+    const signal = dependencies?.signal ? AbortSignal.any([disconnected, dependencies.signal]) : disconnected;
+    const fetchDependencies = { ...dependencies, signal };
+    signal.throwIfAborted();
     publish(window, nodeId, operationId, 'getting_original', 'Getting original EPUB…', 0);
     const remote = await fetchOriginalEpubRemoteRoot({
-      ...(dependencies ? { dependencies } : {}),
+      dependencies: fetchDependencies,
       documentId: target.documentId
     });
+    signal.throwIfAborted();
     publish(window, nodeId, operationId, 'downloading_epub', 'Downloading EPUB…', 0.2);
-    const file = await downloadReadwiseOriginalEpubFile(remote.rawSourceUrl, dependencies);
-    publish(window, nodeId, operationId, 'reading_epub', 'Reading EPUB…', 0.35);
+    const file = await downloadReadwiseOriginalEpubFile(remote.rawSourceUrl, fetchDependencies);
     const importedAt = new Date().toISOString();
     try {
-      candidate = await prepareOriginalEpubCandidate({ filePath: file.filePath, now: importedAt, title: target.title });
+      signal.throwIfAborted();
+      publish(window, nodeId, operationId, 'reading_epub', 'Reading EPUB…', 0.35);
+      candidate = await prepareOriginalEpubCandidate({
+        filePath: file.filePath, now: importedAt, signal, title: target.title
+      });
     } finally { await file.dispose(); }
+    signal.throwIfAborted();
     const preparedCandidate = candidate;
-    const document = buildLocalReadwiseOriginalEpubDocument(target);
-    publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);
-    publish(window, nodeId, operationId, 'saving', 'Saving…', 0.9);
-    await runWithDatabaseConnectionOwner(() => commitReadwiseOriginalEpub({
-      candidate: preparedCandidate, document, expectedSnapshot, importedAt, target
-    }));
+    await runWithDatabaseConnectionOwner(() => {
+      signal.throwIfAborted();
+      publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);
+      const document = buildLocalReadwiseOriginalEpubDocument(target);
+      publish(window, nodeId, operationId, 'saving', 'Saving…', 0.9);
+      return commitReadwiseOriginalEpub({
+        candidate: preparedCandidate, document, expectedSnapshot, importedAt, target
+      });
+    });
+    candidate = null;
     publish(window, nodeId, operationId, 'completed', 'Rebuilt from EPUB.', 1);
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
+    // Published content-addressed images may already belong to another import.
+    if (disconnected?.aborted) return { node_id: nodeId, status: 'cancelled' };
     if (candidate) await cleanCreatedManagedAttachmentFiles(candidate.stages);
     const errorCode = readOriginalEpubErrorCode(error);
     console.error('[readwise-original-epub] replacement failed', { errorCode, nodeId });
     publish(window, nodeId, operationId, 'failed', 'The book is unchanged.', 1);
     return { error_code: errorCode, node_id: nodeId, status: 'failed' };
   } finally {
-    finishReadwiseSourceOperation(nodeId);
+    if (disconnected) finishReadwiseSourceOperation(nodeId);
   }
 }
 

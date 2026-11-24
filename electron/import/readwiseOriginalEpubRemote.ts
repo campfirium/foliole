@@ -1,4 +1,5 @@
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import {
   createReadwiseApiRequest,
@@ -10,7 +11,10 @@ export async function fetchOriginalEpubRemoteRoot(input: {
   dependencies?: ReadwiseApiFetchDependencies;
   documentId: string;
 }) {
-  const request = createReadwiseApiRequest(input.dependencies);
+  const request = await runWithDatabaseConnectionOwner(() => {
+    input.dependencies?.signal?.throwIfAborted();
+    return createReadwiseApiRequest(input.dependencies);
+  });
   const rootUrl = new URL(READWISE_READER_LIST_URL);
   rootUrl.searchParams.set('id', input.documentId);
   rootUrl.searchParams.set('withRawSourceUrl', 'true');

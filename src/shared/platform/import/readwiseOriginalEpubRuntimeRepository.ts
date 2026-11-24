@@ -17,7 +17,7 @@ function isActionResult(value: unknown): value is NativeReadwiseOriginalEpubResu
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const payload = value as Record<string, unknown>;
   return typeof payload.node_id === 'string'
-    && ['completed', 'failed', 'not_applicable', 'source_inactive']
+    && ['cancelled', 'completed', 'failed', 'not_applicable', 'source_inactive']
       .includes(String(payload.status))
     && (payload.error_code === undefined || payload.error_code === null || typeof payload.error_code === 'string');
 }

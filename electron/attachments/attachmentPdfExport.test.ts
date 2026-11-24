@@ -18,11 +18,20 @@ const { showSaveDialog, listNodeAttachments, loadAttachmentResourceDescription, 
 
 vi.mock('electron', () => ({ dialog: { showSaveDialog } }));
 vi.mock('../database/attachments.js', () => ({ listNodeAttachments }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+}));
+vi.mock('./attachmentLibraryPathSnapshot.js', () => ({
+  readAttachmentLibraryPathSnapshot: () => ({ assetsDir: '/library/Assets' })
+}));
 vi.mock('../database/attachmentResourceDescription.js', () => ({ loadAttachmentResourceDescription }));
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
 vi.mock('./resourceResolver.js', () => ({ resolveAttachmentFile }));
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
+});
 
 it('saves the linked PDF bytes with its original filename', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-pdf-export-'));
@@ -38,10 +47,40 @@ it('saves the linked PDF bytes with its original filename', async () => {
   showSaveDialog.mockResolvedValue({ canceled: false, filePath: destination });
 
   try {
+    await fs.writeFile(destination, 'Previous PDF');
     await expect(exportNodePdf('topic-1', null)).resolves.toEqual({ status: 'saved', path: destination });
     expect(showSaveDialog).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'Paper.pdf' }));
     expect(await fs.readFile(destination)).toEqual(bytes);
+    expect(await fs.readdir(directory)).toEqual(['Paper.pdf']);
     expect(listNodeAttachments).toHaveBeenCalledWith('topic-1');
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('keeps the existing destination when writing the replacement PDF fails partway', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-pdf-export-'));
+  const destination = path.join(directory, 'Paper.pdf');
+  const original = Buffer.from('%PDF-1.7\nold copy');
+  const bytes = Buffer.from('%PDF-1.7\nnew copy');
+  listNodeAttachments.mockReturnValue([{
+    attachmentId: 'pdf-hash', role: 'reference',
+    attachment: { mimeType: 'application/pdf', originalName: 'Paper.pdf' }
+  }]);
+  resolveAttachmentFile.mockResolvedValue({ status: 'ready', filePath: '/library/Assets/pdf-hash.pdf', bytes });
+  showSaveDialog.mockResolvedValue({ canceled: false, filePath: destination });
+
+  try {
+    await fs.writeFile(destination, original);
+    const writeFile = fs.writeFile.bind(fs);
+    vi.spyOn(fs, 'writeFile').mockImplementationOnce(async (file, _data, options) => {
+      await writeFile(file, bytes.subarray(0, 5), options);
+      throw Object.assign(new Error('disk full'), { code: 'ENOSPC' });
+    });
+
+    await expect(exportNodePdf('topic-1', null)).resolves.toEqual({ status: 'save_failed', path: null });
+    expect(await fs.readFile(destination)).toEqual(original);
+    expect(await fs.readdir(directory)).toEqual(['Paper.pdf']);
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }

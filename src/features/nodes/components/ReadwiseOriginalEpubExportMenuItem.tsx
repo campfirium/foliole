@@ -30,7 +30,12 @@ export function ReadwiseOriginalEpubExportMenuItem({ nodeId }: { nodeId: string 
     const noticeId = showAppRuntimeNotice(t('desktop.nodeList.exportOriginalEpub.exporting'), 'info');
     const result = await exportRuntimeReadwiseOriginalEpub(nodeId).catch(() => null);
     if (noticeId !== null) clearAppRuntimeNotice(noticeId);
-    if (result?.status === 'cancelled') return;
+    if (result?.status === 'cancelled') {
+      if (result.error_code === 'readwise_disconnected') {
+        showAppRuntimeNotice(t('desktop.nodeList.originalEpub.downloadCancelled'), 'info');
+      }
+      return;
+    }
     if (result?.status === 'saved') {
       showAppRuntimeNotice(t('desktop.nodeList.exportOriginalEpub.success'));
     } else {
