@@ -36,6 +36,11 @@ export interface NativeSoftDeleteNodesArgs extends NativeRestoreNodesArgs {
   deletedAt: string;
 }
 
+export interface NativeDeleteNodesPermanentlyArgs {
+  nodeIds: string[];
+  libraryScope?: string;
+}
+
 export type NativeTrashCommandMap = {
   [NATIVE_COMMANDS.softDeleteNodes]: {
     args: NativeSoftDeleteNodesArgs;
@@ -46,7 +51,7 @@ export type NativeTrashCommandMap = {
     result: NativeRestoreNodesResult;
   };
   [NATIVE_COMMANDS.deleteNodesPermanently]: {
-    args: { nodeIds: string[] };
+    args: NativeDeleteNodesPermanentlyArgs;
     result: NativeDeleteNodesPermanentlyResult;
   };
 };

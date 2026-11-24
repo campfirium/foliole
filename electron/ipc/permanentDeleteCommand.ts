@@ -36,10 +36,11 @@ function loadChunkParents(connection: DatabaseConnection, nodeIds: string[]) {
 /** Deletes in short write tasks; a failure leaves the remaining nodes in the trash. */
 export async function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseDeleteNodesPermanentlyArgs(args);
-  const { plan, libraryScope, connection } = await runDesktopDatabaseWrite('foreground', () => ({
-    connection: openDatabaseConnection(), libraryScope: currentLibraryScope(),
-    plan: preparePermanentDelete(parsed.nodeIds)
-  }));
+  const libraryScope = parsed.libraryScope ?? currentLibraryScope();
+  const { plan, connection } = await runDesktopDatabaseWrite('foreground', () => {
+    if (currentLibraryScope() !== libraryScope) throw new Error('permanent_delete_library_changed');
+    return { connection: openDatabaseConnection(), plan: preparePermanentDelete(parsed.nodeIds) };
+  });
   const removed: string[] = [];
   const parents = new Set<string>();
   const affectedArticleIds = new Set<string>();

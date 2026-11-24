@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../../lib/platform/nativeTrashCommandMap';
+import type { NativeDeleteNodesPermanentlyArgs, NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../../lib/platform/nativeTrashCommandMap';
 
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
@@ -153,7 +153,7 @@ export async function softDeleteWorkspaceNodes(
 }
 
 export async function deleteWorkspaceNodesPermanently(
-  payload: { nodeIds: string[] }
+  payload: NativeDeleteNodesPermanentlyArgs
 ): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

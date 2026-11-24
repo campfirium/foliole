@@ -1,4 +1,4 @@
-import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
+import type { NativeDeleteNodesPermanentlyArgs, NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   deleteWorkspaceNodesPermanently,
@@ -163,7 +163,7 @@ export async function syncRestoreNodesToRuntime(payload: NativeRestoreNodesArgs)
 }
 
 export async function syncDeleteNodesPermanentlyToRuntime(
-  payload: { nodeIds: string[] }
+  payload: NativeDeleteNodesPermanentlyArgs
 ): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
   return deleteWorkspaceNodesPermanently(payload);
 }

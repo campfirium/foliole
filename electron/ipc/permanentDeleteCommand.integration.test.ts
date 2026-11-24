@@ -250,3 +250,22 @@ it.each([10, 11])('stops clearing %i trashed topics when an existing library tak
   expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id IN (SELECT value FROM json_each(?))',
     [JSON.stringify(ids)])).toBe(10);
 });
+
+it('rejects a request from the previous library before planning its first batch', async () => {
+  const original = path.join(root, 'original');
+  const next = path.join(root, 'next');
+  const ids = ['shared-topic'];
+  await seedLibraryWithSharedIds(next, ids, 'next-parent');
+  await seedLibraryWithSharedIds(original, ids, 'original-parent');
+  softDeleteNodes({ nodeIds: ids, deletedAt: NOW });
+  const libraryScope = currentLibraryScope();
+  await handleInvokeRequest({ command: 'update_library_path_setting', args: {
+    location: 'library_home', path: next, confirm_existing_library_home: true
+  } });
+
+  const outcome = await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: ids, libraryScope } })
+    .then(value => ({ value }), error => ({ error }));
+  expect(readSharedNodes(ids)).toEqual([{ id: ids[0], deleted_at: null }]);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', ids)).toBe(0);
+  expect(outcome).toEqual({ error: expect.objectContaining({ message: expect.stringContaining('permanent_delete_library_changed') }) });
+});
