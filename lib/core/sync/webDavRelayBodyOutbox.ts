@@ -15,7 +15,7 @@ import { WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 
 export const webDavRelayPacketSchema = z.object({
-  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.dat$/u),
+  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.(?:dat|bin)$/u),
   chunks: z.number().int().positive(),
   bytes: z.number().int().positive(),
   through: z.number().int().positive(),

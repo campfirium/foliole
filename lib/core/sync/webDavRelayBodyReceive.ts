@@ -5,15 +5,15 @@ import { readFramedSyncMissingDependency } from './framedSyncInventoryRoundDeliv
 import { receiveRequestSyncBatch } from './requestSyncBatchReceiver.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { enqueueWebDavRelayAttachmentRepairs, markWebDavRelayAttachment } from './webDavRelayAttachments.js';
-import { receiveWebDavAttachment, WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
+import { receiveWebDavAttachment } from './webDavRelayAttachmentWire.js';
 import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { relayCollectionUrl, relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
 import { readWebDavRelayPacket } from './webDavRelayPacketRead.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
 import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
-import { readWebDavRelayRepair, WEB_DAV_REPAIR_SUFFIX } from './webDavRelayRepairWire.js';
+import { readWebDavRelayRepair } from './webDavRelayRepairWire.js';
 
-const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset|\.repair)?\.dat$/u;
+const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.(?:(asset|repair)\.)?(?:dat|bin)$/u;
 
 type Input = {
   host: RequestSyncDatabaseHost;
@@ -36,7 +36,7 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
     const applied = new Set(rows.map(row => row.key.slice(prefix.length)));
     return names.filter(packet => !applied.has(packet.name));
   }, input.signal);
-  let remaining = pending.filter(packet => !packet.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX) && !packet.name.endsWith(WEB_DAV_REPAIR_SUFFIX));
+  let remaining = pending.filter(packet => !packet.kind);
   while (remaining.length) {
     const deferred = [];
     for (const name of remaining) {
@@ -52,16 +52,16 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
   }
   let repairQueued = false;
   if (input.attachments) for (const packet of pending) {
-    if (packet.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX)) {
+    if (packet.kind === 'asset') {
       await receiveAttachment(input, input.attachments, packet);
-    } else if (packet.name.endsWith(WEB_DAV_REPAIR_SUFFIX)) {
+    } else if (packet.kind === 'repair') {
       if (await receiveRepair(input, packet)) repairQueued = true;
     }
   }
   return repairQueued;
 }
 
-type Packet = { name: string; url: URL };
+type Packet = { name: string; kind: string | undefined; url: URL };
 
 async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) {
   const list = (directory: URL) => request(directory, { method: 'PROPFIND', headers: { Depth: '1' } },
@@ -73,8 +73,10 @@ async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) 
     const status = await request(new URL('../', direction), { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
     if (status !== 207) throw new Error(`webdav_relay_folder_unavailable:${status}`);
   }
-  const packets = (directory: URL, children: string[]) => children.filter(name => packetName.test(name))
-    .map(name => ({ name, url: new URL(name, directory) }));
+  const packets = (directory: URL, children: string[]): Packet[] => children.flatMap(name => {
+    const match = packetName.exec(name);
+    return match ? [{ name, kind: match[1], url: new URL(name, directory) }] : [];
+  });
   const result = packets(direction, legacy ?? []);
   for (const name of generations ?? []) {
     const generation = relayGeneration.safeParse(name.replace(/\/$/u, ''));
