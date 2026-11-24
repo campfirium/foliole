@@ -22,6 +22,7 @@ import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeId
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { drainDirtyNodeSyncVersions } from '../database/nodeSyncVersionDrain.js';
 import * as nodeDocument from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { createMultiChapterBookEpub } from '../import/readwiseBooksEndToEnd.fixture.js';
@@ -62,6 +63,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await drainDirtyNodeSyncVersions();
   await flushMirrorSync();
   vi.restoreAllMocks();
   closeDatabaseConnection();
@@ -176,6 +178,7 @@ it('retains moved book content through Trash and restore and clears its files on
   handleNodeMutationCommand('restore_nodes', { nodeIds });
   await flushMirrorSync();
   await expect(fs.readFile(mirror(bookId), 'utf8')).resolves.toContain('Chapter annotation.');
+  handleNodeMutationCommand('soft_delete_nodes', { nodeIds, deletedAt: '2030-10-06T00:03:00.000Z' });
   await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds });
   await flushMirrorSync();
   for (const file of previous) await expect(fs.access(file)).rejects.toMatchObject({ code: 'ENOENT' });

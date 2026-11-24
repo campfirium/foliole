@@ -22,8 +22,9 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
-import { deletePermanentDeleteChunk, finishPermanentDelete, preparePermanentDelete } from './nodePermanentDeleteChunks.js';
+import { deletePermanentDeleteChunk, preparePermanentDelete } from './nodePermanentDeleteChunks.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersionWithDriver } from './nodeSyncVersions.js';
+import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import {
   clearNodeSourceDisposition,
   recordNodeSourceDisposition
@@ -120,9 +121,11 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
 /** Synchronous whole-set deletion for maintenance callers; the trash command uses the chunked path. */
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
   const plan = preparePermanentDelete(input.nodeIds);
+  const attachments = createAttachmentCleanupPlan(plan.nodeIds);
+  const { driver } = openDatabaseConnection();
   const released = deletePermanentDeleteChunk(plan.nodeIds);
-  if (released.length) collectTextBodyBlobCandidates(openDatabaseConnection().driver, released);
-  finishPermanentDelete(plan);
+  if (released.length) collectTextBodyBlobCandidates(driver, released);
+  withTransaction(driver, () => cleanupOrphanAttachments(driver, attachments));
   return [];
 }
 

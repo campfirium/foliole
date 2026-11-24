@@ -22,9 +22,12 @@ import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { softDeleteNodes } from './nodeMutations.js';
 import { getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
 import { drainDirtyNodeSyncVersions } from './nodeSyncVersionDrain.js';
 import { searchWorkspace } from './workspaceSearch.js';
+
+const TRASHED_AT = '2026-11-24T00:00:00.000Z';
 
 beforeEach(async () => {
   appDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-cold-delete-'));
@@ -51,9 +54,14 @@ function expectDeleted() {
   )).toEqual({ node_id: 'removed' });
 }
 
+function deleteFromTrash(nodeIds: string[]) {
+  softDeleteNodes({ nodeIds, deletedAt: TRASHED_AT });
+  return handleNodeMutationCommand('delete_nodes_permanently', { nodeIds });
+}
+
 it('permanently deletes before search tables exist and rebuilds only surviving content after reopen', async () => {
   expect(searchTables()).toEqual([]);
-  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['removed'] });
+  await deleteFromTrash(['removed']);
   expectDeleted();
   expect(searchTables()).toEqual([]);
   closeDatabaseConnection();
@@ -65,7 +73,7 @@ it('permanently deletes before search tables exist and rebuilds only surviving c
 });
 
 it('clears all pending work without creating search tables when every ordinary node is deleted', async () => {
-  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['removed', 'survivor'] });
+  await deleteFromTrash(['removed', 'survivor']);
   expect(getNodeRow('removed')).toBeUndefined();
   expect(getNodeRow('survivor')).toBeUndefined();
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM main.search_index_invalidations')).toEqual([]);
@@ -79,7 +87,7 @@ it('clears all pending work without creating search tables when every ordinary n
 it('immediately removes initialized search content and preserves the surviving result after reopen', async () => {
   initializeWorkspaceSearchSidecar(openDatabaseConnection());
   expect(searchWorkspace('removed').map(({ id }) => id)).toEqual(['removed']);
-  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['removed'] });
+  await deleteFromTrash(['removed']);
   expectDeleted();
   expect(searchWorkspace('removed')).toEqual([]);
   expect(processSearchIndexInvalidations(openDatabaseConnection().driver).failed).toBe(0);
@@ -92,7 +100,7 @@ it('immediately removes initialized search content and preserves the surviving r
 it('retains the pre-delete tombstone version when cold physical deletion aborts and can retry after reopen', async () => {
   const { driver } = openDatabaseConnection();
   driver.execute("CREATE TRIGGER reject_cold_delete BEFORE DELETE ON nodes WHEN OLD.id = 'removed' BEGIN SELECT RAISE(ABORT, 'physical delete failed'); END");
-  await expect(handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['removed'] }))
+  await expect(deleteFromTrash(['removed']))
     .rejects.toThrow('physical delete failed');
   expect(getNodeRow('removed')?.deleted_at).toBeTruthy();
   expect(driver.queryOne<{ snapshot_json: string }>(
@@ -109,7 +117,7 @@ it.each(['node_search', 'pdf_search', 'pdf_page_map', 'search_metadata'])(
   'deletes safely with only %s absent and lets normal initialization restore search', async (table) => {
     initializeWorkspaceSearchSidecar(openDatabaseConnection());
     openDatabaseConnection().driver.execute(`DROP TABLE search.${table}`);
-    await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['removed'] });
+    await deleteFromTrash(['removed']);
     expectDeleted();
     const remainingTables = searchTables().map(({ name }) => name);
     expect(remainingTables).not.toContain(table);

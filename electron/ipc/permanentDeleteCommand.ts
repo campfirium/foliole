@@ -5,10 +5,13 @@ import {
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import {
   deletePermanentDeleteChunk,
-  finishPermanentDelete,
   preparePermanentDelete,
+  readTrashDeleteChunk,
   splitPermanentDeleteChunks
 } from '../database/nodePermanentDeleteChunks.js';
+import {
+  cleanupAttachmentsAfterDelete, collectAttachmentCleanupCandidates, type AttachmentFileRow
+} from '../database/orphanAttachmentCleanup.js';
 import { enqueueReleasedBodyCollection } from '../database/releasedBodyCollectionTask.js';
 import { resolveArticleIdsFromNodeId } from '../mirror/mirrorArticleResolver.js';
 import { capturePermanentMirrorPaths, retirePermanentMirrorPaths } from '../mirror/mirrorPermanentDelete.js';
@@ -29,12 +32,6 @@ function assertPermanentDeleteConnection(connection: DatabaseConnection) {
   if (!isCurrentDatabaseConnection(connection)) throw new Error('permanent_delete_library_changed');
 }
 
-function loadChunkParents(connection: DatabaseConnection, nodeIds: string[]) {
-  return connection.driver.queryAll<{ parent_id: string }>(
-    'SELECT DISTINCT parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND parent_id IS NOT NULL',
-    [JSON.stringify(nodeIds)]).map(row => row.parent_id);
-}
-
 /** Deletes in short write tasks; a failure leaves the remaining nodes in the trash. */
 export async function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseDeleteNodesPermanentlyArgs(args);
@@ -48,18 +45,23 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
   const removed: string[] = [];
   const parents = new Set<string>();
   const affectedArticleIds = new Set<string>();
+  const attachments = new Map<string, AttachmentFileRow>();
   const refreshScope = () => ({ kind: 'nodes' as const, nodeIds: [...new Set([...removed, ...parents])], structure: true });
   try {
     for (const chunk of splitPermanentDeleteChunks(plan, PERMANENT_DELETE_CHUNK_SIZE)) {
       const mirrors = await runDesktopDatabaseWrite('foreground', () => {
         assertPermanentDeleteConnection(connection);
-        const retiredMirrors = capturePermanentMirrorPaths(chunk);
-        const articleIds = chunk.flatMap(resolveArticleIdsFromNodeId);
-        const chunkParents = loadChunkParents(connection, chunk);
-        const released = deletePermanentDeleteChunk(chunk);
-        removed.push(...chunk);
-        for (const parent of chunkParents) parents.add(parent);
+        const eligible = readTrashDeleteChunk(connection.driver, chunk);
+        if (!eligible.length) return [];
+        const ids = eligible.map(row => row.id);
+        const retiredMirrors = capturePermanentMirrorPaths(ids);
+        const articleIds = ids.flatMap(resolveArticleIdsFromNodeId);
+        const candidates = collectAttachmentCleanupCandidates(connection.driver, ids);
+        const released = deletePermanentDeleteChunk(ids);
+        removed.push(...ids);
+        for (const row of eligible) if (row.parent_id !== null) parents.add(row.parent_id);
         for (const articleId of articleIds) affectedArticleIds.add(articleId);
+        for (const candidate of candidates) attachments.set(`${candidate.id}:${candidate.mime_type}`, candidate);
         enqueueReleasedBodyCollection(released);
         return retiredMirrors;
       });
@@ -68,8 +70,10 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
     }
     return await runDesktopDatabaseWrite('foreground', () => {
       assertPermanentDeleteConnection(connection);
-      finishPermanentDelete(plan);
-      return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow, refreshScope(), libraryScope);
+      cleanupAttachmentsAfterDelete(connection.driver, [...attachments.values()]);
+      const removedIds = new Set(removed);
+      const result = { removedNodeIds: parsed.nodeIds.filter(id => removedIds.has(id)) };
+      return completeWorkspaceMutation(result, originWindow, refreshScope(), libraryScope);
     });
   } catch (error) {
     // The origin window reloads on its own failure path; other windows learn about removed chunks here.

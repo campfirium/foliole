@@ -9,13 +9,14 @@ import { moveAttachmentToTrash } from '../attachments/attachmentTrashFiles.js';
 import { openDatabaseConnection } from './connection.js';
 import { deletePdfPageTextRowsForAttachment } from './pdfPageTextRows.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
+import { withTransaction } from './transaction.js';
 
 interface NodeResourcesRow extends DatabaseRow, NodeBodyRow {
   id: string;
   resource_references: string;
 }
 
-interface AttachmentFileRow {
+export interface AttachmentFileRow {
   id: string;
   mime_type: string;
 }
@@ -45,18 +46,30 @@ const REFERENCING_NODE_ROWS_SQL = `SELECT n.id, n.content, n.body_blob_hash, n.r
   FROM nodes n
   WHERE (instr(n.content, '${ASSET_MARKDOWN_SCHEME}') > 0 OR n.resource_references NOT IN ('', '[]'))`;
 
-export function createAttachmentCleanupPlan(nodeIds: string[]): AttachmentCleanupPlan {
-  const driver = openDatabaseConnection().driver;
-  const removedIds = JSON.stringify(nodeIds);
-  const candidates = collectNodeKeys(driver.queryAll<NodeResourcesRow>(
-    `${REFERENCING_NODE_ROWS_SQL} AND n.id IN (SELECT value FROM json_each(?))`, [removedIds]));
-  // Nothing to release: the rest of the library cannot change the plan, so it is not read.
-  const retainedKeys = candidates.size ? collectNodeKeys(driver.queryAll<NodeResourcesRow>(
-    `${REFERENCING_NODE_ROWS_SQL} AND n.id NOT IN (SELECT value FROM json_each(?))`, [removedIds])) : new Set<string>();
-  return { candidates: [...candidates].sort().map((key) => {
+export function collectAttachmentCleanupCandidates(driver: DatabaseDriver, nodeIds: string[]): AttachmentFileRow[] {
+  const keys = collectNodeKeys(driver.queryAll<NodeResourcesRow>(
+    `${REFERENCING_NODE_ROWS_SQL} AND n.id IN (SELECT value FROM json_each(?))`, [JSON.stringify(nodeIds)]));
+  return [...keys].sort().map((key) => {
     const identity = parseCanonicalAttachmentStorageKey(key)!;
     return { id: identity.contentHash, mime_type: identity.mimeType };
-  }), retainedKeys: [...retainedKeys] };
+  });
+}
+
+export function createAttachmentCleanupPlan(nodeIds: string[]): AttachmentCleanupPlan {
+  const { driver } = openDatabaseConnection();
+  const candidates = collectAttachmentCleanupCandidates(driver, nodeIds);
+  const retainedKeys = candidates.length ? collectNodeKeys(driver.queryAll<NodeResourcesRow>(
+    `${REFERENCING_NODE_ROWS_SQL} AND n.id NOT IN (SELECT value FROM json_each(?))`, [JSON.stringify(nodeIds)])) : [];
+  return { candidates, retainedKeys: [...retainedKeys] };
+}
+
+export function cleanupAttachmentsAfterDelete(driver: DatabaseDriver, candidates: AttachmentFileRow[]) {
+  if (!candidates.length) return;
+  // Other writes could add references between committed chunks.
+  withTransaction(driver, () => {
+    const retainedKeys = collectNodeKeys(driver.queryAll<NodeResourcesRow>(REFERENCING_NODE_ROWS_SQL));
+    cleanupOrphanAttachments(driver, { candidates, retainedKeys: [...retainedKeys] });
+  });
 }
 
 export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {

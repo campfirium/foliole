@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { openDatabaseConnection } from '../database/connection.js';
 import { moveNodes, replaceNodeOrder } from '../database/nodeMutations.js';
-import { deletePermanentDeleteChunk, finishPermanentDelete } from '../database/nodePermanentDeleteChunks.js';
+import { deletePermanentDeleteChunk } from '../database/nodePermanentDeleteChunks.js';
 import { restoreNodesWithParents as restoreNodes, softDeleteNodesWithParents as softDeleteNodes } from '../database/nodeTrashTransitions.js';
 import { upsertVersionedNodeSnapshot, createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
+import { cleanupAttachmentsAfterDelete, collectAttachmentCleanupCandidates } from '../database/orphanAttachmentCleanup.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
@@ -70,9 +72,13 @@ vi.mock('../database/nodeMutations.js', () => ({
 }));
 vi.mock('../database/nodePermanentDeleteChunks.js', () => ({
   deletePermanentDeleteChunk: vi.fn(() => []),
-  finishPermanentDelete: vi.fn(),
-  preparePermanentDelete: vi.fn((nodeIds: string[]) => ({ attachmentCleanupPlan: { candidates: [], retainedKeys: [] }, nodeIds })),
+  preparePermanentDelete: vi.fn((nodeIds: string[]) => ({ nodeIds })),
+  readTrashDeleteChunk: vi.fn((_driver, nodeIds: string[]) => nodeIds.map(id => ({ id, parent_id: null }))),
   splitPermanentDeleteChunks: vi.fn((plan: { nodeIds: string[] }) => [plan.nodeIds])
+}));
+vi.mock('../database/orphanAttachmentCleanup.js', () => ({
+  cleanupAttachmentsAfterDelete: vi.fn(),
+  collectAttachmentCleanupCandidates: vi.fn()
 }));
 vi.mock('../database/releasedBodyCollectionTask.js', () => ({ enqueueReleasedBodyCollection: vi.fn() }));
 vi.mock('../database/nodeTrashTransitions.js', () => ({ restoreNodesWithParents: vi.fn(), softDeleteNodesWithParents: vi.fn() }));
@@ -247,6 +253,8 @@ it('has every window, including the one that moved a topic to or from Trash, rer
 });
 
 it('handles restore and permanent delete node commands', async () => {
+  const candidates = [{ id: 'a'.repeat(64), mime_type: 'image/png' }];
+  vi.mocked(collectAttachmentCleanupCandidates).mockReturnValueOnce(candidates);
   await expect(handleInvokeRequest({ command: 'restore_nodes', args: { nodeIds: ['node-1'] } })).resolves.toEqual({
     restoredNodeIds: ['node-1'],
     skippedConflicts: []
@@ -262,5 +270,6 @@ it('handles restore and permanent delete node commands', async () => {
     })
   ).resolves.toEqual({ removedNodeIds: ['node-3'] });
   expect(deletePermanentDeleteChunk).toHaveBeenCalledWith(['node-3']);
-  expect(finishPermanentDelete).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ['node-3'] }));
+  expect(collectAttachmentCleanupCandidates).toHaveBeenCalledExactlyOnceWith(openDatabaseConnection().driver, ['node-3']);
+  expect(cleanupAttachmentsAfterDelete).toHaveBeenCalledExactlyOnceWith(openDatabaseConnection().driver, candidates);
 });
