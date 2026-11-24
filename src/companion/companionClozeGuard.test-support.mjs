@@ -17,6 +17,24 @@ export function withDatabase(file, run) {
   try { return run(db); } finally { db.close(); }
 }
 
+/**
+ * The schema bootstrap page opens Flow on an empty phone library, which now writes the phone guided sample under Inbox
+ * (T852-5). These journeys need a library holding only their own topic, so the sample and the Flow state built on it go.
+ */
+export function removeGuidedSample(db) {
+  let ids = db.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all().map(row => row.id);
+  const roots = db.prepare("SELECT id FROM nodes WHERE parent_id = 'special-inbox'").all().map(row => row.id);
+  assert.ok(ids.length === 0 || (roots.length === 1 && db.prepare('SELECT COUNT(*) AS count FROM nodes WHERE parent_id = ?')
+    .get(roots[0]).count === ids.length - 1), 'the bootstrap library holds only the guided sample');
+  const removeLeaves = db.prepare("DELETE FROM nodes WHERE id NOT LIKE 'special-%' AND id NOT IN (SELECT parent_id FROM nodes WHERE parent_id IS NOT NULL)");
+  while (ids.length) {
+    removeLeaves.run();
+    ids = db.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all().map(row => row.id);
+  }
+  for (const { name } of db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'daily_flow_%'").all()) db.prepare(`DELETE FROM "${name}"`).run();
+  db.prepare("DELETE FROM companion_meta WHERE key LIKE 'flow_resume:%' OR key LIKE 'flow_history:%'").run();
+}
+
 export async function selectAnswer(page, selected = answer, waitForGuard = true) {
   await page.locator('[data-node-id="guard-source"]').evaluate((article, text) => {
     const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
@@ -98,9 +116,8 @@ async function main() {
     await bootstrap.locator('[data-companion-preview-ready="true"]').waitFor({ state: 'attached' });
     await bootstrap.close();
     withDatabase(file, db => {
+      removeGuidedSample(db);
       db.prepare("INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at) VALUES('guard-source','topic','Long topic',?,5,'2026-11-05T00:00:00Z','2026-11-05T00:00:00Z')").run(content);
-      for (const { name } of db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'daily_flow_%'").all()) db.prepare(`DELETE FROM "${name}"`).run();
-      db.prepare("DELETE FROM companion_meta WHERE key LIKE 'flow_resume:%'").run();
     });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
