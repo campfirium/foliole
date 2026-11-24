@@ -12,6 +12,12 @@ export interface ReviewEvent {
   voids_op_id: string | null;
 }
 
+export class InvalidReviewTimestampError extends Error {
+  constructor(readonly opId: string | undefined) {
+    super('invalid_review_timestamp');
+  }
+}
+
 /** Events are immutable facts; snapshots and event scheduler versions never seed this calculation. */
 export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings, nodeId?: string): SchedulerCard | null {
   return replayReviewEventsFromBaseline(events, parameters, null, nodeId);
@@ -21,7 +27,7 @@ export function recomputeReview(events: readonly ReviewEvent[], parameters: Revi
 export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
   baseline: SchedulerCard | null, nodeId?: string): SchedulerCard | null {
   const voids = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
-  const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at) }))
+  const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at, event.op_id) }))
     .sort((a, b) => a.instant - b.instant
     || (a.op_id < b.op_id ? -1 : a.op_id > b.op_id ? 1 : 0));
   const scheduler = createFsrsReviewScheduler({ loadSettings: () => parameters,
@@ -44,12 +50,12 @@ export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], p
 export function previewReviewAt(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
   candidate: { grade: number; now: string; nodeId?: string }): SchedulerCard | null {
   const instant = reviewInstant(candidate.now);
-  const history = events.filter(event => reviewInstant(event.reviewed_at) <= instant);
+  const history = events.filter(event => reviewInstant(event.reviewed_at, event.op_id) <= instant);
   return recomputeReview([...history, { op_id: '~preview', kind: 'review', grade: candidate.grade,
     reviewed_at: candidate.now, voids_op_id: null }], parameters, candidate.nodeId);
 }
 
-function reviewInstant(value: string) {
-  if (!isReviewTimestamp(value, true)) throw new Error('invalid_review_timestamp');
+function reviewInstant(value: string, opId?: string) {
+  if (!isReviewTimestamp(value, true)) throw new InvalidReviewTimestampError(opId);
   return Date.parse(value);
 }

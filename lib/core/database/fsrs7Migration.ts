@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { recomputeReview } from '../review/recomputeReview.js';
+import { InvalidReviewTimestampError, recomputeReview } from '../review/recomputeReview.js';
 import { createInitialSchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRowSchemas.js';
@@ -23,11 +23,20 @@ const previousCard = z.object({ node_id: z.string(), due: z.string() });
 
 function rebuild(row: unknown, events: unknown[], settings: unknown[], ancestors: unknown[]) {
   const { node_id: id, due } = previousCard.parse(row);
-  const card = recomputeReview(events.map(value => identityReviewRowSchema.parse(value)),
-    parametersForNode(id, settings, ancestors), id) ?? createInitialSchedulerCard(due);
-  // Preserve only the upgrade-time arrangement. Subsequent facts use ordinary FSRS-7 projection.
-  return [id, due, card.last_review, card.state, card.stability, card.stability_fast ?? 0,
-    card.difficulty, card.elapsed_days, card.scheduled_days, card.reps, card.lapses];
+  try {
+    const card = recomputeReview(events.map(value => identityReviewRowSchema.parse(value)),
+      parametersForNode(id, settings, ancestors), id) ?? createInitialSchedulerCard(due);
+    // Preserve only the upgrade-time arrangement. Subsequent facts use ordinary FSRS-7 projection.
+    return [id, due, card.last_review, card.state, card.stability, card.stability_fast ?? 0,
+      card.difficulty, card.elapsed_days, card.scheduled_days, card.reps, card.lapses];
+  } catch (error) {
+    if (!(error instanceof InvalidReviewTimestampError) || error.opId === undefined) throw error;
+    throw new Error(
+      `FSRS-7 upgrade blocked by invalid_review_timestamp (node_id=${JSON.stringify(id)}, op_id=${JSON.stringify(error.opId)}). ` +
+      'Keep the original library and its backups while repairing this review record before retrying.',
+      { cause: error }
+    );
+  }
 }
 
 /** The existing schema-upgrade transaction owns this one-time conversion and rollback. */
