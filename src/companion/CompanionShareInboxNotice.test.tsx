@@ -1,6 +1,8 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { TextBodyTooLargeError } from '../../lib/core/nodes/textBodyBudget';
+
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
@@ -29,6 +31,15 @@ it('shows a failed delivery and lets the user retry without reopening the app', 
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   expect(runtime.consume).toHaveBeenCalledTimes(2);
   expect(screen.getByText('Workspace')).toBeInTheDocument();
+});
+
+it('identifies an oversized share as a text limit failure', async () => {
+  runtime.consume.mockRejectedValueOnce(new TextBodyTooLargeError(1_048_577));
+  renderInbox();
+  expect(await screen.findByRole('alert')).toHaveTextContent('exceeds the 1 MiB');
+  expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('dismisses only the notice and consumes again on the next native delivery event', async () => {

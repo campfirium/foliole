@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { assertTextBodyWithinBudget, TextBodyTooLargeError } from '../../lib/core/nodes/textBodyBudget';
 import { combineNativeCompanionShareParts } from '../../lib/platform/companionShareInboxContract';
 import {
   acknowledgeCompanionShare,
@@ -29,8 +30,17 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
   // for this exposure. Keep payload validation, collision checks and resource limits;
   // reassess the decision if evidence establishes broader impact.
   let snapshot = workspace.state.workspace_snapshot;
+  let oversizedShare: TextBodyTooLargeError | undefined;
   for (const item of await loadPendingCompanionShares()) {
     const text = combineNativeCompanionShareParts(item.parts);
+    try {
+      assertTextBodyWithinBudget(text);
+    } catch (error) {
+      if (!(error instanceof TextBodyTooLargeError)) throw error;
+      // Leave the original native delivery intact and report the limit after draining valid shares.
+      oversizedShare ??= error;
+      continue;
+    }
     const result = await persistCompanionCapturedText({
       deviceId: workspace.bootstrapState.device_id,
       nodeId: stableShareNodeId(item.delivery_id),
@@ -45,6 +55,7 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
     await workspace.refreshAfterMutation(result.published ? undefined : snapshot);
     await acknowledgeCompanionShare(item.delivery_id);
   }
+  if (oversizedShare) throw oversizedShare;
 }
 
 export function listenForCompanionShares(listener: () => void) {

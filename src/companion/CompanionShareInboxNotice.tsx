@@ -17,10 +17,12 @@ export function CompanionShareInboxNotice(props: {
     {share.failed ? (
       <div className="pointer-events-none fixed inset-0 z-workspace-overlay flex items-center justify-center px-6">
         <div className={appShelllessSurfaceClassName('pointer-events-auto flex max-w-sm flex-col gap-3 px-4 py-3 text-ui-md')}>
-          <p role="alert">{t('companion.share.incomplete')}</p>
+          <p role="alert">{t(share.failed === 'text-too-large' ? 'shared.textLimit.exceeded' : 'companion.share.incomplete')}</p>
           <div className="flex justify-end gap-2">
             <AppButton onClick={share.dismiss} variant="ghost">{t('companion.capture.close')}</AppButton>
-            <AppButton disabled={share.pending} onClick={share.retry} variant="subtle">{t('companion.app.retry')}</AppButton>
+            {share.failed === 'incomplete' ? (
+              <AppButton disabled={share.pending} onClick={share.retry} variant="subtle">{t('companion.app.retry')}</AppButton>
+            ) : null}
           </div>
         </div>
       </div>
