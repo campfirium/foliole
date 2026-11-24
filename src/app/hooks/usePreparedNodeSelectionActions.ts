@@ -14,6 +14,22 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
 
+// The target is not active yet, so without keepWarm the renderer boundary would drop its body again.
+function createPreparedLoadOptions(nodeId: string, isCurrent: () => boolean) {
+  return {
+    keepWarm: true,
+    onDocumentMerged: (document: { content: string }) => {
+      if (isCurrent()) markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
+    },
+    onLoadResolved: () => {
+      if (isCurrent()) markNodeDocumentLoadResolved(nodeId);
+    },
+    onLoadStarted: () => {
+      if (isCurrent()) markNodeDocumentLoadStarted(nodeId);
+    }
+  };
+}
+
 export function usePreparedOpenNodeAction(
   action: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null,
   flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
@@ -33,39 +49,34 @@ export function usePreparedOpenNodeAction(
     ) => {
       const requestToken = ++requestTokenRef.current;
       markRequested(nodeId);
-      if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
-        flushPendingEditorDraft();
-      }
-      prepareForNavigation();
-      const result = action(nodeId, browseRootIntent);
-      const navigation = result ? { ...result, focusAnchor } : result;
-      const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-      const needsDocument = targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository();
-      const deferAnchor = Boolean(navigation?.focusAnchor && needsDocument);
-      if (!deferAnchor) finalize(navigation);
-      void flushPendingEditorDraftImmediately();
-
-      if (!needsDocument) return;
-      const isCurrent = () => requestTokenRef.current === requestToken && useWorkspaceStore.getState().activeNodeId === nodeId;
-
-      const document = await loadDesktopNodeDocument(nodeId, {
-        onDocumentMerged: (document) => {
-          if (requestTokenRef.current === requestToken) {
-            markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
-          }
-        },
-        onLoadResolved: () => {
-          if (requestTokenRef.current === requestToken) {
-            markNodeDocumentLoadResolved(nodeId);
-          }
-        },
-        onLoadStarted: () => {
-          if (requestTokenRef.current === requestToken) {
-            markNodeDocumentLoadStarted(nodeId);
-          }
+      const flushDraft = () => {
+        if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
+          flushPendingEditorDraft();
         }
-      }, isCurrent);
-      if (deferAnchor && document && isCurrent()) finalize(navigation);
+      };
+      flushDraft();
+      const openTarget = () => {
+        prepareForNavigation();
+        const result = action(nodeId, browseRootIntent);
+        finalize(result ? { ...result, focusAnchor } : result);
+        void flushPendingEditorDraftImmediately();
+      };
+      const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
+      if (!targetNode || isNodeDocumentLoaded(targetNode) || !hasWorkspaceRuntimeRepository()) {
+        openTarget();
+        return;
+      }
+
+      // Keep the current note and editor on screen until the target body is ready, so the editor is never swapped
+      // for a loading placeholder. Only the newest request may switch; a failed read still opens the target so its
+      // own retry state is shown.
+      void flushPendingEditorDraftImmediately();
+      const isCurrent = () => requestTokenRef.current === requestToken;
+      await loadDesktopNodeDocument(nodeId, createPreparedLoadOptions(nodeId, isCurrent), isCurrent);
+      if (requestTokenRef.current !== requestToken) return;
+      // Typing may have continued in the old note while the body loaded.
+      flushDraft();
+      openTarget();
     },
     [action, finalize, flushActiveEditorTransaction, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
   );

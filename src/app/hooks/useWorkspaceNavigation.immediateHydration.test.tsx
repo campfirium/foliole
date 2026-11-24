@@ -2,6 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
+import { removeCachedWorkspaceNodeDocument } from '../../store/workspaceNodeDocumentCache';
+import { resetWorkspaceNodeDocumentLoaderForTest } from '../../store/workspaceNodeDocumentLoader';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
@@ -37,10 +39,10 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
 }));
 
 function createPrefetchHookHarness(callOrder: string[]) {
-  const openNode = vi.fn(() => {
+  const openNode = vi.fn((nodeId: string) => {
     callOrder.push('open-node');
-    useWorkspaceStore.getState().setActiveNode('node-2');
-    return { focusAnchor: null, nodeId: 'node-2' };
+    useWorkspaceStore.getState().setActiveNode(nodeId);
+    return { focusAnchor: null, nodeId };
   });
   const saveActiveNodeView = vi.fn(() => {
     callOrder.push('save-view');
@@ -94,11 +96,12 @@ async function runImmediateHydrationCase() {
   expect(callOrder).toEqual([
     'selection-requested',
     'flush-draft',
-    'save-view',
-    'open-node',
     'load-started',
     'load-resolved',
-    'load-merged'
+    'load-merged',
+    'flush-draft',
+    'save-view',
+    'open-node'
   ]);
   expect(openNode).toHaveBeenCalledTimes(1);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document'))
@@ -114,8 +117,58 @@ describe('useWorkspaceNavigation immediate hydration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetWorkspaceNavigationTestState();
+    resetWorkspaceNodeDocumentLoaderForTest();
+    for (const nodeId of ['node-1', 'node-2', 'pdf-parent']) removeCachedWorkspaceNodeDocument(nodeId);
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   });
 
-  it('opens a cold target immediately and hydrates its document afterward', runImmediateHydrationCase);
+  it('keeps the current note until a cold target body is ready, then switches', runImmediateHydrationCase);
+
+  it('switches only to the newest cold target when clicks overlap', async () => {
+    seedPrefetchTestState();
+    useWorkspaceStore.setState((state) => ({
+      nodeOrder: [...state.nodeOrder, 'pdf-parent'],
+      nodesById: { ...state.nodesById, 'pdf-parent': { ...state.nodesById['pdf-parent']!, hasContent: true, hasReveal: false } }
+    }));
+    const resolvers: Array<(value: unknown) => void> = [];
+    vi.mocked(getRuntimeInvoke).mockReturnValue(
+      vi.fn(() => new Promise((resolve) => { resolvers.push(resolve); }))
+    );
+    const { openNode, view } = createPrefetchHookHarness([]);
+    const body = { content: 'Body', hideTitleHeading: false, kind: 'topic', reveal: null, virtualFilter: null };
+
+    await act(async () => {
+      const first = view.result.current.handleSelectNode('node-2');
+      const second = view.result.current.handleSelectNode('pdf-parent');
+      resolvers.forEach((resolve) => resolve(body));
+      await Promise.all([first, second]);
+    });
+
+    expect(openNode).toHaveBeenCalledTimes(1);
+    expect(openNode).toHaveBeenCalledWith('pdf-parent', 'current-context');
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('pdf-parent');
+  });
+
+  it('does not switch while the body is still loading', async () => {
+    seedPrefetchTestState();
+    let resolveBody: (value: unknown) => void = () => undefined;
+    vi.mocked(getRuntimeInvoke).mockReturnValue(
+      vi.fn(() => new Promise((resolve) => { resolveBody = resolve; }))
+    );
+    const { openNode, view } = createPrefetchHookHarness([]);
+
+    let pending: unknown;
+    await act(async () => {
+      pending = view.result.current.handleSelectNode('node-2');
+      await Promise.resolve();
+    });
+    expect(openNode).not.toHaveBeenCalled();
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+
+    await act(async () => {
+      resolveBody({ content: 'Body', hideTitleHeading: false, kind: 'topic', reveal: null, virtualFilter: null });
+      await pending;
+    });
+    expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  });
 });
