@@ -1,3 +1,4 @@
+import { WATCHED_HISTORY_PATH_SQL } from '../../lib/core/database/watchedHistoryPathIndex.js';
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { createTrackedDesktopSourceFingerprint } from '../../lib/core/import/fingerprint.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -27,11 +28,13 @@ export function applyWatchedPreparedImportIdentity(
     [binding.bindingId, relativePath]
   );
   const historicalRefs = existing ? [] : loadHistoricalRefsForWatchedBinding(binding.bindingId);
-  const historical = historicalRefs.length ? openDatabaseConnection().driver.queryAll<{
-    source_fingerprint: string; source_location: string
-  }>(`SELECT source_fingerprint, source_location FROM import_sources
-     WHERE source_ref IN (${historicalRefs.map(() => '?').join(',')})`, historicalRefs)
-    .filter((row) => normalizeWatchedRelativeLocation(row.source_location) === relativePath) : [];
+  const historical = historicalRefs.length
+    ? openDatabaseConnection().driver.queryAll<{ source_fingerprint: string }>(
+      `SELECT source_fingerprint FROM import_sources
+       WHERE source_ref IN (${historicalRefs.map(() => '?').join(',')})
+         AND (${WATCHED_HISTORY_PATH_SQL}) = ? LIMIT 2`,
+      [...historicalRefs, relativePath]
+    ) : [];
   if (historical.length > 1) throw new Error('watched_history_ambiguous');
   const sourceFingerprint = existing?.source_fingerprint ?? historical[0]?.source_fingerprint ??
     createTrackedDesktopSourceFingerprint(

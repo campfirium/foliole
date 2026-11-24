@@ -37,6 +37,7 @@ import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
+import { migrateWatchedHistoryPathIndex } from './watchedHistoryPathIndex.js';
 import { WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA } from './webDavRelayReviewSequence.js';
 
 export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
@@ -99,5 +100,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 197, migrate: db => {
     for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) db.exec(sql);
   } },
-  { version: 198, migrate: migratePdfAttachmentNodeIndex }
+  { version: 198, migrate: migratePdfAttachmentNodeIndex },
+  { version: 199, migrate: migrateWatchedHistoryPathIndex }
 ];
