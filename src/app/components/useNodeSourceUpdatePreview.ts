@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 
+import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import { translate } from '../../shared/localization/translations';
 import { loadRuntimeNodeTextAlternativePreview } from '../../shared/platform/desktop/nodeTextAlternativeRuntimeRepository';
 import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { onManagedInboxUpdated, onWorkspaceContentChanged } from '../../shared/platform/runtimeShellEvents';
+import { clearAppRuntimeNotice, showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 interface NodeSourceUpdatePreviewState {
   isLoading: boolean;
@@ -25,14 +28,25 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
     }
 
     let isDisposed = false;
+    let latestRequest = 0;
+    let noticeId: number | null = null;
     const unlisteners: (() => void)[] = [];
 
     const loadPreview = async () => {
+      if (isDisposed) return;
+      const request = ++latestRequest;
       setState((current) => ({ isLoading: true, value: current.value }));
-      const value = await loadRuntimeNodeTextAlternativePreview(nodeId, selectedId)
-        ?? await loadRuntimeNodeSourceUpdatePreview(nodeId);
-      if (!isDisposed) {
+      try {
+        const value = await loadRuntimeNodeTextAlternativePreview(nodeId, selectedId)
+          ?? await loadRuntimeNodeSourceUpdatePreview(nodeId);
+        if (isDisposed || request !== latestRequest) return;
+        if (noticeId !== null) clearAppRuntimeNotice(noticeId);
+        noticeId = null;
         setState({ isLoading: false, value });
+      } catch {
+        if (isDisposed || request !== latestRequest) return;
+        setState(DEFAULT_STATE);
+        noticeId = showAppRuntimeNotice(translate(getStoredAppLocale(), 'desktop.sourceUpdate.previewLoadFailed'));
       }
     };
 
@@ -47,6 +61,7 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
 
     return () => {
       isDisposed = true;
+      if (noticeId !== null) clearAppRuntimeNotice(noticeId);
       unlisteners.forEach(dispose => dispose());
     };
   }, [nodeId, selectedId]);

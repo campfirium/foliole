@@ -7,6 +7,7 @@ export const ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS: Partial<Record<Translat
   'desktop.sourceUpdate.alternative.option': '{host} · {date}',
   'desktop.sourceUpdate.alternative.expires': '保留至 {date}',
   'desktop.sourceUpdate.alternative.hint': '最多保留 3 份备选正文，每份保留 30 天',
+  'desktop.sourceUpdate.previewLoadFailed': '无法加载对比预览。',
   'desktop.sourceUpdate.dialogTitle': '对比视图',
   'desktop.sourceUpdate.close': '关闭来源更新面板',
   'desktop.sourceUpdate.accept': '接受更新',

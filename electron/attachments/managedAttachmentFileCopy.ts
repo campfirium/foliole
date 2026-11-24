@@ -33,13 +33,14 @@ export async function prepareCanonicalImageAttachmentFile(filePath: string) {
 }
 
 export async function stageManagedAttachmentFileCopy(input: {
+  assetsDir?: string;
   sourcePath: string;
   contentHash: string;
   mimeType: string;
   originalName: string;
   now?: string;
 }): Promise<StagedManagedAttachment> {
-  const storagePath = resolveAttachmentStoragePath(input.contentHash, undefined, input.mimeType);
+  const storagePath = resolveAttachmentStoragePath(input.contentHash, input.assetsDir, input.mimeType);
   const createdFile = await publishImmutableAttachment(storagePath, input.contentHash,
     temporary => copyFile(input.sourcePath, temporary, constants.COPYFILE_EXCL));
   return {
