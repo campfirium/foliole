@@ -19,7 +19,8 @@ export function createReviewQueueDayWindow(window: ReviewQueueDayWindow | undefi
     },
     review(node: ReviewQueueNode, native: number) {
       if (!bounds || !node.review || node.review.scheduledDays < 1) return native;
-      const due = timestamp(node.review.due);
+      // `native` is the stored due resolved to the day-start hour, the same instant grading checks.
+      const due = native;
       if (due >= bounds.start && due < bounds.end) return bounds.start;
       return due >= bounds.end ? Math.max(bounds.end, native) : native;
     }
