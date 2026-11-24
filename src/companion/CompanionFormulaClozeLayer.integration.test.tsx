@@ -120,7 +120,7 @@ it.each([0, 250])('does not traverse the library when changing articles with %i 
     nodes[id] = { ...topic, id };
   }
   const enumerate = vi.fn(Reflect.ownKeys);
-  const source = { ...snapshot, nodesById: new Proxy(nodes, { ownKeys: enumerate }) };
+  const source = { ...snapshot, nodesById: new Proxy<typeof nodes>(nodes, { ownKeys: enumerate }) };
   const presentation = renderHook(({ nodeId }) => useCompanionFormulaClozePresentation(source, nodeId),
     { initialProps: { nodeId: 'topic' } });
   expect(presentation.result.current).toEqual([]);
