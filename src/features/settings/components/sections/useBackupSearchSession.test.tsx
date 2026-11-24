@@ -139,3 +139,64 @@ it('does not start a replacement query when the panel closes during cancellation
   expect(result.current.current).toBeNull();
   expect(result.current.status).toBe('idle');
 });
+
+it('keeps the results from a reopened panel when a previous cancellation finishes', async () => {
+  let open = true;
+  const { result, rerender } = renderHook(() => useBackupSearchSession(open));
+  act(() => result.current.setQuery('old'));
+  await act(() => result.current.submit());
+
+  const cancellation = Promise.withResolvers<void>();
+  runtime.cancel.mockReturnValueOnce(cancellation.promise);
+  let pendingCancel: Promise<void> | undefined;
+  act(() => { pendingCancel = result.current.cancel(); });
+  expect(runtime.cancel).toHaveBeenCalledWith('session-1');
+
+  open = false;
+  rerender();
+  open = true;
+  rerender();
+  const start = Promise.withResolvers<string>();
+  runtime.start.mockReturnValueOnce(start.promise);
+  runtime.next.mockResolvedValueOnce({ match: match('new-result'), skipped_backup_count: 1, status: 'match' });
+  act(() => result.current.setQuery('new'));
+  let pendingSubmit: Promise<void> | undefined;
+  act(() => { pendingSubmit = result.current.submit(); });
+  await waitFor(() => expect(runtime.start).toHaveBeenCalledWith('new'));
+
+  await act(async () => {
+    cancellation.resolve();
+    await pendingCancel;
+  });
+  expect(result.current.status).toBe('starting');
+
+  await act(async () => {
+    start.resolve('session-2');
+    await pendingSubmit;
+  });
+  expect(result.current.current?.node_id).toBe('new-result');
+  expect(result.current.skippedBackupCount).toBe(1);
+  expect(result.current.status).toBe('match');
+});
+
+it('keeps a replacement pending while the old search is being cancelled', async () => {
+  const { result } = renderHook(() => useBackupSearchSession(true));
+  act(() => result.current.setQuery('old'));
+  await act(() => result.current.submit());
+
+  const cancellation = Promise.withResolvers<void>();
+  runtime.cancel.mockReturnValueOnce(cancellation.promise);
+  act(() => result.current.setQuery('new'));
+  let replacement: Promise<void> | undefined;
+  act(() => { replacement = result.current.submit(); });
+  expect(result.current.status).toBe('starting');
+  expect(runtime.start).toHaveBeenCalledExactlyOnceWith('old');
+
+  await act(() => result.current.cancel());
+  await act(async () => {
+    cancellation.resolve();
+    await replacement;
+  });
+  expect(runtime.start).toHaveBeenCalledExactlyOnceWith('old');
+  expect(result.current.status).toBe('cancelled');
+});
