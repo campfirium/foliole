@@ -20,10 +20,10 @@ async function readResults(db: DbPort, kind: SearchKind, query: string) {
 }
 
 export function loadCompanionSearchSnapshot(query: string, signal?: AbortSignal) {
-  // All categories share one committed view and release it when this read ends.
+  // Search keeps one committed view. Opening or copying an article needs a separate read.
   return getIosCompanionDatabaseOwner().readSnapshot(async (db) => ({
     topics: await readResults(db, 'topicSearch', query),
     pdf: await readResults(db, 'pdfPageTextSearch', query),
     external: await readResults(db, 'externalDocumentSearch', query)
-  }), signal);
+  }), signal, { allowInteractiveBorrow: false });
 }

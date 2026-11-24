@@ -128,8 +128,9 @@ export class CapacitorCompanionDatabaseOwner {
     return this.enqueue(() => task(this.requireDb()));
   }
 
-  readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    return this.enqueueSnapshot(task, signal);
+  readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal,
+    options?: { allowInteractiveBorrow: false }): Promise<T> {
+    return this.enqueueSnapshot(task, signal, options?.allowInteractiveBorrow);
   }
 
   async readInteractiveSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -140,10 +141,10 @@ export class CapacitorCompanionDatabaseOwner {
     return this.snapshots!.readInteractive(task, signal);
   }
 
-  private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal, borrowable = true): Promise<T> {
     const registered = await this.enqueue(() => {
       this.requireDb();
-      return Promise.resolve({ result: this.snapshots!.read(task, signal) });
+      return Promise.resolve({ result: this.snapshots!.read(task, signal, borrowable) });
     });
     return registered.result;
   }

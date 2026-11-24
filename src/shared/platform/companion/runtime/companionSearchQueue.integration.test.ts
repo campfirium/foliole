@@ -2,15 +2,18 @@
 import { expect, it, vi } from 'vitest';
 
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { handoffCompanionArticle } from '../reading/companionArticleHandoff';
 
 import { companionNodeSqliteLibrary } from './companionNodeSqlite.testSupport';
 import { loadCompanionSearchSnapshot } from './companionSearchSnapshot';
 
+const clipboard = vi.hoisted(() => vi.fn());
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
   return {
-    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
-    registerPlugin: createCompanionNativeSyncStub
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true,
+      isPluginAvailable: (name: string) => name === 'FolioleCompanionBootstrap' },
+    registerPlugin: () => ({ ...createCompanionNativeSyncStub(), writeClipboardText: clipboard })
   };
 });
 
@@ -36,7 +39,7 @@ function pauseAfterFirstSearchQuery(owner: Owner) {
     }
   });
   owner.read = task => read(wrap(task));
-  owner.readSnapshot = (task, signal) => snapshot(wrap(task), signal);
+  owner.readSnapshot = (task, signal, options) => snapshot(wrap(task), signal, options);
   return { started, resume, queries };
 }
 
@@ -78,5 +81,34 @@ it('abandons subsequent SQL categories when the search is superseded', async () 
     await cancelled;
     expect(paused.queries).toHaveLength(1);
     await expect(loadCompanionSearchSnapshot('beta')).resolves.toMatchObject({ topics: [], pdf: [], external: [] });
+  } finally { await library.dispose(); }
+});
+
+it('copies the committed article body even while a search holds an older snapshot', async () => {
+  const library = companionNodeSqliteLibrary();
+  try {
+    const owner = await library.open();
+    await owner.runWriter(db => db.run(
+      "INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('article','Article','alpha original','now','now')"
+    ), { kind: 'business' });
+    const paused = pauseAfterFirstSearchQuery(owner);
+    const search = loadCompanionSearchSnapshot('alpha');
+    await paused.started;
+    try {
+      await owner.runWriter(db => db.run("UPDATE nodes SET content='alpha committed' WHERE id='article'"), { kind: 'business' });
+      let entered!: () => void;
+      const reading = new Promise<void>(resolve => { entered = resolve; });
+      const read = owner.readInteractiveSnapshot.bind(owner);
+      owner.readInteractiveSnapshot = (task, signal) => {
+        const result = read(task, signal);
+        entered();
+        return result;
+      };
+      const copy = handoffCompanionArticle({ nodeId: 'article', mode: 'copy', flush: async () => {}, isCurrent: () => true });
+      await reading;
+      paused.resume();
+      expect(await copy).toEqual({ status: 'presented' });
+      expect(clipboard).toHaveBeenCalledWith({ text: expect.stringContaining('alpha committed') });
+    } finally { paused.resume(); await search; }
   } finally { await library.dispose(); }
 });
