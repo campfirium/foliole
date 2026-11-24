@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/androidCompanionCoreSchemaStatements';
+import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/desktopSourceSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupRestoreSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
@@ -48,6 +49,7 @@ beforeEach(() => {
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  for (const statement of DESKTOP_SOURCE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
   sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');

@@ -1,3 +1,4 @@
+import { forgetDepartedExternalFoldersWithDbPort } from '../../../../../lib/core/database/externalFolderRetirement';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { beginSyncGroupLocalAdoption, SYNC_GROUP_LOCAL_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../../../../lib/core/sync/syncGroupOverwriteProgress';
@@ -99,6 +100,7 @@ export function leaveCompanionSyncGroupDevice() {
       return;
     }
     const now = new Date().toISOString();
+    await forgetDepartedExternalFoldersWithDbPort(tx, group.group_id, now);
     await tx.run(
       `UPDATE sync_group_devices SET state = 'left', left_at = ?, updated_at = ?
        WHERE group_id = ? AND device_identity_key = ?`,
