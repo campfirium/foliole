@@ -1,4 +1,4 @@
-import { CalendarDays, CircleCheck, FolderTree, ListChecks, Trash2, Upload } from 'lucide-react';
+import { CalendarDays, CircleCheck, FolderTree, ListChecks, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
 
 import type { SuperMemoMigrationStep as SavedStep } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
@@ -11,6 +11,7 @@ const steps = [
   { id: 'load', label: 'loadStep', Icon: Upload },
   { id: 'structure', label: 'structureStep', Icon: FolderTree },
   { id: 'schedule', label: 'scheduleStep', Icon: CalendarDays },
+  { id: 'priority', label: 'priorityStep', Icon: SlidersHorizontal },
   { id: 'grades', label: 'gradesStep', Icon: ListChecks }
 ] as const;
 

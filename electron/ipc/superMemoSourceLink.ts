@@ -16,7 +16,7 @@ import {
 function sourceSelection(link: SavedSuperMemoSource, deletedEntries = link.deletedEntries): RememberedSuperMemoSource {
   const { filePath, collectionDirectory, panel } = link;
   const savedForm = { percent: link.percent, sourceFormat: link.sourceFormat, gradeMap: link.gradeMap,
-    folderChoices: link.folderChoices, comparison: link.comparison };
+    priorityBoundaries: link.priorityBoundaries, folderChoices: link.folderChoices, comparison: link.comparison };
   return { filePath, name: path.basename(filePath), collectionDirectory: collectionDirectory ?? undefined,
     savedForm, snapshot: link.snapshot, ...(deletedEntries ? { deletedEntries } : {}), ...(panel ? { panel } : {}) };
 }
@@ -62,6 +62,7 @@ async function rememberLink(value: unknown, formOnly: boolean, snapshot: unknown
       throw new Error('supermemo_source_changed');
     }
     saveMigrationSource(file, store, { ...previous, percent: link.percent, sourceFormat: link.sourceFormat,
+      ...(link.priorityBoundaries ? { priorityBoundaries: link.priorityBoundaries } : {}),
       ...(link.gradeMap ? { gradeMap: link.gradeMap } : {}), ...(link.folderChoices ? { folderChoices: link.folderChoices } : {}) });
   } else {
     const previousPath = store.activeFilePath;

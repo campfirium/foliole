@@ -7,11 +7,11 @@ import { settingsDialogFooterInset } from '../../../shared/ui/settingsDialogBoun
 import type { SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
 
 const nextStep = {
-  load: 'structure', structure: 'schedule', schedule: 'grades'
+  load: 'structure', structure: 'schedule', schedule: 'priority', priority: 'grades'
 } as const;
 
 const previousStep = {
-  structure: 'load', schedule: 'structure', grades: 'schedule', complete: 'grades'
+  structure: 'load', schedule: 'structure', priority: 'schedule', grades: 'priority', complete: 'grades'
 } as const;
 
 export function SuperMemoDraftActions({ step, busy, importing = false, updating = false, canProceed, hasPreview, referenceMapValid = true, navigate, convert }: {

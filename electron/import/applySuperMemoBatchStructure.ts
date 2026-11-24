@@ -4,10 +4,12 @@ import type { NativeSuperMemoPreview, SuperMemoFolderChoice } from '../../lib/pl
 import { applySuperMemoDirectoryMoves, type SuperMemoDirectoryMove } from './applySuperMemoDirectoryMoves.js';
 import type { SuperMemoContentBatchEntry } from './planSuperMemoCitationUpdates.js';
 import type { SuperMemoFirstReviewReceipt } from './planSuperMemoFirstReviewUpdates.js';
+import type { SuperMemoPriorityReceipt } from './planSuperMemoPriorityUpdates.js';
 import type { writeSuperMemoRows } from './runSuperMemoImport.js';
 import type { SuperMemoSourceEvidence } from './superMemoSourceIdentity.js';
 
-export interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFirstReviewReceipt, 'outcome'> {
+export interface BatchEntry extends SuperMemoContentBatchEntry, Omit<SuperMemoFirstReviewReceipt, 'outcome'>,
+  Omit<SuperMemoPriorityReceipt, 'outcome'> {
   withdrawnAt?: string;
   sourceEvidence?: SuperMemoSourceEvidence;
   sourceChildren?: number[];

@@ -98,6 +98,22 @@ export function DirectoryChanges({ changes }: { changes: NativeSuperMemoDirector
   );
 }
 
+export function PriorityChanges({ changes }: { changes: NonNullable<NativeSuperMemoDirectoryUpdate['priorityChanges']> }) {
+  const t = useTranslation();
+  return <section className="grid gap-2">
+    <h2 className="text-sm font-semibold">{t('desktop.superMemoDrafts.priorityChanges')}</h2>
+    <ul className="divide-y divide-foreground/10 text-sm">
+      {changes.map(change => <li key={change.sourceId} className="grid gap-1 py-2">
+        <span>{change.title}</span>
+        <span className="text-foreground/65">
+          {change.status === 'protected' ? t('desktop.superMemoDrafts.priorityProtected')
+            : t('desktop.superMemoDrafts.directoryMove', { from: `P${change.from}`, to: `P${change.to}` })}
+        </span>
+      </li>)}
+    </ul>
+  </section>;
+}
+
 export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof runRuntimeSuperMemoImport>> }) {
   const t = useTranslation();
   const additions = result.directoryUpdate?.changes.filter(change => change.status === 'add') ?? [];
@@ -106,6 +122,7 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
   const citations = result.directoryUpdate?.citationChanges.filter(change => change.status === 'update').length ?? 0;
   const text = result.directoryUpdate?.textChanges.filter(change => change.status === 'update').length ?? 0;
   const dates = result.directoryUpdate?.firstReviewChanges.filter(change => change.status === 'update' || change.status === 'basis').length ?? 0;
+  const priorities = result.directoryUpdate?.priorityChanges?.filter(change => change.status === 'update').length ?? 0;
   const anchors = result.directoryUpdate?.changes.filter(change => change.restoreAnchor).length ?? 0;
   const withdrawn = result.directoryUpdate?.withdrawnSourceIds.length ?? 0;
   if (!result.directoryUpdate) return <p role="status">{t('desktop.superMemoDrafts.importResult', {
@@ -119,6 +136,7 @@ export function SuperMemoResult({ result }: { result: Awaited<ReturnType<typeof 
     addedParents && t('desktop.superMemoDrafts.directoryAdded', { count: addedParents }),
     addedMaterials && t('desktop.superMemoDrafts.directoryAddedMaterials', { count: addedMaterials }),
     anchors && t('desktop.superMemoDrafts.directoryAnchorsRestored', { count: anchors }),
+    priorities && t('desktop.superMemoDrafts.prioritiesUpdated', { count: priorities }),
     dates && t('desktop.superMemoDrafts.firstReviewUpdated', { count: dates }),
     withdrawn && t('desktop.superMemoDrafts.withdrawn', { count: withdrawn }),
     result.directoryUpdate.sourceMatch?.linkOnConfirm && t('desktop.superMemoDrafts.exportLinked')

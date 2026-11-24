@@ -102,9 +102,10 @@ export async function saveSuperMemoGradeMap(gradeMap: SuperMemoGradeMap) {
 
 export type SuperMemoUpdateTarget = Pick<NativeSuperMemoPreviewArgs, 'targetBatchId' | 'originalElements'>;
 
-export async function previewRuntimeSuperMemoImport(xml: string | SuperMemoSourceDraft['elements'], collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, target?: SuperMemoUpdateTarget, folderChoices: SuperMemoFolderChoice[] = [], updatePercent?: number) {
+export async function previewRuntimeSuperMemoImport(xml: string | SuperMemoSourceDraft['elements'], collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat, target?: SuperMemoUpdateTarget, folderChoices: SuperMemoFolderChoice[] = [], updatePercent?: number, priorityBoundaries?: readonly number[]) {
   const source = typeof xml === 'string' ? parseRuntimeSuperMemoSource(xml, collectionDirectory) : { elements: xml, ...(collectionDirectory ? { collectionDirectory } : {}) };
-  const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat, ...target, folderChoices, ...(updatePercent !== undefined ? { updatePercent } : {}) });
+  const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat, ...target, folderChoices, ...(priorityBoundaries ? { priorityBoundaries } : {}),
+    ...(updatePercent !== undefined ? { updatePercent } : {}) });
   return { preview, elements: source.elements, folderChoices };
 }
 

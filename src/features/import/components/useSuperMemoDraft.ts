@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMemoImportStructure';
+import { DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } from '../../../../lib/core/import/superMemoPriorityMapping';
 import { isValidSuperMemoReferenceMap, type SuperMemoReferenceMap } from '../../../../lib/core/import/superMemoReferenceFields';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationPanel, SuperMemoMigrationSnapshot } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -32,6 +33,7 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
   const [gradeMap, setGradeMap] = useState(initialGrades);
   const [sourceFormat, setSourceFormat] = useState(automaticSourceFormat);
   const [percent, setPercent] = useState(0);
+  const [priorityBoundaries, setPriorityBoundaries] = useState(DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES);
   const [retryAsUpdate, setRetryAsUpdate] = useState(false);
   const [source, setSource] = useState<Source>();
   const [remembered, setRemembered] = useState<RememberedSuperMemoSource>();
@@ -44,7 +46,7 @@ function useDraftState(initialGrades: SuperMemoGradeMap) {
 
   return {
     target, setTarget, draft, setDraft, gradeMap, setGradeMap, sourceFormat, setSourceFormat, percent, setPercent,
-    retryAsUpdate, setRetryAsUpdate, source, setSource, remembered, setRemembered, result, setResult,
+    priorityBoundaries, setPriorityBoundaries, retryAsUpdate, setRetryAsUpdate, source, setSource, remembered, setRemembered, result, setResult,
     busy, setBusy, loadingXml, setLoadingXml, importing, setImporting, error, setError, pending, setPending
   };
 }
@@ -81,13 +83,18 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
     if (nextPreview) setDraft(nextPreview);
   }, setBusy, setError);
 
-  function saveForm(next: Pick<SuperMemoMigrationForm, 'percent' | 'sourceFormat'>) {
+  function saveForm(next: Pick<SuperMemoMigrationForm, 'percent' | 'sourceFormat' | 'priorityBoundaries'>) {
     if (remembered) void rememberDraftSource(remembered, next, true).catch(error => setError(previewFailure(error, 'save')));
   }
 
   function changePercent(next: number) {
     state.setPercent(next);
     saveForm({ sourceFormat, percent: next });
+  }
+
+  function changePriorityBoundaries(next: readonly number[]) {
+    state.setPriorityBoundaries(next);
+    saveForm({ sourceFormat, percent, priorityBoundaries: next });
   }
 
   function changeReferences(referenceMap: SuperMemoReferenceMap) {
@@ -104,7 +111,7 @@ export function useSuperMemoDraft(initialGrades: SuperMemoGradeMap, pickerTitle:
   const { busy, error } = state;
 
   return { draft, percent, setPercent: changePercent, source, selection: remembered, busy, loadingXml: state.loadingXml, retryAsUpdate: state.retryAsUpdate, importing: state.importing, error, setError,
-    result, gradeMap, sourceFormat, referenceMap, changeGrades, changeReferences, changeFolder: (id: number, folder: boolean) => updateDraftFolder(state, id, folder),
+    result, gradeMap, sourceFormat, referenceMap, priorityBoundaries: state.priorityBoundaries, changePriorityBoundaries, changeGrades, changeReferences, changeFolder: (id: number, folder: boolean) => updateDraftFolder(state, id, folder),
     importSource: (ids: number[]) => importDraft(state, ids, selectionActions.savePanel),
     reviewUpdate: () => reviewDraftUpdate(state, selectionActions.savePanel),
     candidates: state.pending?.candidates, ...selectionActions,
@@ -121,7 +128,7 @@ async function prepareImport(state: DraftState) {
   const updatePercent = draft?.preview.directoryUpdate ? state.percent : undefined;
   const nextFormat = draft?.preview.directoryUpdate && !sourceFormat.referenceMap ? mappedSourceFormat : sourceFormat;
   const refreshed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, nextFormat, target,
-    draft?.folderChoices, updatePercent);
+    draft?.folderChoices, updatePercent, state.priorityBoundaries);
   return { current, elements, refreshed, updatePercent, sourceFormat: nextFormat };
 }
 
@@ -154,7 +161,7 @@ function reviewDraftUpdate(state: DraftState, savePanel: SavePanel) {
     if (!update) throw new Error('supermemo_update_changed');
     const internalOnly = update.hasRuleCorrections && !update.sourceMatch && !update.pairedSourceRequired &&
       update.proposedPercent === undefined && !update.changes.length && !update.citationChanges.length &&
-      !update.textChanges.length && !update.firstReviewChanges.length && !update.withdrawals.length;
+      !update.textChanges.length && !update.firstReviewChanges.length && !update.priorityChanges?.length && !update.withdrawals.length;
     if (internalOnly) {
       await writePreparedImport(state, prepared, [], savePanel, update.signature);
       return undefined;
@@ -179,9 +186,9 @@ function importDraft(state: DraftState, withdrawSourceIds: number[], savePanel: 
 
 function persistPreparedImport(state: DraftState, prepared: Awaited<ReturnType<typeof prepareImport>>,
   withdrawSourceIds: number[], updateSignature?: string, ruleCorrectionsOnly?: true) {
-  const { percent, gradeMap, target } = state;
+  const { percent, gradeMap, target, priorityBoundaries } = state;
   const { current, elements, refreshed, updatePercent, sourceFormat } = prepared;
-  return runRuntimeSuperMemoImport({ elements, percent, gradeMap, sourceFormat,
+  return runRuntimeSuperMemoImport({ elements, percent, gradeMap, sourceFormat, priorityBoundaries,
     previewSignature: refreshed.preview.previewSignature!, folderChoices: refreshed.folderChoices,
     ...(current.collectionDirectory ? { collectionDirectory: current.collectionDirectory } : {}),
     ...(updatePercent !== undefined ? { updatePercent } : {}),
@@ -196,7 +203,7 @@ async function writePreparedImport(state: DraftState, prepared: Awaited<ReturnTy
   const result = await persistPreparedImport(state, prepared, withdrawSourceIds, updateSignature);
   setResult(result);
   const { batchId, imported, skipped, unresolvedImages } = result;
-  const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, undefined, refreshed.folderChoices)
+  const completed = await previewRuntimeSuperMemoImport(elements, current.collectionDirectory, gradeMap, sourceFormat, undefined, refreshed.folderChoices, undefined, state.priorityBoundaries)
     .catch(() => undefined);
   await savePanel({ batchId, result: { imported, skipped, unresolvedImages }, step: result.directoryUpdate ? 'grades' : 'complete' },
     completed ? migrationSnapshot(completed) : undefined);

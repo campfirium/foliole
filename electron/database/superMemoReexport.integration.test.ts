@@ -43,6 +43,14 @@ function input(elements: SuperMemoXmlDraftElement[]) {
     rows: describeSuperMemoSource(elements, base.offset, base.scheduler, base.gradeMap) } };
 }
 
+function priorityUpdateInput() {
+  const current = input(newer);
+  const rows = current.preview.rows.map(row => row.id === 2 || row.id === 6
+    ? { ...row, sourcePriorityPercent: 20 } : row);
+  return { ...current, preview: { ...current.preview, rows },
+    priorityBoundaries: [0, 11, 20, 33, 44, 56, 67, 78, 89, 100] };
+}
+
 it.each(['tracked', 'legacy'])('verifies a new export against the %s original batch before updating or adding entries', async (format) => {
   const fixture = await restoreFixture();
   const peer = fixture.peer('source');
@@ -50,8 +58,8 @@ it.each(['tracked', 'legacy'])('verifies a new export against the %s original ba
     connection.driver = createBetterSqlite3Driver(peer.sqlite);
     bindParentOrderWriter(connection.driver, { deviceAnchor: peer.id, libraryPath: peer.file });
   };
-  const row = (title: string) => peer.sqlite.prepare('SELECT id, content, parent_id, deleted_at FROM nodes WHERE title = ?').get(title) as
-    { id: string; content: string; parent_id: string; deleted_at: string | null } | undefined;
+  const row = (title: string) => peer.sqlite.prepare('SELECT id, content, parent_id, deleted_at, priority FROM nodes WHERE title = ?').get(title) as
+    { id: string; content: string; parent_id: string; deleted_at: string | null; priority: number } | undefined;
   const plan = (args: ReturnType<typeof input>, target = {}) =>
     updateSuperMemoDirectories(args.elements, args.preview, undefined, undefined, { ...args, ...target })!;
   try {
@@ -64,7 +72,7 @@ it.each(['tracked', 'legacy'])('verifies a new export against the %s original ba
       FROM json_each(workspace_meta.value, '$.entries') AS entry
     ) WHERE key = ?`).run(`supermemo-import:${batchId}`);
     const target = { targetBatchId: batchId, ...(format === 'legacy' ? { originalElements: original } : {}) };
-    const revised = { ...input(newer), ...target };
+    const revised = { ...priorityUpdateInput(), ...target };
     const wrong = input([card(1, 'Foreign one'), card(2, 'Foreign two'), card(3, 'Foreign three')]);
     const rejected = plan(wrong, target);
     expect(rejected.sourceMatch?.status).toBe('unverified');
@@ -73,16 +81,16 @@ it.each(['tracked', 'legacy'])('verifies a new export against the %s original ba
     expect(comparison.sourceMatch).toMatchObject({ status: 'verified', matched: 3, additions: 1,
       conflicts: [{ sourceId: 3, reason: 'number-conflict' }, { sourceId: 5, reason: 'renumbered' }] });
     expect(comparison.changes).toMatchObject([{ sourceId: 6, status: 'add' }]);
+    expect(comparison.priorityChanges).toEqual([{ sourceId: 2, title: 'Card 2', from: 5, to: 3, status: 'update' }]);
     const originalCard = row('Card 2');
     expect(await confirmSuperMemoDirectoryUpdate(revised, comparison.signature)).toMatchObject({ batchId, imported: 6 });
     peer.reopen();
     bind();
-    expect(row('Card 2')).toEqual({ ...originalCard, content: 'Revised second question' });
+    expect(row('Card 2')).toEqual({ ...originalCard, content: 'Revised second question', priority: 3 });
     expect(row('Card 3')?.content).toBe('Original used number');
     expect(row('Card 4')?.deleted_at).toBeNull();
     expect(row('Card 5')).toBeUndefined();
-    expect(row('Original directory')).toBeDefined();
-    expect(row('Card 6')).toMatchObject({ content: 'A genuinely new question', parent_id: row('Original directory')!.id });
+    expect(row('Card 6')).toMatchObject({ content: 'A genuinely new question', parent_id: row('Original directory')!.id, priority: 3 });
     expect(plan(input(newer))).toMatchObject({ batchId, changes: [], sourceMatch: { status: 'verified', additions: 0 } });
     expect(plan(input(original)).sourceMatch?.status).toBe('older-export');
     await expect(runSuperMemoImport(input(newer))).rejects.toThrow('supermemo_update_preview_required');

@@ -11,12 +11,12 @@ import { restoreSuperMemoDraft } from './superMemoSavedDraft';
 import type { DraftState } from './useSuperMemoDraft';
 
 function useRestorePanel(state: DraftState, initialGrades: SuperMemoGradeMap) {
-  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget } = state;
+  const { setBusy, setError, setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget, setPriorityBoundaries } = state;
   useEffect(() => {
     let active = true;
     void getRuntimeSuperMemoSourceSelection().then(selection => {
       if (!active || !selection) return;
-      restoreSuperMemoDraft({ setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget },
+      restoreSuperMemoDraft({ setRemembered, setPercent, setSourceFormat, setGradeMap, setSource, setDraft, setTarget, setPriorityBoundaries },
         selection, initialGrades);
     }).catch(error => {
       if (active) setError(previewFailure(error, 'selectionRead'));
@@ -24,7 +24,7 @@ function useRestorePanel(state: DraftState, initialGrades: SuperMemoGradeMap) {
       if (active) setBusy(false);
     });
     return () => { active = false; };
-  }, [initialGrades, setBusy, setDraft, setError, setGradeMap, setPercent, setRemembered, setSource, setSourceFormat, setTarget]);
+  }, [initialGrades, setBusy, setDraft, setError, setGradeMap, setPercent, setPriorityBoundaries, setRemembered, setSource, setSourceFormat, setTarget]);
 }
 
 export function useSuperMemoSourceSelection(state: DraftState, initialGrades: SuperMemoGradeMap) {

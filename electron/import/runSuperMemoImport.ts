@@ -6,6 +6,7 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { resolveSuperMemoTextAnchor } from '../../lib/core/import/superMemoAnchorRule.js';
 import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
 import { prepareSuperMemoParentText, type SuperMemoParentText } from '../../lib/core/import/superMemoParentText.js';
+import { mapSuperMemoPriority } from '../../lib/core/import/superMemoPriorityMapping.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import type { SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
@@ -102,6 +103,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
   percent: number; offset: string; now: string; gradeMap: SuperMemoGradeMap; sourceFormat: SuperMemoSourceFormat;
   allRows?: Row[]; existingNodeIds?: ReadonlyMap<number, string>;
   rootNodeId?: string | undefined;
+  priorityBoundaries?: readonly number[];
   existingParentContent?: (nodeId: string) => string | undefined;
 }) {
   const { percent, offset, now, gradeMap, sourceFormat, allRows = prepared.map(({ row }) => row) } = options;
@@ -109,8 +111,6 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
   const nodeIds = allocateImportedNodeIds(prepared, options.existingNodeIds);
   const sourceRows = new Map(allRows.map(row => [row.id, row]));
   const parentBodies = new Map<number, AnchorParent>();
-  const priorities = allRows.filter(row => row.sourceRank != null).sort((a, b) => a.sourceRank! - b.sourceRank!);
-  const priorityById = new Map(priorities.map((row, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
   const preparedById = new Map(prepared.map(entry => [entry.row.id, entry]));
   return orderSuperMemoImportWrites(allRows.map(row => ({ row })), parents).flatMap(({ row }) => {
     const entry = preparedById.get(row.id);
@@ -121,10 +121,12 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
     const nodeId = nodeIds.get(row.id) ?? null;
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
+    const appliedPriority = nodeId && kind !== 'skipped' ? mapSuperMemoPriority(row.sourcePriorityPercent, options.priorityBoundaries) : undefined;
     let importedAnchorLink: string | null = null;
     let importedCitation: SuperMemoCitation | null = null;
     if (nodeId && kind !== 'skipped') {
-      const snapshot: Snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
+      const snapshot: Snapshot = { nodeId, parentNodeId, kind,
+        priority: appliedPriority ?? 5,
         title: row.title || `#${row.id}`, isTitleManual: true, content: '', reveal: null, anchorLink: null,
         position: null, createdAt: now, updatedAt: now };
       const article = row.sourceArticleId ? sourceRows.get(row.sourceArticleId) : undefined;
@@ -152,7 +154,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
       persistElement(snapshot, element, { ...body, content }, { ...answer, content: reveal }, due, offset, row.sourceState, gradeMap);
       if (row.structure?.folderBody) persistFolderBody(snapshot, body);
     }
-    return [{ ...row, sourceExample: undefined, nodeId, importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceEvidence: superMemoSourceEvidence(element),
+    return [{ ...row, sourceExample: undefined, nodeId, ...(appliedPriority !== undefined ? { appliedPriority } : {}), importedParentNodeId: parentNodeId, importedAnchorLink, importedCitation, sourceEvidence: superMemoSourceEvidence(element),
       ...importedTextReceipt(kind, body.content, answer.content), sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] }];
   });
@@ -161,6 +163,7 @@ export function writeSuperMemoRows(prepared: PreparedRows, options: {
 export async function runSuperMemoImport(input: {
   folderChoices?: SuperMemoFolderChoice[] | undefined;
   elements: SuperMemoXmlDraftElement[]; preview: NativeSuperMemoPreview; percent: number;
+  priorityBoundaries?: readonly number[];
   offset: string; collectionDirectory?: string | undefined; gradeMap: SuperMemoGradeMap; scheduler: ReviewSchedulerSettings; sourceFormat: SuperMemoSourceFormat; expectedImages: ReadonlyMap<string, string | null>;
 }) {
   const { driver } = openDatabaseConnection();

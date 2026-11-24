@@ -1,5 +1,6 @@
 import type { NativeSuperMemoPreviewRow } from '../../platform/nativeSuperMemoImportContract.js';
 
+import { superMemoPriorityPercent } from './superMemoPriorityMapping.js';
 import { sourceDay } from './superMemoSchedulePreview.js';
 import type { SuperMemoXmlDraftElement } from './superMemoXmlDraft.js';
 
@@ -14,6 +15,7 @@ export interface SuperMemoCollectionFields {
   referenceId: number | null;
   state: NonNullable<NativeSuperMemoPreviewRow['sourceState']> | null;
   rank: number | null;
+  priorityPercent: number | null;
   children: number[];
 }
 
@@ -125,8 +127,10 @@ export function matchSuperMemoCollection(elements: SuperMemoXmlDraftElement[], t
     const due = relative > 0 && relative < 30_000
       ? new Date(base + relative * DAY_MS).toISOString().slice(0, 10) : null;
     const offset = (id - 1) * 118;
+    const rank = ranks.get(id);
     return [id, { titleId: binary.getUint32(offset + 2, true), conceptGroupId: binary.getUint32(offset + 65, true) || null,
       articleId: binary.getUint32(offset + 93, true) || null,
-      referenceId: binary.getUint16(offset + 44, true) || null, children: childrenOf(tree, id, children), due, state, rank: ranks.get(id) ?? null }];
+      referenceId: binary.getUint16(offset + 44, true) || null, children: childrenOf(tree, id, children), due, state, rank: rank ?? null,
+      priorityPercent: superMemoPriorityPercent(rank, ranks.size) }];
   }));
 }

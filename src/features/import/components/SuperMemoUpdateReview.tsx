@@ -1,4 +1,4 @@
-import { CalendarDays, FileText, FolderTree, Link2, ListChecks, ScanSearch, Trash2 } from 'lucide-react';
+import { CalendarDays, FileText, FolderTree, Link2, ListChecks, ScanSearch, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import type { NativeSuperMemoDirectoryUpdate } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -9,7 +9,7 @@ import {
 } from '../../../shared/ui';
 import { settingsDialogGrid, settingsDialogPane, settingsDialogPaneBody } from '../../../shared/ui/settingsDialogBounds';
 
-import { CitationChanges, DirectoryChanges, FirstReviewChanges, SourceMatch, TextChanges } from './SuperMemoDirectoryUpdate';
+import { CitationChanges, DirectoryChanges, FirstReviewChanges, PriorityChanges, SourceMatch, TextChanges } from './SuperMemoDirectoryUpdate';
 import { SuperMemoWithdrawals } from './SuperMemoWithdrawals';
 
 const reviewCategories = [
@@ -18,6 +18,7 @@ const reviewCategories = [
   { id: 'text', label: 'textChanges', Icon: FileText },
   { id: 'citation', label: 'citationChanges', Icon: Link2 },
   { id: 'schedule', label: 'firstReviewChanges', Icon: CalendarDays },
+  { id: 'priority', label: 'priorityChanges', Icon: SlidersHorizontal },
   { id: 'withdrawals', label: 'withdrawals', Icon: Trash2 },
   { id: 'summary', label: 'updateSummary', Icon: ListChecks }
 ] as const;
@@ -29,6 +30,7 @@ function canApplyUpdate(update: NativeSuperMemoDirectoryUpdate, selected: number
     update.changes.some(change => change.status === 'move' || change.status === 'anchor' || change.status === 'add') ||
     update.citationChanges.some(change => change.status === 'update') ||
     update.textChanges.some(change => change.status === 'update') ||
+    update.priorityChanges?.some(change => change.status === 'update') ||
     update.firstReviewChanges.some(change => change.status === 'update' || change.status === 'basis')
   );
 }
@@ -41,6 +43,7 @@ function availableCategories(update: NativeSuperMemoDirectoryUpdate) {
     text: update.textChanges.length > 0,
     citation: update.citationChanges.length > 0,
     schedule: update.firstReviewChanges.length > 0 || update.proposedPercent !== undefined,
+    priority: Boolean(update.priorityChanges?.length),
     withdrawals: update.withdrawals.length > 0,
     summary: update.pairedSourceRequired
   };
@@ -64,6 +67,7 @@ function ReviewDetails({ category, update, busy, selected, onSelect }: {
       </p> : null}
       <FirstReviewChanges changes={update.firstReviewChanges} showHeading={false} />
     </section>;
+    case 'priority': return <PriorityChanges changes={update.priorityChanges ?? []} />;
     case 'withdrawals': return <SuperMemoWithdrawals candidates={update.withdrawals} selected={selected} disabled={busy} onChange={onSelect} />;
     case 'summary': return <p className="text-sm">{t(update.pairedSourceRequired
       ? 'desktop.superMemoDrafts.updateNeedsCollection' : 'desktop.superMemoDrafts.noBatchChanges')}</p>;
@@ -81,7 +85,7 @@ export function SuperMemoUpdateReview({ update, busy, onClose, onApply }: {
   const [selected, setSelected] = useState<number[]>([]);
   const counts: Partial<Record<Category, number>> = {
     directory: update.changes.length, text: update.textChanges.length, citation: update.citationChanges.length,
-    schedule: update.firstReviewChanges.length, withdrawals: update.withdrawals.length
+    schedule: update.firstReviewChanges.length, priority: update.priorityChanges?.length ?? 0, withdrawals: update.withdrawals.length
   };
   return <AppDialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
     <AppDialogPortal>

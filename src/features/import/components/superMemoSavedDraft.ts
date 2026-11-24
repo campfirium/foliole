@@ -1,4 +1,5 @@
 import { applySuperMemoFolderDisplay, defaultSuperMemoFolder } from '../../../../lib/core/import/superMemoImportStructure';
+import { DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } from '../../../../lib/core/import/superMemoPriorityMapping';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrationSnapshot, SuperMemoSourceLink, SuperMemoSourceSelection } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -9,11 +10,11 @@ import type { DraftState } from './useSuperMemoDraft';
 export const mappedSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, referenceMap: {} };
 
 type DraftSetters = Pick<DraftState, 'setRemembered' | 'setPercent' | 'setSourceFormat' | 'setGradeMap' |
-  'setTarget' | 'setSource' | 'setDraft'>;
+  'setTarget' | 'setSource' | 'setDraft' | 'setPriorityBoundaries'>;
 
 export function restoreSuperMemoDraft(state: DraftSetters, selection: RememberedSuperMemoSource, initialGrades: SuperMemoGradeMap) {
   const { elements, preview } = selection.snapshot;
-  const { percent, sourceFormat, gradeMap, comparison, folderChoices = [] } = selection.savedForm;
+  const { percent, sourceFormat, gradeMap, priorityBoundaries, comparison, folderChoices = [] } = selection.savedForm;
   const overrides = new Map(folderChoices.map(choice => [choice.id, choice.folder]));
   const parents = new Set(elements.filter(element => element.children?.length).map(element => element.id));
   const rows = preview.directoryUpdate ? preview.rows : preview.rows.map(row =>
@@ -22,6 +23,7 @@ export function restoreSuperMemoDraft(state: DraftSetters, selection: Remembered
 
   state.setRemembered(selection);
   state.setPercent(percent);
+  state.setPriorityBoundaries(priorityBoundaries ?? DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES);
   state.setSourceFormat(preview.directoryUpdate || sourceFormat.referenceMap ? sourceFormat : mappedSourceFormat);
   state.setGradeMap(gradeMap ?? initialGrades);
   state.setTarget(comparison

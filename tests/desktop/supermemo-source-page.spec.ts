@@ -22,6 +22,8 @@ test('combines grade and reference settings, remembers mappings, and writes the 
   await loadSource(desktopApp, dialog, testInfo.outputPath('XmlOnly'), xml);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('button', { name: /^(Next|下一步)$/ }).click();
+  await expect(dialog.getByRole('button', { name: /^(Priority mapping|优先级映射)$/ })).toHaveAttribute('aria-current', 'step');
+  await dialog.getByRole('button', { name: /^(Next|下一步)$/ }).click();
   await expect(dialog.getByRole('button', { name: gradesStep })).toHaveAttribute('aria-current', 'step');
   await expect(dialog.getByRole('button', { name: confirmStep })).toHaveCount(0);
   const preview = dialog.getByRole('article', { name: /^(Preview|预览)$/ });

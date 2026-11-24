@@ -17,6 +17,11 @@ it('navigates backward and forward and keeps conversion as an explicit action', 
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
   expect(navigate).toHaveBeenLastCalledWith('structure');
   fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(navigate).toHaveBeenLastCalledWith('priority');
+  rerender(<SuperMemoDraftActions {...props} step="priority" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  expect(navigate).toHaveBeenLastCalledWith('schedule');
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
   expect(navigate).toHaveBeenLastCalledWith('grades');
 
   rerender(<SuperMemoDraftActions {...props} step="grades" referenceMapValid={false} />);
@@ -27,7 +32,7 @@ it('navigates backward and forward and keeps conversion as an explicit action', 
   expect(convert).toHaveBeenCalledOnce();
 
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-  expect(navigate).toHaveBeenLastCalledWith('schedule');
+  expect(navigate).toHaveBeenLastCalledWith('priority');
 
   rerender(<SuperMemoDraftActions {...props} step="structure" busy />);
   expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();

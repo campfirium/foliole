@@ -7,6 +7,7 @@ import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { SuperMemoImportCompletePage } from './SuperMemoImportCompletePage';
 import { SuperMemoLoadPage } from './SuperMemoLoadPage';
 import { superMemoMigrationStepLabel, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
+import { SuperMemoPriorityPage } from './SuperMemoPriorityPage';
 import { SuperMemoReferenceSettings } from './SuperMemoReferenceSettings';
 import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
 import { SuperMemoStructurePage } from './SuperMemoStructurePage';
@@ -31,7 +32,7 @@ export function SuperMemoMigrationContent({ model, current, navigation, sourceCo
       {current === 'load' ? <SuperMemoLoadPage {...{ model, onLoad, onLoadNew }} /> : null}
       {current === 'complete' ? <SuperMemoImportCompletePage /> : null}
       {current === 'deleted' ? <SuperMemoDeletedPage /> : null}
-      {current !== 'load' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
+      {current !== 'load' && current !== 'priority' && !preview && !busy && !result && !selection ? <p>{t('desktop.superMemoDrafts.description')}</p> : null}
       {current === 'structure' && draft ? (
         <>
           <p className="shrink-0 text-sm text-foreground/65">{t('desktop.superMemoDrafts.structureReview')}</p>
@@ -40,6 +41,8 @@ export function SuperMemoMigrationContent({ model, current, navigation, sourceCo
             navigation={navigation} busy={busy} onChange={model.changeFolder} />
         </>
       ) : null}
+      {current === 'priority' ? <SuperMemoPriorityPage boundaries={model.priorityBoundaries}
+        paired={preview?.pairedCollection === true} busy={busy} onChange={model.changePriorityBoundaries} /> : null}
       {current === 'grades' && selection ? (
         <div className="grid min-w-0 gap-4 text-sm [@media(min-height:880px)]:gap-5">
           <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />

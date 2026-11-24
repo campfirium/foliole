@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { applySuperMemoStructure } from '../../lib/core/import/superMemoImportStructure.js';
+import { DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } from '../../lib/core/import/superMemoPriorityMapping.js';
 import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, formatSuperMemoSource } from '../../lib/core/import/superMemoSourceFormatting.js';
 import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
@@ -19,6 +20,7 @@ import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { isImportAccessDenied } from './importAccessError.js';
 import { readSuperMemoCollection } from './readSuperMemoCollection.js';
+import { superMemoPriorityBoundariesSchema } from './superMemoPrioritySchema.js';
 import { superMemoSourceFormatSchema } from './superMemoSourceFormatSchema.js';
 
 const elementSchema = z.object({
@@ -49,6 +51,7 @@ const previewSchema = z.object({ folderChoices: z.array(z.object({ id: z.number(
   originalElements: z.array(elementSchema).optional(),
   withdrawSourceIds: z.array(z.number().int().positive()).optional(),
   updatePercent: z.number().int().min(0).max(100).optional(),
+  priorityBoundaries: superMemoPriorityBoundariesSchema.optional(),
   ruleCorrectionsOnly: z.literal(true).optional(),
   updateSignature: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   gradeMap: z.array(grade).length(6).optional(), previewSignature: z.string().regex(/^[a-f0-9]{64}$/).optional() });
@@ -96,7 +99,7 @@ function handleSuperMemoAdjustment(args: unknown, previewOnly: boolean, afterWri
 
 function getSuperMemoPreviewSignature(
   preview: NativeSuperMemoPreview,
-  evidence: { elements: unknown; collectionDirectory: string | undefined; offset: string; scheduler: unknown; gradeMap: unknown; images: unknown }
+  evidence: { elements: unknown; collectionDirectory: string | undefined; offset: string; scheduler: unknown; gradeMap: unknown; images: unknown; priorityBoundaries: readonly number[] }
 ) {
   // Placement is a conversion choice; its generated sample does not identify the source.
   const rows = preview.rows.map(row => ({ ...row, sourceExample: undefined, sourceTitle: undefined }));
@@ -135,7 +138,7 @@ async function buildSuperMemoPreview(
         sourceConceptGroupId: paired.conceptGroupId,
         sourceConceptFolderId: paired.conceptGroupId ? collection?.groups.get(paired.conceptGroupId) ?? null : null,
         sourceArticleId: paired.articleId, sourceReferenceId: paired.referenceId,
-        sourceRank: paired.rank, sourceChildren: paired.children, ...(sourceTitle ? { sourceTitle } : {}),
+        sourcePriorityPercent: paired.priorityPercent, sourceChildren: paired.children, ...(sourceTitle ? { sourceTitle } : {}),
         ...(reset ? { recalculatedDue: null, replayedCount: 0, historyNeedsReview: false } : {}) };
     })
   };
@@ -151,7 +154,9 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
   const write = command === NATIVE_COMMANDS.runSuperMemoImport;
   if (!write && command !== NATIVE_COMMANDS.previewSuperMemoImport) return undefined;
   const percent = write ? z.object({ percent: z.number().int().min(0).max(100) }).parse(args).percent : 0;
-  const { elements, folderChoices, collectionDirectory: selectedDirectory, gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP, previewSignature, updateSignature, updatePercent, ruleCorrectionsOnly, withdrawSourceIds, targetBatchId, originalElements, sourceFormat = DEFAULT_SUPER_MEMO_SOURCE_FORMAT } = previewSchema.parse(args);
+  const { elements, folderChoices, collectionDirectory: selectedDirectory, gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP,
+    previewSignature, updateSignature, updatePercent, ruleCorrectionsOnly, withdrawSourceIds, targetBatchId, originalElements,
+    sourceFormat = DEFAULT_SUPER_MEMO_SOURCE_FORMAT, priorityBoundaries = DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } = previewSchema.parse(args);
   const seen = new Set<number>();
   for (const { id, parentId } of elements) {
     if (seen.has(id) || (parentId !== null && !seen.has(parentId))) throw new Error('invalid_supermemo_element_tree');
@@ -169,7 +174,7 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
     const saved = resolveSuperMemoBatch(openDatabaseConnection().driver, elements, preview, target);
     const choices = saved ? saved.batch.folderChoices : folderChoices;
     preview.previewSignature = getSuperMemoPreviewSignature(preview,
-      { elements, collectionDirectory, offset, scheduler, gradeMap, images: [...images] });
+      { elements, collectionDirectory, offset, scheduler, gradeMap, images: [...images], priorityBoundaries });
     if (choices) {
       if (write && !previewSignature) throw new Error('supermemo_preview_required');
       const authorizedChoices = saved?.reexport ? choices.filter(choice => saved.reexport!.verified.has(choice.id)) : choices;
@@ -179,7 +184,7 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
       throw new Error('supermemo_preview_changed');
     }
     const input = { elements, preview, percent, offset, collectionDirectory, gradeMap, scheduler, sourceFormat, expectedImages: images,
-      folderChoices: choices, ...(updatePercent !== undefined ? { updatePercent } : {}), ...target };
+      folderChoices: choices, priorityBoundaries, ...(updatePercent !== undefined ? { updatePercent } : {}), ...target };
     if (!write) {
       const update = updateSuperMemoDirectories(elements, preview, undefined, undefined, input);
       return update ? { ...preview, directoryUpdate: update } : preview;

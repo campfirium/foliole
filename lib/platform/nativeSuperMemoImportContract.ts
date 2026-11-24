@@ -14,6 +14,7 @@ export interface NativeSuperMemoPreviewArgs {
   originalElements?: SuperMemoXmlDraftElement[];
   folderChoices?: SuperMemoFolderChoice[];
   updatePercent?: number;
+  priorityBoundaries?: readonly number[];
 }
 
 export interface NativeSuperMemoPreviewRow {
@@ -35,7 +36,7 @@ export interface NativeSuperMemoPreviewRow {
   remoteImages?: number;
   skippedAudio?: number;
   sourceState?: 'pending' | 'active' | 'dismissed' | null;
-  sourceRank?: number | null;
+  sourcePriorityPercent?: number | null;
   sourceConceptGroupId?: number | null;
   sourceConceptFolderId?: number | null;
   sourceArticleId?: number | null;
@@ -59,11 +60,12 @@ export interface SuperMemoMigrationForm {
   percent: number;
   sourceFormat: SuperMemoSourceFormat;
   gradeMap?: SuperMemoGradeMap | undefined;
+  priorityBoundaries?: readonly number[] | undefined;
   folderChoices?: SuperMemoFolderChoice[] | undefined;
   comparison?: { batchId: string; originalFilePath?: string | undefined } | undefined;
 }
 
-export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'grades' | 'complete' | 'deleted' | 'source' | 'confirm';
+export type SuperMemoMigrationStep = 'load' | 'structure' | 'schedule' | 'priority' | 'grades' | 'complete' | 'deleted' | 'source' | 'confirm';
 
 export interface SuperMemoMigrationPanel {
   step?: SuperMemoMigrationStep | undefined;
@@ -151,6 +153,14 @@ export interface NativeSuperMemoSourceMatch {
   conflicts: Array<{ sourceId: number; title: string; reason: 'number-conflict' | 'renumbered' }>;
 }
 
+export interface NativeSuperMemoPriorityChange {
+  sourceId: number;
+  title: string;
+  from: number | null;
+  to: number;
+  status: 'update' | 'protected';
+}
+
 export interface NativeSuperMemoDirectoryUpdate {
   batchId: string;
   signature: string;
@@ -163,6 +173,7 @@ export interface NativeSuperMemoDirectoryUpdate {
   textChanges: NativeSuperMemoTextChange[];
   hasRuleCorrections?: true;
   firstReviewChanges: NativeSuperMemoFirstReviewChange[];
+  priorityChanges?: NativeSuperMemoPriorityChange[];
   withdrawals: NativeSuperMemoWithdrawal[];
   withdrawnSourceIds: number[];
   changes: Array<{

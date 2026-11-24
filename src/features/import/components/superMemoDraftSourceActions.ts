@@ -1,3 +1,4 @@
+import { DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } from '../../../../lib/core/import/superMemoPriorityMapping';
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import type { NativeSuperMemoSource, SuperMemoMigrationForm } from '../../../../lib/platform/nativeSuperMemoImportContract';
@@ -23,7 +24,7 @@ function comparisonForm(target: DraftTarget | undefined) {
 }
 
 function createCandidateLoader(state: DraftState, initialGrades: SuperMemoGradeMap) {
-  const { setGradeMap, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError, setRemembered } = state;
+  const { setGradeMap, setTarget, setSourceFormat, setDraft, setSource, setPercent, setPending, setError, setRemembered, setPriorityBoundaries } = state;
   async function prepare(selected: Source, nextTarget: DraftTarget | undefined) {
     const sameSource = Boolean(nextTarget || selected.filePath === state.remembered?.filePath);
     const prior = sameSource ? state.sourceFormat : mappedSourceFormat;
@@ -47,7 +48,9 @@ function createCandidateLoader(state: DraftState, initialGrades: SuperMemoGradeM
     const update = loaded.preview.directoryUpdate;
     const sameExport = filePath === state.remembered?.filePath;
     const percent = nextTarget || sameExport ? state.percent : selected.savedForm?.percent ?? update?.savedPercent ?? 0;
-    const savedForm = { percent, sourceFormat, gradeMap,
+    const priorityBoundaries = nextTarget || sameExport
+      ? state.priorityBoundaries : selected.savedForm?.priorityBoundaries ?? DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES;
+    const savedForm = { percent, sourceFormat, gradeMap, priorityBoundaries,
       folderChoices: loaded.folderChoices, ...comparisonForm(nextTarget) };
     const panel = { ...(sameExport ? state.remembered?.panel : undefined),
       step: 'structure' as const,
@@ -61,6 +64,7 @@ function createCandidateLoader(state: DraftState, initialGrades: SuperMemoGradeM
     setDraft({ elements: loaded.elements, preview: loaded.preview, folderChoices: loaded.folderChoices });
     setSource({ ...selected, xml: '', draft: { elements: loaded.elements, originalElements: nextTarget?.originalElements } });
     setPercent(percent);
+    setPriorityBoundaries(priorityBoundaries);
     setPending(undefined);
     setError(false);
   }
@@ -210,6 +214,6 @@ export function createSourceActions(state: DraftState, pickerTitle: string, init
 
 function pairCollection(state: DraftState, recover: (choice: boolean, pending: Pending) => Promise<void>) {
   if (!state.source || !state.draft) return;
-  const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat, folderChoices: state.draft.folderChoices };
+  const savedForm = { percent: state.percent, sourceFormat: state.sourceFormat, priorityBoundaries: state.priorityBoundaries, folderChoices: state.draft.folderChoices };
   return recover(true, { selected: { ...state.source, savedForm }, target: state.target });
 }
