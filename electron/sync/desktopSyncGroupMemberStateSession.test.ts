@@ -220,3 +220,41 @@ it('collects from a restarted runtime at the same endpoint without duplicate act
   await emit('lost', service('old'));
   expect(loadDesktopSyncGroupRoutes(group.group_id)).toHaveLength(1);
 });
+
+it.each(['error', 'restart'] as const)('retires a published endpoint on discovery %s until it is seen again', async (reset) => {
+  await emit('found', service('old'));
+  expect(loadDesktopSyncGroupRoutes(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.10:38641');
+
+  if (reset === 'error') state.callbacks?.onError(new Error('Discovery interrupted'));
+  else state.callbacks?.onStarted();
+  await emit('lost', service('old'));
+  expect(loadDesktopSyncGroupMemberEndpoints(group.group_id)).toEqual([]);
+  expect(loadDesktopSyncGroupRoutes(group.group_id)).toEqual([]);
+
+  await emit('found', { ...service('new'), addresses: ['192.0.2.20'] });
+  expect(loadDesktopSyncGroupMemberEndpoints(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.20:38641');
+  expect(loadDesktopSyncGroupRoutes(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.20:38641');
+});
+
+it.each(['error', 'restart'] as const)('retires a manually discovered route on discovery %s', async (reset) => {
+  const route = saveDesktopSyncGroupRoute({
+    endpoint_url: 'http://192.0.2.10:38641', group_id: group.group_id, local_device_id: 'mac',
+    peer_device_id: 'windows', peer_device_name: 'Windows', peer_platform: 'Windows 11'
+  });
+  const otherGroupRoute = saveDesktopSyncGroupRoute({
+    ...route, group_id: 'other-group', peer_device_id: 'another-window'
+  });
+  const phoneRoute = saveDesktopSyncGroupRoute({ ...route, peer_device_id: 'phone', peer_platform: 'ios-capacitor' });
+  session.stop();
+  session = startDesktopSyncGroupMemberStateSession(group, vi.fn(), activate, removeDesktopSyncGroupRoute);
+  expect(loadDesktopSyncGroupMemberEndpoints(group.group_id)).toEqual([]);
+  expect(loadDesktopSyncGroupRoutes(group.group_id)).toEqual([route, phoneRoute]);
+
+  if (reset === 'error') state.callbacks?.onError(new Error('Discovery interrupted'));
+  else state.callbacks?.onStarted();
+  expect(loadDesktopSyncGroupRoutes(group.group_id)).toEqual([phoneRoute]);
+  expect(loadDesktopSyncGroupRoutes('other-group')).toEqual([otherGroupRoute]);
+
+  await emit('found', { ...service('new'), addresses: ['192.0.2.20'] });
+  expect(loadDesktopSyncGroupRoutes(group.group_id)).toEqual([phoneRoute, { ...route, endpoint_url: 'http://192.0.2.20:38641' }]);
+});

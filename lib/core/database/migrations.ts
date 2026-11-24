@@ -3,6 +3,7 @@ import { readUserVersion, setUserVersion } from './databaseUserVersion.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from './desktopFreshSchemaStatements.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
 import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
+import { registerStoredImportLocatorKey } from './storedImportLocatorSchema.js';
 
 export { DATABASE_SCHEMA_VERSION } from './databaseSchemaVersion.js';
 
@@ -25,6 +26,7 @@ export function initializeDatabaseSchema(
   sqlite: DatabaseMigrationTarget,
   options: InitializeDatabaseSchemaOptions = {}
 ) {
+  registerStoredImportLocatorKey(sqlite);
   const currentVersion = readUserVersion(sqlite);
   if (currentVersion === DATABASE_SCHEMA_VERSION && !options.beforeVersionCommit) {
     return;

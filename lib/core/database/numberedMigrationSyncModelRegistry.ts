@@ -36,6 +36,7 @@ import { retireParentOrderProjection } from './retireParentOrderProjectionMigrat
 import { LEGACY_REVIEW_CALENDAR_INDEX } from './reviewCalendarLegacyIndex.js';
 import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
+import { migrateStoredImportLocatorKeys } from './storedImportLocatorSchema.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 import { migrateWatchedHistoryPathIndex } from './watchedHistoryPathIndex.js';
@@ -103,5 +104,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 198, migrate: migratePdfAttachmentNodeIndex },
   { version: 199, migrate: migrateWatchedHistoryPathIndex },
-  { version: 200, migrate: db => db.exec(LEGACY_REVIEW_CALENDAR_INDEX) }
+  { version: 200, migrate: db => db.exec(LEGACY_REVIEW_CALENDAR_INDEX) },
+  { version: 201, migrate: migrateStoredImportLocatorKeys }
 ];

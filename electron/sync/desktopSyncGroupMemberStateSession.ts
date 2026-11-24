@@ -29,20 +29,31 @@ export function startDesktopSyncGroupMemberStateSession(
   onDiscoveryState: (error: Error | null) => void = () => undefined
 ): RecoverableDesktopDnsSdSession {
   let active = true;
+  let started = false;
   const activatedMembers = new Map<string, string>();
+  const forgetMember = (deviceId: string) => {
+    endpoints.delete(deviceId);
+    activatedMembers.delete(deviceId);
+    onMemberLost(deviceId);
+  };
   const discovery = createDesktopSyncGroupMemberDiscovery(
     (observation, isCurrent) => probeAndExchange(group, observation,
       activatedMembers, onChanged, onMember, () => active && isCurrent(), onDiscoveryState),
-    (deviceId) => {
-      endpoints.delete(deviceId);
-      activatedMembers.delete(deviceId);
-      onMemberLost(deviceId);
-    }
+    forgetMember
   );
+  const resetDiscovery = () => {
+    discovery.reset();
+    const routes = loadDesktopSyncGroupRoutes(group.group_id).filter(peer => !isMobileSyncPlatform(peer.peer_platform));
+    const peers = [...loadDesktopSyncGroupMemberEndpoints(group.group_id), ...routes];
+    const deviceIds = new Set(peers.map(peer => peer.peer_device_id));
+    for (const deviceId of deviceIds) forgetMember(deviceId);
+  };
   const runtime = startRecoverableDesktopDnsSdSession({
-    onError: (error) => { discovery.reset(); onDiscoveryState(error); },
+    onError: (error) => { resetDiscovery(); onDiscoveryState(error); },
     onStarted: () => {
-      discovery.reset();
+      // The initial join may already have a route before the first browse starts.
+      if (started) resetDiscovery();
+      started = true;
       onDiscoveryState(null);
     },
     onService: ({ kind, service }) => {
