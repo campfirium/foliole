@@ -3,12 +3,14 @@ import type {
   ExportBookContract,
   ReaderDocumentContract
 } from '../../lib/core/readwise/readwiseApiContract.js';
+import type { ReadwiseApiIndexScope } from '../import/readwiseApiCandidateTypes.js';
 
 import { openDatabaseConnection } from './connection.js';
 
 export const INDEX_EXPORT_KIND = 'candidate-export-v3';
 export const INDEX_READER_KIND = 'candidate-reader-v3';
 const TAG_REPLAY_KIND = 'candidate-tag-replay-v3';
+const CATEGORY_TAG_KIND = 'candidate-category-tag-v3';
 export const ANNOTATION_LEDGER_KIND = 'readwise-annotation-ledger-v3';
 
 export interface ReadwiseAnnotationLedgerFact {
@@ -126,29 +128,35 @@ export function loadReadwiseApiAnnotationLedgerDocuments(
   return [...highlights, ...notes].map((item) => normalizeLedgerDocument(item));
 }
 
-export function saveReadwiseApiTagReplayMatches(driver: DatabaseDriver, connectionRef: string, documentIds: string[]) {
+export function saveReadwiseApiTagMatches(
+  driver: DatabaseDriver, connectionRef: string, scope: ReadwiseApiIndexScope, documentIds: string[]
+) {
+  const kind = scope === 'reader:tag' ? TAG_REPLAY_KIND : CATEGORY_TAG_KIND;
   const insert = driver.prepare(upsertSql());
-  for (const documentId of documentIds) insert.run([connectionRef, TAG_REPLAY_KIND, documentId, 'true']);
+  const evidence = JSON.stringify(scope);
+  for (const documentId of documentIds) insert.run([connectionRef, kind, documentId, evidence]);
 }
 
-export function loadReadwiseApiTagReplayMatches(connectionRef: string) {
+export function loadReadwiseApiTagMatchesAfterReplay(connectionRef: string) {
   const rows = openDatabaseConnection().driver.queryAll<{ remote_id: string }>(
-    'SELECT remote_id FROM readwise_api_import_stage WHERE connection_ref = ? AND record_kind = ?',
-    [connectionRef, TAG_REPLAY_KIND]
+    'SELECT remote_id FROM readwise_api_import_stage WHERE connection_ref = ? AND record_kind IN (?, ?)',
+    [connectionRef, TAG_REPLAY_KIND, CATEGORY_TAG_KIND]
   );
   return new Set(rows.map(row => row.remote_id));
 }
 
-export function clearReadwiseApiTagReplayMatches(driver: DatabaseDriver, connectionRef: string) {
-  driver.execute('DELETE FROM readwise_api_import_stage WHERE connection_ref = ? AND record_kind = ?',
-    [connectionRef, TAG_REPLAY_KIND]);
+export function clearReadwiseApiScopeTagMatches(driver: DatabaseDriver, connectionRef: string, scope: ReadwiseApiIndexScope) {
+  driver.execute(`DELETE FROM readwise_api_import_stage WHERE connection_ref = ? AND record_kind = ?
+    AND (? IS NULL OR payload_json = ?)`, scope === 'reader:tag'
+    ? [connectionRef, TAG_REPLAY_KIND, null, null]
+    : [connectionRef, CATEGORY_TAG_KIND, JSON.stringify(scope), JSON.stringify(scope)]);
 }
 
 export function clearReadwiseApiTransientIndex(connectionRef: string) {
   openDatabaseConnection().driver.execute(
     `DELETE FROM readwise_api_import_stage
-     WHERE connection_ref = ? AND record_kind IN (?, ?, ?)`,
-    [connectionRef, INDEX_READER_KIND, INDEX_EXPORT_KIND, TAG_REPLAY_KIND]
+     WHERE connection_ref = ? AND record_kind IN (?, ?, ?, ?)`,
+    [connectionRef, INDEX_READER_KIND, INDEX_EXPORT_KIND, TAG_REPLAY_KIND, CATEGORY_TAG_KIND]
   );
 }
 

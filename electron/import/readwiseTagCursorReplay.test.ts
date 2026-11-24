@@ -2,8 +2,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { openNodeSqliteFixture } from '../database/nodeSqliteFixture.testSupport.js';
+import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
+import { buildReadwiseApiCandidateIndex } from './readwiseApiCandidateIndex.js';
 import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { apiSettings, readerDocument, response } from './readwiseApiImportRun.testSupport.js';
 
@@ -66,4 +68,38 @@ it('imports only currently tagged articles after Reader rejects the saved tag cu
   expect(cursors.slice(-2)).toEqual(['expired', null]);
   expect(loadReadwiseApiImportSource(connectionRef, 'still-tagged')?.body).toContain('Body still-tagged');
   expect(result).toMatchObject({ committedCount: 1, remainingCount: 0, totalCount: 1 });
+});
+
+it('keeps evidence from a full category scan when the incremental tag cursor must restart', async () => {
+  await runReadwiseApiCandidatePipeline({
+    assertEligible: () => undefined, connectionRef, settings,
+    dependencies: { fetchImpl: async () => response([]), minIntervalMs: 0 }
+  });
+
+  const policy = { ...settings.readwiseAutoImportPolicy, articleWithoutHighlights: 'external' as const };
+  let interrupted = true;
+  const fetchImpl: typeof fetch = async input => {
+    const url = new URL(String(input));
+    if (url.searchParams.get('category') === 'article') {
+      expect(url.searchParams.has('updatedAfter')).toBe(false);
+      return response([tagged('older-tagged-article')]);
+    }
+    if (!url.searchParams.has('tag')) return response([]);
+    expect(url.searchParams.has('updatedAfter')).toBe(true);
+    const cursor = url.searchParams.get('pageCursor');
+    if (interrupted) {
+      if (cursor) throw new Error('tag scan interrupted');
+      return response([], 'expired');
+    }
+    return cursor ? new Response('{}', { status: 400 }) : response([]);
+  };
+  const index = () => buildReadwiseApiCandidateIndex({ connectionRef, dependencies: { fetchImpl, minIntervalMs: 0 },
+    settings: { ...settings, readwiseAutoImportPolicy: policy } });
+  await expect(index()).rejects.toThrow('tag scan interrupted');
+  interrupted = false;
+  await index();
+
+  const candidates = loadReadwiseApiCandidates(connectionRef);
+  expect(candidates.find(candidate => candidate.documentId === 'older-tagged-article'))
+    .toMatchObject({ destination: 'inbox', matchedImportTag: true });
 });

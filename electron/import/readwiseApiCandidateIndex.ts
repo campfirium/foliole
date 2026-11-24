@@ -11,10 +11,10 @@ import {
   loadReadwiseApiAnnotationLedger,
   loadReadwiseApiExportIndex,
   loadReadwiseApiReaderIndex,
-  loadReadwiseApiTagReplayMatches,
+  loadReadwiseApiTagMatchesAfterReplay,
   saveReadwiseApiExportIndexPage,
   saveReadwiseApiReaderIndexPage,
-  saveReadwiseApiTagReplayMatches
+  saveReadwiseApiTagMatches
 } from '../database/readwiseApiIndexStage.js';
 import {
   loadOrCreateReadwiseApiScopeLedgers,
@@ -123,9 +123,10 @@ function savePage(
   }
   const documents = results.map(normalizeReaderDocument).filter(item => item !== null);
   saveReadwiseApiReaderIndexPage(connectionRef, documents, ledger.runStartedAt);
-  if (ledger.replayedTagCursor) {
+  const isCategoryScope = isParentCategory(ledger.scope.slice('reader:'.length));
+  if (importTag.trim() && (ledger.replayedTagCursor || isCategoryScope)) {
     const matches = documents.filter(doc => matchesReadwiseDocumentImportTag(doc.tags, importTag)).map(doc => doc.id);
-    saveReadwiseApiTagReplayMatches(driver, connectionRef, matches);
+    saveReadwiseApiTagMatches(driver, connectionRef, ledger.scope, matches);
   }
 }
 
@@ -144,7 +145,7 @@ async function assembleCandidates(
     request,
     runStartedAt: run.roundStartedAt
   });
-  const { byId, exportIdsByParent, graph, parentIds, replayedTagMatches } = await loadCandidateAssemblyFacts(
+  const { byId, exportIdsByParent, graph, parentIds, tagMatchesAfterReplay } = await loadCandidateAssemblyFacts(
     connectionRef, run.roundStartedAt
   );
   for (const parentId of parentIds) {
@@ -164,8 +165,8 @@ async function assembleCandidates(
       byId.set(parent.id, parent);
     }
     if (!parent || !isParentCategory(parent.category)) continue;
-    // Cached documents still supply metadata, but only replayed pages may route a document by tag.
-    const matchedImportTag = (replayedTagMatches === null || replayedTagMatches.has(parentId)) && matchesReadwiseDocumentImportTag(
+    // A rejected tag cursor invalidates its earlier pages, while category results keep their own evidence.
+    const matchedImportTag = (tagMatchesAfterReplay === null || tagMatchesAfterReplay.has(parentId)) && matchesReadwiseDocumentImportTag(
       parent.tags,
       settings.readwiseAutoImportPolicy.importTag
     );
@@ -201,8 +202,8 @@ function loadCandidateAssemblyFacts(connectionRef: string, runStartedAt: string)
       ...exportIdsByParent.keys()
     ]);
     const tagScope = loadReadwiseApiScopeLedgers(connectionRef).find(ledger => ledger.scope === 'reader:tag');
-    const replayedTagMatches = tagScope?.replayedTagCursor ? loadReadwiseApiTagReplayMatches(connectionRef) : null;
-    return { byId, exportIdsByParent, graph, parentIds, replayedTagMatches };
+    const tagMatchesAfterReplay = tagScope?.replayedTagCursor ? loadReadwiseApiTagMatchesAfterReplay(connectionRef) : null;
+    return { byId, exportIdsByParent, graph, parentIds, tagMatchesAfterReplay };
   });
 }
 
