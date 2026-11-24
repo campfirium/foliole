@@ -13,10 +13,10 @@ import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
+import { requestClipboardImport, requestFileImport } from './importActivityRequests';
 import { WorkspaceDemoRailBottomActions } from './WorkspaceDemoRailBottomActions';
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
-import { useDemoImportRequestBridge, useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
 import { renderStudyDock } from './WorkspaceStudyDock';
 import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
@@ -61,8 +61,6 @@ function useWorkspaceRailToolbarState({
   WorkspaceSideToolbarProps,
   'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
 >) {
-  const demoImport = useDemoMarkdownRailImport();
-  useDemoImportRequestBridge(demoImport);
   const { isDemo } = useDemoRuntimeState();
   const rail = useWorkspaceRailSettings();
   const [contextMenuPosition, setContextMenuPosition] = useState<{ left: number; top: number } | null>(null);
@@ -73,14 +71,14 @@ function useWorkspaceRailToolbarState({
 
   function runRailCommand(commandId: string) {
     if (commandId === APP_COMMAND_IDS.importSingleFile) {
-      if (demoImport.isDemo) {
-        demoImport.openFilePicker();
+      if (isDemo) {
+        requestFileImport();
       } else {
         onStartImport();
       }
     } else if (commandId === APP_COMMAND_IDS.clipboardImport) {
-      if (demoImport.isDemo) {
-        void demoImport.importClipboardMarkdown();
+      if (isDemo) {
+        requestClipboardImport();
       } else {
         onStartClipboardImport();
       }
@@ -98,7 +96,7 @@ function useWorkspaceRailToolbarState({
   return {
     bottomItems,
     contextMenuPosition,
-    demoImport,
+    isDemo,
     openRailManager,
     rail,
     runRailCommand,
@@ -133,7 +131,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />
-        {state.demoImport.isDemo ? <WorkspaceDemoRailBottomActions {...definedProps({ onRunRailAction: props.onRunRailAction })} /> : null}
+        {state.isDemo ? <WorkspaceDemoRailBottomActions {...definedProps({ onRunRailAction: props.onRunRailAction })} /> : null}
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>
       {renderStudyDock({
@@ -152,14 +150,6 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           top={state.contextMenuPosition.top}
         />
       ) : null}
-      <input
-        accept=".md,text/markdown,text/plain"
-        className="hidden"
-        multiple
-        onChange={(event) => void state.demoImport.importMarkdownFiles(event.target.files)}
-        ref={state.demoImport.fileInputRef}
-        type="file"
-      />
     </AppToolbar>
   );
 }

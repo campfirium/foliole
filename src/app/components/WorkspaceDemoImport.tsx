@@ -4,19 +4,9 @@ import { importDemoMarkdown, useDemoRuntimeState, type DemoMarkdownRuntimeEntry 
 
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
 
-export function requestDemoFolderImport() {
-  window.dispatchEvent(new CustomEvent(FILE_IMPORT_REQUEST_EVENT, { detail: 'folder' }));
-}
-
-export function useDemoMarkdownRailImport() {
-  const demoState = useDemoRuntimeState();
+export function WorkspaceDemoImport() {
+  const { isDemo } = useDemoRuntimeState();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  async function importClipboardMarkdown() {
-    const markdown = (await navigator.clipboard?.readText?.())?.trim();
-    if (!markdown) return;
-    await importDemoMarkdown([{ markdown, sourceName: 'Clipboard Markdown' }]);
-  }
 
   async function importMarkdownFiles(files: FileList | null) {
     if (!files) return;
@@ -27,21 +17,11 @@ export function useDemoMarkdownRailImport() {
     }
   }
 
-  return {
-    fileInputRef,
-    importClipboardMarkdown,
-    importMarkdownFiles,
-    isDemo: demoState.isDemo,
-    openFilePicker: () => openPicker(fileInputRef.current, false)
-  };
-}
-
-export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemoMarkdownRailImport>) {
   useEffect(() => {
-    if (!controller.isDemo) return undefined;
-    const handleClipboardRequest = () => void controller.importClipboardMarkdown();
+    if (!isDemo) return undefined;
+    const handleClipboardRequest = () => void importClipboardMarkdown();
     const handleFileRequest = (event: Event) => {
-      openPicker(controller.fileInputRef.current, event instanceof CustomEvent && event.detail === 'folder');
+      openPicker(fileInputRef.current, event instanceof CustomEvent && event.detail === 'folder');
     };
     window.addEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
     window.addEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
@@ -49,7 +29,18 @@ export function useDemoImportRequestBridge(controller: ReturnType<typeof useDemo
       window.removeEventListener(CLIPBOARD_IMPORT_REQUEST_EVENT, handleClipboardRequest);
       window.removeEventListener(FILE_IMPORT_REQUEST_EVENT, handleFileRequest);
     };
-  }, [controller.fileInputRef, controller.importClipboardMarkdown, controller.isDemo]);
+  }, [isDemo]);
+
+  return isDemo ? (
+    <input accept=".md,text/markdown,text/plain" hidden multiple type="file"
+      onChange={event => void importMarkdownFiles(event.target.files)} ref={fileInputRef} />
+  ) : null;
+}
+
+async function importClipboardMarkdown() {
+  const markdown = (await navigator.clipboard?.readText?.())?.trim();
+  if (!markdown) return;
+  await importDemoMarkdown([{ markdown, sourceName: 'Clipboard Markdown' }]);
 }
 
 function openPicker(input: HTMLInputElement | null, folder: boolean) {

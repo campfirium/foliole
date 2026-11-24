@@ -4,8 +4,6 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createBrowserDemoRuntimeController } from '../../demo/demoRuntimeController';
 import { resetDemoWorkspaceSnapshot } from '../../demo/demoWorkspaceReset';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
-import { AppearanceSettingsProvider } from '../../features/settings/context/AppearanceSettingsProvider';
-import { WorkspaceRailSettingsProvider } from '../../features/settings/context/WorkspaceRailSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -13,7 +11,7 @@ import { installDemoRuntimeController } from '../../shared/platform/runtime/demo
 import { runDemoCommandPreview } from '../hooks/appPaletteDemoCommand';
 
 import { requestFileImport } from './importActivityRequests';
-import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
+import { WorkspaceDemoImport } from './WorkspaceDemoImport';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -30,14 +28,7 @@ it('opens a directory from Import Folder and preserves paths when importing into
   resetDemoWorkspaceSnapshot('/en/demo/');
   const controller = createBrowserDemoRuntimeController();
   installDemoRuntimeController(controller);
-  const { container } = renderWithLocalization(
-    <AppearanceSettingsProvider>
-      <WorkspaceRailSettingsProvider>
-        <WorkspaceSideToolbar canStartStudyMode isSettingsOpen={false} isStudyMode={false} onOpenSettings={vi.fn()}
-          onStartClipboardImport={vi.fn()} onStartImport={vi.fn()} onToggleReviewSession={vi.fn()} />
-      </WorkspaceRailSettingsProvider>
-    </AppearanceSettingsProvider>
-  );
+  const { container } = renderWithLocalization(<WorkspaceDemoImport />);
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
   const click = vi.spyOn(input, 'click').mockImplementation(() => undefined);
   const translate: Translate = key => key;

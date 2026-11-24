@@ -2,7 +2,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { getDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showDemoOperationNotice } from '../../shared/ui/DemoOperationNotice';
-import { requestDemoFolderImport } from '../components/WorkspaceSideToolbarDemoImport';
+import { requestDemoFolderImport } from '../components/importActivityRequests';
 
 const NON_DEMONSTRABLE_DEMO_COMMAND_IDS: ReadonlySet<string> = new Set([
   APP_COMMAND_IDS.checkForUpdates,

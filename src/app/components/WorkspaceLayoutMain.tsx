@@ -15,6 +15,7 @@ import { useWorkspaceActivityNotice } from './useWorkspaceActivityNotice';
 import { useWorkspaceImportRequests } from './useWorkspaceImportRequests';
 import { useWorkspaceShellBridges } from './useWorkspaceShellBridges';
 import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
+import { WorkspaceDemoImport } from './WorkspaceDemoImport';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
@@ -158,6 +159,7 @@ function WorkspaceMainContent(props: WorkspaceLayoutProps) {
       />
       {props.overlay}
       {renderWorkspaceActivityNotice(clipboardImportNotice)}
+      <WorkspaceDemoImport />
       <WorkspaceRuntimeNotice />
       <WorkspaceAuxiliaryDialogs />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />

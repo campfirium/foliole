@@ -10,6 +10,7 @@ import { installDemoRuntimeController, type DemoRuntimeController, type DemoRunt
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 
 import { FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
+import { WorkspaceDemoImport } from './WorkspaceDemoImport';
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
 vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({
@@ -177,9 +178,12 @@ it('shows Demo conversion actions in the bottom rail', () => {
 it('routes command requests to the Demo browser file picker', () => {
   installDemoState(true);
   const { container } = renderWithLocalization(
-    <AppearanceSettingsProvider>
-      <WorkspaceRailSettingsProvider>{toolbar(false)}</WorkspaceRailSettingsProvider>
-    </AppearanceSettingsProvider>
+    <>
+      <WorkspaceDemoImport />
+      <AppearanceSettingsProvider>
+        <WorkspaceRailSettingsProvider>{toolbar(false)}</WorkspaceRailSettingsProvider>
+      </AppearanceSettingsProvider>
+    </>
   );
   const input = container.querySelector<HTMLInputElement>('input[type="file"]');
   if (!input) throw new Error('Demo file input is missing.');
@@ -188,6 +192,8 @@ it('routes command requests to the Demo browser file picker', () => {
   window.dispatchEvent(new Event(FILE_IMPORT_REQUEST_EVENT));
 
   expect(click).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+  expect(click).toHaveBeenCalledTimes(2);
 });
 
 it('shows localized Demo conversion actions in the bottom rail', () => {
