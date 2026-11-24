@@ -45,7 +45,10 @@ export function useWorkspaceSyncAppliedRefresh() {
         } else if (syncAppliedChangesWorkspace(payload)) requestWorkspaceStateRefresh('sync-applied');
         void hydrateRuntimeSystemEntryDisplayNames().catch(() => undefined);
         if (payload.appliedObjectIds.some(id => id.endsWith(`:${FOLDER_LIST_SORT_MEMORY_SETTING_KEY}`))) {
-          void hydrateFolderListSortMemory({ demo: false }).catch(() => undefined);
+          const libraryScope = useWorkspaceStore.getState().libraryScope;
+          if (libraryScope && (!payload.libraryScope || payload.libraryScope === libraryScope)) {
+            void hydrateFolderListSortMemory({ demo: false, libraryScope }).catch(() => undefined);
+          }
         }
       }
     }).then((nextUnlisten) => {

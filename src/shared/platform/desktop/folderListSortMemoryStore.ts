@@ -14,7 +14,10 @@ const DEMO_STORAGE_KEY = 'foliole-demo-folder-list-sort-memory-v1';
 const listeners = new Set<() => void>();
 let snapshot: FolderListSortMemoryPayload = EMPTY_FOLDER_LIST_SORT_MEMORY;
 let pendingSave: Promise<unknown> = Promise.resolve();
-let demoMode = false;
+type LibraryContext = { demo: boolean; libraryScope?: string | undefined };
+let context: LibraryContext = { demo: false };
+let hydrated = false;
+let revision = 0;
 
 function publish(next: FolderListSortMemoryPayload) {
   if (JSON.stringify(next) === JSON.stringify(snapshot)) return;
@@ -31,17 +34,30 @@ function readDemoPayload() {
   }
 }
 
-/** Loads the library's desktop sort choices; called at start and after sync applies another desktop's choices. */
-export async function hydrateFolderListSortMemory(options: { demo: boolean }) {
-  demoMode = options.demo;
+/** Loads the desktop choices after startup, a library switch or an incoming sort setting. */
+export async function hydrateFolderListSortMemory(options: LibraryContext) {
+  if (context.demo !== options.demo || context.libraryScope !== options.libraryScope) {
+    context = options;
+    hydrated = false;
+    pendingSave = Promise.resolve();
+    publish(EMPTY_FOLDER_LIST_SORT_MEMORY);
+  }
+  const readRevision = ++revision;
   if (options.demo) {
     publish(readDemoPayload());
     return;
   }
   const invoke = getRuntimeInvoke();
-  if (!invoke) return;
+  const { libraryScope } = options;
+  if (!invoke || !libraryScope) return;
+
   await pendingSave;
-  publish(parseFolderListSortMemoryPayload(await invoke(NATIVE_COMMANDS.loadFolderListSortMemory)));
+  if (readRevision !== revision) return;
+  const result = await invoke(NATIVE_COMMANDS.loadFolderListSortMemory, { libraryScope });
+  if (readRevision === revision) {
+    hydrated = true;
+    publish(parseFolderListSortMemoryPayload(result));
+  }
 }
 
 export function getFolderListSortMemorySnapshot() {
@@ -58,10 +74,16 @@ export function rememberFolderListSort(
   choice: FolderListSortMemoryEntry,
   fallback: FolderListSortMemoryEntry
 ) {
+  const target = context;
+  const { demo, libraryScope } = target;
+  const invoke = getRuntimeInvoke();
+  if (invoke && !demo && (!hydrated || !libraryScope)) return;
+
   const next = withFolderListSortChoice(snapshot, listId, choice, fallback);
   if (JSON.stringify(next) === JSON.stringify(snapshot)) return;
+  const writeRevision = ++revision;
   publish(next);
-  if (demoMode) {
+  if (demo) {
     try {
       window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -69,12 +91,12 @@ export function rememberFolderListSort(
     }
     return;
   }
-  const invoke = getRuntimeInvoke();
-  if (!invoke) return;
-  pendingSave = pendingSave
-    .catch(() => undefined)
-    .then(() => invoke(NATIVE_COMMANDS.saveFolderListSortMemory, { payload: snapshot }))
-    .catch((error: unknown) => console.warn('[folder-list-sort-memory] save failed', error));
+  if (!invoke || !libraryScope) return;
+  pendingSave = pendingSave.then(async () => {
+    if (context !== target) return;
+    const result = await invoke(NATIVE_COMMANDS.saveFolderListSortMemory, { choice, fallback, libraryScope, listId });
+    if (writeRevision === revision) publish(parseFolderListSortMemoryPayload(result));
+  }).catch((error: unknown) => console.warn('[folder-list-sort-memory] save failed', error));
 }
 
 function subscribe(listener: () => void) {
@@ -89,6 +111,8 @@ export function useFolderListSortMemorySnapshot() {
 export function resetFolderListSortMemoryForTests() {
   snapshot = EMPTY_FOLDER_LIST_SORT_MEMORY;
   pendingSave = Promise.resolve();
-  demoMode = false;
+  context = { demo: false };
+  hydrated = false;
+  revision++;
   listeners.clear();
 }

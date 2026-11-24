@@ -2,6 +2,9 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import {
+  parseFolderListSortMemoryPayload, withFolderListSortChoice, type FolderListSortMemoryEdit
+} from '../../../lib/platform/folderListSortMemoryContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -17,9 +20,10 @@ import { useDocumentPanelFolderListSort } from './useDocumentPanelFolderListSort
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
 let saved: unknown = null;
-const invoke = vi.fn(async (command: string, args?: { payload?: unknown }) => {
-  if (command === NATIVE_COMMANDS.saveFolderListSortMemory) {
-    saved = JSON.parse(JSON.stringify(args?.payload));
+const libraryScope = 'library';
+const invoke = vi.fn(async (command: string, edit?: FolderListSortMemoryEdit) => {
+  if (command === NATIVE_COMMANDS.saveFolderListSortMemory && edit) {
+    saved = withFolderListSortChoice(parseFolderListSortMemoryPayload(saved), edit.listId, edit.choice, edit.fallback);
     return saved;
   }
   if (command === NATIVE_COMMANDS.loadFolderListSortMemory) return saved;
@@ -48,7 +52,7 @@ const nodeOrder = Object.keys(nodesById);
 
 function MainPanelFolders() {
   const [folderId, setFolderId] = useState('inbox');
-  const sort = useDocumentPanelFolderListSort(folderId, Boolean(nodesById[folderId]?.manualChildOrder?.length));
+  const sort = useDocumentPanelFolderListSort(folderId, nodesById[folderId]?.manualChildOrder?.length ? 'manual' : 'dateSaved');
   return (
     <>
       {['inbox', 'archive', 'ordered'].map((id) => (
@@ -82,14 +86,15 @@ function chooseSort(current: string, next: string) {
 async function reopen() {
   await waitFor(() => expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.saveFolderListSortMemory, expect.anything()));
   resetFolderListSortMemoryForTests();
-  await act(() => hydrateFolderListSortMemory({ demo: false }));
+  await act(() => hydrateFolderListSortMemory({ demo: false, libraryScope }));
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   saved = null;
   invoke.mockClear();
   resetFolderListSortMemoryForTests();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke as never);
+  await hydrateFolderListSortMemory({ demo: false, libraryScope });
 });
 
 afterEach(() => resetFolderListSortMemoryForTests());

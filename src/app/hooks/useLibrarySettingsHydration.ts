@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
 import { hydrateFolderListSortMemory } from '../../shared/platform/desktop/folderListSortMemoryStore';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useSystemEntryDisplayNamesHydration } from './useSystemEntryDisplayNamesHydration';
 
@@ -10,7 +11,8 @@ export function useLibrarySettingsHydration() {
   useSystemEntryDisplayNamesHydration();
   const { isDemo, startedAt } = useDemoRuntimeState();
 
-  useEffect(() => {
-    void hydrateFolderListSortMemory({ demo: isDemo }).catch(() => undefined);
-  }, [isDemo, startedAt]);
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  useLayoutEffect(() => {
+    void hydrateFolderListSortMemory({ demo: isDemo, libraryScope }).catch(() => undefined);
+  }, [isDemo, libraryScope, startedAt]);
 }

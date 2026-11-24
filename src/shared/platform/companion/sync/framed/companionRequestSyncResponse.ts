@@ -7,6 +7,7 @@ import { withInboundAttachmentPreparation } from '../../../../../../lib/core/syn
 import { parseRequestSyncPeerRound, respondRequestSyncRoundControl, touchRequestSyncStream } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { createWebDavRelayInboundCleanup } from '../../../../../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
+import { FOLDER_LIST_SORT_MEMORY_SETTING_KEY } from '../../../../../../lib/platform/folderListSortMemoryContract.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { publishCompanionSyncApplied } from '../companionSyncApplied.js';
@@ -43,9 +44,13 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
   let host: Awaited<ReturnType<typeof currentCompanionRequestSyncDatabaseHost>> | undefined;
   let stream: FramedSyncStreamBody | undefined;
   let applied = false;
+  let folderListSortChanged = false;
   try {
     const groupKey = Uint8Array.from(atob(credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0));
-    host = await currentCompanionRequestSyncDatabaseHost(() => { applied = true; });
+    host = await currentCompanionRequestSyncDatabaseHost(({ objectType, globalId }) => {
+      applied = true;
+      folderListSortChanged ||= isPhoneFolderListSortSetting(objectType, globalId);
+    });
     const files = host.files;
     stream = await readFramedSyncStream(touchRequestSyncStream(companionRequestSyncHttpChunks(host.files, directory, {
       response_chunk_count: Number(payload.request_chunk_count), response_byte_length: Number(payload.request_byte_length)
@@ -80,11 +85,17 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     await host?.files.remove(directory);
     throw error;
   } finally {
-    if (applied) publishCompanionSyncApplied({ kind: 'nodes', nodeIds: [] });
+    if (applied) publishCompanionSyncApplied({ kind: 'nodes', nodeIds: [] }, { folderListSortChanged });
     dispose();
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();
   }
+}
+
+function isPhoneFolderListSortSetting(objectType: string, globalId: string) {
+  if (objectType !== 'setting') return false;
+  const [scope, , formFactor, , key] = globalId.split(':');
+  return scope === 'user_space' && formFactor === 'phone' && key === FOLDER_LIST_SORT_MEMORY_SETTING_KEY;
 }
 
 async function captureRelayState(host: Awaited<ReturnType<typeof currentCompanionRequestSyncDatabaseHost>>,
