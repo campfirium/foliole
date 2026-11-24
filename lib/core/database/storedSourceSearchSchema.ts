@@ -1,6 +1,8 @@
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { tableExists } from './numberedMigrationHelpers.js';
-import { STORED_IMPORT_LOCATOR_SCHEMA, STORED_IMPORT_ROWS_SQL } from './storedImportLocatorSchema.js';
+import {
+  LEGACY_STORED_IMPORT_LOCATOR_SCHEMA, LEGACY_STORED_IMPORT_ROWS_SQL, STORED_IMPORT_LOCATOR_SCHEMA
+} from './storedImportLocatorSchema.js';
 
 const EXTERNAL_ROWS_SQL = `SELECT d.title, d.file_name || ' ' || d.relative_path,
   d.content, 'external', d.document_id,
@@ -39,11 +41,10 @@ export const STORED_EXTERNAL_SOURCE_SEARCH_TRIGGERS = (['INSERT', 'UPDATE', 'DEL
   sql: sourceTrigger('external_documents', event, 'external', 'source_key = ROW.document_id')
 }));
 
-export const STORED_SOURCE_SEARCH_SCHEMA = [
+const SOURCE_SEARCH_SCHEMA = [
   `CREATE VIRTUAL TABLE IF NOT EXISTS stored_source_search USING fts5(
     title, path, content, kind UNINDEXED, source_key UNINDEXED, metadata UNINDEXED, updated_at UNINDEXED
   )`,
-  ...STORED_IMPORT_LOCATOR_SCHEMA,
   ...(['INSERT', 'UPDATE', 'DELETE'] as const).flatMap((event) => [
     sourceTrigger('external_documents', event, 'external', 'source_key = ROW.document_id'),
     sourceTrigger('keep_import_items', event, 'removed', "source_key = ROW.rule_id || ':' || ROW.source_path"),
@@ -51,10 +52,12 @@ export const STORED_SOURCE_SEARCH_SCHEMA = [
   ])
 ];
 
+export const STORED_SOURCE_SEARCH_SCHEMA = [...SOURCE_SEARCH_SCHEMA, ...STORED_IMPORT_LOCATOR_SCHEMA];
+
 export function initializeStoredSourceSearch(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'external_documents') || !tableExists(sqlite, 'keep_import_items')) return;
-  for (const statement of STORED_SOURCE_SEARCH_SCHEMA) sqlite.exec(statement);
+  for (const statement of [...SOURCE_SEARCH_SCHEMA, ...LEGACY_STORED_IMPORT_LOCATOR_SCHEMA]) sqlite.exec(statement);
   sqlite.exec(`INSERT INTO stored_source_search ${EXTERNAL_ROWS_SQL}`);
   sqlite.exec(`INSERT INTO stored_source_search ${REMOVED_ROWS_SQL}`);
-  sqlite.exec(`INSERT INTO stored_import_locators ${STORED_IMPORT_ROWS_SQL}`);
+  sqlite.exec(`INSERT INTO stored_import_locators ${LEGACY_STORED_IMPORT_ROWS_SQL}`);
 }

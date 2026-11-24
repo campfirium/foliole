@@ -8,6 +8,7 @@ import { backup, DatabaseSync } from 'node:sqlite';
 import { expect, it } from 'vitest';
 
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
+import { registerStoredImportLocatorKey } from '../../lib/core/database/storedImportLocatorSchema.js';
 import { prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { markSyncGroupRestoreApplied } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -21,6 +22,7 @@ import { textBranch } from './topicTextState.testSupport.js';
 
 function createLibrary(file: string, deviceId: string) {
   const sqlite = new DatabaseSync(file);
+  registerStoredImportLocatorKey(sqlite);
   for (const sql of DESKTOP_FRESH_SCHEMA_STATEMENTS) sqlite.exec(sql);
   sqlite.exec("INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now')");
   sqlite.prepare("INSERT INTO sync_group_local_state VALUES (1, 'group', ?, 'active', 'now')").run(deviceId);
@@ -63,6 +65,7 @@ it('publishes consecutive backup overwrites to a second library after a clock ro
     const firstPath = path.join(root, 'first.db');
     await backup(source, firstPath);
     const firstBackup = new DatabaseSync(firstPath);
+    registerStoredImportLocatorKey(firstBackup);
     try {
       const snapshot = captureCurrentSyncGroupForBackupRestore(nodeSqliteTestDriver(source));
       await applySyncNodesWithDbPort(nodeSqliteTestPort(firstBackup), [textBranch('first-version', 'First backup')]);

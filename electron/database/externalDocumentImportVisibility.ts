@@ -1,3 +1,5 @@
+import { normalizeStoredImportLocator } from '../../lib/core/database/storedImportLocatorSchema.js';
+
 import { openDatabaseConnection } from './connection.js';
 import { resolveDesktopSourceAddress } from './desktopSources.js';
 
@@ -9,10 +11,6 @@ interface ActiveImportLocatorRow {
   source_ref: string | null;
 }
 
-function normalizeExternalImportLocator(locator: string) {
-  return locator.replace(/\\/g, '/').toLowerCase();
-}
-
 function currentLocator(row: ActiveImportLocatorRow) {
   return row.source_ref && row.source_location
     ? resolveDesktopSourceAddress(row.source_ref, row.source_location)
@@ -21,7 +19,7 @@ function currentLocator(row: ActiveImportLocatorRow) {
 
 export function loadActiveImportedSourceLocators() {
   return new Set(loadActiveImportedSourceLocatorRows()
-    .map(currentLocator).filter((value): value is string => Boolean(value)).map(normalizeExternalImportLocator));
+    .map(currentLocator).filter((value): value is string => Boolean(value)).map(normalizeStoredImportLocator));
 }
 
 function loadActiveImportedSourceLocatorRows() {
@@ -38,7 +36,7 @@ export function loadActiveImportedSourceLocatorNodeIds() {
   loadActiveImportedSourceLocatorRows().forEach((row) => {
     const current = currentLocator(row);
     if (!current) return;
-    const locator = normalizeExternalImportLocator(current);
+    const locator = normalizeStoredImportLocator(current);
     if (!nodeIds.has(locator)) {
       nodeIds.set(locator, row.latest_node_id);
     }
@@ -50,7 +48,7 @@ export function resolveImportedNodeIdForExternalDocument(
   absolutePath: string,
   importedNodeIdsByLocator?: Map<string, string>
 ) {
-  const locator = normalizeExternalImportLocator(absolutePath);
+  const locator = normalizeStoredImportLocator(absolutePath);
   if (importedNodeIdsByLocator) return importedNodeIdsByLocator.get(locator) ?? null;
   return openDatabaseConnection().driver.queryOne<{ node_id: string }>(
     `SELECT node_id FROM stored_import_locators WHERE locator = ?
@@ -59,7 +57,7 @@ export function resolveImportedNodeIdForExternalDocument(
 }
 
 export function isExternalDocumentVisible(absolutePath: string, activeImportedLocators?: Set<string>) {
-  const locator = normalizeExternalImportLocator(absolutePath);
+  const locator = normalizeStoredImportLocator(absolutePath);
   if (activeImportedLocators) return !activeImportedLocators.has(locator);
   return !openDatabaseConnection().driver.queryOne(
     'SELECT node_id FROM stored_import_locators WHERE locator = ? LIMIT 1', [locator]

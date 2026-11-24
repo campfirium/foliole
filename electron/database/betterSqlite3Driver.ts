@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseExecuteResult, DatabaseRow, DatabaseStatement } from '../../lib/core/database/driver.js';
+import { registerStoredImportLocatorKey } from '../../lib/core/database/storedImportLocatorSchema.js';
 
 import type { SqliteDatabase } from './connection.js';
 import { prepareCachedSqliteStatement } from './sqliteStatementCache.js';
@@ -11,6 +12,7 @@ function toExecuteResult(result: { changes: number; lastInsertRowid: number | bi
 }
 
 export function createBetterSqlite3Driver(sqlite: SqliteDatabase): DatabaseDriver {
+  registerStoredImportLocatorKey(sqlite);
   const driver: DatabaseDriver = {
     prepare(sql: string) {
       const statement = prepareCachedSqliteStatement(sqlite, sql);

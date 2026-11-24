@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import type BetterSqlite3 from 'better-sqlite3';
 
+import { registerStoredImportLocatorKey } from '../../lib/core/database/storedImportLocatorSchema.js';
 import type { DbParams, DbPort, DbRow, DbRunResult } from '../../lib/core/sync/dbPort.js';
 
 import { bindFramedSyncPayloadBudget, readFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
@@ -21,6 +22,7 @@ export interface BetterSqliteDbPortOptions {
 }
 
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
+  registerStoredImportLocatorKey(sqlite);
   const coordinator = getSqliteConnectionCoordinator(sqlite);
   const port: DbPort & { readonly __dbPortName?: string } = {
     connectionIdentity: sqlite,
