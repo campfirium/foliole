@@ -4,7 +4,7 @@ import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 import type { DbPort, DbRow, DbValue } from '../sync/dbPort.js';
 import { alternativeImageFacts } from '../sync/topicAlternativeConflict.js';
-import { writeTopicAlternative } from '../sync/topicAlternativeStore.js';
+import { settleTopicAlternatives, writeTopicAlternative } from '../sync/topicAlternativeStore.js';
 import { alternativeForBodyHash } from '../sync/topicTextState.js';
 
 import { collectArticleImageStorageKeys } from './replaceArticleImageSource.js';
@@ -27,6 +27,7 @@ export type LibraryMergeDecision = 'new' | 'same' | 'known' | 'deleted' | 'alter
 export interface LibraryMergeReport {
   added: number;
   alternatives: number;
+  alternativesChanged: boolean;
   unchanged: number;
   skippedDeleted: number;
   reviewsAdded: number;
@@ -56,12 +57,13 @@ const SOURCE_OUTLINE_SQL = `WITH RECURSIVE visible(id, parent_id, depth) AS (
   WHERE n.virtual_filter IS NULL ORDER BY visible.depth, visible.id`;
 
 const TARGET_FACTS_SQL = `SELECT q.id, n.id AS node_id, n.deleted_at, n.content, n.resource_references,
+  (SELECT COUNT(*) FROM node_text_alternatives a WHERE a.node_id = n.id AND a.status = 'available') AS available_alternatives,
   EXISTS (SELECT 1 FROM node_sync_tombstones t WHERE t.node_id = q.id) AS tombstoned,
   (? IS NOT NULL AND EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = ?)) AS known
   FROM (SELECT ? AS id) q LEFT JOIN nodes n ON n.id = q.id`;
 
 type MergeDecisionFacts = { node_id: string | null; deleted_at: string | null; content: string | null; tombstoned: number; known: number };
-type TargetFacts = MergeDecisionFacts & { resource_references: string | null };
+type TargetFacts = MergeDecisionFacts & { resource_references: string | null; available_alternatives: number };
 
 export function decideLibraryMergeNode(source: Pick<LibraryMergeSourceNode, 'content'>, target: MergeDecisionFacts): LibraryMergeDecision {
   if (!target.node_id) return target.tombstoned ? 'deleted' : 'new';
@@ -119,13 +121,25 @@ async function writeAlternative(tx: DbPort, node: LibraryMergeSourceNode, now: s
     host_name: node.last_modified_by_host_name ?? 'unknown', version_created_at: node.updated_at,
     snapshot: {} } as Parameters<typeof alternativeForBodyHash>[0], hash, now);
   const [existing] = await tx.query('SELECT 1 FROM node_text_alternatives WHERE alternative_id = ?', [entry.id]);
-  if (existing) return false;
+  if (existing) return null;
   await writeTopicAlternative(tx, { alternative_id: entry.id, node_id: node.id, source_version_id: versionId,
     body_text: node.content, body_blob_hash: hash, source_host_name: entry.source_host_name,
     created_at: entry.created_at, expires_at: entry.expires_at, status: 'available', updated_at: now,
     ...alternativeImageFacts({ snapshot: { resource_references: node.resource_references ?? '[]',
       image_sources: node.image_sources } } as Parameters<typeof alternativeImageFacts>[0], node.content) }, true);
-  return true;
+  return entry.id;
+}
+
+async function mergeAlternatives(tx: DbPort, node: LibraryMergeSourceNode, target: TargetFacts,
+  decision: LibraryMergeDecision, now: string
+) {
+  const newId = decision === 'alternative' ? await writeAlternative(tx, node, now) : null;
+  if (!newId && !target.available_alternatives) return { added: false, changed: false };
+  const retained = await settleTopicAlternatives(tx, node.id, hashTextBody(target.content ?? ''), now);
+  return {
+    added: newId !== null && retained.some(entry => entry.id === newId),
+    changed: newId !== null || retained.length !== target.available_alternatives
+  };
 }
 
 /** Adds the source's review events this library lacks; the same review is the same `op_id` on every device. */
@@ -148,7 +162,8 @@ export async function runLibraryMerge(input: {
   const { source, target, host, now } = input;
   const outline = await source.query<{ id: string; parent_id: string | null; depth: number }>(SOURCE_OUTLINE_SQL);
   const nodes = outline.filter(row => !row.id.startsWith(SPECIAL_NODE_PREFIX));
-  const report: LibraryMergeReport = { added: 0, alternatives: 0, unchanged: 0, skippedDeleted: 0, reviewsAdded: 0, attachmentKeys: [] };
+  const report: LibraryMergeReport = { added: 0, alternatives: 0, alternativesChanged: false,
+    unchanged: 0, skippedDeleted: 0, reviewsAdded: 0, attachmentKeys: [] };
   const attachmentKeys = new Set<string>();
   // Nodes this run created: a new child of one of them keeps its parent.
   const created = new Set<string>();
@@ -176,8 +191,10 @@ export async function runLibraryMerge(input: {
           report.added += 1;
           for (const key of nodeAttachmentKeys(node)) attachmentKeys.add(key);
         } else {
-          if (decision === 'alternative' && await writeAlternative(tx, node, now)) report.alternatives += 1;
+          const alternative = await mergeAlternatives(tx, node, targetFacts, decision, now);
+          if (alternative.added) report.alternatives += 1;
           else report.unchanged += 1;
+          report.alternativesChanged ||= alternative.changed;
           await collectRetainedAttachmentKeys(tx, node, targetFacts, now, attachmentKeys);
         }
         const reviews = await mergeReviewLog(source, tx, node.id);

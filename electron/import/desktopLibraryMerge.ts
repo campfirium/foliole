@@ -160,7 +160,8 @@ export async function mergeDesktopLibrary(input: {
         target: ownedPort(createBetterSqliteDbPort(connection.sqlite)), host,
         ...(input.batchSize ? { batchSize: input.batchSize } : {}) });
       const attachments = await copyLibraryMergeAttachments(report.attachmentKeys, mobile ? mobile.attachmentsDirectory : input.attachmentsDirectory);
-      return { added: report.added, alternatives: report.alternatives, unchanged: report.unchanged,
+      return { added: report.added, alternatives: report.alternatives, alternativesChanged: report.alternativesChanged,
+        unchanged: report.unchanged,
         skippedDeleted: report.skippedDeleted, reviewsAdded: report.reviewsAdded, attachmentsCopied: attachments.copied, attachmentsMissing: attachments.missing,
         folderId: host.folderId() };
     } finally { sqlite.close(); }

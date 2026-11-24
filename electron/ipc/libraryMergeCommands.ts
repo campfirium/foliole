@@ -37,12 +37,12 @@ async function pickSource(window: BrowserWindow | null): Promise<NativeLibraryMe
 }
 
 async function runMerge(args: Record<string, unknown>): Promise<NativeLibraryMergeResult> {
-  const result = await mergeDesktopLibrary({
+  const { alternativesChanged, ...result } = await mergeDesktopLibrary({
     sourcePath: asString(args.sourcePath, 'sourcePath'),
     attachmentsDirectory: asNullableString(args.attachmentsDirectory, 'attachmentsDirectory'),
     folderTitle: asString(args.folderTitle, 'folderTitle')
   });
-  if (result.added || result.alternatives || result.reviewsAdded || result.attachmentsCopied) notifyWorkspaceContentChanged(null);
+  if (result.added || alternativesChanged || result.reviewsAdded || result.attachmentsCopied) notifyWorkspaceContentChanged(null);
   return result;
 }
 

@@ -16,6 +16,8 @@ vi.mock('../../shared/platform/runtimeShellEvents', () => ({
   onManagedInboxUpdated: runtime.inbox
 }));
 
+import { clearAppRuntimeNotice, useAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 
 afterEach(() => vi.resetAllMocks());
@@ -36,4 +38,28 @@ it('refreshes available alternatives after a committed workspace change and unsu
   expect(runtime.alternative).toHaveBeenLastCalledWith('topic', undefined);
   view.unmount();
   expect(unsubscribe).toHaveBeenCalledOnce();
+});
+
+it('ends loading, reports a failed preview and recovers on the next workspace refresh', async () => {
+  let changed: (() => void) | undefined;
+  runtime.changed.mockImplementation(async handler => { changed = handler; return () => {}; });
+  runtime.inbox.mockResolvedValue(() => {});
+  runtime.alternative.mockRejectedValueOnce(new Error('Invalid alternatives from an earlier merge'));
+  const view = renderHook(() => ({
+    preview: useNodeSourceUpdatePreview('topic'),
+    notice: useAppRuntimeNotice()
+  }));
+
+  await waitFor(() => expect(view.result.current.notice).toMatchObject({
+    message: 'Could not load the comparison preview.', tone: 'error'
+  }));
+  expect(view.result.current.preview).toMatchObject({ isLoading: false, value: null });
+
+  runtime.alternative.mockResolvedValue({ alternative_id: 'alt', source_node_id: 'topic' });
+  await act(async () => changed!());
+  await waitFor(() => expect(view.result.current.preview).toMatchObject({
+    isLoading: false, value: { alternative_id: 'alt' }
+  }));
+  const notice = view.result.current.notice;
+  if (notice) act(() => clearAppRuntimeNotice(notice.id));
 });

@@ -5,6 +5,7 @@ export const EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS = {
   'desktop.sourceUpdate.alternative.option': '{host} · {date}',
   'desktop.sourceUpdate.alternative.expires': 'Available until {date}',
   'desktop.sourceUpdate.alternative.hint': 'Up to 3 alternative bodies, kept for 30 days',
+  'desktop.sourceUpdate.previewLoadFailed': 'Could not load the comparison preview.',
   'desktop.sourceUpdate.dialogTitle': 'Comparison view',
   'desktop.sourceUpdate.close': 'Close source update panel',
   'desktop.sourceUpdate.accept': 'Accept update',

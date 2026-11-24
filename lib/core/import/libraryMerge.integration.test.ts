@@ -5,7 +5,12 @@ import { afterEach, expect, it } from 'vitest';
 
 import { buildAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../database/desktopFreshSchemaStatements.js';
+import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from '../database/driver.js';
+import { hashTextBody } from '../database/textBodyHash.js';
+import { loadTopicTextBodiesWithDriver } from '../database/topicTextBodiesWithDriver.js';
+import { loadTopicTextStateWithDriver } from '../database/topicTextStateWithDriver.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
+import { writeTopicAlternative } from '../sync/topicAlternativeStore.js';
 
 import { runLibraryMerge } from './libraryMerge.js';
 
@@ -106,4 +111,68 @@ it('retries only source attachments still referenced by the target', async () =>
   target.db.exec("UPDATE node_text_alternatives SET status = 'dismissed', body_text = ''");
 
   expect(await merge(source, target)).toMatchObject({ added: 0, alternatives: 0, attachmentKeys: [INLINE_IMAGE] });
+});
+
+function previewBodies(target: ReturnType<typeof library>, nodeId: string) {
+  const reader = {
+    queryAll<T extends DatabaseRow>(sql: string, params: DatabaseBindParams = []) {
+      return target.db.prepare(sql).all(...params) as T[];
+    }
+  } satisfies Pick<DatabaseDriver, 'queryAll'>;
+  const driver = reader as DatabaseDriver;
+  const options = loadTopicTextStateWithDriver(driver, nodeId);
+  return loadTopicTextBodiesWithDriver(driver, nodeId, options).map(body => body.text);
+}
+
+async function mergeTextVersion(
+  target: ReturnType<typeof library>, body: string, version: number, now: string
+) {
+  const source = library();
+  addNode(source.db, 'conflict', body, { versionId: `v${version}`, updatedAt: `2026-11-0${version}T00:00:00.000Z` });
+  return merge(source, target, now);
+}
+
+it('keeps the three newest distinct bodies previewable across multiple backup merges', async () => {
+  const now = new Date().toISOString();
+  const target = library();
+  addNode(target.db, 'conflict', 'Local body');
+
+  for (const version of [2, 3, 4]) {
+    expect(await mergeTextVersion(target, `Body ${version}`, version, now)).toMatchObject({ alternatives: 1 });
+  }
+  const older = await mergeTextVersion(target, 'Older body', 1, now);
+  expect(previewBodies(target, 'conflict')).toEqual(['Body 4', 'Body 3', 'Body 2']);
+  expect(older).toMatchObject({ alternatives: 0, unchanged: 1 });
+
+  expect(await mergeTextVersion(target, 'Newest body', 5, now)).toMatchObject({ alternatives: 1 });
+  expect(previewBodies(target, 'conflict')).toEqual(['Newest body', 'Body 4', 'Body 3']);
+  expect(target.db.prepare("SELECT content FROM nodes WHERE id = 'conflict'").get()).toEqual({ content: 'Local body' });
+});
+
+it('keeps the same alternative body previewable when it arrives with different version IDs', async () => {
+  const now = new Date().toISOString();
+  const target = library();
+  addNode(target.db, 'conflict', 'Local body');
+
+  expect(await mergeTextVersion(target, 'Identical body', 1, now)).toMatchObject({ alternatives: 1 });
+  const duplicate = await mergeTextVersion(target, 'Identical body', 2, now);
+  expect(previewBodies(target, 'conflict')).toEqual(['Identical body']);
+  expect(duplicate).toMatchObject({ alternatives: 0, unchanged: 1 });
+});
+
+it('repairs invalid alternatives persisted by an earlier merge when the same Topic is merged again', async () => {
+  const now = new Date().toISOString();
+  const target = library();
+  addNode(target.db, 'conflict', 'Local body');
+  await mergeTextVersion(target, 'Same alternative', 1, now);
+  await writeTopicAlternative(target.port, {
+    alternative_id: 'previous-duplicate', node_id: 'conflict', source_version_id: 'old-version',
+    body_text: 'Same alternative', body_blob_hash: hashTextBody('Same alternative'),
+    source_host_name: 'old-source', created_at: NOW, expires_at: new Date(Date.parse(now) + 86_400_000).toISOString(),
+    resource_references: '[]', image_sources: null, updated_at: now, status: 'available'
+  }, true);
+  expect(() => previewBodies(target, 'conflict')).toThrow('text_alternative_identity_duplicate');
+
+  expect(await mergeTextVersion(target, 'Local body', 3, now)).toMatchObject({ alternatives: 0, alternativesChanged: true });
+  expect(previewBodies(target, 'conflict')).toEqual(['Same alternative']);
 });
