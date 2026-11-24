@@ -6,7 +6,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 
-import { answer, content, selectAnswer, withDatabase } from './companionClozeGuard.test-support.mjs';
+import { answer, content, removeGuidedSample, selectAnswer, withDatabase } from './companionClozeGuard.test-support.mjs';
 
 async function edit(page, title, value) {
   await page.getByRole('button', { name: new RegExp(`^${title}`) }).click();
@@ -19,9 +19,14 @@ async function edit(page, title, value) {
 }
 
 async function openSettings(page) {
+  const tab = page.getByTestId('companion-tab-settings');
   const exit = page.getByRole('button', { name: 'Exit', exact: true });
-  if (await exit.isVisible()) await exit.click();
-  await page.getByTestId('companion-tab-settings').click();
+  if (!await tab.isVisible()) {
+    // Flow and an opened topic hide the tab bar; a tap on the topic brings back the Exit chrome once it is hidden.
+    if (!await exit.isVisible()) await page.locator('[data-node-id="guard-source"] .cm-line').last().click();
+    await exit.click();
+  }
+  await tab.click();
   await page.getByRole('button', { name: 'Cloze guard', exact: true }).click();
 }
 
@@ -82,15 +87,24 @@ async function main() {
   const result = { output, errors: [] };
   try {
     let page = await context.newPage();
+    await page.goto(url);
+    await page.locator('[data-companion-preview-ready="true"]').waitFor({ state: 'attached' });
+    await page.close();
+    withDatabase(file, db => {
+      removeGuidedSample(db);
+      db.prepare("INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at) VALUES('guard-source','topic','Long topic',?,5,'2026-11-05T00:00:00Z','2026-11-05T00:00:00Z')").run(content);
+    });
+    page = await context.newPage();
     page.setDefaultTimeout(10000);
     await page.goto(url);
     await page.locator('[data-companion-preview-ready="true"]').waitFor({ state: 'attached' });
+    // Flow opens on the seeded topic, which is due.
+    await page.getByRole('button', { name: 'Read', exact: true }).waitFor();
     await openSettings(page);
     await edit(page, 'Only check when selected answer is longer than', '0');
     await edit(page, 'Then guard when generated card front is longer than', '600');
     await edit(page, 'Long cloze mistake guard', 'convert');
     await context.close();
-    withDatabase(file, db => db.prepare("INSERT INTO nodes(id,kind,title,content,priority,created_at,updated_at) VALUES('guard-source','topic','Long topic',?,5,'2026-11-05T00:00:00Z','2026-11-05T00:00:00Z')").run(content));
     context = await launch();
     page = await context.newPage();
     page.setDefaultTimeout(10000);
