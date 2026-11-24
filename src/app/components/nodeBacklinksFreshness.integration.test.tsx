@@ -87,3 +87,26 @@ it.each(['versioned', 'unversioned', 'direct'] as const)('skips ordinary text sa
   await waitFor(() => expect(view.result.current.value[0]?.context).toBe('Changed context [[Target]].'));
   expect(reads()).toHaveLength(2);
 });
+
+it('refreshes the backlinks of a child made visible by a parent save', async () => {
+  const excerpt = snapshot('excerpt', 'Excerpt', 'See [[Target]].');
+  const anchorLink = { id: 'highlight', kind: 'highlight',
+    locator: { from: 0, to: excerpt.content.length, originalText: excerpt.content } };
+  await mutate('create_topic', { ...excerpt, parentNodeId: 'source', anchorLink });
+  await mutate('soft_delete_nodes', { nodeIds: [excerpt.nodeId], deletedAt: new Date().toISOString() });
+  expect(persisted(excerpt.nodeId)?.deleted_at).not.toBeNull();
+  const view = watchTargetBacklinks();
+  await waitFor(() => expect(view.result.current.hasLoaded).toBe(true));
+  expect(view.result.current.value).toEqual([]);
+
+  const parent = snapshot('source', 'Source', excerpt.content.replace('[[Target]]', 'the topic'));
+  await mutate('update_node_content_with_anchors', {
+    parent,
+    affectedAnchors: [{ nodeId: excerpt.nodeId, anchorLink, updatedAt: parent.updatedAt }]
+  });
+
+  expect(persisted(excerpt.nodeId)?.deleted_at).toBeNull();
+  await waitFor(() => expect(view.result.current.value).toEqual([
+    { sourceNodeId: excerpt.nodeId, sourceTitle: excerpt.title, context: excerpt.content, matchCount: 1 }
+  ]));
+});

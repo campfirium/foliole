@@ -25,7 +25,7 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const versionId = asString(edit.versionId, 'versionId');
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
   const { driver, sqlite } = openDatabaseConnection();
-  const previous = readNodeBacklinkSource(driver, parent.nodeId);
+  const previous = readNodeBacklinkSource(driver, parent.nodeId, affectedAnchors.map(anchor => anchor.nodeId));
   const port = createBetterSqliteDbPort(sqlite);
   const result = await applyLocalContentEdit(port, {
     ...(edit.field === 'reveal' ? { field: 'reveal' as const } : {}),

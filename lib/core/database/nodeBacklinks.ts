@@ -85,9 +85,13 @@ function didOutgoingBacklinksChange(previous: string, next: string) {
 
 type BacklinkSourceSnapshot = Pick<BacklinkSourceRow, 'title' | 'content'>;
 
-export function readNodeBacklinkSource(driver: DatabaseDriver, nodeId: string) {
-  return driver.queryOne<BacklinkSourceSnapshot>(
-    'SELECT title, content FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
+export function readNodeBacklinkSource(driver: DatabaseDriver, nodeId: string, updatedAnchorIds: readonly string[] = []) {
+  const sql = 'SELECT title, content FROM nodes WHERE id = ? AND deleted_at IS NULL';
+  if (!updatedAnchorIds.length) return driver.queryOne<BacklinkSourceSnapshot>(sql, [nodeId]);
+  // Explicit anchor updates can restore rows. In that case the parent alone cannot describe the change.
+  return driver.queryOne<BacklinkSourceSnapshot>(`${sql} AND NOT EXISTS (
+    SELECT 1 FROM nodes WHERE deleted_at IS NOT NULL AND id IN (SELECT value FROM json_each(?))
+  )`, [nodeId, JSON.stringify(updatedAnchorIds)]);
 }
 
 export function describeNodeBacklinkSourceChange(nodeId: string,

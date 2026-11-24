@@ -18,11 +18,9 @@ export interface NodeSearchInvalidationOptions {
 export function prepareNodeSearchInvalidationForUpsert(
   driver: DatabaseDriver,
   input: UpsertNodeSnapshotInput,
+  existingPathRow: ExistingNodePathRow | undefined,
   options: NodeSearchInvalidationOptions = {}
 ) {
-  const existingPathRow = driver.queryOne<ExistingNodePathRow>('SELECT parent_id, title FROM nodes WHERE id = ?', [
-    input.nodeId
-  ]);
   return () => {
     enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId], {
       requestProcessing: options.workspaceInvalidation !== 'defer'

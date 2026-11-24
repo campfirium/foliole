@@ -127,7 +127,7 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   diagnostics.parseAnchorsMs = readElapsedMs(parseAnchorsStartedAt);
   const upsertStartedAt = readNowMs();
   const { driver } = openDatabaseConnection();
-  const previous = readNodeBacklinkSource(driver, parent.nodeId);
+  const previous = readNodeBacklinkSource(driver, parent.nodeId, affectedAnchors.map(anchor => anchor.nodeId));
   const persistedAnchors = upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
     searchInvalidation: { workspaceInvalidation: 'defer' },
     ...(args.expectedNodeTimestamps === undefined ? {} : { expectedNodeTimestamps: parseExpectedNodeTimestamps(args.expectedNodeTimestamps) })
@@ -177,10 +177,11 @@ function handleUpdateNodeContentCommand(command: string, args: Record<string, un
       updatedNodeIds: renamed.updatedNodeIds
     });
   }
-  const { driver } = openDatabaseConnection();
-  const previous = readNodeBacklinkSource(driver, parsed.nodeId);
-  const currentVersionId = upsertVersionedNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
-  const backlinkSourceChange = describeNodeBacklinkSourceChange(parsed.nodeId, previous, readNodeBacklinkSource(driver, parsed.nodeId));
+  let backlinkSourceChange: NodeBacklinkSourceChange | undefined;
+  const currentVersionId = upsertVersionedNodeSnapshot(parsed, {
+    searchInvalidation: { workspaceInvalidation: 'defer' },
+    onBacklinkSourceChange: change => { backlinkSourceChange = change; }
+  });
   enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
   scheduleMirrorSync([parsed.nodeId]);
   return buildNodeMutationPatchResult({

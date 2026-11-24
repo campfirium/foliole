@@ -7,6 +7,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import type { DatabaseDriver } from './driver.js';
 import { serializeImageSources } from './imageSources.js';
 import { initializeCreatedReviewSchedule } from './initialReviewSchedule.js';
+import { describeNodeBacklinkSourceChange, type NodeBacklinkSourceChange } from './nodeBacklinks.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -85,7 +86,7 @@ function runNodeTableUpsert(
   input: UpsertNodeSnapshotInput,
   bodyBlobHash: string | null
 ) {
-  run([
+  return run([
     input.nodeId,
     input.parentNodeId,
     input.kind,
@@ -112,7 +113,10 @@ function runNodeTableUpsert(
   ]);
 }
 
+type PreviousNodeSnapshot = { title: string; parent_id: string | null; content?: string; deleted_at?: string | null };
+
 export interface UpsertNodeSnapshotOptions {
+  onBacklinkSourceChange?: (change: NodeBacklinkSourceChange | undefined) => void;
   parentMembership?: 'first';
   searchInvalidation?: NodeSearchInvalidationOptions;
 }
@@ -150,17 +154,18 @@ export function upsertNodeSnapshot(
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
 ): void {
-  const previousNode = driver.queryOne<{ title: string; parent_id: string | null }>('SELECT title, parent_id FROM nodes WHERE id = ?', [input.nodeId]);
-  if (previousNode?.title !== input.title) input = { ...input, title: normalizeNodeTitle(input.title) };
-  assertNodeTextFieldsWithinBudget(input);
   const statements = getUpsertNodeSnapshotStatements(driver);
-
+  const backlinkColumns = options.onBacklinkSourceChange ? ', content, deleted_at' : '';
   driver.transaction(() => {
+    const previousNode = driver.queryOne<PreviousNodeSnapshot>(
+      `SELECT title, parent_id${backlinkColumns} FROM nodes WHERE id = ?`, [input.nodeId]);
+    if (previousNode?.title !== input.title) input = { ...input, title: normalizeNodeTitle(input.title) };
+    assertNodeTextFieldsWithinBudget(input);
     const resetGlobalUntitledSequence = !input.isTitleManual
       && input.anchorLink?.kind !== 'image-excerpt'
       && input.title.trim() === 'Untitled'
       && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
-    const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
+    const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, previousNode, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
     // Every writer stores content and body_blob_hash together, so an unchanged body (a title or metadata
     // save) keeps its hash instead of hashing the whole text again.
@@ -168,7 +173,7 @@ export function upsertNodeSnapshot(
       'SELECT body_blob_hash, content IS ? AS same_body FROM nodes WHERE id = ?', [input.content, input.nodeId]);
     const bodyBlobHash = previousBody?.body_blob_hash && previousBody.same_body === 1
       ? previousBody.body_blob_hash : hashTextBody(input.content);
-    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
+    const { changes } = runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     if (!previousNode && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
     if (!previousNode || previousNode.parent_id !== input.parentNodeId) {
       ensureNodeParentMembership(driver, input.nodeId, options.parentMembership);
@@ -190,6 +195,11 @@ export function upsertNodeSnapshot(
     enqueueSearchInvalidation();
     if (previousBody?.body_blob_hash && previousBody.body_blob_hash !== bodyBlobHash) {
       collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash]);
+    }
+    if (options.onBacklinkSourceChange) {
+      const previous = previousNode?.deleted_at === null && previousNode.content !== undefined
+        ? { title: previousNode.title, content: previousNode.content } : undefined;
+      options.onBacklinkSourceChange(describeNodeBacklinkSourceChange(input.nodeId, previous, changes ? input : previous));
     }
   });
 }

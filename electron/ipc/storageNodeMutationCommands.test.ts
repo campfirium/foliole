@@ -16,6 +16,7 @@ vi.mock('../database/connection.js', async (importOriginal) => {
   const connection = { driver: { queryAll: vi.fn(() => []), queryOne: vi.fn(() => undefined) } };
   return {
     ...await importOriginal<typeof import('../database/connection.js')>(),
+    getOpenDatabaseConnection: () => connection,
     isCurrentDatabaseConnection: (candidate: unknown) => candidate === connection,
     openDatabaseConnection: vi.fn(() => connection),
     runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
@@ -131,7 +132,7 @@ it('handles node mutation commands', async () => {
       reveal: null,
       shelvedAt: '2026-05-27T00:00:00.000Z'
     }),
-    { searchInvalidation: { workspaceInvalidation: 'defer' } }
+    { searchInvalidation: { workspaceInvalidation: 'defer' }, onBacklinkSourceChange: expect.any(Function) }
   );
   expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-1']);
   expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
@@ -170,7 +171,7 @@ it('handles node reveal mutation command', async () => {
       nodeId: 'node-2',
       reveal: 'Answer'
     }),
-    { searchInvalidation: { workspaceInvalidation: 'defer' } }
+    { searchInvalidation: { workspaceInvalidation: 'defer' }, onBacklinkSourceChange: expect.any(Function) }
   );
   expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-2']);
 });
