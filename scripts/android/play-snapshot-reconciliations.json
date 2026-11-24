@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "reconciliations": [
+    {
+      "deploymentId": 7728198485,
+      "marker": "creating",
+      "statusId": 22410715228,
+      "statusCreatedAt": "2026-11-17T10:49:17Z",
+      "authorization": "T853: the release owner confirmed on 2026-11-24 that the snapshot edit possibly left by run 44068281334 is read-only, was never committed and is invalidated by any newer edit from the same account; treat this exact creating marker as cleared."
+    }
+  ]
+}

@@ -61,3 +61,12 @@ it('prepares a later source during review even when an older active legacy sourc
   expect(f.reruns).toEqual([]);
   expect(f.rows[0].payload.prebuilt).toBeUndefined();
 });
+
+it('refuses to create an inventory snapshot when the ticket cannot record the reservation round', async () => {
+  const f = await fixture();
+  const waiting = { description: 'Play submission: waiting', creator: { login: 'github-actions[bot]' } };
+  f.histories.set(701, Array.from({ length: 92 }, () => ({ ...waiting })));
+  await expect(prepare(f)).rejects.toThrow(/93 of 100 GitHub statuses.*no Play edit was created/u);
+  expect(creates(f)).toHaveLength(0);
+  expect(await readPlayPreparation(f.clients().github, f.rows[0])).toEqual({ phase: 'cleared' });
+});

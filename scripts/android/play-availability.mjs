@@ -1,8 +1,8 @@
 import { readPlayReleases } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
-import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
-import { readPlayPublicStatus, readPlaySnapshot, writePlayCheckStatus, writePlayPublicStatus, writePlayReviewStatus } from './play-availability-state.mjs';
+import { readMobileCandidatePhase, requireDeploymentStatusBudget } from '../mobile/mobile-candidate-phase.mjs';
+import { readPlayAvailability, readPlayPublicStatus, readPlaySnapshot, writePlayCheckStatus, writePlayPublicStatus, writePlayReviewStatus } from './play-availability-state.mjs';
 import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 
 export function exactRelease(releases, candidate) {
@@ -34,7 +34,11 @@ async function deleteSnapshot(play, github, row, editId) {
   await writePlayCheckStatus(github, row, 'snapshot', 'cleared');
 }
 
+// creating, open:<id> and cleared, then the public status and the check result.
+const PLAY_SNAPSHOT_STATUS_COST = 5;
+
 async function inspectSnapshot(play, github, row) {
+  await requireDeploymentStatusBudget(github, row.id, PLAY_SNAPSHOT_STATUS_COST, 'A Play availability snapshot');
   await writePlayCheckStatus(github, row, 'snapshot', 'creating');
   const edit = await play('POST', 'edits', {});
   if (!validPlayEditId(edit?.id)) throw new Error('Play snapshot creation is uncertain; reconcile manually');
@@ -80,15 +84,19 @@ async function checkCandidate(play, github, row, readInventory) {
 export async function checkRegisteredPlayAvailability({ play, github, registration, readInventory = () => readPlayReleases(play) }) {
   const row = verifyStoredMobileCandidate(registration);
   if (!['committed', 'observed'].includes(await readMobileCandidatePhase(github, row.id))) return 'waiting';
-  await writePlayCheckStatus(github, row, 'result', 'checking');
+  // Unchanged results are not rewritten: repeated scheduled checks must not exhaust the deployment's statuses.
+  const previous = await readPlayAvailability(github, row.id);
+  const record = async value => { if (value !== previous) await writePlayCheckStatus(github, row, 'result', value); };
   try {
     const { publicStatus } = await checkCandidate(play, github, row, readInventory);
     const result = ['available', 'rejected'].includes(publicStatus) ? publicStatus : 'waiting';
     if (publicStatus) await writePlayPublicStatus(github, row, publicStatus);
-    await writePlayCheckStatus(github, row, 'result', result);
+    await record(result);
     return result;
   } catch (error) {
-    await writePlayCheckStatus(github, row, 'result', 'error');
+    if (!error.statusBudgetExhausted) {
+      try { await record('error'); } catch { /* the original failure is more useful than a lost error marker */ }
+    }
     throw error;
   }
 }

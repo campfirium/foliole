@@ -43,8 +43,49 @@ marker blocks automatic retries: the release owner must reconcile the account's
 actual edit before authorizing recovery. Do not reset the marker merely to retry.
 No generic retry, upload, commit or replacement edit is used to hide uncertainty.
 
-Completed Android checks stop scheduled waiting. A manual check can refresh the
-same candidate and revoke an old result. Deployment state remains `pending`:
+Completed Android checks stop scheduled waiting: a candidate whose review was
+rejected, or whose public status is `available` without a later manual `waiting`
+result, is no longer checked on schedule, and neither is any older candidate once a
+newer one is available. A later halt or rollback is therefore not detected on
+schedule; an exact `candidate_id` check refreshes the same candidate and can revoke
+an old result, after which scheduled waiting resumes for it. Unchanged results are
+not rewritten, so a candidate waiting in review adds history only when its review,
+public status or result actually changes.
+
+### Deployment status limit
+
+GitHub keeps at most 100 statuses per Deployment and rejects the 101st write with
+HTTP 422. A write lost this way between edit creation and `open:<id>` leaves a Play
+edit whose ID is unknown and a `creating` marker that can never be updated. Before
+writing any `creating` marker, each edit-creating path therefore counts the
+Deployment's statuses and stops before creating the edit unless the whole round
+fits: availability snapshots need 5 (`creating`, `open`, `cleared`, public status,
+result), version reservation snapshots 8 (four preparation markers plus later queue
+states) and upload edits 7 (two edit markers plus five delivery phases). The error
+names the Deployment and its used count. A full Deployment requires owner
+reconciliation; it is never worked around by writing elsewhere.
+
+### Owner reconciliation records
+
+When the release owner has reconciled a marker that can no longer be updated on its
+Deployment, the authorization is recorded in
+`scripts/android/play-snapshot-reconciliations.json` and committed to `dev`. Each
+entry names `deploymentId`, the unresolved snapshot `marker` value (for example
+`creating`), the exact GitHub `statusId` and `statusCreatedAt` of that status, and an
+`authorization` sentence naming the task, the owner's confirmation and its date. The
+snapshot is treated as `cleared` only while that exact status is still the
+Deployment's newest status; any later status, a different status ID, time, marker or
+Deployment leaves the original fail-closed behavior in place. Add an entry only
+after the owner has confirmed the account's actual edit state; the record is not a
+retry switch.
+
+T853 recorded Deployment `7728198485`: run 44068281334 hit the status limit while
+writing `open:<id>`, so its `creating` marker (2026-11-17T10:49:17Z) remained. The
+owner confirmed on 2026-11-24 that the possible leftover edit is read-only, was
+never committed and is invalidated by any newer edit from the same account. That
+Deployment cannot accept further statuses, so an exact manual check of it fails
+before creating an edit; the candidate is already `available` and is no longer
+checked on schedule. Deployment state remains `pending`:
 Android availability alone is not combined iOS/Android readiness or public-release
 permission. The later public gate must freshly check both exact candidates.
 

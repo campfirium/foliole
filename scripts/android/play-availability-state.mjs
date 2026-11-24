@@ -1,15 +1,19 @@
 import { readMobileStatus } from '../mobile/mobile-candidate-phase.mjs';
 import { openPlayEdit } from './play-edit-id.mjs';
+import { isReconciledPlaySnapshot, readPlaySnapshotReconciliations } from './play-snapshot-reconciliation.mjs';
 
 const SNAPSHOT = 'Play snapshot: ';
 const RESULT = 'Play availability: ';
 const RESULTS = new Set(['checking', 'waiting', 'available', 'rejected', 'error']);
 
-export async function readPlaySnapshot(github, id) {
-  const { value = 'cleared' } = await readMobileStatus(github, id, SNAPSHOT);
+export async function readPlaySnapshot(github, id, reconciliations = readPlaySnapshotReconciliations()) {
+  const history = await readMobileStatus(github, id, SNAPSHOT);
+  const { value = 'cleared' } = history;
   if (!['creating', 'cleared'].includes(value) && !openPlayEdit(value)) {
     throw new Error('Unknown Play snapshot requires reconciliation');
   }
+  // The release owner's versioned record clears only the exact unresolved marker it names.
+  if (value !== 'cleared' && isReconciledPlaySnapshot(id, value, history, reconciliations)) return 'cleared';
   return value;
 }
 

@@ -146,7 +146,9 @@ it('shares persisted Play availability through review, query failure, rollout an
     }]);
 
     f.track.releases[0].status = 'halted';
-    await check();
+    expect(await check()).toEqual([]);
+    expect(await channel()).toMatchObject({ build: '5', status: 'available', url });
+    await checkPendingPlayCandidates({ ...f.clients(), candidateId: '72' });
     await expect(fail()).rejects.toThrow('Play HTTP 403');
     expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'unavailable' });
     expect(f.edits.size).toBe(0);

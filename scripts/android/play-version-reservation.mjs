@@ -3,6 +3,10 @@ import { PLAY_TRACK } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 import { readPlayPreparation, writePlayPreparation } from './play-preparation-state.mjs';
+import { requireDeploymentStatusBudget } from '../mobile/mobile-candidate-phase.mjs';
+
+// creating, open, open with the reserved code and cleared, plus later queue transitions on the same ticket.
+const PLAY_RESERVATION_STATUS_COST = 8;
 
 async function clearSnapshot(github, play, row, state) {
   try { await play('DELETE', playEditPath(state.editId)); }
@@ -18,6 +22,7 @@ export async function reservePlayVersion({ github, play, row }) {
   if (state.phase === 'open') state = await clearSnapshot(github, play, row, state);
   if (state.versionCode) return state.versionCode;
   const history = await readReservedPlayHistory(github);
+  await requireDeploymentStatusBudget(github, row.id, PLAY_RESERVATION_STATUS_COST, 'A Play version reservation snapshot');
   await writePlayPreparation(github, row, { phase: 'creating' });
   const edit = await play('POST', 'edits', {});
   if (!validPlayEditId(edit?.id)) throw new Error('Play inventory snapshot outcome is unknown');

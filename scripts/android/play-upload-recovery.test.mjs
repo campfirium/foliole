@@ -177,3 +177,12 @@ it('allows a new edit when the previous edit has already committed', async () =>
   expect(await deliver()).toMatchObject({ phase: 'observed' });
   expect(creates()).toBe(before + 1);
 });
+
+it('refuses to create an upload edit when the candidate cannot record the delivery round', async () => {
+  const { f, registration, deliver, creates, status } = await prepared();
+  const before = creates();
+  f.histories.set(registration.id, Array.from({ length: 94 }, () => status('Play upload edit: creating')));
+  await expect(deliver()).rejects.toThrow(/94 of 100 GitHub statuses.*no Play edit was created/u);
+  expect(creates()).toBe(before);
+  expect(f.histories.get(registration.id)).toHaveLength(94);
+});

@@ -79,13 +79,13 @@ it('checks actual review and availability independently after a confirmed commit
   expect(result(f)).toBe('Play availability: available');
 });
 
-it('continues the same candidate after hundreds of persisted check results and refuses forged checkpoint ownership', async () => {
+it('reads paged legacy history, refuses an over-full deployment before any edit and refuses forged checkpoint ownership', async () => {
   const f = await fixture(); f.lifecycle = 'PUBLISHED';
   f.histories.get(71).unshift(...Array.from({ length: 205 }, () => f.status('Play availability: waiting')));
-  expect(await checkRegisteredPlayAvailability(f.clients())).toBe('available');
+  await expect(checkRegisteredPlayAvailability(f.clients())).rejects.toThrow(/207 of 100 GitHub statuses/u);
   f.histories.get(71).unshift({ description: 'Play snapshot: creating', creator: { login: 'other-user' } });
   await expect(checkRegisteredPlayAvailability(f.clients())).rejects.toThrow(/identity differs/u);
-  expect(creates(f)).toHaveLength(1);
+  expect(creates(f)).toHaveLength(0);
 });
 
 it('performs no store calls when the durable candidate inventory is empty', async () => {
@@ -163,14 +163,18 @@ it('rejects duplicate exact releases and malformed version inventories while sti
   expect(f.edits.size).toBe(0);
 });
 
-it('rechecks the available build on schedule and retains exact manual refresh', async () => {
+it('stops scheduled checks once available and retains exact manual refresh', async () => {
   const f = await fixture();
   expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ deploymentId: 71, state: 'waiting' }]);
   f.lifecycle = 'PUBLISHED';
   expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'available' }]);
+  const writes = f.histories.get(71).length;
   f.track.releases[0].status = 'halted';
-  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'waiting' }]);
+  expect(await checkPendingPlayCandidates(f.clients())).toEqual([]);
+  expect(f.histories.get(71)).toHaveLength(writes);
+  expect(creates(f)).toHaveLength(1);
   expect(await checkPendingPlayCandidates({ ...f.clients(), candidateId: '71' })).toMatchObject([{ state: 'waiting' }]);
+  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'waiting' }]);
   await expect(checkPendingPlayCandidates({ ...f.clients(), candidateId: '72' })).rejects.toThrow(/not found/u);
 });
 

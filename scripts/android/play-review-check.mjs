@@ -18,15 +18,20 @@ export async function checkPendingPlayCandidates({ github, play, candidateId, re
     .sort((left, right) => right.payload.candidate.versionCode - left.payload.candidate.versionCode);
   if (candidateId && selected.length !== 1) throw new Error('Durable candidate was not found');
   const results = [];
-  let checkedAvailable = false;
+  let newerAvailable = false;
   for (const row of selected) {
     const previous = await readPlayAvailability(github, row.id);
     const snapshot = await readPlaySnapshot(github, row.id);
     const publicStatus = await readPlayPublicStatus(github, row.id);
-    if (!candidateId && snapshot === 'cleared' &&
-      (previous === 'rejected' || (checkedAvailable && publicStatus === 'available'))) continue;
+    // Scheduled waiting ends once a candidate is rejected or verified available, unless a manual
+    // refresh revoked that result; older candidates end once a newer one is available.
+    const completed = previous === 'rejected' || (publicStatus === 'available' && previous !== 'waiting');
+    if (!candidateId && snapshot === 'cleared' && (completed || newerAvailable)) {
+      newerAvailable ||= publicStatus === 'available';
+      continue;
+    }
     const state = await checkRegisteredPlayAvailability({ github, play, registration: row, readInventory });
-    checkedAvailable ||= state === 'available' || publicStatus === 'available';
+    newerAvailable ||= state === 'available' || publicStatus === 'available';
     results.push({ deploymentId: row.id, sourceSha: row.payload.sourceSha, versionCode: row.payload.candidate.versionCode, state });
   }
   return results;

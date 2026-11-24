@@ -1,9 +1,11 @@
-import { readMobileStatus } from '../mobile/mobile-candidate-phase.mjs';
+import { readMobileStatus, requireDeploymentStatusBudget } from '../mobile/mobile-candidate-phase.mjs';
 import { openPlayEdit, validPlayEditId } from './play-edit-id.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { requirePlayReservation } from './play-preparation-state.mjs';
 
 const PREFIX = 'Play upload edit: ';
+// creating and open:<id>, then the upload-unknown, uploaded, commit-unknown, committed and observed phases.
+const PLAY_UPLOAD_STATUS_COST = 7;
 export async function resolvePlayUploadEdit({ github, play, registration, state }) {
   if (state.schemaVersion === 1) return;
   const { value } = await readMobileStatus(github, registration.id, PREFIX);
@@ -14,6 +16,7 @@ export async function resolvePlayUploadEdit({ github, play, registration, state 
   if (state.phase !== 'signed') throw new Error('Original upload edit is missing; reconcile without uploading again');
   await requirePlayReservation(github, registration.payload.candidate);
   await readReservedPlayHistory(github, undefined, registration);
+  await requireDeploymentStatusBudget(github, registration.id, PLAY_UPLOAD_STATUS_COST, 'A Play upload edit');
   const save = description => github('POST', `deployments/${registration.id}/statuses`, {
     state: 'pending', description: `${PREFIX}${description}`, auto_inactive: false });
   await save('creating');
