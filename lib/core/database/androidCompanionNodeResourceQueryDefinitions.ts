@@ -6,6 +6,7 @@ import {
 } from './androidCompanionDerivedReadSql.js';
 import { COMPANION_WORKSPACE_DISPLAY_NODE_QUERY } from './companionSnapshotNodeQuery.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
@@ -41,7 +42,9 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'SELECT attachment_id, page, text, page_width, page_height, ' +
       'max(0, instr(lower(text), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression('text', '?', 80)} AS excerpt ` +
-      'FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ORDER BY attachment_id ASC, page ASC LIMIT ?',
+      'FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ' +
+      `AND attachment_id IN (SELECT id FROM (${NODE_PDF_RESOURCES_SQL} AND owner.deleted_at IS NULL)) ` +
+      'ORDER BY attachment_id ASC, page ASC LIMIT ?',
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },
       { key: 'page', source: 'page', type: 'long' },

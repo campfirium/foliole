@@ -1,4 +1,4 @@
-import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { defaultTreeAdapter, Parser, type DefaultTreeAdapterMap, type DefaultTreeAdapterTypes } from 'parse5';
 
 import { decodeTextFile } from './decodeTextFile.js';
 
@@ -18,18 +18,30 @@ function declaredMetaEncoding(node: DefaultTreeAdapterTypes.Element) {
   return (match?.[1] ?? match?.[2] ?? match?.[3])?.trim() || null;
 }
 
-function readLatin1Markup(bytes: Uint8Array) {
-  let text = '';
-  for (let offset = 0; offset < bytes.length; offset += 8192) {
-    text += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-  }
-  return text;
-}
-
 function findHtmlEncoding(bytes: Uint8Array) {
-  // Parse actual markup so comments, raw script text and inert template contents
-  // cannot supply a declaration. Read the whole local file, including late meta.
-  const pending: HtmlNode[] = [parse(readLatin1Markup(bytes))];
+  let headEncoding: string | null = null;
+  const parser = new Parser<DefaultTreeAdapterMap>({
+    treeAdapter: {
+      ...defaultTreeAdapter,
+      appendChild(parent, child) {
+        defaultTreeAdapter.appendChild(parent, child);
+        if (!headEncoding && 'tagName' in parent && parent.tagName === 'head' &&
+          'tagName' in child && child.tagName === 'meta') {
+          headEncoding = declaredMetaEncoding(child);
+        }
+      }
+    }
+  });
+  // Feed byte-preserving chunks and stop once an active head declaration wins.
+  const chunkSize = 8192;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const end = Math.min(offset + chunkSize, bytes.length);
+    parser.tokenizer.write(String.fromCharCode(...bytes.subarray(offset, end)), end === bytes.length);
+    if (headEncoding) return headEncoding;
+  }
+  // Legacy local pages can declare their encoding in the body. Retain the
+  // parser's document order, including markup repaired by HTML tree building.
+  const pending: HtmlNode[] = [parser.document];
   while (pending.length) {
     const node = pending.pop()!;
     if ('tagName' in node && node.tagName === 'meta') {

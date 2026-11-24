@@ -47,7 +47,7 @@ beforeEach(() => {
   mocks.runtimeStatus.mockReturnValue('ready');
   mocks.capture.mockReturnValue('snapshot');
   mocks.prepare.mockResolvedValue({ document: { id: 'document' } });
-  mocks.placePdf.mockResolvedValue(undefined);
+  mocks.placePdf.mockResolvedValue(true);
   mocks.commit.mockImplementation(() => undefined);
 });
 
@@ -60,7 +60,7 @@ it('places highlights again without rebuilding the Reader body for a PDF that al
   await expect(resyncReadwiseSource('source')).resolves.toMatchObject({ status: 'completed' });
   expect(mocks.placePdf).toHaveBeenCalledWith({
     attachmentId: 'original', connectionRef: 'connection', documentId: 'document', nodeId: 'source'
-  });
+  }, expect.any(Function));
   expect(mocks.prepare).not.toHaveBeenCalled();
   expect(mocks.commit).not.toHaveBeenCalled();
 });

@@ -167,7 +167,10 @@ function buildPageUrl(run: ReadwiseApiImportRunState, kind: 'export' | 'reader')
   return url;
 }
 
-export function createReadwiseApiRequest(dependencies: ReadwiseApiFetchDependencies = {}) {
+export function createReadwiseApiRequest(
+  dependencies: ReadwiseApiFetchDependencies = {},
+  connectionRef?: string
+) {
   const settings = loadStoredReadwiseHostSettings();
   if (!canRunReadwiseApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
     throw new Error('readwise_api_import_not_ready');
@@ -175,7 +178,7 @@ export function createReadwiseApiRequest(dependencies: ReadwiseApiFetchDependenc
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');
   return createReadwiseRequest(
     readReadwiseApiSecret(settings.apiConnection.secretRef), dependencies,
-    loadReadwiseRemoteSource()?.connectionRef
+    connectionRef ?? loadReadwiseRemoteSource()?.connectionRef
   );
 }
 

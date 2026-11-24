@@ -1,3 +1,5 @@
+import { setTimeout as delay } from 'node:timers/promises';
+
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { canCurrentHostRunReadwise, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -26,8 +28,8 @@ export function createReadwiseRequest(
   let lastRequestAt = 0;
   return async (url: URL) => {
     for (let retry = 0; retry <= maxRetries; retry += 1) {
-      const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
-      if (delay) await abortableDelay(delay, dependencies.signal);
+      const waitMs = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
+      if (waitMs) await abortableDelay(waitMs, dependencies.signal);
       await runWithDatabaseConnectionOwner(() => assertReadwiseApiEligible(
         dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover
       ));
@@ -49,7 +51,11 @@ export function createReadwiseRequest(
         continue;
       }
       if (response.status === 401 || response.status === 403) {
-        await runWithDatabaseConnectionOwner(() => saveReconnectRequired(loadStoredReadwiseHostSettings()));
+        await runWithDatabaseConnectionOwner(() => {
+          assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+          const settings = loadStoredReadwiseHostSettings();
+          if (settings.apiConnection.state === 'connected') saveReconnectRequired(settings);
+        });
         throw new Error('readwise_api_reconnect_required');
       }
       if (response.status === 429 && retry < maxRetries) {
@@ -95,12 +101,6 @@ function transientRetryDelay(retry: number, dependencies: ReadwiseApiFetchDepend
   return dependencies.minIntervalMs === 0 ? 0 : 1_000 * (2 ** retry);
 }
 
-function abortableDelay(delay: number, signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(resolve, delay);
-    signal?.addEventListener('abort', () => {
-      clearTimeout(timeout);
-      reject(new DOMException('Readwise import cancelled', 'AbortError'));
-    }, { once: true });
-  });
+function abortableDelay(waitMs: number, signal?: AbortSignal) {
+  return delay(waitMs, undefined, signal ? { signal } : undefined);
 }

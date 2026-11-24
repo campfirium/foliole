@@ -11,10 +11,10 @@ vi.mock('@capacitor/core', async () => {
 
 import { searchCompanionFullTextSnapshot } from '../../companionFullTextSearch';
 
-import { createSearchLibrary } from './companionSearchSnapshot.testSupport';
+import { createSearchLibraryWithPdf } from './companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 
-let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
+let library: Awaited<ReturnType<typeof createSearchLibraryWithPdf>> | null = null;
 afterEach(async () => { await library?.close(); library = null; });
 const identities = (result: Awaited<ReturnType<typeof searchCompanionFullTextSnapshot>>) => ({
   topics: result.topics.map((item) => item.nodeId), external: result.external.map((item) => item.document_id),
@@ -22,7 +22,7 @@ const identities = (result: Awaited<ReturnType<typeof searchCompanionFullTextSna
 });
 
 it.each(['remove', 'insert', 'reorder'] as const)('keeps all three result sets fixed across %s and rebuilds only for a new search', async (change) => {
-  library = await createSearchLibrary();
+  library = await createSearchLibraryWithPdf();
   const snapshot = await searchCompanionFullTextSnapshot('alpha');
   const original = identities(snapshot);
   await writeIosCompanionDatabase(async (db) => {
@@ -32,7 +32,11 @@ it.each(['remove', 'insert', 'reorder'] as const)('keeps all three result sets f
       await db.run('DELETE FROM pdf_page_text WHERE page=1');
     } else if (change === 'insert') {
       await db.run("INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('new','new','alpha','zzz','zzz')");
-      await db.run("INSERT INTO pdf_page_text (attachment_id,page,text) VALUES ('aaa',1,'alpha')");
+      const pdfHash = 'b'.repeat(64);
+      await db.run("UPDATE nodes SET resource_references = ? WHERE id = 'new'", [
+        JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'New.pdf' }])
+      ]);
+      await db.run("INSERT INTO pdf_page_text (attachment_id,page,text) VALUES (?,1,'alpha')", [pdfHash]);
       await db.run(`INSERT INTO external_documents (document_id,folder_id,relative_path,file_name,extension,
         source_size_bytes,source_modified_at,source_modified_ms,content_hash,title,content,indexed_at,created_at,updated_at)
         VALUES ('new','folder','new.md','new.md','md',0,'now',0,'new','New','alpha','now','now','zzz')`);
@@ -55,7 +59,7 @@ it.each(['remove', 'insert', 'reorder'] as const)('keeps all three result sets f
 });
 
 it('serializes all categories with a real writer and keeps committed facts after a subsequent rollback', async () => {
-  library = await createSearchLibrary();
+  library = await createSearchLibraryWithPdf();
   let release!: () => void;
   let entered!: () => void;
   const started = new Promise<void>((resolve) => { entered = resolve; });
@@ -92,7 +96,7 @@ it('serializes all categories with a real writer and keeps committed facts after
 });
 
 it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each category', { meta: { calibratedMs: 30000 } }, async (count) => {
-  library = await createSearchLibrary(count);
+  library = await createSearchLibraryWithPdf(count);
   let writerWaitMs = 0;
   let waiting: Promise<void> | null = null;
   const query = library.connection.query;

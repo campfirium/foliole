@@ -70,7 +70,7 @@ export function prepareReadwiseApiDocuments(
       : document.parentId ? exportedHighlights.get(document.parentId) : null;
     const joined = Boolean(ancestor.documentId && exported?.documentId === ancestor.documentId);
     const annotation = document.category === 'highlight' && joined && exported
-      ? prepareAnnotation(document, exported.highlight)
+      ? prepareReadwiseExportHighlight(exported.highlight, document.parentId, document)
       : null;
     const foldedNote = document.category === 'note' && joined && Boolean(exported?.highlight.note);
     if (!ancestor.documentId || (!annotation && !foldedNote)) {
@@ -125,9 +125,10 @@ function prepareDocument(
   }];
 }
 
-function prepareAnnotation(
-  document: ReaderDocumentContract,
-  exported: ExportHighlightContract
+export function prepareReadwiseExportHighlight(
+  exported: ExportHighlightContract,
+  parentRemoteId: string | null,
+  reader?: Pick<ReaderDocumentContract, 'createdAt' | 'updatedAt'>
 ): PreparedReadwiseApiAnnotation | null {
   if (exported.isDeleted) return null;
   const text = exported.text?.trim() ?? '';
@@ -137,12 +138,12 @@ function prepareAnnotation(
   return {
     content,
     contentHash: sha256(content),
-    createdAt: document.createdAt ?? null,
+    createdAt: reader?.createdAt ?? null,
     kind: 'highlight',
     locatorText: text || null,
-    parentRemoteId: document.parentId,
-    remoteId: document.id,
-    updatedAt: exported.updatedAt ?? document.updatedAt
+    parentRemoteId,
+    remoteId: exported.externalId,
+    updatedAt: exported.updatedAt ?? reader?.updatedAt ?? null
   };
 }
 

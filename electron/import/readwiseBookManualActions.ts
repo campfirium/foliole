@@ -82,6 +82,7 @@ async function importSelectedReadwiseBookEpub(input: {
   const generatedNodeId = imported.nodeId || input.targetNodeId || input.book.generatedNodeId;
   input.onBeforeHighlightPlacement?.();
   const placement = await placeReadwiseBookHighlights({
+    bookKey: input.book.bookKey,
     highlightMarkdownPath: input.book.highlightMarkdownPath,
     importedAt: imported.importedAt,
     readwiseConfig: loadImportManagerSettings().readwiseReaderConfig,

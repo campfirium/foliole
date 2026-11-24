@@ -68,6 +68,18 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   } };
 }
 
+export async function createSearchLibraryWithPdf(count = 125, bodySize = 4096) {
+  const library = await createSearchLibrary(count, bodySize);
+  const pdfHash = 'a'.repeat(64);
+  library.database.transaction(() => {
+    library.database.prepare("UPDATE pdf_page_text SET attachment_id = ? WHERE attachment_id = 'pdf'").run(pdfHash);
+    library.database.prepare("UPDATE nodes SET resource_references = ? WHERE id = '000000'").run(
+      JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'Search.pdf' }])
+    );
+  })();
+  return library;
+}
+
 export async function reopenSearchLibrary(root: string, now: string, databaseExists = true) {
   await closeIosCompanionDatabase();
   const db = new Database(path.join(root, 'library.db'));

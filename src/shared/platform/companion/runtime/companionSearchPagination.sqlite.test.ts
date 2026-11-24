@@ -11,28 +11,34 @@ vi.mock('./iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({ read: (task: (db: DbPort) => Promise<unknown>) => task(scope.port!) })
 }));
 
+const pdfHash = 'a'.repeat(64);
+
 function seedSearchDatabase(db: Database.Database) {
   db.exec(`
     CREATE TABLE nodes (id TEXT PRIMARY KEY, parent_id TEXT, title TEXT, opening_text TEXT, content TEXT,
-      body_blob_hash TEXT, updated_at TEXT, created_at TEXT, deleted_at TEXT);
+      body_blob_hash TEXT, updated_at TEXT, created_at TEXT, deleted_at TEXT, resource_references TEXT DEFAULT '[]');
     CREATE INDEX idx_nodes_parent_id ON nodes(parent_id);
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
     CREATE TABLE desktop_sources (source_type TEXT, config_ref TEXT, type_settings_json TEXT);
     CREATE TABLE sync_group_devices (device_identity_key TEXT, state TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT, page_width REAL, page_height REAL);
+    CREATE TABLE pdf_index_state (attachment_id TEXT PRIMARY KEY, status TEXT, indexed_at TEXT);
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, folder_id TEXT, relative_path TEXT,
       file_name TEXT, extension TEXT, title TEXT, opening_text TEXT, reference_kind TEXT, reference_json TEXT,
       content TEXT, body_blob_hash TEXT, updated_at TEXT, is_present INTEGER);
   `);
   for (let index = 0; index < 125; index += 1) {
     const id = String(index).padStart(3, '0');
-    db.prepare('INSERT INTO nodes VALUES (?,NULL,?,NULL,?,NULL,?,?,NULL)').run(id, `Topic ${id}`, 'prefix alpha body', id, id);
-    db.prepare('INSERT INTO pdf_page_text VALUES (?, ?, ?, NULL, NULL)').run('pdf', index + 1, 'prefix alpha body');
+    db.prepare('INSERT INTO nodes (id,parent_id,title,opening_text,content,body_blob_hash,updated_at,created_at,deleted_at) VALUES (?,NULL,?,NULL,?,NULL,?,?,NULL)').run(id, `Topic ${id}`, 'prefix alpha body', id, id);
+    db.prepare('INSERT INTO pdf_page_text VALUES (?, ?, ?, NULL, NULL)').run(pdfHash, index + 1, 'prefix alpha body');
     db.prepare('INSERT INTO external_documents VALUES (?,NULL,?,?,NULL,?,NULL,NULL,NULL,?,NULL,?,1)')
       .run(id, `${id}.md`, `${id}.md`, `External ${id}`, 'prefix alpha body', id);
   }
-  db.exec("INSERT INTO nodes VALUES ('hidden',NULL,'alpha',NULL,'alpha',NULL,'999','999','deleted')");
+  db.exec("INSERT INTO nodes (id,parent_id,title,opening_text,content,body_blob_hash,updated_at,created_at,deleted_at) VALUES ('hidden',NULL,'alpha',NULL,'alpha',NULL,'999','999','deleted')");
+  db.prepare("UPDATE nodes SET resource_references = ? WHERE id = '000'").run(
+    JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'Search.pdf' }])
+  );
   db.exec("UPDATE external_documents SET is_present = 0 WHERE document_id = '124'");
 }
 

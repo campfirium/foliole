@@ -30,6 +30,7 @@ export interface ReadwiseApiDocumentImportState {
   metadata: Record<string, unknown>;
   remoteLifecycle: ReadwiseRemoteLifecycleState | null;
   originalFile: ReadwiseApiOriginalFileState | null;
+  pdfAnnotationsCheckedAt?: string;
   sourceUpdatedAt: string | null;
   sourceUpdate?: ReadwiseApiSourceUpdateState | null;
   version: number;
@@ -44,7 +45,9 @@ export interface ReadwiseApiSourceUpdateState {
 
 export function normalizeReadwiseApiDocumentImportState(value: unknown): ReadwiseApiDocumentImportState {
   const row = record(value);
+  const pdfAnnotationsCheckedAt = text(row.pdfAnnotationsCheckedAt);
   return {
+    ...(pdfAnnotationsCheckedAt && Number.isFinite(Date.parse(pdfAnnotationsCheckedAt)) ? { pdfAnnotationsCheckedAt } : {}),
     annotations: Array.isArray(row.annotations)
       ? row.annotations.flatMap(normalizeAnnotation).sort((left, right) => left.remoteId.localeCompare(right.remoteId))
       : [],

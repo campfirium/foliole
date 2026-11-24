@@ -5,8 +5,7 @@ import type {
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { localizeReadwisePdfOriginal } from './readwisePdfOriginalAction.js';
-import { placeReadwisePdfHighlightsFromAttachment } from './readwisePdfPlacement.js';
+import { resyncReadwisePdfOriginal } from './readwisePdfOriginalAction.js';
 import {
   beginReadwiseSourceOperation,
   finishReadwiseSourceOperation,
@@ -35,15 +34,20 @@ export async function resyncReadwiseSource(
   const start = await runWithDatabaseConnectionOwner(() => {
     const target = loadReadwiseSourceResyncTarget(nodeId);
     if (!target) return { status: 'not_applicable' as const };
-    if (readReadwiseSourceResyncRuntimeStatus(target) !== 'ready' || !beginReadwiseSourceOperation(nodeId)) {
+    if (readReadwiseSourceResyncRuntimeStatus(target) !== 'ready' || isReadwiseSourceOperationRunning(nodeId)) {
       return { status: 'source_inactive' as const };
     }
-    return { status: 'ready' as const, target, expectedSnapshot: captureReadwiseSourceResyncSnapshot(target) };
+    const expectedSnapshot = captureReadwiseSourceResyncSnapshot(target);
+    const controller = target.state.metadata.category === 'pdf' ? new AbortController() : undefined;
+    beginReadwiseSourceOperation(nodeId, controller);
+    return { status: 'ready' as const, target, expectedSnapshot, controller };
   });
   if (start.status !== 'ready') return { node_id: nodeId, status: start.status };
   try {
-    if (start.target.state.metadata.category === 'pdf') {
-      await resyncReadwisePdfOriginal(start.target, start.expectedSnapshot, dependencies);
+    if (start.controller) {
+      const signal = dependencies?.signal
+        ? AbortSignal.any([dependencies.signal, start.controller.signal]) : start.controller.signal;
+      await resyncReadwisePdfOriginal(start.target, start.expectedSnapshot, { ...dependencies, signal });
       return { node_id: nodeId, status: 'completed' };
     }
     const candidate = await prepareReadwiseSourceResync(start.target, dependencies);
@@ -53,30 +57,13 @@ export async function resyncReadwiseSource(
     }));
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
-    const errorCode = readErrorCode(error);
+    const errorCode = start.controller && (start.controller.signal.aborted || dependencies?.signal?.aborted)
+      ? 'readwise_pdf_resync_cancelled' : readErrorCode(error);
     console.error('[readwise-source-resync] failed', { errorCode, nodeId });
     return { error_code: errorCode, node_id: nodeId, status: 'failed' };
   } finally {
     finishReadwiseSourceOperation(nodeId);
   }
-}
-
-async function resyncReadwisePdfOriginal(
-  target: NonNullable<ReturnType<typeof loadReadwiseSourceResyncTarget>>,
-  snapshot: string,
-  dependencies?: ReadwiseApiFetchDependencies
-) {
-  const originalFile = target.state.originalFile;
-  if (originalFile?.status !== 'localized') {
-    await localizeReadwisePdfOriginal(target, snapshot, dependencies);
-    return;
-  }
-  await placeReadwisePdfHighlightsFromAttachment({
-    attachmentId: originalFile.attachmentId,
-    connectionRef: target.connectionRef,
-    documentId: target.documentId,
-    nodeId: target.nodeId
-  });
 }
 
 function state(

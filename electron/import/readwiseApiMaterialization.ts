@@ -82,6 +82,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
   if (!input.document.body.trim() && !existing?.body?.trim()) {
     const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt), { });
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
+      ...(existing?.state.pdfAnnotationsCheckedAt ? { pdfAnnotationsCheckedAt: existing.state.pdfAnnotationsCheckedAt } : {}),
       annotations: existing?.state.annotations ?? [],
       bodyAuthority: existing?.state.bodyAuthority ?? 'reader_html',
       bodyState: 'unavailable',
@@ -161,6 +162,7 @@ function materializeAvailableDocument(
   ];
   const bindings = nextAnnotationStates.map(({ kind, nodeId, remoteId }) => ({ kind, nodeId, remoteId }));
   saveState(input, record.sourceFingerprint, bindings, {
+    ...(existing?.state.pdfAnnotationsCheckedAt ? { pdfAnnotationsCheckedAt: existing.state.pdfAnnotationsCheckedAt } : {}),
     annotations: nextAnnotationStates,
     bodyAuthority: existing?.state.bodyAuthority ?? 'reader_html',
     bodyState: 'materialized',

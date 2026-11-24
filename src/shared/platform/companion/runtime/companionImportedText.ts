@@ -32,13 +32,13 @@ export async function persistCompanionImportedTextWithDb(db: DbPort, prepared: P
   };
   assertNodeTextForSave(node);
   const hostName = await iosCompanionHostName(db);
-  const nodes = buildImportedBookNodes(node, prepared, chapters);
+  const { nodes, childIdsByParent } = buildImportedBookNodes(node, prepared, chapters);
   const versions = await Promise.all(nodes.map(child => toWorkspaceNativeNodeVersion(child, hostName)));
   await commitCompanionNodeHistoryWithDb(db, versions, 'Import file', 'local_mutation', nodes.map(child => child.id));
   if (chapters.length) await saveImportedBookOpenings(db, nodes);
-  const parents = new Set(nodes.slice(1).map(child => child.parentNodeId));
-  for (const parentId of parents) await saveLocalCurrentParentOrderWithDbPort(db, { parentId: parentId!,
-    childIds: nodes.filter(child => child.parentNodeId === parentId).map(child => child.id), hostName, now: prepared.importedAt });
+  for (const [parentId, childIds] of childIdsByParent) {
+    await saveLocalCurrentParentOrderWithDbPort(db, { parentId, childIds, hostName, now: prepared.importedAt });
+  }
   const record = buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', 'new', {
     nodeId: node.id, degradedReason: prepared.degradedReason, failureReason: null
   });
@@ -64,18 +64,24 @@ async function resolveTitle(db: DbPort, desired: string) {
 function buildImportedBookNodes(node: WorkspaceNodeSnapshot, prepared: PreparedImportRecord,
   chapters: (PreparedBookNode & { resourceReferences: NodeResourceReference[] })[]) {
   const nodes = [node];
+  const childIdsByParent = new Map<string, string[]>();
   const ids = new Map<string, string>();
   for (const chapter of chapters) {
     const id = createEpubGeneratedNodeId(hashTextBody(`${prepared.sourceFingerprint}\u001f${chapter.key}`));
     ids.set(chapter.key, id);
+    const parentId = chapter.parentKey ? ids.get(chapter.parentKey) ?? node.id : node.id;
     const child = { ...node, id, title: chapter.title, content: chapter.content,
       hideTitleHeading: chapter.hideTitleHeading, resourceReferences: chapter.resourceReferences,
       openingText: resolveNodeOpeningText(chapter.content, chapter.title),
-      parentNodeId: chapter.parentKey ? ids.get(chapter.parentKey) ?? node.id : node.id };
+      parentNodeId: parentId };
     delete child.importSourceFingerprint; delete child.importContentFingerprint;
-    assertNodeTextForSave(child); nodes.push(child);
+    assertNodeTextForSave(child);
+    nodes.push(child);
+    const childIds = childIdsByParent.get(parentId) ?? [];
+    childIds.push(id);
+    childIdsByParent.set(parentId, childIds);
   }
-  return nodes;
+  return { nodes, childIdsByParent };
 }
 
 async function saveImportedBookOpenings(db: DbPort, nodes: WorkspaceNodeSnapshot[]) {

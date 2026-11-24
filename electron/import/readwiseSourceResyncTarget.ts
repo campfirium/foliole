@@ -1,6 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { normalizeReadwiseApiDocumentImportState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import { readAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 
 import {
   captureReadwiseOriginalEpubSnapshot,
@@ -51,5 +53,10 @@ export function readReadwiseSourceResyncRuntimeStatus(target: ReadwiseSourceResy
 }
 
 export function captureReadwiseSourceResyncSnapshot(target: ReadwiseSourceResyncTarget) {
-  return captureReadwiseOriginalEpubSnapshot(target);
+  const snapshot = captureReadwiseOriginalEpubSnapshot(target);
+  if (target.state.metadata.category !== 'pdf') return snapshot;
+  const resources = openDatabaseConnection().driver.queryOne<{ resource_references: string }>(
+    'SELECT resource_references FROM nodes WHERE id = ?', [target.nodeId]);
+  return JSON.stringify([snapshot, resources?.resource_references, loadReadwiseDeviceConnection(),
+    readAttachmentLibraryPathSnapshot()]);
 }
