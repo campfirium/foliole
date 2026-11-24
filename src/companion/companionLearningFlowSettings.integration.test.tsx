@@ -7,10 +7,14 @@ import { resolveReviewSessionProgress } from '../../lib/core/flow/flowSessionPro
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { companionDailyFlowSettings, openCompanionDailyFlow, ownedCompanionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { persistFlowMutation } from './companionFlowMutation';
@@ -59,6 +63,42 @@ it.each([1, 2])('opens Flow on the saved boundary and keeps %i completed Topics'
   expect(next.session.readTopicCount).toBe(0);
   const row = library.database.prepare('SELECT session_json FROM daily_flow_state').get() as { session_json: string };
   expect(JSON.parse(row.session_json).dayWindow).toEqual(next.session.dayWindow);
+});
+
+it('retains overlapping Flow progress when a workspace undo prepares the changed day', async () => {
+  const stamp = new Date(2026, 10, 3, 12);
+  const now = stamp.toISOString();
+  vi.setSystemTime(stamp);
+  try {
+    const params = { now, mode: 'recommended' as const };
+    const { session } = await openCompanionDailyFlow(params);
+    const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+    const read = await persistFlowMutation({ action: 'read', nodeId: session.currentNodeId!, now, snapshot,
+      history: { key: 'learning-settings', mode: params.mode, session } });
+    expect(read.session?.readTopicCount).toBe(1);
+    await mutateCompanionWorkspace({ type: 'create', nodeId: 'undo-folder', kind: 'folder', parentNodeId: null, title: 'Undo folder' });
+    const { unmount } = render(<CompanionLearningSettingsContent />);
+    await changeLearningSetting('New day starts at', '10');
+    unmount();
+
+    const restored = await replayCompanionFlowHistory(companionFlowHistoryKey('Search'), 'undo', createEmptyReviewSession());
+    expect(restored?.readTopicCount).toBe(1);
+    expect(restored?.dayWindow).toEqual(createDailyFlowDayWindow(now, 10));
+    expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot!.trashedNodeIds).toContain('undo-folder');
+    expect(restored?.currentNodeId).toBe(read.session?.currentNodeId);
+    const reopened = await openCompanionDailyFlow(params);
+    expect(reopened.session.dayWindow).toEqual(restored?.dayWindow);
+    expect(resolveReviewSessionProgress(reopened.session)).toEqual({ reviewCompletedCount: 1, reviewQueueCount: 1 });
+    const currentSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+    const second = await persistFlowMutation({ action: 'read', nodeId: reopened.session.currentNodeId!, now, snapshot: currentSnapshot,
+      history: { key: 'learning-settings', mode: params.mode, session: reopened.session } });
+    expect(second.session?.readTopicCount).toBe(2);
+    expect(library.database.prepare("SELECT count(*) AS total FROM daily_flow_sync_facts WHERE kind='advance'").get())
+      .toEqual({ total: 2 });
+    expect((await openCompanionDailyFlow(params)).session.readTopicCount).toBe(2);
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('uses a changed default priority for unassigned topics while retaining explicit priorities', async () => {
