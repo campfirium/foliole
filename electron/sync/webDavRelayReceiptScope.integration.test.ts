@@ -71,7 +71,8 @@ it('honors an unscoped receipt left by an older library for a still-visible pack
     const { key } = await scope(target);
     // Represent the persisted receipt layout before collection generations were recorded.
     await target.db.transaction(async tx => {
-      await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [`${key}:applied:legacy:${name}`]);
+      const scoped = await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [`${key}:applied:legacy:${name}`]);
+      expect(scoped.changes).toBe(1);
       await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
         [`${key}:applied:${name}`, 'true', new Date().toISOString()]);
     });
@@ -83,9 +84,7 @@ it('honors an unscoped receipt left by an older library for a still-visible pack
     expect(await text(target, 'already-applied')).toBe('Previously received body');
   }, (_response, request) => {
     if (!name && request.method === 'MOVE' && typeof request.headers.destination === 'string') {
-      const destination = request.headers.destination.replace(/\.dat$/u, '.bin');
-      request.headers.destination = destination;
-      name = path.posix.basename(new URL(destination).pathname);
+      name = path.posix.basename(new URL(request.headers.destination).pathname);
     }
     return false;
   });
@@ -126,7 +125,7 @@ it('reclaims the responder receipts after the LAN initiator deletes its retired 
 
 async function seedHistoricalReceipts(peer: RestorePeer, scopeKey: string) {
   const keys = Array.from({ length: 256 }, () =>
-    `${scopeKey}:applied:20261001T120000.000Z-${crypto.randomUUID()}.bin`).sort();
+    `${scopeKey}:applied:20261001T120000.000Z-${crypto.randomUUID()}.dat`).sort();
   await peer.db.run(`INSERT INTO sync_group_metadata (key, value, updated_at)
     SELECT value, 'true', ? FROM json_each(?)`, [new Date().toISOString(), JSON.stringify(keys)]);
   return keys.map(key => ({ key }));

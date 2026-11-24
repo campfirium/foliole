@@ -32,9 +32,7 @@ final class FolioleCompanionWebDavHttp {
     private static final String COLLECTIONS = DIRECTION + "-collections/";
     private static final String DIRECTORY = "(?:" + DIRECTION + "/|" + COLLECTIONS
         + "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)";
-    private static final String PACKET_NAME = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}";
-    private static final String PACKET = PACKET_NAME + "(?:\\.asset|\\.repair)?\\.(?:dat|bin)";
-    private static final String PACKET_PROPERTIES = PACKET_NAME + "(?:(?:\\.asset|\\.repair)?\\.dat|\\.asset\\.bin)";
+    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset|\\.repair)?\\.dat";
     private static final Set<String> METHODS = Set.of("DELETE", "GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
@@ -154,11 +152,7 @@ final class FolioleCompanionWebDavHttp {
     }
 
     static boolean canReadPacketProperties(String path, String depth) {
-        return depth.equals("0") && path.matches(DIRECTORY + PACKET_PROPERTIES + "(\\.partial)?");
-    }
-
-    static boolean canTransferPacket(String path, boolean stagedOnly) {
-        return path.matches(DIRECTORY + PACKET + (stagedOnly ? "\\.partial" : "(\\.partial)?"));
+        return depth.equals("0") && path.matches(DIRECTORY + PACKET + "(\\.partial)?");
     }
 
     private static Request buildRequest(PluginCall input, FramedSyncFiles files, Progress progress, HttpUrl root) {
@@ -185,10 +179,10 @@ final class FolioleCompanionWebDavHttp {
                 if (!path.matches(DIRECTORY) && !path.matches(COLLECTIONS)) throw invalidPath();
                 break;
             case "GET":
-                if (!canTransferPacket(path, false)) throw invalidPath();
+                if (!path.matches(DIRECTORY + PACKET + "(\\.partial)?")) throw invalidPath();
                 break;
             default:
-                if (!canTransferPacket(path, true)) throw invalidPath();
+                if (!path.matches(DIRECTORY + PACKET + "\\.partial")) throw invalidPath();
         }
         if (method.equals("MOVE")) {
             String destination = url.toString().substring(0, url.toString().length() - ".partial".length());

@@ -91,7 +91,7 @@ async function readCandidate(db: DbPort, scope: WebDavRelayBodyScope): Promise<C
   const state = await readRelayCollections(db, scope.key);
   const outbox = await readWebDavRelayBodyOutbox(db, scope);
   if (state?.retired) return { offer: state.retired, sequence: state.startSequence, retired: true };
-  if (outbox.packet || (await db.query('SELECT 1 FROM sync_group_metadata WHERE key = ?',
+  if (outbox.hasStagedPacket || (await db.query('SELECT 1 FROM sync_group_metadata WHERE key = ?',
     [webDavRelayAttachmentOutboxKey(scope)])).length) return;
   if (outbox.sequence <= (state?.startSequence ?? scope.baseline.sequence) && !state?.keys.length) return;
   const prefix = `${scope.key}:attachment:`;

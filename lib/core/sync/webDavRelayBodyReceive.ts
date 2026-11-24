@@ -15,7 +15,7 @@ import { readMissingRelayReceiptGenerations, readUnappliedRelayPackets, recordRe
 import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
 import { readWebDavRelayRepair } from './webDavRelayRepairWire.js';
 
-const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.(?:(asset|repair)\.)?(?:dat|bin)$/u;
+const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.(?:(asset|repair)\.)?dat$/u;
 
 type Input = {
   host: RequestSyncDatabaseHost;

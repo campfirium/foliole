@@ -53,16 +53,12 @@ async function equalBytes(left: AsyncIterable<Uint8Array>, right: AsyncIterable<
   }
 }
 
-export async function publishWebDavRelayFile(request: WebDavRelayRequest, packet: URL,
+export async function publishWebDavRelayFile(request: WebDavRelayRequest, destination: URL,
   ciphertext: NonNullable<Parameters<WebDavRelayRequest>[1]['body']>) {
-  assertPublication(packet, ciphertext.bytes);
-  const isPublished = async (url: URL) => {
-    const existing = await compareRemoteBytes(request, url, ciphertext);
-    if (existing === 'different') throw new Error('webdav_relay_destination_conflict');
-    return existing === 'matching';
-  };
-  const destination = await unpublishedDestination(packet, isPublished);
-  if (!destination) return 'already_published';
+  assertPublication(destination, ciphertext.bytes);
+  const existing = await compareRemoteBytes(request, destination, ciphertext);
+  if (existing === 'matching') return 'already_published';
+  if (existing === 'different') throw new Error('webdav_relay_destination_conflict');
 
   const staged = new URL(destination);
   staged.pathname += '.partial';
@@ -74,32 +70,26 @@ export async function publishWebDavRelayFile(request: WebDavRelayRequest, packet
   const move = await request(staged, { method: 'MOVE',
     headers: { Destination: destination.href, Overwrite: 'F' } }, webDavRelayStatus);
   if (move === 201) return 'published';
-  if ((move === 404 || move === 412) && await isPublished(destination)) return 'already_published';
+  if (move === 404 || move === 412) {
+    const confirmed = await compareRemoteBytes(request, destination, ciphertext);
+    if (confirmed === 'matching') return 'already_published';
+    if (confirmed === 'different') throw new Error('webdav_relay_destination_conflict');
+  }
   throw new Error(`webdav_relay_move_failed:${move}`);
 }
 
-async function unpublishedDestination(packet: URL, isPublished: (url: URL) => Promise<boolean>) {
-  // Settle a lost reply at the original path before publishing any remaining bytes.
-  if (await isPublished(packet)) return null;
-  if (!packet.pathname.endsWith('.bin')) return packet;
-  const current = new URL(packet);
-  current.pathname = current.pathname.replace(/\.bin$/u, '.dat');
-  return await isPublished(current) ? null : current;
-}
 
 function assertPublication(destination: URL, bytes: number) {
   if (!['http:', 'https:'].includes(destination.protocol) || destination.username || destination.password ||
-      destination.search || destination.hash || !/\.(?:dat|bin)$/u.test(destination.pathname) || bytes <= 0) {
+      destination.search || destination.hash || !destination.pathname.endsWith('.dat') || bytes <= 0) {
     throw new Error('webdav_relay_invalid_publication');
   }
 }
 
-export async function publishWebDavRelayAttachment(request: WebDavRelayRequest, packet: URL,
+export async function publishWebDavRelayAttachment(request: WebDavRelayRequest, destination: URL,
   ciphertext: NonNullable<Parameters<WebDavRelayRequest>[1]['body']>, assertScope: () => Promise<void>) {
-  assertPublication(packet, ciphertext.bytes);
-  const isPublished = (url: URL) => isAttachmentPublished(request, url, ciphertext.bytes);
-  const destination = await unpublishedDestination(packet, isPublished);
-  if (!destination) return;
+  assertPublication(destination, ciphertext.bytes);
+  if (await isAttachmentPublished(request, destination, ciphertext.bytes)) return;
   const staged = new URL(destination);
   staged.pathname += '.partial';
   const put = await request(staged, { method: 'PUT', body: ciphertext,
@@ -111,7 +101,7 @@ export async function publishWebDavRelayAttachment(request: WebDavRelayRequest, 
   const move = await request(staged, { method: 'MOVE',
     headers: { Destination: destination.href, Overwrite: 'F' } }, webDavRelayStatus);
   if (move === 201) return;
-  if ((move === 404 || move === 412) && await isPublished(destination)) return;
+  if ((move === 404 || move === 412) && await isAttachmentPublished(request, destination, ciphertext.bytes)) return;
   throw new Error(`webdav_relay_move_failed:${move}`);
 }
 
