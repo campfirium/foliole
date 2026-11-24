@@ -15,8 +15,9 @@ function Separator() {
 export function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]; onSelectItem?: (id: string) => void }) {
   const t = useTranslation();
   const lineRef = useRef<HTMLDivElement>(null);
+  const overflowRef = useRef<HTMLSpanElement>(null);
   const [pathOpen, setPathOpen] = useState(false);
-  const shown = useBreadcrumbFit(lineRef, props.items.length, props.items.map(item => item.id).join('/'));
+  const shown = useBreadcrumbFit(lineRef, overflowRef, props.items.length, JSON.stringify(props.items.map(({ id, label }) => [id, label])));
   if (props.items.length === 0) {
     return null;
   }
@@ -25,7 +26,7 @@ export function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]
 
   return (
     <nav aria-label={t('companion.review.breadcrumb')}>
-      <div ref={lineRef} className="flex min-w-0 items-center overflow-hidden whitespace-nowrap text-[12px] leading-5 text-companion-text-secondary">
+      <div ref={lineRef} className="relative flex min-w-0 items-center overflow-hidden whitespace-nowrap text-[12px] leading-5 text-companion-text-secondary">
         {hasHidden ? (
           <>
             <button aria-label={t('shared.breadcrumb.expand')} className={segmentClassName} onClick={() => setPathOpen(true)} type="button">…</button>
@@ -40,6 +41,12 @@ export function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]
             {index < visible.length - 1 ? <Separator /> : null}
           </Fragment>
         ))}
+        {props.items.length > 1 ? (
+          <span aria-hidden="true" className="pointer-events-none invisible absolute top-0 left-0 flex" ref={overflowRef}>
+            <button className={segmentClassName} tabIndex={-1} type="button">…</button>
+            <Separator />
+          </span>
+        ) : null}
       </div>
       {hasHidden ? (
         <CompanionMenuSheet open={pathOpen} onOpenChange={setPathOpen} title={t('shared.breadcrumb.location')}>

@@ -37,12 +37,13 @@ function Separator() {
 export function AppBreadcrumb({ ariaLabel, className, items, onSelect }: BreadcrumbProps) {
   const t = useTranslation();
   const lineRef = useRef<HTMLElement>(null);
-  const shown = useBreadcrumbFit(lineRef, items.length, items.map(item => item.id).join('/'));
+  const overflowRef = useRef<HTMLSpanElement>(null);
+  const shown = useBreadcrumbFit(lineRef, overflowRef, items.length, JSON.stringify(items.map(({ id, label }) => [id, label])));
   const visible = items.slice(items.length - shown);
   const hasHidden = shown < items.length;
 
   return (
-    <nav ref={lineRef} aria-label={ariaLabel ?? t('shared.breadcrumb.aria')} className={cn('flex min-w-0 items-baseline overflow-hidden whitespace-nowrap', className)}>
+    <nav ref={lineRef} aria-label={ariaLabel ?? t('shared.breadcrumb.aria')} className={cn('relative flex min-w-0 items-baseline overflow-hidden whitespace-nowrap', className)}>
       {hasHidden ? (
         <>
           <AppDropdownMenu>
@@ -64,6 +65,12 @@ export function AppBreadcrumb({ ariaLabel, className, items, onSelect }: Breadcr
           {index < visible.length - 1 ? <Separator /> : null}
         </Fragment>
       ))}
+      {items.length > 1 ? (
+        <span aria-hidden="true" className="pointer-events-none invisible absolute top-0 left-0 flex" ref={overflowRef}>
+          <button className={segmentClassName} tabIndex={-1} type="button">…</button>
+          <Separator />
+        </span>
+      ) : null}
     </nav>
   );
 }
