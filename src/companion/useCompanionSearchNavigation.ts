@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 import type { CompanionTopicSearchResult } from '../shared/platform/companionFullTextSearch';
@@ -10,6 +10,11 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 export function useCompanionSearchNavigation(surface: ReturnType<typeof useCompanionArticleSurface>) {
   const [searchMatch, setSearchMatch] = useState<CompanionSearchMatch | null>(null);
+  const followingBacklink = Boolean(surface.returnFromBacklink);
+  useEffect(() => {
+    // Reopening the search topic from a backlink resumes reading at its saved position.
+    if (followingBacklink) setSearchMatch(null);
+  }, [followingBacklink]);
   const [topicNodeId, setTopicNodeId] = useCompanionNavigationField('searchTopicNodeId', null);
   const { externalDocument, setExternalDocument, pdfResult, setPdfResult } = useSearchDocumentResume();
   const clearLocalResult = useCallback(() => {

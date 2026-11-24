@@ -43,7 +43,8 @@ export function useCompanionBrowseState(
     sortDirection: DEFAULT_FOLDER_LIST_SORT_DIRECTION,
     sortKey: DEFAULT_FOLDER_LIST_SORT_KEY
   },
-  display: { activeAction: CompanionTabAction; flowNodeId: string | null } = { activeAction: 'recent', flowNodeId: null }
+  display: { activeAction: CompanionTabAction; flowNodeId: string | null; followingBacklink?: boolean }
+    = { activeAction: 'recent', flowNodeId: null }
 ) {
   const snapshot = workspaceSync.state.workspace_snapshot;
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
@@ -72,7 +73,7 @@ export function useCompanionBrowseState(
 
   return {
     breadcrumbAnchor,
-    browsedFolder,
+    browsedFolder: display.followingBacklink ? null : browsedFolder,
     readableArticle,
     recentArticles,
     selectedBrowseNodeId,

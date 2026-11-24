@@ -18,6 +18,7 @@ const navigationSchema = z.object({
   activeAction: z.enum(['review', 'recent', 'search', 'more']),
   selectedBrowseNodeId: z.string().nullable(),
   browseReturnNodeId: z.string().nullable(),
+  backlinkReturnNodeIds: z.array(z.string()).default([]),
   isBrowseDirectoryOpen: z.boolean(),
   flowSessionMode: z.enum(['recommended', 'review-first', 'reading-only']).default('recommended'),
   directorySelection,
@@ -37,7 +38,7 @@ export type CompanionNavigationState = z.infer<typeof navigationSchema>;
 export function initialCompanionNavigation(hasWorkspace: boolean): CompanionNavigationState {
   return {
     activeAction: hasWorkspace ? 'review' : 'more', selectedBrowseNodeId: null, browseReturnNodeId: null,
-    isBrowseDirectoryOpen: false, flowSessionMode: 'recommended', directorySelection: { kind: 'root' },
+    backlinkReturnNodeIds: [], isBrowseDirectoryOpen: false, flowSessionMode: 'recommended', directorySelection: { kind: 'root' },
     settingsPage: 'list', searchTopicNodeId: null, searchQuery: '',
     searchExternalDocumentId: null, searchPdf: null, externalScrollTopById: {}, originalPdfNodeId: null, pdfPositionById: {}
   };
@@ -74,6 +75,8 @@ export function restoreCompanionNavigation(value: string | null, snapshot: Works
     state.selectedBrowseNodeId = null;
     state.searchTopicNodeId = null;
   }
+  state.backlinkReturnNodeIds = state.selectedBrowseNodeId
+    ? state.backlinkReturnNodeIds.filter(id => isCanonicalVisibleNodeId(snapshot, id)) : [];
   if (state.browseReturnNodeId && !isCanonicalVisibleNodeId(snapshot, state.browseReturnNodeId)) {
     state.browseReturnNodeId = null;
   }
