@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "Comportement des gestes de la souris",
   "settings.demoPreview.readwise.status": "Readwise Statut du lecteur",
   "settings.demoPreview.note.label": "Accès aux dossiers",
-  "settings.demoPreview.note.externalFolders": "Les fonctionnalités des dossiers externes sont simplifiées dans cette démo. L'application de bureau inclut l'expérience complète."
+  "settings.demoPreview.note.externalFolders": "Les fonctionnalités des dossiers externes sont simplifiées dans cette démo. L'application de bureau inclut l'expérience complète.",
+  "settings.demoPreview.rail.readwise": "Importer depuis Readwise Reader",
+  "settings.demoPreview.superMemo.sample.title": "Collection d’exemple",
+  "settings.demoPreview.superMemo.sample.description": "Un exemple intégré en lecture seule, avec {topics} sujets et {items} éléments. Vos fichiers ne sont pas lus.",
+  "settings.demoPreview.superMemo.footnote": "Démo uniquement. Rien n’est importé ni enregistré.",
+  "settings.demoPreview.superMemo.finish": "Terminer la démo",
+  "settings.demoPreview.superMemo.done.title": "Fin de la démo",
+  "settings.demoPreview.superMemo.done.description": "Ceci était une démo. Rien n’a été importé et votre espace de travail n’a pas changé. Utilisez l’application de bureau pour migrer votre propre collection.",
+  "settings.demoPreview.superMemo.close": "Fermer la démo"
 }

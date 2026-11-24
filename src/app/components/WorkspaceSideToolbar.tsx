@@ -15,6 +15,8 @@ import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 import { requestClipboardImport, requestFileImport } from './importActivityRequests';
 import { WorkspaceDemoRailBottomActions } from './WorkspaceDemoRailBottomActions';
+import { WorkspaceDemoReadwiseRailAction } from './WorkspaceDemoReadwiseRailAction';
+import { WorkspaceDemoSuperMemoRailAction } from './WorkspaceDemoSuperMemoRailAction';
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import { renderStudyDock } from './WorkspaceStudyDock';
@@ -124,6 +126,8 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           items={state.topItems}
           onRun={state.runRailCommand}
         />
+        {state.isDemo ? <WorkspaceDemoReadwiseRailAction onRun={state.runRailCommand} /> : null}
+        {state.isDemo ? <WorkspaceDemoSuperMemoRailAction /> : null}
         <div className="flex-1" />
         <WorkspaceUpdateAction />
         <RailActionGroup

@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "Comportamento do gesto do mouse",
   "settings.demoPreview.readwise.status": "Readwise Status do leitor",
   "settings.demoPreview.note.label": "Acesso à pasta",
-  "settings.demoPreview.note.externalFolders": "Os recursos de pasta externa são simplificados nesta demonstração. O aplicativo de desktop inclui a experiência completa."
+  "settings.demoPreview.note.externalFolders": "Os recursos de pasta externa são simplificados nesta demonstração. O aplicativo de desktop inclui a experiência completa.",
+  "settings.demoPreview.rail.readwise": "Importar do Readwise Reader",
+  "settings.demoPreview.superMemo.sample.title": "Coleção de exemplo",
+  "settings.demoPreview.superMemo.sample.description": "Um exemplo integrado somente leitura com {topics} tópicos e {items} itens. Seus arquivos não são lidos.",
+  "settings.demoPreview.superMemo.footnote": "Apenas demonstração. Nada é importado ou salvo.",
+  "settings.demoPreview.superMemo.finish": "Concluir demonstração",
+  "settings.demoPreview.superMemo.done.title": "Fim da demonstração",
+  "settings.demoPreview.superMemo.done.description": "Esta foi uma demonstração. Nada foi importado e seu espaço de trabalho não mudou. Use o aplicativo para computador para migrar sua própria coleção.",
+  "settings.demoPreview.superMemo.close": "Fechar demonstração"
 }

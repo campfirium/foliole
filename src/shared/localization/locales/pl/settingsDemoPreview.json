@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "Zachowanie gestów myszy",
   "settings.demoPreview.readwise.status": "Readwise Stan czytnika",
   "settings.demoPreview.note.label": "Dostęp do folderu",
-  "settings.demoPreview.note.externalFolders": "W tym demo funkcje folderów zewnętrznych zostały uproszczone. Aplikacja komputerowa zapewnia pełną funkcjonalność."
+  "settings.demoPreview.note.externalFolders": "W tym demo funkcje folderów zewnętrznych zostały uproszczone. Aplikacja komputerowa zapewnia pełną funkcjonalność.",
+  "settings.demoPreview.rail.readwise": "Importuj z Readwise Reader",
+  "settings.demoPreview.superMemo.sample.title": "Przykładowa kolekcja",
+  "settings.demoPreview.superMemo.sample.description": "Wbudowany przykład tylko do odczytu: tematy: {topics}, elementy: {items}. Twoje pliki nie są odczytywane.",
+  "settings.demoPreview.superMemo.footnote": "Tylko demo. Nic nie jest importowane ani zapisywane.",
+  "settings.demoPreview.superMemo.finish": "Zakończ demo",
+  "settings.demoPreview.superMemo.done.title": "Koniec demo",
+  "settings.demoPreview.superMemo.done.description": "To było demo. Nic nie zostało zaimportowane, a Twój obszar roboczy się nie zmienił. Aby przenieść własną kolekcję, użyj aplikacji komputerowej.",
+  "settings.demoPreview.superMemo.close": "Zamknij demo"
 }

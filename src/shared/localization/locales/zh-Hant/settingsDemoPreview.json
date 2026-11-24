@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "滑鼠手勢行為",
   "settings.demoPreview.readwise.status": "Readwise 讀者狀態",
   "settings.demoPreview.note.label": "資料夾訪問",
-  "settings.demoPreview.note.externalFolders": "此示範中簡化了外部資料夾功能。桌面應用程式包含完整的體驗。"
+  "settings.demoPreview.note.externalFolders": "此示範中簡化了外部資料夾功能。桌面應用程式包含完整的體驗。",
+  "settings.demoPreview.rail.readwise": "從 Readwise Reader 匯入",
+  "settings.demoPreview.superMemo.sample.title": "範例資料庫",
+  "settings.demoPreview.superMemo.sample.description": "內建的唯讀範例，含 {topics} 個主題和 {items} 個項目。不會讀取你的檔案。",
+  "settings.demoPreview.superMemo.footnote": "僅供示範，不會匯入或儲存任何內容。",
+  "settings.demoPreview.superMemo.finish": "結束示範",
+  "settings.demoPreview.superMemo.done.title": "示範結束",
+  "settings.demoPreview.superMemo.done.description": "這只是示範，沒有匯入任何內容，你的工作區沒有變更。請使用桌面應用程式遷移自己的資料庫。",
+  "settings.demoPreview.superMemo.close": "關閉示範"
 }

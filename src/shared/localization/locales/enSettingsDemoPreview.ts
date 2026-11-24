@@ -14,5 +14,13 @@ export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
   'settings.demoPreview.mouseGestures.title': 'Mouse gesture behavior',
   'settings.demoPreview.readwise.status': 'Readwise Reader status',
   'settings.demoPreview.note.label': 'Folder access',
-  'settings.demoPreview.note.externalFolders': 'External folder features are simplified in this demo. The desktop app includes the full experience.'
+  'settings.demoPreview.note.externalFolders': 'External folder features are simplified in this demo. The desktop app includes the full experience.',
+  'settings.demoPreview.rail.readwise': 'Import from Readwise Reader',
+  'settings.demoPreview.superMemo.sample.title': 'Sample collection',
+  'settings.demoPreview.superMemo.sample.description': 'A built-in, read-only sample with {topics} topics and {items} items. Your files are not read.',
+  'settings.demoPreview.superMemo.footnote': 'Demo only. Nothing is imported or saved.',
+  'settings.demoPreview.superMemo.finish': 'Finish demo',
+  'settings.demoPreview.superMemo.done.title': 'End of demo',
+  'settings.demoPreview.superMemo.done.description': 'This was a demo. Nothing was imported and your workspace has not changed. Use the desktop app to migrate your own collection.',
+  'settings.demoPreview.superMemo.close': 'Close demo'
 } as const;

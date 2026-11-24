@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "マウス ジェスチャの動作",
   "settings.demoPreview.readwise.status": "Readwise リーダーのステータス",
   "settings.demoPreview.note.label": "フォルダーへのアクセス",
-  "settings.demoPreview.note.externalFolders": "このデモでは、外部フォルダー機能が簡略化されています。デスクトップ アプリにはすべてのエクスペリエンスが含まれています。"
+  "settings.demoPreview.note.externalFolders": "このデモでは、外部フォルダー機能が簡略化されています。デスクトップ アプリにはすべてのエクスペリエンスが含まれています。",
+  "settings.demoPreview.rail.readwise": "Readwise Reader からインポート",
+  "settings.demoPreview.superMemo.sample.title": "サンプルコレクション",
+  "settings.demoPreview.superMemo.sample.description": "{topics} 件のトピックと {items} 件のアイテムを含む、読み取り専用の内蔵サンプルです。お手元のファイルは読み込みません。",
+  "settings.demoPreview.superMemo.footnote": "デモのみです。何もインポート・保存されません。",
+  "settings.demoPreview.superMemo.finish": "デモを終了",
+  "settings.demoPreview.superMemo.done.title": "デモはここまでです",
+  "settings.demoPreview.superMemo.done.description": "これはデモです。何もインポートされておらず、ワークスペースは変わっていません。ご自身のコレクションの移行にはデスクトップアプリをご利用ください。",
+  "settings.demoPreview.superMemo.close": "デモを閉じる"
 }

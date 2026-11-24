@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "Mausgestenverhalten",
   "settings.demoPreview.readwise.status": "Readwise Leserstatus",
   "settings.demoPreview.note.label": "Ordnerzugriff",
-  "settings.demoPreview.note.externalFolders": "Externe Ordnerfunktionen werden in dieser Demo vereinfacht. Die Desktop-App bietet das volle Erlebnis."
+  "settings.demoPreview.note.externalFolders": "Externe Ordnerfunktionen werden in dieser Demo vereinfacht. Die Desktop-App bietet das volle Erlebnis.",
+  "settings.demoPreview.rail.readwise": "Aus Readwise Reader importieren",
+  "settings.demoPreview.superMemo.sample.title": "Beispielsammlung",
+  "settings.demoPreview.superMemo.sample.description": "Ein integriertes, schreibgeschütztes Beispiel mit {topics} Themen und {items} Elementen. Deine Dateien werden nicht gelesen.",
+  "settings.demoPreview.superMemo.footnote": "Nur eine Demo. Nichts wird importiert oder gespeichert.",
+  "settings.demoPreview.superMemo.finish": "Demo beenden",
+  "settings.demoPreview.superMemo.done.title": "Ende der Demo",
+  "settings.demoPreview.superMemo.done.description": "Dies war eine Demo. Es wurde nichts importiert und dein Arbeitsbereich ist unverändert. Nutze die Desktop-App, um deine eigene Sammlung zu übertragen.",
+  "settings.demoPreview.superMemo.close": "Demo schließen"
 }

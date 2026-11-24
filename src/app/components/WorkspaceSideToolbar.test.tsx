@@ -113,6 +113,8 @@ it('runs the feedback command from the bottom rail', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Send Feedback' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
+  expect(screen.queryByRole('button', { name: 'Import from Readwise Reader' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Import from SuperMemo' })).toBeNull();
 });
 
 it('runs immersive reading from the top rail', () => {
@@ -172,6 +174,9 @@ it('shows Demo conversion actions in the bottom rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
 
   expect(screen.getByRole('button', { name: 'Reset data' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Import from Readwise Reader' }));
+  expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.openReadwiseReaderSettings);
+  expect(screen.getByRole('button', { name: 'Import from SuperMemo' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
 });
 

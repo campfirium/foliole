@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "Поведение жестов мыши",
   "settings.demoPreview.readwise.status": "Readwise Статус читателя",
   "settings.demoPreview.note.label": "Доступ к папке",
-  "settings.demoPreview.note.externalFolders": "В этой демонстрации упрощены функции внешних папок. Настольное приложение включает в себя все возможности."
+  "settings.demoPreview.note.externalFolders": "В этой демонстрации упрощены функции внешних папок. Настольное приложение включает в себя все возможности.",
+  "settings.demoPreview.rail.readwise": "Импорт из Readwise Reader",
+  "settings.demoPreview.superMemo.sample.title": "Пример коллекции",
+  "settings.demoPreview.superMemo.sample.description": "Встроенный пример только для чтения: тем — {topics}, элементов — {items}. Ваши файлы не читаются.",
+  "settings.demoPreview.superMemo.footnote": "Только демонстрация. Ничего не импортируется и не сохраняется.",
+  "settings.demoPreview.superMemo.finish": "Завершить демонстрацию",
+  "settings.demoPreview.superMemo.done.title": "Конец демонстрации",
+  "settings.demoPreview.superMemo.done.description": "Это была демонстрация. Ничего не импортировано, ваше рабочее пространство не изменилось. Чтобы перенести свою коллекцию, используйте настольное приложение.",
+  "settings.demoPreview.superMemo.close": "Закрыть демонстрацию"
 }

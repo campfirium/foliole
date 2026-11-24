@@ -14,5 +14,13 @@
   "settings.demoPreview.mouseGestures.title": "마우스 제스처 동작",
   "settings.demoPreview.readwise.status": "Readwise 리더 상태",
   "settings.demoPreview.note.label": "폴더 액세스",
-  "settings.demoPreview.note.externalFolders": "이 데모에서는 외부 폴더 기능이 단순화되었습니다. 데스크톱 앱에는 전체 환경이 포함되어 있습니다."
+  "settings.demoPreview.note.externalFolders": "이 데모에서는 외부 폴더 기능이 단순화되었습니다. 데스크톱 앱에는 전체 환경이 포함되어 있습니다.",
+  "settings.demoPreview.rail.readwise": "Readwise Reader에서 가져오기",
+  "settings.demoPreview.superMemo.sample.title": "샘플 컬렉션",
+  "settings.demoPreview.superMemo.sample.description": "주제 {topics}개와 항목 {items}개가 담긴 읽기 전용 내장 샘플입니다. 내 파일은 읽지 않습니다.",
+  "settings.demoPreview.superMemo.footnote": "데모 전용입니다. 아무것도 가져오거나 저장하지 않습니다.",
+  "settings.demoPreview.superMemo.finish": "데모 마치기",
+  "settings.demoPreview.superMemo.done.title": "데모 종료",
+  "settings.demoPreview.superMemo.done.description": "데모였습니다. 아무것도 가져오지 않았으며 작업 공간은 그대로입니다. 내 컬렉션을 옮기려면 데스크톱 앱을 사용하세요.",
+  "settings.demoPreview.superMemo.close": "데모 닫기"
 }
