@@ -42,7 +42,7 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
   };
 }
 
-export type CompanionCaptureOpenChange = (open: boolean, reason?: 'saving-draft') => void;
+export type CompanionCaptureOpenChange = (open: boolean, reason?: 'saving-draft' | 'preserve-draft') => void;
 
 interface CaptureDraftProps {
   draftScope: string;
@@ -66,7 +66,8 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
     if (retryRefresh) return handleOpenChange(false);
     if (!persistCaptureBackDraft(props.draftScope, draft)) return;
     preserveOnClose.current = true;
-    props.onOpenChange(false);
+    if (draft.trim()) props.onOpenChange(false, 'preserve-draft');
+    else props.onOpenChange(false);
   };
   const saveText = createCaptureTextSaver(props, state, handleOpenChange, epubMode.offer);
   return {

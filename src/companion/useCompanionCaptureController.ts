@@ -23,7 +23,7 @@ export function useCompanionCaptureController(args: {
   const latest = useRef(args);
   latest.current = args;
   const setIsCaptureSheetOpen: CompanionCaptureOpenChange = (open, reason) => {
-    if (!open) preserveParent.current = reason === 'saving-draft';
+    if (!open && reason !== 'preserve-draft') preserveParent.current = reason === 'saving-draft';
     if (open && !isCaptureSheetOpen && !preserveParent.current) {
       const candidate = args.isBrowseDirectoryOpen
         ? args.directorySelection.kind === 'internal' ? args.directorySelection.nodeId : null

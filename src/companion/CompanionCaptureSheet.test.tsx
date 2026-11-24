@@ -68,7 +68,7 @@ describe('CompanionCaptureSheet', () => {
     );
     fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'Unfinished note' } });
     document.dispatchEvent(new Event(COMPANION_ANDROID_CAPTURE_BACK_EVENT, { cancelable: true }));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onOpenChange).toHaveBeenCalledWith(false, 'preserve-draft');
     rerender(<CompanionCaptureSheet draftScope="test" onOpenChange={onOpenChange} onSave={onSave} open={false} />);
     rerender(<CompanionCaptureSheet draftScope="test" onOpenChange={onOpenChange} onSave={onSave} open />);
     expect(screen.getByLabelText('Capture text')).toHaveValue('Unfinished note');

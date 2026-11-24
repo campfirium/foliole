@@ -11,6 +11,7 @@ import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { COMPANION_ANDROID_CAPTURE_BACK_EVENT } from './companionAndroidBackEvent';
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -96,7 +97,7 @@ it('freezes the physical target at Add and uses it for manual text saves too', a
   expect(library.database.prepare("SELECT parent_id FROM nodes WHERE title = 'Manual text'").get()).toEqual({ parent_id: 'physical-folder' });
 });
 
-it('retries a reopened capture in its original folder and uses the current folder for a new draft', async () => {
+it.each([false, true])('retries in the original folder after reopening (system back after failure: %s)', async backAfterFailure => {
   await openCapture();
   const database = library.database;
   database.exec(`CREATE TRIGGER fail_retry_capture BEFORE INSERT ON nodes WHEN NEW.title = 'Retry capture'
@@ -124,6 +125,12 @@ it('retries a reopened capture in its original folder and uses the current folde
   }
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
   expect(findTopics()).toEqual([]);
+  if (backAfterFailure) {
+    fireEvent(document, new Event(COMPANION_ANDROID_CAPTURE_BACK_EVENT, { cancelable: true }));
+    expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(screen.getByLabelText('Capture text')).toHaveValue('Retry capture');
+  }
   database.exec('DROP TRIGGER fail_retry_capture');
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull());
