@@ -30,19 +30,26 @@ export function startDesktopSyncGroupMemberStateSession(
 ): RecoverableDesktopDnsSdSession {
   let active = true;
   const activatedMembers = new Map<string, string>();
+  const forgetMember = (deviceId: string) => {
+    endpoints.delete(deviceId);
+    activatedMembers.delete(deviceId);
+    onMemberLost(deviceId);
+  };
   const discovery = createDesktopSyncGroupMemberDiscovery(
     (observation, isCurrent) => probeAndExchange(group, observation,
       activatedMembers, onChanged, onMember, () => active && isCurrent(), onDiscoveryState),
-    (deviceId) => {
-      endpoints.delete(deviceId);
-      activatedMembers.delete(deviceId);
-      onMemberLost(deviceId);
-    }
+    forgetMember
   );
+  const resetDiscovery = () => {
+    discovery.reset();
+    for (const [deviceId, peer] of endpoints) {
+      if (peer.group_id === group.group_id) forgetMember(deviceId);
+    }
+  };
   const runtime = startRecoverableDesktopDnsSdSession({
-    onError: (error) => { discovery.reset(); onDiscoveryState(error); },
+    onError: (error) => { resetDiscovery(); onDiscoveryState(error); },
     onStarted: () => {
-      discovery.reset();
+      resetDiscovery();
       onDiscoveryState(null);
     },
     onService: ({ kind, service }) => {

@@ -220,3 +220,18 @@ it('collects from a restarted runtime at the same endpoint without duplicate act
   await emit('lost', service('old'));
   expect(loadDesktopSyncGroupRoutes(group.group_id)).toHaveLength(1);
 });
+
+it.each(['error', 'restart'] as const)('retires a published endpoint on discovery %s until it is seen again', async (reset) => {
+  await emit('found', service('old'));
+  expect(loadDesktopSyncGroupRoutes(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.10:38641');
+
+  if (reset === 'error') state.callbacks?.onError(new Error('Discovery interrupted'));
+  else state.callbacks?.onStarted();
+  await emit('lost', service('old'));
+  expect(loadDesktopSyncGroupMemberEndpoints(group.group_id)).toEqual([]);
+  expect(loadDesktopSyncGroupRoutes(group.group_id)).toEqual([]);
+
+  await emit('found', { ...service('new'), addresses: ['192.0.2.20'] });
+  expect(loadDesktopSyncGroupMemberEndpoints(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.20:38641');
+  expect(loadDesktopSyncGroupRoutes(group.group_id)[0]?.endpoint_url).toBe('http://192.0.2.20:38641');
+});
