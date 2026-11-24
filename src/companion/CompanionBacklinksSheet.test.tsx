@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -51,6 +51,22 @@ describe('CompanionBacklinksSheet', () => {
     await waitFor(() => expect(onOpenNode).toHaveBeenCalledWith('a'));
     expect(flush).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('does not open a source after the sheet closes while saving the reading position', async () => {
+    const onOpenNode = vi.fn();
+    const onOpenChange = vi.fn();
+    let finishFlush!: () => void;
+    const flush = vi.fn(() => new Promise<void>(resolve => { finishFlush = resolve; }));
+    const props = { activity: { editing: false, flush } as never, nodeId: 'target', snapshot, onOpenChange, onOpenNode };
+    const { rerender } = render(<CompanionBacklinksSheet {...props} open />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Alpha/ }));
+    expect(flush).toHaveBeenCalledOnce();
+    rerender(<CompanionBacklinksSheet {...props} open={false} />);
+    await act(async () => finishFlush());
+
+    expect(onOpenNode).not.toHaveBeenCalled();
   });
 
   it('reads the companion database on native runtimes and shows a short empty state', async () => {

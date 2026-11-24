@@ -111,11 +111,12 @@ export function useCompanionArticleSurface(
 ) {
   const { activeAction, setUserActiveAction } = useCompanionActiveAction(workspaceSync);
   const flow = useCompanionSurfaceFlow(workspaceSync, activeAction);
-  const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
-    flowNodeId: flow.view.currentCard?.nodeId ?? null });
   const [backlinkReturnNodeIds, setBacklinkReturnNodeIds] = useCompanionNavigationField('backlinkReturnNodeIds', []);
+  const followingBacklink = backlinkReturnNodeIds.length > 0;
+  const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
+    flowNodeId: flow.view.currentCard?.nodeId ?? null, followingBacklink });
   const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
-    workspaceSync, browseState, activeAction, flow, backlinkReturnNodeIds.length > 0);
+    workspaceSync, browseState, activeAction, flow, followingBacklink);
   const effectiveReviewSession = useMemo(
     () => hydrateCompanionReviewSession(flow.view, currentArticle),
     [flow.view, currentArticle]

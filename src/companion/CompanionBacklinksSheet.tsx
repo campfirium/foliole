@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { collectBacklinks, type BacklinkItem } from '../features/nodes/model/internalLinks';
@@ -61,21 +61,27 @@ function BacklinksContents(props: CompanionBacklinksSheetProps) {
   const { state, retry } = useBacklinksLoad(props.nodeId, props.snapshot);
   const [busy, setBusy] = useState(false);
   const [openError, setOpenError] = useState(false);
+  const opening = useRef(false);
+  useLayoutEffect(() => () => { opening.current = false; }, []);
   const canOpen = Boolean(props.onOpenNode) && props.activity?.editing !== true;
 
   async function open(sourceNodeId: string) {
-    if (busy || !canOpen) return;
+    if (opening.current || !canOpen) return;
+    opening.current = true;
     setBusy(true);
     setOpenError(false);
     try {
       await props.activity?.flush();
-      if (props.activity?.editing) return;
+      if (!opening.current || props.activity?.editing) return;
       props.onOpenChange(false);
       props.onOpenNode?.(sourceNodeId);
     } catch {
-      setOpenError(true);
+      if (opening.current) setOpenError(true);
     } finally {
-      setBusy(false);
+      if (opening.current) {
+        opening.current = false;
+        setBusy(false);
+      }
     }
   }
 

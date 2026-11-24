@@ -187,3 +187,18 @@ it('keeps a backlink cycle in Browse until it returns to the original Flow card 
   await expectPosition('Read here', 925);
   expect(screen.getByRole('button', { name: 'Read' })).toBeVisible();
 });
+
+it('opens the body of a backlink source with child topics and returns to the prior reader', async () => {
+  library.database.prepare(`INSERT INTO nodes (id, parent_id, title, kind, content, created_at, updated_at)
+    VALUES ('child', 'source', 'Child', 'topic', 'Nested body', '2026-10-25', '2026-10-25')`).run();
+  await readInFolder();
+  scrollReader(925);
+  await followBacklink();
+
+  await waitFor(() => expect(reader().body).toHaveTextContent('See'));
+  exitArticle('Exit');
+  await expectPosition('Read here', 925);
+  exitArticle('Exit');
+  fireEvent.click(await screen.findByRole('button', { name: 'Open topic Source' }));
+  expect(await screen.findByRole('button', { name: 'Open topic Child' })).toBeVisible();
+});
