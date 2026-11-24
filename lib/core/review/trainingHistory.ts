@@ -1,3 +1,4 @@
+import { parseHistoricalReviewInstant } from './reviewTimestamp.js';
 import type { ReviewTrainingEvent } from './trainingModel.js';
 
 export interface TrainingHistory {
@@ -16,11 +17,10 @@ export function prepareTrainingHistory(events: readonly ReviewTrainingEvent[]) {
       deltas: Float64Array.from(reviews.map((review, index) => index === 0 ? 0 :
         Math.max(0, review.time - reviews[index - 1]!.time) / 86400000)) });
   };
-  const ordered = [...events].sort((a, b) => Date.parse(a.reviewedAt) - Date.parse(b.reviewedAt)
+  const ordered = events.map(event => ({ ...event, time: trainingInstant(event.reviewedAt) })).sort((a, b) => a.time - b.time
     || (a.opId < b.opId ? -1 : a.opId > b.opId ? 1 : 0));
   for (const event of ordered) {
-    const time = Date.parse(event.reviewedAt);
-    if (!Number.isFinite(time)) throw new Error('review_training_timestamp_invalid');
+    const { time } = event;
     const reviews = current.get(event.nodeId) ?? [];
     if (event.kind === 'reset') { append(reviews); current.set(event.nodeId, []); }
     else {
@@ -33,8 +33,14 @@ export function prepareTrainingHistory(events: readonly ReviewTrainingEvent[]) {
 }
 
 export function reviewTrainingCutoff(events: readonly ReviewTrainingEvent[]) {
-  const times = events.filter(event => event.kind === 'review').map(event => Date.parse(event.reviewedAt)).sort((a, b) => a - b);
+  const times = events.filter(event => event.kind === 'review').map(event => trainingInstant(event.reviewedAt)).sort((a, b) => a - b);
   return times[Math.floor(times.length * 0.8)] ?? Infinity;
+}
+
+function trainingInstant(value: string) {
+  const instant = parseHistoricalReviewInstant(value);
+  if (!Number.isFinite(instant)) throw new Error('review_training_timestamp_invalid');
+  return instant;
 }
 
 /** Convert real events to the upstream CSV without constructing quadratic history prefixes in JS. */

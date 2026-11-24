@@ -1,8 +1,8 @@
 import { FSRS7_DEFAULT_WEIGHTS } from 'ts-fsrs/models/fsrs-7';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { evaluateReviewTraining } from './trainingEvaluation.js';
-import { prepareTrainingHistory, trainingReviewCsv } from './trainingHistory.js';
+import { prepareTrainingHistory, reviewTrainingCutoff, trainingReviewCsv } from './trainingHistory.js';
 
 it('keeps fractional and same-instant reviews, splits resets, and evaluates same-day held-out answers', () => {
   const event = (opId: string, reviewedAt: string, grade = 3) =>
@@ -18,4 +18,19 @@ it('keeps fractional and same-instant reviews, splits resets, and evaluates same
   const metric = evaluateReviewTraining([...FSRS7_DEFAULT_WEIGHTS], histories, Date.parse('2026-11-01T00:30:00Z'));
   expect(metric?.logLoss).toBeGreaterThan(0);
   expect(metric?.rmse).toBeGreaterThan(0);
+});
+
+it('uses the replayed legacy instant for training and its cutoff when the host rejects the raw date', () => {
+  const raw = '2026-02-30T12:00:00Z';
+  const canonical = '2026-03-02T12:00:00.000Z';
+  const originalParse = Date.parse;
+  const parse = vi.spyOn(Date, 'parse').mockImplementation(value => value === raw ? NaN : originalParse(value));
+  try {
+    const history = [{ nodeId: 'card', opId: 'historical', grade: 3, kind: 'review', reviewedAt: raw }] as const;
+    const control = [{ ...history[0], reviewedAt: canonical }];
+    expect(prepareTrainingHistory(history)).toEqual(prepareTrainingHistory(control));
+    expect(reviewTrainingCutoff(history)).toBe(originalParse(canonical));
+  } finally {
+    parse.mockRestore();
+  }
 });

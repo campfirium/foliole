@@ -54,9 +54,41 @@ it('rejects ambiguous local timestamps instead of interpreting the same fact dif
   }
 });
 
-it.each(['2026-02-30T12:00:00Z', '2025-02-29', '2026-04-31T12:00:00+08:00'])('rejects impossible event dates before replay: %s', reviewed_at => {
+it.each(['2026-02-32T12:00:00Z', '2026-13-01', '2026-04-31T12:60:00+08:00'])('rejects unparseable event dates before replay: %s', reviewed_at => {
   expect(() => recomputeReview([{ ...events[0]!, reviewed_at }], DEFAULT_REVIEW_SCHEDULER_SETTINGS))
     .toThrow('invalid_review_timestamp');
+});
+
+it.each([
+  ['2026-02-30T12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['2025-02-29', '2025-03-01T00:00:00.000Z'],
+  ['2026-04-31T12:00:00+08:00', '2026-05-01T04:00:00.000Z'],
+  ['2026-02-30t12:00:00.123456z', '2026-03-02T12:00:00.123Z'],
+  ['2026-02-30T24:00Z', '2026-03-03T00:00:00.000Z'],
+  ['2026-02-30 12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['2026/02/30 12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['2026-2-30 12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['02/30/2026 12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['30 Feb 2026 12:00:00 GMT+00:00', '2026-03-02T12:00:00.000Z'],
+  ['Feb 30, 2026 12:00:00Z', '2026-03-02T12:00:00.000Z'],
+  ['2026-02T12:00:00Z', '2026-02-01T12:00:00.000Z'],
+  ['2026-02-30 12:00:00 GMT+08:00', '2026-03-02T04:00:00.000Z'],
+  ['0001-02-30 12:00Z', '2030-01-02T12:00:00.000Z'],
+  ['0049-02-30 12:00Z', '2049-03-02T12:00:00.000Z'],
+  ['2026-02-30 12:00:00+24:00', '2026-03-01T12:00:00.000Z']
+])('uses the old instant for stored %s, while rejecting it as a new score time', (legacy, canonical) => {
+  const parameters = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+  expect(new Date(Date.parse(legacy)).toISOString()).toBe(canonical);
+  const history = [{ ...events[0]!, reviewed_at: legacy }];
+  const control = [{ ...events[0]!, reviewed_at: canonical }];
+  for (const zone of ['Asia/Shanghai', 'America/Los_Angeles']) {
+    process.env.TZ = zone;
+    expect(recomputeReview(history, parameters)).toEqual(recomputeReview(control, parameters));
+    expect(recomputeReview(history, parameters)?.last_review).toBe(canonical);
+    expect(previewReviewAt(history, parameters, { grade: 3, now: '2026-05-02T00:00:00Z' }))
+      .toEqual(previewReviewAt(control, parameters, { grade: 3, now: '2026-05-02T00:00:00Z' }));
+  }
+  expect(() => previewReviewAt([], parameters, { grade: 3, now: legacy })).toThrow('invalid_review_timestamp');
 });
 
 it('retains valid date-only review facts as absolute UTC dates', () => {

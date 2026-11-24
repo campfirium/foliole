@@ -1,6 +1,6 @@
 import { normalizeFsrs7Card } from './fsrs7Card.js';
 import { createFsrsReviewScheduler } from './fsrsScheduler.js';
-import { isReviewTimestamp } from './reviewTimestamp.js';
+import { historicalReviewInstant, requireReviewInstant } from './reviewTimestamp.js';
 import { createReviewSchedulerParameters, getReviewSchedulerVersion, type ReviewSchedulerSettings } from './settings.js';
 import { createInitialSchedulerCard, mapGradeToRustRating, type SchedulerCard } from './types.js';
 
@@ -14,14 +14,19 @@ export interface ReviewEvent {
 
 /** Events are immutable facts; snapshots and event scheduler versions never seed this calculation. */
 export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings, nodeId?: string): SchedulerCard | null {
-  return replayReviewEventsFromBaseline(events, parameters, null, nodeId);
+  return replayReviewEvents(events, parameters, null, nodeId, historicalReviewInstant);
 }
 
 /** A browser import may carry an explicit pre-event profile; native replay always supplies null. */
 export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
   baseline: SchedulerCard | null, nodeId?: string): SchedulerCard | null {
+  return replayReviewEvents(events, parameters, baseline, nodeId, requireReviewInstant);
+}
+
+function replayReviewEvents(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
+  baseline: SchedulerCard | null, nodeId: string | undefined, parseInstant: typeof historicalReviewInstant): SchedulerCard | null {
   const voids = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
-  const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at) }))
+  const ordered = events.map(event => ({ ...event, instant: parseInstant(event.reviewed_at, event.op_id) }))
     .sort((a, b) => a.instant - b.instant
     || (a.op_id < b.op_id ? -1 : a.op_id > b.op_id ? 1 : 0));
   const scheduler = createFsrsReviewScheduler({ loadSettings: () => parameters,
@@ -34,8 +39,9 @@ export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], p
     if (grade !== 1 && grade !== 2 && grade !== 3 && grade !== 4) throw new Error('invalid_review_grade');
     // Keep absolute scheduler timestamps. Local day-boundary display belongs to the consumer,
     // otherwise identical facts produce different persisted values in different time zones.
-    card = scheduler.grade({ card: card ?? createInitialSchedulerCard(event.reviewed_at),
-      ...(nodeId ? { nodeId } : {}), rating: mapGradeToRustRating(grade), now: event.reviewed_at }).card;
+    const now = new Date(event.instant).toISOString();
+    card = scheduler.grade({ card: card ?? createInitialSchedulerCard(now),
+      ...(nodeId ? { nodeId } : {}), rating: mapGradeToRustRating(grade), now }).card;
   }
   return card;
 }
@@ -43,13 +49,8 @@ export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], p
 /** Preview the candidate at its event time; persistence still projects the complete immutable history. */
 export function previewReviewAt(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
   candidate: { grade: number; now: string; nodeId?: string }): SchedulerCard | null {
-  const instant = reviewInstant(candidate.now);
-  const history = events.filter(event => reviewInstant(event.reviewed_at) <= instant);
+  const instant = requireReviewInstant(candidate.now);
+  const history = events.filter(event => historicalReviewInstant(event.reviewed_at, event.op_id) <= instant);
   return recomputeReview([...history, { op_id: '~preview', kind: 'review', grade: candidate.grade,
     reviewed_at: candidate.now, voids_op_id: null }], parameters, candidate.nodeId);
-}
-
-function reviewInstant(value: string) {
-  if (!isReviewTimestamp(value, true)) throw new Error('invalid_review_timestamp');
-  return Date.parse(value);
 }

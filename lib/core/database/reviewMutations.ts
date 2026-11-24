@@ -1,3 +1,5 @@
+import { requireReviewInstant } from '../review/reviewTimestamp.js';
+
 import type { DatabaseDriver } from './driver.js';
 import { saveNodeReadingStateWithSync } from './nodeReadingSyncState.js';
 import { INSERT_REVIEW_EVENT_SQL } from './reviewLogRecord.js';
@@ -61,6 +63,7 @@ export function applyReviewGrade(
         || existing.scheduler_version !== input.schedulerVersion) throw new Error('review_op_mismatch');
       return readStoredReviewCard(driver, input.nodeId);
     }
+    requireReviewInstant(input.reviewedAt, opId);
     const logId = context.createId();
     insertReviewLogStatement.run(toReviewLogParams(input, context, opId, logId));
     return recomputeNodeReview(driver, input.nodeId);
@@ -75,6 +78,7 @@ export function resetNodeReviewState(
   driver.transaction(() => {
     const opId = `reset:${context.hostName}:${nodeId}:${context.deletedAt}`;
     if (driver.queryOne('SELECT 1 FROM review_log WHERE op_id = ?', [opId])) return;
+    requireReviewInstant(context.deletedAt, opId);
     driver.prepare(`UPDATE nodes SET shelved_at = NULL, updated_at = ?,
       last_modified_by_host_name = ?, sync_dirty = 1
       WHERE id = ? AND shelved_at IS NOT NULL`).run([context.deletedAt, context.hostName, nodeId]);

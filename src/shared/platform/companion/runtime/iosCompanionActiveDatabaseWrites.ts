@@ -1,6 +1,7 @@
 import { INSERT_REVIEW_EVENT_SQL } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { readStoredReviewCardWithDb } from '../../../../../lib/core/database/storedReviewCard';
+import { requireReviewInstant } from '../../../../../lib/core/review/reviewTimestamp';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib/core/sync/syncFactRowSchemas';
 import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
@@ -164,6 +165,7 @@ async function insertReviewLog(db: DbPort, nodeId: string, opId: string, draft: 
       || existing.scheduler_version !== row.scheduler_version) throw new Error('review_op_mismatch');
     return false;
   }
+  requireReviewInstant(row.reviewed_at, opId);
   await db.run(INSERT_REVIEW_EVENT_SQL, REVIEW_FACT_COLUMNS.map(column => row[column]));
   return true;
 }
