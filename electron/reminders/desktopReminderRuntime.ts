@@ -3,7 +3,7 @@ import { Notification } from 'electron';
 import { isReminderForDevice, type ReminderRule } from '../../lib/core/reminders/reminderRule.js';
 import {
   isCurrentDatabaseConnection, openDatabaseConnection, registerDatabaseConnectionCleanup,
-  runWithDatabaseConnectionOwner, type DatabaseConnection
+  registerDatabaseConnectionReady, runWithDatabaseConnectionOwner, type DatabaseConnection
 } from '../database/connection.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
@@ -16,7 +16,7 @@ const delivered = new Map<string, Notification>();
 const foregroundRules = new Map<string, { rule: ReminderRule; connection: DatabaseConnection }>();
 let loadedConnection: DatabaseConnection | undefined;
 let unsubscribeForeground: (() => void) | undefined;
-let cleanupRegistered = false;
+let lifecycleRegistered = false;
 
 function reportFailure(error: unknown) {
   appendMainProcessDiagnosticLog('desktop_reminder_failed', { error });
@@ -130,9 +130,10 @@ export function refreshDesktopReminders() {
 
 export function startDesktopReminders() {
   try {
-    if (!cleanupRegistered) {
+    if (!lifecycleRegistered) {
       registerDatabaseConnectionCleanup(clearReminderSchedule);
-      cleanupRegistered = true;
+      registerDatabaseConnectionReady(refreshDesktopReminders);
+      lifecycleRegistered = true;
     }
     unsubscribeForeground ??= subscribeReminderForeground(updateForegroundReminders);
     refreshDesktopReminders();

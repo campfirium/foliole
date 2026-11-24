@@ -6,6 +6,7 @@ import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection,
   markDatabaseConnectionUnavailable,
+  notifyDatabaseConnectionReady,
   openDatabaseConnection
 } from './connection.js';
 import { createDatabaseRestoreArtifacts, type DatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
@@ -29,6 +30,7 @@ export async function recoverCurrentDatabaseAfterRestoreFailure(args: {
         requireCurrentSource: true
       });
       clearDatabaseConnectionUnavailable();
+      notifyDatabaseConnectionReady();
       return;
     }
     const rollbackPath = await artifacts.materialize(

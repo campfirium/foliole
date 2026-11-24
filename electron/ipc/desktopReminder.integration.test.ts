@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { promises as fs } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +11,8 @@ import type { ReminderRule } from '../../lib/core/reminders/reminderRule.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { DESKTOP_REMINDER_OPEN_DIVE_PREFIX, DESKTOP_REMINDER_OPEN_FLOW } from '../../lib/platform/nativeReminderContract.js';
 import { closeDatabaseConnection } from '../database/connection.js';
+import { compactApplicationDatabase } from '../database/databaseCompaction.js';
+import { compactAndVerifyDatabaseCandidate } from '../database/databaseCompactionWorkerCore.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { installDesktopReminderNavigation } from '../reminders/desktopReminderNavigation.js';
 import { startDesktopReminders, stopDesktopReminders } from '../reminders/desktopReminderRuntime.js';
@@ -27,6 +30,7 @@ vi.mock('electron', async () => {
   app: Object.assign(new EventEmitter(), { getPath: () => state.root }),
   BrowserWindow: { getFocusedWindow: () => state.focused ? {} : null },
   powerMonitor: new EventEmitter(),
+  shell: { trashItem: vi.fn().mockResolvedValue(undefined) },
   nativeTheme: { shouldUseDarkColors: false, on: vi.fn() },
   systemPreferences: { subscribeNotification: vi.fn() },
   Notification: class {
@@ -94,6 +98,26 @@ it('reloads the enabled schedule, moves it on edit, repeats daily, and cancels o
   await vi.advanceTimersByTimeAsync(86_400_000);
   expect(state.show).toHaveBeenCalledTimes(2);
   expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([disabled]);
+});
+
+it.each([false, true])('keeps reminders running when compaction reopens the database (replacement fails: %s)', async fails => {
+  // SQLite's online backup needs real immediates while the reminder clock stays controlled.
+  vi.useRealTimers();
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+  vi.setSystemTime(new Date(2026, 10, 10, 12, 0));
+  startDesktopReminders();
+  const rule = save('After maintenance', '12:01', true);
+  const rename = fails ? vi.spyOn(fs, 'rename').mockRejectedValueOnce(new Error('injected replacement failure')) : null;
+  try {
+    const compact = compactApplicationDatabase(compactAndVerifyDatabaseCandidate);
+    if (fails) await expect(compact).rejects.toThrow('current library has been restored');
+    else await expect(compact).resolves.toHaveProperty('after');
+  } finally {
+    rename?.mockRestore();
+  }
+  expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([rule]);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(state.show.mock.calls).toEqual([['After maintenance']]);
 });
 
 it('rejects invalid and stale mutations while keeping the current schedule', async () => {
