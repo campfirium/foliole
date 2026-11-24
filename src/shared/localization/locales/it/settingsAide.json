@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Migrazione dei dati",
   "settings.general.dataMigration.superMemo": "Migra da SuperMemo",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Consenti alla CLI e ad altri strumenti locali di impostare pianificazioni e priorità quando creano argomenti ed elementi nella libreria attuale.",
+  "settings.general.agentControl.learningImportDescription": "Consenti alla CLI e ad altri strumenti locali di impostare pianificazioni e priorità quando creano argomenti ed elementi nella libreria attuale. Possono anche modificare la priorità di materiali e cartelle esistenti.",
   "settings.general.agentControl.learningImportError": "Impossibile caricare o salvare l’autorizzazione per l’importazione dell’apprendimento.",
   "settings.general.aide.settingsRow": "Impostazioni di Aide",
   "settings.general.aide.settingsDescription": "Modelli, dati delle conversazioni e ciò che Aide può vedere e modificare.",

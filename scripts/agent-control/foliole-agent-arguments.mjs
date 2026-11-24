@@ -84,8 +84,18 @@ function requireFields(flags, required, optional = []) {
 function buildUpdateBody(flags) {
   const base = requireFields(flags, ['id', 'expected_updated_at']);
   if (!base.ok) return base;
-  if (!flags.title && !flags.reveal && !Object.hasOwn(flags, 'content')) return { error: 'missing_patch', ok: false, statusCode: 2 };
-  return { body: { ...base.body, ...(flags.title ? { title: flags.title } : {}), ...(flags.reveal ? { reveal: flags.reveal } : {}), ...(Object.hasOwn(flags, 'content') ? { content: flags.content } : {}) }, ok: true };
+  const patch = {};
+  if (flags.title) patch.title = flags.title;
+  if (flags.reveal) patch.reveal = flags.reveal;
+  if (Object.hasOwn(flags, 'content')) patch.content = flags.content;
+  if (Object.hasOwn(flags, 'priority')) {
+    if (flags.priority !== 'inherit' && !/^[0-9]$/u.test(flags.priority)) {
+      return { error: 'invalid_priority', ok: false, statusCode: 2 };
+    }
+    patch.priority = flags.priority === 'inherit' ? null : Number(flags.priority);
+  }
+  if (Object.keys(patch).length === 0) return { error: 'missing_patch', ok: false, statusCode: 2 };
+  return { body: { ...base.body, ...patch }, ok: true };
 }
 
 function normalizeFieldValue(field, value) {

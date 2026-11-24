@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "डेटा माइग्रेशन",
   "settings.general.dataMigration.superMemo": "SuperMemo से माइग्रेट करें",
   "settings.general.agentControl.searchTerms": "एजेंट कंट्रोल",
-  "settings.general.agentControl.learningImportDescription": "मौजूदा लाइब्रेरी में विषय और अभ्यास प्रश्न बनाते समय CLI और दूसरे स्थानीय टूल को शेड्यूल और प्राथमिकताएँ तय करने दें।",
+  "settings.general.agentControl.learningImportDescription": "मौजूदा लाइब्रेरी में विषय और अभ्यास प्रश्न बनाते समय CLI और दूसरे स्थानीय टूल को शेड्यूल और प्राथमिकताएँ तय करने दें। ये टूल मौजूदा सामग्री और फ़ोल्डरों की प्राथमिकता भी बदल सकते हैं।",
   "settings.general.agentControl.learningImportError": "सीखने के इंपोर्ट की अनुमति लोड या सहेजी नहीं जा सकी।",
   "settings.general.aide.settingsRow": "Aide की सेटिंग",
   "settings.general.aide.settingsDescription": "मॉडल, बातचीत का डेटा, और Aide क्या देख और बदल सकता है।",

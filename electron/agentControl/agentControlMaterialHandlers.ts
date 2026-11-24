@@ -113,7 +113,7 @@ export async function handleMaterialRead(
   recordRequest({ capability, options, request, result: 'success', targetId: id });
   sendJson(response, 200, { material: {
     ...material,
-    ...(includeLearning ? { learning: readAgentControlMaterialLearning(id, material.kind) } : {}),
+    ...(includeLearning ? { learning: readAgentControlMaterialLearning(material) } : {}),
     ...(includeRelations ? { relations: readAgentControlMaterialRelations(id) } : {})
   } });
 }
@@ -193,7 +193,13 @@ export async function handleMaterialDeleteSoft(
 }
 
 function normalizeUpdatePatch(body: Record<string, unknown>) {
-  const patch: { content?: string; reveal?: string; title?: string } = {};
+  const patch: { content?: string; priority?: number | null; reveal?: string; title?: string } = {};
+  if (Object.hasOwn(body, 'priority')) {
+    if (body.priority !== null && (
+      typeof body.priority !== 'number' || !Number.isInteger(body.priority) || body.priority < 0 || body.priority > 9
+    )) return null;
+    patch.priority = body.priority;
+  }
   if (Object.hasOwn(body, 'title')) {
     if (typeof body.title !== 'string') return null;
     patch.title = body.title;

@@ -4,7 +4,7 @@ export const EN_SETTINGS_AIDE_TRANSLATIONS = {
   'settings.general.dataMigration.section': 'Data migration',
   'settings.general.dataMigration.superMemo': 'Migrate from SuperMemo',
   'settings.general.agentControl.searchTerms': 'Agent Control',
-  'settings.general.agentControl.learningImportDescription': 'Let the CLI and other local tools set schedules and priorities when creating Topics and Items in the current library.',
+  'settings.general.agentControl.learningImportDescription': 'Let the CLI and other local tools set schedules and priorities when creating Topics and Items in the current library. They can also change the priority of existing materials and folders.',
   'settings.general.agentControl.learningImportError': 'Could not load or save the learning import permission.',
   'settings.general.aide.settingsRow': 'Aide settings',
   'settings.general.aide.settingsDescription': 'Models, conversation data, and what Aide can see and change.',

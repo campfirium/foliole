@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Migração de dados",
   "settings.general.dataMigration.superMemo": "Migrar do SuperMemo",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Permita que a CLI e outras ferramentas locais definam agendamentos e prioridades ao criar tópicos e itens na biblioteca atual.",
+  "settings.general.agentControl.learningImportDescription": "Permita que a CLI e outras ferramentas locais definam agendamentos e prioridades ao criar tópicos e itens na biblioteca atual. Essas ferramentas também podem alterar a prioridade de materiais e pastas existentes.",
   "settings.general.agentControl.learningImportError": "Não foi possível carregar ou salvar a permissão de importação de aprendizado.",
   "settings.general.aide.settingsRow": "Configurações do Aide",
   "settings.general.aide.settingsDescription": "Modelos, dados de conversa e o que o Aide pode ver e alterar.",

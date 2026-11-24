@@ -28,7 +28,7 @@ describe('foliole agent cli discovery', () => {
     }));
     expect(result.output.commands).toContainEqual(expect.objectContaining({
       access: 'write',
-      arguments: { optional: ['content', 'content-stdin', 'reveal', 'title'], required: ['id', 'expected-updated-at'] },
+      arguments: { optional: ['content', 'content-stdin', 'priority', 'reveal', 'title'], required: ['id', 'expected-updated-at'] },
       name: 'materials/update'
     }));
     const names = result.output.commands.map((command) => command.name);
@@ -56,7 +56,7 @@ describe('foliole agent cli discovery', () => {
   it('documents command arguments and write safety in human and JSON forms', async () => {
     const human = await runAgentCli(['materials/update', '--help'], { env: {} });
     expect(human.status).toBe(0);
-    expect(human.output).toContain('Updates only the supplied title, content, or Item answer');
+    expect(human.output).toContain('Material priority (0–9 or inherit) requires Allow learning progress imports');
     expect(human.output).toContain('--expected-updated-at');
     expect(human.output).not.toContain('--backup-dir <path>');
     expect(human.output).toContain('latest materials/read');

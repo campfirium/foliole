@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Migracja danych",
   "settings.general.dataMigration.superMemo": "Migruj z SuperMemo",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Pozwól CLI i innym lokalnym narzędziom ustawiać harmonogramy i priorytety podczas tworzenia tematów i elementów w bieżącej bibliotece.",
+  "settings.general.agentControl.learningImportDescription": "Pozwól CLI i innym lokalnym narzędziom ustawiać harmonogramy i priorytety podczas tworzenia tematów i elementów w bieżącej bibliotece. Narzędzia te mogą też zmieniać priorytet istniejących materiałów i folderów.",
   "settings.general.agentControl.learningImportError": "Nie udało się wczytać ani zapisać uprawnienia do importu nauki.",
   "settings.general.aide.settingsRow": "Ustawienia Aide",
   "settings.general.aide.settingsDescription": "Modele, dane rozmów oraz to, co Aide może widzieć i zmieniać.",

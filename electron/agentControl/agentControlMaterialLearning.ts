@@ -1,21 +1,25 @@
 import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
+import type { AgentMaterialReadPayload } from './agentControlMaterials.js';
+
 type LearningSettings = {
   priority: number | null;
   shelved_at: string | null;
   desired_retention: number | null;
   enable_short_term: number | null;
   initial_review_due: string | null;
+  virtual_filter: string | null;
 };
 
-export function readAgentControlMaterialLearning(id: string, kind: string) {
-  if (kind !== 'topic' && kind !== 'item') return null;
+export function readAgentControlMaterialLearning({ id, kind, special_kind }: AgentMaterialReadPayload) {
+  if (special_kind || !['folder', 'topic', 'item'].includes(kind)) return null;
   const { driver } = openDatabaseConnection();
   const settings = driver.queryOne<LearningSettings>(
-    'SELECT priority, shelved_at, desired_retention, enable_short_term, initial_review_due FROM nodes WHERE id = ?', [id]
+    'SELECT priority, shelved_at, desired_retention, enable_short_term, initial_review_due, virtual_filter FROM nodes WHERE id = ?', [id]
   );
-  if (!settings) return null;
+  if (!settings || settings.virtual_filter) return null;
+  if (kind === 'folder') return { priority: settings.priority };
 
   const [learning] = readWorkspaceNodeLearning(driver, [id]);
   const common = { priority: settings.priority, shelved_at: settings.shelved_at };

@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "資料遷移",
   "settings.general.dataMigration.superMemo": "從 SuperMemo 遷移",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "讓 CLI 和其他本機工具在目前資料庫中建立主題和複習卡時，可設定排程和優先順序。",
+  "settings.general.agentControl.learningImportDescription": "讓 CLI 和其他本機工具在目前資料庫中建立主題和複習卡時，可設定排程和優先順序。也可變更現有資料和資料夾的優先順序。",
   "settings.general.agentControl.learningImportError": "無法載入或儲存學習進度匯入權限。",
   "settings.general.aide.settingsRow": "Aide 設定",
   "settings.general.aide.settingsDescription": "模型、對話資料，以及 Aide 能查看和變更的內容。",

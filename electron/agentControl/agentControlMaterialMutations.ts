@@ -10,7 +10,9 @@ import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js'
 import type { NodeKind } from '../../lib/core/nodes/nodeKind.js';
 import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { isAgentControlLearningImportEnabled } from '../database/agentControlLearningImportPermission.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { readAgentControlMaterial, type AgentMaterialReadPayload } from './agentControlMaterials.js';
@@ -59,17 +61,26 @@ export class AgentMaterialMutationError extends Error {
   }
 }
 
-export function updateAgentControlMaterial(input: {
+interface MaterialUpdate {
   content?: string;
   expectedUpdatedAt: string;
   id: string;
+  priority?: number | null;
   reveal?: string;
   title?: string;
-}): AgentMaterialReadPayload {
+}
+
+export function updateAgentControlMaterial(input: MaterialUpdate): AgentMaterialReadPayload {
+  if (input.priority === undefined) return updateMaterial(input);
+  return openDatabaseConnection().sqlite.transaction(() => updateMaterial(input)).immediate();
+}
+
+function updateMaterial(input: MaterialUpdate): AgentMaterialReadPayload {
   const row = readMaterialSnapshotRow(input.id);
   if (!row) throw new AgentMaterialMutationError('not_found', 404);
-  ensureMaterialIsActive(input.id);
+  const current = readActiveMaterial(input.id);
   if (row.updated_at !== input.expectedUpdatedAt) throw new AgentMaterialMutationError('conflict', 409);
+  if (input.priority !== undefined) validatePriorityUpdate(current, row.virtual_filter);
   if (typeof input.title === 'string' && input.title.trim().length === 0) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
@@ -89,16 +100,43 @@ export function updateAgentControlMaterial(input: {
     : row.kind === 'item' && !row.is_title_manual && typeof input.content === 'string'
       ? deriveNodeTitleFromContent(input.content)
       : row.title;
-  rewriteAgentControlNodeSnapshot({
-    content: input.content ?? readRowContent(row),
-    id: input.id,
-    ...(hasExplicitTitle ? { isTitleManual: true } : {}),
-    ...(input.reveal === undefined ? {} : { reveal: input.reveal }),
-    title
-  });
+  const updatedAt = input.priority === undefined ? undefined : nextPriorityRevision(row.updated_at);
+  if (updatedAt && input.priority !== undefined) writeMaterialPriority(row, input.priority, updatedAt);
+  if (input.priority === undefined || input.content !== undefined || input.reveal !== undefined || hasExplicitTitle) {
+    rewriteAgentControlNodeSnapshot({
+      content: input.content ?? readRowContent(row), id: input.id,
+      ...(hasExplicitTitle ? { isTitleManual: true } : {}),
+      ...(input.reveal === undefined ? {} : { reveal: input.reveal }),
+      ...(updatedAt === undefined ? {} : { updatedAt }),
+      title
+    });
+  }
   const material = readAgentControlMaterial(input.id);
   if (!material) throw new AgentMaterialMutationError('not_found', 404);
   return material;
+}
+
+function validatePriorityUpdate(material: AgentMaterialReadPayload, virtualFilter: string | null) {
+  if (!isAgentControlLearningImportEnabled()) throw new AgentMaterialMutationError('learning_import_disabled', 403);
+  if (material.special_kind || virtualFilter || !['folder', 'topic', 'item'].includes(material.kind)) {
+    throw new AgentMaterialMutationError('invalid_request', 400);
+  }
+}
+
+function nextPriorityRevision(previous: string) {
+  const now = Date.now();
+  const last = Date.parse(previous);
+  return new Date(Number.isFinite(last) ? Math.max(now, last + 1) : now).toISOString();
+}
+
+function writeMaterialPriority(row: MaterialSnapshotRow, priority: number | null, updatedAt: string) {
+  const hostName = loadOrCreateDesktopHostName(updatedAt);
+  const result = openDatabaseConnection().driver.execute(
+    `UPDATE nodes SET priority = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
+     WHERE id = ? AND updated_at = ? AND deleted_at IS NULL`,
+    [priority, updatedAt, hostName, row.id, row.updated_at]
+  );
+  if (result.changes !== 1) throw new AgentMaterialMutationError('conflict', 409);
 }
 
 export function rewriteAgentControlNodeSnapshot(input: {
@@ -170,10 +208,11 @@ function readMaterialSnapshotRow(nodeId: string) {
   );
 }
 
-function ensureMaterialIsActive(nodeId: string) {
+function readActiveMaterial(nodeId: string) {
   const material = readAgentControlMaterial(nodeId);
   if (!material) throw new AgentMaterialMutationError('not_found', 404);
   if (material.deleted) throw new AgentMaterialMutationError('conflict', 409);
+  return material;
 }
 
 function toUpsertInput(

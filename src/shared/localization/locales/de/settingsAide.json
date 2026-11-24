@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Datenmigration",
   "settings.general.dataMigration.superMemo": "Von SuperMemo migrieren",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Erlaube der CLI und anderen lokalen Tools, beim Erstellen von Themen und Elementen in der aktuellen Bibliothek Zeitpläne und Prioritäten festzulegen.",
+  "settings.general.agentControl.learningImportDescription": "Erlaube der CLI und anderen lokalen Tools, beim Erstellen von Themen und Elementen in der aktuellen Bibliothek Zeitpläne und Prioritäten festzulegen. Sie können auch die Priorität vorhandener Materialien und Ordner ändern.",
   "settings.general.agentControl.learningImportError": "Die Berechtigung für den Import von Lernfortschritt konnte nicht geladen oder gespeichert werden.",
   "settings.general.aide.settingsRow": "Aide-Einstellungen",
   "settings.general.aide.settingsDescription": "Modelle, Unterhaltungsdaten und was Aide sehen und ändern kann.",

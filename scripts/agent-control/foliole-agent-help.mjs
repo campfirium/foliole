@@ -13,7 +13,7 @@ const GROUP_LABELS = {
 const FLAG_DESCRIPTIONS = {
   content: 'Topic content or Item question. Pass an empty value with --content= to clear Topic content.',
   'include-relations': 'Pass true to include the source anchor and backlinks.',
-  'include-learning': 'Pass true to include the current Topic or Item schedule and learning settings.',
+  'include-learning': 'Pass true to include material priority and any reading or review schedule.',
   'content-stdin': 'Pass true to read UTF-8 content from standard input instead of --content.',
   'content-mode': 'Use full for complete content and answers. The default is preview.',
   'expected-updated-at': 'The updated_at value returned by the latest read.',
@@ -26,6 +26,7 @@ const FLAG_DESCRIPTIONS = {
   limit: 'Maximum number of results to return.',
   'material-ids': 'Comma-separated Topic or Folder IDs in the requested order.',
   'parent-id': 'Parent ID, or root for the workspace root; root means Inbox for Items.',
+  priority: 'Set a material priority from 0 to 9, or pass inherit to clear it.',
   query: 'Search text.',
   'review-schedule': 'Item schedule JSON with due, priority, and optional history of reviewed_at and grade events.',
   reveal: 'Item answer, limited to 4,000 characters.',
@@ -74,10 +75,10 @@ const COMMAND_DETAILS = {
   ]),
   'materials/restore': guardedWrite('Use the updated_at value returned for the trashed material.'),
   'materials/update': details([
-    'Updates only the supplied title, content, or Item answer; it does not change Folder membership or ordering.',
+    'Material priority (0–9 or inherit) requires Allow learning progress imports.',
     'Run materials/read first and pass the latest materials/read updated_at value.'
   ], [
-    'foliole materials/update --id <id> --expected-updated-at <updated_at> --title "New title"'
+    'foliole materials/update --id <id> --expected-updated-at <updated_at> --priority 2'
   ]),
   'virtual-folders/add-items': details([
     'Adds the supplied Topics without removing existing Topics from the virtual Folder.'

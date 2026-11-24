@@ -38,11 +38,19 @@ test('requires local permission to import Topic and Item schedules', async ({ de
         last_review_at: '2026-10-01T00:00:00.000Z' }
     } } } });
 
+  const { id, updated_at } = topic.output.material;
+  const update = (revision: string) => runAgentCli(['materials/update', '--descriptor', args[2], '--id', id,
+    '--expected-updated-at', revision, '--priority', '0']);
+  const updated = await update(updated_at);
+  expect(updated).toMatchObject({ status: 0, output: { material: { id } } });
+
   await permission.click();
   await expect(permission).not.toBeChecked();
   expect(await runAgentCli(args)).toMatchObject({ output: { error: 'learning_import_disabled' }, status: 1 });
+  expect(await update(updated.output.material.updated_at))
+    .toMatchObject({ output: { error: 'learning_import_disabled' }, status: 1 });
   expect(await runAgentCli(['materials/read', '--descriptor', args[2], '--id', topic.output.material.id,
     '--include-learning', 'true'])).toMatchObject({ status: 0, output: { material: { learning: {
-      priority: 2, reading_schedule: { next_at: '2027-02-01T00:00:00.000Z', repetition_count: 6 }
+      priority: 0, reading_schedule: { next_at: '2027-02-01T00:00:00.000Z', repetition_count: 6 }
     } } } });
 });

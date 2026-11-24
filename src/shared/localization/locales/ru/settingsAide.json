@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Миграция данных",
   "settings.general.dataMigration.superMemo": "Миграция из SuperMemo",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Разрешите CLI и другим локальным инструментам задавать расписания и приоритеты при создании тем и карточек в текущей библиотеке.",
+  "settings.general.agentControl.learningImportDescription": "Разрешите CLI и другим локальным инструментам задавать расписания и приоритеты при создании тем и карточек в текущей библиотеке. Эти инструменты также могут менять приоритет существующих материалов и папок.",
   "settings.general.agentControl.learningImportError": "Не удалось загрузить или сохранить разрешение на импорт обучения.",
   "settings.general.aide.settingsRow": "Настройки Aide",
   "settings.general.aide.settingsDescription": "Модели, данные разговоров и то, что Aide может видеть и менять.",

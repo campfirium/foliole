@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "데이터 마이그레이션",
   "settings.general.dataMigration.superMemo": "SuperMemo에서 마이그레이션",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "CLI 및 기타 로컬 도구가 현재 라이브러리에서 주제와 아이템을 만들 때 일정과 우선순위를 설정하도록 허용합니다.",
+  "settings.general.agentControl.learningImportDescription": "CLI 및 기타 로컬 도구가 현재 라이브러리에서 주제와 아이템을 만들 때 일정과 우선순위를 설정하도록 허용합니다. 기존 자료와 폴더의 우선순위도 변경할 수 있습니다.",
   "settings.general.agentControl.learningImportError": "학습 가져오기 권한을 불러오거나 저장할 수 없습니다.",
   "settings.general.aide.settingsRow": "Aide 설정",
   "settings.general.aide.settingsDescription": "모델, 대화 데이터, Aide가 보고 변경할 수 있는 항목.",

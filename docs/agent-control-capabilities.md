@@ -20,7 +20,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Collection and filter rules | The manual virtual Folder API lists manual Folders. | Review whether external callers need structured access to collections or filter rules. | Review supported operations by virtual Folder type. On Android and iOS, Search saves the current keyword as a saved-search index under Virtual. Its index row menu renames it or moves it to Trash, and its Trash row restores it. Matching materials stay where they are. | Check collection-based and rule-based membership separately from manually curated membership. |
 | Dive and source relationships | The desktop bridge has Dive operations. Agent Control has no Dive routes. | Android and iOS companion can create a Dive from Directory → More → New, with an optional initial source from the searchable library tree. | Companion can add or remove direct sources, including batch removal from the Dive list, convert between Dives and virtual folders, and move a Dive to Trash or restore it. These actions preserve the original source materials. | Confirm external organization and migration scenarios before choosing an Agent Control contract. |
 | Attachments and derived content | Material reads can include a derived material’s source anchor and desktop backlinks. | Create a question-and-answer Item or an anchored excerpt from one Topic text selection. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
-| Learning settings and state | Opt in on material reads for the current Topic or Item schedule, priority, and learning settings. Review history has no route. | Import an active Topic reading schedule and priority with local permission. Import an Item’s first review date and priority with optional historical grades. | Material update accepts content, title, and answer fields. Editing an existing priority stays in the app, including the Android Flow Topic reading menu. | Determine which learning settings are valid per material type and which actions external tools need after creation. |
+| Learning settings and state | Opt in on material reads for priority and current Topic or Item learning settings. Review history has no route. | Import an active Topic reading schedule and priority with local permission. Import an Item’s first review date and priority with optional historical grades. | `materials/update` sets the priority of a Topic, Item, or ordinary Folder with local permission. The Android Flow Topic reading menu also edits priority. | Editing an existing reading or review schedule via Agent Control needs a separate contract for preserving learning history. Retention and short-term scheduling are configured in the app. |
 
 On Android and iOS, start Dive Flow by touching and holding its directory row or from the top-right Dive menu. The Dive menu also opens the local reminder form. Convert or trash the Dive from its directory row menu. Browse sorting applies to lists that consume the Browse preference and stays out of the Dive menu. These actions stay in the app UI.
 
@@ -112,8 +112,19 @@ Send `include_learning: true` with the material ID to `materials/read`, or pass 
 
 - Topic: `learning` contains the node priority, shelving date, and `reading_schedule` with the next and last handled times, interval in milliseconds, growth factor, repetition count, reading priority, and reading state.
 - Item: `learning` contains the node priority, shelving date, retention and short-term scheduling overrides, initial review due date, and `review_schedule` with the current due date, last review time, FSRS state (0 new, 1 learning, 2 review, 3 relearning), stability, fast stability, difficulty, elapsed and scheduled days, repetitions, and lapses.
+- Ordinary Folder: `learning` contains its explicit `priority`. Descendants without their own priority can inherit this setting.
 
-A missing schedule is null. A null setting override uses Foliole's normal inheritance rules. Folders return `learning: null`. The response gives current scheduling state for one material. Review events and reading position use separate product data.
+A missing schedule is null. A null setting override uses Foliole's normal inheritance rules. System and virtual Folders return `learning: null`. The response gives current scheduling state for one material. Review events and reading position use separate product data.
+
+### Updating an existing material priority
+
+Enable **Allow learning progress imports** for the current library, then send integer `priority` (0–9) with `id` and `expected_updated_at` to `materials/update`. Take the revision from `materials/read`. The CLI takes the same value through `--priority`. Send `priority: null` or `--priority inherit` to clear a material's explicit priority and restore inheritance.
+
+```sh
+foliole materials/update --id <id> --expected-updated-at <updated_at> --priority 2
+```
+
+This sets the material-level priority for a Topic (including an excerpt), Item, or ordinary Folder. Foliole applies its normal queue ordering and priority inheritance. Setting a Folder's priority affects descendants that inherit from it. Reading and review schedules and history are preserved. To update explicit priorities across a list of materials, send one update per ID. A stale revision returns HTTP 409. When learning imports are disabled, a valid priority update returns HTTP 403 with `learning_import_disabled`, including when combined with a text edit.
 
 ### Reading source relationships
 

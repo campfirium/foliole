@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "データ移行",
   "settings.general.dataMigration.superMemo": "SuperMemo から移行",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "CLI やその他のローカル ツールが、現在のライブラリでトピックやアイテムを作成するときに、スケジュールと優先度を設定できるようにします。",
+  "settings.general.agentControl.learningImportDescription": "CLI やその他のローカル ツールが、現在のライブラリでトピックやアイテムを作成するときに、スケジュールと優先度を設定できるようにします。既存の資料やフォルダの優先度も変更できます。",
   "settings.general.agentControl.learningImportError": "学習インポートの権限を読み込めないか、保存できませんでした。",
   "settings.general.aide.settingsRow": "Aide の設定",
   "settings.general.aide.settingsDescription": "モデル、会話データ、および Aide が参照・変更できる内容。",
