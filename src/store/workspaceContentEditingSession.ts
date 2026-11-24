@@ -44,6 +44,10 @@ export function readWorkspaceContentEditingSessionReady(libraryScope: string | u
   return session?.ready;
 }
 
+export function isCurrentWorkspaceContentEditingSession(session: WorkspaceContentEditingSession) {
+  return sessions.get(keyFor(session.libraryScope, session.nodeId)) === session;
+}
+
 export async function endWorkspaceContentEditingSession(session: WorkspaceContentEditingSession) {
   const key = keyFor(session.libraryScope, session.nodeId);
   await session.ready;

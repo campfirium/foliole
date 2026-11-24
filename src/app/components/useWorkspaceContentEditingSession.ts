@@ -5,7 +5,7 @@ import { logRuntimeError } from '../../shared/platform/runtimeLogging';
 import { subscribeMainWindowBlur } from '../../shared/platform/windowControls';
 import { waitForWorkspaceContentCommands } from '../../store/workspaceContentCommands';
 import { beginWorkspaceContentEditingSession, endWorkspaceContentEditingSession,
-  type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
+  isCurrentWorkspaceContentEditingSession, type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
 import { waitForNodeCreateConfirmations } from '../../store/workspaceNodeContentVersionGuard';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
@@ -13,8 +13,9 @@ import type { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 type Draft = ReturnType<typeof useEditorDraftSync>;
 type EditingBoundary = { session: WorkspaceContentEditingSession; draft: Draft; finishing?: boolean;
-  inputCompletion?: Promise<void> | undefined };
+  departed?: boolean; inputCompletion?: Promise<void> | undefined };
 type BoundaryRef = MutableRefObject<EditingBoundary | null>;
+type FinishEditingBoundary = (boundary?: EditingBoundary | null) => Promise<void>;
 
 async function waitForInputCompletion(boundary: EditingBoundary) {
   let completion: Promise<void> | undefined;
@@ -24,53 +25,66 @@ async function waitForInputCompletion(boundary: EditingBoundary) {
   } while (boundary.inputCompletion !== completion);
 }
 
-function useEditorSessionWindowExit(finish: () => Promise<void>, libraryScope: string | undefined,
-  nodeId: string | null, readOnly: boolean) {
+function leaveEditingBoundary(boundary: EditingBoundary, finish: FinishEditingBoundary) {
+  boundary.departed = true;
+  boundary.session.closing = true;
+  void finish(boundary);
+}
+
+function useEditorSessionWindowExit(finish: FinishEditingBoundary, active: BoundaryRef,
+  libraryScope: string | undefined, nodeId: string | null, readOnly: boolean) {
   useEffect(() => {
     const onBlur = () => { void finish(); };
     const unsubscribeNativeBlur = subscribeMainWindowBlur(onBlur);
     window.addEventListener('blur', onBlur);
-    return () => { unsubscribeNativeBlur?.(); window.removeEventListener('blur', onBlur); void finish(); };
-  }, [finish, libraryScope, nodeId, readOnly]);
+    return () => {
+      unsubscribeNativeBlur?.();
+      window.removeEventListener('blur', onBlur);
+      const boundary = active.current;
+      if (boundary && boundary.session.nodeId === nodeId && boundary.session.libraryScope === libraryScope) {
+        leaveEditingBoundary(boundary, finish);
+      }
+    };
+  }, [active, finish, libraryScope, nodeId, readOnly]);
 }
 
-function useFinishEditingSession(active: BoundaryRef) {
-  return useCallback(async () => {
-    const boundary = active.current;
-    if (!boundary || boundary.finishing || boundary.session.closing) return;
-    const { session, draft: input } = boundary;
+async function settleEditingBoundary(boundary: EditingBoundary) {
+  const { session, draft } = boundary;
+  const inLibrary = () => useWorkspaceStore.getState().libraryScope === session.libraryScope;
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+
+  const succeeded = await waitForWorkspaceContentCommands(session.libraryScope, session.nodeId);
+  // A failed command leaves an explicit exit retryable. A view already left still needs to close.
+  if (!succeeded && !boundary.departed) return false;
+  await waitForInputCompletion(boundary);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+
+  session.closing = true;
+  // Composition and buffered editor delivery complete on their real signals.
+  await draft.settleBufferedInput(session.nodeId);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+  draft.flushDraftSynchronously(session.nodeId);
+  await waitForNodeCreateConfirmations([session.nodeId]);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  return !inLibrary() || await drainPendingNodeContentRuntimePersist(session.nodeId);
+}
+
+function useFinishEditingSession(active: BoundaryRef): FinishEditingBoundary {
+  return useCallback(async (boundary = active.current) => {
+    if (!boundary || boundary.finishing) return;
     boundary.finishing = true;
     try {
-      if (useWorkspaceStore.getState().libraryScope !== session.libraryScope) {
-        await endWorkspaceContentEditingSession(session);
-        if (active.current === boundary) active.current = null;
-        return;
-      }
-      if (!await waitForWorkspaceContentCommands(session.libraryScope, session.nodeId)) {
-        boundary.finishing = false;
-        return;
-      }
-      if (active.current !== boundary) return;
-      await waitForInputCompletion(boundary);
-      if (active.current !== boundary) return;
-      session.closing = true;
-      // Composition and buffered editor delivery complete on their real signals.
-      await input.settleBufferedInput(session.nodeId);
-      if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
-      input.flushDraftSynchronously();
-      await waitForNodeCreateConfirmations([session.nodeId]);
-      if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
-      if (!await drainPendingNodeContentRuntimePersist(session.nodeId)) {
-        boundary.finishing = false;
-        session.closing = false;
-        return;
-      }
-      await endWorkspaceContentEditingSession(session);
+      if (!await settleEditingBoundary(boundary)) return;
+      await endWorkspaceContentEditingSession(boundary.session);
       if (active.current === boundary) active.current = null;
     } catch (error) {
-      boundary.finishing = false;
-      session.closing = false;
       logRuntimeError('editor session could not finish', { area: 'persistence', action: 'content_editing_session', error });
+    } finally {
+      boundary.finishing = false;
+      boundary.session.closing = Boolean(boundary.departed);
     }
   }, [active]);
 }
@@ -80,7 +94,8 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
   const active = useRef<EditingBoundary | null>(null);
   const pendingInput = useRef<{ completion: Promise<void>; libraryScope: string | undefined; nodeId: string | null } | null>(null);
   const finish = useFinishEditingSession(active);
-  useEditorSessionWindowExit(finish, libraryScope, nodeId, readOnly);
+  useEditorSessionWindowExit(finish, active, libraryScope, nodeId, readOnly);
+  const finishEditing = useCallback(() => finish(), [finish]);
   const settleAcceptedInput = useCallback(async () => {
     let input: typeof pendingInput.current;
     do {
@@ -109,6 +124,10 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
   const handleEditorInput = useCallback((meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? nodeId;
     if (sourceNodeId && !readOnly) {
+      const previous = active.current;
+      if (previous && (previous.session.nodeId !== sourceNodeId || previous.session.libraryScope !== libraryScope)) {
+        leaveEditingBoundary(previous, finish);
+      }
       const session = beginWorkspaceContentEditingSession(libraryScope, sourceNodeId);
       if (session && active.current?.session !== session) {
         const input = pendingInput.current;
@@ -118,6 +137,6 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
       else if (active.current) active.current.draft = draft;
     }
     draft.handleEditorInput(meta);
-  }, [draft, libraryScope, nodeId, readOnly]);
-  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing: finish, settleAcceptedInput };
+  }, [draft, finish, libraryScope, nodeId, readOnly]);
+  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing, settleAcceptedInput };
 }
