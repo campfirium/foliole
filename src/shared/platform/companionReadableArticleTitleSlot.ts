@@ -18,3 +18,10 @@ export function isCompanionArticleNode(snapshot: WorkspaceSnapshot, node: Compan
 
   return true;
 }
+
+/** Browse lists top-level articles, plus child topics when the reader keeps them shown. */
+export function isCompanionBrowseListTopic(snapshot: WorkspaceSnapshot, node: CompanionReadableNode | undefined,
+  includeChildTopics: boolean) {
+  if (!includeChildTopics) return isCompanionArticleNode(snapshot, node);
+  return Boolean(node && node.kind === 'topic' && !node.anchorLink);
+}

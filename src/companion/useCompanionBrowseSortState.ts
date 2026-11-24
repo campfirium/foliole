@@ -23,7 +23,11 @@ import {
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 import { useCompanionNavigationField, useHasCompanionNavigation } from './CompanionNavigationProvider';
 
-const DEFAULT_SORT = { direction: DEFAULT_FOLDER_LIST_SORT_DIRECTION, key: DEFAULT_FOLDER_LIST_SORT_KEY };
+const DEFAULT_SORT: { direction: FolderListSortDirection; key: FolderListSortKey } =
+  { direction: DEFAULT_FOLDER_LIST_SORT_DIRECTION, key: DEFAULT_FOLDER_LIST_SORT_KEY };
+/** The Browse home list doubles as reading history, so until a reader picks an order it shows the last opened first. */
+const HOME_DEFAULT_SORT: typeof DEFAULT_SORT = { direction: DEFAULT_FOLDER_LIST_SORT_DIRECTION, key: 'dateLastOpened' };
+const defaultSortFor = (id: string | null) => id === HOME_NODE_ID ? HOME_DEFAULT_SORT : DEFAULT_SORT;
 
 /** The Browse list on screen, as the id its sort is kept under; null when no list is shown (an external document). */
 export function resolveCompanionBrowseSortListId(args: {
@@ -67,9 +71,9 @@ function useRememberedBrowseSort(snapshot: WorkspaceSnapshot | null) {
     resolveCompanionTrashFolderViewByNodeId(snapshot, selectedBrowseNodeId))), [selectedBrowseNodeId, snapshot]);
   const listId = resolveCompanionBrowseSortListId({ browseReturnNodeId, directorySelection, isBrowseDirectoryOpen,
     isListNode: () => selectedIsList, selectedBrowseNodeId });
-  const read = (id: string | null) => readCompanionFolderListSort(id) ?? DEFAULT_SORT;
+  const read = (id: string | null) => readCompanionFolderListSort(id) ?? defaultSortFor(id);
   const remember = (id: string | null, choice: typeof DEFAULT_SORT) => {
-    if (id) void rememberCompanionFolderListSort(id, choice, DEFAULT_SORT, other => isKnownListId(snapshot, other));
+    if (id) void rememberCompanionFolderListSort(id, choice, defaultSortFor(id), other => isKnownListId(snapshot, other));
   };
   const shown = read(listId);
   return {

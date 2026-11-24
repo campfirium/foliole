@@ -14,6 +14,7 @@ import { useReminderDraftRequest } from '../features/settings/context/ReminderDr
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isNativeCompanionRuntime } from '../shared/platform/companionBootstrap';
 
+import { toggleCompanionBrowseShowChildTopics, useCompanionBrowseShowChildTopics } from './companionBrowseChildTopics';
 import {
   CompanionBrowseContainerActions,
   CompanionBrowseContainerSection,
@@ -81,6 +82,7 @@ function BrowseMainMenu(props: {
       {props.diveActions && <BrowseDiveMenuActions actions={props.diveActions} onClose={props.onClose} />}
       {props.onOpenSort && <CompanionMenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort}
         status={props.activeSortLabel} trailingIcon={ChevronRight} />}
+      {props.page.kind === 'recent' && <BrowseChildTopicsRow />}
       {emptyTrash && <CompanionMenuRow destructive label={t('companion.batch.emptyTrash')} onSelect={() => {
         props.onClose();
         emptyTrash();
@@ -88,6 +90,13 @@ function BrowseMainMenu(props: {
       <CompanionBrowseContainerSection page={props.page} onClose={props.onClose} />
     </>
   );
+}
+
+/** Browse-only display choice; folders already reach child topics by opening their topic. */
+function BrowseChildTopicsRow() {
+  const t = useTranslation();
+  const shown = useCompanionBrowseShowChildTopics();
+  return <CompanionMenuRow active={shown} label={t('companion.browse.showChildTopics')} onSelect={toggleCompanionBrowseShowChildTopics} />;
 }
 
 function BrowseSortMenu(props: {

@@ -47,13 +47,13 @@ function topicOrder(ui: Awaited<ReturnType<typeof openBrowse>>) {
   return ui.result.current.surface.recentArticles.map(topic => topic.nodeId);
 }
 
-it('enters Browse unchanged, then alternates actual topic order', async () => {
+it('enters Browse on the last opened order, then alternates actual topic order', async () => {
   const ui = await openBrowse();
-  expect(topicOrder(ui)).toEqual(['new', 'article']);
-  act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(topicOrder(ui)).toEqual(['article', 'new']);
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(topicOrder(ui)).toEqual(['new', 'article']);
+  act(() => ui.result.current.actions.handleNavigationAction('recent'));
+  expect(topicOrder(ui)).toEqual(['article', 'new']);
 });
 
 it('returns from a topic, folder or directory before interpreting a tap as a sort change', async () => {
@@ -62,14 +62,14 @@ it('returns from a topic, folder or directory before interpreting a tap as a sor
     act(() => ui.result.current.surface.handleSelectBrowseNode(nodeId));
     act(() => ui.result.current.actions.handleNavigationAction('recent'));
     expect(ui.result.current.surface.selectedBrowseNodeId).toBeNull();
-    expect(ui.result.current.sort.browseSortKey).toBe('dateSaved');
+    expect(ui.result.current.sort.browseSortKey).toBe('dateLastOpened');
   }
   act(() => ui.result.current.actions.secondaryDestinations.handleSecondaryDestination('directory'));
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(ui.result.current.directoryOpen).toBe(false);
-  expect(ui.result.current.sort.browseSortKey).toBe('dateSaved');
-  act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(ui.result.current.sort.browseSortKey).toBe('dateLastOpened');
+  act(() => ui.result.current.actions.handleNavigationAction('recent'));
+  expect(ui.result.current.sort.browseSortKey).toBe('dateSaved');
 });
 
 it('keeps the chosen sort when switching tabs and resumes the two-mode shortcut from a menu choice', async () => {
@@ -77,7 +77,7 @@ it('keeps the chosen sort when switching tabs and resumes the two-mode shortcut 
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
   act(() => ui.result.current.actions.handleNavigationAction('search'));
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
-  expect(ui.result.current.sort.browseSortKey).toBe('dateLastOpened');
+  expect(ui.result.current.sort.browseSortKey).toBe('dateSaved');
   act(() => ui.result.current.sort.setBrowseSortKey('name'));
   act(() => ui.result.current.sort.setBrowseSortDirection('asc'));
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
@@ -87,15 +87,15 @@ it('keeps the chosen sort when switching tabs and resumes the two-mode shortcut 
 it('keeps the home order through a real database close and reopen, outside navigation', async () => {
   const ui = await openBrowse();
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
-  await waitFor(() => expect(savedSorts()).toEqual({ 'special-home': { direction: 'desc', key: 'dateLastOpened' } }));
+  await waitFor(() => expect(savedSorts()).toEqual({ 'special-home': { direction: 'desc', key: 'dateSaved' } }));
   ui.unmount();
   const reopened = renderResumeSurface(await library.reopen());
   await waitFor(() => expect(reopened.result.current).not.toBeNull());
-  expect(topicOrder(reopened)).toEqual(['article', 'new']);
-  expect(reopened.result.current.sort).toMatchObject({ browseSortKey: 'dateLastOpened', browseSortDirection: 'desc' });
-  act(() => reopened.result.current.actions.handleNavigationAction('recent'));
   expect(topicOrder(reopened)).toEqual(['new', 'article']);
   expect(reopened.result.current.sort).toMatchObject({ browseSortKey: 'dateSaved', browseSortDirection: 'desc' });
+  act(() => reopened.result.current.actions.handleNavigationAction('recent'));
+  expect(topicOrder(reopened)).toEqual(['article', 'new']);
+  expect(reopened.result.current.sort).toMatchObject({ browseSortKey: 'dateLastOpened', browseSortDirection: 'desc' });
   await waitFor(() => expect(savedSorts()).toEqual({}));
   const saved = JSON.parse((await loadCompanionNavigationResume((await library.snapshot()).libraryScope!))!);
   expect(saved).not.toHaveProperty('browseSortKey');
@@ -126,7 +126,7 @@ it('keeps a folder order to that folder, apart from home and other folders', asy
   act(() => ui.result.current.directory.setDirectorySelection({ kind: 'trash' }));
   expect(ui.result.current.sort.browseSortKey).toBe('dateSaved');
   act(() => ui.result.current.setDirectoryOpen(false));
-  expect(ui.result.current.sort).toMatchObject({ browseSortKey: 'dateSaved', browseSortDirection: 'desc' });
+  expect(ui.result.current.sort).toMatchObject({ browseSortKey: 'dateLastOpened', browseSortDirection: 'desc' });
   act(() => ui.result.current.surface.handleSelectBrowseNode('folder'));
   expect(ui.result.current.sort).toMatchObject({ browseSortKey: 'name', browseSortDirection: 'asc' });
   expect(ui.result.current.surface.browsedFolder?.items.map(item => item.nodeId)).toEqual(['article', 'new']);
@@ -156,16 +156,16 @@ it('moves an older single Browse sort to home once and keeps another library apa
   const other = renderResumeSurface(await library.snapshot());
   await waitFor(() => expect(other.result.current).not.toBeNull());
   act(() => other.result.current.actions.handleNavigationAction('recent'));
-  expect(other.result.current.sort.browseSortKey).toBe('dateSaved');
+  expect(other.result.current.sort.browseSortKey).toBe('dateLastOpened');
   expect(phoneSortRows()).toEqual([]);
 });
 
-it('leaves home on its default when older navigation held the default or no sort', async () => {
+it('leaves home on the last opened default when older navigation held the old default or no sort', async () => {
   const snapshot = await library.snapshot();
   await saveCompanionNavigationResume(snapshot.libraryScope!, JSON.stringify({ ...initialCompanionNavigation(true),
     activeAction: 'recent', browseSortKey: 'dateSaved', browseSortDirection: 'desc' }));
   const ui = renderResumeSurface(snapshot);
   await waitFor(() => expect(ui.result.current).not.toBeNull());
-  expect(topicOrder(ui)).toEqual(['new', 'article']);
+  expect(topicOrder(ui)).toEqual(['article', 'new']);
   expect(phoneSortRows()).toEqual([]);
 });

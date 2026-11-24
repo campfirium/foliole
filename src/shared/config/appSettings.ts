@@ -132,6 +132,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeTrashManualCollapsed: 'foliole-node-trash-manual-collapsed',
   workspaceContentSort: 'foliole-workspace-content-sort',
   viewHideDismissedTopics: 'foliole-view-hide-dismissed-topics',
+  companionBrowseShowChildTopics: 'foliole-companion-browse-show-child-topics',
   externalFoldersEnabled: 'foliole-external-folders-enabled',
   externalLibraryCollapsed: 'foliole-external-library-collapsed',
   externalLibraryFolderOrder: 'foliole-external-library-folder-order',

@@ -101,3 +101,21 @@ it('keeps controls without a target on this page out of the root and trash bars'
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
   expect(within(screen.getByRole('dialog', { name: 'Browse' })).getByRole('button', { name: /^Sort/ })).toBeVisible();
 });
+
+it('toggles child topics from the Browse list menu only, shown by default and kept on this device', () => {
+  window.localStorage.removeItem('foliole-companion-browse-show-child-topics');
+  const props = { onChangeSortDirection: vi.fn(), onChangeSortKey: vi.fn(), onOpenCapture: vi.fn(),
+    sortDirection: 'desc' as const, sortKey: 'dateLastOpened' as const };
+  const { unmount } = render(<CompanionBrowseTopActions page={{ kind: 'folder', nodeId: 'folder' }} {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Show child topics/ })).not.toBeInTheDocument();
+  unmount();
+
+  render(<CompanionBrowseTopActions page={{ kind: 'recent' }} {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  const row = within(screen.getByRole('dialog')).getByRole('button', { name: /Show child topics/ });
+  expect(row.querySelector('svg')).not.toBeNull();
+  fireEvent.click(row);
+  expect(window.localStorage.getItem('foliole-companion-browse-show-child-topics')).toBe('false');
+  expect(row.querySelector('svg')).toBeNull();
+});

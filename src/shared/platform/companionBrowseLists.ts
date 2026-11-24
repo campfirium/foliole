@@ -22,7 +22,7 @@ import {
 
 import { sortCompanionBrowseNodes, sortCompanionDirectoryNodes } from './companionBrowseOrdering';
 import { resolveCompanionArticleTitle, resolveCompanionUntitledLabel } from './companionReadableArticle';
-import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
+import { isCompanionBrowseListTopic } from './companionReadableArticleTitleSlot';
 
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
@@ -90,6 +90,8 @@ function isRootFolderNode(node: CompanionReadableNode | undefined): node is Comp
 function resolveParentFolderLabel(snapshot: WorkspaceSnapshot, node: CompanionReadableNode): string | null {
   if (!node.parentNodeId) return null;
   const parentNode = snapshot.nodesById[node.parentNodeId];
+  // A child topic names the topic it came from instead of a folder.
+  if (parentNode?.kind === 'topic') return resolveCompanionArticleTitle(parentNode);
   if (!parentNode || parentNode.kind !== 'folder') return null;
   return parentNode.title.trim() || resolveCompanionUntitledLabel();
 }
@@ -234,13 +236,14 @@ export function resolveCompanionTrashFolderViewByNodeId(
 export function resolveCompanionRecentArticles(
   snapshot: WorkspaceSnapshot | null,
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
-  sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
+  sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION,
+  includeChildTopics = false
 ): CompanionRecentArticle[] {
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
   if (!normalizedSnapshot) return [];
   const articles = selectCanonicalVisibleNodeIds(normalizedSnapshot)
     .map((nodeId) => normalizedSnapshot.nodesById[nodeId])
-    .filter((node): node is CompanionReadableNode => Boolean(node && isCompanionArticleNode(normalizedSnapshot, node)))
+    .filter((node): node is CompanionReadableNode => Boolean(node && isCompanionBrowseListTopic(normalizedSnapshot, node, includeChildTopics)))
     .filter(hasReadableContent);
   return sortCompanionBrowseNodes(normalizedSnapshot, articles, sortKey, sortDirection).map((node) => {
     const bodyStatus = normalizeBodyStatus(node.bodyStatus);

@@ -12,6 +12,7 @@ import {
   resolveCompanionRecentArticles
 } from '../shared/platform/companionBrowseLists';
 
+import { useCompanionBrowseShowChildTopics } from './companionBrowseChildTopics';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -53,17 +54,18 @@ export function useCompanionBrowseState(
   );
   const needsRecentArticles = display.activeAction === 'recent' || (display.activeAction === 'review' &&
     selectedBrowseNodeId !== null && selectedBrowseNodeId !== display.flowNodeId);
-  const projection = useRef<{ snapshot: typeof browseSnapshot; sortKey: typeof sort.sortKey;
+  const showChildTopics = useCompanionBrowseShowChildTopics();
+  const projection = useRef<{ snapshot: typeof browseSnapshot; sortKey: typeof sort.sortKey; showChildTopics: boolean;
     sortDirection: typeof sort.sortDirection; articles: CompanionRecentArticle[] } | null>(null);
   const projectedArticles = useMemo(() => {
     if (!needsRecentArticles) return projection.current?.articles ?? [];
     const previous = projection.current;
     if (previous && previous.snapshot === browseSnapshot && previous.sortKey === sort.sortKey &&
-      previous.sortDirection === sort.sortDirection) return previous.articles;
-    const articles = resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection);
-    projection.current = { snapshot: browseSnapshot, ...sort, articles };
+      previous.sortDirection === sort.sortDirection && previous.showChildTopics === showChildTopics) return previous.articles;
+    const articles = resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection, showChildTopics);
+    projection.current = { snapshot: browseSnapshot, ...sort, showChildTopics, articles };
     return articles;
-  }, [browseSnapshot, needsRecentArticles, sort.sortDirection, sort.sortKey]);
+  }, [browseSnapshot, needsRecentArticles, showChildTopics, sort.sortDirection, sort.sortKey]);
   const recentArticles = useMemo(() => projectedArticles.length > 0
     ? projectedArticles : buildReadableArticleFallback(workspaceSync.readableArticle),
   [projectedArticles, workspaceSync.readableArticle]);

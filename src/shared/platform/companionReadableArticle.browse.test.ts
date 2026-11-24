@@ -83,6 +83,14 @@ describe('companionReadableArticle recent browse helpers', () => {
     expect(resolveCompanionRecentArticles(snapshot, 'dateLastOpened').map((article) => article.nodeId)).toEqual(['node-1', 'node-2', 'node-7']);
   });
 
+  it('lists child topics under their parent topic name when Browse keeps them shown', () => {
+    const result = resolveCompanionRecentArticles(createSnapshot(), 'dateSaved', 'desc', true);
+
+    expect(result.map((article) => article.nodeId)).toContain('node-5');
+    expect(result.some((article) => article.nodeId === 'node-6')).toBe(false);
+    expect(result.find((article) => article.nodeId === 'node-5')?.folderLabel).toBe('Newer');
+  });
+
   it('excludes child topics and cloze items from recent articles', () => {
     const result = resolveCompanionRecentArticles(createSnapshot());
 
