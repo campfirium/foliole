@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
+import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
@@ -93,6 +94,52 @@ it('freezes the physical target at Add and uses it for manual text saves too', a
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull());
   expect(library.database.prepare("SELECT parent_id FROM nodes WHERE title = 'Manual text'").get()).toEqual({ parent_id: 'physical-folder' });
+});
+
+it('retries a reopened capture in its original folder and uses the current folder for a new draft', async () => {
+  await openCapture();
+  const database = library.database;
+  database.exec(`CREATE TRIGGER fail_retry_capture BEFORE INSERT ON nodes WHEN NEW.title = 'Retry capture'
+    BEGIN SELECT RAISE(ABORT, 'Write unavailable'); END`);
+  const owner = getIosCompanionDatabaseOwner();
+  const runWriter = owner.runWriter.bind(owner);
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  vi.spyOn(owner, 'runWriter').mockImplementationOnce(async (task, options) => {
+    started.resolve();
+    await release.promise;
+    return runWriter(task, options);
+  });
+  const findTopics = () => database.prepare("SELECT id, parent_id FROM nodes WHERE title = ?").all('Retry capture');
+  try {
+    fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'Retry capture' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); await started.promise; });
+    expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Change location' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(screen.getByLabelText('Capture text')).toHaveValue('Retry capture');
+    expect(screen.getByLabelText('Capture text')).toHaveAttribute('readonly');
+  } finally {
+    release.resolve();
+  }
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
+  expect(findTopics()).toEqual([]);
+  database.exec('DROP TRIGGER fail_retry_capture');
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull());
+  const saved = findTopics() as { id: string; parent_id: string }[];
+  expect(saved).toEqual([{ id: expect.any(String), parent_id: 'physical-folder' }]);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByLabelText('Capture text')).toHaveValue('');
+  fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'New capture' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Capture' })).toBeNull());
+  expect(database.prepare("SELECT parent_id FROM nodes WHERE title = 'New capture'").all()).toEqual([{ parent_id: 'other-folder' }]);
+
+  await reopenSearchLibrary(library.root, '2026-10-30T00:00:00Z');
+  await loadCompanionWorkspaceSyncState();
+  expect(await loadCompanionWorkspaceNode(saved[0]!.id)).toMatchObject({ parentNodeId: 'physical-folder' });
 });
 
 it.each(['target', 'ancestor'])('does not redirect to Inbox if the original physical %s was deleted after opening', async deleted => {

@@ -42,12 +42,14 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
   };
 }
 
+export type CompanionCaptureOpenChange = (open: boolean, reason?: 'saving-draft') => void;
+
 interface CaptureDraftProps {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
   onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
-  onOpenChange(open: boolean): void;
+  onOpenChange: CompanionCaptureOpenChange;
   open: boolean;
 }
 
@@ -107,7 +109,7 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
     let reopenForRecovery = !clipboard && !retryRefresh;
     if (reopenForRecovery) {
       preserveOnClose.current = true;
-      props.onOpenChange(false);
+      props.onOpenChange(false, 'saving-draft');
     }
     try {
       let result: CompanionCaptureTextSaveResult | null = null;

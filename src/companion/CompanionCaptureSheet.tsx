@@ -23,7 +23,7 @@ import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } fr
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { CompanionFileImportNotice } from './CompanionFileImportNotice';
 import { useCompanionCaptureClipboard } from './useCompanionCaptureClipboard';
-import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
+import { useCompanionCaptureDraft, type CompanionCaptureOpenChange } from './useCompanionCaptureDraft';
 import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
 
 function CaptureSheetViewport(props: ComponentProps<typeof AppDialogContent>) {
@@ -143,7 +143,7 @@ export function CompanionCaptureSheet(props: {
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
   onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
-  onOpenChange(open: boolean): void;
+  onOpenChange: CompanionCaptureOpenChange;
   open: boolean;
 }) {
   const t = useTranslation();
