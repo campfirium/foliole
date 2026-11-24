@@ -86,6 +86,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.search.title': 'Local search',
   'companion.search.description': 'Topics and synced reading materials on this device.',
   'companion.search.descriptionTopics': 'Topics synced to this device.',
+  'companion.search.history': 'Recently opened',
   'companion.search.loading': 'Searching...',
   'companion.search.loadMore': 'Load more',
   'companion.search.empty': 'No local results found.',

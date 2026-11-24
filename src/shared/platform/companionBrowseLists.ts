@@ -60,11 +60,11 @@ export interface CompanionTrashView {
   items: CompanionFolderListEntry[];
 }
 
-function normalizeBodyStatus(status: CompanionReadableNode['bodyStatus']) {
+export function normalizeBodyStatus(status: CompanionReadableNode['bodyStatus']) {
   return status === 'missing' || status === 'empty' || status === 'fetching' || status === 'failed' ? status : undefined;
 }
 
-function hasReadableContent(node: CompanionReadableNode | undefined) {
+export function hasReadableContent(node: CompanionReadableNode | undefined) {
   return Boolean(node && (
     node.hasContent ||
     (typeof node.content === 'string' && node.content.trim()) ||
@@ -87,7 +87,7 @@ function isRootFolderNode(node: CompanionReadableNode | undefined): node is Comp
   return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
 }
 
-function resolveParentFolderLabel(snapshot: WorkspaceSnapshot, node: CompanionReadableNode): string | null {
+export function resolveParentFolderLabel(snapshot: WorkspaceSnapshot, node: CompanionReadableNode): string | null {
   if (!node.parentNodeId) return null;
   const parentNode = snapshot.nodesById[node.parentNodeId];
   if (!parentNode || parentNode.kind !== 'folder') return null;
