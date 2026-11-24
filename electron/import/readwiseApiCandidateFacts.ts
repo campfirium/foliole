@@ -20,8 +20,9 @@ export function createReadwiseApiCandidateFactFetcher(
 ) {
   const request = createReadwiseApiRequest(dependencies);
   return async (candidate: ReadwiseApiCandidate) => {
+    const annotationIds = [...candidate.highlightIds, ...(candidate.noteIds ?? [])];
     let { indexed, parent } = await runWithDatabaseConnectionOwner(() => {
-      const indexed = loadReadwiseApiReaderIndex(connectionRef);
+      const indexed = loadReadwiseApiReaderIndex(connectionRef, [candidate.documentId, ...annotationIds]);
       const parent = indexed.find((item) => item.id === candidate.documentId && item.htmlContent)
         ?? loadReadwiseApiExistingParent(connectionRef, candidate.documentId);
       return { indexed, parent };
@@ -30,13 +31,12 @@ export function createReadwiseApiCandidateFactFetcher(
       parent = await fetchExact(candidate.documentId, true, request);
       indexed = await runWithDatabaseConnectionOwner(() => {
         if (parent) saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
-        return loadReadwiseApiReaderIndex(connectionRef);
+        return loadReadwiseApiReaderIndex(connectionRef, annotationIds);
       });
     }
     if (!parent || parent.category !== candidate.readerCategory) {
       throw new Error('readwise_api_candidate_parent_missing');
     }
-    const annotationIds = [...candidate.highlightIds, ...(candidate.noteIds ?? [])];
     const known = new Map(indexed.map((item) => [item.id, item]));
     const annotations = annotationIds.flatMap((id) => known.get(id) ?? []);
     if (annotations.length !== annotationIds.length) {

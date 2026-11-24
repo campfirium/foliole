@@ -114,16 +114,16 @@ export function loadReadwiseApiCandidateProgress(connectionRef: string) {
 }
 
 export function loadPreparedReadwiseApiCandidate(connectionRef: string, documentId: string) {
-  const candidate = loadReadwiseApiCandidate(documentId, connectionRef);
+  const candidate = loadReadwiseApiCandidate(connectionRef, documentId);
   if (!candidate) return null;
-  const ids = new Set([documentId, ...candidate.highlightIds, ...(candidate.noteIds ?? [])]);
-  const indexed = loadReadwiseApiReaderIndex(connectionRef).filter((item) => ids.has(item.id));
+  const ids = [documentId, ...candidate.highlightIds, ...(candidate.noteIds ?? [])];
+  const indexed = loadReadwiseApiReaderIndex(connectionRef, ids);
   const byId = new Map(indexed.map((item) => [item.id, item]));
-  for (const item of loadReadwiseApiAnnotationLedgerDocuments(connectionRef, documentId)) {
-    if (ids.has(item.id) && !byId.has(item.id)) byId.set(item.id, item);
+  for (const item of loadReadwiseApiAnnotationLedgerDocuments(connectionRef, documentId, ids)) {
+    if (!byId.has(item.id)) byId.set(item.id, item);
   }
   const readers = [...byId.values()];
-  const books = loadReadwiseApiExportIndex(connectionRef).filter((item) => item.externalId === documentId);
+  const books = loadReadwiseApiExportIndex(connectionRef, [documentId]);
   return prepareReadwiseApiDocuments(readers, books)[0] ?? null;
 }
 
@@ -145,7 +145,7 @@ export function clearReadwiseApiCandidateStage(connectionRef: string) {
   );
 }
 
-function loadReadwiseApiCandidate(documentId: string, connectionRef: string) {
+export function loadReadwiseApiCandidate(connectionRef: string, documentId: string) {
   const row = openDatabaseConnection().driver.queryOne<{ payload_json: string }>(
     `SELECT payload_json FROM readwise_api_import_stage
      WHERE connection_ref = ? AND record_kind = ? AND remote_id = ?`,
