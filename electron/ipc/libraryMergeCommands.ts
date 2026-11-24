@@ -42,7 +42,7 @@ async function runMerge(args: Record<string, unknown>): Promise<NativeLibraryMer
     attachmentsDirectory: asNullableString(args.attachmentsDirectory, 'attachmentsDirectory'),
     folderTitle: asString(args.folderTitle, 'folderTitle')
   });
-  if (result.added || result.alternatives || result.reviewsAdded) notifyWorkspaceContentChanged(null);
+  if (result.added || result.alternatives || result.reviewsAdded || result.attachmentsCopied) notifyWorkspaceContentChanged(null);
   return result;
 }
 

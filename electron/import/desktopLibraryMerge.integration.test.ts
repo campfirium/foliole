@@ -11,6 +11,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -139,6 +140,29 @@ it('adds nothing when the same source is merged again', async () => {
   expect(second).toMatchObject({ added: 0, alternatives: 0, reviewsAdded: 0, folderId: first.folderId });
   expect(target.sqlite.prepare('SELECT COUNT(*) AS count FROM nodes WHERE title = ?').get('Merged library')).toEqual({ count: 1 });
   expect(first.folderId).toBeTruthy();
+});
+
+it('copies missing files on a rerun for both added notes and retained alternatives', async () => {
+  const source = sourceLibrary();
+  const target = targetLibrary();
+  const alternativeImage = Buffer.concat([png, Buffer.from('alternative')]);
+  const alternativeKey = `${createHash('sha256').update(alternativeImage).digest('hex')}.png`;
+  addNode(source, { id: 'shared-changed', parent: null, title: 'Changed',
+    content: `![alternative](${buildAssetMarkdownUrl(alternativeKey)})` });
+  const attachments = path.join(temp, 'source-assets');
+  await mkdir(attachments);
+  await writeFile(path.join(attachments, pngKey), png);
+  await writeFile(path.join(attachments, alternativeKey), alternativeImage);
+  const first = await merge(source, target, null);
+  expect(first).toMatchObject({ attachmentsCopied: 0, attachmentsMissing: 3 });
+
+  const rerun = () => mergeDesktopLibrary({
+    sourcePath: source.dbPath, attachmentsDirectory: attachments, folderTitle: 'Merged library', now
+  });
+  expect(await rerun()).toMatchObject({ added: 0, alternatives: 0, attachmentsCopied: 2, attachmentsMissing: 1 });
+  expect(await readFile(path.join(temp, 'assets', pngKey))).toEqual(png);
+  expect(await readFile(path.join(temp, 'assets', alternativeKey))).toEqual(alternativeImage);
+  expect(await rerun()).toMatchObject({ added: 0, alternatives: 0, attachmentsCopied: 0, attachmentsMissing: 1 });
 });
 
 it('finishes an interrupted merge on the next run and keeps children under their own parent', async () => {

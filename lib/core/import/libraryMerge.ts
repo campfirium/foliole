@@ -30,7 +30,7 @@ export interface LibraryMergeReport {
   unchanged: number;
   skippedDeleted: number;
   reviewsAdded: number;
-  /** Attachment storage keys the added nodes and alternatives refer to. */
+  /** Source attachments still referenced by the target notes or their available alternatives. */
   attachmentKeys: string[];
 }
 
@@ -55,14 +55,15 @@ const SOURCE_OUTLINE_SQL = `WITH RECURSIVE visible(id, parent_id, depth) AS (
 ) SELECT visible.id, visible.parent_id, visible.depth FROM visible JOIN nodes n ON n.id = visible.id
   WHERE n.virtual_filter IS NULL ORDER BY visible.depth, visible.id`;
 
-const TARGET_FACTS_SQL = `SELECT q.id, n.id AS node_id, n.deleted_at, n.content,
+const TARGET_FACTS_SQL = `SELECT q.id, n.id AS node_id, n.deleted_at, n.content, n.resource_references,
   EXISTS (SELECT 1 FROM node_sync_tombstones t WHERE t.node_id = q.id) AS tombstoned,
   (? IS NOT NULL AND EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = ?)) AS known
   FROM (SELECT ? AS id) q LEFT JOIN nodes n ON n.id = q.id`;
 
-type TargetFacts = { node_id: string | null; deleted_at: string | null; content: string | null; tombstoned: number; known: number };
+type MergeDecisionFacts = { node_id: string | null; deleted_at: string | null; content: string | null; tombstoned: number; known: number };
+type TargetFacts = MergeDecisionFacts & { resource_references: string | null };
 
-export function decideLibraryMergeNode(source: Pick<LibraryMergeSourceNode, 'content'>, target: TargetFacts): LibraryMergeDecision {
+export function decideLibraryMergeNode(source: Pick<LibraryMergeSourceNode, 'content'>, target: MergeDecisionFacts): LibraryMergeDecision {
   if (!target.node_id) return target.tombstoned ? 'deleted' : 'new';
   if (target.deleted_at || target.tombstoned) return 'deleted';
   if (target.content === source.content) return 'same';
@@ -85,10 +86,29 @@ async function insideFolder(tx: DbPort, nodeId: string, folderId: string) {
   return Boolean(row?.inside);
 }
 
-function nodeAttachmentKeys(node: LibraryMergeSourceNode) {
+type AttachmentReferences = { content: string; resource_references: string | null };
+
+function nodeAttachmentKeys(node: AttachmentReferences) {
   const keys = new Set(parseNodeResourceReferences(node.resource_references).map(row => row.storage_key));
   for (const key of collectArticleImageStorageKeys(node.content)) keys.add(key);
   return keys;
+}
+
+async function collectRetainedAttachmentKeys(
+  tx: DbPort, node: LibraryMergeSourceNode, target: TargetFacts, now: string, keys: Set<string>
+) {
+  const sourceKeys = nodeAttachmentKeys(node);
+  if (sourceKeys.size === 0) return;
+  const currentKeys = nodeAttachmentKeys({ content: target.content ?? '', resource_references: target.resource_references });
+  for (const key of currentKeys) if (sourceKeys.delete(key)) keys.add(key);
+  if (sourceKeys.size === 0) return;
+
+  const alternatives = await tx.query<AttachmentReferences>(`SELECT body_text AS content, resource_references
+    FROM node_text_alternatives WHERE node_id = ? AND body_blob_hash = ? AND status = 'available' AND expires_at > ?`,
+  [node.id, hashTextBody(node.content), now]);
+  for (const alternative of alternatives) {
+    for (const key of nodeAttachmentKeys(alternative)) if (sourceKeys.has(key)) keys.add(key);
+  }
 }
 
 /** Adds the source body as an alternative once; a rerun leaves an existing one, even a dismissed one, alone. */
@@ -143,7 +163,8 @@ export async function runLibraryMerge(input: {
       for (const id of ids) {
         const node = byId.get(id);
         if (!node) continue;
-        const decision = decideLibraryMergeNode(node, await readTargetFacts(tx, node));
+        const targetFacts = await readTargetFacts(tx, node);
+        const decision = decideLibraryMergeNode(node, targetFacts);
         if (decision === 'deleted') { report.skippedDeleted += 1; continue; }
         if (decision === 'new') {
           const parent = node.parent_id;
@@ -154,11 +175,10 @@ export async function runLibraryMerge(input: {
           created.add(node.id);
           report.added += 1;
           for (const key of nodeAttachmentKeys(node)) attachmentKeys.add(key);
-        } else if (decision === 'alternative' && await writeAlternative(tx, node, now)) {
-          report.alternatives += 1;
-          for (const key of nodeAttachmentKeys(node)) attachmentKeys.add(key);
         } else {
-          report.unchanged += 1;
+          if (decision === 'alternative' && await writeAlternative(tx, node, now)) report.alternatives += 1;
+          else report.unchanged += 1;
+          await collectRetainedAttachmentKeys(tx, node, targetFacts, now, attachmentKeys);
         }
         const reviews = await mergeReviewLog(source, tx, node.id);
         report.reviewsAdded += reviews;
