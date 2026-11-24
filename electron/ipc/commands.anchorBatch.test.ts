@@ -10,6 +10,7 @@ import { handleInvokeRequest } from './commands.js';
 
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
+  openDatabaseConnection: vi.fn(() => ({ driver: { queryOne: vi.fn(() => undefined) } })),
   runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
 }));
 

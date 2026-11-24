@@ -51,7 +51,6 @@ import { initializeDatabase } from '../database/migrate.js';
 import { restoreNodes, softDeleteNodes } from '../database/nodeMutations.js';
 import { runReleasedBodyCollectionWorker } from '../database/releasedBodyCollectionWorkerClient.js';
 import { resetSearchInvalidationCoalescerForTests } from '../database/searchIndexInvalidationCoalescer.js';
-
 import * as mirrorRetirements from '../mirror/mirrorPermanentDelete.js';
 
 import { handleInvokeRequest } from './commands.js';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/internalLinks';
+import { collectBacklinks } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 

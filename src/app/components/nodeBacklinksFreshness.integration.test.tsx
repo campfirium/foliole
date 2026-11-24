@@ -3,7 +3,7 @@ import '../../test/nodeBacklinks.testSupport';
 import { fireEvent, renderHook, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
-import { installBridge, mutate, panel, persisted, reader, save, saveVersioned, writer } from '../../test/nodeBacklinks.testSupport';
+import { installBridge, mutate, panel, persisted, reader, save, saveVersioned, snapshot, writer } from '../../test/nodeBacklinks.testSupport';
 
 import { useNodeBacklinks } from './useNodeBacklinks';
 
@@ -66,20 +66,24 @@ it('shares a loaded lookup and a new link lookup across two views in the same wi
   expect(reads()).toHaveLength(2);
 });
 
-it('skips ordinary saved text and refreshes when a backlink context actually changes', async () => {
-  await saveVersioned('source', 'Source', 'First [[Target]] reference.');
+it.each(['versioned', 'unversioned', 'direct'] as const)('skips ordinary text saves and refreshes changed backlink context (%s)', async (route) => {
+  const saveBody = route === 'versioned' ? saveVersioned : route === 'direct' ? save
+    : (id: string, title: string, content: string) => mutate('update_node_content_with_anchors', {
+      parent: snapshot(id, title, content), affectedAnchors: []
+    });
+  await saveBody('source', 'Source', 'First [[Target]] reference.');
   const reads = recordBacklinkReads();
   const view = watchTargetBacklinks();
   await waitFor(() => expect(view.result.current.value[0]?.context).toBe('First [[Target]] reference.'));
   expect(reads()).toHaveLength(1);
 
-  await saveVersioned('target', 'Target', 'Ordinary body edit [[Source]].');
-  await saveVersioned('source', 'Source', 'First [[Target]] reference.\n\nEdited paragraph.');
+  await saveBody('target', 'Target', 'Ordinary body edit [[Source]].');
+  await saveBody('source', 'Source', 'First [[Target]] reference.\n\nEdited paragraph.');
   expect(persisted('target')?.content).toBe('Ordinary body edit [[Source]].');
   expect(persisted('source')?.content).toContain('Edited paragraph.');
   expect(reads()).toHaveLength(1);
 
-  await saveVersioned('source', 'Source', 'Changed context [[Target]].');
+  await saveBody('source', 'Source', 'Changed context [[Target]].');
   await waitFor(() => expect(view.result.current.value[0]?.context).toBe('Changed context [[Target]].'));
   expect(reads()).toHaveLength(2);
 });

@@ -12,11 +12,15 @@ import { handleInvokeRequest } from './commands.js';
 import { registerMoveCommandCoverage } from './storageNodeMove.test-support.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
-vi.mock('../database/connection.js', async (importOriginal) => ({
-  ...await importOriginal<typeof import('../database/connection.js')>(),
-  openDatabaseConnection: vi.fn(() => ({ driver: { queryAll: vi.fn(() => []) } })),
-  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
-}));
+vi.mock('../database/connection.js', async (importOriginal) => {
+  const connection = { driver: { queryAll: vi.fn(() => []), queryOne: vi.fn(() => undefined) } };
+  return {
+    ...await importOriginal<typeof import('../database/connection.js')>(),
+    isCurrentDatabaseConnection: (candidate: unknown) => candidate === connection,
+    openDatabaseConnection: vi.fn(() => connection),
+    runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+  };
+});
 
 vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'library' }));
 

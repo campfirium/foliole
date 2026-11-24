@@ -71,7 +71,7 @@ function summarizeBacklinkSource(content: string) {
   return targets;
 }
 
-export function didOutgoingBacklinksChange(previous: string, next: string) {
+function didOutgoingBacklinksChange(previous: string, next: string) {
   if (previous === next || (!previous.includes('[[') && !next.includes('[['))) return false;
   const previousTargets = summarizeBacklinkSource(previous);
   const nextTargets = summarizeBacklinkSource(next);
@@ -81,6 +81,20 @@ export function didOutgoingBacklinksChange(previous: string, next: string) {
     if (after?.count !== before.count || after.context !== before.context) return true;
   }
   return false;
+}
+
+type BacklinkSourceSnapshot = Pick<BacklinkSourceRow, 'title' | 'content'>;
+
+export function readNodeBacklinkSource(driver: DatabaseDriver, nodeId: string) {
+  return driver.queryOne<BacklinkSourceSnapshot>(
+    'SELECT title, content FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
+}
+
+export function describeNodeBacklinkSourceChange(nodeId: string,
+  previous: BacklinkSourceSnapshot | undefined, current: BacklinkSourceSnapshot | undefined): NodeBacklinkSourceChange | undefined {
+  if (!previous || !current) return undefined;
+  return { nodeId, titleChanged: previous.title !== current.title,
+    outgoingLinksChanged: didOutgoingBacklinksChange(previous.content, current.content) };
 }
 
 export const NODE_BACKLINK_TARGET_SQL = `SELECT id, title
