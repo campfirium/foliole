@@ -162,44 +162,35 @@ describe('tryForegroundAutoSync failures', () => {
 
   it('records when a failed sync returns no error details', testRecordsMissingFailureDetails);
 
-  it('uses the bound relay for manual sync after the LAN lookup cannot reach a desktop', async () => {
-    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
-    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
-      .mockRejectedValueOnce(new Error('discovery_no_devices'));
-    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-    const setStatus = vi.fn();
-    const outcome = await tryForegroundAutoSync({
-      cancelled: () => false, setError: vi.fn(), setState: vi.fn(), setSyncProgress: vi.fn(),
-      setStatus, state: createSyncState(), triggerReason: 'manual', runId: 'relay-run'
+  it.each([
+    { attachmentsPending: false, outcome: 'completed', result: 'completed', status: 'completed' },
+    { attachmentsPending: true, outcome: 'relay-pending', result: 'waiting', status: 'skipped' }
+  ])('uses the bound relay for manual sync after LAN lookup fails and records $result',
+    async ({ attachmentsPending, outcome, result, status }) => {
+      relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
+      relay.sync.mockImplementationOnce(async (_binding, _stats, progress) => {
+        progress.published = 1;
+        return { attachmentsPending };
+      });
+      syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+        .mockRejectedValueOnce(new Error('discovery_no_devices'));
+      const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+      const setError = vi.fn();
+      const setStatus = vi.fn();
+      await expect(tryForegroundAutoSync({
+        cancelled: () => false, setError, setState: vi.fn(), setSyncProgress: vi.fn(),
+        setStatus, state: createSyncState(), triggerReason: 'manual', runId: 'relay-run'
+      })).resolves.toBe(outcome);
+      expect(setError).toHaveBeenCalledExactlyOnceWith(null);
+      expect(relay.sync).toHaveBeenCalledOnce();
+      expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
+      expect(setStatus).toHaveBeenLastCalledWith('idle');
+      expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+        endpointUrl: null, runId: 'relay-run', result, status, message: expect.stringContaining('"published":1')
+      }));
     });
-    expect(outcome).toBe('completed');
-    expect(relay.sync).toHaveBeenCalledOnce();
-    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
-    expect(setStatus).toHaveBeenLastCalledWith('idle');
-    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-      endpointUrl: null, runId: 'relay-run', result: 'completed', message: expect.stringContaining('"published":1')
-    }));
-  });
 
   it('surfaces a missing desktop anchor before sync starts', testSurfacesMissingAnchorBeforeSyncStarts);
-
-  it('records remaining WebDAV attachments as waiting after a manual sync', async () => {
-    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
-    relay.sync.mockResolvedValueOnce({ attachmentsPending: true });
-    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
-      .mockRejectedValueOnce(new Error('discovery_no_devices'));
-    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-    const setError = vi.fn();
-    const outcome = await tryForegroundAutoSync({
-      cancelled: () => false, setError, setState: vi.fn(), setSyncProgress: vi.fn(),
-      setStatus: vi.fn(), state: createSyncState(), triggerReason: 'manual', runId: 'relay-waiting'
-    });
-    expect(outcome).toBe('relay-pending');
-    expect(setError).toHaveBeenCalledExactlyOnceWith(null);
-    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-      runId: 'relay-waiting', result: 'waiting', status: 'skipped'
-    }));
-  });
 });
 
 describe('scheduled WebDAV sends', () => {

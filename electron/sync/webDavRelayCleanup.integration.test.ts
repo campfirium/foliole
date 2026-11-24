@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
+import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
