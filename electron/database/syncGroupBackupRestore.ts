@@ -11,6 +11,7 @@ import { saveBackupRestorePendingSync } from './backupRestorePendingSync.js';
 import { retagLocalReadwiseSources, retagStandaloneReadwiseOwner } from './readwiseSourceIdentity.js';
 import { writeJsonSetting } from './settingsStore.js';
 import { loadLegacyStandaloneDeviceId } from './standaloneDeviceIdentity.js';
+import { loadDesktopSyncGroupRestoreState } from './syncGroupRestoreState.js';
 import { retagLocalWatchedFolderBindings } from './watchedGroupOwnershipTransition.js';
 
 const GROUP_TABLES = [
@@ -60,7 +61,7 @@ export function finishSyncGroupBackupRestore(
     restored_at: restoredAt,
     source_device_identity_key: String(snapshot.local.local_device_identity_key)
   };
-  driver.transaction((tx) => {
+  return driver.transaction((tx) => {
     tx.execute(`INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?) ON CONFLICT(group_id) DO UPDATE SET
       display_name = excluded.display_name, workgroup_key = excluded.workgroup_key,
@@ -76,13 +77,13 @@ export function finishSyncGroupBackupRestore(
     }
     insertRow(tx, 'sync_group_local_state', snapshot.local);
     applyBackupRestoreHostSettings(tx, snapshot);
-    resetSyncGeneration(tx, event.restore_id);
+    const published = mode === 'overwrite' ? publishBackupRestoreEvent(tx, event) : null;
+    if (!published) resetSyncGeneration(tx, event.restore_id);
     saveBackupRestorePendingSync(tx, mode === 'pause' ? { groupId: event.group_id,
       restoreId: event.restore_id, restoredAt } : null);
     writeRestoreSyncParticipation(tx, mode === 'pause', true);
-    if (mode === 'overwrite') publishBackupRestoreEvent(tx, event);
+    return published;
   });
-  return mode === 'overwrite' ? event : null;
 }
 
 function insertRow(driver: DatabaseDriver, table: string, row: DatabaseRow) {
@@ -110,11 +111,17 @@ export function writeRestoreSyncParticipation(driver: DatabaseDriver, paused: bo
 }
 
 export function publishBackupRestoreEvent(driver: DatabaseDriver, event: SyncGroupRestoreEvent) {
+  const latest = loadDesktopSyncGroupRestoreState(driver, event.group_id)?.event.restored_at;
+  const appliedAt = event.restored_at;
+  // Peers already order by this wire timestamp and break concurrent ties by restore ID.
+  const restoredAt = latest && latest >= appliedAt ? new Date(Date.parse(latest) + 1).toISOString() : appliedAt;
+  if (latest && restoredAt <= latest) throw new Error('sync_group_restore_order_exhausted');
   resetSyncGeneration(driver, event.restore_id);
   driver.execute(`INSERT INTO sync_group_restore_events
     (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
     VALUES (?, ?, ?, ?, ?, ?)`, [event.restore_id, event.group_id,
-    event.restored_at, event.source_device_identity_key, event.restored_at, event.restored_at]);
+    restoredAt, event.source_device_identity_key, appliedAt, appliedAt]);
+  return { ...event, restored_at: restoredAt };
 }
 
 export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: ReturnType<typeof captureBackupRestoreHostSettings>) {
