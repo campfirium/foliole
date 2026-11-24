@@ -29,6 +29,7 @@ export function startDesktopSyncGroupMemberStateSession(
   onDiscoveryState: (error: Error | null) => void = () => undefined
 ): RecoverableDesktopDnsSdSession {
   let active = true;
+  let started = false;
   const activatedMembers = new Map<string, string>();
   const forgetMember = (deviceId: string) => {
     endpoints.delete(deviceId);
@@ -42,14 +43,17 @@ export function startDesktopSyncGroupMemberStateSession(
   );
   const resetDiscovery = () => {
     discovery.reset();
-    for (const [deviceId, peer] of endpoints) {
-      if (peer.group_id === group.group_id) forgetMember(deviceId);
-    }
+    const routes = loadDesktopSyncGroupRoutes(group.group_id).filter(peer => !isMobileSyncPlatform(peer.peer_platform));
+    const peers = [...loadDesktopSyncGroupMemberEndpoints(group.group_id), ...routes];
+    const deviceIds = new Set(peers.map(peer => peer.peer_device_id));
+    for (const deviceId of deviceIds) forgetMember(deviceId);
   };
   const runtime = startRecoverableDesktopDnsSdSession({
     onError: (error) => { resetDiscovery(); onDiscoveryState(error); },
     onStarted: () => {
-      resetDiscovery();
+      // The initial join may already have a route before the first browse starts.
+      if (started) resetDiscovery();
+      started = true;
       onDiscoveryState(null);
     },
     onService: ({ kind, service }) => {
