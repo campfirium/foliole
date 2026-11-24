@@ -191,3 +191,57 @@ it('keeps Show child topics off in this phone\'s library database, not WebView s
   await hydrateCompanionBrowseShowChildTopics();
   expect(getCompanionBrowseShowChildTopics()).toBe(false);
 });
+
+const legacyChildTopicsKey = 'foliole-companion-browse-show-child-topics';
+
+it('imports the old Show child topics choice when Browse first opens after an upgrade', async () => {
+  library.database.prepare(`INSERT INTO nodes (id, parent_id, title, kind, content, created_at, updated_at)
+    VALUES ('child', 'article', 'Child topic', 'topic', 'Body', '2026-10-25T03:00:00Z', '2026-10-25T03:00:00Z')`).run();
+  window.localStorage.setItem(legacyChildTopicsKey, 'false');
+  try {
+    const ui = await openBrowse();
+    expect(topicOrder(ui)).toEqual(['article', 'new']);
+    expect(window.localStorage.getItem(legacyChildTopicsKey)).toBeNull();
+    expect(library.database.prepare("SELECT value_json FROM setting_records WHERE key='companion_browse_show_child_topics'").get())
+      .toEqual({ value_json: 'false' });
+
+    ui.unmount();
+    resetCompanionBrowseShowChildTopicsForTests();
+    const reopened = renderResumeSurface(await library.reopen());
+    await waitFor(() => expect(reopened.result.current).not.toBeNull());
+    expect(topicOrder(reopened)).toEqual(['article', 'new']);
+    expect(getCompanionBrowseShowChildTopics()).toBe(false);
+  } finally {
+    window.localStorage.removeItem(legacyChildTopicsKey);
+  }
+});
+
+it('keeps an existing library choice when WebView still contains the old key', async () => {
+  await toggleCompanionBrowseShowChildTopics();
+  await toggleCompanionBrowseShowChildTopics();
+  window.localStorage.setItem(legacyChildTopicsKey, 'false');
+  try {
+    await openBrowse();
+    expect(getCompanionBrowseShowChildTopics()).toBe(true);
+    expect(library.database.prepare("SELECT value_json FROM setting_records WHERE key='companion_browse_show_child_topics'").get())
+      .toEqual({ value_json: 'true' });
+    expect(window.localStorage.getItem(legacyChildTopicsKey)).toBeNull();
+  } finally {
+    window.localStorage.removeItem(legacyChildTopicsKey);
+  }
+});
+
+it('keeps the old WebView choice available when the migration transaction fails', async () => {
+  window.localStorage.setItem(legacyChildTopicsKey, 'false');
+  library.database.exec(`CREATE TRIGGER fail_child_topics_migration BEFORE INSERT ON setting_records
+    WHEN NEW.key = 'companion_browse_show_child_topics' BEGIN SELECT RAISE(ABORT, 'migration interrupted'); END`);
+  try {
+    await expect(hydrateCompanionBrowseShowChildTopics()).rejects.toThrow('migration interrupted');
+    expect(window.localStorage.getItem(legacyChildTopicsKey)).toBe('false');
+    library.database.exec('DROP TRIGGER fail_child_topics_migration');
+    await expect(hydrateCompanionBrowseShowChildTopics()).resolves.toBe(false);
+    expect(window.localStorage.getItem(legacyChildTopicsKey)).toBeNull();
+  } finally {
+    window.localStorage.removeItem(legacyChildTopicsKey);
+  }
+});
