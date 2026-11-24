@@ -10,12 +10,12 @@ interface CurrentHead {
   created_at: string; content_hash: string; body_text: string | null; snapshot_json: string;
 }
 
-/** Adds one current fact version; never rewrites or traverses historical versions. */
+/** Dirty nodes are versioned later from their live rows, which may differ from their heads. */
 export function appendMigratedNodeResourceVersions(db: DatabaseMigrationTarget) {
   const heads = db.prepare(`SELECT n.id, n.resource_references, v.version_id, v.host_name,
     v.created_at, v.content_hash, v.body_text, v.snapshot_json FROM nodes n
     JOIN node_sync_versions v ON v.version_id = n.current_version_id
-    WHERE n.resource_references <> '[]' AND v.snapshot_json IS NOT NULL`).all() as CurrentHead[];
+    WHERE n.resource_references <> '[]' AND n.sync_dirty = 0 AND v.snapshot_json IS NOT NULL`).all() as CurrentHead[];
   for (const head of heads) appendHead(db, head);
 }
 
