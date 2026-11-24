@@ -112,6 +112,14 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   return cachedConnection;
 }
 
+export function getOpenDatabaseConnection() {
+  return cachedConnection;
+}
+
+export function isCurrentDatabaseConnection(connection: DatabaseConnection) {
+  return cachedConnection === connection;
+}
+
 export function runWithDatabaseConnectionOwner<T>(execute: () => Promise<T> | T) {
   return mainDatabaseCoordinator.runExclusive(() => execute());
 }

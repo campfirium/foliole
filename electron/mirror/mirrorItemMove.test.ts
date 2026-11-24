@@ -21,6 +21,7 @@ vi.mock('electron', () => ({ dialog: { showSaveDialog }, BrowserWindow: { getAll
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { drainDirtyNodeSyncVersions } from '../database/nodeSyncVersionDrain.js';
 import * as nodeDocument from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
@@ -59,6 +60,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await drainDirtyNodeSyncVersions();
   await flushMirrorSync();
   vi.restoreAllMocks();
   closeDatabaseConnection();
@@ -125,6 +127,7 @@ it('keeps moved inputs safe across Trash, restore and permanent deletion', async
   await flushMirrorSync();
   await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('Child annotation.');
   const previous = mirror('manual');
+  handleNodeMutationCommand('soft_delete_nodes', { nodeIds, deletedAt: '2030-10-06T00:03:00.000Z' });
   await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds });
   await flushMirrorSync();
   await expect(fs.access(previous)).rejects.toMatchObject({ code: 'ENOENT' });

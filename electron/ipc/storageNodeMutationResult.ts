@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 
+import type { NodeBacklinkSourceChange } from '../../lib/core/database/nodeBacklinks.js';
 import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeNodeSnapshotArgs } from '../../lib/platform/nativeStorageContract.js';
 
@@ -9,13 +10,16 @@ import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.j
 export type OriginWindow = BrowserWindow | null;
 
 export function completeWorkspaceMutation(result: unknown = null, originWindow: OriginWindow = null,
-  workspaceScope: WorkspaceRefreshScope = { kind: 'full' }, libraryScope?: string) {
-  notifyWorkspaceContentChanged(null, { refreshingWindow: originWindow, workspaceScope, ...(libraryScope ? { libraryScope } : {}) });
+  workspaceScope: WorkspaceRefreshScope = { kind: 'full' }, libraryScope?: string,
+  backlinkSourceChange?: NodeBacklinkSourceChange) {
+  notifyWorkspaceContentChanged(null, { refreshingWindow: originWindow, workspaceScope,
+    ...(libraryScope && { libraryScope }), ...(backlinkSourceChange && { backlinkSourceChange }) });
   return result;
 }
 
 export function buildNodeMutationPatchResult(args: {
   workspaceScope?: WorkspaceRefreshScope;
+  backlinkSourceChange?: NodeBacklinkSourceChange;
   libraryScope?: string;
   activeNodeId?: string | null;
   anchorUpdates?: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>;
@@ -36,7 +40,7 @@ export function buildNodeMutationPatchResult(args: {
     ...(args.updatedNodeIds ? { updatedNodeIds: args.updatedNodeIds } : {})
   }, args.originWindow, args.workspaceScope ?? { kind: 'nodes',
     nodeIds: [...new Set([...args.nodes.map(node => node.nodeId), ...args.updatedNodeIds ?? [],
-      ...args.anchorUpdates?.map(node => node.nodeId) ?? []])], structure: true }, args.libraryScope);
+      ...args.anchorUpdates?.map(node => node.nodeId) ?? []])], structure: true }, args.libraryScope, args.backlinkSourceChange);
 }
 
 export function completeCreatedNodeCreation(

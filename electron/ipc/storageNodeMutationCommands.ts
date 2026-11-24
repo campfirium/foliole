@@ -1,7 +1,9 @@
+import { describeNodeBacklinkSourceChange, readNodeBacklinkSource, type NodeBacklinkSourceChange } from '../../lib/core/database/nodeBacklinks.js';
 import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
 import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import {
   replaceNodeOrder,
 } from '../database/nodeMutations.js';
@@ -46,6 +48,7 @@ function readElapsedMs(startedAt: number) {
 
 function buildNodeContentWithAnchorsResult(args: {
   affectedAnchors: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>;
+  backlinkSourceChange: NodeBacklinkSourceChange | undefined;
   diagnostics: Record<string, number>;
   originWindow: OriginWindow;
   parent: ReturnType<typeof parseNodeSnapshotArgs>;
@@ -55,6 +58,7 @@ function buildNodeContentWithAnchorsResult(args: {
   const result = buildNodeMutationPatchResult({
     workspaceScope: { kind: 'nodes', nodeIds: [args.parent.nodeId, ...args.affectedAnchors.map(node => node.nodeId)] },
     anchorUpdates: args.affectedAnchors,
+    ...(args.backlinkSourceChange && { backlinkSourceChange: args.backlinkSourceChange }),
     nodes: [args.parent],
     originWindow: args.originWindow,
     updatedNodeIds: [args.parent.nodeId, ...args.affectedAnchors.map((node) => node.nodeId)]
@@ -122,6 +126,8 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   diagnostics.parseAnchorsMs = readElapsedMs(parseAnchorsStartedAt);
   const upsertStartedAt = readNowMs();
+  const { driver } = openDatabaseConnection();
+  const previous = readNodeBacklinkSource(driver, parent.nodeId, affectedAnchors.map(anchor => anchor.nodeId));
   const persistedAnchors = upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
     searchInvalidation: { workspaceInvalidation: 'defer' },
     ...(args.expectedNodeTimestamps === undefined ? {} : { expectedNodeTimestamps: parseExpectedNodeTimestamps(args.expectedNodeTimestamps) })
@@ -135,8 +141,10 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   const scheduleMirrorStartedAt = readNowMs();
   scheduleMirrorSync([parent.nodeId, ...persistedAnchors.map((node) => node.nodeId)]);
   diagnostics.scheduleMirrorMs = readElapsedMs(scheduleMirrorStartedAt);
+  const backlinkSourceChange = describeNodeBacklinkSourceChange(parent.nodeId, previous, readNodeBacklinkSource(driver, parent.nodeId));
   const result = buildNodeContentWithAnchorsResult({
     affectedAnchors: persistedAnchors,
+    backlinkSourceChange,
     diagnostics,
     originWindow,
     parent,
@@ -169,11 +177,16 @@ function handleUpdateNodeContentCommand(command: string, args: Record<string, un
       updatedNodeIds: renamed.updatedNodeIds
     });
   }
-  const currentVersionId = upsertVersionedNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  let backlinkSourceChange: NodeBacklinkSourceChange | undefined;
+  const currentVersionId = upsertVersionedNodeSnapshot(parsed, {
+    searchInvalidation: { workspaceInvalidation: 'defer' },
+    onBacklinkSourceChange: change => { backlinkSourceChange = change; }
+  });
   enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
   scheduleMirrorSync([parsed.nodeId]);
   return buildNodeMutationPatchResult({
     nodes: [{ ...parsed, ...(currentVersionId ? { currentVersionId } : {}) }],
+    ...(backlinkSourceChange && { backlinkSourceChange }),
     originWindow, updatedNodeIds: [parsed.nodeId]
   });
 }

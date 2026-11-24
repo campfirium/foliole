@@ -46,10 +46,15 @@ it('keeps the last saved result while refreshing and rejects an earlier request 
   runtime.load.mockReturnValueOnce(old.promise).mockReturnValueOnce(latest.promise);
   act(() => runtime.changed?.({ libraryScope: 'library-a' }));
   expect(view.result.current.value).toEqual(item('Saved'));
-  act(() => runtime.changed?.({ libraryScope: 'library-a' }));
+  act(() => {
+    runtime.changed?.({ libraryScope: 'library-a' });
+    runtime.changed?.({ libraryScope: 'library-a' });
+  });
+  expect(runtime.load).toHaveBeenCalledTimes(2);
   await act(async () => latest.resolve(item('Latest saved')));
   await act(async () => old.resolve(item('Earlier saved')));
   expect(view.result.current.value).toEqual(item('Latest saved'));
+  expect(runtime.load).toHaveBeenCalledTimes(3);
 });
 
 it('keeps errors retryable and prevents a late failure from overriding a successful refresh', async () => {
@@ -63,8 +68,8 @@ it('keeps errors retryable and prevents a late failure from overriding a success
   runtime.load.mockReturnValueOnce(old.promise).mockResolvedValueOnce(item('Synced'));
   act(() => runtime.changed?.({ libraryScope: 'library-a' }));
   act(() => runtime.synced?.({ libraryScope: 'library-a' }));
-  await waitFor(() => expect(view.result.current.value).toEqual(item('Synced')));
   await act(async () => old.reject(new Error('late error')));
+  await waitFor(() => expect(view.result.current.value).toEqual(item('Synced')));
   expect(view.result.current.errorMessage).toBe('');
   expect(view.result.current.value).toEqual(item('Synced'));
 });

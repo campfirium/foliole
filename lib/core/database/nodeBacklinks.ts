@@ -20,6 +20,12 @@ export interface NodeBacklinkRecord {
   match_count: number;
 }
 
+export interface NodeBacklinkSourceChange {
+  nodeId: string;
+  titleChanged: boolean;
+  outgoingLinksChanged: boolean;
+}
+
 function normalizeTitle(value: string) {
   return value.trim().toLocaleLowerCase();
 }
@@ -51,6 +57,48 @@ function collectMatchingLinkOffsets(content: string, normalizedTargetTitle: stri
   }
   WIKI_LINK_PATTERN.lastIndex = 0;
   return offsets;
+}
+
+function summarizeBacklinkSource(content: string) {
+  const targets = new Map<string, { count: number; context: string }>();
+  for (const match of content.matchAll(WIKI_LINK_PATTERN)) {
+    const title = normalizeTitle(match[1] ?? '');
+    if (!title) continue;
+    const existing = targets.get(title);
+    if (existing) existing.count++;
+    else targets.set(title, { count: 1, context: buildBacklinkContext(content, match.index) });
+  }
+  return targets;
+}
+
+function didOutgoingBacklinksChange(previous: string, next: string) {
+  if (previous === next || (!previous.includes('[[') && !next.includes('[['))) return false;
+  const previousTargets = summarizeBacklinkSource(previous);
+  const nextTargets = summarizeBacklinkSource(next);
+  if (previousTargets.size !== nextTargets.size) return true;
+  for (const [title, before] of previousTargets) {
+    const after = nextTargets.get(title);
+    if (after?.count !== before.count || after.context !== before.context) return true;
+  }
+  return false;
+}
+
+type BacklinkSourceSnapshot = Pick<BacklinkSourceRow, 'title' | 'content'>;
+
+export function readNodeBacklinkSource(driver: DatabaseDriver, nodeId: string, updatedAnchorIds: readonly string[] = []) {
+  const sql = 'SELECT title, content FROM nodes WHERE id = ? AND deleted_at IS NULL';
+  if (!updatedAnchorIds.length) return driver.queryOne<BacklinkSourceSnapshot>(sql, [nodeId]);
+  // Explicit anchor updates can restore rows. In that case the parent alone cannot describe the change.
+  return driver.queryOne<BacklinkSourceSnapshot>(`${sql} AND NOT EXISTS (
+    SELECT 1 FROM nodes WHERE deleted_at IS NOT NULL AND id IN (SELECT value FROM json_each(?))
+  )`, [nodeId, JSON.stringify(updatedAnchorIds)]);
+}
+
+export function describeNodeBacklinkSourceChange(nodeId: string,
+  previous: BacklinkSourceSnapshot | undefined, current: BacklinkSourceSnapshot | undefined): NodeBacklinkSourceChange | undefined {
+  if (!previous || !current) return undefined;
+  return { nodeId, titleChanged: previous.title !== current.title,
+    outgoingLinksChanged: didOutgoingBacklinksChange(previous.content, current.content) };
 }
 
 export const NODE_BACKLINK_TARGET_SQL = `SELECT id, title

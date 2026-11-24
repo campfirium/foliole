@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { logRuntimeError } from '../../shared/platform/runtimeLogging';
 import { subscribeMainWindowBlur } from '../../shared/platform/windowControls';
+import { patchWorkspaceRecord } from '../../shared/workspaceRecordPatch';
 import { waitForWorkspaceContentCommands } from '../../store/workspaceContentCommands';
 import { beginWorkspaceContentEditingSession, endWorkspaceContentEditingSession,
-  type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
+  isCurrentWorkspaceContentEditingSession, type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
 import { waitForNodeCreateConfirmations } from '../../store/workspaceNodeContentVersionGuard';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
@@ -13,7 +14,7 @@ import type { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 type Draft = ReturnType<typeof useEditorDraftSync>;
 type EditingBoundary = { session: WorkspaceContentEditingSession; draft: Draft; finishing?: boolean;
-  inputCompletion?: Promise<void> | undefined };
+  departed?: boolean; inputCompletion?: Promise<void> | undefined };
 type BoundaryRef = MutableRefObject<EditingBoundary | null>;
 
 async function waitForInputCompletion(boundary: EditingBoundary) {
@@ -24,63 +25,95 @@ async function waitForInputCompletion(boundary: EditingBoundary) {
   } while (boundary.inputCompletion !== completion);
 }
 
-function useEditorSessionWindowExit(finish: () => Promise<void>, libraryScope: string | undefined,
-  nodeId: string | null, readOnly: boolean) {
+function useEditorSessionWindowExit(finishEditing: () => Promise<void>, leaveEditing: (boundary: EditingBoundary) => void, active: BoundaryRef,
+  libraryScope: string | undefined, nodeId: string | null, readOnly: boolean) {
   useEffect(() => {
-    const onBlur = () => { void finish(); };
+    const onBlur = () => { void finishEditing(); };
     const unsubscribeNativeBlur = subscribeMainWindowBlur(onBlur);
     window.addEventListener('blur', onBlur);
-    return () => { unsubscribeNativeBlur?.(); window.removeEventListener('blur', onBlur); void finish(); };
-  }, [finish, libraryScope, nodeId, readOnly]);
+    return () => {
+      unsubscribeNativeBlur?.();
+      window.removeEventListener('blur', onBlur);
+      const boundary = active.current;
+      if (boundary && boundary.session.nodeId === nodeId && boundary.session.libraryScope === libraryScope) {
+        leaveEditing(boundary);
+      }
+    };
+  }, [active, finishEditing, leaveEditing, libraryScope, nodeId, readOnly]);
+}
+
+async function settleEditingBoundary(boundary: EditingBoundary) {
+  const { session, draft } = boundary;
+  const inLibrary = () => useWorkspaceStore.getState().libraryScope === session.libraryScope;
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+
+  const succeeded = await waitForWorkspaceContentCommands(session.libraryScope, session.nodeId);
+  // A failed command leaves an explicit exit retryable. A view already left still needs to close.
+  if (!succeeded && !boundary.departed) return false;
+  await waitForInputCompletion(boundary);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+
+  session.closing = true;
+  // Composition and buffered editor delivery complete on their real signals.
+  await draft.settleBufferedInput(session.nodeId);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  if (!inLibrary()) return true;
+  draft.flushDraftSynchronously(session.nodeId);
+  await waitForNodeCreateConfirmations([session.nodeId]);
+  if (!isCurrentWorkspaceContentEditingSession(session)) return false;
+  return !inLibrary() || await drainPendingNodeContentRuntimePersist(session.nodeId);
+}
+
+function releaseEditingDocument({ libraryScope, nodeId }: WorkspaceContentEditingSession) {
+  useWorkspaceStore.setState(state => {
+    const node = state.nodesById[nodeId];
+    if (state.libraryScope !== libraryScope || state.activeNodeId === nodeId || !node) return state;
+    // Reconcile this node now that the session no longer retains its document.
+    return { nodesById: patchWorkspaceRecord(state.nodesById, { [nodeId]: node }) };
+  });
 }
 
 function useFinishEditingSession(active: BoundaryRef) {
-  return useCallback(async () => {
-    const boundary = active.current;
-    if (!boundary || boundary.finishing || boundary.session.closing) return;
-    const { session, draft: input } = boundary;
+  const departed = useRef(new Set<EditingBoundary>());
+  const finish = useCallback(async (boundary: EditingBoundary) => {
+    if (boundary.finishing) return;
     boundary.finishing = true;
     try {
-      if (useWorkspaceStore.getState().libraryScope !== session.libraryScope) {
-        await endWorkspaceContentEditingSession(session);
-        if (active.current === boundary) active.current = null;
-        return;
-      }
-      if (!await waitForWorkspaceContentCommands(session.libraryScope, session.nodeId)) {
-        boundary.finishing = false;
-        return;
-      }
-      if (active.current !== boundary) return;
-      await waitForInputCompletion(boundary);
-      if (active.current !== boundary) return;
-      session.closing = true;
-      // Composition and buffered editor delivery complete on their real signals.
-      await input.settleBufferedInput(session.nodeId);
-      if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
-      input.flushDraftSynchronously();
-      await waitForNodeCreateConfirmations([session.nodeId]);
-      if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
-      if (!await drainPendingNodeContentRuntimePersist(session.nodeId)) {
-        boundary.finishing = false;
-        session.closing = false;
-        return;
-      }
-      await endWorkspaceContentEditingSession(session);
+      if (!await settleEditingBoundary(boundary)) return;
+      await endWorkspaceContentEditingSession(boundary.session);
       if (active.current === boundary) active.current = null;
+      releaseEditingDocument(boundary.session);
     } catch (error) {
-      boundary.finishing = false;
-      session.closing = false;
       logRuntimeError('editor session could not finish', { area: 'persistence', action: 'content_editing_session', error });
+    } finally {
+      boundary.finishing = false;
+      boundary.session.closing = Boolean(boundary.departed);
+      if (!isCurrentWorkspaceContentEditingSession(boundary.session)) departed.current.delete(boundary);
     }
   }, [active]);
+  const leaveEditing = useCallback((boundary: EditingBoundary) => {
+    boundary.departed = true;
+    boundary.session.closing = true;
+    departed.current.add(boundary);
+    void finish(boundary);
+  }, [finish]);
+  const finishEditing = useCallback(async () => {
+    // A departed session still owns its accepted input until its save succeeds.
+    const boundaries = new Set(departed.current);
+    if (active.current) boundaries.add(active.current);
+    await Promise.all([...boundaries].map(finish));
+  }, [active, finish]);
+  return { finishEditing, leaveEditing };
 }
 
 export function useWorkspaceContentEditingSession(nodeId: string | null, readOnly: boolean, draft: Draft) {
   const libraryScope = useWorkspaceStore(state => state.libraryScope);
   const active = useRef<EditingBoundary | null>(null);
   const pendingInput = useRef<{ completion: Promise<void>; libraryScope: string | undefined; nodeId: string | null } | null>(null);
-  const finish = useFinishEditingSession(active);
-  useEditorSessionWindowExit(finish, libraryScope, nodeId, readOnly);
+  const { finishEditing, leaveEditing } = useFinishEditingSession(active);
+  useEditorSessionWindowExit(finishEditing, leaveEditing, active, libraryScope, nodeId, readOnly);
   const settleAcceptedInput = useCallback(async () => {
     let input: typeof pendingInput.current;
     do {
@@ -108,7 +141,12 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
   }, [draft, libraryScope, nodeId, readOnly]);
   const handleEditorInput = useCallback((meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? nodeId;
-    if (sourceNodeId && !readOnly) {
+    // A delivery for the previous topic belongs to its departing boundary.
+    if (sourceNodeId && sourceNodeId === nodeId && !readOnly) {
+      const previous = active.current;
+      if (previous && (previous.session.nodeId !== sourceNodeId || previous.session.libraryScope !== libraryScope)) {
+        leaveEditing(previous);
+      }
       const session = beginWorkspaceContentEditingSession(libraryScope, sourceNodeId);
       if (session && active.current?.session !== session) {
         const input = pendingInput.current;
@@ -118,6 +156,6 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
       else if (active.current) active.current.draft = draft;
     }
     draft.handleEditorInput(meta);
-  }, [draft, libraryScope, nodeId, readOnly]);
-  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing: finish, settleAcceptedInput };
+  }, [draft, leaveEditing, libraryScope, nodeId, readOnly]);
+  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing, settleAcceptedInput };
 }

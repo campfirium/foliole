@@ -22,8 +22,9 @@ export function runWorkspaceContentCommand<T>(command: () => T): T {
 
 export async function waitForWorkspaceContentCommands(scope: string, nodeId: string) {
   const key = keyFor(scope, nodeId);
+  let succeeded = true;
   while (pending.get(key)?.size) {
-    if ((await Promise.all([...pending.get(key)!])).includes(false)) return false;
+    if ((await Promise.all([...pending.get(key)!])).includes(false)) succeeded = false;
   }
-  return true;
+  return succeeded;
 }

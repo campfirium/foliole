@@ -26,18 +26,21 @@ export function createDeleteNodesPermanentlyAction(
 ): WorkspaceState['deleteNodesPermanently'] {
   return async (nodeIds) => {
     let mutation: DeleteNodeMutationResult | null = null;
+    let libraryScope: string | undefined;
     set((state) => {
+      libraryScope = state.libraryScope;
       mutation = computeDeleteNodesPermanentlyMutation(state, collectDeleteActionTargets(state, nodeIds));
       return mutation ? mutation.patch : state;
     });
     const pendingMutation = mutation as DeleteNodeMutationResult | null;
     if (!pendingMutation) return;
-    const result = await commitPermanentDeleteMutation(runtimeHandlers, pendingMutation);
+    const result = await commitPermanentDeleteMutation(runtimeHandlers, pendingMutation, libraryScope);
     if (!result || result.removedNodeIds.length !== pendingMutation.nodeIds.length) {
       reloadAfterFailedPermanentDelete();
       return;
     }
     // A refresh while the runtime was still deleting may have loaded some of these nodes back.
-    set((state) => computeDeleteNodesPermanentlyMutation(state, result.removedNodeIds)?.patch ?? state);
+    set((state) => state.libraryScope === libraryScope
+      ? computeDeleteNodesPermanentlyMutation(state, result.removedNodeIds)?.patch ?? state : state);
   };
 }

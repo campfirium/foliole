@@ -1,4 +1,4 @@
-import type { NativeSoftDeleteNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
+import type { NativeDeleteNodesPermanentlyArgs, NativeSoftDeleteNodesArgs } from '../../lib/platform/nativeTrashCommandMap';
 import type {
   WorkspaceDeleteNodesPermanentlyResult,
   WorkspaceSoftDeleteNodesResult
@@ -15,7 +15,7 @@ export interface TrashRuntimeHandlers {
   ) => Promise<WorkspaceSoftDeleteNodesResult | undefined> | WorkspaceSoftDeleteNodesResult | undefined;
   syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
   syncDeleteNodesPermanently: (
-    payload: { nodeIds: string[] }
+    payload: NativeDeleteNodesPermanentlyArgs
   ) => Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> | WorkspaceDeleteNodesPermanentlyResult | undefined;
 }
 
@@ -41,13 +41,15 @@ export async function commitSoftDeleteMutation(
 
 export async function commitPermanentDeleteMutation(
   runtimeHandlers: TrashRuntimeHandlers,
-  mutation: DeleteNodeMutationResult | null
+  mutation: DeleteNodeMutationResult | null,
+  libraryScope?: string
 ) {
   if (!mutation || mutation.nodeIds.length === 0) {
     return null;
   }
   const result = await runtimeHandlers.syncDeleteNodesPermanently({
-    nodeIds: mutation.nodeIds
+    nodeIds: mutation.nodeIds,
+    ...(libraryScope ? { libraryScope } : {})
   });
   if (!result || result.removedNodeIds.length === 0) {
     return null;

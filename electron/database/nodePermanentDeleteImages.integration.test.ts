@@ -20,7 +20,7 @@ import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { deleteNodesPermanently, upsertNodeSnapshot } from './nodeMutations.js';
+import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { seedNode, getNodeRow } from './nodeMutations.test.helpers.js';
 import { drainDirtyNodeSyncVersions } from './nodeSyncVersionDrain.js';
 
@@ -64,6 +64,7 @@ afterEach(async () => {
 
 it.each([false, true])('cleans only the removed image region from database facts (grouped=%s)', async (grouped) => {
   seedImageChild(grouped);
+  softDeleteNodes({ nodeIds: ['child'], deletedAt: at });
   const before = parent();
   const unrelated = openDatabaseConnection().sqlite.prepare("SELECT * FROM nodes WHERE id = 'unrelated'").get();
   await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['child'] });
@@ -114,6 +115,7 @@ it('cleans multiple children together and keeps same-named regions in other atta
   driver.execute('UPDATE nodes SET image_regions = ? WHERE id = ?', [JSON.stringify([
     ...regions, { attachmentId: 'other', regions: [region('gone')] }
   ]), 'parent']);
+  softDeleteNodes({ nodeIds: ['child', 'second'], deletedAt: at });
   await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds: ['child', 'second'] });
   expect(JSON.parse(parent().image_regions!)).toEqual([{ attachmentId: 'other', regions: [region('gone')] }]);
   expect(getNodeRow('child')).toBeUndefined();

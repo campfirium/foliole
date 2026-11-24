@@ -31,9 +31,12 @@ vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => null, getAllWindows: () => [] },
   app: { getName: () => 'Foliole', getVersion: () => 'test', getPath: () => appDataDir },
   shell: {}, dialog: {}, ipcMain: {}, nativeImage: {}, clipboard: {}, Menu: {},
-  systemPreferences: {}, screen: {}
+  systemPreferences: { subscribeNotification: vi.fn() }, screen: {}, nativeTheme: { shouldUseDarkColors: false }
 }));
 vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({ rebuildMirrorAttachmentLinks: vi.fn() }));
+vi.mock('../database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn() }));
+vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
 vi.mock('../database/releasedBodyCollectionTask.js', () => ({
@@ -41,14 +44,19 @@ vi.mock('../database/releasedBodyCollectionTask.js', () => ({
 }));
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { markDatabaseReady } from '../database/databaseReadiness.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { restoreNodes, softDeleteNodes } from '../database/nodeMutations.js';
 import { runReleasedBodyCollectionWorker } from '../database/releasedBodyCollectionWorkerClient.js';
 import { resetSearchInvalidationCoalescerForTests } from '../database/searchIndexInvalidationCoalescer.js';
+import * as mirrorRetirements from '../mirror/mirrorPermanentDelete.js';
 
 import { handleInvokeRequest } from './commands.js';
+import { saveCurrentLibraryHome } from './libraryPathBootstrap.js';
+import { handlePermanentDeleteNodeCommand } from './permanentDeleteCommand.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 const NOW = '2026-10-23T00:00:00.000Z';
 let root = '';
@@ -56,6 +64,7 @@ let root = '';
 beforeEach(async () => {
   resetSearchInvalidationCoalescerForTests();
   releasedHashes.length = 0;
+  vi.mocked(notifyWorkspaceContentChanged).mockClear();
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-t404-permanent-delete-'));
   appDataDir = path.join(root, 'app');
   initializeDatabase();
@@ -63,6 +72,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   resetSearchInvalidationCoalescerForTests();
   closeDatabaseConnection();
   await fs.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
@@ -183,4 +193,105 @@ it('retains sibling order, hidden slots and source order facts when one child is
     .toEqual(['last', 'hidden', 'first']);
   expect(reopened.queryOne("SELECT deleted_at FROM nodes WHERE id = 'hidden'")).toEqual({ deleted_at: NOW });
   expect(sources()).toEqual(beforeSources);
+});
+
+async function seedLibraryWithSharedIds(home: string, ids: string[], parentId: string) {
+  closeDatabaseConnection();
+  saveCurrentLibraryHome(home);
+  initializeDatabase();
+  await handleInvokeRequest({ command: 'create_folder', args: nodeArgs(parentId, null, 'folder', '') });
+  for (const id of ids) {
+    await handleInvokeRequest({ command: 'create_topic', args: nodeArgs(id, parentId, 'topic', id) });
+  }
+}
+
+function readSharedNodes(ids: string[]) {
+  return openDatabaseConnection().driver.queryAll<{ id: string; deleted_at: string | null }>(
+    'SELECT id, deleted_at FROM nodes WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id',
+    [JSON.stringify(ids)]);
+}
+
+it.each([10, 11])('stops clearing %i trashed topics when an existing library takes over after a committed batch', async (count) => {
+  const original = path.join(root, 'original');
+  const next = path.join(root, 'next');
+  const ids = Array.from({ length: count }, (_, index) => `shared-topic-${String(index).padStart(2, '0')}`);
+  await seedLibraryWithSharedIds(next, ids, 'next-parent');
+  const nextBefore = readSharedNodes(ids);
+  await seedLibraryWithSharedIds(original, ids, 'original-parent');
+  softDeleteNodes({ nodeIds: ids, deletedAt: NOW });
+  const originalScope = currentLibraryScope();
+
+  const retire = mirrorRetirements.retirePermanentMirrorPaths;
+  vi.spyOn(mirrorRetirements, 'retirePermanentMirrorPaths').mockImplementationOnce(async (mirrors) => {
+    await retire(mirrors);
+    expect(readSharedNodes(ids)).toEqual(ids.slice(0, -10).map(id => ({ id, deleted_at: NOW })));
+    await handleInvokeRequest({ command: 'update_library_path_setting', args: {
+      location: 'library_home', path: next, confirm_existing_library_home: true
+    } });
+  });
+
+  const outcome = await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: ids } })
+    .then(value => ({ value }), error => ({ error }));
+  expect(openDatabaseConnection().dbPath, 'error' in outcome ? String(outcome.error) : undefined)
+    .toBe(path.join(next, 'Data', 'foliole.db'));
+  expect(readSharedNodes(ids)).toEqual(nextBefore);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id IN (SELECT value FROM json_each(?))',
+    [JSON.stringify(ids)])).toBe(0);
+  expect(outcome).toEqual({ error: expect.objectContaining({ message: expect.stringContaining('permanent_delete_library_changed') }) });
+  expect(notifyWorkspaceContentChanged).toHaveBeenLastCalledWith(null, {
+    libraryScope: originalScope, requestSync: false,
+    workspaceScope: { kind: 'nodes', nodeIds: [...ids.slice(-10), 'original-parent'], structure: true }
+  });
+
+  await handleInvokeRequest({ command: 'update_library_path_setting', args: {
+    location: 'library_home', path: original, confirm_existing_library_home: true
+  } });
+  expect(readSharedNodes(ids)).toEqual(ids.slice(0, -10).map(id => ({ id, deleted_at: NOW })));
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id IN (SELECT value FROM json_each(?))',
+    [JSON.stringify(ids)])).toBe(10);
+});
+
+it('rejects a request from the previous library before planning its first batch', async () => {
+  const original = path.join(root, 'original');
+  const next = path.join(root, 'next');
+  const ids = ['shared-topic'];
+  await seedLibraryWithSharedIds(next, ids, 'next-parent');
+  await seedLibraryWithSharedIds(original, ids, 'original-parent');
+  softDeleteNodes({ nodeIds: ids, deletedAt: NOW });
+  const libraryScope = currentLibraryScope();
+  await handleInvokeRequest({ command: 'update_library_path_setting', args: {
+    location: 'library_home', path: next, confirm_existing_library_home: true
+  } });
+
+  const outcome = await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: ids, libraryScope } })
+    .then(value => ({ value }), error => ({ error }));
+  expect(readSharedNodes(ids)).toEqual([{ id: ids[0], deleted_at: null }]);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', ids)).toBe(0);
+  expect(outcome).toEqual({ error: expect.objectContaining({ message: expect.stringContaining('permanent_delete_library_changed') }) });
+});
+
+
+it('rejects a queued delete after the original database connection is replaced at the same path', async () => {
+  const ids = ['queued-topic'];
+  await handleInvokeRequest({ command: 'create_topic', args: nodeArgs(ids[0]!, null, 'topic', 'Keep this') });
+  softDeleteNodes({ nodeIds: ids, deletedAt: NOW });
+  const libraryScope = currentLibraryScope();
+  let finishReplacement!: () => void;
+  const pendingReplacement = new Promise<void>(resolve => { finishReplacement = resolve; });
+  const replace = runWithDatabaseConnectionMaintenance(async () => {
+    await pendingReplacement;
+    closeDatabaseConnection();
+    initializeDatabase();
+    restoreNodes({ nodeIds: ids });
+  });
+
+  const deletion = handlePermanentDeleteNodeCommand({ nodeIds: ids, libraryScope }, null);
+  const outcome = deletion.then(value => ({ value }), error => ({ error }));
+  finishReplacement();
+  await replace;
+
+  expect(currentLibraryScope()).toBe(libraryScope);
+  expect(await outcome).toEqual({ error: expect.objectContaining({ message: 'permanent_delete_library_changed' }) });
+  expect(readSharedNodes(ids)).toEqual([{ id: ids[0], deleted_at: null }]);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', ids)).toBe(0);
 });

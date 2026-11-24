@@ -47,7 +47,7 @@ export function canUseManualVirtualFolderSource(node: VirtualNodeResultCandidate
 }
 
 function matchesVirtualNodeFilter(
-  node: VirtualNodeResultCandidate,
+  node: Pick<VirtualNodeResultCandidate, 'collections' | 'content'>,
   searchableText: string,
   conditions: ReturnType<typeof getRunnableConditions>
 ) {
@@ -56,6 +56,14 @@ function matchesVirtualNodeFilter(
     if (condition.field === 'manual') return false;
     return searchableText.includes(normalizeSearchText(condition.value));
   });
+}
+
+export function createConditionalVirtualNodeMatcher(filter: VirtualNodeFilter | null | undefined) {
+  const conditions = getRunnableConditions(filter);
+  if (conditions.length === 0) return null;
+  return (node: Pick<VirtualNodeResultCandidate, 'collections' | 'content' | 'title'>,
+    searchableText = `${node.title}\n${node.content ?? ''}`.toLocaleLowerCase()) =>
+    matchesVirtualNodeFilter(node, searchableText, conditions);
 }
 
 export function applyVirtualNodeManualOrder(resultIds: readonly string[], manualChildOrder: readonly string[] | null | undefined) {
@@ -113,12 +121,12 @@ export function createVirtualNodeResultResolver(args: {
         }
       });
     }
-    const conditions = getRunnableConditions(request.filter);
-    const matchedIds = conditions.length === 0 ? [] : candidateIds.filter((nodeId) => {
+    const matches = createConditionalVirtualNodeMatcher(request.filter);
+    const matchedIds = !matches ? [] : candidateIds.filter((nodeId) => {
       if (nodeId === request.activeNodeId) return false;
       const node = args.nodesById[nodeId];
       const searchableText = getSearchableTextById().get(nodeId);
-      return Boolean(node && searchableText && matchesVirtualNodeFilter(node, searchableText, conditions));
+      return Boolean(node && searchableText && matches(node, searchableText));
     });
     return applyVirtualNodeManualOrder(matchedIds, request.manualChildOrder);
   };

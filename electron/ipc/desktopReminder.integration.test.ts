@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { promises as fs } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,12 +11,17 @@ import type { ReminderRule } from '../../lib/core/reminders/reminderRule.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { DESKTOP_REMINDER_OPEN_DIVE_PREFIX, DESKTOP_REMINDER_OPEN_FLOW } from '../../lib/platform/nativeReminderContract.js';
 import { closeDatabaseConnection } from '../database/connection.js';
+import { compactApplicationDatabase } from '../database/databaseCompaction.js';
+import { compactAndVerifyDatabaseCandidate } from '../database/databaseCompactionWorkerCore.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { installDesktopReminderNavigation } from '../reminders/desktopReminderNavigation.js';
 import { startDesktopReminders, stopDesktopReminders } from '../reminders/desktopReminderRuntime.js';
 
 import { IPC_MENU_EVENT_CHANNEL } from './contracts.js';
+import { saveCurrentLibraryHome } from './libraryPathBootstrap.js';
+import { loadLibraryPathSettingsSync } from './libraryPaths.js';
 import { handleReminderCommand } from './reminderCommands.js';
+import { handleSettingsStorageCommand } from './storageSettingsCommands.js';
 
 const state = vi.hoisted(() => ({ root: '', focused: false, show: vi.fn(), click: new Map<string, () => void>() }));
 vi.mock('electron', async () => {
@@ -24,6 +30,9 @@ vi.mock('electron', async () => {
   app: Object.assign(new EventEmitter(), { getPath: () => state.root }),
   BrowserWindow: { getFocusedWindow: () => state.focused ? {} : null },
   powerMonitor: new EventEmitter(),
+  shell: { trashItem: vi.fn().mockResolvedValue(undefined) },
+  nativeTheme: { shouldUseDarkColors: false, on: vi.fn() },
+  systemPreferences: { subscribeNotification: vi.fn() },
   Notification: class {
     static isSupported() { return true; }
     constructor(private readonly options: { body: string }) {}
@@ -38,6 +47,9 @@ vi.mock('./boot.js', async importOriginal => ({
   ...await importOriginal<typeof import('./boot.js')>(),
   waitForRendererAppReady: async () => undefined
 }));
+vi.mock('../mirror/rebuildAttachmentLinks.js', () => ({ rebuildMirrorAttachmentLinks: vi.fn() }));
+vi.mock('../database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn() }));
+vi.mock('../import/managedInboxMonitor.js', () => ({ refreshManagedInboxMonitorFromSettings: vi.fn() }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: state.root, app_config_dir: state.root,
   app_cache_dir: path.join(state.root, 'cache'), app_log_dir: path.join(state.root, 'logs')
@@ -86,6 +98,26 @@ it('reloads the enabled schedule, moves it on edit, repeats daily, and cancels o
   await vi.advanceTimersByTimeAsync(86_400_000);
   expect(state.show).toHaveBeenCalledTimes(2);
   expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([disabled]);
+});
+
+it.each([false, true])('keeps reminders running when compaction reopens the database (replacement fails: %s)', async fails => {
+  // SQLite's online backup needs real immediates while the reminder clock stays controlled.
+  vi.useRealTimers();
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+  vi.setSystemTime(new Date(2026, 10, 10, 12, 0));
+  startDesktopReminders();
+  const rule = save('After maintenance', '12:01', true);
+  const rename = fails ? vi.spyOn(fs, 'rename').mockRejectedValueOnce(new Error('injected replacement failure')) : null;
+  try {
+    const compact = compactApplicationDatabase(compactAndVerifyDatabaseCandidate);
+    if (fails) await expect(compact).rejects.toThrow('current library has been restored');
+    else await expect(compact).resolves.toHaveProperty('after');
+  } finally {
+    rename?.mockRestore();
+  }
+  expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([rule]);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(state.show.mock.calls).toEqual([['After maintenance']]);
 });
 
 it('rejects invalid and stale mutations while keeping the current schedule', async () => {
@@ -190,4 +222,59 @@ it('persists a preset only on save and keeps its identity across edits and reloa
   closeDatabaseConnection();
   expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([edited]);
   expect(state.show).not.toHaveBeenCalled();
+});
+
+function switchLibrary(home: string, confirmed = true) {
+  return handleSettingsStorageCommand(NATIVE_COMMANDS.updateLibraryPathSetting, {
+    location: 'library_home', path: home, confirm_existing_library_home: confirmed
+  });
+}
+
+it('starts persisted daily reminders on adoption and ignores notification clicks from an earlier connection', async () => {
+  const original = loadLibraryPathSettingsSync().library_home;
+  const next = path.join(state.root, 'Existing library');
+  closeDatabaseConnection();
+  saveCurrentLibraryHome(next);
+  initializeDatabase();
+  const nextRule = save('Due in the new library', '12:02', true);
+  stopDesktopReminders();
+  closeDatabaseConnection();
+
+  saveCurrentLibraryHome(original);
+  const send = vi.fn();
+  const openWindow = vi.fn(async () => ({ isDestroyed: () => false, webContents: { send } }));
+  installDesktopReminderNavigation(openWindow as unknown as Parameters<typeof installDesktopReminderNavigation>[0]);
+  save('Delivered in the original library', '12:01', true, undefined, 'flow');
+  save('Due in the original library', '12:03', true);
+  startDesktopReminders();
+  await vi.advanceTimersByTimeAsync(60_000);
+  const oldClick = state.click.get('Delivered in the original library');
+  expect(oldClick).toBeDefined();
+
+  await expect(switchLibrary(next)).resolves.toMatchObject({ library_home: next });
+  expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([nextRule]);
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(state.show.mock.calls).toEqual([['Delivered in the original library'], [nextRule.message]]);
+
+  await expect(switchLibrary(original)).resolves.toMatchObject({ library_home: original });
+  oldClick?.();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(openWindow).not.toHaveBeenCalled();
+});
+
+it('keeps the current daily schedule after adoption is declined', async () => {
+  const original = loadLibraryPathSettingsSync().library_home;
+  const next = path.join(state.root, 'Existing library');
+  closeDatabaseConnection();
+  saveCurrentLibraryHome(next);
+  initializeDatabase();
+  closeDatabaseConnection();
+  saveCurrentLibraryHome(original);
+
+  const rule = save('Still due in the original library', '12:01', true);
+  startDesktopReminders();
+  await expect(switchLibrary(next, false)).rejects.toThrow('existing_library_home_requires_confirmation');
+  expect(handleReminderCommand(NATIVE_COMMANDS.loadDesktopReminders, {})).toEqual([rule]);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(state.show.mock.calls).toEqual([[rule.message]]);
 });

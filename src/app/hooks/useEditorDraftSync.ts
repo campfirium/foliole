@@ -167,5 +167,5 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setDraftState
   });
 
-  return createEditorDraftSyncApi({ editorContent, flushDraft, handleEditorChange, handleEditorInput, userInputEvidence });
+  return createEditorDraftSyncApi({ editorContent, flushDraft, getPendingDraftCommit, handleEditorChange, handleEditorInput, userInputEvidence });
 }

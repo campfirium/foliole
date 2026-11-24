@@ -11,12 +11,12 @@ export function installDesktopReminderNavigation(openWindow: () => Promise<Brows
   openMainWindow = openWindow;
 }
 
-export async function openDesktopReminderDestination(destination: ReminderRule['destination']) {
-  if (!destination) return;
+export async function openDesktopReminderDestination(destination: ReminderRule['destination'], isCurrent: () => boolean) {
+  if (!destination || !isCurrent()) return;
   const window = await openMainWindow?.();
   if (!window) return;
   await waitForRendererAppReady();
-  if (window.isDestroyed()) return;
+  if (!isCurrent() || window.isDestroyed()) return;
   const payload: MenuCommandEvent = { commandId: destination === 'flow' ? DESKTOP_REMINDER_OPEN_FLOW : DESKTOP_REMINDER_OPEN_DIVE_PREFIX + destination.diveId };
   window.webContents.send(IPC_MENU_EVENT_CHANNEL, payload);
 }

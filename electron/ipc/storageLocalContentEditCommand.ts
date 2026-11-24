@@ -1,5 +1,6 @@
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCodec.js';
+import { describeNodeBacklinkSourceChange, readNodeBacklinkSource } from '../../lib/core/database/nodeBacklinks.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -23,7 +24,9 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   const versionId = asString(edit.versionId, 'versionId');
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const { driver, sqlite } = openDatabaseConnection();
+  const previous = readNodeBacklinkSource(driver, parent.nodeId, affectedAnchors.map(anchor => anchor.nodeId));
+  const port = createBetterSqliteDbPort(sqlite);
   const result = await applyLocalContentEdit(port, {
     ...(edit.field === 'reveal' ? { field: 'reveal' as const } : {}),
     ...(edit.baseContent !== undefined ? { baseContent: asString(edit.baseContent, 'baseContent') } : {}),
@@ -39,26 +42,24 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
     updatedAt: parent.updatedAt
   }, applyContentRecord(parent, affectedAnchors, versionId));
   // applyLocalContentEdit already released the superseded bodies inside its transaction (WA-064).
-  const children = await port.query<{ id: string; anchor_link: string | null; image_regions: string | null; updated_at: string }>(
-    'SELECT id, anchor_link, image_regions, updated_at FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [parent.nodeId]
-  );
-  const anchorUpdates = children.flatMap((child) => {
-    const anchorLink = parseStoredAnchorLink(child.anchor_link);
-    return anchorLink ? [{ nodeId: child.id, anchorLink, imageRegions: parseStoredImageRegions(child.image_regions), updatedAt: child.updated_at }] : [];
-  });
+  const anchorUpdates = await readContentEditAnchorUpdates(port, parent.nodeId);
   const updatedNodeIds = [parent.nodeId, ...anchorUpdates.map((child) => child.nodeId)];
   enqueueCoalescedWorkspaceSearchInvalidation(updatedNodeIds);
   scheduleMirrorSync(updatedNodeIds);
+  const content = result.current.body_text ?? '';
+  const title = result.current.snapshot.title;
+  const backlinkSourceChange = describeNodeBacklinkSourceChange(parent.nodeId, previous, { content, title });
   return {
     ...(buildNodeMutationPatchResult({
       libraryScope, workspaceScope: { kind: 'nodes', nodeIds: updatedNodeIds },
       anchorUpdates,
+      ...(backlinkSourceChange && { backlinkSourceChange }),
       nodes: [{
         ...parent,
-        content: result.current.body_text ?? '',
+        content,
         reveal: result.current.snapshot.reveal ?? null,
         hideTitleHeading: result.current.snapshot.hide_title_heading,
-        title: result.current.snapshot.title,
+        title,
         updatedAt: result.current.updated_at
       }],
       originWindow,
@@ -69,6 +70,16 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
       submittedVersionId: result.submittedVersionId
     }
   };
+}
+
+async function readContentEditAnchorUpdates(port: ReturnType<typeof createBetterSqliteDbPort>, nodeId: string) {
+  const children = await port.query<{ id: string; anchor_link: string | null; image_regions: string | null; updated_at: string }>(
+    'SELECT id, anchor_link, image_regions, updated_at FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [nodeId]
+  );
+  return children.flatMap((child) => {
+    const anchorLink = parseStoredAnchorLink(child.anchor_link);
+    return anchorLink ? [{ nodeId: child.id, anchorLink, imageRegions: parseStoredImageRegions(child.image_regions), updatedAt: child.updated_at }] : [];
+  });
 }
 
 function applyContentRecord(

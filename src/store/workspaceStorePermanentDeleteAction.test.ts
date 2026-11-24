@@ -123,3 +123,20 @@ it('reloads surviving nodes after a partial runtime deletion instead of leaving 
   expect(harness.getState().nodesById[removedNodeId]).toBeUndefined();
   expect(harness.getState().nodeOrder).not.toContain(removedNodeId);
 });
+
+it('keeps a same-ID topic from the new library when the old delete reply completes', async () => {
+  let finish!: (value: unknown) => void;
+  const received = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+  const { actions, harness, nodeId } = await seedTrashedNode(received);
+  harness.setState({ libraryScope: 'library-a' });
+  const existing = { ...harness.getState().nodesById[nodeId]!, title: 'Same ID in library B', deletedAt: null };
+
+  const deletion = actions.deleteNodesPermanently([nodeId]);
+  harness.setState({ libraryScope: 'library-b', nodesById: { [nodeId]: existing },
+    nodeOrder: [nodeId], trashedNodeIds: [], trashedNodeDeletedAtById: {} });
+  finish({ removedNodeIds: [nodeId] });
+  await deletion;
+
+  expect(harness.getState().nodesById[nodeId]).toEqual(existing);
+  expect(received).toHaveBeenCalledExactlyOnceWith({ nodeIds: [nodeId], libraryScope: 'library-a' });
+});

@@ -1,3 +1,4 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { deleteNodesPermanentlyDeferringBodies } from '../../lib/core/database/nodeMutations.js';
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
@@ -6,22 +7,17 @@ import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { removePermanentDeleteParentImages } from './nodePermanentDeleteParentImages.js';
 import { flushNodeSyncVersion } from './nodeSyncVersions.js';
-import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { recordNodeSourceDisposition } from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
 
 export interface PermanentDeletePlan {
-  attachmentCleanupPlan: ReturnType<typeof createAttachmentCleanupPlan>;
   /** Parents precede their descendants; chunks are taken from the end. */
   nodeIds: string[];
 }
 
 export function preparePermanentDelete(nodeIds: string[]): PermanentDeletePlan {
   assertFoliolePublishedDeleteAllowed(nodeIds);
-  return {
-    attachmentCleanupPlan: createAttachmentCleanupPlan(nodeIds),
-    nodeIds: orderParentsFirst(nodeIds)
-  };
+  return { nodeIds: orderParentsFirst(nodeIds) };
 }
 
 /** Splits the plan so every chunk only removes nodes whose selected descendants are already gone. */
@@ -31,6 +27,27 @@ export function splitPermanentDeleteChunks(plan: PermanentDeletePlan, chunkSize:
     chunks.push(plan.nodeIds.slice(Math.max(0, end - chunkSize), end));
   }
   return chunks;
+}
+
+export function readTrashDeleteChunk(driver: DatabaseDriver, nodeIds: string[]) {
+  // A parent with any surviving child must stay, including when only that child was restored.
+  return driver.queryAll<{ id: string; parent_id: string | null }>(`WITH RECURSIVE
+    candidates AS (
+      SELECT n.id, n.parent_id, requested.key AS batch_position
+      FROM json_each(?) requested JOIN nodes n ON n.id = requested.value
+      WHERE n.deleted_at IS NOT NULL
+    ),
+    blocked(id, parent_id) AS (
+      SELECT candidate.id, candidate.parent_id FROM candidates candidate
+      JOIN nodes child ON child.parent_id = candidate.id
+      WHERE child.id NOT IN (SELECT id FROM candidates)
+      UNION
+      SELECT candidate.id, candidate.parent_id FROM blocked
+      JOIN candidates candidate ON candidate.id = blocked.parent_id
+    )
+    SELECT id, parent_id FROM candidates
+    WHERE id NOT IN (SELECT id FROM blocked)
+    ORDER BY batch_position`, [JSON.stringify(nodeIds)]);
 }
 
 /** Removes one chunk and returns the text body hashes it released. */
@@ -59,13 +76,6 @@ export function deletePermanentDeleteChunk(nodeIds: string[]): string[] {
   return withTransaction(connection.driver, () => {
     removePermanentDeleteParentImages(connection.driver, nodeIds, hostName, deletedAt);
     return deleteNodesPermanentlyDeferringBodies(connection.driver, { deletedAt, nodeIds });
-  });
-}
-
-export function finishPermanentDelete(plan: PermanentDeletePlan) {
-  const { driver } = openDatabaseConnection();
-  withTransaction(driver, () => {
-    return cleanupOrphanAttachments(driver, plan.attachmentCleanupPlan);
   });
 }
 

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 
-import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh';
-import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/internalLinks';
+import { collectBacklinks } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
-import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import {
+  EMPTY_RUNTIME_BACKLINKS_STATE, refreshRuntimeBacklinks, subscribeRuntimeBacklinks,
+  type RuntimeBacklinksState
+} from './nodeBacklinksRuntimeLoad';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 function collectLocalBacklinks(args: {
@@ -25,67 +25,6 @@ function collectLocalBacklinks(args: {
     nodesById: args.nodesById,
     trashedNodeIds: args.trashedNodeIds
   });
-}
-
-interface RuntimeBacklinksState {
-  errorMessage: string;
-  isLoading: boolean;
-  libraryScope: string | undefined;
-  targetNodeId: string | null;
-  value: BacklinkItem[] | null;
-}
-
-const EMPTY_RUNTIME_BACKLINKS_STATE: RuntimeBacklinksState = {
-  errorMessage: '',
-  isLoading: false,
-  libraryScope: undefined,
-  targetNodeId: null,
-  value: null
-};
-
-function startRuntimeBacklinksLoad(
-  targetNodeId: string | null,
-  libraryScope: string | undefined,
-  setRuntimeState: Dispatch<SetStateAction<RuntimeBacklinksState>>
-) {
-  if (!targetNodeId) {
-    setRuntimeState(EMPTY_RUNTIME_BACKLINKS_STATE);
-    return () => undefined;
-  }
-
-  let generation = 0;
-  let disposed = false;
-  const unlisteners: (() => void)[] = [];
-  const reload = () => {
-    const request = ++generation;
-    setRuntimeState(current => ({ errorMessage: '', isLoading: true, targetNodeId, libraryScope,
-      value: current.targetNodeId === targetNodeId && current.libraryScope === libraryScope ? current.value : null }));
-    void loadRuntimeNodeBacklinks(targetNodeId).then(value => {
-      if (!disposed && request === generation) {
-        setRuntimeState({ errorMessage: '', isLoading: false, targetNodeId, libraryScope, value });
-      }
-    }).catch(() => {
-      if (!disposed && request === generation) {
-        setRuntimeState(current => ({ ...current, errorMessage: 'Backlinks could not be loaded.', isLoading: false }));
-      }
-    });
-  };
-  const changed = (payload: { libraryScope?: string; workspaceScope?: WorkspaceRefreshScope }) => {
-    const scope = payload.workspaceScope;
-    if (scope?.kind === 'nodes' && !scope.nodeIds.length && !scope.structure) return;
-    if (!disposed && (!payload.libraryScope || !libraryScope || payload.libraryScope === libraryScope)) reload();
-  };
-  reload();
-  for (const subscribe of [onWorkspaceContentChanged, onWorkspaceSyncApplied]) {
-    void subscribe(changed).then(unlisten => {
-      if (disposed) unlisten?.();
-      else if (unlisten) unlisteners.push(unlisten);
-    });
-  }
-  return () => {
-    disposed = true;
-    unlisteners.forEach(unlisten => unlisten());
-  };
 }
 
 export function useNodeBacklinks(args: {
@@ -107,15 +46,14 @@ export function useNodeBacklinks(args: {
     [args.nodeOrder, args.nodesById, args.targetNodeId, args.trashedNodeIds]
   );
   const [runtimeState, setRuntimeState] = useState<RuntimeBacklinksState>(EMPTY_RUNTIME_BACKLINKS_STATE);
-  const [refreshKey, setRefreshKey] = useState(0);
-
   const retry = useCallback(() => {
-    setRefreshKey((value) => value + 1);
-  }, []);
+    if (args.targetNodeId) refreshRuntimeBacklinks(args.targetNodeId, libraryScope);
+  }, [args.targetNodeId, libraryScope]);
 
   useEffect(() => {
-    return startRuntimeBacklinksLoad(args.targetNodeId, libraryScope, setRuntimeState);
-  }, [args.targetNodeId, libraryScope, refreshKey]);
+    if (args.targetNodeId) return subscribeRuntimeBacklinks(args.targetNodeId, libraryScope, setRuntimeState);
+    setRuntimeState(EMPTY_RUNTIME_BACKLINKS_STATE);
+  }, [args.targetNodeId, libraryScope]);
 
   const isCurrentRuntimeState = runtimeState.targetNodeId === args.targetNodeId && runtimeState.libraryScope === libraryScope;
   return {

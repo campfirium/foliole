@@ -1,9 +1,8 @@
 import { PUSH_QUEUE_PRIORITIES } from '../../lib/core/review/unifiedPushQueueRules.js';
-import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 import type {
-  DeleteNodesPermanentlyInput,
-  MoveNodesInput,
-} from '../database/nodeMutations.js';
+  NativeDeleteNodesPermanentlyArgs, NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate
+} from '../../lib/platform/nativeTrashCommandMap.js';
+import type { MoveNodesInput } from '../database/nodeMutations.js';
 
 import { parseAnnotationTrashGuard } from './annotationTrashArgs.js';
 import { asImageRegions } from './commandParserImageRegions.js';
@@ -95,9 +94,10 @@ function parseRestoreParentOrders(value: unknown): NonNullable<NativeRestoreNode
   return orders;
 }
 
-export function parseDeleteNodesPermanentlyArgs(args: Record<string, unknown>): DeleteNodesPermanentlyInput {
+export function parseDeleteNodesPermanentlyArgs(args: Record<string, unknown>): NativeDeleteNodesPermanentlyArgs {
   if ('nodeOrder' in args) throw new Error('invalid argument: nodeOrder');
-  return { nodeIds: asStringArray(args.nodeIds, 'nodeIds') };
+  const nodeIds = asStringArray(args.nodeIds, 'nodeIds');
+  return args.libraryScope === undefined ? { nodeIds } : { nodeIds, libraryScope: asString(args.libraryScope, 'libraryScope') };
 }
 
 export function parseMoveNodesArgs(args: Record<string, unknown>): MoveNodesInput {

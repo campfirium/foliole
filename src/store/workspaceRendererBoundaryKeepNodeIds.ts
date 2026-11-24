@@ -1,3 +1,4 @@
+import { listWorkspaceContentEditingNodeIds } from './workspaceContentEditingSession';
 import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -30,7 +31,8 @@ export function collectRendererBoundaryKeepNodeIds(
   state: WorkspaceState | Partial<WorkspaceState>,
   currentState: WorkspaceState
 ) {
-  const keepNodeIds = new Set(listPendingNodeSyncNodeIds());
+  const libraryScope = 'libraryScope' in state ? state.libraryScope : currentState.libraryScope;
+  const keepNodeIds = new Set([...listPendingNodeSyncNodeIds(), ...listWorkspaceContentEditingNodeIds(libraryScope)]);
   const rendererBoundaryKeepNodeIds = resolveRendererBoundaryKeepNodeIds(state, currentState);
 
   for (const nodeId of rendererBoundaryKeepNodeIds) {

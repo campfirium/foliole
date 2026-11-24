@@ -25,18 +25,19 @@ it('moves the selected index once and synchronizes its fixed eligible results', 
     desktop.sqlite.prepare("INSERT INTO settings VALUES ('host_name', ?, 'now')").run(desktop.id);
     bindParentOrderWriter(driver, { deviceAnchor: desktop.id, libraryPath: desktop.file });
     const now = new Date().toISOString();
-    const seed = (nodeId: string, kind: 'topic' | 'folder', parentNodeId: string | null, virtualFilter?: VirtualNodeFilter) => {
+    const seed = (nodeId: string, kind: 'topic' | 'folder', parentNodeId: string | null, virtualFilter?: VirtualNodeFilter,
+      manualChildOrder?: string[]) => {
       upsertNodeSnapshot(driver, {
         nodeId, kind, parentNodeId, title: `Match ${nodeId}`, content: '', reveal: null, anchorLink: null,
         createdAt: now, updatedAt: now, hostName: desktop.id, isTitleManual: true, position: null,
-        ...(virtualFilter ? { virtualFilter } : {})
+        ...(virtualFilter ? { virtualFilter } : {}), ...(manualChildOrder ? { manualChildOrder } : {})
       });
       flushNodeSyncVersionWithDriver(driver, nodeId, desktop.id, now);
     };
     seed('first', 'topic', null);
     seed('second', 'topic', null);
     seed('child', 'topic', 'first');
-    seed('index', 'folder', VIRTUAL_ROOT_NODE_ID, filter);
+    seed('index', 'folder', VIRTUAL_ROOT_NODE_ID, filter, ['second', 'first']);
     expect(await requestNodeRound(desktop, companion)).toMatchObject({ complete: true, pending: 0 });
 
     const ids = ['second', 'child', 'first', 'second'];
@@ -61,8 +62,45 @@ it('moves the selected index once and synchronizes its fixed eligible results', 
       manual_child_order: JSON.stringify(dive.directSourceIds) });
     expect(isManualVirtualNodeFilter(parseVirtualNodeFilter(row[0]?.virtual_filter))).toBe(true);
 
-    seed('empty-index', 'folder', VIRTUAL_ROOT_NODE_ID, filter);
-    convertDiveDirectory(desktop.sqlite, 'empty-index', 'dive', { filter: JSON.stringify(filter), ids: [] });
+    const emptyFilter: VirtualNodeFilter = { ...filter,
+      conditions: [{ field: 'text', operator: 'contains', value: 'Absent keyword' }] };
+    seed('empty-index', 'folder', VIRTUAL_ROOT_NODE_ID, emptyFilter);
+    convertDiveDirectory(desktop.sqlite, 'empty-index', 'dive', { filter: JSON.stringify(emptyFilter), ids: [] });
     expect(listDives(desktop.sqlite)).toEqual([{ id: 'empty-index', title: 'Match empty-index', directSourceIds: [] }]);
+  } finally { await fixture.close(); }
+});
+
+it('uses saved titles and cold bodies when freezing a conditional index into a Dive', async () => {
+  const fixture = await restoreFixture();
+  const desktop = fixture.peer('source');
+  const companion = await fixture.companionPeer('target');
+  try {
+    const driver = createBetterSqlite3Driver(desktop.sqlite);
+    desktop.sqlite.prepare("INSERT INTO settings VALUES ('host_name', ?, 'now')").run(desktop.id);
+    bindParentOrderWriter(driver, { deviceAnchor: desktop.id, libraryPath: desktop.file });
+    const now = new Date().toISOString();
+    const seed = (nodeId: string, title: string, content: string, directory = false) => {
+      upsertNodeSnapshot(driver, { nodeId, title, content,
+        kind: directory ? 'folder' : 'topic', parentNodeId: directory ? VIRTUAL_ROOT_NODE_ID : null,
+        reveal: null, anchorLink: null, createdAt: now, updatedAt: now,
+        hostName: desktop.id, isTitleManual: true, position: null,
+        ...(directory ? { virtualFilter: filter, manualChildOrder: ['body-hit', 'title-hit'] } : {})
+      });
+      flushNodeSyncVersionWithDriver(driver, nodeId, desktop.id, now);
+    };
+    seed('body-hit', 'Cold topic', 'The keyword is only here: mAtCh.');
+    seed('title-hit', 'Match in title', '');
+    seed('stale-hit', 'No longer a result', 'Unrelated');
+    seed('index', 'Saved index', '', true);
+    desktop.reopen();
+
+    convertDiveDirectory(desktop.sqlite, 'index', 'dive', { filter: JSON.stringify(filter), ids: ['title-hit', 'stale-hit'] });
+
+    const expected = { id: 'index', title: 'Saved index', directSourceIds: ['body-hit', 'title-hit'] };
+    desktop.reopen();
+    expect(listDives(desktop.sqlite)).toEqual([expected]);
+    expect(await requestNodeRound(desktop, companion)).toMatchObject({ complete: true, pending: 0 });
+    companion.reopen();
+    expect(listDives(companion.sqlite)).toEqual([expected]);
   } finally { await fixture.close(); }
 });

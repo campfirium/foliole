@@ -1,3 +1,4 @@
+import type { NodeBacklinkSourceChange } from '../../lib/core/database/nodeBacklinks.js';
 import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
@@ -55,6 +56,7 @@ export interface WorkspaceSyncAppliedEvent {
 }
 
 export interface WorkspaceContentChangedEvent {
+  backlinkSourceChange?: NodeBacklinkSourceChange;
   workspaceScope?: WorkspaceRefreshScope;
   libraryScope?: string;
   scope: 'workspace';
