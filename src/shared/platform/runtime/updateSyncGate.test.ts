@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { normalizeMobileChannels, normalizeUpdateManifest } from '../updateCheckModel';
+
 import { isSyncWaitSatisfied, listSyncWaitTargets, resolveSyncGateMissing } from './updateSyncGate';
 
 function manifestWith(release: Record<string, unknown>) {

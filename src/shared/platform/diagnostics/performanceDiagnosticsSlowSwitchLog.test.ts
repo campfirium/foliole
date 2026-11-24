@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const logRuntimeEvent = vi.hoisted(() => vi.fn());
 vi.mock('../runtimeLogging', () => ({ logRuntimeEvent }));
 
-import { reportSlowNodeSwitch } from './performanceDiagnosticsSlowSwitchLog';
 import { createNodeSelectionFlow } from '../performanceDiagnosticsState';
+
+import { reportSlowNodeSwitch } from './performanceDiagnosticsSlowSwitchLog';
 
 describe('slow note switch log', () => {
   beforeEach(() => logRuntimeEvent.mockClear());
