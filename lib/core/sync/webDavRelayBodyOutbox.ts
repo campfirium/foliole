@@ -21,15 +21,22 @@ export const webDavRelayPacketSchema = z.object({
   through: z.number().int().positive(),
   attachments: z.array(attachmentBlockResourceSchema.shape.storageKey).optional()
 });
-const outboxSchema = z.object({ sequence: z.number().int().nonnegative(), packet: webDavRelayPacketSchema.nullable() });
+export const retiredWebDavRelayPacketSchema = z.object({ name: z.string().endsWith('.bin') });
+const outboxSchema = z.object({
+  sequence: z.number().int().nonnegative(),
+  packet: z.union([webDavRelayPacketSchema, retiredWebDavRelayPacketSchema]).nullable()
+});
 type Packet = z.infer<typeof webDavRelayPacketSchema>;
-type Outbox = z.infer<typeof outboxSchema>;
+type Outbox = { sequence: number; packet: Packet | null };
 
-function metadataKey(scope: WebDavRelayBodyScope) { return `${scope.key}:outbox`; }
+export const webDavRelayBodyOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:outbox`;
 
-export async function readWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayBodyScope): Promise<Outbox> {
-  const [row] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?', [metadataKey(scope)]);
-  return row ? outboxSchema.parse(JSON.parse(row.value)) : { sequence: scope.baseline.sequence, packet: null };
+export async function readWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayBodyScope) {
+  const [row] = await db.query<{ value: string }>(
+    'SELECT value FROM sync_group_metadata WHERE key = ?', [webDavRelayBodyOutboxKey(scope)]);
+  const state = row ? outboxSchema.parse(JSON.parse(row.value)) : { sequence: scope.baseline.sequence, packet: null };
+  return { sequence: state.sequence, hasStagedPacket: state.packet !== null,
+    packet: state.packet && 'chunks' in state.packet ? state.packet : null };
 }
 
 export async function hasWebDavRelayPublishedChanges(db: DbPort, scope: WebDavRelayBodyScope) {
@@ -40,12 +47,12 @@ export async function hasWebDavRelayPublishedChanges(db: DbPort, scope: WebDavRe
 export async function writeWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayBodyScope, state: Outbox) {
   await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  [metadataKey(scope), JSON.stringify(state), new Date().toISOString()]);
+  [webDavRelayBodyOutboxKey(scope), JSON.stringify(state), new Date().toISOString()]);
 }
 
 export async function hasWebDavRelayBodyToSend(db: DbPort, scope: WebDavRelayBodyScope) {
   const state = await readWebDavRelayBodyOutbox(db, scope);
-  if (state.packet) return true;
+  if (state.hasStagedPacket) return true;
   const [row] = await db.query<{ pending: number }>(`SELECT (
     EXISTS (SELECT 1 FROM sync_object_state WHERE object_type = 'node' AND state_seq > ?)
     OR EXISTS (SELECT 1 FROM webdav_relay_review_sequence WHERE state_seq > ?)

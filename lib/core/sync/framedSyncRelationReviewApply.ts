@@ -81,7 +81,11 @@ async function applyReview(tx: DbPort, row: FramedSyncReviewSource) {
     throw new Error(`framed_sync_review_conflict:${row.op_id}`);
   }
   const [node] = await tx.query('SELECT 1 FROM nodes WHERE id = ? LIMIT 1', [row.node_id]);
-  if (!node) throw new Error(`framed_sync_review_node_missing:${row.node_id}`);
+  if (!node) {
+    const [deleted] = await tx.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [row.node_id]);
+    if (deleted) return false;
+    throw new Error(`framed_sync_review_node_missing:${row.node_id}`);
+  }
   await tx.run(
     `INSERT INTO review_log (${REVIEW_COLUMNS.join(', ')}) VALUES (${REVIEW_COLUMNS.map(() => '?').join(', ')})`,
     REVIEW_COLUMNS.map((column) => row[column])

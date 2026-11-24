@@ -68,7 +68,8 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
           await prepared.databaseRoundCompleted?.();
         } }));
       if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(prepared),
-        { context, groupKey, stream: receivedStream, signal, onProgress: () => lease.touch() }, consume);
+        { context, groupKey, stream: receivedStream, signal, onProgress: () => lease.touch(),
+          confirmPeerAttachment: storageKey => relayBaselines.confirmAttachment(lease.signal, storageKey) }, consume);
       return await respondRequestSyncDatabase(prepared, { context, groupKey, mode, stream: receivedStream, signal,
         ...(mode === 'objects' ? { batch: { peerState } } : {}),
         ...(mode === 'object' ? { object: { peerState, expectedObject: {

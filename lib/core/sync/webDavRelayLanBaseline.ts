@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
 import type { WebDavRelayBinding } from '../../platform/webDavRelayContract.js';
@@ -6,6 +8,7 @@ import type { DbPort } from './dbPort.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
+import { recordWebDavRelayLanAttachment } from './webDavRelayAttachments.js';
 import { recordWebDavRelayReceive } from './webDavRelayReceiveFreshness.js';
 
 const positionSchema = z.object({
@@ -26,6 +29,14 @@ type Scope = {
   localEpoch: string;
   peerEpoch: string;
 };
+
+export function webDavRelayBodyIdentity({ binding, localDevice, localEpoch, peerEpoch, sourceEpoch }:
+  Scope & Pick<Baseline, 'sourceEpoch'>) {
+  const epochs = localDevice === binding.desktop_device_id ? [localEpoch, peerEpoch] : [peerEpoch, localEpoch];
+  const digest = bytesToHex(sha256(new TextEncoder().encode(JSON.stringify([binding.id, ...epochs]))));
+  const source = bytesToHex(sha256(new TextEncoder().encode(sourceEpoch)));
+  return { digest, key: `webdav_relay_body:${digest}:${source}` };
+}
 
 async function readPosition(db: DbPort, scope: Scope) {
   if (await syncGroupLocalPublicationBlockReason(db)) return null;
@@ -77,7 +88,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
   if (!captured) return;
 
   // Confirmation may follow more local commits. Only the pre-inventory position is covered here.
-  return async () => {
+  const confirmBaseline = async () => {
     signal?.throwIfAborted();
     return host.write(db => db.transaction(async tx => {
       const current = await readPosition(tx, scope);
@@ -91,6 +102,22 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
       return true;
     }));
   };
+  const { key } = webDavRelayBodyIdentity({ ...scope, sourceEpoch: captured.sourceEpoch });
+  return Object.assign(confirmBaseline, {
+    async confirmAttachment(storageKey: string) {
+      signal?.throwIfAborted();
+      try {
+        await host.write(db => db.transaction(async tx => {
+          if ((await readPosition(tx, scope))?.sourceEpoch === captured.sourceEpoch) {
+            await recordWebDavRelayLanAttachment(tx, { key }, storageKey);
+          }
+        }));
+      } catch (error) {
+        signal?.throwIfAborted();
+        console.warn('[sync] WebDAV LAN attachment receipt deferred', error);
+      }
+    }
+  });
 }
 
 export function createWebDavRelayInboundBaselines() {
@@ -104,6 +131,10 @@ export function createWebDavRelayInboundBaselines() {
     async confirm(round: AbortSignal) {
       const confirm = await byRound.get(round);
       return confirm?.();
+    },
+    async confirmAttachment(round: AbortSignal, storageKey: string) {
+      const captured = await byRound.get(round);
+      await captured?.confirmAttachment(storageKey);
     }
   };
 }

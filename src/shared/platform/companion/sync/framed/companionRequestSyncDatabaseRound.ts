@@ -122,6 +122,7 @@ async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: Reques
   const { signal, peerRound } = input;
   const confirmBaseline = await captureWebDavRelayLanBaseline(host, await loadCompanionWebDavRelay(), context, 'initiator', signal);
   if (peerRound) {
+    if (confirmBaseline) peerRound.confirmRelayAttachment = confirmBaseline.confirmAttachment;
     const cleanup = await tryCaptureWebDavRelayCleanup(() =>
       captureCompanionWebDavRelayCleanup(host, context, 'initiator', peerRound.lease.signal));
     if (cleanup) peerRound.relayCleanup = cleanup;

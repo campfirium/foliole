@@ -41,7 +41,7 @@ export async function runWebDavTestLanRound(source: RestorePeer, target: Restore
     { ...options.remote.cleanup, signal: lease.signal }, context, 'responder');
   if (localCleanup) round.relayCleanup = localCleanup;
   const server = lanServer(source, target, { id, confirmTarget: confirmTarget ? async () => { await confirmTarget(); } : undefined,
-    remoteCleanup, attachments: options?.remote.attachments });
+    remoteCleanup, attachments: options?.remote.attachments, confirmRemoteAttachment: confirmTarget?.confirmAttachment });
   try {
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
@@ -65,7 +65,8 @@ export async function runWebDavTestLanRound(source: RestorePeer, target: Restore
         round.databaseConfirmed = true;
       }
       if (!options) return result;
-      const attachments = await exchangeRequestSyncAttachments(options.local.attachments, exchange, () => {});
+      const attachments = await exchangeRequestSyncAttachments(options.local.attachments, exchange, () => {}, undefined,
+        confirmSource?.confirmAttachment);
       round.attachmentsConfirmed = attachments.pending === 0 && !attachments.yielded;
       await options.beforeFinish?.();
       return { ...result, attachments };
@@ -81,6 +82,7 @@ function lanServer(source: RestorePeer, target: RestorePeer, round: {
   confirmTarget: (() => Promise<void>) | undefined;
   remoteCleanup: RequestSyncPeerRound['relayCleanup'];
   attachments: RequestSyncAttachmentHost | undefined;
+  confirmRemoteAttachment: ((storageKey: string) => Promise<void>) | undefined;
 }) {
   const host = { ...target.host, enqueueSearchInvalidations: target.desktop };
   return createServer((request, response) => {
@@ -94,7 +96,7 @@ function lanServer(source: RestorePeer, target: RestorePeer, round: {
             onCompleted: round.confirmTarget, relayCleanup: round.remoteCleanup });
         }
         if (mode === 'attachments' && round.attachments) return respondRequestSyncAttachments<FramedSyncStreamBody | void>(round.attachments,
-          { ...input, groupKey: webDavTestGroupKey }, prepareDesktopRequestSyncBody);
+          { ...input, groupKey: webDavTestGroupKey, confirmPeerAttachment: round.confirmRemoteAttachment }, prepareDesktopRequestSyncBody);
         if (mode !== 'inventory' && mode !== 'objects' && mode !== 'pulls') throw new Error('lan_fixture_mode_invalid');
         return respondRequestSyncDatabase(host, { ...input, groupKey: webDavTestGroupKey, mode,
           batch: { peerState: state(source) } }, prepareDesktopRequestSyncBody);

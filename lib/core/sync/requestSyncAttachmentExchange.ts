@@ -19,12 +19,13 @@ const VERIFICATION_ONLY_PASSES = 64;
 
 /** Drain the transfer lists pass after pass; only pending data work or a pass without progress ends the stream. */
 export async function exchangeRequestSyncAttachments(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
-  report: (storageKey: string, error: unknown) => void, shouldYield = attachmentDataYield()) {
+  report: (storageKey: string, error: unknown) => void, shouldYield = attachmentDataYield(),
+  confirmPeerAttachment?: (storageKey: string) => Promise<void>) {
   const total = { transferred: 0, blocks: 0 };
   // A key that failed in this stream waits for the next round instead of repeating within it.
   const failed = new Set<string>();
   for (let verificationOnly = 0; ;) {
-    const { verifying, ...pass } = await exchangeAttachmentPass(host, exchange, report, shouldYield, failed);
+    const { verifying, ...pass } = await exchangeAttachmentPass(host, exchange, report, shouldYield, failed, confirmPeerAttachment);
     total.transferred += pass.transferred;
     total.blocks += pass.blocks;
     const progressed = pass.transferred > 0 || pass.blocks > 0;
@@ -35,26 +36,19 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
 }
 
 async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
-  report: (storageKey: string, error: unknown) => void, shouldYield: () => boolean, failed: Set<string>) {
+  report: (storageKey: string, error: unknown) => void, shouldYield: () => boolean, failed: Set<string>,
+  confirmPeerAttachment?: (storageKey: string) => Promise<void>) {
   exchange.signal?.throwIfAborted();
-  let remoteNeeds = new Set<string>();
-  let pendingScan = false;
-  let parsingPending = false;
-  await attachmentRequest(exchange, { operation: 'needs' }, async message => {
-    if (message.state !== 'partial' && message.state !== 'end') throw new Error('attachment_needs_invalid');
-    for (const key of message.storageKeys) remoteNeeds.add(key);
-    pendingScan ||= message.pending;
-    parsingPending ||= message.parsingPending;
-  });
+  const remote = await readRemoteAttachmentDemand(exchange);
   const roundKey = JSON.stringify(exchange.context);
   const retryFirst = takeRetryFirstRound(roundKey);
-  remoteNeeds = new Set(prioritizeRetryPairs([...remoteNeeds], retryFirst));
+  const remoteNeeds = new Set(prioritizeRetryPairs([...remote.keys], retryFirst));
   const demand = await host.needsSlice(shouldYield);
   const local = { ...demand, keys: prioritizeRetryPairs(demand.keys, retryFirst),
     pdfTextKeys: prioritizeRetryPairs(demand.pdfTextKeys ?? [], retryFirst) };
-  pendingScan ||= local.pending;
-  parsingPending ||= local.parsingPending ?? false;
-  const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report, failed);
+  const pendingScan = remote.pending || local.pending;
+  const parsingPending = remote.parsingPending || (local.parsingPending ?? false);
+  const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report, failed, confirmPeerAttachment);
   const text = createAttachmentTextProgress(host, exchange, shouldYield, report, result);
   const stages = [
     { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
@@ -95,6 +89,19 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
     yielded: parsingPending || verificationPending() || text.verificationPending || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
 
+async function readRemoteAttachmentDemand(exchange: RequestSyncExchange) {
+  const keys = new Set<string>();
+  let pending = false;
+  let parsingPending = false;
+  await attachmentRequest(exchange, { operation: 'needs' }, async message => {
+    if (message.state !== 'partial' && message.state !== 'end') throw new Error('attachment_needs_invalid');
+    for (const key of message.storageKeys) keys.add(key);
+    pending ||= message.pending;
+    parsingPending ||= message.parsingPending;
+  });
+  return { keys, pending, parsingPending };
+}
+
 function takeRetryFirstRound(roundKey: string) {
   const retryFirst = retryFirstRounds.has(roundKey);
   if (retryFirst) retryFirstRounds.delete(roundKey); else retryFirstRounds.add(roundKey);
@@ -102,7 +109,8 @@ function takeRetryFirstRound(roundKey: string) {
 }
 
 function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
-  report: (key: string, error: unknown) => void, failed: Set<string>) {
+  report: (key: string, error: unknown) => void, failed: Set<string>,
+  confirmPeerAttachment?: (storageKey: string) => Promise<void>) {
   const result = { transferred: 0, blocks: 0 };
   const pendingKeys = new Set<string>();
   let verifying = false;
@@ -113,8 +121,10 @@ function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: Req
       const slice = await execute();
       result.blocks += slice.blocks;
       verifying ||= slice.verificationPending === true;
-      if (slice.complete) result.transferred++;
-      else pendingKeys.add(key);
+      if (slice.complete) {
+        await confirmPeerAttachment?.(key);
+        result.transferred++;
+      } else pendingKeys.add(key);
     }
     catch (error) {
       exchange.signal?.throwIfAborted(); pendingKeys.add(key);

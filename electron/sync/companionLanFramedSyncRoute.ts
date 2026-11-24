@@ -127,7 +127,8 @@ function respondInbound(host: ReturnType<typeof createDesktopRequestSyncDatabase
   return withInboundAttachmentPreparation(withRelayBaseline(host, input, lease, single), { lifecycle: lease.signal, signal: input.signal,
     mode: input.url.searchParams.get('request') ?? '', single },
   async prepared => respondDesktopRequestSyncHttp(prepared, { ...input,
-    relayCleanup: await relayCleanup.read(lease.signal) }));
+    relayCleanup: await relayCleanup.read(lease.signal),
+    confirmPeerAttachment: storageKey => relayBaselines.confirmAttachment(lease.signal, storageKey) }));
 }
 
 function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,

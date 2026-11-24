@@ -18,6 +18,7 @@ import { publishWebDavRelayAttachment, type WebDavRelayRequest } from './webDavR
 import { resolveWebDavRelayRepairKeys } from './webDavRelayRepairAuthorization.js';
 import { repairRequestSchema, type RepairRequest } from './webDavRelayRepairWire.js';
 
+const ATTACHMENT_BATCH_SIZE = 64;
 const pendingSchema = webDavRelayPacketSchema.pick({ name: true, chunks: true, bytes: true })
   .extend({ key: attachmentBlockResourceSchema.shape.storageKey, resourceBytes: attachmentBlockResourceSchema.shape.byteLength.optional(), repairId: z.string().optional() });
 type Pending = ReturnType<typeof pendingSchema.parse>;
@@ -35,7 +36,7 @@ type Input = {
   progress: { published: number; retries: number };
 };
 
-const prefix = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment:`;
+const prefix = (scope: Pick<WebDavRelayBodyScope, 'key'>) => `${scope.key}:attachment:`;
 export const webDavRelayAttachmentOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment-outbox`;
 
 export async function hasWebDavRelayAttachmentsToSend(db: DbPort, scope: WebDavRelayBodyScope) {
@@ -57,12 +58,20 @@ export async function markWebDavRelayAttachment(db: DbPort, scope: WebDavRelayBo
   [prefix(scope) + key, state, new Date().toISOString()]);
 }
 
+export async function recordWebDavRelayLanAttachment(db: DbPort, scope: Pick<WebDavRelayBodyScope, 'key'>, key: string) {
+  await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, 'lan-covered', ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    WHERE sync_group_metadata.value IN ('pending', 'lan')`, [prefix(scope) + key, new Date().toISOString()]);
+}
+
 export async function enqueueWebDavRelayAttachmentRepairs(db: DbPort, scope: WebDavRelayBodyScope, repair: RepairRequest) {
   if (scope.attachmentPolicy.mode === 'off') return;
   const keys = await resolveWebDavRelayRepairKeys(db, repair.demand);
   for (const key of keys) {
-    await db.run(`UPDATE sync_group_metadata SET value = ?, updated_at = ? WHERE key = ?`,
-      [JSON.stringify({ ...repair, demand: repair.demand.filter(([hash]) => key.startsWith(hash)) }), new Date().toISOString(), prefix(scope) + key]);
+    const demand = repair.demand.filter(([hash]) => key.startsWith(hash));
+    await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [prefix(scope) + key, JSON.stringify({ ...repair, demand }), new Date().toISOString()]);
   }
 }
 
@@ -114,9 +123,7 @@ export async function publishWebDavRelayAttachments(input: Input) {
     [new Date().toISOString(), prefix(scope), `${scope.key}:attachment;`]));
     return;
   }
-  const keys = await host.readSnapshot(db => db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
-    WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{') ORDER BY updated_at, key LIMIT 64`,
-  [prefix(scope), `${scope.key}:attachment;`]), input.signal);
+  const keys = await readAttachmentBatch(input);
   for (const row of keys) {
     if (input.lanConnected()) return;
     await input.assertScope();
@@ -132,27 +139,47 @@ export async function publishWebDavRelayAttachments(input: Input) {
   }
 }
 
+function readAttachmentBatch({ host, scope, signal }: Input) {
+  const lower = prefix(scope);
+  const upper = `${scope.key}:attachment;`;
+  return host.readSnapshot(async db => {
+    const batch = await db.query<{ key: string; ordinary: number }>(`SELECT key, value = 'pending' AS ordinary
+      FROM sync_group_metadata WHERE key >= ? AND key < ? AND (value = 'pending' OR substr(value, 1, 1) = '{')
+      ORDER BY updated_at, key LIMIT ?`, [lower, upper, ATTACHMENT_BATCH_SIZE]);
+    if (batch.length < ATTACHMENT_BATCH_SIZE || batch.some(row => row.ordinary)) return batch;
+
+    // Keep a repair slot while admitting normal sends even when repairs fill the queue head.
+    const ordinary = await db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
+      WHERE key >= ? AND key < ? AND value = 'pending' ORDER BY updated_at, key LIMIT ?`,
+    [lower, upper, ATTACHMENT_BATCH_SIZE - 1]);
+    return [...ordinary, ...batch.slice(0, ATTACHMENT_BATCH_SIZE - ordinary.length)];
+  }, signal);
+}
+
 async function freeze(input: Input, key: string, repair?: RepairRequest) {
   const { host, scope, signal } = input;
+  let staging = false;
   try {
     const pending = await input.attachments.withFile(key, async file => {
-      if (file.modifiedAt === undefined || !Number.isFinite(scope.baseline.capturedAt)) {
-        throw new Error('webdav_relay_attachment_time_unavailable');
-      }
-      if (file.modifiedAt < scope.baseline.capturedAt) return null;
       const policy = scope.attachmentPolicy;
       if (policy.mode === 'limited' && file.resource.byteLength > policy.max_mib * WEB_DAV_ATTACHMENT_MIB) return 'lan';
       const wire = await prepareWebDavAttachment(file, { context: scope.send, groupKey: input.groupKey, signal });
+      staging = true;
       return { key, resourceBytes: file.resource.byteLength, ...(repair ? { repairId: repair.id } : {}), ...await stageWebDavRelayPacket(input.files, scope, wire, WEB_DAV_ATTACHMENT_SUFFIX) };
     }, { shouldYield: () => { signal?.throwIfAborted(); return input.lanConnected(); } });
-    if (pending && pending !== 'lan') await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+    if (pending !== 'lan') await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
       [webDavRelayAttachmentOutboxKey(scope), JSON.stringify(pending), new Date().toISOString()]));
-    else await host.write(db => markWebDavRelayAttachment(db, scope, key, pending ?? 'done'));
+    else await host.write(db => markWebDavRelayAttachment(db, scope, key, 'lan'));
     return pending === 'lan' ? null : pending;
   } catch (error) {
     if (!(error instanceof AttachmentVerificationPending) &&
-        !(error instanceof Error && error.message === 'attachment_source_missing')) throw error;
-    if (!repair) await host.write(db => markWebDavRelayAttachment(db, scope, key, 'pending'));
+        !(error instanceof Error && (error.message === 'attachment_source_missing' ||
+          error.message === 'attachment_source_invalid' || error.message === 'attachment_source_truncated'))) throw error;
+    if (staging) await input.files.remove(webDavRelayPacketDirectory(scope));
+    // Defer the retry without replacing its repair request.
+    await host.write(db => db.run(`UPDATE sync_group_metadata SET updated_at = ?
+      WHERE key = ? AND (value = 'pending' OR substr(value, 1, 1) = '{')`,
+    [new Date().toISOString(), prefix(scope) + key]));
     return null;
   }
 }

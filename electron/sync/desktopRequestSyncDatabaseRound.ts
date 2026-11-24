@@ -77,6 +77,7 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
       loadDesktopWebDavRelayForLanRound(context.groupId, context.responderDeviceId)) : undefined;
     const confirmBaseline = await captureWebDavRelayLanBaseline(host, binding, context, 'initiator', input.signal);
     const { peerRound } = input;
+    if (peerRound && confirmBaseline) peerRound.confirmRelayAttachment = confirmBaseline.confirmAttachment;
     if (binding && peerRound) {
       const cleanup = await tryCaptureWebDavRelayCleanup(() =>
         captureDesktopWebDavRelayCleanup(host, context, 'initiator', peerRound.lease.signal));

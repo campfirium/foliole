@@ -10,6 +10,7 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection, readRelayCollections, relayCollectionOffer, relayCollectionUrl, relayGenerationRoot,
   writeRelayCollections, type RelayCollectionOffer } from './webDavRelayCollections.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { rememberRelayCollectionCleanup, removeRelayCollectionReceipts } from './webDavRelayReceipts.js';
 
 type Runtime = {
   host: RequestSyncDatabaseHost;
@@ -42,6 +43,10 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       await assertCurrent();
       const covered = await hasFiles(input, offer);
       await assertCurrent();
+      if (covered) await input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
+        await assertCurrent();
+        await input.host.write(db => rememberRelayCollectionCleanup(db, scope, offer.generation));
+      });
       return covered;
     },
     async retire() {
@@ -62,6 +67,10 @@ export async function captureWebDavRelayCleanup(input: Runtime, context: Request
       const target = direction === 'incoming' ? scope.incoming : scope.outgoingDirection;
       const status = await input.request(relayCollectionUrl(target, offer.generation), { method: 'DELETE' }, webDavRelayStatus);
       if (status !== 204 && status !== 404) throw new Error(`webdav_relay_cleanup_failed:${status}`);
+      if (direction === 'incoming') await input.files.exclusive(webDavRelayPacketDirectory(scope), async () => {
+        await assertCurrent();
+        await input.host.write(db => db.transaction(tx => removeRelayCollectionReceipts(tx, scope, offer.generation)));
+      });
     },
     async forgetDeleted() {
       if (!captured?.retired) return;
@@ -82,7 +91,7 @@ async function readCandidate(db: DbPort, scope: WebDavRelayBodyScope): Promise<C
   const state = await readRelayCollections(db, scope.key);
   const outbox = await readWebDavRelayBodyOutbox(db, scope);
   if (state?.retired) return { offer: state.retired, sequence: state.startSequence, retired: true };
-  if (outbox.packet || (await db.query('SELECT 1 FROM sync_group_metadata WHERE key = ?',
+  if (outbox.hasStagedPacket || (await db.query('SELECT 1 FROM sync_group_metadata WHERE key = ?',
     [webDavRelayAttachmentOutboxKey(scope)])).length) return;
   if (outbox.sequence <= (state?.startSequence ?? scope.baseline.sequence) && !state?.keys.length) return;
   const prefix = `${scope.key}:attachment:`;
