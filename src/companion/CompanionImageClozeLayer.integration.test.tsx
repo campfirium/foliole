@@ -146,3 +146,45 @@ async function editSecondMask(view: ReturnType<typeof renderWithLocalization>, w
   fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
   expect((await screen.findByRole('dialog')).querySelector(`[data-saved-region="${region.id}"]`)).toHaveStyle({ left: `${(region.x + 0.05) * 100}%` });
 }
+
+it('sets focus and crop from the reading image tap, shows them in the article, and clears focus', async () => {
+  const refresh = vi.fn().mockResolvedValue(undefined);
+  const workspace = { state: await loadCompanionWorkspaceSyncState(), refreshAfterMutation: refresh } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
+  const activity = new CompanionReadingActivity('topic', () => {});
+  const current = async () => (await loadCompanionWorkspaceNode('topic'))!;
+  const renderArticle = (node: { content: string; currentVersionId?: string | null }) => <MouseGestureSettingsProvider><CompanionImageClozeLayer
+    activity={activity} nodeId="topic" content={node.content} versionId={node.currentVersionId ?? null} workspaceSync={workspace}>
+    <CompanionArticleDocument content={node.content} nodeId="topic" />
+  </CompanionImageClozeLayer></MouseGestureSettingsProvider>;
+  const view = renderWithLocalization(renderArticle(await current()));
+  async function edit(tool: 'Focus' | 'Crop', apply: () => void) {
+    const image = await waitFor(() => { const value = view.container.querySelector<HTMLImageElement>('.cm-md-image-element'); expect(value?.src).toBe(png); return value!; });
+    fireEvent.load(image);
+    fireEvent.click(image);
+    expect(await screen.findByRole('dialog')).toBeVisible();
+    fireEvent.load(screen.getByAltText('Original image'));
+    fireEvent.click(screen.getByRole('button', { name: tool }));
+    apply();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    workspace.state = await loadCompanionWorkspaceSyncState();
+    view.rerender(renderArticle(await current()));
+  }
+  const draw = () => {
+    const canvas = screen.getByTestId('image-cloze-canvas');
+    fireEvent.pointerDown(canvas, { pointerId: 30, button: 0, clientX: 100, clientY: 75 });
+    fireEvent.pointerMove(canvas, { pointerId: 30, clientX: 300, clientY: 225 });
+    fireEvent.pointerUp(canvas, { pointerId: 30 });
+  };
+  await edit('Focus', draw);
+  expect((await current()).content).toBe(`Before\n\n![Diagram;focus=2500,2500,7500,7500](asset://${hash}.png)\n\nAfter`);
+  await waitFor(() => expect(view.container.querySelector('.cm-md-image-focus-mask')).toBeTruthy());
+  await edit('Crop', draw);
+  expect((await current()).content).toBe(`Before\n\n![Diagram;focus=2500,2500,7500,7500;crop=2500,2500,7500,7500](asset://${hash}.png)\n\nAfter`);
+  await waitFor(() => expect(view.container.querySelector('[data-md-image-crop-visible="true"]')).toBeTruthy());
+  await edit('Focus', () => fireEvent.click(screen.getByRole('button', { name: 'Remove focus' })));
+  expect((await current()).content).toBe(`Before\n\n![Diagram;crop=2500,2500,7500,7500](asset://${hash}.png)\n\nAfter`);
+  await waitFor(() => expect(view.container.querySelector('.cm-md-image-focus-mask')).toBeNull());
+  expect(refresh).toHaveBeenCalledTimes(3);
+  expect(library.database.prepare("SELECT count(*) FROM nodes WHERE kind='item'").pluck().get()).toBe(0);
+});

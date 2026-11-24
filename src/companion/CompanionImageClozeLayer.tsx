@@ -4,6 +4,7 @@ import { collectImageMatches } from '../features/editor/model/markdownImageMatch
 import type { ImageClozeRegionEdit } from '../features/image-cloze/model/imageClozeRegionEdit';
 import { saveCompanionImageCloze, type CompanionImageClozeRequest } from '../shared/platform/companion/editing/companionImageCloze';
 import { deleteCompanionImageCloze } from '../shared/platform/companion/editing/companionImageClozeDeletion';
+import { saveCompanionImageRect, type CompanionImageRectKind } from '../shared/platform/companion/editing/companionImageRect';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -12,9 +13,10 @@ import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligi
 import { CompanionImageClozeEditor } from './CompanionImageClozeEditor';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionImageClozePresentation } from './useCompanionImageClozePresentation';
+import type { CompanionImageRects } from './useCompanionImageRectSession';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-type Draft = Omit<CompanionImageClozeRequest, 'regions' | 'edits'> & { attachmentId: string; src: string };
+type Draft = Omit<CompanionImageClozeRequest, 'regions' | 'edits'> & { attachmentId: string; src: string; rects?: CompanionImageRects };
 
 export function CompanionImageClozeLayer(props: {
   activity: CompanionReadingActivity; nodeId: string; content: string; versionId: string | null;
@@ -43,7 +45,8 @@ export function CompanionImageClozeLayer(props: {
     accepted.current = null;
     setDraft({ nodeId: `node-${createCompanionUuid()}`, parentNodeId: node.id, expectedContent: props.content,
       expectedVersionId: props.versionId, imageRange: { from, to }, attachmentId: match.attachmentId,
-      src: image.currentSrc || image.src, scope: getCompanionReadingScope() });
+      src: image.currentSrc || image.src, scope: getCompanionReadingScope(),
+      ...(match.focusEditable === false || props.content.startsWith('![[', from) ? {} : { rects: { focus: match.focus ?? null, crop: match.crop ?? null } }) });
   }
   async function confirm(regions: CompanionImageClozeRequest['regions'], edits: ImageClozeRegionEdit[] = []) {
     if (!draft) return;
@@ -57,6 +60,7 @@ export function CompanionImageClozeLayer(props: {
     });
     setDraft(null);
   }
+  const saveRect = async (kind: CompanionImageRectKind, rect: RectChange['rect']) => { if (draft) { await saveDraftRect(props, draft, accepted, { kind, rect }); setDraft(null); } };
   async function remove(regionId: string) {
     if (!draft) return;
     await props.activity.flush('image-cloze');
@@ -70,6 +74,24 @@ export function CompanionImageClozeLayer(props: {
     {props.children}
     {draft ? <CompanionImageClozeEditor key={draft.nodeId} attachmentId={draft.attachmentId} src={draft.src}
       savedRegions={savedRegions.filter(region => region.attachmentId === draft.attachmentId)}
-      onCancel={() => { void props.activity.run('image-cloze', async () => {}); setDraft(null); }} onConfirm={confirm} onDelete={remove} /> : null}
+      onCancel={() => { void props.activity.run('image-cloze', async () => {}); setDraft(null); }} onConfirm={confirm} onDelete={remove}
+      {...(draft.rects ? { rects: draft.rects, onSaveRect: saveRect } : {})} /> : null}
   </div>;
+}
+
+type LayerProps = Parameters<typeof CompanionImageClozeLayer>[0];
+type RectChange = { kind: CompanionImageRectKind; rect: CompanionImageRects[CompanionImageRectKind] };
+
+async function saveDraftRect(props: LayerProps, draft: Draft, accepted: { current: string | null }, change: RectChange) {
+  await props.activity.flush('image-cloze');
+  await props.activity.run('image-cloze', async () => {
+    const signature = JSON.stringify(change);
+    if (accepted.current && accepted.current !== signature) throw new Error('image_rect_saved_request_changed');
+    if (!accepted.current) {
+      await saveCompanionImageRect({ nodeId: draft.parentNodeId, expectedContent: draft.expectedContent, expectedVersionId: draft.expectedVersionId,
+        imageRange: draft.imageRange, ...change, scope: draft.scope });
+      accepted.current = signature;
+    }
+    await props.workspaceSync.refreshAfterMutation(undefined, props.nodeId);
+  });
 }

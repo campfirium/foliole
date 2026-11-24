@@ -156,3 +156,9 @@
   border-color: transparent;
   box-shadow: none;
 }
+
+.cm-md-image-cloze-region[data-image-rect-kind][data-region-state='selected'] {
+  background: transparent;
+  border-color: var(--role-accent);
+  border-style: solid;
+}

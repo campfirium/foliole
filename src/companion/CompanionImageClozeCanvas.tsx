@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
+import { imageFocusMaskStyle, type ImageFocusRect } from '../features/editor/model/markdownImageFocus';
 import type { ImageClozeDraftRegion } from '../features/image-cloze/model/imageCloze';
 import type { ImageClozeEditorPresentation } from '../features/image-cloze/model/imageClozePresentation';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -7,10 +8,10 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { ImageClozeView } from './companionImageClozeGeometry';
 import { useCompanionImageClozeGestures } from './useCompanionImageClozeGestures';
 
-function Mask(props: { region: ImageClozeDraftRegion; index: number; scale: number; marking: boolean; saved?: boolean; selected: boolean; select(): void }) {
+function Mask(props: { region: ImageClozeDraftRegion; index: number; scale: number; marking: boolean; saved?: boolean; selected: boolean; select(): void; label?: string | undefined; rectKind?: string | undefined }) {
   const t = useTranslation();
   const { region, scale } = props;
-  return <div data-saved-region={props.saved ? region.id : undefined} data-cloze-region={region.id} data-cloze-handle="move" aria-label={t('companion.imageCloze.region', { number: props.index + 1 })}
+  return <div data-saved-region={props.saved ? region.id : undefined} data-cloze-region={region.id} data-cloze-handle="move" data-image-rect-kind={props.rectKind} aria-label={props.label ?? t('companion.imageCloze.region', { number: props.index + 1 })}
     className="cm-md-image-cloze-region" data-region-state={props.selected ? 'selected' : props.saved ? 'outlined' : 'normal'} onClick={props.select} style={{ left: `${region.x * 100}%`, top: `${region.y * 100}%`, width: `${region.width * 100}%`, height: `${region.height * 100}%` }}>
     {props.marking && props.selected ? ['nw', 'ne', 'sw', 'se'].map(handle => <span key={handle} data-cloze-region={region.id} data-cloze-handle={handle}
       className="absolute flex items-center justify-center" style={{ width: 44 / scale, height: 44 / scale, transform: 'translate(-50%, -50%)', left: handle.includes('w') ? '0%' : '100%', top: handle.includes('n') ? '0%' : '100%' }}>
@@ -28,6 +29,7 @@ export function CompanionImageClozeCanvas(props: {
   src: string; view: ImageClozeView; regions: ImageClozeDraftRegion[]; marking: boolean; locked: boolean;
   setView(view: ImageClozeView): void; updateRegion(region: ImageClozeDraftRegion): void;
   onStatus(status: 'ready' | 'missing'): void;
+  rectMode?: { kind: 'focus' | 'crop'; label: string; rect: ImageFocusRect | null } | undefined;
 }) {
   const t = useTranslation();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -51,8 +53,10 @@ export function CompanionImageClozeCanvas(props: {
     <div data-cloze-image className="absolute left-1/2 top-1/2" style={{ ...size, transform: `translate(-50%, -50%) translate(${props.view.x}px, ${props.view.y}px) scale(${props.view.scale})`, transformOrigin: 'center' }}>
       <img ref={props.image} alt={t('companion.imageCloze.source')} src={props.src} draggable={false} className="block h-full w-full"
         onLoad={() => { fit(); props.onStatus('ready'); }} onError={() => props.onStatus('missing')} />
+      {props.rectMode?.rect ? <div aria-hidden="true" data-image-rect-shade={props.rectMode.kind}
+        style={{ ...imageFocusMaskStyle(props.rectMode.rect), ...(props.rectMode.kind === 'crop' ? { backgroundColor: 'rgb(0 0 0 / 0.72)' } : {}) }} /> : null}
       {props.savedRegions.map((region, index) => <Mask key={region.id} region={{ ...region, answer: '' }} index={index} scale={props.view.scale} marking={props.marking} saved selected={props.selected === region.id} select={() => { if (!props.locked) props.select(region.id); }} />)}
-      {props.regions.map((region, index) => <Mask key={region.id} region={region} index={props.savedRegions.length + index} scale={props.view.scale} marking={props.marking} selected={props.selected === region.id} select={() => { if (!props.locked) props.select(region.id); }} />)}
+      {props.regions.map((region, index) => <Mask key={region.id} region={region} index={props.savedRegions.length + index} label={props.rectMode?.label} rectKind={props.rectMode?.kind} scale={props.view.scale} marking={props.marking} selected={props.selected === region.id} select={() => { if (!props.locked) props.select(region.id); }} />)}
     </div>
   </div>;
 }
