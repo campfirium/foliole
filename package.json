@@ -316,7 +316,7 @@
       "glob": "14.0.6"
     },
     "@electron/universal": "3.0.6",
-    "minimatch": "11.0.8",
+    "minimatch": "11.0.9",
     "@capacitor/cli": {
       "glob": "14.0.6"
     },
