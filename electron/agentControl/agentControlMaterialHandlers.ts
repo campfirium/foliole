@@ -9,15 +9,8 @@ import {
   updateAgentControlMaterial
 } from './agentControlMaterialMutations.js';
 import { readAgentControlMaterialRelations } from './agentControlMaterialRelations.js';
-import {
-  AGENT_CONTROL_MATERIAL_SEARCH_LIMIT,
-  AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT,
-  normalizeBodyObject,
-  normalizeOptionalLimit,
-  readAgentControlJsonBody,
-  readAgentControlMaterial,
-  searchAgentControlMaterials
-} from './agentControlMaterials.js';
+import { normalizeBodyObject, readAgentControlJsonBody, readAgentControlMaterial } from './agentControlMaterials.js';
+import { normalizeMaterialSearchLimit, searchAgentControlMaterials } from './agentControlMaterialSearch.js';
 import type { AgentControlRequestHandlerOptions } from './agentControlRequestHandler.js';
 import { isBearerTokenAuthorized } from './agentControlToken.js';
 
@@ -134,10 +127,10 @@ export async function handleMaterialSearch(
     sendJson(response, 400, { error: 'invalid_request' });
     return;
   }
-  const limit = normalizeOptionalLimit(body.limit, AGENT_CONTROL_MATERIAL_SEARCH_LIMIT, AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT);
+  const limit = normalizeMaterialSearchLimit(body.limit);
   const payload = searchAgentControlMaterials(query, limit, offset);
   recordRequest({ capability, options, request, result: 'success' });
-  sendJson(response, 200, payload as unknown as Record<string, unknown>);
+  sendJson(response, 200, payload);
 }
 
 export async function handleMaterialUpdate(

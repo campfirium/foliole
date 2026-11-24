@@ -1,19 +1,13 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import type { WorkspaceSearchResult } from '../../lib/core/database/workspaceSearch.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { searchWorkspace } from '../database/workspaceSearch.js';
 
 import { projectAgentMaterialIdentity, type AgentMaterialSpecialKind } from './agentControlMaterialIdentity.js';
 import {
   readAgentControlMaterialListParent,
   type AgentMaterialListParentSummary
 } from './agentControlMaterialListParents.js';
-import {
-  projectAgentMaterialReveal,
-  projectAgentMaterialSearchResults,
-  type AgentMaterialSearchResult
-} from './agentControlMaterialsProjection.js';
+import { projectAgentMaterialReveal } from './agentControlMaterialsProjection.js';
 
 export {
   AGENT_CONTROL_JSON_BODY_LIMIT_BYTES,
@@ -24,8 +18,6 @@ export {
 export const AGENT_CONTROL_MATERIAL_CONTENT_LIMIT = 4_000;
 export const AGENT_CONTROL_MATERIAL_CHILDREN_LIMIT = 30;
 export const AGENT_CONTROL_MATERIAL_CHILD_PREVIEW_LIMIT = 220;
-export const AGENT_CONTROL_MATERIAL_SEARCH_LIMIT = 20;
-export const AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT = 40;
 
 interface MaterialRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
@@ -77,14 +69,6 @@ export interface AgentMaterialChildSummary {
   special_kind?: AgentMaterialSpecialKind;
   title: string;
   updated_at: string;
-}
-
-export interface AgentMaterialSearchPayload {
-  count: number;
-  limit: number;
-  next_offset?: number | null;
-  query: string;
-  results: AgentMaterialSearchResult[];
 }
 
 export interface AgentMaterialChildrenPayload {
@@ -210,19 +194,5 @@ function toChildSummary(row: MaterialRow): AgentMaterialChildSummary {
     kind: row.kind,
     title: row.title,
     updated_at: row.updated_at
-  };
-}
-
-export function searchAgentControlMaterials(query: string, limit: number, offset?: number): AgentMaterialSearchPayload {
-  const normalizedQuery = query.trim();
-  const matches = searchWorkspace(normalizedQuery) as WorkspaceSearchResult[];
-  const start = offset ?? 0;
-  const results = projectAgentMaterialSearchResults(matches.slice(start, start + limit), limit);
-  return {
-    count: results.length,
-    limit,
-    ...(offset !== undefined ? { next_offset: start + limit < matches.length ? start + limit : null } : {}),
-    query: normalizedQuery,
-    results
   };
 }

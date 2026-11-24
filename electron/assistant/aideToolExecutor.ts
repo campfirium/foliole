@@ -7,6 +7,7 @@ import { AIDE_LOCAL_DIVE_TOOLS } from './aideLocalDiveTools.js';
 import { AIDE_LOCAL_EXTERNAL_TOOLS } from './aideLocalExternalTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { checkAideReadTarget, filterAideReadResult, type AideReadScope } from './aideReadScope.js';
+import { searchAideMaterials } from './aideScopedMaterialSearch.js';
 import { validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
 import {
@@ -62,13 +63,38 @@ export async function executeAideTool(
   const readScope = definition.mutates ? undefined : options.session?.readScope;
   if (readScope && await checkAideReadTarget(readScope, request.tool, body)) return outsideReadScope();
   if (definition.mutates) return executeWrite(request.tool, definition, body, descriptor, options);
-  const raw = definition.local
-    ? await executeLocal(request.tool, false, body, options)
-    : await executeRemote(definition, body, descriptor, options);
+  const scopedSearch = request.tool === 'search_materials' ? readScope : undefined;
+  const raw = scopedSearch
+    ? await executeScopedSearch(scopedSearch, body, options)
+    : await executeRead(request.tool, definition, body, descriptor, options);
   if (!raw.success) return raw;
-  const outcome = readScope ? await filterReadResult(readScope, request.tool, raw) : raw;
+  const outcome = readScope && !scopedSearch ? await filterReadResult(readScope, request.tool, raw) : raw;
   const charge = chargeAideReadResult(options.session, outcome.contentItems[0]?.text ?? '');
   return charge.ok ? outcome : readLimitReached(charge.remaining);
+}
+
+function executeRead(
+  tool: string,
+  definition: AideToolDefinition,
+  body: Record<string, unknown>,
+  descriptor: AgentControlSessionDescriptor,
+  options: NonNullable<Parameters<typeof executeAideTool>[1]>
+) {
+  return definition.local ? executeLocal(tool, false, body, options) : executeRemote(definition, body, descriptor, options);
+}
+
+async function executeScopedSearch(
+  scope: AideReadScope,
+  body: Record<string, unknown>,
+  options: NonNullable<Parameters<typeof executeAideTool>[1]>
+) {
+  try {
+    options.onDispatch?.(false);
+    return result(await searchAideMaterials(scope, body, options.signal), true);
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    return failure('read_failed');
+  }
 }
 
 async function executeWrite(
