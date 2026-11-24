@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { resolveTextAnchorLinkInContent } from '../../features/nodes/model/textAnchorResolution';
@@ -6,11 +6,13 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
 import { hasWorkspaceRuntimeRepository, loadReadingResumeFromRuntime } from '../../shared/platform/workspaceRuntimeRepository';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
+import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 
 import { buildAnchorViewState } from './anchorViewState';
 import { flushVisibleReadingJump } from './appControllerSaveActiveNodeView';
 import type { useWorkspaceSelectors } from './appControllerState';
+import { currentNavigationGeneration, isNavigationGenerationCurrent } from './navigationRequestGeneration';
 import { requestReadingPositionApply } from './readingPositionRequests';
 import type { useAppRuntime } from './useAppRuntime';
 
@@ -39,21 +41,53 @@ function resolveViewRestore(viewState: NodeViewState, targetViewportMode?: 'cent
   };
 }
 
+type DeferredAnchorNavigation = {
+  generation: number;
+  libraryScope: ReturnType<typeof useWorkspaceStore.getState>['libraryScope'];
+  result: NodeNavigationResult;
+};
+
+function useRevealLoadedAnchor(
+  pending: { current: DeferredAnchorNavigation | null },
+  apply: (result: NodeNavigationResult | null) => boolean
+) {
+  const activeNodeId = useWorkspaceStore(state => state.activeNodeId);
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  const isLoaded = useWorkspaceStore(state => isNodeDocumentLoaded(state.nodesById[state.activeNodeId ?? '']));
+  useLayoutEffect(() => {
+    const request = pending.current;
+    if (!request) return;
+    if (request.result.nodeId !== activeNodeId || request.libraryScope !== libraryScope ||
+      !isNavigationGenerationCurrent(request.generation)) {
+      pending.current = null;
+    } else if (isLoaded) {
+      apply(request.result);
+    }
+  }, [activeNodeId, apply, isLoaded, libraryScope, pending]);
+}
+
 export function useNavigationReadingPosition(
   runtime: ReturnType<typeof useAppRuntime>,
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'],
   setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'],
   nodesById: Record<string, Node> = {}
 ) {
+  const pending = useRef<DeferredAnchorNavigation | null>(null);
   const applyNavigationReadingPosition = useCallback(
     (result: NodeNavigationResult | null) => {
+      pending.current = null;
       if (!result) {
         return false;
       }
       if (result.focusAnchor && (getPdfAnchorLocators(result.focusAnchor.locator).length > 0)) {
         return false;
       }
-      const targetNode = useWorkspaceStore.getState().nodesById[result.nodeId] ?? nodesById[result.nodeId];
+      const workspace = useWorkspaceStore.getState();
+      const targetNode = workspace.nodesById[result.nodeId] ?? nodesById[result.nodeId];
+      if (result.focusAnchor && targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository()) {
+        pending.current = { result, generation: currentNavigationGeneration(), libraryScope: workspace.libraryScope };
+        return true;
+      }
       const focusAnchor = result.focusAnchor && targetNode
         ? resolveTextAnchorLinkInContent(result.focusAnchor, targetNode.content)
         : result.focusAnchor;
@@ -77,6 +111,8 @@ export function useNavigationReadingPosition(
     },
     [nodeViewById, nodesById, runtime, setNodeViewState]
   );
+
+  useRevealLoadedAnchor(pending, applyNavigationReadingPosition);
 
   return {
     applyNavigationReadingPosition
