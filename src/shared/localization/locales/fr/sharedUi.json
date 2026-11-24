@@ -20,6 +20,7 @@
   "shared.confirm.cancel": "Annuler",
   "shared.confirm.confirm": "Confirmer",
   "shared.close": "Fermer",
+  "shared.flow.soonNoOtherTopics": "Il n’y a pas d’autre sujet à lire.",
   "shared.selection.commands": "Commandes de sélection\nLe démarrage de",
   "shared.startup.originalDataProtection": "Pour protéger votre bibliothèque, Foliole a interrompu cette mise à niveau. Certaines informations des anciens enregistrements de synchronisation n’ont pas pu être vérifiées dans la bibliothèque actuelle. Un redémarrage ne rétablira pas ces informations. Copiez les diagnostics et contactez l’assistance.",
   "shared.startup.errorTitle": "Foliole a rencontré un problème",

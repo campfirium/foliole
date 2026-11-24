@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
+
 interface ReadingFeedback {
   nodeId: string | null;
   errorMessage: string | null;
@@ -26,13 +28,13 @@ export function resetReadingReviewFeedback() {
   publish(emptyFeedback);
 }
 
-export async function submitReadingReviewFeedback(nodeId: string | null, save: () => Promise<boolean>) {
+export async function submitReadingReviewFeedback(nodeId: string | null, save: () => Promise<SoonReviewActionResult>) {
   if (!nodeId || pending) return;
   pending = true;
   const previous = feedback.nodeId === nodeId ? feedback : emptyFeedback;
   const attempt: ReadingFeedback = { ...previous, nodeId, isSubmitting: true };
   publish(attempt);
-  let saved: boolean;
+  let saved: SoonReviewActionResult;
   try {
     saved = await save();
   } catch {
@@ -41,7 +43,7 @@ export async function submitReadingReviewFeedback(nodeId: string | null, save: (
     pending = false;
   }
   if (feedback !== attempt) return;
-  publish(saved ? emptyFeedback : {
+  publish(saved !== false ? emptyFeedback : {
     nodeId,
     errorMessage: 'Failed to save. Please retry.',
     isSubmitting: false,

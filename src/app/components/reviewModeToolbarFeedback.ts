@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { resetReadingReviewFeedback, submitReadingReviewFeedback, useReadingReviewFeedbackState } from '../hooks/readingReviewFeedbackState';
 import { resetReviewGradeFeedback, submitReviewGradeFeedback, useReviewGradeFeedbackState } from '../hooks/reviewGradeFeedbackState';
@@ -30,7 +31,7 @@ export function useReadingReviewFeedback(args: {
   onDismissReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onReadReviewTopic: () => Promise<boolean>;
-  onRevisitReviewTopicSoon: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   reviewCurrentNodeId: string | null;
 }) {
   const { onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic, onRevisitReviewTopicSoon } = args;

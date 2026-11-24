@@ -102,7 +102,7 @@ export interface BuildControllerLayoutPropsArgs {
     postponeReviewTopic: (now?: string) => Promise<boolean>;
     setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
     dismissReviewTopic: (now?: string) => Promise<boolean>;
-    revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
+    revisitReviewTopicSoon: WorkspaceState['revisitReviewTopicSoon'];
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;

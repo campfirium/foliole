@@ -20,6 +20,7 @@
   "shared.confirm.cancel": "रद्द करें",
   "shared.confirm.confirm": "पुष्टि करें",
   "shared.close": "बंद करें",
+  "shared.flow.soonNoOtherTopics": "पढ़ने के लिए कोई और विषय नहीं है।",
   "shared.selection.commands": "चुनी सामग्री की कार्रवाइयाँ",
   "shared.startup.originalDataProtection": "आपकी लाइब्रेरी की सुरक्षा के लिए Foliole ने यह अपग्रेड रोक दिया है। पुराने सिंक रिकॉर्ड की कुछ जानकारी मौजूदा लाइब्रेरी में सत्यापित नहीं हो सकी। ऐप फिर शुरू करने से यह जानकारी वापस नहीं आएगी। निदान की जानकारी कॉपी करें और सहायता टीम से संपर्क करें।",
   "shared.startup.errorTitle": "Foliole शुरू करते समय समस्या आई",

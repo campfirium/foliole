@@ -5,6 +5,7 @@ import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/revi
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { readLegacyCycleProjection } from '../../../../../lib/core/flow/cycleFlowLegacy';
 import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
+import { isDailyFlowNoOtherTopics } from '../../../../../lib/core/flow/dailyFlowSoonOutcome';
 import { retainLegacyHistoryEncoding } from '../../../../../lib/core/flow/flowHistoryEntry';
 import { restoreFlowHistoryEntryAsync } from '../../../../../lib/core/flow/flowHistoryEntryAsync';
 import type { FlowTiming } from '../../../../../lib/core/flow/flowTiming';
@@ -48,6 +49,9 @@ export function commitCompanionFlowHistory(args: {
   }, flowHistoryRefreshScope(args.entry), undefined, timing).then(result => {
     if (args.entry.beforeContext.reviewSession.daily) settleDailyFlowRetry(args.entry.id);
     return result;
+  }, error => {
+    if (isDailyFlowNoOtherTopics(error)) settleDailyFlowRetry(args.entry.id);
+    throw error;
   });
 }
 

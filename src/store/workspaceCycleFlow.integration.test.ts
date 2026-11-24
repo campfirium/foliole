@@ -154,10 +154,16 @@ it('keeps sleeping and mode-hidden rows in place and returns without spinning wh
   expect((await readDailyFlow(peer.port))?.session).toEqual(session);
 });
 
-it('reuses one identity for a single topic repeatedly sent Soon and counts its initial pass once', async () => {
+it('counts a single topic once and rejects further Soon actions without saving a revision', async () => {
   node(peer, 'a', 'topic');
-  let session = await open(peer, now, settings(peer), 'reading-only');
-  for (let index = 0; index < 6; index++) session = await act(peer, session, 'soon');
+  const first = await open(peer, now, settings(peer), 'reading-only');
+  const session = await act(peer, first, 'soon');
+  const rows = await readCycleRows(peer.port);
+  for (let index = 0; index < 5; index++) {
+    await expect(act(peer, session, 'soon')).rejects.toThrow('daily_flow_no_other_topics');
+  }
+  expect((await readDailyFlow(peer.port))?.session).toEqual(session);
+  expect(await readCycleRows(peer.port)).toEqual(rows);
   expect(session.currentNodeId).toBe('a');
   expect(session.readTopicCount).toBe(1);
   expect(session.cycle?.remaining).toBe(0);

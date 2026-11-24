@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import type { MutableRefObject } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
@@ -222,7 +223,7 @@ export interface WorkspaceLayoutFieldTypes {
   onPostponeReviewTopic: () => Promise<boolean>;
   onOpenPostponeTopicPanel: (nodeId?: string | null) => boolean;
   onDismissReviewTopic: () => Promise<boolean>;
-  onRevisitReviewTopicSoon: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   onContinueReading: () => void;
   onResumeReviewItem: () => void;
   onExitFlowHere?: () => void;

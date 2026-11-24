@@ -3,10 +3,12 @@ import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 import { cycleChanges } from './cycleFlowChanges.js';
 import { chooseCycleCurrent, isCycleCurrentReady } from './cycleFlowOpen.js';
 import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
+import { selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, copyCycleNavigation } from './cycleFlowState.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { fullDayCandidates } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
+import { DAILY_FLOW_NO_OTHER_TOPICS } from './dailyFlowSoonOutcome.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
 import { calculateReviewStepElapsedMs, resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
@@ -25,6 +27,12 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   const currentRow = rows.get(current);
   if (nextReading && (!currentRow?.active || currentRow.order_key !== (source.dive?.position ?? cycle.scanAfter) ||
     !eligible.has(nextReading) || mode === 'review-first')) throw new Error('daily_flow_learning_changed');
+  if (!source.dive && args.readingAction === 'soon' && currentRow?.cohort === 'soon') {
+    const other = await selectCycleSuccessor(db, { ...cycle }, { mode, now: args.now, settings, excluded: current });
+    if (!other) throw new Error(DAILY_FLOW_NO_OTHER_TOPICS);
+    // Recheck the successor at commit time when a prepared window would return the same topic.
+    if (db.preparedNavigation?.next.currentNodeId === current) db.preparedNavigation = undefined;
+  }
   for (const id of ids) {
     const before = rows.get(id);
     const active = eligible.has(id) || (id === current && args.readingAction === 'soon');

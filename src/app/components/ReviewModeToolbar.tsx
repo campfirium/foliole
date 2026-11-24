@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -42,7 +43,7 @@ interface ReviewModeToolbarProps {
   onReadReviewTopic: (options?: ReadReviewTopicOptions) => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
-  onRevisitReviewTopicSoon: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   onContinueReading: () => void;
   onRevealAnswer: () => void;
   onExitReviewMode: () => void;

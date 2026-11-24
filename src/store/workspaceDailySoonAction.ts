@@ -1,5 +1,9 @@
+import { DAILY_FLOW_NO_OTHER_TOPICS, isDailyFlowNoOtherTopics } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import { readWorkspaceOperationLearning } from '../shared/platform/runtime/workspaceOperationLearning';
+import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { persistAndApplyReadingReviewPatch } from './workspaceReadingReviewHistoryCommit';
@@ -18,7 +22,7 @@ export function createRevisitReviewTopicSoonAction(set: Set, get: () => Workspac
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId || pendingNodeIds.has(currentNodeId) ||
       !isReadingReviewItemNode(snapshot.nodesById[currentNodeId])) return false;
-    const result = await persistAndApplyReadingReviewPatch({ currentNodeId, get, set, pendingNodeIds,
+    return persistAndApplyReadingReviewPatch({ currentNodeId, get, set, pendingNodeIds,
       persistence: runtimeWorkspaceReviewPersistence, buildPatch: async state => {
         const nodesById = await readWorkspaceOperationLearning(state.nodesById, [currentNodeId], state.libraryScope ?? state.reviewSession.daily?.scope);
         const node = nodesById?.[currentNodeId];
@@ -31,7 +35,12 @@ export function createRevisitReviewTopicSoonAction(set: Set, get: () => Workspac
           beforeReviewSession: snapshot.reviewSession, mutationTimestamp: now, nodeId: currentNodeId,
           state, title: 'Soon Topic' });
         return { historyEntry, nextNodesForSync: [], patch: { ...active, reviewSession } };
-      } });
-    return Boolean(result);
+      } }).then(Boolean, error => {
+        if (!isDailyFlowNoOtherTopics(error)) throw error;
+        if (get().reviewSession === snapshot.reviewSession) {
+          showAppRuntimeNotice(translate(getStoredAppLocale(), 'shared.flow.soonNoOtherTopics'), 'info');
+        }
+        return DAILY_FLOW_NO_OTHER_TOPICS;
+      });
   };
 }

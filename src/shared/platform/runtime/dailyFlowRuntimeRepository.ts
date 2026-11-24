@@ -1,6 +1,7 @@
 import type { WorkspaceNodeSnapshot } from '../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult } from '../../../../lib/core/flow/dailyFlowContract';
 import { retainDailyFlowRetry, settleDailyFlowRetry } from '../../../../lib/core/flow/dailyFlowRetry';
+import { isDailyFlowNoOtherTopics } from '../../../../lib/core/flow/dailyFlowSoonOutcome';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
@@ -33,6 +34,9 @@ export function commitDailyFlowRuntime(args: DailyFlowCommitArgs, knownNodes: Re
     const display = await loadDailyFlowDisplayNodes(result, knownNodes, args.token.scope);
     settleDailyFlowRetry(args.opId);
     return { ...result, appliedReadings: retained.readings, nodes: display };
+  }, error => {
+    if (isDailyFlowNoOtherTopics(error)) settleDailyFlowRetry(args.opId);
+    throw error;
   });
 }
 

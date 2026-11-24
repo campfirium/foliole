@@ -1,5 +1,6 @@
 import { useContext } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
@@ -48,7 +49,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   onReadReviewTopic: WorkspaceLayoutProps['review']['onReadReviewTopic'];
   onPostponeReviewTopic: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
-  onRevisitReviewTopicSoon: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   onContinueReading: () => void;
   onExitReviewMode: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;

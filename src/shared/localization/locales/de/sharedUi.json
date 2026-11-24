@@ -20,6 +20,7 @@
   "shared.confirm.cancel": "Abbrechen",
   "shared.confirm.confirm": "Bestätigen",
   "shared.close": "Schließen",
+  "shared.flow.soonNoOtherTopics": "Es gibt keine anderen Themen zum Lesen.",
   "shared.selection.commands": "Auswahlbefehle",
   "shared.startup.originalDataProtection": "Zum Schutz Ihrer Bibliothek hat Foliole dieses Upgrade angehalten. Einige Informationen aus älteren Synchronisierungseinträgen konnten in der aktuellen Bibliothek nicht überprüft werden. Ein Neustart stellt diese Informationen nicht wieder her. Bitte kopieren Sie die Diagnosedaten und wenden Sie sich an den Support.",
   "shared.startup.errorTitle": "Foliole Beim Start ist ein Problem aufgetreten",

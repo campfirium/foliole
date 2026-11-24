@@ -1,5 +1,6 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
+import { isDailyFlowNoOtherTopics } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import {
@@ -113,10 +114,12 @@ export async function persistAndApplyReadingReviewPatch(args: {
     if (!began) return false;
     let persisted = false;
     let invalidPersistence = false;
+    let blockedSoon: unknown;
     try {
       persisted = await persistPreparedReading(args.get, result, args.persistence);
     } catch (error) {
-      await recoverWorkspaceDailyFlow(args.set, args.get, error, result.historyEntry.mutationTimestamp);
+      if (isDailyFlowNoOtherTopics(error)) blockedSoon = error;
+      else await recoverWorkspaceDailyFlow(args.set, args.get, error, result.historyEntry.mutationTimestamp);
       invalidPersistence = isWorkspacePartialPersistenceError(error);
       persisted = false;
     }
@@ -126,6 +129,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
           ? createEmptyWorkspaceActionHistory()
           : failWorkspaceAction(state.appActionHistory, result.historyEntry.id)
       }));
+      if (blockedSoon) throw blockedSoon;
       return false;
     }
     const { applied, undoRequested } = settleCommittedReadingPatch(args.set, result, beforeReviewSession);

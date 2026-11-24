@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
@@ -50,7 +51,7 @@ interface UseReviewKeyboardShortcutsArgs {
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: (nodeId: string) => boolean;
   dismissReviewTopic: () => Promise<boolean>;
-  revisitReviewTopicSoon: () => Promise<boolean>;
+  revisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   scrollReviewReadingDown: () => boolean;
   scrollReviewReadingUp: () => boolean;
   goBack: () => void;

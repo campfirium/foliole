@@ -20,6 +20,7 @@
   "shared.confirm.cancel": "キャンセル",
   "shared.confirm.confirm": "確認",
   "shared.close": "閉じる",
+  "shared.flow.soonNoOtherTopics": "ほかに読むトピックはありません。",
   "shared.selection.commands": "選択コマンド",
   "shared.startup.originalDataProtection": "ライブラリを保護するため、Foliole はこのアップグレードを停止しました。古い同期記録の一部の情報を現在のライブラリで確認できませんでした。再起動してもこの情報は復元されません。診断情報をコピーしてサポートにお問い合わせください。",
   "shared.startup.errorTitle": "Foliole の起動で問題が発生しました",

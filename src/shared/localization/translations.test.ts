@@ -95,3 +95,13 @@ it('uses the Hindi catalog for the SuperMemo copy in the Hindi interface', async
   expect(translate('hi', 'settings.title')).toBe('सेटिंग');
   expect(translate('hi', 'desktop.superMemoDrafts.title')).toBe('SuperMemo इंपोर्ट');
 });
+
+it('localizes the repeated Soon notice in every registered interface language', async () => {
+  const key = 'shared.flow.soonNoOtherTopics';
+  const english = translate('en', key);
+  expect(english).toBe('No other topics to read.');
+  for (const locale of APP_LOCALES.filter(value => value !== 'en')) {
+    expect(await preloadTranslationCatalog(locale)).toBe(true);
+    expect(translate(locale, key)).not.toBe(english);
+  }
+});

@@ -1,3 +1,4 @@
+import type { SoonReviewActionResult } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow/dailyFlowSession';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
@@ -88,7 +89,7 @@ export interface WorkspaceState {
   readReviewTopic: (now?: string, options?: ReadReviewTopicOptions) => Promise<boolean>;
   postponeReviewTopic: (now?: string) => Promise<boolean>;
   setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string, expectedReading?: Node['reading'], unit?: 'weeks' | 'days') => Promise<boolean>;
-  revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
+  revisitReviewTopicSoon: (now?: string) => Promise<SoonReviewActionResult>;
   dismissReviewTopic: (now?: string) => Promise<boolean>;
   exitReviewSession: () => void;
   deleteNode: (nodeId: string, continuation?: WorkspaceDeleteContinuation) => void;

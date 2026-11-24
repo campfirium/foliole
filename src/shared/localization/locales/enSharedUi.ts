@@ -20,6 +20,7 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.confirm.cancel': 'Cancel',
   'shared.confirm.confirm': 'Confirm',
   'shared.close': 'Close',
+  'shared.flow.soonNoOtherTopics': 'No other topics to read.',
   'shared.selection.commands': 'Selection commands',
   'shared.startup.originalDataProtection': 'To protect your library, Foliole has stopped this upgrade. Some information in older sync records could not be verified in the current library. Restarting will not restore this information. Please copy the diagnostics and contact support.',
   'shared.startup.errorTitle': 'Foliole startup encountered a problem',

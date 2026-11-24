@@ -1,3 +1,4 @@
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -176,6 +177,6 @@ export interface BuildLayoutPropsArgs {
   readReviewTopic: WorkspaceState['readReviewTopic'];
   postponeReviewTopic: () => Promise<boolean>;
   dismissReviewTopic: () => Promise<boolean>;
-  revisitReviewTopicSoon: () => Promise<boolean>;
+  revisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   revealReviewAnswer: () => void;
 }

@@ -82,3 +82,30 @@ it.each(['pending', 'failed'] as const)('displays a committed body and accepts a
   expect((await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).undoStack).toHaveLength(2);
   ui.unmount();
 });
+
+it('shows a localized notice and keeps the last topic and its saved history on repeated Soon', async () => {
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const ui = renderHook(() => useSurface(initial, vi.fn()));
+  await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
+  for (let index = 0; index < 2; index++) {
+    const current = ui.result.current.flow.view.currentCard!.nodeId;
+    await act(async () => { await ui.result.current.actions.handleDismissReviewTopic(); });
+    expect(ui.result.current.actions.readingError).toBeNull();
+    expect(ui.result.current.flow.view.currentCard!.nodeId).not.toBe(current);
+  }
+  const current = ui.result.current.flow.view.currentCard!.nodeId;
+  await act(async () => { await ui.result.current.actions.handleSoonReviewTopic(); });
+  expect(ui.result.current.actions.readingError).toBeNull();
+  const owner = getIosCompanionDatabaseOwner();
+  const saved = await owner.read(db => readDailyFlow(db));
+  const history = await loadCompanionFlowHistory(ui.result.current.flow.historyKey);
+  expect(saved?.session.currentNodeId).toBe(current);
+  expect(history.undoStack).toHaveLength(3);
+
+  await act(async () => { await ui.result.current.actions.handleSoonReviewTopic(); });
+
+  expect(ui.result.current.actions.readingError).toBe('No other topics to read.');
+  expect(ui.result.current.flow.view.currentCard!.nodeId).toBe(current);
+  expect(await owner.read(db => readDailyFlow(db))).toEqual(saved);
+  expect(await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).toEqual(history);
+});

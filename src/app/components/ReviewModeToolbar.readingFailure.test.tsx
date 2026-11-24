@@ -1,15 +1,25 @@
 import { act, fireEvent, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { installBrowserDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowBrowserRuntime';
+import { installWorkspaceBrowserCommit } from '../../store/workspaceBrowserCommit';
+import { browserFlow, flowNode, flowNow } from '../../store/workspaceBrowserFlow.testSupport';
 import { ReviewShortcutHarness } from '../hooks/useReviewKeyboardShortcuts.testUtils';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
+import { WorkspaceRuntimeNotice } from './WorkspaceRuntimeNotice';
+
+afterEach(() => {
+  installWorkspaceBrowserCommit(null);
+  installBrowserDailyFlowRuntime(null);
+});
 
 function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}, shortcutRead?: () => Promise<boolean>, shortcutOverrides: Parameters<typeof ReviewShortcutHarness>[0] = {}) {
   return renderWithLocalization(
     <>
     {shortcutRead && <ReviewShortcutHarness reviewCurrentNodeId="reading-1" readingReadShortcuts={{ primary: { key: 'f' } }} readReviewTopic={shortcutRead} {...shortcutOverrides} />}
+    <WorkspaceRuntimeNotice />
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
@@ -155,3 +165,35 @@ for (const [key, actionProp] of [['2', 'postponeReviewTopic'], ['4', 'dismissRev
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 }
+
+it('explains why a repeated Soon stays on the only remaining topic without adding another operation', async () => {
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse(flowNow));
+  try {
+    const store = browserFlow([flowNode('reading-1')]);
+    await store.getState().startReviewSession(flowNow);
+    renderReadingToolbar({ onRevisitReviewTopicSoon: () => store.getState().revisitReviewTopicSoon(flowNow) });
+    const soon = screen.getByRole('button', { name: 'Soon' });
+    await act(async () => { fireEvent.click(soon); });
+
+    const first = store.getState().reviewSession;
+    const raw = () => localStorage.getItem('foliole-workspace-v1');
+    const saved = JSON.parse(raw()!).state.browserDailyFlow;
+    const history = store.getState().appActionHistory.undoStack;
+    expect(first.currentNodeId).toBe('reading-1');
+    expect(first.readTopicCount).toBe(1);
+    expect(saved.rows).toEqual([expect.objectContaining({ node_id: 'reading-1', cohort: 'soon' })]);
+    expect(Object.keys(saved.operations)).toHaveLength(1);
+    expect(history).toHaveLength(1);
+
+    await act(async () => { fireEvent.click(soon); });
+
+    expect(screen.getByText('No other topics to read.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(soon).toBeEnabled();
+    expect(store.getState().reviewSession).toEqual(first);
+    expect(JSON.parse(raw()!).state.browserDailyFlow).toEqual(saved);
+    expect(store.getState().appActionHistory.undoStack).toEqual(history);
+  } finally {
+    vi.restoreAllMocks();
+  }
+});

@@ -90,7 +90,7 @@ Send `reading_schedule` on a Topic `materials/create` request. With the CLI, pas
 
 Priority is a Foliole integer from 0 to 9. Timestamps require an offset and are stored in UTC, with the next date at or after the last handled date. Interval milliseconds and repetition count are nonnegative safe integers. Growth factor is at least 1. All six fields are required. The Topic and its active schedule are committed together and use Foliole's existing queue and sync. A malformed schedule or a schedule on a Folder or Item returns HTTP 400 when the permission is on. As with ordinary creation, repeating a successful request creates another material.
 
-The mobile Flow progress indicator uses the current learning session. Its display stays in the app UI because it adds no new learning action or stored data.
+The mobile Flow progress indicator uses the current learning session. Its display stays in the app UI because it adds no new learning action or stored data. When the current Topic is already in Soon and no other material is ready in Flow, repeating Soon shows a notice and creates no queue change or history entry. Flow navigation stays in the app UI.
 
 ### Importing an Item first review date
 

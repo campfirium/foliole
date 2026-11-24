@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { isDailyFlowNoOtherTopics } from '../../lib/core/flow/dailyFlowSoonOutcome';
 import { timeFlow, type FlowTiming, type FlowTimingStatus } from '../../lib/core/flow/flowTiming';
 import { findEnabledSequentialReadingSourceId } from '../../lib/core/review/sequentialReadingSources';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -69,8 +72,13 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
         : await submitPreparedAction(args, { token, action, grade, releaseSequentialReading }, pending,
           () => latest.current.active, setReadingError, timing));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not complete this action.';
-      (action === 'grade' ? setReviewError : setReadingError)(message);
+      if (isDailyFlowNoOtherTopics(error)) {
+        status = 'cancelled';
+        setReadingError(translate(getStoredAppLocale(), 'shared.flow.soonNoOtherTopics'));
+      } else {
+        const message = error instanceof Error ? error.message : 'Could not complete this action.';
+        (action === 'grade' ? setReviewError : setReadingError)(message);
+      }
     } finally {
       timing?.('action', status);
       args.flow.releaseAction();

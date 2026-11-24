@@ -1,3 +1,4 @@
+import type { SoonReviewActionResult } from '../../../lib/core/flow/dailyFlowSoonOutcome';
 import { DESKTOP_REMINDER_OPEN_FLOW } from '../../../lib/platform/nativeReminderContract';
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
@@ -65,7 +66,7 @@ interface PaletteCommandRunnerArgs
   postponeReviewTopic: () => Promise<boolean | void>;
   openPostponeTopicPanel: () => void;
   dismissReviewTopic: () => Promise<boolean | void>;
-  revisitReviewTopicSoon: () => Promise<boolean>;
+  revisitReviewTopicSoon: () => Promise<SoonReviewActionResult>;
   redoWorkspaceAction: () => boolean | Promise<boolean>;
   isReviewMode: boolean;
   openPerformancePanel: () => void;

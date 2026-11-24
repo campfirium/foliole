@@ -3,6 +3,7 @@ import { openStoredDailyFlow } from '../../../../lib/core/flow/cycleFlowOpen';
 import type { DailyFlowSettings } from '../../../../lib/core/flow/dailyFlowContract';
 import { readDailyFlowFuture } from '../../../../lib/core/flow/dailyFlowFuture';
 import { retainDailyFlowRetry, settleDailyFlowRetry } from '../../../../lib/core/flow/dailyFlowRetry';
+import { isDailyFlowNoOtherTopics } from '../../../../lib/core/flow/dailyFlowSoonOutcome';
 import { readStoredDailyFlowView } from '../../../../lib/core/flow/dailyFlowView';
 import type { BrowserWorkspaceCandidate } from '../../../store/workspaceBrowserCandidate';
 
@@ -23,7 +24,11 @@ export function createBrowserDailyFlowRuntime(args: {
     commit: (input, nodes) => args.transaction(nodes, candidate => {
       const retained = retainDailyFlowRetry(input);
       candidate.afterPublish(() => settleDailyFlowRetry(retained.opId));
-      return commitCycleFlow(createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet), retained, args.settings());
+      return commitCycleFlow(createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet), retained, args.settings())
+        .catch(error => {
+          if (isDailyFlowNoOtherTopics(error)) settleDailyFlowRetry(retained.opId);
+          throw error;
+        });
     }),
     view: (input, seed, nodes) => args.transaction(nodes, async candidate => {
       const store = createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet);
