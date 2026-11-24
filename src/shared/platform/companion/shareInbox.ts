@@ -1,7 +1,7 @@
 import { registerPlugin } from '@capacitor/core';
 
 import type { NativeCompanionShareInboxPayload } from '../../../../lib/platform/companionShareInboxContract';
-import { hasNativeCompanionShareText, isNativeCompanionShareInboxPayload } from '../../../../lib/platform/companionShareInboxContract';
+import { isNativeCompanionShareInboxPayload } from '../../../../lib/platform/companionShareInboxContract';
 import { requireCompanionNativePlugin } from '../companionRuntimeCapabilities';
 
 interface CompanionShareInboxPlugin {
@@ -21,14 +21,7 @@ export async function loadPendingCompanionShares() {
   if (!isNativeCompanionShareInboxPayload(payload)) {
     throw new Error('Native companion share inbox returned an invalid payload.');
   }
-  const pending = [];
-  for (const item of payload.items) {
-    // Older hosts could queue text that trims to empty. Retire the empty delivery
-    // so it cannot block valid shares behind it.
-    if (hasNativeCompanionShareText(item.parts)) pending.push(item);
-    else await acknowledgeCompanionShare(item.delivery_id);
-  }
-  return pending;
+  return payload.items;
 }
 
 export function acknowledgeCompanionShare(deliveryId: string) {

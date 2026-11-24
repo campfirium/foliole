@@ -17,16 +17,10 @@ export interface NativeCompanionShareInboxPayload {
 
 const DELIVERY_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function containsShareText(part: NativeCompanionSharePart) {
-  return part.value.trim().length > 0;
-}
-
-export function hasNativeCompanionShareText(parts: NativeCompanionSharePart[]) {
-  return parts.some(containsShareText);
-}
-
 export function combineNativeCompanionShareParts(parts: NativeCompanionSharePart[]) {
-  const values = parts.filter(containsShareText).map(part => part.value);
+  const values = parts
+    .map(part => part.value)
+    .filter(value => value.trim().length > 0);
   return [...new Set(values)].join('\n\n');
 }
 
