@@ -23,6 +23,7 @@ function seedSearchDatabase(db: Database.Database) {
     CREATE TABLE sync_group_devices (device_identity_key TEXT, state TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT, page_width REAL, page_height REAL);
+    CREATE TABLE pdf_index_state (attachment_id TEXT PRIMARY KEY, status TEXT, indexed_at TEXT);
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, folder_id TEXT, relative_path TEXT,
       file_name TEXT, extension TEXT, title TEXT, opening_text TEXT, reference_kind TEXT, reference_json TEXT,
       content TEXT, body_blob_hash TEXT, updated_at TEXT, is_present INTEGER);

@@ -1,4 +1,5 @@
 import { NODE_PDF_RESOURCES_SQL } from '../../../../../lib/core/database/nodePdfResourcesSql';
+import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../../../../lib/core/nodes/nodeOpeningPreview';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { buildPdfTextArtifact, importPdfTextArtifact, PDF_TEXT_EXTRACTOR_VERSION } from '../../../../../lib/core/sync/pdfTextArtifact';
@@ -25,7 +26,7 @@ export async function completeCompanionPdfTextImport(source: { storageKey: strin
       await saveIndexState(db, pdf, null);
       const first = pages.find(page => page.text.trim());
       if (first && node?.deleted_at === null && node.placeholder) {
-        await db.run('UPDATE nodes SET opening_text = ? WHERE id = ?', [resolveNodeOpeningText(first.text, node.title), nodeId]);
+        await savePdfOpening(db, nodeId, node.title, first.text);
       }
     }, { kind: 'nodes', nodeIds: [nodeId] });
   } catch (error) {
@@ -37,6 +38,31 @@ export async function completeCompanionPdfTextImport(source: { storageKey: strin
       }
     }, { kind: 'nodes', nodeIds: [nodeId] });
   }
+}
+
+// Restoring reapplies the saved node version. Rebuild the local preview from its indexed original.
+export async function restoreCompanionPdfOpenings(db: DbPort, nodes: readonly WorkspaceNodeSnapshot[]) {
+  const targets = nodes.flatMap(node => {
+    const pdf = node.resourceReferences?.find(reference =>
+      reference.role === 'reference' && reference.storage_key.endsWith('.pdf'));
+    return pdf ? [[node.id, pdf.storage_key.slice(0, -4)]] : [];
+  });
+  if (!targets.length) return;
+  const rows = await db.query<{ id: string; title: string; text: string | null }>(
+    `SELECT n.id, n.title, (
+       SELECT text FROM pdf_page_text
+       WHERE attachment_id = json_extract(target.value, '$[1]') AND trim(text) <> ''
+       ORDER BY page LIMIT 1
+     ) AS text
+     FROM json_each(?) target JOIN nodes n ON n.id = json_extract(target.value, '$[0]')
+     WHERE n.opening_text IS NULL AND instr(n.content, ?) > 0`, [JSON.stringify(targets), PDF_READER_PLACEHOLDER_TEXT]);
+  for (const row of rows) {
+    if (row.text) await savePdfOpening(db, row.id, row.title, row.text);
+  }
+}
+
+function savePdfOpening(db: DbPort, nodeId: string, title: string, text: string) {
+  return db.run('UPDATE nodes SET opening_text = ? WHERE id = ?', [resolveNodeOpeningText(text, title), nodeId]);
 }
 
 async function readPdfImportTopic(db: DbPort, nodeId: string, pdf: string) {

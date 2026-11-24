@@ -5,6 +5,7 @@ import type { createSearchLibrary } from '../shared/platform/companion/runtime/c
 import { purgeCompanionTrashBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
 import { moveCompanionBatchToTrash, type CompanionBatchTarget } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
+import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { loadIosPdfPageText, searchIosPdfPageText } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseReads';
 import { searchCompanionFullTextSnapshot } from '../shared/platform/companionFullTextSearch';
 
@@ -49,6 +50,9 @@ export async function verifyPdfIndexAfterTopicDeletion(
   if (mode === 'trash') {
     await restoreCompanionBatchFromTrash([current()]);
     expect(await searchIosPdfPageText('gamma')).toEqual(matches);
+    expect(await loadCompanionWorkspaceNode(current().id)).toMatchObject({
+      openingText: 'Foliole PDF User Journey Page 1 alpha keyword'
+    });
   } else if (mode === 'purge') {
     expect(await loadIosPdfPageText(hash)).toEqual([]);
     expect(library.database.prepare('SELECT * FROM pdf_text_artifact WHERE pdf_hash = ?').get(hash)).toBeUndefined();

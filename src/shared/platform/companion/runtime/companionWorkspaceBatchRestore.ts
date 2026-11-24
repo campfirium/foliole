@@ -6,6 +6,7 @@ import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/wor
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import { runCompanionHistoryMutation } from './companionFlowHistory';
+import { restoreCompanionPdfOpenings } from './companionImportedPdfText';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersions } from './companionNodeHistory';
 import { loadCompanionBatchTrashNodes, maintainCompanionBatchTrashReading, withStoredTrashReadings } from './companionTrashSequentialReading';
 import { collectCompanionBatchSubtree, type CompanionBatchTarget } from './companionWorkspaceBatchTrash';
@@ -32,6 +33,7 @@ export function restoreCompanionBatchFromTrash(targets: readonly CompanionBatchT
       targets.map(target => target.id).filter(id => restoredIds.has(id)), now);
     const records = await createCompanionMetadataVersions(db, restored, host);
     await commitCompanionNodeHistoryWithDb(db, records, 'Restore from Trash', 'local_restore', null, readings, undefined, host);
+    await restoreCompanionPdfOpenings(db, restored);
     readingNodeIds = readings.map(change => change.nodeId);
     return result;
   }, result => ({ kind: 'nodes', nodeIds: result.restoredNodeIds, structure: true, metadata: true,
