@@ -48,7 +48,7 @@ async function copyAttachment({ storageKey }: { storageKey: string }) {
 }
 const copyOne = vi.fn(copyAttachment);
 const port = {
-  prepareAttachmentDirectory: vi.fn(async () => undefined),
+  prepareAttachmentDirectory: vi.fn(async () => ({ exists: true })),
   copyAttachment: copyOne,
   ...folderAttachmentCopyPort(input => copyOne(input)),
   finishAttachments: vi.fn(async (result: { pending: number | null; errorMessage: string | null }) => ({

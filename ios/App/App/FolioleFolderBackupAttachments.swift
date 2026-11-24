@@ -4,13 +4,21 @@ import Foundation
 
 /// Native file operations only; the shared durable work consumer owns copy/delete intent.
 enum FolioleFolderBackupAttachments {
-    static func prepare(_ directory: URL) throws -> URL {
+    static func prepare(_ directory: URL, create: Bool) throws -> URL? {
         let folder = directory.appendingPathComponent("Attachments", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: folder.path) {
+        var info = stat()
+        if lstat(folder.path, &info) != 0 {
+            guard errno == ENOENT else { throw backupError("Cannot read backup attachment folder.") }
+            guard create else { return nil }
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
+            guard lstat(folder.path, &info) == 0 else { throw backupError("Cannot create backup attachment folder.") }
         }
-        let values = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-        guard values.isDirectory == true, values.isSymbolicLink != true else { throw backupError("Invalid backup attachment folder.") }
+        guard info.st_mode & S_IFMT == S_IFDIR else { throw backupError("Invalid backup attachment folder.") }
+        return folder
+    }
+
+    private static func requireDirectory(_ directory: URL) throws -> URL {
+        guard let folder = try prepare(directory, create: false) else { throw backupError("Backup attachment folder was removed.") }
         return folder
     }
 
@@ -19,7 +27,7 @@ enum FolioleFolderBackupAttachments {
                      check: () throws -> Void) throws -> Bool {
         try validate(key)
         try check()
-        let target = try prepare(directory).appendingPathComponent(key)
+        let target = try requireDirectory(directory).appendingPathComponent(key)
         guard let source = try source(key, roots: roots) else { throw backupError("Source attachment is missing.") }
         let expected = String(key.prefix(64))
         if exists(target) {
@@ -46,7 +54,7 @@ enum FolioleFolderBackupAttachments {
 
     /// Makes the renames of a batch durable once; callers persist before reporting copies as complete.
     static func persist(_ directory: URL) throws {
-        try syncDirectory(try prepare(directory))
+        try syncDirectory(try requireDirectory(directory))
     }
 
     static func delete(_ key: String, roots: [URL], directory: URL, check: () throws -> Void) throws {
@@ -59,7 +67,7 @@ enum FolioleFolderBackupAttachments {
                 throw backupError("Source attachment still exists or cannot be checked.")
             }
         }
-        let target = try prepare(directory).appendingPathComponent(key)
+        let target = try requireDirectory(directory).appendingPathComponent(key)
         if !exists(target) { return }
         guard try hash(target, check: check) == String(key.prefix(64)) else { throw backupError("Backup attachment changed outside Foliole.") }
         try check()

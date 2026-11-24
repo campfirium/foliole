@@ -47,7 +47,8 @@ export interface CompanionFolderBackupPort {
   backupDatabase(input: {
     sourceEpoch: string; requestId: string; chooseDirectory: boolean; replaceExisting?: boolean;
   }): Promise<CompanionFolderDatabaseBackupResult>;
-  prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
+  /** Probe without creating so the source inventory can be recorded before a missing folder is rebuilt. */
+  prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string; create: boolean }): Promise<{ exists: boolean }>;
   /** Copies keys in order in one native call. A key without a result was not attempted (the request was cancelled). */
   copyAttachments(input: { sourceEpoch: string; requestId: string; storageKeys: string[] }): Promise<{
     results: CompanionFolderAttachmentCopyResult[];

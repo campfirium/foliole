@@ -53,12 +53,14 @@ final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAt
         open(context, profile).delete(key, cancelled);
     }
 
-    static void prepareDirectory(Context context, JSONObject profile) throws Exception {
-        new FolioleFolderBackupAttachmentTarget(context, profile);
+    static boolean prepareDirectory(Context context, JSONObject profile, boolean create) throws Exception {
+        return new FolioleFolderBackupAttachmentTarget(context, profile, create).folder != null;
     }
 
     private static FolioleFolderBackupAttachmentCopy.Folder open(Context context, JSONObject profile) throws Exception {
-        return new FolioleFolderBackupAttachmentCopy.Folder(new FolioleFolderBackupAttachmentTarget(context, profile), profile.getString("id"));
+        var target = new FolioleFolderBackupAttachmentTarget(context, profile, false);
+        if (target.folder == null) throw new IllegalStateException("Backup attachment folder was removed.");
+        return new FolioleFolderBackupAttachmentCopy.Folder(target, profile.getString("id"));
     }
 
     private static File source(Context context, String key) throws Exception {
@@ -68,19 +70,33 @@ final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAt
         return FolioleAttachmentBlockFiles.checkedSourceFile(source);
     }
 
-    private FolioleFolderBackupAttachmentTarget(Context context, JSONObject profile) throws Exception {
+    private FolioleFolderBackupAttachmentTarget(Context context, JSONObject profile, boolean create) throws Exception {
         resolver = context.getContentResolver();
         tree = Uri.parse(profile.getString("tree"));
         Uri root = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        Uri selected = findFolder(root);
+        if (selected == null && create) {
+            Uri created = DocumentsContract.createDocument(resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, "Attachments");
+            selected = findFolder(root);
+            if (created == null || selected == null
+                || !DocumentsContract.getDocumentId(created).equals(DocumentsContract.getDocumentId(selected))) {
+                throw new IllegalStateException("Cannot create attachment backup folder.");
+            }
+        }
+        if (selected != null && !DocumentsContract.Document.MIME_TYPE_DIR.equals(resolver.getType(selected))) {
+            throw new IllegalStateException("Invalid backup attachment folder.");
+        }
+        folder = selected;
+    }
+    private Uri findFolder(Uri root) throws Exception {
         String found = null;
         for (String[] child : children(root)) if ("Attachments".equals(child[0])) {
             if (found != null) throw new IllegalStateException("Duplicate attachment filenames in backup folder.");
             found = child[1];
         }
-        folder = found == null ? DocumentsContract.createDocument(resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, "Attachments")
-            : uri(found);
-        if (folder == null) throw new IllegalStateException("Cannot create attachment backup folder.");
+        return found == null ? null : uri(found);
     }
+
     private Uri uri(String documentId) { return DocumentsContract.buildDocumentUriUsingTree(tree, documentId); }
     private List<String[]> children(Uri parent) throws Exception {
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getDocumentId(parent));

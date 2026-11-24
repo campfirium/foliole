@@ -28,8 +28,9 @@ export async function folderAttachmentWorkFixture(native: {
   access: { mockImplementation(execute: (input: NativeCompanionFramedFileRequest) => Promise<unknown>): unknown };
 }, createPort: (sqlite: Database.Database) => DbPort) {
   const root = await createFixtureRoot();
-  const directory = path.join(root, 'source'), target = path.join(root, 'target');
-  await mkdir(directory); await mkdir(target);
+  const directory = path.join(root, 'source'), backup = path.join(root, 'target');
+  const target = path.join(backup, 'Attachments');
+  await mkdir(directory); await mkdir(target, { recursive: true });
   const databasePath = path.join(root, 'source.sqlite');
   let sqlite = new Database(databasePath);
   for (const statement of COMPANION_SCHEMA_STATEMENTS) sqlite.exec(statement);
@@ -59,8 +60,16 @@ export async function folderAttachmentWorkFixture(native: {
   };
   // Tests steer single files through copyAttachment; the batch contract replays it per key.
   const copyAttachment = vi.fn(copy), batch = folderAttachmentCopyPort(input => copyAttachment(input));
+  const prepareAttachmentDirectory = vi.fn(async ({ create = true }: { create?: boolean } = {}) => {
+    if (create) await mkdir(target, { recursive: true });
+    try { await access(target); return { exists: true }; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      return { exists: false };
+    }
+  });
   const port = {
-    cancelDatabase: vi.fn(async () => undefined), prepareAttachmentDirectory: vi.fn(async () => undefined), copyAttachment,
+    cancelDatabase: vi.fn(async () => undefined), prepareAttachmentDirectory, copyAttachment,
     copyAttachments: vi.fn(batch.copyAttachments), stopAttachments: vi.fn(batch.stopAttachments),
     finishAttachments: vi.fn(async (input: { copied: number; pending: number | null; errorMessage: string | null }) => ({
       configured: true, directoryId: 'profile', directoryLabel: 'Backup', databaseSavedAt: 'database committed',
@@ -76,7 +85,7 @@ export async function folderAttachmentWorkFixture(native: {
     return { key, bytes, file: path.join(target, key), source: path.join(directory, key) };
   };
   return {
-    root, directory, target, host, receive, inventory, port, copy, run,
+    root, directory, backup, target, host, receive, inventory, port, copy, run,
     get sqlite() { return sqlite; }, get db() { return db; },
     suspend() { sqlite.close(); },
     async reopen() { if (sqlite.open) sqlite.close(); sqlite = new Database(databasePath); db = createPort(sqlite); receiver = await makeReceiver(); },

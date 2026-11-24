@@ -26,7 +26,7 @@ async function fixture() {
   fixtures.push(f); await f.run();
   runtime.owner = { read: f.host.write, readBackgroundSnapshot: f.host.write,
     runWriter: f.host.write, folderBackupSource: async () => 'owner' };
-  const targetDb = path.join(f.target, 'Foliole.sqlite');
+  const targetDb = path.join(f.backup, 'Foliole.sqlite');
   const backup = vi.fn(async ({ requestId }: { requestId: string }) => {
     await f.sqlite.backup(targetDb);
     return { requestId, cancelled: false, databaseCommitted: true,

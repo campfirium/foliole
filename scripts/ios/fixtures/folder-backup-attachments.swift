@@ -21,6 +21,10 @@ struct AttachmentBackupFixture {
         func reject(_ action: () throws -> Void) {
             do { try action(); preconditionFailure("unsafe operation succeeded") } catch {}
         }
+        verify(try FolioleFolderBackupAttachments.prepare(target, create: false) == nil)
+        reject { _ = try copy() }
+        verify(try FolioleFolderBackupAttachments.prepare(target, create: false) == nil)
+        verify(try FolioleFolderBackupAttachments.prepare(target, create: true) != nil)
         verify(try copy())
         try FolioleFolderBackupAttachments.persist(target)
         verify(try !copy())

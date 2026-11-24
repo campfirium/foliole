@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
@@ -8,19 +8,33 @@ import { createBetterSqliteDbPort } from '../../../../../electron/database/bette
 import { COMPANION_FOLDER_ATTACHMENT_COPY_BATCH, type CompanionFolderBackupPort,
   type CompanionFolderBackupState } from '../../../../../lib/platform/companionFolderBackupContract';
 
+import { flushCompanionForegroundTime, startCompanionForegroundTime, stopCompanionForegroundTime } from '../runtime/companionForegroundTime';
+
+import { automaticFolderBackupFixture, closeAutomaticBackupFixtures, setCompanionAutomaticFolderBackup } from './companionAutomaticFolderBackup.testSupport';
 import { folderAttachmentWorkFixture } from './companionFolderAttachmentWork.testSupport';
 import { backUpCompanionDatabase } from './companionFolderBackup';
 import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from './companionFolderBackupState';
 
-const runtime = vi.hoisted(() => ({ access: vi.fn(), inventory: vi.fn(), owner: null as unknown, port: null as unknown }));
+const runtime = vi.hoisted(() => ({ access: vi.fn(), inventory: vi.fn(), owner: null as unknown, port: null as unknown, resume: () => {} }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
   accessFramedSyncFile: runtime.access, maintainAttachmentFiles: runtime.inventory
 } }));
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => runtime.owner }));
-vi.mock('./companionFolderBackupRuntimeRepository', () => ({ getCompanionFolderBackupPort: () => runtime.port }));
+vi.mock('./companionFolderBackupRuntimeRepository', () => ({
+  getCompanionFolderBackupPort: () => runtime.port, supportsCompanionFolderDatabaseBackup: () => true
+}));
+vi.mock('../../appLifecycle', () => ({
+  readNativeAppActiveState: async () => true,
+  subscribeNativeAppForeground: async () => () => {},
+  subscribeNativeAppBackground: async () => () => {}
+}));
 
 const fixtures: Awaited<ReturnType<typeof folderAttachmentWorkFixture>>[] = [];
-afterEach(async () => { for (const f of fixtures.splice(0)) await f.close(); vi.clearAllMocks(); });
+afterEach(async () => {
+  await closeAutomaticBackupFixtures();
+  for (const f of fixtures.splice(0)) await f.close();
+  vi.clearAllMocks();
+});
 
 /** The durable profile follows the Android plugin: `working` is persisted before the database round,
  * commit records savedAt, finishAttachments writes the final phase, and a reload turns `working` into the interrupted retry. */
@@ -39,7 +53,7 @@ async function fixture() {
     databaseSavedAt: durable.savedAt, phase: durable.phase, errorMessage: durable.error, attachmentFilesPending: durable.pending });
   const backupDatabase = vi.fn(async ({ requestId }: { requestId: string }) => {
     durable.phase = 'working'; durable.error = null;
-    await f.sqlite.backup(path.join(f.target, 'Foliole.sqlite'));
+    await f.sqlite.backup(path.join(f.backup, 'Foliole.sqlite'));
     durable.savedAt = `commit ${++commits}`; durable.pending = null;
     return { requestId, cancelled: false, databaseCommitted: true, sourcePages: 1, changedPages: 1, state: state() };
   });
@@ -65,6 +79,28 @@ it('reopens a completed backup as saved with no remaining work', async () => {
   expect(durable.phase).toBe('saved');
   expect(await getCompanionFolderBackupState()).toMatchObject({ phase: 'saved', pendingItems: 0, databaseSavedAt: 'commit 1' });
   expect(await readFile(item.file)).toEqual(item.bytes);
+});
+
+it.each([false, true])('rebuilds a removed attachment directory (inventory fails once: %s)', async failInventory => {
+  const { f } = await fixture();
+  const first = await f.receive('completed original');
+  const second = await f.receive('another completed original');
+  expect((await backUpCompanionDatabase()).state).toMatchObject({ phase: 'saved', pendingItems: 0 });
+  for (const item of [first, second]) expect(await readFile(item.file)).toEqual(item.bytes);
+  expect(f.rows()).toEqual([]);
+
+  await rm(f.target, { recursive: true });
+  expect(await f.exists(path.join(f.backup, 'Foliole.sqlite'))).toBe(true);
+  if (failInventory) {
+    f.inventory.mockRejectedValueOnce(new Error('source inventory unavailable'));
+    expect((await backUpCompanionDatabase()).state).toMatchObject({ phase: 'failed', errorMessage: 'source inventory unavailable' });
+    expect(await f.exists(f.target)).toBe(false);
+    await f.reopen();
+  }
+
+  expect((await backUpCompanionDatabase()).state).toMatchObject({ phase: 'saved', pendingItems: 0, errorMessage: null });
+  for (const item of [first, second]) expect(await readFile(item.file)).toEqual(item.bytes);
+  expect(f.rows()).toEqual([]);
 });
 
 it('ends a committed round as failed when confirming it locally fails, keeping savedAt and the unstarted attachment', async () => {
@@ -138,4 +174,25 @@ it('announces the shrinking pending count to the settings page while attachment 
   // After the database round and the first full batch, only the last attachment is still pending.
   expect(observed).toContain(total);
   expect(observed).toContain(1);
+});
+
+it('keeps a completed automatic backup current across recurring foreground checkpoints', async () => {
+  const f = await automaticFolderBackupFixture(runtime);
+  await setCompanionAutomaticFolderBackup(true);
+  await vi.waitFor(async () => expect(await getCompanionFolderBackupState()).toMatchObject({ pendingItems: 0 }));
+  const completed = f.backup.mock.calls.length;
+  const identity = vi.spyOn(f.owner, 'foregroundTimeOwnerId').mockResolvedValue('11111111-1111-4111-8111-111111111111');
+  vi.useFakeTimers({ toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+  try {
+    await startCompanionForegroundTime(f.owner);
+    await vi.advanceTimersByTimeAsync(180_000);
+    await flushCompanionForegroundTime();
+    expect(await f.owner.read(db => db.query('SELECT sum(duration_ms) AS total FROM foreground_daily_time')))
+      .toEqual([{ total: 180_000 }]);
+    expect(await getCompanionFolderBackupState()).toMatchObject({ pendingItems: 0 });
+    expect(f.backup).toHaveBeenCalledTimes(completed);
+  } finally {
+    try { await stopCompanionForegroundTime(); }
+    finally { vi.useRealTimers(); identity.mockRestore(); }
+  }
 });
