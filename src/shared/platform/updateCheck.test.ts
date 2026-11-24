@@ -12,6 +12,7 @@ import {
   normalizeUpdateManifest,
   openFolioleLatestRelease,
   readUpdateCheckState,
+  refreshCachedUpdateManifest,
   selectLatestPlatformRelease,
   selectSkippedPlatformReleases,
   subscribeUpdateCheckState
@@ -233,7 +234,30 @@ it('clears a cached available release after that version is installed', async ()
     latestReleaseUrl: null,
     latestVersion: null
   });
-  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+it('caches mobile channel status from downloads.json and keeps it when the fetch fails', async () => {
+  const downloads = {
+    platforms: { android: { status: 'available', version: '0.1.3' } },
+    storeChannels: { ios: { status: 'in-review', version: '0.1.3' } }
+  };
+  vi.mocked(fetch).mockImplementation(async (input) => String(input).endsWith('/downloads.json')
+    ? ({ json: async () => downloads, ok: true } as Response)
+    : ({ json: async () => createManifest(), ok: true } as Response));
+
+  await checkForFolioleUpdates({ force: true });
+  const expected = {
+    apk: { status: 'available', version: '0.1.3' },
+    ios: { status: 'in-review', version: '0.1.3' }
+  };
+  expect(readUpdateCheckState().cachedMobileChannels).toEqual(expected);
+
+  vi.mocked(fetch).mockImplementation(async (input) => String(input).endsWith('/downloads.json')
+    ? ({ ok: false, status: 503 } as Response)
+    : ({ json: async () => createManifest(), ok: true } as Response));
+  await refreshCachedUpdateManifest();
+  expect(readUpdateCheckState().cachedMobileChannels).toEqual(expected);
 });
 
 it('records failures with a shorter retry delay', async () => {

@@ -10,12 +10,14 @@ import {
   compareVersionStrings as compareVersions,
   DEFAULT_UPDATE_STATE,
   getUpdateCheckDelayMs,
+  normalizeMobileChannels,
   normalizeReleaseNotesCatalog,
   normalizeUpdateManifest,
   normalizeUpdateState,
   selectLatestPlatformRelease,
   shouldRunUpdateCheck,
   type UpdateCheckState,
+  type UpdateManifest,
   type UpdateReleaseNotesByLocale,
   type UpdateRelease
 } from './updateCheckModel';
@@ -43,6 +45,16 @@ const updateCheckStateSubscribers = new Set<() => void>();
 function getManifestUrl() {
   const configured = import.meta.env.VITE_FOLIOLE_UPDATE_MANIFEST_URL as string | undefined;
   return configured?.trim() || DEFAULT_MANIFEST_URL;
+}
+
+/** `downloads.json` sits next to the manifest and carries the 30-minute store channel status. */
+async function fetchMobileChannels(manifestUrl: string) {
+  try {
+    const response = await fetch(new URL('downloads.json', manifestUrl).toString(), { cache: 'no-store' });
+    return response.ok ? normalizeMobileChannels(await response.json()) : null;
+  } catch {
+    return null;
+  }
 }
 
 function getNotesUrl(manifestUrl: string, locale: (typeof UPDATE_NOTES_LOCALES)[number]) {
@@ -140,6 +152,7 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
     const latestRelease = selectLatestPlatformRelease(manifest, currentVersion);
     const cachedReleaseNotes = latestRelease ? await fetchReleaseNotes(manifestUrl) : state.cachedReleaseNotes;
     const nextState: UpdateCheckState = {
+      cachedMobileChannels: (await fetchMobileChannels(manifestUrl)) ?? state.cachedMobileChannels ?? null,
       cachedReleaseNotes,
       cachedManifest: manifest,
       dismissedVersion: state.dismissedVersion,
@@ -177,16 +190,23 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
   }
 }
 
-/** Re-reads the manifest only to refresh per-channel availability; never touches the download state. */
+/** Re-reads the manifest and mobile channel status only for the sync gate; never touches the download state. */
 export async function refreshCachedUpdateManifest() {
+  const manifestUrl = getManifestUrl();
+  let manifest: UpdateManifest | null = null;
   try {
-    const response = await fetch(getManifestUrl(), { cache: 'no-store' });
-    if (!response.ok) return;
-    const manifest = normalizeUpdateManifest(await response.json());
-    if (manifest) writeUpdateCheckState({ ...readUpdateCheckState(), cachedManifest: manifest });
+    const response = await fetch(manifestUrl, { cache: 'no-store' });
+    if (response.ok) manifest = normalizeUpdateManifest(await response.json());
   } catch {
     // Keep the previous manifest; the next scheduled check retries.
   }
+  const channels = await fetchMobileChannels(manifestUrl);
+  const state = readUpdateCheckState();
+  writeUpdateCheckState({
+    ...state,
+    cachedManifest: manifest ?? state.cachedManifest,
+    cachedMobileChannels: channels ?? state.cachedMobileChannels ?? null
+  });
 }
 
 export function openFolioleLatestRelease() {

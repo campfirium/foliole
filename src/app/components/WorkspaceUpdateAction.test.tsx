@@ -25,7 +25,10 @@ vi.mock('../../shared/platform/desktopUpdate', () => ({
 }));
 
 vi.mock('../../shared/platform/updateCheck', () => ({
-  readUpdateCheckState: () => ({ cachedManifest: updateMock.manifest }),
+  readUpdateCheckState: () => ({
+    cachedManifest: updateMock.manifest,
+    cachedMobileChannels: { apk: { status: 'available', version: '0.8.3' } }
+  }),
   refreshCachedUpdateManifest: async () => undefined,
   subscribeUpdateCheckState: () => () => undefined
 }));
@@ -97,7 +100,7 @@ it('replays the reminder after one minute while the update stays ready', () => {
 
 function gatedManifest() {
   return {
-    releases: [{ mobileAvailability: { apk: true }, syncBreaking: true, version: '0.8.3' }],
+    releases: [{ syncBreaking: true, version: '0.8.3' }],
     schemaVersion: 1
   };
 }

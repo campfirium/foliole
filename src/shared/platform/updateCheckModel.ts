@@ -21,11 +21,39 @@ interface UpdateCheckPolicy {
 export const SYNC_GATE_PLATFORMS = ['ios', 'googlePlay', 'apk'] as const;
 export type SyncGatePlatform = (typeof SYNC_GATE_PLATFORMS)[number];
 
+/** What a mobile channel currently serves, as published in the website `downloads.json`. */
+export interface MobileChannelStatus {
+  status: string;
+  version: string;
+}
+export type MobileChannels = Partial<Record<SyncGatePlatform, MobileChannelStatus>>;
+
+function normalizeChannel(value: unknown): MobileChannelStatus | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  return typeof raw.version === 'string' && typeof raw.status === 'string'
+    ? { status: raw.status, version: raw.version }
+    : null;
+}
+
+/** Reads iOS and Google Play from `storeChannels` and the Android APK from `platforms.android`. */
+export function normalizeMobileChannels(value: unknown): MobileChannels | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as { platforms?: Record<string, unknown>; storeChannels?: Record<string, unknown> };
+  const entries = ([
+    ['ios', raw.storeChannels?.ios],
+    ['googlePlay', raw.storeChannels?.['android-play']],
+    ['apk', raw.platforms?.android]
+  ] as const).flatMap(([platform, channel]) => {
+    const normalized = normalizeChannel(channel);
+    return normalized ? [[platform, normalized] as const] : [];
+  });
+  return entries.length ? Object.fromEntries(entries) as MobileChannels : null;
+}
+
 export interface UpdateRelease {
   architectures?: string[];
   date?: string;
-  /** Per mobile channel: `true` once that channel serves a build that syncs with this release. */
-  mobileAvailability?: Partial<Record<SyncGatePlatform, boolean>>;
   platforms: string[];
   severity?: 'critical' | 'normal' | 'security';
   summary?: string;
@@ -54,6 +82,7 @@ export type UpdateReleaseNotesByLocale = Partial<Record<UpdateNotesLocale, Updat
 
 export interface UpdateCheckState {
   cachedManifest: UpdateManifest | null;
+  cachedMobileChannels?: MobileChannels | null;
   cachedReleaseNotes: UpdateReleaseNotesByLocale | null;
   dismissedVersion: string | null;
   lastCheckedAt: string | null;
@@ -65,6 +94,7 @@ export interface UpdateCheckState {
 
 export const DEFAULT_UPDATE_STATE: UpdateCheckState = {
   cachedManifest: null,
+  cachedMobileChannels: null,
   cachedReleaseNotes: null,
   dismissedVersion: null,
   lastCheckedAt: null,
@@ -103,14 +133,6 @@ function normalizeTrustedReleaseUrl(value: string) {
   }
 }
 
-function normalizeMobileAvailability(value: unknown) {
-  if (!value || typeof value !== 'object') return null;
-  const raw = value as Record<string, unknown>;
-  const entries = SYNC_GATE_PLATFORMS.filter((platform) => typeof raw[platform] === 'boolean')
-    .map((platform) => [platform, raw[platform] as boolean] as const);
-  return entries.length ? Object.fromEntries(entries) as Partial<Record<SyncGatePlatform, boolean>> : null;
-}
-
 function normalizeRelease(value: unknown): UpdateRelease | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
@@ -122,11 +144,9 @@ function normalizeRelease(value: unknown): UpdateRelease | null {
     ? raw.architectures.filter((architecture): architecture is string => typeof architecture === 'string')
     : [];
   if (!platforms.length) return null;
-  const mobileAvailability = normalizeMobileAvailability(raw.mobileAvailability);
   return {
     ...(architectures.length ? { architectures } : {}),
     ...(typeof raw.date === 'string' ? { date: raw.date } : {}),
-    ...(mobileAvailability ? { mobileAvailability } : {}),
     platforms,
     ...(raw.severity === 'critical' || raw.severity === 'normal' || raw.severity === 'security' ? { severity: raw.severity } : {}),
     ...(typeof raw.summary === 'string' ? { summary: raw.summary } : {}),
@@ -190,11 +210,22 @@ export function normalizeUpdateManifest(value: unknown): UpdateManifest | null {
   };
 }
 
+function normalizeStoredMobileChannels(value: unknown): MobileChannels | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const entries = SYNC_GATE_PLATFORMS.flatMap((platform) => {
+    const channel = normalizeChannel(raw[platform]);
+    return channel ? [[platform, channel] as const] : [];
+  });
+  return entries.length ? Object.fromEntries(entries) as MobileChannels : null;
+}
+
 export function normalizeUpdateState(value: unknown): UpdateCheckState {
   if (!value || typeof value !== 'object') return DEFAULT_UPDATE_STATE;
   const raw = value as Record<string, unknown>;
   return {
     cachedManifest: normalizeUpdateManifest(raw.cachedManifest),
+    cachedMobileChannels: normalizeStoredMobileChannels(raw.cachedMobileChannels),
     cachedReleaseNotes: normalizeReleaseNotesByLocale(raw.cachedReleaseNotes),
     dismissedVersion: typeof raw.dismissedVersion === 'string' ? raw.dismissedVersion : null,
     lastCheckedAt: typeof raw.lastCheckedAt === 'string' ? raw.lastCheckedAt : null,

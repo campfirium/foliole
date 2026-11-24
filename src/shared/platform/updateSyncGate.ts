@@ -3,6 +3,8 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
 import {
   SYNC_GATE_PLATFORMS,
+  compareVersionStrings,
+  type MobileChannels,
   type SyncGatePlatform,
   type UpdateManifest
 } from './updateCheckModel';
@@ -14,11 +16,21 @@ export interface SyncWait {
   version: string;
 }
 
-/** Channels that still lack a build syncing with `version`; empty when the release does not break sync. */
-export function resolveSyncGateMissing(manifest: UpdateManifest | null, version: string | undefined) {
+/**
+ * Channels that still lack a build syncing with `version`; empty when the release does not break sync.
+ * A channel is ready once it serves `version` or newer with status `available`.
+ */
+export function resolveSyncGateMissing(
+  manifest: UpdateManifest | null,
+  channels: MobileChannels | null,
+  version: string | undefined
+) {
   const release = version ? manifest?.releases.find((item) => item.version === version) : undefined;
-  if (!release?.syncBreaking) return [];
-  return SYNC_GATE_PLATFORMS.filter((platform) => release.mobileAvailability?.[platform] !== true);
+  if (!version || !release?.syncBreaking) return [];
+  return SYNC_GATE_PLATFORMS.filter((platform) => {
+    const channel = channels?.[platform];
+    return !(channel?.status === 'available' && compareVersionStrings(channel.version, version) >= 0);
+  });
 }
 
 export function isSyncWaitSatisfied(target: SyncWaitTarget, missing: readonly SyncGatePlatform[]) {

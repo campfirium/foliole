@@ -42,6 +42,11 @@ function describeMissing(t: Translate, missing: readonly SyncGatePlatform[]) {
   return `${t('desktop.workspace.syncGate.intro')}${status}`;
 }
 
+function resolveGateMissing(version: string | undefined) {
+  const { cachedManifest, cachedMobileChannels } = readUpdateCheckState();
+  return resolveSyncGateMissing(cachedManifest, cachedMobileChannels ?? null, version);
+}
+
 function promptWaitReady(t: Translate, target: SyncWaitTarget) {
   return requestAppConfirmation({
     cancelLabel: t('desktop.workspace.syncGate.later'),
@@ -60,7 +65,7 @@ export function useWorkspaceUpdateSyncGate(version: string | undefined, ready: b
   const [wait, setWait] = useState<SyncWait | null>(readSyncWait);
   const promptedRef = useRef<string | null>(null);
   useEffect(() => subscribeUpdateCheckState(() => setRevision((value) => value + 1)), []);
-  const missing = resolveSyncGateMissing(readUpdateCheckState().cachedManifest, version);
+  const missing = resolveGateMissing(version);
   const activeWait = wait && wait.version === version ? wait : null;
   const updateWait = (next: SyncWait | null) => {
     writeSyncWait(next);
@@ -84,7 +89,7 @@ export function useWorkspaceUpdateSyncGate(version: string | undefined, ready: b
       return;
     }
     await refreshCachedUpdateManifest();
-    const stillMissing = resolveSyncGateMissing(readUpdateCheckState().cachedManifest, version);
+    const stillMissing = resolveGateMissing(version);
     if (!stillMissing.length) {
       void installDesktopUpdate();
       return;
