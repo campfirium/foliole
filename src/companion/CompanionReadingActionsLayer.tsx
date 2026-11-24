@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { definedProps } from '../shared/lib/definedProps';
 
+import { useCompanionBacklinksSheet } from './CompanionBacklinksSheet';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { ReadingActionsSheet } from './CompanionReadingSheets';
@@ -13,6 +14,7 @@ export function ReadingActionsLayer(props: {
   editHistory?: CompanionEditHistoryActionsProps;
   actionsOpen: boolean;
   onOpenOutline?: () => void;
+  onOpenBacklinkNode?: (nodeId: string) => void;
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | null): void;
@@ -42,7 +44,8 @@ export function ReadingActionsLayer(props: {
     () => props.onOpenActions(false),
     'copy'
   );
-  return (
+  const backlinks = useCompanionBacklinksSheet({ activity: handoffContext.activity, nodeId: readableArticle.nodeId, snapshot: handoffContext.snapshot, onOpenNode: props.onOpenBacklinkNode, disabled: readableArticle.isTrashed });
+  return (<>
     <ReadingActionsSheet
       key={readableArticle.nodeId}
       nodeId={readableArticle.nodeId}
@@ -55,6 +58,7 @@ export function ReadingActionsLayer(props: {
         editHistory: props.editHistory,
         priorityNodeId: props.readableArticle.isTrashed ? undefined : props.readableArticle.nodeId,
         onOpenOutline: props.onOpenOutline,
+        onOpenBacklinks: backlinks.openSheet,
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         articleHandoff,
         articleCopy,
@@ -63,5 +67,6 @@ export function ReadingActionsLayer(props: {
           : undefined
       })}
     />
-  );
+    {backlinks.sheet}
+  </>);
 }

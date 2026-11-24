@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "開啟連結參考 ({count})",
   "desktop.links.backlinks": "反向連結",
   "desktop.links.mentionedTimes": "被提及 {count} 次",
+  "desktop.links.empty": "沒有反向連結",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.flow.libraryScope": "全庫",
   "desktop.rightPanel.outline": "概要",

@@ -1,4 +1,4 @@
-import { ArchiveRestore, ListTree, Search, Share2, Copy, X, SlidersHorizontal } from 'lucide-react';
+import { ArchiveRestore, ArrowDownLeft, ListTree, Search, Share2, Copy, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -41,6 +41,14 @@ function ReadingActionRow(props: {
   );
 }
 
+function ReadingBacklinksAction(props: { onClose(): void; onOpen?: (() => void) | undefined }) {
+  const t = useTranslation();
+  if (!props.onOpen) return null;
+  return <ReadingActionRow icon={<ArrowDownLeft aria-hidden="true" className="h-5 w-5" />}
+    label={t('desktop.links.backlinks')}
+    onClick={() => { props.onClose(); props.onOpen?.(); }} />;
+}
+
 function ReadingRestoreErrorMessage({ saved }: { saved: boolean }) {
   const t = useTranslation();
   return (
@@ -79,6 +87,7 @@ export function ReadingActionsSheet(props: {
   priorityNodeId?: string;
   onFindInDocument(): void;
   onOpenOutline?: () => void;
+  onOpenBacklinks?: () => void;
   onOpenChange(open: boolean): void;
   onOpenReadingSheet(sheet: 'font'): void;
   onOpenClozeRemoval?: () => void;
@@ -118,6 +127,7 @@ export function ReadingActionsSheet(props: {
           label={t('companion.reading.outline')}
           onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
         /> : null}
+        <ReadingBacklinksAction onClose={() => props.onOpenChange(false)} onOpen={props.onOpenBacklinks} />
         {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
         {props.articleCopy && <ReadingArticleHandoff {...props.articleCopy} copy />}
         {props.onOpenClozeRemoval ? <ReadingActionRow

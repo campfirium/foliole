@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "Referências de links abertos ({count})",
   "desktop.links.backlinks": "Backlinks",
   "desktop.links.mentionedTimes": "Mencionado {count} vezes",
+  "desktop.links.empty": "Nenhum backlink",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "Esboço",
   "desktop.rightPanel.highlights": "Destaques",

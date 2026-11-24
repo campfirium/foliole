@@ -187,6 +187,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         onOpenReadingSheet={props.onOpenReadingSheet}
         readableArticle={props.readableArticle}
         {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash, onOpenClozeRemoval: props.onOpenClozeRemoval })}
+        {...definedProps({ onOpenBacklinkNode: props.onOpenOutlineNode })}
       />
       <ReadingSheetsLayer
         activity={props.activity}

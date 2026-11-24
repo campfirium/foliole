@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "Link-Referenzen öffnen ({count})",
   "desktop.links.backlinks": "Backlinks",
   "desktop.links.mentionedTimes": "{count} Mal erwähnt",
+  "desktop.links.empty": "Keine Backlinks",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "Gliederung",
   "desktop.rightPanel.highlights": "Highlights",

@@ -92,6 +92,7 @@
   "desktop.links.openReferences": "लिंक के संदर्भ खोलें ({count})",
   "desktop.links.backlinks": "बैकलिंक",
   "desktop.links.mentionedTimes": "{count} बार ज़िक्र हुआ",
+  "desktop.links.empty": "कोई बैकलिंक नहीं",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.flow.libraryScope": "पूरी लाइब्रेरी",
   "desktop.rightPanel.outline": "रूपरेखा",

@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "Otwórz odnośniki do linków ({count})",
   "desktop.links.backlinks": "Linki zwrotne",
   "desktop.links.mentionedTimes": "Wspomniano {count} razy",
+  "desktop.links.empty": "Brak linków zwrotnych",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "Zarys",
   "desktop.rightPanel.highlights": "Najważniejsze",

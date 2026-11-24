@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "Ссылки на открытые ссылки ({count})",
   "desktop.links.backlinks": "Обратные ссылки",
   "desktop.links.mentionedTimes": "Упоминается {count} раз",
+  "desktop.links.empty": "Нет обратных ссылок",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "Схема",
   "desktop.rightPanel.highlights": "Основные моменты",

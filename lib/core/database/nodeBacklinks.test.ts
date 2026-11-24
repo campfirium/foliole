@@ -4,7 +4,13 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver.js';
 
-import { loadNodeBacklinks } from './nodeBacklinks.js';
+import {
+  collectNodeBacklinkRecords,
+  loadNodeBacklinks,
+  NODE_BACKLINK_TARGET_SQL,
+  nodeBacklinkCaselessNeedle,
+  nodeBacklinkSourcesQuery
+} from './nodeBacklinks.js';
 
 let db: Database.Database;
 beforeEach(() => {
@@ -17,8 +23,19 @@ function insert(id: string, title: string, content = '', deletedAt: string | nul
   db.prepare('INSERT INTO nodes VALUES (?, ?, ?, ?)').run(id, title, content, deletedAt);
 }
 
+function readPrefiltered() {
+  const target = db.prepare(NODE_BACKLINK_TARGET_SQL).get('target') as { title: string } | undefined;
+  if (!target?.title.trim()) return [];
+  const query = nodeBacklinkSourcesQuery('target', target.title);
+  const sources = db.prepare(query.sql).all(...query.params) as { id: string; title: string; content: string }[];
+  return collectNodeBacklinkRecords(target, sources);
+}
+
+// The companion path adds a lossless prefilter; it must return exactly what the desktop path returns.
 function read() {
-  return loadNodeBacklinks(createBetterSqlite3Driver(db), 'target');
+  const desktop = loadNodeBacklinks(createBetterSqlite3Driver(db), 'target');
+  expect(readPrefiltered()).toEqual(desktop);
+  return desktop;
 }
 
 it('matches case and whitespace while excluding embedded links', () => {
@@ -75,4 +92,25 @@ it('keeps source insertion order rather than sorting by id or title', () => {
   insert('plain', 'Plain', 'No links');
   insert('a', 'Apple', '[[Topic]]');
   expect(read().map(row => row.source_node_id)).toEqual(['z', 'a']);
+});
+
+it.each([
+  ['阅读笔记', '阅读笔记'],
+  ['100%_done', '100%_'],
+  [' Topic A ', ' '],
+  ['Äpfel', null],
+  ['K', null],
+  ['Rust 2024 笔记', ' 2024 笔记'],
+  ['   ', null]
+])('derives a caseless prefilter needle for %j', (title, needle) => {
+  expect(nodeBacklinkCaselessNeedle(title)).toBe(needle === ' ' ? null : needle);
+});
+
+it('prefilters sources by the caseless title run without dropping case variants', () => {
+  insert('target', 'Rust 2024 笔记');
+  insert('upper', 'Upper', '[[RUST 2024 笔记]]');
+  insert('other', 'Other', '[[Go 2023 笔记]]');
+  const query = nodeBacklinkSourcesQuery('target', 'Rust 2024 笔记');
+  expect(query.params).toEqual(['target', ' 2024 笔记']);
+  expect(read().map(row => row.source_node_id)).toEqual(['upper']);
 });

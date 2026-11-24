@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "リンク参照を開く ({count})",
   "desktop.links.backlinks": "バックリンク",
   "desktop.links.mentionedTimes": "{count} 回言及されました",
+  "desktop.links.empty": "バックリンクなし",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "概要",
   "desktop.rightPanel.highlights": "ハイライト",

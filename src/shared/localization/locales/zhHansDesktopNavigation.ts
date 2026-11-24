@@ -99,6 +99,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.links.openReferences': '打开链接引用（{count}）',
   'desktop.links.backlinks': '反向链接',
   'desktop.links.mentionedTimes': '提到 {count} 次',
+  'desktop.links.empty': '没有反向链接',
   'desktop.rightPanel.flow': 'Flow',
   'desktop.rightPanel.flow.libraryScope': '全库',
   'desktop.rightPanel.outline': '大纲',

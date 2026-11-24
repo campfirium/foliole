@@ -99,6 +99,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.links.openReferences': 'Open link references ({count})',
   'desktop.links.backlinks': 'Backlinks',
   'desktop.links.mentionedTimes': 'Mentioned {count} times',
+  'desktop.links.empty': 'No backlinks',
   'desktop.rightPanel.flow': 'Flow',
   'desktop.rightPanel.flow.libraryScope': 'Library',
   'desktop.rightPanel.outline': 'Outline',

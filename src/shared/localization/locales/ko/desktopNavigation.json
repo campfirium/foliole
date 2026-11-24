@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "링크 참조 열기({count})",
   "desktop.links.backlinks": "백링크",
   "desktop.links.mentionedTimes": "{count}번 언급됨",
+  "desktop.links.empty": "백링크 없음",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "개요",
   "desktop.rightPanel.highlights": "하이라이트",

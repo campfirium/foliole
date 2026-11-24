@@ -91,6 +91,7 @@
   "desktop.links.openReferences": "Abrir referencias de enlaces ({count})",
   "desktop.links.backlinks": "Vínculos de retroceso",
   "desktop.links.mentionedTimes": "Mencionado {count} veces",
+  "desktop.links.empty": "Sin vínculos de retroceso",
   "desktop.rightPanel.flow": "Flow",
   "desktop.rightPanel.outline": "Esquema",
   "desktop.rightPanel.highlights": "Destacados",
