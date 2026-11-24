@@ -1,7 +1,7 @@
 import type { PdfAnchorLocator, PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 
 import { resolvePdfSelectionClientRects } from './pdfSelectionClientRects';
-import { intersectPdfTextLayerRange, resolvePdfSelectedPageNumbers } from './pdfSelectionPages';
+import { intersectPdfTextLayerRange } from './pdfSelectionPages';
 import { resolvePdfRangeText } from './pdfSelectionRangeText';
 
 function normalizedRects(range: Range, page: DOMRect) {
@@ -20,8 +20,7 @@ function normalizedRects(range: Range, page: DOMRect) {
   });
 }
 
-export function resolvePdfCrossPageSelection(container: HTMLElement, selection: Selection) {
-  const pageNumbers = resolvePdfSelectedPageNumbers(container, selection);
+export function resolvePdfCrossPageSelection(container: HTMLElement, selection: Selection, pageNumbers: number[]) {
   const range = selection.getRangeAt(0);
   const fragments: PdfAnchorLocator[] = [];
   const texts: string[] = [];

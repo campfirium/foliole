@@ -22,41 +22,61 @@ export type WorkspaceRefreshScope =
     metadata?: boolean;
   };
 
-interface PendingRefresh {
-  revision: number;
-  scope: WorkspaceRefreshScope;
-}
-
 export interface WorkspaceSnapshotReader<T> {
   (input: { current: T; scope: WorkspaceRefreshScope }): Promise<T>;
 }
 
-type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
+const nodeIdFields = ['nodeIds', 'reviewNodeIds', 'readingNodeIds', 'viewStateNodeIds', 'openStateNodeIds'] as const;
+type NodeIdField = typeof nodeIdFields[number];
 
-function unionIds(scopes: readonly NodeScope[], pick: (scope: NodeScope) => readonly string[] | undefined) {
-  return [...new Set(scopes.flatMap(scope => pick(scope) ?? []))];
-}
+class WorkspaceRefreshScopes {
+  private ids = new Map<NodeIdField, Set<string>>();
+  private full = false;
+  private activeNode = false;
+  private structure = false;
+  private sawTrash = false;
+  private sawMetadata = false;
+  private sawOtherThanTrash = false;
+  private sawOtherThanTrashOrMetadata = false;
 
-function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
-  const scope: NodeScope = { kind: 'nodes', nodeIds: unionIds(scopes, item => item.nodeIds) };
-  const reviewNodeIds = unionIds(scopes, item => item.reviewNodeIds);
-  const readingNodeIds = unionIds(scopes, item => item.readingNodeIds);
-  const viewStateNodeIds = unionIds(scopes, item => item.viewStateNodeIds);
-  const openStateNodeIds = unionIds(scopes, item => item.openStateNodeIds);
-  if (reviewNodeIds.length) scope.reviewNodeIds = reviewNodeIds;
-  if (readingNodeIds.length) scope.readingNodeIds = readingNodeIds;
-  if (viewStateNodeIds.length) scope.viewStateNodeIds = viewStateNodeIds;
-  if (openStateNodeIds.length) scope.openStateNodeIds = openStateNodeIds;
-  if (scopes.some(item => item.activeNode)) scope.activeNode = true;
-  if (scopes.some(item => item.structure)) scope.structure = true;
-  if (scopes.some(item => item.trash) && scopes.every(item => !item.structure || item.trash)) scope.trash = true;
-  if (scopes.some(item => item.metadata) && scopes.every(item => !item.structure || item.trash || item.metadata)) scope.metadata = true;
-  return scope;
+  add(scope: WorkspaceRefreshScope) {
+    if (this.full) return;
+    if (scope.kind === 'full') {
+      this.full = true;
+      this.ids.clear();
+      return;
+    }
+    for (const field of nodeIdFields) {
+      const values = scope[field];
+      if (!values?.length) continue;
+      const ids = this.ids.get(field) ?? new Set<string>();
+      for (const id of values) ids.add(id);
+      this.ids.set(field, ids);
+    }
+    this.activeNode ||= Boolean(scope.activeNode);
+    this.structure ||= Boolean(scope.structure);
+    this.sawTrash ||= Boolean(scope.trash);
+    this.sawMetadata ||= Boolean(scope.metadata);
+    this.sawOtherThanTrash ||= Boolean(scope.structure && !scope.trash);
+    this.sawOtherThanTrashOrMetadata ||= Boolean(scope.structure && !scope.trash && !scope.metadata);
+  }
+
+  toScope(): WorkspaceRefreshScope {
+    if (this.full) return { kind: 'full' };
+    const scope: Extract<WorkspaceRefreshScope, { kind: 'nodes' }> = { kind: 'nodes', nodeIds: [] };
+    for (const [field, ids] of this.ids) scope[field] = [...ids];
+    if (this.activeNode) scope.activeNode = true;
+    if (this.structure) scope.structure = true;
+    if (this.sawTrash && !this.sawOtherThanTrash) scope.trash = true;
+    if (this.sawMetadata && !this.sawOtherThanTrashOrMetadata) scope.metadata = true;
+    return scope;
+  }
 }
 
 export function mergeWorkspaceRefreshScopes(scopes: readonly WorkspaceRefreshScope[]): WorkspaceRefreshScope {
-  if (scopes.some(scope => scope.kind === 'full')) return { kind: 'full' };
-  return copyNodeScope(scopes as readonly NodeScope[]);
+  const pending = new WorkspaceRefreshScopes();
+  for (const scope of scopes) pending.add(scope);
+  return pending.toScope();
 }
 
 export function workspaceRefreshScopeHasChanges(scope: WorkspaceRefreshScope) {
@@ -68,8 +88,7 @@ export function workspaceRefreshScopeHasChanges(scope: WorkspaceRefreshScope) {
 /** Owns published snapshots, not database writes or uncommitted editor drafts. */
 export class WorkspaceSnapshotRefresh<T> {
   private session = 0;
-  private revision = 0;
-  private pending: PendingRefresh[] = [];
+  private pending: WorkspaceRefreshScopes | null = null;
   private running: Promise<void> | null = null;
   private listeners = new Set<() => void>();
 
@@ -87,13 +106,13 @@ export class WorkspaceSnapshotRefresh<T> {
 
   /** Call only for committed changes, or an explicit request to reread current state. */
   register(scope: WorkspaceRefreshScope) {
-    this.pending.push({ revision: ++this.revision, scope: scope.kind === 'full'
-      ? scope : copyNodeScope([scope]) });
+    this.pending ??= new WorkspaceRefreshScopes();
+    this.pending.add(scope);
   }
 
   reset(snapshot: T) {
     this.session += 1;
-    this.pending = [];
+    this.pending = null;
     this.snapshot = snapshot;
     this.notify();
   }
@@ -114,7 +133,7 @@ export class WorkspaceSnapshotRefresh<T> {
     if (!read) return Promise.reject(new Error('workspace_snapshot_reader_missing'));
     const running: Promise<void> = this.drain(read).then(() => {
       if (this.running === running) this.running = null;
-      if (this.pending.length) return this.refresh(read);
+      if (this.pending) return this.refresh(read);
     }, error => {
       if (this.running === running) this.running = null;
       throw error;
@@ -124,23 +143,29 @@ export class WorkspaceSnapshotRefresh<T> {
   }
 
   private async drain(read: WorkspaceSnapshotReader<T>) {
-    while (this.pending.length) {
+    while (this.pending) {
       const session = this.session;
-      const revision = this.revision;
-      const scope = mergeWorkspaceRefreshScopes(this.pending.map(entry => entry.scope));
+      const batch = this.pending;
+      const scope = batch.toScope();
+      this.pending = null;
       let next: T;
       try {
         next = await read({ current: this.snapshot, scope });
       } catch (error) {
         if (session !== this.session) continue;
+        this.retainFailedBatch(batch);
         throw error;
       }
       if (session !== this.session) continue;
       const changed = !Object.is(this.snapshot, next);
       this.snapshot = next;
-      this.pending = this.pending.filter(entry => entry.revision > revision);
       if (changed) this.notify();
     }
+  }
+
+  private retainFailedBatch(batch: WorkspaceRefreshScopes) {
+    if (this.pending) batch.add(this.pending.toScope());
+    this.pending = batch;
   }
 
   private notify() {

@@ -3,7 +3,7 @@ import type { MutableRefObject } from 'react';
 
 import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 
-import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
+import { resolvePdfSelectionContent } from './pdfSelectionText';
 
 const CONTEXT_MENU_SELECTION_FALLBACK_WINDOW_MS = 1000;
 export interface PdfSelectionSnapshot {
@@ -15,23 +15,19 @@ export interface PdfSelectionSnapshot {
 type PdfSelectionChangeHandler = (locator: PdfSelectionLocator | undefined) => void;
 
 export function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionSnapshot | null {
-  const selection = window.getSelection();
-  if (!selection) {
-    return null;
-  }
-  const selectionText = resolvePdfSelectionText(surface, selection);
-  if (!selectionText) {
-    return null;
-  }
-  const locator = resolvePdfSelectionLocator(surface, selection);
-  if (!locator) {
-    return null;
-  }
-  return {
-    capturedAt: Date.now(),
-    locator,
-    selectionText
-  };
+  const selection = resolvePdfSelectionContent(surface, window.getSelection());
+  return selection ? { ...selection, capturedAt: Date.now() } : null;
+}
+
+const eventSelections = new WeakMap<Event, { surface: HTMLElement; snapshot: PdfSelectionSnapshot | null }>();
+
+/** The selection overlay and toolbar are notified by the same native events. */
+export function resolvePdfSelectionForEvent(surface: HTMLElement, event: Event) {
+  const previous = eventSelections.get(event);
+  if (previous?.surface === surface) return previous.snapshot;
+  const snapshot = resolvePdfSelectionSnapshot(surface);
+  eventSelections.set(event, { surface, snapshot });
+  return snapshot;
 }
 
 function resolveFallbackSelection(snapshot: PdfSelectionSnapshot | null) {
@@ -53,8 +49,8 @@ function createSelectionTrackingHandlers(
   preservedSelectionRef: MutableRefObject<PdfSelectionSnapshot | null>,
   onSelectionChange?: PdfSelectionChangeHandler
 ) {
-  const syncSelectionSnapshot = () => {
-    const snapshot = resolvePdfSelectionSnapshot(surface);
+  const syncSelectionSnapshot = (event: Event) => {
+    const snapshot = resolvePdfSelectionForEvent(surface, event);
     if (snapshot || window.getSelection()?.isCollapsed === false) {
       preservedSelectionRef.current = snapshot;
     }
@@ -64,14 +60,14 @@ function createSelectionTrackingHandlers(
   return {
     handleMouseDown: (event: MouseEvent) => {
       if (event.button === 2) {
-        syncSelectionSnapshot();
+        syncSelectionSnapshot(event);
       }
     },
     handleMouseUp: (event: MouseEvent) => {
       if (event.button !== 0) {
         return;
       }
-      syncSelectionSnapshot();
+      syncSelectionSnapshot(event);
     },
     syncSelectionSnapshot
   };

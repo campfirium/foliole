@@ -17,19 +17,25 @@ function isSelectionNodeInside(container: HTMLElement, node: Node | null) {
   return container.contains(normalizedNode);
 }
 
+function hasPdfSelection(container: HTMLElement | null, selection: Selection | null) {
+  return Boolean(container && selection && !selection.isCollapsed && selection.rangeCount > 0 &&
+    isSelectionNodeInside(container, selection.anchorNode) && isSelectionNodeInside(container, selection.focusNode));
+}
+
 export function resolvePdfSelectionText(container: HTMLElement | null, selection: Selection | null) {
-  if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return '';
-  }
-
-  if (!isSelectionNodeInside(container, selection.anchorNode) || !isSelectionNodeInside(container, selection.focusNode)) {
-    return '';
-  }
-
-  if (resolvePdfSelectedPageNumbers(container, selection).length > 1) {
-    return resolvePdfCrossPageSelection(container, selection)?.selectionText ?? '';
-  }
+  if (!container || !selection || !hasPdfSelection(container, selection)) return '';
+  const pages = resolvePdfSelectedPageNumbers(container, selection);
+  if (pages.length > 1) return resolvePdfCrossPageSelection(container, selection, pages)?.selectionText ?? '';
   return resolvePdfRangeText(selection.getRangeAt(0));
+}
+
+export function resolvePdfSelectionContent(container: HTMLElement | null, selection: Selection | null) {
+  if (!container || !selection || !hasPdfSelection(container, selection)) return null;
+  const pages = resolvePdfSelectedPageNumbers(container, selection);
+  if (pages.length > 1) return resolvePdfCrossPageSelection(container, selection, pages);
+  const selectionText = resolvePdfRangeText(selection.getRangeAt(0));
+  const locator = selectionText ? resolveSinglePageLocator(selection) : undefined;
+  return locator ? { locator, selectionText } : null;
 }
 
 function resolveSelectionPageShell(selection: Selection): HTMLElement | null {
@@ -127,15 +133,13 @@ function resolveRangeBoundingRect(range: Range): DOMRect | null {
 }
 
 export function resolvePdfSelectionLocator(container: HTMLElement | null, selection: Selection | null): PdfSelectionLocator | undefined {
-  if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return undefined;
-  }
-  if (!isSelectionNodeInside(container, selection.anchorNode) || !isSelectionNodeInside(container, selection.focusNode)) {
-    return undefined;
-  }
-  if (resolvePdfSelectedPageNumbers(container, selection).length > 1) {
-    return resolvePdfCrossPageSelection(container, selection)?.locator;
-  }
+  if (!container || !selection || !hasPdfSelection(container, selection)) return undefined;
+  const pages = resolvePdfSelectedPageNumbers(container, selection);
+  return pages.length > 1 ? resolvePdfCrossPageSelection(container, selection, pages)?.locator
+    : resolveSinglePageLocator(selection);
+}
+
+function resolveSinglePageLocator(selection: Selection): PdfSelectionLocator | undefined {
   const pageShell = resolveSelectionPageShell(selection);
   const pageFromData = pageShell?.dataset.pdfPageNumber;
   const page = pageFromData ? Number(pageFromData) : NaN;

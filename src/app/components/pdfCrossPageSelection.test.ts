@@ -5,8 +5,9 @@ import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
 import { usePdfSelectedPageNumbers } from './pdfSelectionPages';
-import { resolvePdfSelectionSnapshot } from './pdfSelectionRuntime';
+import { resolvePdfSelectionSnapshot, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
+import { usePdfSelectionToolbar } from './usePdfSelectionToolbar';
 
 function fixture(texts = ['First page ending', 'Second page beginning']) {
   const surface = document.createElement('div');
@@ -98,5 +99,25 @@ it('retains the complete native selection beyond the viewport and releases on ca
   input.selection.removeAllRanges();
   fireEvent(document, new Event('selectionchange'));
   expect(result.current).toEqual([]);
+  unmount();
+});
+
+it('measures page geometry once when a selection opens the toolbar', () => {
+  const input = fixture();
+  selectAll(input);
+  const surfaceRef = { current: input.surface };
+  const preservedSelectionRef = { current: null as PdfSelectionSnapshot | null };
+  const result = vi.fn();
+  const firstFrame = input.pageElements[1]!.querySelector<HTMLElement>('[data-testid="pdf-document-page"]')!;
+  const geometry = vi.spyOn(firstFrame, 'getBoundingClientRect');
+  const { unmount } = renderHook(() => {
+    useTrackPdfSelection(surfaceRef, preservedSelectionRef);
+    usePdfSelectionToolbar({ surfaceRef, onClose: vi.fn(), onOpen: result });
+  });
+  fireEvent.mouseUp(input.surface, { button: 0 });
+  expect(result).toHaveBeenCalledWith(expect.objectContaining({
+    selectionText: 'First page ending\nSecond page beginning'
+  }), expect.anything());
+  expect(geometry).toHaveBeenCalledTimes(1);
   unmount();
 });
