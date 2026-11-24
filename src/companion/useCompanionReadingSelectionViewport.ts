@@ -2,6 +2,8 @@ import { useLayoutEffect, type ReactNode, type RefObject } from 'react';
 
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
+const EXPANDED_TOP_CHROME_BOTTOM = 'calc(max(env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px)) + 3rem)';
+
 export function useCompanionReadingSelectionViewport(
   surfaceRef: RefObject<HTMLElement | null>,
   editing: boolean,
@@ -21,11 +23,12 @@ export function useCompanionReadingSelectionViewport(
     const status = reviewFooter?.querySelector(':scope > [role="status"]');
 
     const update = () => {
-      const top = topChrome?.getBoundingClientRect().bottom ?? 0;
+      // Floating toolbars unmount when hidden; hold the expanded toolbar band so the body does not move.
+      const top = topChrome ? `${topChrome.getBoundingClientRect().bottom}px` : EXPANDED_TOP_CHROME_BOTTOM;
       const headerHeight = breadcrumb?.getBoundingClientRect().height ?? 0;
       const footerTop = Math.min(...[bottomChrome, reviewFooter, status]
         .map(element => element?.getBoundingClientRect().top ?? window.innerHeight));
-      surface.style.setProperty('--companion-reading-chrome-bottom', `${top}px`);
+      surface.style.setProperty('--companion-reading-chrome-bottom', top);
       surface.style.setProperty('--companion-reading-breadcrumb-height', `${headerHeight}px`);
       surface.style.setProperty('--companion-reading-viewport-bottom', `${Math.max(0, window.innerHeight - footerTop)}px`);
     };

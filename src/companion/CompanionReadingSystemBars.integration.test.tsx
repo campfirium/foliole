@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createContentSaveMock } from './companionContentEditingTestSupport';
@@ -35,9 +35,15 @@ function more() {
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 }
 const applied = async (enabled: boolean, hidden = false) => {
-  await waitFor(() => expect(host.apply).toHaveBeenLastCalledWith(target(enabled, hidden)));
+  await waitFor(() => expect(host.apply).toHaveBeenLastCalledWith(target(enabled, hidden)), { timeout: 3000 });
 };
-afterEach(async () => { host.platform = 'android'; localStorage.clear(); await act(async () => undefined); vi.clearAllMocks(); });
+afterEach(async () => {
+  host.platform = 'android'; localStorage.clear();
+  cleanup();
+  // Let the deferred release from an unmounted reader fire before the next test.
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); });
+  vi.clearAllMocks();
+});
 
 it('shows time and battery with reading tools and hides them together without disabling overlay mode', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
@@ -51,6 +57,18 @@ it('shows time and battery with reading tools and hides them together without di
   expect(host.apply.mock.calls.every(([value]) => (value as { enabled: boolean }).enabled)).toBe(true);
   view.rerender(<p>Library</p>);
   await applied(false);
+});
+
+it('keeps the status bar hidden while switching to the next card', async () => {
+  localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
+  const view = render(article());
+  await applied(true, true);
+  view.rerender(<p>Loading</p>);
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
+  view.rerender(article('second'));
+  await applied(true, true);
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1800)); });
+  expect(host.apply.mock.calls.some(([value]) => (value as { enabled: boolean }).enabled === false)).toBe(false);
 });
 
 it('keeps the status bar outside Outline and restores the reading layout after closing', async () => {
@@ -101,7 +119,7 @@ it('keeps failed exit restoration visible in the surviving shell and retries its
   const view = render(<><CompanionReadingSystemBarNotice />{article()}</>); await applied(true, true);
   host.apply.mockRejectedValueOnce(new Error('window unavailable'));
   view.rerender(<><CompanionReadingSystemBarNotice /><p>Library</p></>);
-  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Could not change the system status bar'));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Could not change the system status bar'), { timeout: 3000 });
   fireEvent.click(screen.getByRole('button', { name: 'Retry system status bar' }));
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument()); await applied(false);
   expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ hideSystemStatusBar: true });

@@ -59,7 +59,7 @@ function ReadingChromeTextButton(props: {
 }
 
 function ChromeSpacer() {
-  return <div aria-hidden="true" className="h-10" />;
+  return <div aria-hidden="true" className="h-12" />;
 }
 
 function EditingChrome(props: {

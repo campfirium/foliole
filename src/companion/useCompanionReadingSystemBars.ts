@@ -5,9 +5,20 @@ import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '
 
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 
+// Moving to the next card unmounts the article before the next one mounts; releasing at once lets Android flash the status bar.
+const RELEASE_GRACE_MS = 1500;
+let pendingRelease: ReturnType<typeof setTimeout> | null = null;
+
 export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisible: boolean) {
-  useEffect(() => () => {
-    if (supportsCompanionReadingSystemBars()) void companionReadingSystemBars.request({ enabled: false, hidden: false });
+  useEffect(() => {
+    if (pendingRelease) { clearTimeout(pendingRelease); pendingRelease = null; }
+    return () => {
+      if (!supportsCompanionReadingSystemBars()) return;
+      pendingRelease = setTimeout(() => {
+        pendingRelease = null;
+        void companionReadingSystemBars.request({ enabled: false, hidden: false });
+      }, RELEASE_GRACE_MS);
+    };
   }, []);
   const { hideSystemStatusBar } = useCompanionReadingDisplay();
   useEffect(() => {
