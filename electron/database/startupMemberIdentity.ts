@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { resolveDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { loadDesktopLibraryWriterBinding } from '../deviceAnchorStore.js';
@@ -36,8 +37,15 @@ export function rebindStartupMemberIdentity(driver: DatabaseDriver, dbPath: stri
       previous?.device_name ?? 'Desktop', resolveDesktopSyncGroupPlatform(os.platform(), os.release()), now, now]);
     driver.execute('UPDATE sync_group_local_state SET local_device_identity_key = ?, updated_at = ? WHERE singleton_id = 1',
       [expected.identity_key, now]);
-    // The copy must not reuse the original's sequence and proof generation.
-    resetSyncGeneration(driver, `rebind-${randomUUID()}`);
+    const pending = driver.queryOne<{ receiver_epoch: string }>(
+      `UPDATE sync_group_metadata SET value = json_set(value, '$.receiverDeviceId', ?), updated_at = ?
+       WHERE key = ? AND json_extract(value, '$.groupId') = ?
+         AND json_extract(value, '$.receiverDeviceId') = ?
+       RETURNING json_extract(value, '$.receiverLibraryEpoch') AS receiver_epoch`,
+      [expected.identity_key, now, SYNC_GROUP_OVERWRITE_PROGRESS_KEY, local.group_id, local.local_device_identity_key]
+    );
+    // A pending overwrite survives the move. Its original epoch remains bound to the consumed snapshot.
+    resetSyncGeneration(driver, pending?.receiver_epoch ?? `rebind-${randomUUID()}`);
   });
   return { previousDeviceId: local.local_device_identity_key, deviceId: expected.identity_key };
 }
