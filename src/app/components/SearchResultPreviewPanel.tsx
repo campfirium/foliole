@@ -45,7 +45,10 @@ function useNodePreviewContent(result: WorkspaceSearchResult | null, nodesById: 
     setContent(result.excerpt);
     let cancelled = false;
     setIsLoading(false);
-    void ensureWorkspaceNodeDocumentReady(result.id, { keepWarm: true }).then((document) => {
+    void ensureWorkspaceNodeDocumentReady(result.id, {
+      includeTrashed: result.isTrashed === true,
+      keepWarm: true
+    }).then((document) => {
       if (!cancelled) {
         setContent(document?.content || result.excerpt);
       }
@@ -118,7 +121,7 @@ function SearchResultPreviewWindow(props: {
       <section className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')} style={props.frame.panelStyle}>
         <SearchResultPreviewHeader
           frame={props.frame}
-          onOpen={() => props.onOpenResult(props.result)}
+          onOpen={props.result.isTrashed ? undefined : () => props.onOpenResult(props.result)}
           title={props.result.title}
         />
         <SearchResultPreviewBody {...props} />
@@ -130,7 +133,7 @@ function SearchResultPreviewWindow(props: {
 
 function SearchResultPreviewHeader(props: {
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
-  onOpen: () => void;
+  onOpen: (() => void) | undefined;
   title: string;
 }) {
   const t = useTranslation();
@@ -147,7 +150,7 @@ function SearchResultPreviewHeader(props: {
         <div className="mt-1 text-xs text-foreground/55">{t('desktop.searchPreview.subtitle')}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <AppButton onClick={props.onOpen} size="sm">{t('desktop.searchPreview.open')}</AppButton>
+        {props.onOpen ? <AppButton onClick={props.onOpen} size="sm">{t('desktop.searchPreview.open')}</AppButton> : null}
         <AppIconButton
           icon={props.frame.isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
           label={props.frame.isFullscreen ? t('desktop.searchPreview.restoreWindow') : t('desktop.searchPreview.fullScreen')}
