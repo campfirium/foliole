@@ -2,6 +2,7 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../shared/ui';
 
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
+import { superMemoNoticeKind } from './superMemoNotice';
 import type { useSuperMemoDraft } from './useSuperMemoDraft';
 
 const sourceRowLayout = 'items-center !px-0 before:!inset-x-0 max-[1080px]:flex-row max-[1080px]:items-center';
@@ -41,7 +42,7 @@ export function SuperMemoLoadPage({ model, onLoad, onLoadNew }: {
           </SettingsControlSlot> : null}
         </SettingsRow>
       </SettingsSection>
-      <SuperMemoLoadNotice inline reload={retryAsUpdate} error={error === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
+      <SuperMemoLoadNotice inline reload={retryAsUpdate} error={superMemoNoticeKind(error) === 'xmlUpdated' ? false : error} {...{ busy, candidates }} onClose={() => setError(false)}
         recover={choice => void recoverCollection(choice)} retry={() => void retrySource()} />
     </>
   );

@@ -45,3 +45,12 @@ test('opens SuperMemo migration from the command palette and shares the draft wi
   await expect(reopened.getByRole('slider')).toHaveValue('100');
   await expect(reopened.getByText('Example', { exact: true })).toBeVisible();
 });
+
+test('shows the specific reason a valid XML export cannot be loaded', async ({ desktopWindow, desktopApp }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
+  const wrongCount = `<SuperMemoCollection><Count>2</Count>${card}</SuperMemoCollection>`;
+  await loadSource(desktopApp, dialog, testInfo.outputPath('WrongCount'), wrongCount);
+  const notice = dialog.getByRole('alert').filter({ hasText: 'supermemo_element_count_mismatch' });
+  await expect(notice.getByText('supermemo_element_count_mismatch', { exact: true })).toBeVisible();
+  await notice.screenshot({ path: testInfo.outputPath('supermemo-error-code.png') });
+});

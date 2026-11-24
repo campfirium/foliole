@@ -5,6 +5,7 @@ import { isImportAccessDenied } from '../../../shared/platform/import/importAcce
 import { activateSavedRuntimeSuperMemoSource, previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, selectRuntimeSuperMemoCollection,
   pickRuntimeSuperMemoSource, readRuntimeSuperMemoSource, reloadRuntimeSuperMemoSource, type SuperMemoUpdateTarget } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
+import { previewFailure, superMemoNoticeKind, type SuperMemoNotice } from './superMemoNotice';
 import { mappedSourceFormat, migrationSnapshot, rememberDraftSource, restoreSuperMemoDraft } from './superMemoSavedDraft';
 import type { DraftState } from './useSuperMemoDraft';
 
@@ -12,22 +13,6 @@ export type Source = NativeSuperMemoSource;
 type Candidate = NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoCollection>>>[number];
 export type DraftTarget = SuperMemoUpdateTarget & { targetBatchId: string; originalFilePath?: string | undefined };
 export type Pending = { selected: Source; target: DraftTarget | undefined; candidates?: Candidate[] };
-
-export type SuperMemoNotice = false | 'selectionRead' | 'collectionChoice' | 'xmlAccess' | 'xmlUpdated' | 'xmlSize' | 'xmlRead' | 'xmlFormat' |
-  'collectionAccess' | 'collectionRead' | 'collectionMismatch' | 'sourceMismatch' | 'preview' | 'convert' | 'save';
-
-export function previewFailure(error: unknown): Exclude<SuperMemoNotice, false> {
-  const message = String(error);
-  if (message.includes('supermemo_xml_updated') || message.includes('supermemo_collection_updated')) return 'xmlUpdated';
-  if (message.includes('invalid_supermemo_xml_size')) return 'xmlSize';
-  if (message.includes('supermemo_source_mismatch')) return 'sourceMismatch';
-  if (message.includes('supermemo_link_save_failed')) return 'save';
-  if (message.includes('invalid_supermemo_xml')) return 'xmlFormat';
-  if (message.includes('supermemo_collection_access_denied')) return 'collectionAccess';
-  if (message.includes('supermemo_collection_mismatch')) return 'collectionMismatch';
-  if (message.includes('supermemo_collection_unreadable')) return 'collectionRead';
-  return 'preview';
-}
 
 export const automaticSourceFormat: SuperMemoSourceFormat = { ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' };
 
@@ -186,7 +171,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string, init
         }
       } catch (error) {
         const reason = previewFailure(error);
-        if (!reason.startsWith('collection')) {
+        if (!superMemoNoticeKind(reason)?.startsWith('collection')) {
           setError(reason);
           return;
         }
@@ -198,10 +183,10 @@ export function createSourceActions(state: DraftState, pickerTitle: string, init
         await recover(recovery, true, true);
       } catch (error) {
         setPending(recovery);
-        setError(String(error).includes('supermemo_link_save_failed') ? 'save' : isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead');
+        setError(previewFailure(error, isImportAccessDenied(error) ? 'collectionAccess' : 'collectionRead'));
       }
     } catch (error) {
-      setError(isImportAccessDenied(error) ? 'xmlAccess' : /invalid_supermemo_xml_size/.test(String(error)) ? 'xmlSize' : 'xmlRead');
+      setError(previewFailure(error, isImportAccessDenied(error) ? 'xmlAccess' : 'xmlRead'));
     } finally {
       state.setLoadingXml(false);
       setBusy(false);
@@ -215,7 +200,7 @@ export function createSourceActions(state: DraftState, pickerTitle: string, init
       await recover(await restoreRecoverySource(recovery), choice);
     } catch (error) {
       setPending(recovery);
-      setError(isImportAccessDenied(error) ? 'collectionAccess' : previewFailure(error));
+      setError(previewFailure(error, isImportAccessDenied(error) ? 'collectionAccess' : 'preview'));
     } finally {
       setBusy(false);
     }

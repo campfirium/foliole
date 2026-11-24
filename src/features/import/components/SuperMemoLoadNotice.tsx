@@ -5,7 +5,7 @@ import {
   AppDialogOverlay, AppDialogPortal, AppDialogTitle
 } from '../../../shared/ui';
 
-import type { SuperMemoNotice } from './superMemoDraftSourceActions';
+import { superMemoNoticeKind, type SuperMemoNotice } from './superMemoNotice';
 
 const descriptions = {
   selectionRead: 'desktop.superMemoDrafts.selectionReadFailed',
@@ -31,9 +31,10 @@ type NoticeProps = {
   reload?: boolean;
 };
 
-function RecoveryActions({ error, busy, inline, reload, onClose, recover, retry }: NoticeProps) {
+function RecoveryActions({ error: notice, busy, inline, reload, onClose, recover, retry }: NoticeProps) {
   const t = useTranslation();
-  const collection = typeof error === 'string' && error.startsWith('collection');
+  const error = superMemoNoticeKind(notice);
+  const collection = error && error.startsWith('collection');
   const close = <AppButton variant="ghost" disabled={busy} onClick={inline ? onClose : undefined}>
     {t('desktop.superMemoDrafts.close')}
   </AppButton>;
@@ -51,7 +52,8 @@ function RecoveryActions({ error, busy, inline, reload, onClose, recover, retry 
 
 export function SuperMemoLoadNotice(props: NoticeProps) {
   const t = useTranslation();
-  const { error, busy, inline, candidates, onClose, recover } = props;
+  const { error: notice, busy, inline, candidates, onClose, recover } = props;
+  const error = superMemoNoticeKind(notice);
   if (!error) return null;
   const title = t(error === 'collectionAccess' ? 'desktop.superMemoDrafts.collectionAccessTitle'
     : error === 'collectionChoice' ? 'desktop.superMemoDrafts.collectionChoiceTitle' :
@@ -59,6 +61,7 @@ export function SuperMemoLoadNotice(props: NoticeProps) {
         error === 'convert' ? 'desktop.superMemoDrafts.importFailedTitle' : 'desktop.superMemoDrafts.loadFailed');
   const description = <>
     {t(descriptions[error])}
+    {typeof notice === 'object' ? <code className="mt-2 block select-all break-all">{notice.code}</code> : null}
     {error === 'xmlAccess' && resolveRuntimeOperatingSystem() === 'macos'
       ? <span className="mt-2 block">{t('desktop.superMemoDrafts.macPermissionLocation')}</span> : null}
   </>;

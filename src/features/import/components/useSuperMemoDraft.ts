@@ -7,8 +7,9 @@ import type { RememberedSuperMemoSource, SuperMemoMigrationForm, SuperMemoMigrat
 import { isImportAccessDenied } from '../../../shared/platform/import/importAccess';
 import { parseRuntimeSuperMemoSource, previewRuntimeSuperMemoImport, readRuntimeRememberedSuperMemoSource, runRuntimeSuperMemoImport, saveSuperMemoGradeMap } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 
-import { automaticSourceFormat, createSourceActions, previewFailure } from './superMemoDraftSourceActions';
-import type { DraftTarget, Pending, Source, SuperMemoNotice } from './superMemoDraftSourceActions';
+import { automaticSourceFormat, createSourceActions } from './superMemoDraftSourceActions';
+import type { DraftTarget, Pending, Source } from './superMemoDraftSourceActions';
+import { previewFailure, superMemoNoticeKind, type SuperMemoNotice } from './superMemoNotice';
 import { mappedSourceFormat, migrationSnapshot, rememberDraftSource } from './superMemoSavedDraft';
 import { useSuperMemoSourceSelection } from './useSuperMemoSourceSelection';
 
@@ -133,17 +134,10 @@ async function runImportAction<T>(state: DraftState, action: () => Promise<T>) {
   try {
     return await action();
   } catch (error) {
-    const reason = previewFailure(error);
-    if (reason.startsWith('collection')) {
-      setPending({ selected: source, target });
-      setError(reason);
-    } else {
-      const message = String(error);
-      if (reason === 'xmlUpdated' || message.includes('supermemo_preview_changed') ||
-        message.includes('supermemo_update_changed')) setError('xmlUpdated');
-      else if (message.includes('ENOENT') || message.includes('supermemo_xml_missing')) setError('xmlRead');
-      else setError(isImportAccessDenied(error) ? 'xmlAccess' : 'convert');
-    }
+    const fallback = isImportAccessDenied(error) ? 'xmlAccess' : String(error).includes('ENOENT') ? 'xmlRead' : 'convert';
+    const reason = previewFailure(error, fallback);
+    if (superMemoNoticeKind(reason)?.startsWith('collection')) setPending({ selected: source, target });
+    setError(reason);
   } finally {
     setImporting(false);
     setBusy(false);

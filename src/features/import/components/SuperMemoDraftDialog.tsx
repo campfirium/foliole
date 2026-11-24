@@ -18,6 +18,7 @@ import { useSuperMemoPreviewNavigation } from './SuperMemoEntryPreview';
 import { SuperMemoLoadNotice } from './SuperMemoLoadNotice';
 import { SuperMemoMigrationContent } from './SuperMemoMigrationContent';
 import { SuperMemoMigrationSteps, type SuperMemoMigrationStep } from './SuperMemoMigrationSteps';
+import { superMemoNoticeKind } from './superMemoNotice';
 import { SuperMemoUpdateComplete } from './SuperMemoUpdateComplete';
 import { SuperMemoUpdateReview } from './SuperMemoUpdateReview';
 import { useSuperMemoDraft } from './useSuperMemoDraft';
@@ -178,8 +179,8 @@ export function SuperMemoDraftDialog({ open, close, initialGrades, translate }: 
         </AppDialogContent>
       </AppDialogPortal>
       {open && review ? <SuperMemoUpdateReview update={review} busy={busy} onClose={closeReview} onApply={applyUpdate} /> : null}
-      <SuperMemoLoadNotice reload={error === 'xmlUpdated' || model.retryAsUpdate} error={open && (current !== 'load' || error === 'xmlUpdated') && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
-        recover={choose => void model.recoverCollection(choose)} retry={() => void (error === 'xmlUpdated' ? loadSource(true) : model.retrySource())} />
+      <SuperMemoLoadNotice reload={superMemoNoticeKind(error) === 'xmlUpdated' || model.retryAsUpdate} error={open && (current !== 'load' || superMemoNoticeKind(error) === 'xmlUpdated') && error} busy={busy} candidates={model.candidates} onClose={() => setError(false)}
+        recover={choose => void model.recoverCollection(choose)} retry={() => void (superMemoNoticeKind(error) === 'xmlUpdated' ? loadSource(true) : model.retrySource())} />
     </AppDialog>
   );
 }

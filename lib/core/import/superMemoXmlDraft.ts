@@ -49,7 +49,6 @@ function parseSourceReview(line: string, elementId: number): SourceReview {
   const match = /\bElNo=(\d+) Rep=(\d+) Laps=(\d+) Date=(\d{2}\.\d{2}\.\d{4}) (?:Hour=(\d+(?:\.\d+)?) )?.*?\bGrade=(\d+)/.exec(line);
   if (!match || Number(match[1]) !== elementId) throw new Error('invalid_supermemo_history_row');
   const [, , repetition, lapses, date, hour, grade] = match;
-  if (hour && Number(hour) >= 24) throw new Error('invalid_supermemo_history_hour');
   return { date: date!, hour: hour ?? null, grade: Number(grade),
     repetition: Number(repetition), lapses: Number(lapses), raw: line.slice(match.index).trim() };
 }

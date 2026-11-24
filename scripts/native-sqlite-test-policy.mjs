@@ -159,6 +159,7 @@ const controlledElectronSqliteTests = [
   'electron/database/desktopSourceOwnershipMigration.test.ts',
   'electron/database/desktopSourceConnectionMigration.test.ts',
   'electron/database/externalDocumentImportVisibility.test.ts',
+  'electron/database/superMemoCrossMidnight.integration.test.ts',
   'electron/database/superMemoImportDrafts.integration.test.ts',
   'electron/database/superMemoImportWrite.integration.test.ts',
   'electron/import/superMemoTopicContent.integration.test.ts',

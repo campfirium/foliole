@@ -56,9 +56,11 @@ function requireInvoke() {
 }
 
 function parseSuperMemoXml<T>(xml: string, read: (document: Document) => T): T {
-  if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('invalid_supermemo_xml');
+  if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('supermemo_xml_doctype');
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  if (document.documentElement.localName === 'parsererror') throw new Error('supermemo_xml_malformed');
   try {
-    return read(new DOMParser().parseFromString(xml, 'application/xml'));
+    return read(document);
   } catch (error) {
     throw new Error('invalid_supermemo_xml', { cause: error });
   }

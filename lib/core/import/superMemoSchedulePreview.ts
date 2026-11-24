@@ -51,11 +51,14 @@ export function readReviewEvents(element: SuperMemoXmlDraftElement, sourceOffset
     const day = sourceDay(event.date);
     const hour = event.hour === null ? NaN : Number(event.hour);
     const grade = gradeMap[event.grade];
-    if (day === null || !Number.isFinite(hour) || hour < 0 || hour >= 24 || grade === undefined) {
+    if (day === null || !Number.isFinite(hour) || hour < 0 || grade === undefined) {
       return null;
     }
+    // SuperMemo can keep the learning day open after midnight and export elapsed hours.
+    const reviewedAt = new Date(day - offset + Math.round(hour * 3600) * 1000);
+    if (!Number.isFinite(reviewedAt.getTime())) return null;
     events.push({ op_id: String(index).padStart(10, '0'), kind: 'review', voids_op_id: null,
-      grade, reviewed_at: new Date(day - offset + Math.round(hour * 3600) * 1000).toISOString() });
+      grade, reviewed_at: reviewedAt.toISOString() });
   }
   return events;
 }
