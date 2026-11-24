@@ -128,6 +128,7 @@ export function SimplePdfDocument(props: {
   const [loadFailed, setLoadFailed] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [zoom, setZoom] = useState(100);
+  const initialPosition = props.initialPage === undefined ? props.positionPersistence?.initial : undefined;
   const pageWidth = width > 0 ? Math.floor((width * PDF_DEFAULT_FIT_RATIO * zoom) / 100) : undefined;
   usePdfReaderSession(props.attachmentId);
 
@@ -163,8 +164,8 @@ export function SimplePdfDocument(props: {
         >
           {pageWidth && totalPages ? <SimplePdfPageStack
             key={source}
-            initialPage={props.positionPersistence?.initial?.page ?? props.initialPage}
-            persistence={props.positionPersistence}
+            initialPage={props.initialPage ?? initialPosition?.page}
+            persistence={props.positionPersistence && { ...props.positionPersistence, initial: initialPosition }}
             pageWidth={pageWidth}
             scrollRef={scrollContainerRef}
             totalPages={totalPages}
