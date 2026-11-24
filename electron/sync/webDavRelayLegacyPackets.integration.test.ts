@@ -44,7 +44,7 @@ it('resumes an unsent v0.8.2 body before publishing new DAT work', async () => {
     source.reopen();
     rejectPut = false;
     expect(await sync(source)).toMatchObject({ published: 2, retries: 1 });
-    expect(publications).toEqual([old, expect.stringMatching(/\.dat$/u)]);
+    expect(publications).toEqual([old.replace(/\.bin$/u, '.dat'), expect.stringMatching(/\.dat$/u)]);
     source.reopen();
     expect(await sync(source)).toMatchObject({ published: 0 });
     expect(await sync(target)).toMatchObject({ applied: 2 });
@@ -60,6 +60,41 @@ it('resumes an unsent v0.8.2 body before publishing new DAT work', async () => {
       publications.push(path.posix.basename(new URL(request.headers.destination).pathname));
     }
     return false;
+  });
+});
+
+it('delivers pending legacy bytes through a DAT-only relay even if the new MOVE reply is lost', async () => {
+  let rejectPut = true;
+  const uploads: string[] = [];
+  await withRelayPeers(async ({ source, target, sync, scope, dav }) => {
+    await edit(source, 'upgrade-pending', 'Staged before upgrading');
+    await expect(sync(source)).rejects.toThrow('webdav_relay_stage_failed:500');
+    const { key } = await scope(source);
+    const legacyName = await preserveLegacyOutboxName(source, `${key}:outbox`);
+    rejectPut = false;
+    source.reopen();
+
+    dav.dropNextMove();
+    await expect(sync(source)).rejects.toMatchObject({ code: 'ECONNRESET' });
+    source.reopen();
+    expect(await sync(source)).toMatchObject({ published: 1, retries: 1 });
+    expect(await sync(source)).toMatchObject({ published: 0 });
+    expect(uploads).toEqual([legacyName.replace(/\.bin$/u, '.dat.partial')]);
+
+    expect(await sync(target)).toMatchObject({ applied: 1 });
+    target.reopen();
+    expect(await text(target, 'upgrade-pending')).toBe('Staged before upgrading');
+    expect(await sync(target)).toMatchObject({ applied: 0 });
+  }, (response, request) => {
+    if (request.method !== 'PUT') return false;
+    if (rejectPut) {
+      response.writeHead(500).end();
+      return true;
+    }
+    uploads.push(path.posix.basename(request.url!));
+    if (!request.url?.endsWith('.bin.partial')) return false;
+    response.writeHead(415).end();
+    return true;
   });
 });
 
@@ -85,6 +120,29 @@ it('settles a legacy attachment after a lost MOVE response without a duplicate u
     await target.reopen();
     expect(await readFile(path.join(target.assets, attachment))).toEqual(bytes);
     expect(await fixture.sync(target)).toMatchObject({ applied: 0 });
+  } finally { await fixture.close(); }
+});
+
+it('publishes an unsent legacy attachment as DAT with the same packet identity', async () => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    const bytes = Buffer.from('Attachment staged before upgrading');
+    const attachment = storageKey(bytes);
+    await writeFile(path.join(source.assets, attachment), bytes);
+    await editArticle(source.peer, [attachment], 'pending-legacy-attachment');
+    fixture.faultNextAttachmentPut('interrupt');
+    await expect(fixture.sync(source)).rejects.toThrow('test_attachment_put_interrupted');
+
+    const { key } = (await fixture.scope(source.peer))!;
+    const legacyName = await preserveLegacyOutboxName(source.peer, `${key}:attachment-outbox`, '$.name');
+    await source.reopen();
+    expect(await fixture.sync(source)).toMatchObject({ published: 1, retries: 1 });
+    const currentUpload = legacyName.replace(/\.bin$/u, '.dat.partial');
+    expect(fixture.uploads.map(upload => path.posix.basename(new URL(upload).pathname))).toEqual([currentUpload, currentUpload]);
+    expect(await fixture.sync(target)).toMatchObject({ applied: 2 });
+    await target.reopen();
+    expect(await readFile(path.join(target.assets, attachment))).toEqual(bytes);
   } finally { await fixture.close(); }
 });
 
