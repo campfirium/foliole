@@ -50,6 +50,8 @@ Invalid Mermaid diagrams display their original code in the note or diagram prev
 
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
+Manual re-sync of a Readwise PDF is a desktop source action. It checks the connected account's paginated highlight export and applies changes for the selected PDF after the export completes. Agent Control can read the resulting materials through its existing routes. The source action stays in the desktop app.
+
 The desktop file import picker imports every selected file, with a separate post-import reading-mode choice for each EPUB. This OS picker flow stays internal to the desktop app; Agent Control text creation does not expose local file selection.
 
 The desktop search panel remembers its preview line limit, separate font sizes for result titles, previews, and metadata, and whether to show each result's date and time. These are desktop display preferences. Agent Control search returns bounded excerpts independently of the panel's preview line limit.

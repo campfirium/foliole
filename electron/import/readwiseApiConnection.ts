@@ -29,6 +29,7 @@ import {
   writeReadwiseApiSecret
 } from './readwiseApiSecret.js';
 import { invalidateIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
+import { cancelReadwiseSourceOperations } from './readwiseSourceOperationLock.js';
 
 const READWISE_AUTH_URL = 'https://readwise.io/api/v2/auth/';
 
@@ -128,13 +129,7 @@ export async function connectReadwiseApiFromClipboard(
     const verifiedAt = new Date().toISOString();
     saveConnection({ secretRef, state: 'connected', verifiedAt }, remoteSource);
     if (previousToken && previousToken !== token) {
-      const source = remoteSource ?? loadReadwiseRemoteSource();
-      if (source) {
-        invalidateIncompleteReadwiseSourceCutover({
-          connectionRef: source.connectionRef,
-          sourceHost: loadReadwiseHostAssignment().current_host_name
-        });
-      }
+      onReadwiseTokenChanged(remoteSource ?? loadReadwiseRemoteSource());
     }
   } catch (error) {
     if (previousToken) writeReadwiseApiSecret(secretRef, previousToken);
@@ -142,6 +137,16 @@ export async function connectReadwiseApiFromClipboard(
     throw error;
   }
   return result('connected');
+}
+
+function onReadwiseTokenChanged(source: ReturnType<typeof loadReadwiseRemoteSource>) {
+  if (source) {
+    invalidateIncompleteReadwiseSourceCutover({
+      connectionRef: source.connectionRef,
+      sourceHost: loadReadwiseHostAssignment().current_host_name
+    });
+  }
+  cancelReadwiseSourceOperations();
 }
 
 export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
@@ -161,5 +166,6 @@ export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
     if (secretRef && previousToken) writeReadwiseApiSecret(secretRef, previousToken);
     throw error;
   }
+  cancelReadwiseSourceOperations();
   return result('disconnected');
 }

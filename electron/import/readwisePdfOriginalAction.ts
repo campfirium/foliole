@@ -10,6 +10,8 @@ import { fetchReadwiseRawSourceDocument } from './readwiseApiImportFetch.js';
 import { attachReadwiseApiOriginalFile, prepareReadwiseApiOriginalFile, stageReadwiseApiOriginalFile } from './readwiseApiOriginalFile.js';
 import { replacePreviousOriginalLink, saveOriginalFileState } from './readwiseApiOriginalFileCommit.js';
 import { placeReadwisePdfHighlights, placeReadwisePdfHighlightsFromAttachment, readReadwisePdfPages } from './readwisePdfPlacement.js';
+import { persistReadwisePdfResyncAnnotations } from './readwisePdfResyncAnnotations.js';
+import { prepareReadwisePdfResyncExport } from './readwisePdfResyncExport.js';
 import { beginReadwiseSourceOperation, finishReadwiseSourceOperation, isReadwiseSourceOperationRunning } from './readwiseSourceOperationLock.js';
 import { captureReadwiseSourceResyncSnapshot, loadReadwiseSourceResyncTarget, readReadwiseSourceResyncRuntimeStatus } from './readwiseSourceResyncTarget.js';
 
@@ -57,25 +59,31 @@ export async function getReadwisePdfOriginal(
 export async function resyncReadwisePdfOriginal(
   target: ReadwisePdfTarget,
   snapshot: string,
-  dependencies?: ReadwiseApiFetchDependencies
+  dependencies: ReadwiseApiFetchDependencies
 ) {
   const original = target.state.originalFile;
   if (original?.status === 'localized') {
     const found = await placeReadwisePdfHighlightsFromAttachment({
       attachmentId: original.attachmentId, connectionRef: target.connectionRef,
       documentId: target.documentId, nodeId: target.nodeId
-    }, () => {
-      assertUnchangedPdfTarget(target, snapshot);
-      const isAttached = loadNodeResourceReferences(target.nodeId).some(reference =>
-        reference.role === 'reference' && reference.storage_key === `${original.attachmentId}.pdf`);
-      if (!isAttached) attachReadwiseApiOriginalFile(target.nodeId, original, target.title);
+    }, async () => {
+      await runWithDatabaseConnectionOwner(() => assertUnchangedPdfTarget(target, snapshot, dependencies.signal));
+      const remote = await prepareReadwisePdfResyncExport(target, dependencies);
+      return () => {
+        assertUnchangedPdfTarget(target, snapshot, dependencies.signal);
+        const isAttached = loadNodeResourceReferences(target.nodeId).some(reference =>
+          reference.role === 'reference' && reference.storage_key === `${original.attachmentId}.pdf`);
+        if (!isAttached) attachReadwiseApiOriginalFile(target.nodeId, original, target.title);
+        return persistReadwisePdfResyncAnnotations(target, remote);
+      };
     });
     if (found) return;
   }
-  await localizeReadwisePdfOriginal(target, snapshot, dependencies);
+  await localizeReadwisePdfOriginal(target, snapshot, dependencies, true);
 }
 
-function assertUnchangedPdfTarget(target: ReadwisePdfTarget, snapshot: string) {
+function assertUnchangedPdfTarget(target: ReadwisePdfTarget, snapshot: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const current = loadReadwiseSourceResyncTarget(target.nodeId);
   if (current?.state.metadata.category !== 'pdf' || current.connectionRef !== target.connectionRef
     || current.documentId !== target.documentId || current.sourceFingerprint !== target.sourceFingerprint
@@ -88,28 +96,33 @@ function assertUnchangedPdfTarget(target: ReadwisePdfTarget, snapshot: string) {
 async function localizeReadwisePdfOriginal(
   target: ReadwisePdfTarget,
   snapshot: string,
-  dependencies?: ReadwiseApiFetchDependencies
+  dependencies: ReadwiseApiFetchDependencies = {},
+  refreshAnnotations = false
 ) {
   const nodeId = target.nodeId;
   const remote = await fetchReadwiseRawSourceDocument(target.documentId, dependencies);
   if (remote?.category !== 'pdf' || !remote.rawSourceUrl) throw new Error('original_file_not_distributed');
   const prepared = await prepareReadwiseApiOriginalFile({
     category: 'pdf', documentId: target.documentId, hasHtmlBody: true,
-    ...(dependencies ? { dependencies } : {}), rawSourceUrl: remote.rawSourceUrl
+    dependencies, rawSourceUrl: remote.rawSourceUrl
   });
   if (!prepared.bytes || prepared.state.status !== 'localized') {
     throw new Error(prepared.state.reason ?? 'original_file_download_failed');
   }
   const localized = prepared.state;
   const pages = await readReadwisePdfPages(prepared.bytes);
-  await runWithDatabaseConnectionOwner(() => assertUnchangedPdfTarget(target, snapshot));
+  await runWithDatabaseConnectionOwner(() => assertUnchangedPdfTarget(target, snapshot, dependencies.signal));
+  const annotations = refreshAnnotations ? await prepareReadwisePdfResyncExport(target, dependencies) : null;
+  if (annotations) {
+    await runWithDatabaseConnectionOwner(() => assertUnchangedPdfTarget(target, snapshot, dependencies.signal));
+  }
   await stageReadwiseApiOriginalFile({ bytes: prepared.bytes, state: localized, title: target.title });
   if (target.state.originalFile?.status === 'localized'
     && (await resolveAttachmentFile(`${localized.attachmentId}.pdf`)).status !== 'ready') {
     throw new Error('original_file_storage_failed');
   }
   await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
-    assertUnchangedPdfTarget(target, snapshot);
+    assertUnchangedPdfTarget(target, snapshot, dependencies.signal);
     const source = loadReadwiseApiImportSource(target.connectionRef, target.documentId);
     if (!source || source.nodeId !== nodeId) throw new Error('readwise_pdf_target_changed');
     attachReadwiseApiOriginalFile(nodeId, localized, target.title);
@@ -117,8 +130,9 @@ async function localizeReadwisePdfOriginal(
     saveOriginalFileState(target.connectionRef, target.documentId, localized);
     const replaced = target.state.originalFile?.status === 'localized'
       && target.state.originalFile.attachmentId !== localized.attachmentId;
+    const relocateNodeIds = annotations ? persistReadwisePdfResyncAnnotations(target, annotations) : undefined;
     placeReadwisePdfHighlights({ connectionRef: target.connectionRef,
-      documentId: target.documentId, nodeId, pages, relocateExisting: replaced });
+      documentId: target.documentId, nodeId, pages, relocateExisting: replaced, ...(relocateNodeIds ? { relocateNodeIds } : {}) });
     markPdfAttachmentIndexPending(localized.attachmentId);
     enqueuePdfAttachmentIndexing(localized.attachmentId);
   }));

@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
 
 const mocks = vi.hoisted(() => ({ fetchRemote: vi.fn(), prepareResync: vi.fn() }));
 vi.mock('./readwiseApiImportFetch.js', () => ({
+  READWISE_EXPORT_URL: 'https://readwise.io/api/v2/export/',
+  createReadwiseApiRequest: () => async () => ({ nextPageCursor: null, results: [] }),
   fetchReadwiseRawSourceDocument: (...args: unknown[]) => mocks.fetchRemote(...args)
 }));
 vi.mock('./readwiseSourceResyncPreparation.js', () => ({

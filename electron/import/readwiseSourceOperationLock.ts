@@ -1,15 +1,19 @@
-const runningNodeIds = new Set<string>();
+const runningOperations = new Map<string, AbortController | undefined>();
 
 export function isReadwiseSourceOperationRunning(nodeId: string) {
-  return runningNodeIds.has(nodeId);
+  return runningOperations.has(nodeId);
 }
 
-export function beginReadwiseSourceOperation(nodeId: string) {
-  if (runningNodeIds.has(nodeId)) return false;
-  runningNodeIds.add(nodeId);
+export function beginReadwiseSourceOperation(nodeId: string, controller?: AbortController) {
+  if (runningOperations.has(nodeId)) return false;
+  runningOperations.set(nodeId, controller);
   return true;
 }
 
 export function finishReadwiseSourceOperation(nodeId: string) {
-  runningNodeIds.delete(nodeId);
+  runningOperations.delete(nodeId);
+}
+
+export function cancelReadwiseSourceOperations() {
+  for (const controller of runningOperations.values()) controller?.abort();
 }
