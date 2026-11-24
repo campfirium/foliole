@@ -32,6 +32,7 @@ type TextAlternativeState = {
 interface ImmersiveChromeLayerProps {
   editHistory?: CompanionEditHistoryActionsProps;
   activity?: CompanionReadingActivity | undefined;
+  onOpenBacklinkNode?: ((nodeId: string) => void) | undefined;
   onOpenOutlineNode?: ((nodeId: string) => void) | undefined;
   actionsOpen: boolean;
   canEditContent?: boolean;
@@ -187,7 +188,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         onOpenReadingSheet={props.onOpenReadingSheet}
         readableArticle={props.readableArticle}
         {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash, onOpenClozeRemoval: props.onOpenClozeRemoval })}
-        {...definedProps({ onOpenBacklinkNode: props.onOpenOutlineNode })}
+        {...definedProps({ onOpenBacklinkNode: props.onOpenBacklinkNode })}
       />
       <ReadingSheetsLayer
         activity={props.activity}

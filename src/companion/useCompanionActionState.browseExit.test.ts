@@ -16,6 +16,8 @@ function createActionState(args?: {
 
   const actions = useCompanionActionState({
     activeAction: 'recent',
+    backlinkReturnNodeIds: [],
+    selectedBrowseNodeId: null,
     browseReturnNodeId: args?.browseReturnNodeId ?? null,
     browsedFolderNodeId: args?.browsedFolderNodeId ?? null,
     floatingBar,

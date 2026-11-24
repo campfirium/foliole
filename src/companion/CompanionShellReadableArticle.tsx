@@ -145,11 +145,9 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
   const answer = props.flow
     ? props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null
     : node?.kind === 'item' ? props.surface.readableArticle.reveal ?? null : null;
-  const exitFlowHere = props.surface.isFlowBrowsing
-    ? () => props.surface.handleExitFlowHere(nodeId) : null;
 
   return (
-    <FlowExitHereContext.Provider value={exitFlowHere}>
+    <FlowExitHereContext.Provider value={props.surface.isFlowBrowsing ? () => props.surface.handleExitFlowHere(nodeId) : null}>
     <CompanionReadingClozeLayers activity={activity} nodeId={nodeId} workspaceSync={props.workspaceSync}
       content={props.surface.readableArticle.content} versionId={props.surface.readableArticle.currentVersionId ?? null}>
     <ImmersiveReadableArticle
@@ -171,7 +169,9 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.flow || props.surface.isFlowBrowsing ? () => props.surface.handleTabAction('recent') : props.onExit}
       onBack={props.flow ? props.surface.handleResumeFlow : props.onExit}
+      onOpenBacklinkNode={sourceId => props.surface.handleOpenBacklink(nodeId, sourceId)}
       onOpenExistingHighlight={props.surface.handleSelectBrowseNode}
+      onReturnFromBacklink={props.surface.returnFromBacklink}
       onScrollTopChange={props.surface.handleViewScroll}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}

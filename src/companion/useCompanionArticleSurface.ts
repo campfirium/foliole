@@ -19,37 +19,12 @@ import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
-function useCompanionBrowseReturnState() {
-  const [browseReturnNodeId, setBrowseReturnNodeId] = useCompanionNavigationField('browseReturnNodeId', null);
-  return { browseReturnNodeId, setBrowseReturnNodeId };
-}
+type ActionStateArgs = Parameters<typeof useCompanionActionState>[0];
+type BacklinkReturnState = Pick<ActionStateArgs, 'backlinkReturnNodeIds' | 'setBacklinkReturnNodeIds'>;
 
-function useCompanionBrowseActions(args: {
-  activeAction: CompanionTabAction;
-  browsedFolderNodeId: string | null;
-  floatingBar: FloatingBarVisibilityApi;
-  setActiveAction: (action: CompanionTabAction) => void;
-  setReadingError: (value: string | null) => void;
-  setReviewError: (value: string | null) => void;
-  setSelectedBrowseNodeId: Parameters<typeof useCompanionActionState>[0]['setSelectedBrowseNodeId'];
-  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'];
-  workspaceSync: CompanionWorkspaceSyncApi;
-}) {
-  const browseReturn = useCompanionBrowseReturnState();
-  const actions = useCompanionActionState({
-    activeAction: args.activeAction,
-    browseReturnNodeId: browseReturn.browseReturnNodeId,
-    browsedFolderNodeId: args.browsedFolderNodeId,
-    floatingBar: args.floatingBar,
-    setActiveAction: args.setActiveAction,
-    setBrowseReturnNodeId: browseReturn.setBrowseReturnNodeId,
-    setReadingError: args.setReadingError,
-    setReviewError: args.setReviewError,
-    setSelectedBrowseNodeId: args.setSelectedBrowseNodeId,
-    snapshot: args.snapshot,
-    workspaceSync: args.workspaceSync
-  });
-  return { ...actions, browseReturnNodeId: browseReturn.browseReturnNodeId };
+function useCompanionBrowseActions(args: Omit<ActionStateArgs, 'browseReturnNodeId' | 'setBrowseReturnNodeId'>) {
+  const [browseReturnNodeId, setBrowseReturnNodeId] = useCompanionNavigationField('browseReturnNodeId', null);
+  return { ...useCompanionActionState({ ...args, browseReturnNodeId, setBrowseReturnNodeId }), browseReturnNodeId };
 }
 
 function useCompanionInteractionState(
@@ -61,7 +36,8 @@ function useCompanionInteractionState(
   isFlowBrowsing: boolean,
   setActiveAction: (action: CompanionTabAction) => void,
   browse: ReturnType<typeof useCompanionBrowseState>,
-  workspaceSync: CompanionWorkspaceSyncApi
+  workspaceSync: CompanionWorkspaceSyncApi,
+  backlinkReturn: BacklinkReturnState
 ) {
   const { breadcrumbAnchor, setSelectedBrowseNodeId, snapshot } = browse;
   const { setReadingError, setReviewError, ...reviewActions } = useCompanionSurfaceActions({
@@ -72,18 +48,12 @@ function useCompanionInteractionState(
     snapshot,
     workspaceSync
   });
-  const {
-    browseReturnNodeId,
-    handleExitBrowseArticle,
-    handleExitFlowHere,
-    handleExitDirectoryArticle,
-    handleExitSearchArticle,
-    handleSelectBrowseNode,
-    handleSelectRecentArticle,
-    handleTabAction
-  } = useCompanionBrowseActions({
+  const browseActions = useCompanionBrowseActions({
+    ...backlinkReturn,
     activeAction,
     browsedFolderNodeId,
+    flowNodeId: flow.view.currentCard?.nodeId ?? null,
+    selectedBrowseNodeId: browse.selectedBrowseNodeId,
     floatingBar,
     setActiveAction,
     setReadingError,
@@ -95,19 +65,12 @@ function useCompanionInteractionState(
 
   return {
     ...reviewActions,
+    ...browseActions,
     breadcrumbAnchor,
-    browseReturnNodeId,
     handleRevealAnswer: flow.reveal,
     handleContinueReading: flow.continueReading,
     canContinueReading: flow.canContinueReading,
-    handleExitBrowseArticle,
-    handleExitFlowHere,
-    handleExitDirectoryArticle,
-    handleExitSearchArticle,
-    handleSelectBrowseNode,
-    handleSelectRecentArticle,
-    handleTabAction,
-    handleResumeFlow: () => handleTabAction('review'),
+    handleResumeFlow: () => browseActions.handleTabAction('review'),
     isAnswerRevealed: flow.isAnswerRevealed
   };
 }
@@ -150,8 +113,9 @@ export function useCompanionArticleSurface(
   const flow = useCompanionSurfaceFlow(workspaceSync, activeAction);
   const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
     flowNodeId: flow.view.currentCard?.nodeId ?? null });
+  const [backlinkReturnNodeIds, setBacklinkReturnNodeIds] = useCompanionNavigationField('backlinkReturnNodeIds', []);
   const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
-    workspaceSync, browseState, activeAction, flow);
+    workspaceSync, browseState, activeAction, flow, backlinkReturnNodeIds.length > 0);
   const effectiveReviewSession = useMemo(
     () => hydrateCompanionReviewSession(flow.view, currentArticle),
     [flow.view, currentArticle]
@@ -162,8 +126,7 @@ export function useCompanionArticleSurface(
     reviewNodeId: effectiveReviewSession.currentCard?.nodeId ?? null,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId
   });
-  const flushNavigation = useCompanionNavigationFlush();
-  useReadingPositionFlush(readingActivity, handleViewScroll, flushNavigation);
+  useReadingPositionFlush(readingActivity, handleViewScroll);
   const interactionState = useCompanionInteractionState(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
@@ -173,7 +136,8 @@ export function useCompanionArticleSurface(
     isFlowBrowsing,
     setUserActiveAction,
     browseState,
-    workspaceSync
+    workspaceSync,
+    { backlinkReturnNodeIds, setBacklinkReturnNodeIds }
   );
   useExitUnavailableDive(flow, activeAction, workspaceSync, interactionState);
 
@@ -204,10 +168,10 @@ export function useCompanionArticleSurface(
 
 function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
   browse: ReturnType<typeof useCompanionBrowseState>, tabAction: CompanionTabAction,
-  flow: ReturnType<typeof useCompanionFlowSession>) {
+  flow: ReturnType<typeof useCompanionFlowSession>, followingBacklink: boolean) {
   const reviewNodeId = flow.view.currentCard?.nodeId ?? null;
   const isFlowBrowsing = tabAction === 'review' && browse.selectedBrowseNodeId !== null
-    && browse.selectedBrowseNodeId !== reviewNodeId;
+    && (followingBacklink || browse.selectedBrowseNodeId !== reviewNodeId);
   const activeAction = isFlowBrowsing ? 'recent' : tabAction;
   const demandNodeId = activeAction === 'review' ? reviewNodeId
     : activeAction === 'recent' && !browse.browsedFolder ? browse.selectedBrowseNodeId : null;
@@ -229,7 +193,8 @@ function useReadingActivity(nodeId: string | null, libraryScope: string | undefi
 }
 
 function useReadingPositionFlush(activity: CompanionReadingActivity,
-  scroll: ReturnType<typeof useCompanionViewStateSync>, flushNavigation: () => Promise<void>) {
+  scroll: ReturnType<typeof useCompanionViewStateSync>) {
+  const flushNavigation = useCompanionNavigationFlush();
   useEffect(() => {
     activity.flushPosition = async () => { await scroll.flush(); await flushNavigation(); };
     return () => { activity.flushPosition = null; };

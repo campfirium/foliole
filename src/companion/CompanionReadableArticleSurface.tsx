@@ -64,6 +64,8 @@ export interface ImmersiveReadableArticleProps {
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler;
   onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onOpenBacklinkNode?: ((nodeId: string) => void) | undefined;
+  onReturnFromBacklink?: (() => void) | undefined;
   onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onBack?: () => void;
   onExit(): void;
@@ -108,7 +110,8 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, 
     selectionOpen: Boolean(toolbar.selectionToolbar),
     closeSelection: toolbar.clearSelectionAndCloseToolbar,
     finishEditing: toggleContentEditing,
-    exit: props.onBack ?? props.onExit
+    exit: props.onBack ?? props.onExit,
+    returnFromBacklink: props.onReturnFromBacklink
   });
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);
@@ -147,6 +150,7 @@ function ImmersiveArticleChrome(props: {
     <ImmersiveChromeLayer
       activity={articleProps.activity}
       onOpenOutlineNode={articleProps.onOpenExistingHighlight}
+      onOpenBacklinkNode={articleProps.onOpenBacklinkNode}
       snapshot={articleProps.snapshot}
       {...definedProps({ editHistory: articleProps.editHistory })}
       navigation={articleProps.navigation}
@@ -196,7 +200,9 @@ function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
 }
 
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
-  const onExit = useCompanionArticleExit(props.onExit);
+  const exitReader = useCompanionArticleExit(props.onExit);
+  // Popping a backlink keeps the reader on screen.
+  const onExit = props.onReturnFromBacklink ?? exitReader;
   const onBack = useCompanionArticleExit(props.onBack ?? props.onExit);
   const scroll = useCompanionArticleEditScroll({ nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
     scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange });

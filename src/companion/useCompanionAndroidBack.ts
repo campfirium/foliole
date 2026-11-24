@@ -22,6 +22,7 @@ export function handleCompanionAndroidBack(model: CompanionShellModel): void {
   }
   if (closeTopDialog()) return;
   if (dispatchCompanionAndroidBack()) return;
+  if (model.surface.returnFromBacklink) return model.surface.returnFromBacklink();
   if (dispatchCompanionAndroidBack(COMPANION_ANDROID_FLOW_BACK_EVENT)) return;
   if (model.searchExternalDocument) return model.handleExitSearchExternalDocument();
   if (model.searchPdfResult) return model.handleExitSearchPdf();

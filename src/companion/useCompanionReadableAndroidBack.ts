@@ -9,6 +9,7 @@ export function useCompanionReadableAndroidBack(args: {
   selectionOpen: boolean;
   closeSelection(): void;
   exit(): void;
+  returnFromBacklink?: (() => void) | undefined;
   finishEditing(): Promise<void>;
 }): void {
   const flowHistory = useCompanionFlowHistoryControls();
@@ -17,6 +18,7 @@ export function useCompanionReadableAndroidBack(args: {
       event.preventDefault();
       if (args.selectionOpen) args.closeSelection();
       else if (args.editing) void args.finishEditing();
+      else if (args.returnFromBacklink) args.returnFromBacklink();
       else if (!applyCompanionFlowAndroidBack(flowHistory)) args.exit();
     };
     document.addEventListener(COMPANION_ANDROID_BACK_EVENT, handleBack);
