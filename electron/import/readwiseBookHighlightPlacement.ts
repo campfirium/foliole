@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
+import { applyImportedHighlightAnchors, type AnchoredImportedHighlightRecord } from '../../lib/core/database/importHighlightAnchors.js';
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import type { PreparedImportHighlightRecord } from '../../lib/core/import/contract.js';
@@ -13,7 +13,10 @@ import {
 } from '../../lib/core/import/highlightExcerptMatch.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 import { openDatabaseConnection } from '../database/connection.js';
+
+import { bindPreservedReadwiseBookHighlights, normalizeBookHighlightText } from './readwiseBookPreservedHighlightIds.js';
 
 interface ImportedBookSectionMetadata extends DatabaseRow {
   id: string;
@@ -35,7 +38,7 @@ interface SectionHighlightLocator {
   sectionIndex: number;
 }
 
-function readImportedBookSections(rootNodeId: string) {
+function readImportedBookSections(rootNodeId: string, unlocatedId: string | null) {
   const connection = openDatabaseConnection();
   return connection.driver.queryAll<ImportedBookSectionMetadata>(
     `WITH RECURSIVE book_sections(id, parent_id, title, anchor_link, sort_path) AS (
@@ -51,13 +54,13 @@ function readImportedBookSections(rootNodeId: string) {
               book_sections.sort_path || '.' || child.created_at || ':' || child.id
        FROM nodes child
        JOIN book_sections ON child.parent_id = book_sections.id
-       WHERE child.deleted_at IS NULL
+       WHERE child.deleted_at IS NULL AND child.id IS NOT ?
      )
      SELECT book_sections.id, book_sections.title
      FROM book_sections
      WHERE id <> ? AND anchor_link IS NULL
      ORDER BY sort_path, id`,
-    [rootNodeId, rootNodeId]
+    [rootNodeId, unlocatedId, rootNodeId]
   ).map((row) => {
     const body = loadNodeBodyResolution(connection.driver, row.id);
     if (!body) throw new NodeBodyUnavailableError([row.id]);
@@ -71,10 +74,6 @@ function buildSectionHighlightLocators(sections: ImportedBookSection[]) {
     section,
     sectionIndex
   }));
-}
-
-function normalizeBookHighlightText(value: string) {
-  return value.replace(/\r\n?/g, '\n').trim();
 }
 
 function filterBookSections(sections: ImportedBookSection[], highlightTexts: Set<string>) {
@@ -166,24 +165,30 @@ function persistSectionHighlights(input: {
   groupedBySection: Map<string, PreparedImportHighlightRecord[]>;
   importedAt: string;
   sections: ImportedBookSection[];
+  unlocatedId: string | null;
 }) {
   const connection = openDatabaseConnection();
   connection.driver.transaction((driver) => {
+    const bySection = new Map<string, AnchoredImportedHighlightRecord[]>();
+    for (const section of input.sections) {
+      const highlights = input.groupedBySection.get(section.id) ?? [];
+      bySection.set(section.id, applyImportedHighlightAnchors({ content: section.content, highlights }).highlights);
+    }
+    if (input.unlocatedId) bindPreservedReadwiseBookHighlights({ bySection, driver, unlocatedId: input.unlocatedId });
     input.sections.forEach((section) => {
-      const sectionHighlights = input.groupedBySection.get(section.id) ?? [];
-      const anchored = applyImportedHighlightAnchors({ content: section.content, highlights: sectionHighlights });
       replaceImportedHighlightNodes({
         driver,
-        highlights: anchored.highlights,
+        highlights: bySection.get(section.id) ?? [],
         importedAt: input.importedAt,
         parentNodeId: section.id,
-        parentContent: anchored.content
+        parentContent: section.content
       });
     });
   });
 }
 
 export async function placeReadwiseBookHighlights(input: {
+  bookKey?: string;
   highlightMarkdownPath: string | null;
   importedAt: string;
   readwiseConfig: ReadwiseReaderConfig;
@@ -202,7 +207,8 @@ export async function placeReadwiseBookHighlights(input: {
 
   const highlights = extractReadwiseSidecarHighlights(markdown, input.readwiseConfig);
   const highlightTexts = new Set(highlights.map((highlight) => normalizeBookHighlightText(highlight.text)).filter(Boolean));
-  const sections = filterBookSections(readImportedBookSections(input.rootNodeId), highlightTexts);
+  const unlocatedId = input.bookKey ? buildReadwiseUnlocatedNodeId('local-books', input.bookKey) : null;
+  const sections = filterBookSections(readImportedBookSections(input.rootNodeId, unlocatedId), highlightTexts);
   if (sections.length === 0) {
     return { matchedCount: 0, unmatchedCount: highlights.length };
   }
@@ -211,7 +217,8 @@ export async function placeReadwiseBookHighlights(input: {
   persistSectionHighlights({
     groupedBySection: grouped.groupedBySection,
     importedAt: input.importedAt,
-    sections
+    sections,
+    unlocatedId
   });
   return { matchedCount: grouped.matchedCount, unmatchedCount: grouped.unmatchedCount };
 }

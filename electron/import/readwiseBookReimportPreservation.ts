@@ -36,11 +36,22 @@ export function preserveReadwiseBookExcerpts(input: {
     if (parentId !== row.parent_id) moved.push(row.id);
     input.driver.execute(`UPDATE nodes SET parent_id=?,anchor_link=?,image_regions=NULL,updated_at=?,sync_dirty=1 WHERE id=?`,
       [parentId,
-        anchor ? JSON.stringify({ id: anchor.id, kind: anchor.kind }) : null, input.importedAt, row.id]);
+        detachBookAnchor(row.anchor_link, anchor), input.importedAt, row.id]);
   }
   retained.add(unlocatedId);
   ensureNodesParentMembership(input.driver, moved);
   placeReadwiseUnlocatedNodeLast(input.driver, input.rootNodeId, unlocatedId);
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [...retained]);
   return retained;
+}
+
+function detachBookAnchor(value: string | null, anchor: ReturnType<typeof parseStoredAnchorLink>) {
+  if (!anchor) return null;
+  if (anchor.kind !== 'highlight' || !anchor.id.startsWith('imported-highlight-')) {
+    return JSON.stringify({ id: anchor.id, kind: anchor.kind });
+  }
+  const previous = JSON.parse(value!) as { readwiseBookSourceText?: string };
+  const locator = anchor.locator;
+  const originalText = locator && 'originalText' in locator ? locator.originalText : previous.readwiseBookSourceText;
+  return JSON.stringify({ id: anchor.id, kind: anchor.kind, origin: 'imported', readwiseBookSourceText: originalText });
 }
