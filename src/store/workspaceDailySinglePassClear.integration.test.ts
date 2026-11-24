@@ -32,7 +32,8 @@ it('clears at the initial task boundary and counts a later member only once afte
   session = await open(peer, later);
   expect(session.currentNodeId).toBe('b2');
   expect(session.cycle?.clearedAt).toBe(now);
-  for (let index = 0; index < 2; index++) session = await act(peer, session, 'soon', later);
+  session = await act(peer, session, 'soon', later);
+  await expect(act(peer, session, 'soon', later)).rejects.toThrow('daily_flow_no_other_topics');
   expect(session.readTopicCount).toBe(6);
   expect(session.totalNodeCount).toBe(5);
   expect(session.cycle?.remaining).toBe(0);
