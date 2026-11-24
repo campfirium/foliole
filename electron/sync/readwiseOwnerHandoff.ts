@@ -16,6 +16,7 @@ import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadReadwiseHandoffIntent, saveReadwiseHandoffIntent,
   type ReadwiseHandoffIntent } from './readwiseHandoffIntent.js';
+import { bindReadwiseHandoffLibrary, type ReadwiseHandoffLibrary } from './readwiseHandoffLibrary.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH,
   resumeReadwiseExecutionAfterActivation, type ReadwiseStopRequest } from './readwiseOwnerStop.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -24,9 +25,11 @@ const STOP_WAIT_MS = 30_000;
 let activeHandoff: { intent: ReadwiseHandoffIntent;
   promise: Promise<ReturnType<typeof loadReadwiseHostAssignment>> } | null = null;
 
-function resumePreparedActivation() {
+function resumePreparedActivation(intent: ReadwiseHandoffIntent) {
   const current = snapshot();
-  if (!current.group) return null;
+  if (!current.group || current.group.group_id !== intent.groupId || current.mode !== intent.mode ||
+      current.group.local_device_identity_key !== intent.targetId ||
+      current.assignment.active_owner_epoch !== intent.epoch) return null;
   const localId = current.group.local_device_identity_key;
   const guard = loadReadwiseOwnerGuard(current.group.group_id);
   if (!guard || guard.state !== 'active' || guard.ownerId !== localId ||
@@ -66,8 +69,8 @@ function snapshot() {
   return { assignment, dbPath: openDatabaseConnection().dbPath, group, mode: sourceMode.mode };
 }
 
-async function requestRemoteStop(peer: DesktopSyncGroupPeer, request: ReadwiseStopRequest) {
-  const encrypted = await runWithDatabaseConnectionOwner(() => {
+async function requestRemoteStop(peer: DesktopSyncGroupPeer, request: ReadwiseStopRequest, library: ReadwiseHandoffLibrary) {
+  const encrypted = await library.run(() => {
     const key = loadDesktopWorkgroupKey(request.groupId);
     if (!key) throw new Error('readwise_group_key_missing');
     return createDesktopWorkgroupPost({ body: JSON.stringify(request), groupId: request.groupId,
@@ -81,7 +84,7 @@ async function requestRemoteStop(peer: DesktopSyncGroupPeer, request: ReadwiseSt
       signal: AbortSignal.timeout(5_000)
     });
   } catch { throw new Error('readwise_member_unreachable'); }
-  const body = await readDesktopWorkgroupResponse({ contentType: 'application/json; charset=utf-8',
+  const body = await readDesktopWorkgroupResponse({ assertCurrent: library.assertCurrent, contentType: 'application/json; charset=utf-8',
     groupId: request.groupId, method: 'POST', pathWithQuery: READWISE_OWNER_STOP_PATH, response });
   return JSON.parse(body.toString('utf8')) as Record<string, unknown>;
 }
@@ -94,17 +97,17 @@ function validStopAck(value: Record<string, unknown>, request: ReadwiseStopReque
 }
 
 async function waitForStop(deviceId: string, peer: DesktopSyncGroupPeer | null,
-  request: ReadwiseStopRequest) {
+  request: ReadwiseStopRequest, library: ReadwiseHandoffLibrary) {
   if (peer) {
     await assertDesktopSyncGroupPeerCompatible(peer);
-    const membership = await exchangeDesktopSyncGroupMemberState(peer);
+    const membership = await exchangeDesktopSyncGroupMemberState(peer, library.assertCurrent);
     if (membership.localExited || membership.peerBlocked) throw new Error('readwise_member_unavailable');
   }
   const deadline = Date.now() + STOP_WAIT_MS;
   while (Date.now() < deadline) {
     const response = peer
-      ? await requestRemoteStop(peer, request)
-      : await runWithDatabaseConnectionOwner(() => handleReadwiseOwnerStop(JSON.stringify(request), request.targetId));
+      ? await requestRemoteStop(peer, request, library)
+      : await library.run(() => handleReadwiseOwnerStop(JSON.stringify(request), request.targetId));
     if (validStopAck(response, request, deviceId)) return;
     if (response.status !== 'pending' || response.requestId !== request.requestId) {
       throw new Error('readwise_stop_ack_invalid');
@@ -132,36 +135,42 @@ function sameIntent(left: ReadwiseHandoffIntent, right: ReadwiseHandoffIntent) {
     left.forceCurrent === right.forceCurrent;
 }
 
-async function runHandoff(intent: ReadwiseHandoffIntent) {
+async function runHandoff(intent: ReadwiseHandoffIntent, library: ReadwiseHandoffLibrary) {
+  const clearIntent = () => runWithDatabaseConnectionOwner(() => {
+    if (library.isCurrent()) saveReadwiseHandoffIntent(null, intent.groupId);
+  });
   try {
-    const result = await performHandoff(intent);
-    await runWithDatabaseConnectionOwner(() => saveReadwiseHandoffIntent(null, intent.groupId));
+    const result = await performHandoff(intent, library);
+    await clearIntent();
     return result;
   } catch (error) {
     if (!pendingResult(error)) {
-      await runWithDatabaseConnectionOwner(() => saveReadwiseHandoffIntent(null, intent.groupId));
+      await clearIntent();
       throw error;
     }
-    return runWithDatabaseConnectionOwner(loadReadwiseHostAssignment);
+    return library.run(loadReadwiseHostAssignment);
   }
 }
 
-function singleFlight(intent: ReadwiseHandoffIntent) {
+function singleFlight(intent: ReadwiseHandoffIntent, library: ReadwiseHandoffLibrary) {
   if (activeHandoff) {
     if (!sameIntent(activeHandoff.intent, intent)) {
       throw new Error('readwise_handoff_in_progress');
     }
     return activeHandoff.promise;
   }
-  const promise = runHandoff(intent).finally(() => { activeHandoff = null; });
+  const promise = runHandoff(intent, library).finally(() => { activeHandoff = null; });
   activeHandoff = { intent, promise };
   return promise;
 }
 
 export async function activateReadwiseWithHandoff(options: {
-  forceCurrent?: boolean; selectionSource?: 'automatic' | 'chosen'
+  assertCurrent?: () => void; forceCurrent?: boolean; selectionSource?: 'automatic' | 'chosen'
 } = {}) {
-  const initial = await runWithDatabaseConnectionOwner(snapshot);
+  const { initial, library } = await runWithDatabaseConnectionOwner(() => {
+    options.assertCurrent?.();
+    return { initial: snapshot(), library: bindReadwiseHandoffLibrary() };
+  });
   if (!initial.group || (initial.assignment.is_active && !options.forceCurrent)) return initial.assignment;
   const intent: ReadwiseHandoffIntent = { dbPath: initial.dbPath,
     groupId: initial.group.group_id,
@@ -173,20 +182,22 @@ export async function activateReadwiseWithHandoff(options: {
   if (activeHandoff && !sameIntent(activeHandoff.intent, intent)) {
     throw new Error('readwise_handoff_in_progress');
   }
-  await runWithDatabaseConnectionOwner(() => saveReadwiseHandoffIntent(intent, intent.groupId));
-  return singleFlight(intent);
+  await library.run(() => saveReadwiseHandoffIntent(intent, intent.groupId));
+  return singleFlight(intent, library);
 }
 
 export async function continuePendingReadwiseHandoff() {
-  const intent = await runWithDatabaseConnectionOwner(currentIntent);
+  const { intent, library } = await runWithDatabaseConnectionOwner(() => ({
+    intent: currentIntent(), library: bindReadwiseHandoffLibrary()
+  }));
   if (!intent) return null;
-  return singleFlight(intent);
+  return singleFlight(intent, library);
 }
 
-async function performHandoff(intent: ReadwiseHandoffIntent) {
-  const resumed = await runWithDatabaseConnectionOwner(resumePreparedActivation);
+async function performHandoff(intent: ReadwiseHandoffIntent, library: ReadwiseHandoffLibrary) {
+  const resumed = await library.run(() => resumePreparedActivation(intent));
   if (resumed) return resumed;
-  const initial = await runWithDatabaseConnectionOwner(snapshot);
+  const initial = await library.run(snapshot);
   if (!initial.group || (initial.assignment.is_active && !intent.forceCurrent)) return initial.assignment;
   const localId = initial.group.local_device_identity_key;
   const groupId = initial.group.group_id;
@@ -196,26 +207,28 @@ async function performHandoff(intent: ReadwiseHandoffIntent) {
       intent.ownerId !== ownerId || intent.epoch !== initial.assignment.active_owner_epoch ||
       intent.mode !== initial.mode) throw new Error('readwise_handoff_state_changed');
   if (initial.assignment.activation_blocked_reason === 'handoff-in-progress') {
-    const guard = await runWithDatabaseConnectionOwner(() => loadReadwiseOwnerGuard(groupId));
+    const guard = await library.run(() => loadReadwiseOwnerGuard(groupId));
     if (ownerId !== localId || guard?.state !== 'relinquished' ||
         guard.targetId !== localId || guard.epoch !== initial.assignment.active_owner_epoch) {
       throw new Error('readwise_handoff_in_progress');
     }
   }
-  const targets = await runWithDatabaseConnectionOwner(() => stopTargets(groupId, localId, ownerId));
+  const { targets, endpoints } = await library.run(() => ({
+    targets: stopTargets(groupId, localId, ownerId),
+    endpoints: new Map(loadDesktopSyncGroupMemberEndpoints(groupId).map((peer) => [peer.peer_device_id, peer]))
+  }));
   const request: ReadwiseStopRequest = { epoch: initial.assignment.active_owner_epoch,
     groupId, mode: initial.mode as 'api' | 'relay', ownerId,
     requestId: randomUUID(), targetId: localId };
-  const endpoints = new Map(loadDesktopSyncGroupMemberEndpoints(groupId)
-    .map((peer) => [peer.peer_device_id, peer]));
   for (const deviceId of targets) {
     const peer = deviceId === localId ? null : endpoints.get(deviceId);
     if (deviceId !== localId && !peer) throw new Error('readwise_member_unreachable');
-    await waitForStop(deviceId, peer ?? null, request);
+    await waitForStop(deviceId, peer ?? null, request, library);
   }
-  return runWithDatabaseConnectionOwner(() => {
+  return library.run(() => {
     const current = snapshot();
     if (!current.group || current.group.group_id !== groupId || current.mode !== request.mode ||
+        current.group.local_device_identity_key !== localId ||
         current.assignment.active_device_identity_key !== ownerId ||
         current.assignment.active_owner_epoch !== request.epoch) throw new Error('readwise_handoff_state_changed');
     if (!targets.length && stopTargets(groupId, localId, ownerId).length) {

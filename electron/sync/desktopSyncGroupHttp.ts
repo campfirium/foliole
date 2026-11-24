@@ -73,6 +73,7 @@ export function createDesktopWorkgroupPost(args: {
 }
 
 export async function readDesktopWorkgroupResponse(args: {
+  assertCurrent?: () => void;
   contentType: string;
   groupId: string;
   maxEnvelopeBytes?: number;
@@ -87,10 +88,13 @@ export async function readDesktopWorkgroupResponse(args: {
     ? Buffer.from(await args.response.arrayBuffer())
     : await readBoundedResponse(args.response, args.maxEnvelopeBytes);
   const contentType = args.response.headers.get('x-foliole-original-content-type') ?? args.contentType;
-  const plaintext = await runWithDatabaseConnectionOwner(() => decryptDesktopWorkgroupResponse({
-    body, contentType, groupId: args.groupId,
-    method: args.method, pathWithQuery: args.pathWithQuery
-  }));
+  const plaintext = await runWithDatabaseConnectionOwner(() => {
+    args.assertCurrent?.();
+    return decryptDesktopWorkgroupResponse({
+      body, contentType, groupId: args.groupId,
+      method: args.method, pathWithQuery: args.pathWithQuery
+    });
+  });
   if (!args.response.ok) {
     const error = readWorkgroupError(plaintext);
     throw new Error(`sync_group_http_${args.response.status}${error ? `:${error}` : ''}`);
@@ -130,6 +134,7 @@ function readWorkgroupError(body: Buffer) {
 }
 
 export async function postDesktopWorkgroupJson(args: {
+  assertCurrent?: () => void;
   body: string;
   endpointUrl: string;
   groupId: string;
@@ -137,11 +142,15 @@ export async function postDesktopWorkgroupJson(args: {
   pathWithQuery: string;
   secret: string;
 }) {
-  const encrypted = await runWithDatabaseConnectionOwner(() => createDesktopWorkgroupPost(args));
+  const encrypted = await runWithDatabaseConnectionOwner(() => {
+    args.assertCurrent?.();
+    return createDesktopWorkgroupPost(args);
+  });
   const response = await lanPeerHttp.fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
     body: encrypted.body, headers: encrypted.headers, method: 'POST'
   });
   const body = await readDesktopWorkgroupResponse({
+    ...(args.assertCurrent ? { assertCurrent: args.assertCurrent } : {}),
     contentType: 'application/json; charset=utf-8', groupId: args.groupId,
     method: 'POST', pathWithQuery: args.pathWithQuery, response
   });

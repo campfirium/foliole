@@ -14,10 +14,10 @@ const stopOrder = vi.hoisted(() => [] as string[]);
 const PEER = { endpoint_url: 'http://old-device', group_id: 'group',
   local_device_id: 'new-device', peer_device_id: 'old-device', peer_device_name: 'Old', peer_platform: 'macOS' };
 
-vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ dbPath: '/test/library.db', driver: { queryOne: () => ({ state: 'active' }) } }),
-  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
-}));
+vi.mock('../database/connection.js', () => {
+  const connection = { dbPath: '/test/library.db', driver: { queryOne: () => ({ state: 'active' }) } };
+  return { openDatabaseConnection: () => connection, runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute() };
+});
 vi.mock('../database/readwiseHostAssignment.js', () => ({
   activateReadwiseOnThisHost: () => ({ is_active: true }),
   canPrepareReadwiseOnThisHost: () => true,

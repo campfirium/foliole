@@ -11,11 +11,11 @@ import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerComp
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { adoptApiProof, decodeApiProof, encodeApiProof, parseApiProof,
   type ApiProof } from './readwiseGroupApiProof.js';
+import { READWISE_LIBRARY_CHANGED } from './readwiseHandoffLibrary.js';
 import { activateReadwiseWithHandoff } from './readwiseOwnerHandoff.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export const READWISE_GROUP_SETUP_PATH = '/companion/readwise-group-setup';
-const LIBRARY_CHANGED = 'readwise_group_setup_library_changed';
 
 type SetupStatus = { deviceId: string; deviceName: string; mode: 'off' | 'relay' | 'api';
   ready: boolean; apiProof: ApiProof | null };
@@ -73,7 +73,8 @@ async function postSetup(peer: DesktopSyncGroupPeer, request: unknown, assertCur
     return loadDesktopWorkgroupKey(peer.group_id)?.group_key;
   });
   if (!secret) throw new Error('readwise_group_key_missing');
-  return postDesktopWorkgroupJson({ body: JSON.stringify(request), endpointUrl: peer.endpoint_url,
+  return postDesktopWorkgroupJson({ ...(assertCurrent ? { assertCurrent } : {}),
+    body: JSON.stringify(request), endpointUrl: peer.endpoint_url,
     groupId: peer.group_id, localDeviceId: peer.local_device_id,
     pathWithQuery: READWISE_GROUP_SETUP_PATH, secret });
 }
@@ -131,7 +132,7 @@ function captureJoinSetup() {
   const assertCurrent = () => {
     const current = loadDesktopSyncGroup();
     if (openDatabaseConnection() !== connection || !current || current.group_id !== group.group_id ||
-        current.local_device_identity_key !== group.local_device_identity_key) throw new Error(LIBRARY_CHANGED);
+        current.local_device_identity_key !== group.local_device_identity_key) throw new Error(READWISE_LIBRARY_CHANGED);
   };
   return { group, assertCurrent, local: localStatus(), assignment: loadReadwiseHostAssignment(),
     automaticOwner: isAutomaticOwner(), peers: new Map(loadDesktopSyncGroupMemberEndpoints(group.group_id)
@@ -181,7 +182,7 @@ export async function resolveReadwiseJoinDecision(): Promise<ReadwiseJoinDecisio
       device_id: status.deviceId, device_name: status.deviceName
     })) };
   } catch (error) {
-    if (error instanceof Error && error.message === LIBRARY_CHANGED) return { kind: 'none', devices: [] };
+    if (error instanceof Error && error.message === READWISE_LIBRARY_CHANGED) return { kind: 'none', devices: [] };
     if (!initial.assignment.legacy_unassigned) return { kind: 'none', devices: [] };
     return { kind: 'waiting', devices: [],
       reason: error instanceof Error ? error.message : 'readwise_group_setup_failed' };
@@ -199,6 +200,7 @@ export async function selectReadwiseImportDevice(deviceId: string,
     throw new Error('readwise_device_unavailable');
   }
   if (deviceId === group.local_device_identity_key) return activateReadwiseWithHandoff({
+    ...(assertCurrent ? { assertCurrent } : {}),
     forceCurrent: assignment.is_active && autoOwner && !automatic,
     selectionSource: automatic ? 'automatic' : 'chosen'
   });
