@@ -5,6 +5,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { loadSplitTopicPreferences, saveSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
 import { loadSplitTopicWorkspacePreview, saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
+import { recordSplitTopicTrace } from '../splitTopicTrace';
 
 import { SplitTopicDialogHost } from './SplitTopicDialogHost';
 import { requestSplitTopicDialog } from './SplitTopicDialogRequest';
@@ -19,6 +20,8 @@ vi.mock('../../shared/platform/desktop/splitTopicPreferences', () => ({
   loadSplitTopicPreferences: vi.fn(),
   saveSplitTopicPreferences: vi.fn()
 }));
+
+vi.mock('../splitTopicTrace', { spy: true });
 
 vi.mock('../../shared/ui/AppRuntimeNotice', () => ({
   showAppRuntimeNotice: vi.fn()
@@ -88,8 +91,13 @@ it('previews split Topics and leaves storage untouched when canceled', async () 
   vi.mocked(loadSplitTopicPreferences).mockResolvedValue({ delimiter: '---', disposition: 'replace', keepDelimiter: false });
   renderWithLocalization(<SplitTopicDialogHost />);
 
-  act(() => requestSplitTopicDialog('source-topic'));
+  const trace = { startedAt: 1, attempt: 1 };
+  act(() => requestSplitTopicDialog('source-topic', trace));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
+  expect(vi.mocked(recordSplitTopicTrace).mock.calls.filter(([recording]) => recording === trace).map(([, detail]) => detail)).toEqual([
+    { event: 'split.topic.stage', stage: 'dialog-opened' },
+    { event: 'split.topic.preview', delimiter: 'matched', parts: 2 }
+  ]);
 
   expect(screen.getByRole('heading', { name: 'Split Topic' })).toBeInTheDocument();
   const preview = within(screen.getByRole('region', { name: 'Preview' }));

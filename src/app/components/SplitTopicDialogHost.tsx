@@ -30,29 +30,29 @@ function useDialogRequest() {
 
 function useSplitTopicDialogTrace(args: {
   request: SplitTopicDialogRequest | null;
-  preferencesReady: boolean;
+  previewLoaded: boolean;
   content: string | undefined;
   delimiter: string;
   parts: number;
 }) {
-  const { request, preferencesReady, content, delimiter, parts } = args;
+  const { request, previewLoaded, content, delimiter, parts } = args;
   const hasSource = content !== undefined;
   const openedFor = useRef<SplitTopicDialogRequest | null>(null);
   useEffect(() => {
-    if (!request?.trace || openedFor.current === request) return;
-    if (hasSource) openedFor.current = request;
+    if (!request?.trace || !previewLoaded || openedFor.current === request) return;
+    openedFor.current = request;
     recordSplitTopicTrace(request.trace, {
       event: 'split.topic.stage', stage: hasSource ? 'dialog-opened' : 'source-unavailable'
     });
-  }, [request, hasSource]);
+  }, [request, previewLoaded, hasSource]);
 
   useEffect(() => {
-    if (!request?.trace || !preferencesReady || content === undefined) return;
+    if (!request?.trace || !previewLoaded || content === undefined) return;
     recordSplitTopicTrace(request.trace, {
       event: 'split.topic.preview', parts,
       delimiter: !delimiter ? 'empty' : content.includes(delimiter) ? 'matched' : 'unmatched'
     });
-  }, [request, preferencesReady, content, delimiter, parts]);
+  }, [request, previewLoaded, content, delimiter, parts]);
 }
 
 const SplitTopicDialogSurface = forwardRef<HTMLDivElement, {
@@ -128,7 +128,7 @@ export function SplitTopicDialogHost() {
     ? buildSplitTopicPreview({ content, delimiter, footerText, headerText, keepDelimiter })
     : [], [content, delimiter, footerText, headerText, keepDelimiter]);
   useSplitTopicDialogTrace({
-    request, preferencesReady: current !== null, content, delimiter, parts: preview.length
+    request, previewLoaded: current !== null, content, delimiter, parts: preview.length
   });
 
   if (!request) return null;

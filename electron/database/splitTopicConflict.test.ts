@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { buildSplitTopicParts } from '../../lib/core/nodes/splitTopicModel.js';
 
@@ -138,5 +139,19 @@ it('reports that no preview is available after the source is trashed', () => {
   const before = persisted();
 
   expect(submit(shown, 'replace')).toEqual({ status: 'source-changed', preview: null });
+  expect(persisted()).toEqual(before);
+});
+
+it.each(['replace', 'keep-as-parent'] as const)('refuses a %s split after an ancestor enters Trash', (disposition) => {
+  insertTopic('ancestor', '');
+  insertTopic('parent', '', 'ancestor');
+  db.prepare("UPDATE nodes SET kind = 'folder' WHERE id IN ('ancestor', 'parent')").run();
+  db.prepare("UPDATE nodes SET parent_id = 'parent' WHERE id = 'source'").run();
+  const shown = preview();
+  softDeleteNodes(driver, { deletedAt: now, nodeIds: ['ancestor'] });
+  const before = persisted();
+
+  expect(submit(shown, disposition)).toEqual({ status: 'source-changed', preview: null });
+  expect(loadSplitTopicPreview('source')).toBeNull();
   expect(persisted()).toEqual(before);
 });
