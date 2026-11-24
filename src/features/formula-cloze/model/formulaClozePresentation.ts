@@ -3,6 +3,8 @@ import type { FormulaClozePresentationRegion } from './formulaCloze';
 export interface FormulaClozeEditorPresentation {
   canCreate: boolean;
   hiddenRegionIds: string[];
+  /** Standalone cards render the formula at a different offset than in the source topic. */
+  matchByFormulaText?: boolean;
   outlinedRegionIds: string[];
   regions: FormulaClozePresentationRegion[];
 }
