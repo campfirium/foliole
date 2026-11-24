@@ -9,7 +9,7 @@ import { expect, it, vi } from 'vitest';
 
 
 import { deferred } from '../../src/test/deferred.js';
-mport { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
+import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { setAttachmentPublishedListener } from '../attachments/attachmentPublishedEvents.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { persistNodeResourceReference } from '../database/nodeResources.js';

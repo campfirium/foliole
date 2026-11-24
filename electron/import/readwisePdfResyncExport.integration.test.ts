@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 
 
 import { deferred } from '../../src/test/deferred.js';
-mport { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import { disconnectReadwiseApi, loadReadwiseApiConnection } from './readwiseApiConnection.js';

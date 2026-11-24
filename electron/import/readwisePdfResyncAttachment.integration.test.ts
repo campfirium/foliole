@@ -9,7 +9,7 @@ import { expect, it } from 'vitest';
 
 
 import { deferred } from '../../src/test/deferred.js';
-mport { resolveAttachmentFile, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
+import { resolveAttachmentFile, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
