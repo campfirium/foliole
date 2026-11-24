@@ -19,7 +19,7 @@ type ResourceInput = NativeCompanionFramedSyncInventoryRequest & {
 export function continueCompanionRequestSyncResources(input: ResourceInput) {
   return withResources(input, (host, exchange) => exchangeRequestSyncAttachments(host, exchange,
     (storageKey, error) => console.error('[sync] attachment transfer failed', { storageKey, error: String(error) }),
-    input.boundedSlice ? () => true : undefined));
+    input.boundedSlice ? () => true : undefined, input.peerRound?.confirmRelayAttachment));
 }
 
 export function pullCompanionRequestSyncResource(input: ResourceInput & {

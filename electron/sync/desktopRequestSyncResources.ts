@@ -28,5 +28,5 @@ export async function continueDesktopRequestSyncResources(input: Parameters<type
     ...(input.signal ? { signal: input.signal } : {})
   }), (storageKey, error) => appendMainProcessDiagnosticLog('request_sync_attachment_failed', {
     storageKey, sourceDeviceId: input.peer.peer_device_id, error: String(error)
-  }), input.boundedSlice ? () => true : undefined);
+  }), input.boundedSlice ? () => true : undefined, input.peerRound?.confirmRelayAttachment);
 }

@@ -22,6 +22,7 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
   onProgress?: () => void;
+  confirmPeerAttachment?: ((storageKey: string) => Promise<void>) | undefined;
   payloadBudget?: FramedSyncPayloadBudget;
   consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, snapshot?: true) => Promise<T>;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
@@ -62,7 +63,7 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
       file => reply(sourceMessages(selected, file, input.signal, input.onProgress), file.snapshot),
       options), selected, reply);
   }
-  return reply(responseMessages(host, window));
+  return reply(responseMessages(host, window, input.confirmPeerAttachment));
 }
 
 async function withPendingReply<T>(execute: () => Promise<T>, request: AttachmentRequest,
@@ -74,7 +75,8 @@ async function withPendingReply<T>(execute: () => Promise<T>, request: Attachmen
   }
 }
 
-async function* responseMessages(host: RequestSyncAttachmentHost, window: AttachmentRequest[]) {
+async function* responseMessages(host: RequestSyncAttachmentHost, window: AttachmentRequest[],
+  confirmPeerAttachment?: (storageKey: string) => Promise<void>) {
   const request = window[0]!;
   if (request.operation === 'needs') {
     const demand = await host.needsSlice(attachmentWorkBudget());
@@ -96,6 +98,9 @@ async function* responseMessages(host: RequestSyncAttachmentHost, window: Attach
     if (received.kind !== 'partial' || received.offset !== block.offset + block.data.length) break;
   }
   if (!result) throw new Error('attachment_request_invalid');
+  if (request.operation === 'push' && result.kind === 'complete') {
+    await confirmPeerAttachment?.(resource.storageKey);
+  }
   yield attachmentMessage({ ...request, data: new Uint8Array(), state: result.kind, offset: result.offset });
 }
 

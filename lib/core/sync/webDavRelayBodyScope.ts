@@ -1,6 +1,3 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
-
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION, type SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
 import { DEFAULT_WEB_DAV_ATTACHMENT_POLICY, type WebDavRelayBinding } from '../../platform/webDavRelayContract.js';
 
@@ -8,7 +5,7 @@ import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import type { RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { readRelayCollections, relayCollectionUrl } from './webDavRelayCollections.js';
-import { readWebDavRelayLanBaseline } from './webDavRelayLanBaseline.js';
+import { readWebDavRelayLanBaseline, webDavRelayBodyIdentity } from './webDavRelayLanBaseline.js';
 
 export async function readWebDavRelayBaselineScope(db: DbPort, binding: WebDavRelayBinding, localDevice: string) {
   const desktop = localDevice === binding.desktop_device_id;
@@ -37,13 +34,9 @@ export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayB
   if (folder.username || folder.password || folder.search || folder.hash || !folder.pathname.endsWith('/')) {
     throw new Error('webdav_relay_invalid_url');
   }
-  const digest = bytesToHex(sha256(new TextEncoder().encode(JSON.stringify([
-    binding.id, desktop ? epochs.localEpoch : epochs.peerEpoch, desktop ? epochs.peerEpoch : epochs.localEpoch
-  ]))));
+  const { digest, key } = webDavRelayBodyIdentity({ binding, localDevice, ...epochs, sourceEpoch: baseline.sourceEpoch });
   const outgoing = new URL(`foliole-${digest}-${desktop ? 'desktop' : 'phone'}/`, folder);
   const incoming = new URL(`foliole-${digest}-${desktop ? 'phone' : 'desktop'}/`, folder);
-  const source = bytesToHex(sha256(new TextEncoder().encode(baseline.sourceEpoch)));
-  const key = `webdav_relay_body:${digest}:${source}`;
   const collections = await readRelayCollections(db, key);
   return { baseline, key, attachmentPolicy: binding.attachment_policy ?? DEFAULT_WEB_DAV_ATTACHMENT_POLICY,
     outgoingStartSequence: collections?.startSequence ?? baseline.sequence,

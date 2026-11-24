@@ -14,6 +14,7 @@ export type RequestSyncPeerRound = {
   databaseConfirmed?: boolean;
   attachmentsConfirmed?: boolean;
   relayCleanup?: WebDavRelayCleanup;
+  confirmRelayAttachment?(storageKey: string): Promise<void>;
 };
 const roundIdSchema = z.string().uuid();
 const modeSchema = z.enum(['start', 'continue', 'finish', 'single']);
@@ -49,6 +50,7 @@ export async function withRequestSyncPeerRound<T>(exchange: RequestSyncExchange,
   } finally {
     const cleanup = round.relayCleanup;
     delete round.relayCleanup;
+    delete round.confirmRelayAttachment;
     if (round.admitted && !exchange.signal?.aborted) {
       // Preserve committed data while retiring any session that may still hold the remote round.
       const databaseConfirmed = round.databaseConfirmed === true;

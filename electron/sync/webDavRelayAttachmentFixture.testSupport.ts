@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { access, mkdir, utimes, writeFile } from 'node:fs/promises';
+import { access, mkdir, rename, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect } from 'vitest';
@@ -46,7 +46,8 @@ async function attachmentPeer(peer: RestorePeer) {
   }, get attachments() { return { ...source, ...receiver, needsSlice, needs: async () => (await needsSlice(() => false)).keys }; } };
 }
 
-export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
+export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy,
+  options: { unavailableBaselineAttachment?: boolean } = {}) {
   const fixture = await restoreFixture();
   const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL);
   await new Promise<void>(resolve => dav.server.listen(0, '127.0.0.1', resolve));
@@ -66,9 +67,8 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
     const [mac, phone] = peers;
     const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: mac.peer.id,
       phone_device_id: phone.peer.id, directory_url: url.href, attachment_policy: attachmentPolicy };
-    const old = await writeBaselineAttachment(peers);
+    const old = await writeBaselineAttachment(mac.assets);
     await edit(mac.peer, [old], 'baseline');
-    expect(await runWebDavTestLanRound(mac.peer, phone.peer, binding)).toMatchObject({ complete: true });
     for (const [local, remote] of [[mac.peer, phone.peer], [phone.peer, mac.peer]] as const) {
       await local.db.run('INSERT OR IGNORE INTO node_version_device_revisions VALUES (?, ?, ?, 0, ?, NULL, ?)',
         ['group', remote.id, remote.epoch, 'baseline', new Date().toISOString()]);
@@ -78,13 +78,14 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
       attachments, ...(cleanup ? { cleanup: { host: peer.host, files: peer.host.files, request, attachments,
         loadScope: (db: RestorePeer['db']) => readWebDavRelayBodyScope(db, binding, peer.id) } } : {})
     });
-    return { peers, old, close, scope, dav, ...transport,
-      lan(cleanup = true, beforeFinish?: () => Promise<void>, initiator: 0 | 1 = 0) {
-        const local = peers[initiator];
-        const remote = peers[initiator === 0 ? 1 : 0];
-        return runWebDavTestLanRound(local.peer, remote.peer, binding, { local: lanSide(local, cleanup),
-          remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
-      },
+    const lan = (cleanup = true, beforeFinish?: () => Promise<void>, initiator: 0 | 1 = 0) => {
+      const local = peers[initiator];
+      const remote = peers[initiator === 0 ? 1 : 0];
+      return runWebDavTestLanRound(local.peer, remote.peer, binding, { local: lanSide(local, cleanup),
+        remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
+    };
+    await establishAttachmentBaseline(mac.assets, old, options.unavailableBaselineAttachment, () => lan(false));
+    return { peers, old, close, scope, dav, ...transport, lan,
       async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform,
         foreground?: { requestSend(): void }) {
         const current = await scope(peer);
@@ -102,15 +103,25 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
   } catch (error) { await close(); throw error; }
 }
 
-async function writeBaselineAttachment(peers: readonly { assets: string }[]) {
+async function writeBaselineAttachment(assets: string) {
   const bytes = Buffer.from('Already synchronized image');
   const key = storageKey(bytes);
-  for (const { assets } of peers) {
-    const file = path.join(assets, key);
-    await writeFile(file, bytes);
-    await utimes(file, 100, 100);
-  }
+  const file = path.join(assets, key);
+  await writeFile(file, bytes);
+  await utimes(file, 100, 100);
   return key;
+}
+
+async function establishAttachmentBaseline(assets: string, key: string, unavailable: boolean | undefined,
+  lan: () => ReturnType<typeof runWebDavTestLanRound>) {
+  const file = path.join(assets, key);
+  if (unavailable) await rename(file, file + '.offline');
+  try {
+    const result = await lan();
+    expect(result).toMatchObject({ complete: true, attachments: { pending: unavailable ? 1 : 0 } });
+  } finally {
+    if (unavailable) await rename(file + '.offline', file);
+  }
 }
 
 function testTransport() {

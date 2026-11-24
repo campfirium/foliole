@@ -22,6 +22,7 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   signal: AbortSignal;
   onRoundConfirmed?: (attachmentsConfirmed: boolean) => void;
   onProgress?: () => void;
+  confirmPeerAttachment?: (storageKey: string) => Promise<void>;
   relayCleanup?: WebDavRelayCleanup | undefined;
   payloadBudget?: FramedSyncPayloadBudget;
   consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, snapshot?: true) => Promise<void>;
