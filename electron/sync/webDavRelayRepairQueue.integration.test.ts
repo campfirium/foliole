@@ -57,3 +57,45 @@ it('delivers a healthy attachment past a full repair batch and retries a restore
     expect(await repairs()).toEqual(queued.filter(row => row.key !== `${key}:attachment:${recovered.key}`));
   } finally { await fixture.close(); }
 }, 20_000);
+
+it('delivers a healthy attachment while a requested source file is corrupt', async () => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    const original = Buffer.from('Original attachment bytes');
+    const originalKey = storageKey(original);
+    const sourceFile = path.join(source.assets, originalKey);
+    const targetFile = path.join(target.assets, originalKey);
+    await writeFile(sourceFile, original);
+    await edit(source.peer, [originalKey], 'old-article');
+    await fixture.sync(source);
+    expect(fixture.uploads).toHaveLength(1);
+    await writeFile(sourceFile, Buffer.alloc(original.length, 42));
+
+    expect(await fixture.sync(target, async function* (body) {
+      const reader = body[Symbol.asyncIterator]();
+      while (!(await reader.next()).done) { /* Drain the original response. */ }
+      yield Buffer.from('damaged packet');
+    })).toMatchObject({ retries: 1 });
+    expect(fixture.repairUploads).toHaveLength(1);
+    await expect(readFile(targetFile)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const healthy = Buffer.from('Unrelated healthy attachment');
+    const healthyKey = storageKey(healthy);
+    await writeFile(path.join(source.assets, healthyKey), healthy);
+    await edit(source.peer, [healthyKey], 'new-article');
+    await fixture.sync(source);
+    expect(fixture.uploads).toHaveLength(2);
+    await fixture.sync(target);
+    expect(await readFile(path.join(target.assets, healthyKey))).toEqual(healthy);
+    await expect(readFile(targetFile)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    await writeFile(sourceFile, original);
+    await source.reopen();
+    await fixture.sync(source);
+    expect(fixture.uploads).toHaveLength(3);
+    await fixture.sync(target);
+    await target.reopen();
+    expect(await readFile(targetFile)).toEqual(original);
+  } finally { await fixture.close(); }
+});

@@ -134,6 +134,7 @@ export async function publishWebDavRelayAttachments(input: Input) {
 
 async function freeze(input: Input, key: string, repair?: RepairRequest) {
   const { host, scope, signal } = input;
+  let staging = false;
   try {
     const pending = await input.attachments.withFile(key, async file => {
       if (file.modifiedAt === undefined || !Number.isFinite(scope.baseline.capturedAt)) {
@@ -143,6 +144,7 @@ async function freeze(input: Input, key: string, repair?: RepairRequest) {
       const policy = scope.attachmentPolicy;
       if (policy.mode === 'limited' && file.resource.byteLength > policy.max_mib * WEB_DAV_ATTACHMENT_MIB) return 'lan';
       const wire = await prepareWebDavAttachment(file, { context: scope.send, groupKey: input.groupKey, signal });
+      staging = true;
       return { key, resourceBytes: file.resource.byteLength, ...(repair ? { repairId: repair.id } : {}), ...await stageWebDavRelayPacket(input.files, scope, wire, WEB_DAV_ATTACHMENT_SUFFIX) };
     }, { shouldYield: () => { signal?.throwIfAborted(); return input.lanConnected(); } });
     if (pending && pending !== 'lan') await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
@@ -151,7 +153,9 @@ async function freeze(input: Input, key: string, repair?: RepairRequest) {
     return pending === 'lan' ? null : pending;
   } catch (error) {
     if (!(error instanceof AttachmentVerificationPending) &&
-        !(error instanceof Error && error.message === 'attachment_source_missing')) throw error;
+        !(error instanceof Error && (error.message === 'attachment_source_missing' ||
+          error.message === 'attachment_source_invalid' || error.message === 'attachment_source_truncated'))) throw error;
+    if (staging) await input.files.remove(webDavRelayPacketDirectory(scope));
     // Defer the retry without replacing its repair request.
     await host.write(db => db.run(`UPDATE sync_group_metadata SET updated_at = ?
       WHERE key = ? AND (value = 'pending' OR substr(value, 1, 1) = '{')`,
