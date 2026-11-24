@@ -245,3 +245,18 @@ it('keeps the old WebView choice available when the migration transaction fails'
     window.localStorage.removeItem(legacyChildTopicsKey);
   }
 });
+
+it('opens Browse with the old choice even when its upgrade write cannot commit', async () => {
+  window.localStorage.setItem(legacyChildTopicsKey, 'false');
+  library.database.exec(`CREATE TRIGGER fail_child_topics_migration BEFORE INSERT ON setting_records
+    WHEN NEW.key = 'companion_browse_show_child_topics' BEGIN SELECT RAISE(ABORT, 'migration interrupted'); END`);
+  try {
+    await openBrowse();
+    expect(getCompanionBrowseShowChildTopics()).toBe(false);
+    expect(window.localStorage.getItem(legacyChildTopicsKey)).toBe('false');
+    expect(library.database.prepare("SELECT value_json FROM setting_records WHERE key='companion_browse_show_child_topics'").get())
+      .toBeUndefined();
+  } finally {
+    window.localStorage.removeItem(legacyChildTopicsKey);
+  }
+});

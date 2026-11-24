@@ -50,14 +50,17 @@ final class FolioleFolderBackupOperation {
         let target = directory.appendingPathComponent(filename)
         try checkActive()
         profileID = selected.id
-        if let original = try replacementOrigin(target, profile: selected) {
-            return try replaceTarget(target, original: original, profile: selected)
+        if let replacement = selected.replacement,
+           let result = try recoverReplacement(replacement, at: target, profile: selected) { return result }
+        guard let profile = try store.load(), profile.id == selected.id else { throw backupError("Backup folder changed.") }
+        if let original = try replacementOrigin(target, profile: profile) {
+            return try replaceTarget(target, original: original)
         }
-        let profile = try prepareTarget(target, profile: selected)
-        return try writeSnapshot(to: target, profile: profile)
+        let prepared = try prepareTarget(target, profile: profile)
+        return try writeSnapshot(to: target, expected: prepared.fingerprint, pending: prepared.pendingFingerprint)
     }
 
-    private func writeSnapshot(to target: URL, profile: FolioleFolderBackupProfile) throws -> FolioleBackupResult {
+    private func writeSnapshot(to target: URL, expected: String?, pending: String?) throws -> FolioleBackupResult {
         var options = FolioleBackupOptions()
         options.timeoutMilliseconds = 30_000
         options.context = Unmanaged.passUnretained(self).toOpaque()
@@ -66,7 +69,10 @@ final class FolioleFolderBackupOperation {
             let operation = Unmanaged<FolioleFolderBackupOperation>.fromOpaque(context).takeUnretainedValue()
             do {
                 let value = String(cString: fingerprint)
-                try operation.store.update(id: operation.profileID) { $0.pendingFingerprint = value }
+                try operation.store.update(id: operation.profileID) {
+                    if operation.stagingReplacement { $0.replacement?.fingerprint = value }
+                    else { $0.pendingFingerprint = value }
+                }
                 operation.preparedFingerprint = value
                 return SQLITE_OK
             } catch { operation.callbackError = error; return SQLITE_IOERR }
@@ -82,8 +88,8 @@ final class FolioleFolderBackupOperation {
             guard let context else { return }
             Unmanaged<FolioleFolderBackupOperation>.fromOpaque(context).takeUnretainedValue().sourceReleased()
         }
-        let expected = stagingReplacement ? nil : profile.fingerprint.flatMap { strdup($0) }
-        let pending = stagingReplacement ? nil : profile.pendingFingerprint.flatMap { strdup($0) }
+        let expected = expected.flatMap { strdup($0) }
+        let pending = pending.flatMap { strdup($0) }
         defer { if let expected { free(expected) }; if let pending { free(pending) } }
         options.expectedFingerprint = expected.map { UnsafePointer($0) }
         options.pendingFingerprint = pending.map { UnsafePointer($0) }
@@ -132,30 +138,73 @@ final class FolioleFolderBackupOperation {
         return info
     }
 
-    private func replaceTarget(_ target: URL, original: stat, profile: FolioleFolderBackupProfile) throws -> FolioleBackupResult {
-        let staging = target.deletingLastPathComponent().appendingPathComponent(".foliole-backup-\(UUID().uuidString).partial")
+    private func replaceTarget(_ target: URL, original: stat) throws -> FolioleBackupResult {
+        let replacement = FolioleFolderBackupReplacement(id: UUID(), originalDevice: original.st_dev, originalInode: original.st_ino)
+        let staging = replacement.staging(in: target.deletingLastPathComponent())
         guard mkdir(staging.path, S_IRWXU) == 0 else { throw backupError("Cannot stage the replacement backup.") }
-        var retainStaging = false
-        defer { if !retainStaging { try? FileManager.default.removeItem(at: staging) } }
+        do {
+            try store.update(id: profileID) { $0.replacement = replacement }
+            return try stageAndPublish(target, staging: staging, replacement: replacement)
+        } catch {
+            // If the original is still in place, undo any journal moves. Otherwise keep the
+            // published identity and its recovery files for the next round.
+            do {
+                if let current = try FolioleFolderBackupDirectory.regularFile(target), replacement.containsOriginal(current) {
+                    try FolioleFolderBackupDirectory.restoreReplacementJournals(target, from: staging)
+                    try finishReplacement(staging)
+                }
+            } catch {
+                throw backupError("Backup replacement was interrupted. Recovery files are in \(staging.lastPathComponent).")
+            }
+            throw error
+        }
+    }
+
+    private func stageAndPublish(_ target: URL, staging: URL, replacement: FolioleFolderBackupReplacement) throws -> FolioleBackupResult {
         let candidate = staging.appendingPathComponent(target.lastPathComponent)
         try createTargetFile(candidate)
         stagingReplacement = true
-        let result = try writeSnapshot(to: candidate, profile: profile)
-        guard result.committed == 1, result.cleanupPending == 0 else {
+        defer { stagingReplacement = false }
+        let result = try writeSnapshot(to: candidate, expected: nil, pending: nil)
+        guard result.committed == 1, result.cleanupPending == 0,
+              let staged = try FolioleFolderBackupDirectory.regularFile(candidate), staged.st_size > 0 else {
             throw backupError("The replacement backup did not finish.")
         }
-        var staged = stat()
-        guard lstat(candidate.path, &staged) == 0, staged.st_mode & S_IFMT == S_IFREG, staged.st_size > 0 else {
-            throw backupError("The replacement backup file is missing.")
-        }
         try checkActive()
-        var current = stat()
-        guard lstat(target.path, &current) == 0, current.st_dev == original.st_dev, current.st_ino == original.st_ino else {
+        guard let current = try FolioleFolderBackupDirectory.regularFile(target), replacement.containsOriginal(current) else {
             throw backupError("Backup destination changed during replacement.")
         }
-        try FolioleFolderBackupDirectory.publishReplacement(candidate, to: target, retainStaging: &retainStaging)
+        try FolioleFolderBackupDirectory.publishReplacement(candidate, to: target)
         try recordCommit()
+        try finishReplacement(staging)
         return result
+    }
+
+    private func recoverReplacement(_ replacement: FolioleFolderBackupReplacement, at target: URL,
+                                    profile: FolioleFolderBackupProfile) throws -> FolioleBackupResult? {
+        let staging = replacement.staging(in: target.deletingLastPathComponent())
+        if let current = try FolioleFolderBackupDirectory.regularFile(target), replacement.containsOriginal(current) {
+            try FolioleFolderBackupDirectory.restoreReplacementJournals(target, from: staging)
+            try finishReplacement(staging)
+            return nil
+        }
+        // A moved candidate no longer exists at its staged name. Require the durable fingerprint
+        // before opening the published file for another snapshot, even if it is now empty.
+        let hasStaging = try FolioleFolderBackupDirectory.replacementStagingExists(staging)
+        guard let current = try FolioleFolderBackupDirectory.regularFile(target),
+              try !hasStaging || FolioleFolderBackupDirectory.regularFile(staging.appendingPathComponent(target.lastPathComponent)) == nil,
+              let fingerprint = profile.fingerprint ?? replacement.fingerprint else {
+            throw backupError("Cannot verify the interrupted backup replacement. Recovery files are in \(staging.lastPathComponent).")
+        }
+        try requireDistinctSource(current)
+        let result = try writeSnapshot(to: target, expected: fingerprint, pending: profile.pendingFingerprint)
+        if result.committed == 1, result.cleanupPending == 0 { try finishReplacement(staging) }
+        return result
+    }
+
+    private func finishReplacement(_ staging: URL) throws {
+        try FolioleFolderBackupDirectory.removeReplacementStaging(staging)
+        try store.update(id: profileID) { $0.replacement = nil }
     }
 
     private func requireDistinctSource(_ target: stat) throws {

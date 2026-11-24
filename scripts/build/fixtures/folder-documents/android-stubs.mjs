@@ -44,7 +44,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 public class DocumentsContract {
   public static boolean crashAfterCreate, failBeforeCreate;
-  public static String failNextRenameTo;
+  public static String failNextRenameTo, changeNextRenameTo;
   public static class Document {
     public static final String COLUMN_DISPLAY_NAME = "name", COLUMN_DOCUMENT_ID = "id";
     public static final String MIME_TYPE_DIR = "vnd.android.document/directory";
@@ -64,6 +64,10 @@ public class DocumentsContract {
     if (name.equals(failNextRenameTo)) {
       failNextRenameTo = null;
       throw new Exception("backup publication failed");
+    }
+    if (name.equals(changeNextRenameTo)) {
+      changeNextRenameTo = null;
+      name += ".provider";
     }
     Path moved = Files.move(Path.of(file.value()), Path.of(file.value()).resolveSibling(name));
     return Uri.parse(moved.toString());

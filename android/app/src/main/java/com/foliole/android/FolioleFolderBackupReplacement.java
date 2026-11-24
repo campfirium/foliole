@@ -40,9 +40,9 @@ final class FolioleFolderBackupReplacement {
             throw new IllegalStateException("Backup destination changed during replacement.");
         }
         // A provider may lack rename support. In that case the previous file is never deleted.
-        documents.rename(original, previous);
+        documents.rename(original, target, previous);
         for (String suffix : SIDECARS) moveIfPresent(target + suffix, previous + suffix);
-        documents.rename(staged, target);
+        documents.rename(staged, stage, target);
         commit.record();
     }
 
@@ -64,7 +64,7 @@ final class FolioleFolderBackupReplacement {
         }
         if (retained != null) {
             for (String suffix : SIDECARS) moveIfPresent(previous + suffix, target + suffix);
-            documents.rename(retained, target);
+            documents.rename(retained, previous, target);
         }
         discard(stage);
         return false;
@@ -83,7 +83,7 @@ final class FolioleFolderBackupReplacement {
 
     private void moveIfPresent(String from, String to) throws Exception {
         Uri document = documents.find(from);
-        if (document != null) documents.rename(document, to);
+        if (document != null) documents.rename(document, from, to);
     }
 
     private void discard(String name) throws Exception {

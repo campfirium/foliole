@@ -20,6 +20,8 @@ const listeners = new Set<() => void>();
 let shown = true;
 let pendingSave: Promise<unknown> = Promise.resolve();
 
+export class CompanionBrowseChildTopicsMigrationError extends Error {}
+
 function publish(next: boolean) {
   if (next === shown) return;
   shown = next;
@@ -90,10 +92,23 @@ export async function hydrateCompanionBrowseShowChildTopics() {
   const scope = getCompanionReadingScope();
   await pendingSave.catch(() => undefined);
   if (scope !== getCompanionReadingScope()) return shown;
-  const value = await (readLegacyChoice() === undefined
-    ? readIosCompanionDatabase(readShown)
-    : migrateLegacyChoice(scope));
-  if (scope === getCompanionReadingScope()) publish(value ?? true);
+  const legacy = readLegacyChoice();
+  if (legacy === undefined) {
+    const value = await readIosCompanionDatabase(readShown);
+    if (scope === getCompanionReadingScope()) publish(value ?? true);
+  } else {
+    try {
+      const value = await migrateLegacyChoice(scope);
+      if (scope === getCompanionReadingScope()) publish(value ?? true);
+    } catch (error) {
+      if (scope !== getCompanionReadingScope()) return shown;
+      // The old key remains available for a retry. If the transaction committed and only its
+      // follow-up failed, prefer the value the library already holds.
+      const saved = await readIosCompanionDatabase(readShown);
+      if (scope === getCompanionReadingScope()) publish(saved ?? (legacy === 'true'));
+      throw new CompanionBrowseChildTopicsMigrationError(error instanceof Error ? error.message : String(error), { cause: error });
+    }
+  }
   return shown;
 }
 

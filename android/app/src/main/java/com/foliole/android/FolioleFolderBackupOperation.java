@@ -51,7 +51,8 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         releaseCallbacks.clear();
     }
     public void snapshotPrepared(String fingerprint) throws Exception {
-        store.update(profileId, profile -> profile.put("pendingFingerprint", fingerprint));
+        String key = stagingReplacement ? "replacementFingerprint" : "pendingFingerprint";
+        store.update(profileId, profile -> profile.put(key, fingerprint));
         preparedFingerprint = fingerprint;
     }
     public void transactionCommitted() {
@@ -114,15 +115,9 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         }
     }
     private String[] finishInterruptedPublication(FolioleFolderBackupReplacement replacement, JSONObject profile) throws Exception {
-        String expected = optional(profile, "fingerprint");
-        String pending = optional(profile, "pendingFingerprint");
-        if (!profile.optBoolean("ownsTarget")) {
-            if (pending == null) throw new IllegalStateException("Cannot verify the interrupted backup replacement.");
-            // Keep the published candidate's fingerprint while the next source snapshot prepares its own.
-            store.update(profileId, value -> value.put("ownsTarget", true).put("fingerprint", pending));
-            expected = pending;
-        }
-        String[] result = writeSnapshot(expected, pending);
+        String expected = optional(profile, profile.optBoolean("ownsTarget") ? "fingerprint" : "replacementFingerprint");
+        if (expected == null) throw new IllegalStateException("Cannot verify the interrupted backup replacement.");
+        String[] result = writeSnapshot(expected, optional(profile, "pendingFingerprint"));
         requireComplete(result);
         replacement.discardPrevious();
         clearReplacement();
@@ -131,6 +126,7 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     private void clearReplacement() throws Exception {
         store.update(profileId, profile -> {
             profile.remove("replacementPending");
+            profile.remove("replacementFingerprint");
             if (!profile.optBoolean("ownsTarget")) profile.remove("pendingFingerprint");
         });
     }

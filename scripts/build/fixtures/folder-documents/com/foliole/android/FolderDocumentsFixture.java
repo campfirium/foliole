@@ -121,8 +121,9 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
             if (!Files.exists(stage) || Files.size(stage) != 0) throw new AssertionError("The new target was not empty before the snapshot");
             if (!Arrays.equals(previousBytes, Files.readAllBytes(target))) throw new AssertionError("Staging altered the previous backup");
             Files.write(stage, scenario.endsWith("write-failed") ? Arrays.copyOf(candidateBytes, 32) : candidateBytes);
-            if (scenario.endsWith("publish-failed")) {
-                DocumentsContract.failNextRenameTo = "Foliole.sqlite";
+            if (scenario.endsWith("publish-failed") || scenario.endsWith("provider-failed")) {
+                if (scenario.endsWith("provider-failed")) DocumentsContract.changeNextRenameTo = replacement.recoveryName();
+                else DocumentsContract.failNextRenameTo = "Foliole.sqlite";
                 expectFailure(first, () -> replacement.publish(previous, () -> first.save("owned")));
             } else if (scenario.endsWith("metadata-failed")) {
                 expectFailure(first, () -> replacement.publish(previous, () -> { throw new IllegalStateException("Cannot save profile"); }));
@@ -186,6 +187,7 @@ public class FolderDocumentsFixture extends FolioleFolderBackupDocuments {
             case "foreign-replace-create-failed":
             case "foreign-replace-write-failed":
             case "foreign-replace-publish-failed":
+            case "foreign-replace-provider-failed":
             case "foreign-replace-metadata-failed":
             case "foreign-replaced":
                 replace(first, file, Path.of(args[2]), Path.of(args[3]), args[0]);

@@ -1,6 +1,21 @@
 import Foundation
 import Darwin
 
+struct FolioleFolderBackupReplacement: Codable {
+    let id: UUID
+    let originalDevice: Int32
+    let originalInode: UInt64
+    var fingerprint: String?
+
+    func containsOriginal(_ info: stat) -> Bool {
+        info.st_dev == originalDevice && info.st_ino == originalInode
+    }
+
+    func staging(in directory: URL) -> URL {
+        directory.appendingPathComponent(".foliole-backup-\(id.uuidString).partial")
+    }
+}
+
 struct FolioleFolderBackupProfile: Codable {
     var id = UUID().uuidString
     var bookmark: Data
@@ -9,6 +24,7 @@ struct FolioleFolderBackupProfile: Codable {
     var targetCreationPending = false
     var fingerprint: String?
     var pendingFingerprint: String?
+    var replacement: FolioleFolderBackupReplacement?
     var savedAt: String?
     var attachmentFilesPending: Int?
     var attachmentError: String?

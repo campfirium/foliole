@@ -46,7 +46,7 @@ function replace(scenario) {
 it('replaces another backup only when the user confirmed it', () => {
   expect(replace('foreign-replaced')).toContain('other backup replaced');
 });
-it.each(['create', 'write', 'publish'])('keeps the old database if replacement fails during %s', step => {
+it.each(['create', 'write', 'publish', 'provider'])('keeps the old database if replacement fails during %s', step => {
   expect(replace(`foreign-replace-${step}-failed`)).toContain('old backup survives replacement failure');
 });
 it('keeps both completed databases when the published identity cannot be saved', () => {

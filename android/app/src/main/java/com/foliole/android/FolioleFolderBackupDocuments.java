@@ -72,11 +72,24 @@ class FolioleFolderBackupDocuments {
         if (!isNamedDocument(created, name)) throw new IllegalStateException("Cannot create backup document " + name + ".");
         return created;
     }
-    void rename(Uri document, String name) throws Exception {
+    void rename(Uri document, String from, String to) throws Exception {
         requireFile(document);
-        if (find(name) != null) throw new IllegalStateException("Backup document already exists: " + name);
-        Uri moved = DocumentsContract.renameDocument(context.getContentResolver(), document, name);
-        if (!isNamedDocument(moved, name)) throw new IllegalStateException("Cannot rename backup document to " + name + ".");
+        if (find(to) != null) throw new IllegalStateException("Backup document already exists: " + to);
+        Uri moved = DocumentsContract.renameDocument(context.getContentResolver(), document, to);
+        try {
+            if (isNamedDocument(moved, to)) return;
+            throw new IllegalStateException("Cannot rename backup document to " + to + ".");
+        } catch (Exception failure) {
+            try { restoreUnexpectedRename(moved, from); }
+            catch (Exception recovery) { failure.addSuppressed(recovery); }
+            throw failure;
+        }
+    }
+    private void restoreUnexpectedRename(Uri moved, String from) throws Exception {
+        if (moved == null || isNamedDocument(moved, from)) return;
+        if (find(from) != null) throw new IllegalStateException("Backup document already exists: " + from);
+        Uri restored = DocumentsContract.renameDocument(context.getContentResolver(), moved, from);
+        if (!isNamedDocument(restored, from)) throw new IllegalStateException("Cannot restore backup document " + from + ".");
     }
     private boolean isNamedDocument(Uri document, String name) throws Exception {
         Uri found = document == null ? null : find(name);
