@@ -66,7 +66,8 @@ export function useCompanionFlowSession(args: {
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
-  const progressCounts = getProgressCounts(session);
+  // A cleared queue is finished even while Flow keeps serving later cards, so the counter and plant step aside.
+  const progressCounts = session.cycle?.clearedAt ? undefined : getProgressCounts(session);
   const dive = session.dive;
   const openDive = createCompanionDiveFlowControls(current, owner, mode, render);
   return { view, ...companionDiveModeControls(openDive, dive, mode, setMode), dive, openDive,

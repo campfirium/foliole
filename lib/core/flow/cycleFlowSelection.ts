@@ -87,7 +87,11 @@ export async function selectCycleSuccessor(db: ScanStore, meta: CycleMeta, args:
   if (meta.timedResume && meta.timedResume.key === meta.scanAfter) meta.scanAfter = meta.timedResume.after;
   delete meta.timedResume;
   const timed = await takeTimedRow(db, meta, args);
-  if (timed) return timed;
+  if (timed) {
+    // Every ordered row after the cursor lies beyond the queue end, so serving a due card must not delay the clear mark.
+    crossClear(meta, meta.timedResume!.after + 1, args.now);
+    return timed;
+  }
   const currentLap = await scanCycleRange(db, meta, args);
   if (currentLap) return currentLap;
   meta.scanAfter = 0;
