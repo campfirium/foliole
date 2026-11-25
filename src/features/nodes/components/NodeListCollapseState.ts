@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
 import { HOME_NODE_ID, isHomeNode } from '../model/specialNodes';
@@ -27,7 +27,7 @@ export interface CollapsedNodeState {
   setCollapsedTrashNodeIdList: Dispatch<SetStateAction<string[]>>;
   expandNoteCollapse: (nodeId: string) => void;
   toggleNoteCollapse: (nodeId: string) => void;
-  collapseAllNotes: () => void;
+  collapseAllNotes: (keepHomeOpen?: boolean) => void;
   expandAllNotes: () => void;
 }
 
@@ -92,8 +92,15 @@ function useNoteCollapsedState({
   forceExpandedNodeId,
   noteParentById,
   noteRowsAll
-}: Pick<UseCollapsedNodeStateInput, 'forceExpandedNodeId' | 'noteParentById' | 'noteRowsAll'> & { collapsibleHome: boolean }) {
+}: Pick<UseCollapsedNodeStateInput, 'noteParentById' | 'noteRowsAll'> & {
+  collapsibleHome: boolean;
+  forceExpandedNodeId: string | null;
+}) {
   const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll, collapsibleHome);
+  const [dismissedRevealId, setDismissedRevealId] = useState<string | null>(null);
+  useEffect(() => {
+    setDismissedRevealId(null);
+  }, [forceExpandedNodeId]);
   const {
     collapseAllNotes,
     expandAllNotes,
@@ -111,12 +118,15 @@ function useNoteCollapsedState({
       );
       const homeManuallyCollapsed = collapsed.has(HOME_NODE_ID) && manualCollapsedNoteNodeIdList.includes(HOME_NODE_ID);
       collapsed.delete(HOME_NODE_ID);
-      const revealed = removeForcedExpandedNodeIds(collapsed, noteParentById, forceExpandedNodeId);
+      const revealed = dismissedRevealId === forceExpandedNodeId
+        ? collapsed
+        : removeForcedExpandedNodeIds(collapsed, noteParentById, forceExpandedNodeId);
       if (!homeManuallyCollapsed) return revealed;
       return new Set([...revealed, HOME_NODE_ID]);
     },
     [
       forceExpandedNodeId,
+      dismissedRevealId,
       noteCollapsibleNodeIds,
       noteParentById,
       manualCollapsedNoteNodeIdList,
@@ -125,7 +135,10 @@ function useNoteCollapsedState({
   );
 
   return {
-    collapseAllNotes,
+    collapseAllNotes: (keepHomeOpen?: boolean) => {
+      if (keepHomeOpen) setDismissedRevealId(forceExpandedNodeId);
+      collapseAllNotes(keepHomeOpen);
+    },
     hasCollapsibleNotes: noteCollapsibleNodeIds.size > 0,
     noteCollapsibleNodeIds,
     collapsedNoteNodeIds,
@@ -161,11 +174,11 @@ function useNoteManualCollapseState(noteCollapsibleNodeIds: ReadonlySet<string>)
   }, [manualExpandedNoteNodeIdList]);
 
   return {
-    collapseAllNotes: () =>
+    collapseAllNotes: (keepHomeOpen?: boolean) =>
       setManualCollapseState(
         setManualCollapsedNoteNodeIdList,
         setManualExpandedNoteNodeIdList,
-        [...noteCollapsibleNodeIds],
+        [...noteCollapsibleNodeIds].filter((id) => !keepHomeOpen || id !== HOME_NODE_ID),
         'collapsed'
       ),
     expandAllNotes: () =>

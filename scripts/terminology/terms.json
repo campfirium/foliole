@@ -1,5 +1,5 @@
 {
-  "$comment": "Machine-readable product terminology. Only English and Simplified Chinese are controlled here; other locales translate from these. Rationale lives in the private terminology spec and term cards. Avoid rules with status decided block newly added UI copy at pre-commit; status open only warns.",
+  "$comment": "Machine-readable product terminology. Only English and Simplified Chinese are controlled here; other locales translate from these. Rationale lives in the private terminology spec and term cards. Avoid rules with status decided block newly added UI copy at pre-commit; status open only warns. Adding allowPhrases that keep card, entry, note, or nested needs the user's explicit approval; these words leak in easily from casual discussion.",
   "version": 1,
   "controlledLocales": [
     "en",
@@ -228,6 +228,21 @@
       ],
       "status": "decided",
       "reason": "Only for import sources or external formats, not as a Foliole object."
+    },
+    {
+      "id": "nested",
+      "en": [
+        "nested"
+      ],
+      "zhHans": [
+        "嵌套"
+      ],
+      "prefer": [
+        "derived-topic",
+        "topic"
+      ],
+      "status": "decided",
+      "reason": "Structural word; say derived topics or name the actual objects."
     }
   ],
   "allowPhrases": [

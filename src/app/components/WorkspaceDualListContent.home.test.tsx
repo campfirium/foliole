@@ -140,28 +140,19 @@ it.each([false, true])('folds Home without closing its current contents or the o
   expect(screen.getByRole('treeitem', { name: 'Inbox' })).toBeVisible();
 });
 
-it.each([false, true])('toggles all four section headings and preserves nested folder state (expanded: %s)', (expanded) => {
+it('keeps the open topic visible when collapsing its revealed folder path', () => {
   renderWithLocalization(<HomePinnedWorkspaceHarness />);
 
-  const folder = screen.getByRole('treeitem', { name: 'Folder A' });
-  const headings = ['Home', 'Dive', 'Virtual', 'External'].map((name) =>
-    screen.getByRole('treeitem', { name })
-  );
-  expect(screen.getAllByRole('treeitem').filter((row) => headings.includes(row))).toEqual(headings);
-  for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'true');
-  if (expanded) fireEvent.keyDown(folder, { key: 'ArrowRight' });
-  expect(folder).toHaveAttribute('aria-expanded', String(expanded));
+  const contents = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
+  fireEvent.click(contents.getByRole('treeitem', { name: 'Topic A' }));
+  expect(screen.getByRole('treeitem', { name: 'Child Folder' })).toBeVisible();
 
   fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
-  for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.queryByRole('treeitem', { name: 'Folder A' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: 'Home' })).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('treeitem', { name: 'Child Folder' })).toBeNull();
+  expect(contents.getByRole('treeitem', { name: 'Topic A' })).toHaveAttribute('aria-current', 'page');
 
   fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
-  for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-expanded', String(expanded));
-
-  fireEvent.click(headings[2]!.querySelector('[data-node-tree-chevron]')!);
-  expect(headings[0]).toHaveAttribute('aria-expanded', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
-  for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Child Folder' })).toBeVisible();
 });

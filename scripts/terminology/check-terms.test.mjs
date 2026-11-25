@@ -46,6 +46,9 @@ describe('check-terms', () => {
     expect(findTermIssues('Open widget', 'en', withOpenRule)).toEqual([
       expect.objectContaining({ rule: 'pending', severity: 'warn' })
     ]);
+    expect(findTermIssues('Show nested topics', 'en', terms)).toEqual([
+      expect.objectContaining({ rule: 'nested', severity: 'error' })
+    ]);
     expect(findTermIssues('No topics in this folder', 'en', terms)).toEqual([]);
     expect(findTermIssues('Open release notes', 'en', terms)).toEqual([]);
   });

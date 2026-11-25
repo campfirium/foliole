@@ -15,7 +15,7 @@ export function expectAndroidDiagnosticRows() {
   expect(screen.getByText('Review queue bodies')).toBeInTheDocument();
   expect(screen.getByText('Current topic body')).toBeInTheDocument();
   expect(screen.getByText('Top-level topic bodies')).toBeInTheDocument();
-  expect(screen.getByText('Nested topic bodies')).toBeInTheDocument();
+  expect(screen.getByText('Derived topic bodies')).toBeInTheDocument();
   expect(screen.getByText('Review queue attachments')).toBeInTheDocument();
   expect(screen.getByText('Current topic attachments')).toBeInTheDocument();
   expect(screen.getByText('Image attachments')).toBeInTheDocument();

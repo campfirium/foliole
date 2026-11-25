@@ -81,9 +81,18 @@ function renderExternalHeading(
   ];
 }
 
-function useExternalSectionCollapse() {
+function useExternalSectionCollapse(
+  hasHeading: boolean,
+  rows: ExternalTreeRowRecord[],
+  collapsedIds: Set<string>,
+  setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>
+) {
   const [collapsed, setCollapsed] = useState(false);
-  useFolderSectionControl(true, collapsed, () => setCollapsed((value) => !value));
+  const branchIds = rows.filter((row) => row.depth === 1 && row.hasChildren).map((row) => row.id);
+  useFolderSectionControl(hasHeading, collapsed, branchIds, collapsedIds, (overview) => {
+    setCollapsed(false);
+    setCollapsedIds(new Set(overview ? branchIds : []));
+  });
   return [collapsed, setCollapsed] as const;
 }
 
@@ -103,8 +112,8 @@ function VisibleExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const [collapsedIds, setCollapsedIds] = useExternalCollapsedIds(orderedFolders);
   const [contextMenu, setContextMenu] = useState<ExternalFolderContextMenuState | null>(null);
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
-  const [sectionCollapsed, setSectionCollapsed] = useExternalSectionCollapse();
   const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds, Boolean(stack));
+  const [sectionCollapsed, setSectionCollapsed] = useExternalSectionCollapse(Boolean(stack), rows, collapsedIds, setCollapsedIds);
   const onRowKeyDown = useExternalRowKeyDown(collapsedIds, rows, props.onOpenExternalSelection, setCollapsedIds);
   const drag = useExternalFolderDrag(orderedFolders, setFolderOrder);
   return (

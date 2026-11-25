@@ -117,7 +117,7 @@ function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void
   const untitled = t('desktop.nodeList.dive.untitled');
   const failed = () => showAppRuntimeNotice(t('desktop.nodeList.addToDive.saveFailed'));
   return {
-    collapsed, context, dives,
+    collapsed, context, dives, setCollapsed,
     closeMenu: () => setContext(null),
     openMenu: (id: string, event: MouseEvent<HTMLButtonElement>, source?: DiveSourceSelection) => {
       event.preventDefault();
@@ -205,7 +205,11 @@ export function WorkspaceDiveSection(props: {
   };
   const available = Boolean(getDiveRepository());
   const collapsed = section.collapsed.has(rootId);
-  useFolderSectionControl(available, collapsed, () => section.toggle(rootId));
+  const branchIds = section.dives
+    .filter((dive) => dive.directSourceIds.some((id) => props.nodesById[id]?.kind === 'folder'))
+    .map((dive) => rowId(dive.id));
+  useFolderSectionControl(available, collapsed, branchIds, section.collapsed,
+    (overview) => section.setCollapsed(new Set(overview ? branchIds : [])));
   if (!available) return null;
   const selected = props.activeDiveId === rootId;
   const title = customTitle || t('desktop.nodeList.dive.tree');

@@ -63,14 +63,14 @@ function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
 }
 
 function buildWorkspaceVirtualRows(
-  props: WorkspaceVirtualSectionProps,
-  collapsedIds: Set<string>
+  nodeOrder: WorkspaceVirtualSectionProps['nodeOrder'],
+  nodesById: WorkspaceVirtualSectionProps['nodesById']
 ) {
-  const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
-    const node = props.nodesById[nodeId];
+  const virtualNodeIds = nodeOrder.filter((nodeId) => {
+    const node = nodesById[nodeId];
     return isVirtualRootNode(node) || (isVirtualNode(node) && !node?.isDive);
-  }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
-  return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
+  }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, nodesById));
+  return buildNodeTree(virtualNodeIds, nodesById).rows;
 }
 
 function renderSavedSearchContextMenu(args: {
@@ -138,12 +138,12 @@ function useVirtualSectionTreeModel(
   collapsedIds: Set<string>,
   setCollapsedIds: Dispatch<SetStateAction<Set<string>>>
 ) {
-  const rows = useMemo(
-    () => buildWorkspaceVirtualRows(props, collapsedIds),
-    [collapsedIds, props.nodeOrder, props.nodesById]
-  );
+  const allRows = useMemo(() => buildWorkspaceVirtualRows(props.nodeOrder, props.nodesById), [props.nodeOrder, props.nodesById]);
+  const rows = useMemo(() => buildVisibleNodeTreeRows(allRows, collapsedIds), [allRows, collapsedIds]);
+  const branchIds = useMemo(() => allRows.filter((row) => row.depth === 1 && row.hasChildren).map((row) => row.node.id), [allRows]);
   useFolderSectionControl(!props.hideInDemo && rows[0]?.node.id === VIRTUAL_ROOT_NODE_ID,
-    collapsedIds.has(VIRTUAL_ROOT_NODE_ID), () => toggleCollapsed(VIRTUAL_ROOT_NODE_ID, setCollapsedIds));
+    collapsedIds.has(VIRTUAL_ROOT_NODE_ID), branchIds, collapsedIds,
+    (overview) => setCollapsedIds(new Set(overview ? branchIds : [])));
   const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
   const onRowKeyDown = useMemo(() => createNodeListRowKeydownHandler({
     collapsedNodeIds: collapsedIds,

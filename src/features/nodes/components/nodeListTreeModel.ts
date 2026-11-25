@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
@@ -7,7 +7,7 @@ import { HOME_NODE_ID } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { useFolderSectionControl } from './FolderSectionStack';
-import { useCollapsedNodeState } from './NodeListCollapseState';
+import { useCollapsedNodeState, type CollapsedNodeState } from './NodeListCollapseState';
 import { useNodeSelectionHandler } from './NodeListSelection';
 import { useNodeListTreeData, type NodeListTreeData } from './NodeListTreeData';
 import { useNodeCollapseControls, useNodeListContextMenu } from './NodeListTreeHooks';
@@ -114,6 +114,17 @@ function useNodeListTreeControllers(args: {
   return { collapse, contextMenu, handleSelectNode };
 }
 
+function useHomeSectionControl(enabled: boolean, treeData: NodeListTreeData, collapse: CollapsedNodeState) {
+  const { noteRowsAll, noteParentById } = treeData;
+  const branchIds = useMemo(() => {
+    if (!enabled) return [];
+    const rootId = noteRowsAll.some((row) => row.node.id === HOME_NODE_ID) ? HOME_NODE_ID : null;
+    return noteRowsAll.filter((row) => row.hasChildren && noteParentById[row.node.id] === rootId).map((row) => row.node.id);
+  }, [enabled, noteParentById, noteRowsAll]);
+  useFolderSectionControl(enabled, collapse.collapsedNoteNodeIds.has(HOME_NODE_ID), branchIds, collapse.collapsedNoteNodeIds,
+    (overview) => overview ? collapse.collapseAllNotes(true) : collapse.expandAllNotes());
+}
+
 export function useNodeListTreeModel({
   activeNodeId,
   bodyAppendContent,
@@ -136,11 +147,7 @@ export function useNodeListTreeModel({
     noteRowsAll: treeData.noteRowsAll,
     trashRowsAll: treeData.trashRowsAll
   });
-  useFolderSectionControl(
-    Boolean(bodyAppendContent) && treeData.noteRowsAll.some((row) => row.node.id === HOME_NODE_ID && row.hasChildren),
-    collapsedState.collapsedNoteNodeIds.has(HOME_NODE_ID),
-    () => collapsedState.toggleNoteCollapse(HOME_NODE_ID)
-  );
+  useHomeSectionControl(Boolean(bodyAppendContent), treeData, collapsedState);
   const state = useNodeListStateFromTreeData({
     activeNodeId,
     collapsedNoteNodeIds: collapsedState.collapsedNoteNodeIds,

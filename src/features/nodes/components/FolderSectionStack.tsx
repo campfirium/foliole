@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useLayoutEffect, useRef, useSta
 import { useFolderSectionSettings } from './folderSectionSettings';
 
 interface SectionControl {
-  collapsed: boolean;
-  toggle: () => void;
+  hasExpandedBranches: boolean;
+  setOverview: (overview: boolean) => void;
 }
 
 interface FolderSectionContext {
@@ -32,27 +32,37 @@ export function useFolderSectionStack() {
 export function useFolderSectionToolbar() {
   const sections = useFolderSectionStack()?.controls;
   if (!sections) return null;
-  const hasCollapsedNodes = sections.some((section) => section.collapsed);
+  const showOverview = sections.some((section) => section.hasExpandedBranches);
   return {
     hasCollapsibleNodes: sections.length > 0,
-    hasCollapsedNodes,
+    hasCollapsedNodes: !showOverview,
     toggleAll: () => {
       for (const section of sections) {
-        if (section.collapsed === hasCollapsedNodes) section.toggle();
+        section.setOverview(showOverview);
       }
     }
   };
 }
 
-export function useFolderSectionControl(enabled: boolean, collapsed: boolean, toggle: () => void) {
+export function useFolderSectionControl(
+  enabled: boolean,
+  rootCollapsed: boolean,
+  branchIds: readonly string[],
+  collapsedIds: ReadonlySet<string>,
+  setOverview: SectionControl['setOverview']
+) {
   const register = useFolderSectionStack()?.register;
-  const toggleRef = useRef(toggle);
+  const canToggle = enabled && (rootCollapsed || branchIds.length > 0);
+  const hasExpandedBranches = !rootCollapsed && branchIds.some((id) => !collapsedIds.has(id));
+  const setOverviewRef = useRef(setOverview);
   useLayoutEffect(() => {
-    toggleRef.current = toggle;
-  }, [toggle]);
+    setOverviewRef.current = setOverview;
+  }, [setOverview]);
   useLayoutEffect(() => {
-    if (enabled && register) return register({ collapsed, toggle: () => toggleRef.current() });
-  }, [collapsed, enabled, register]);
+    if (canToggle && register) {
+      return register({ hasExpandedBranches, setOverview: (overview) => setOverviewRef.current(overview) });
+    }
+  }, [canToggle, hasExpandedBranches, register]);
 }
 
 export function FolderSectionHeading(props: { children: ReactNode; first?: boolean }) {
