@@ -15,12 +15,13 @@ export function CompanionReadingPageNavigation(props: { children: ReactNode }) {
 
 export const useCompanionReadingPageNavigation = () => useContext(PageContext);
 
-export function useRegisterCompanionReadingPages(surfaceRef: RefObject<HTMLElement | null>, enabled: boolean) {
+export function useRegisterCompanionReadingPages(surfaceRef: RefObject<HTMLElement | null>, enabled: boolean,
+  hasSelection: () => boolean) {
   const register = useContext(RegisterContext);
   useEffect(() => {
     const surface = surfaceRef.current;
     if (!register || !enabled || !surface) return;
-    register(() => (direction: number) => turnCompanionReadingPage(surface, direction));
+    register(() => (direction: number) => { if (!hasSelection()) turnCompanionReadingPage(surface, direction); });
     return () => register(null);
-  }, [register, surfaceRef, enabled]);
+  }, [register, surfaceRef, enabled, hasSelection]);
 }

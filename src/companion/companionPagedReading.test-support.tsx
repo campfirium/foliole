@@ -31,7 +31,7 @@ export function chooseMode(name: 'Paged scroll' | 'Continuous scroll') {
 }
 
 export function pointer(target: HTMLElement, type: string, x: number, y = 300, id = 1) {
-  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
   Object.defineProperties(event, { pointerId: { value: id }, pointerType: { value: 'touch' }, isPrimary: { value: id === 1 } });
   fireEvent(target, event);
 }

@@ -4,9 +4,11 @@ import { act, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { host } from './companionReadingStateTable.host.testSupport';
-import { sessionRows, tapRows, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
+import { sessionRows, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
+import { tapRows } from './companionReadingStateTable.tapRows.testSupport';
 import { createProbe, installLayout, removeLayout, type Observation, type Platform } from './companionReadingStateTable.testSupport';
 import { windowRows } from './companionReadingStateTable.windowRows.testSupport';
+import { updateCompanionToolbarAppearance } from './companionSelectionToolbarPreference';
 
 vi.mock('@capacitor/core', async original => {
   const actual = await original<typeof import('@capacitor/core')>();
@@ -66,6 +68,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
   removeLayout();
   window.getSelection()?.removeAllRanges();
+  localStorage.clear();
+  // The toolbar appearance is also held in memory.
+  updateCompanionToolbarAppearance({ selectionToolbarEnabled: true });
   localStorage.clear();
   host.apply.mockClear();
   host.managed = null;

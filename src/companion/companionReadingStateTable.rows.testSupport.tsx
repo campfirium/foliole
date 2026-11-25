@@ -1,12 +1,10 @@
-// T886 reading state table, paths P1-P7: toolbars, system bars across scene changes, and tap ownership.
+// T886 reading state table, paths P1-P4: toolbars and system bars across scene changes.
 // `expected` is the target behaviour. `gap` marks a row the model does not meet yet: `now` records today's
 // behaviour and the target is an expected failure until the named closure removes the gap.
-import { screen } from '@testing-library/react';
-
 import { CompanionDirectoryContent } from './CompanionDirectoryContent';
 import { host } from './companionReadingStateTable.host.testSupport';
-import { annotatableArticle, article, highlightedArticle, mount, shell } from './companionReadingStateTable.scenes.testSupport';
-import { bodyText, selectBodyText, selectManagedText, type Observation, type Platform, type Probe } from './companionReadingStateTable.testSupport';
+import { article, mount, shell } from './companionReadingStateTable.scenes.testSupport';
+import { bodyText, type Observation, type Platform, type Probe } from './companionReadingStateTable.testSupport';
 import { CompanionSearchExternalArticle } from './CompanionSearchExternalArticle';
 
 export interface ReadingStateRow {
@@ -96,76 +94,4 @@ export const sessionRows: ReadingStateRow[] = [
       await probe.flush();
     } },
   ...externalEntryRows
-];
-
-async function reviewQuestionWithSelection(probe: Probe) {
-  const view = mount(shell({ nodeId: 'item-1' }));
-  await probe.flush();
-  selectBodyText();
-  probe.startObserving();
-  return view;
-}
-
-async function openHighlightMenu(probe: Probe) {
-  mount(highlightedArticle());
-  await probe.flush();
-  await probe.tap(screen.getByText('Existing highlight'));
-  await probe.flush(300);
-  if (!document.querySelector('[data-companion-selection-toolbar]')) throw new Error('highlight menu did not open');
-  probe.startObserving();
-}
-
-export const tapRows: ReadingStateRow[] = [
-  { scene: 'P5 cloze review question with a native selection', event: 'tap outside the selection',
-    expected: seen({ tap: [['clear-selection']] }),
-    gap: { closure: '0-3', now: seen({ selection: 'native', tap: [[]] }) },
-    async run(probe) {
-      await reviewQuestionWithSelection(probe);
-      await probe.tap(bodyText());
-    } },
-  { scene: 'P5 cloze review question with a native selection', event: 'show the answer',
-    expected: seen({}),
-    gap: { closure: '0-3', now: seen({ selection: 'native' }) },
-    async run(probe) {
-      const view = await reviewQuestionWithSelection(probe);
-      view.rerender(shell({ nodeId: 'item-1', revealed: true }));
-      await probe.flush(300);
-      screen.getByText('Review answer');
-    } },
-  { scene: 'P6 paged, highlight menu only', event: 'tap the page edge twice', paged: true,
-    expected: seen({ tap: [['close-menu'], ['turn-page']] }),
-    async run(probe) {
-      await openHighlightMenu(probe);
-      await probe.tap(bodyText(), 355);
-      await probe.tap(bodyText(), 355);
-    } },
-  { scene: 'P7 paged, native selection', event: 'swipe', paged: true,
-    expected: seen({ selection: 'native', tap: [[]] }),
-    async run(probe) {
-      mount(article());
-      await probe.flush();
-      selectBodyText();
-      probe.startObserving();
-      await probe.swipeUp(bodyText());
-    } },
-  // Foliole manages reading ranges only on Android.
-  { scene: 'P7 paged, Foliole-managed selection', event: 'swipe', paged: true, platforms: ['android'],
-    expected: seen({ selection: 'managed', tap: [[]] }),
-    gap: { closure: '0-3', now: seen({ selection: 'managed', tap: [['turn-page']] }) },
-    async run(probe) {
-      mount(annotatableArticle());
-      await probe.flush();
-      await selectManagedText(probe);
-      probe.startObserving();
-      await probe.swipeUp(bodyText());
-    } },
-  { scene: 'P7 paged, Foliole-managed selection', event: 'tap the page edge', paged: true, platforms: ['android'],
-    expected: seen({ tap: [['clear-selection']] }),
-    async run(probe) {
-      mount(annotatableArticle());
-      await probe.flush();
-      await selectManagedText(probe);
-      probe.startObserving();
-      await probe.tap(bodyText(), 355);
-    } }
 ];

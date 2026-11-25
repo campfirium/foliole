@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { getPdfAnchorLocators } from '../../lib/core/anchors/pdfAnchorLocator';
 import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec';
@@ -37,6 +37,7 @@ import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBa
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionReadingSelectionViewport } from './useCompanionReadingSelectionViewport';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
+import { useCompanionSceneSelection } from './useCompanionSceneSelection';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
@@ -93,12 +94,11 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, 
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: toolbarAppearance.selectionToolbarEnabled && Boolean(props.onCreateSelectionAnnotation) &&
       canCreateSelectionAnnotation(snapshot?.nodesById[props.readableArticle.nodeId]) && !reading.isContentEditing,
+    editing: reading.isContentEditing,
     nodeId: props.readableArticle.nodeId,
     snapshot
   });
-  useEffect(() => {
-    if (reading.isContentEditing) toolbar.editorRef.current?.focus();
-  }, [reading.isContentEditing, toolbar.editorRef]);
+  useCompanionSceneSelection(props.answer != null, reading.isContentEditing, toolbar);
   const { cancelContentEditing, toggleContentEditing } = useCompanionContentEditingActions({
     activity: props.activity, // An answered review item edits in its own viewport, which starts from the top.
     captureScrollAnchor: next => { if (props.isReviewItem !== true || props.answer == null) scrollAnchor.capture(toolbar.editorRef.current, next); },
@@ -193,7 +193,7 @@ function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
   const onEditorReady = useCompanionAnchoredEditorReady(model.toolbar.handleEditorReady, scrollAnchor);
   const itemEditing = model.reading.isContentEditing && props.isReviewItem === true && props.answer != null;
   useCompanionItemEditViewport(scrollPosition.surfaceRef, itemEditing);
-  const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
+  const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing, model.toolbar.hasReadingSelection);
   const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
     editing: model.reading.isContentEditing, onEditorReady, surface: scrollPosition.surfaceRef,
     onScrollTopChange: props.onScrollTopChange, jump: { commandId: model.reading.readingRestoreCommandId, selection: model.reading.readingSelection } });
