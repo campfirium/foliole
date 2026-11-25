@@ -23,7 +23,7 @@ export function addNode(peer: Peer, id: string, priority: number, kind: 'topic' 
 
 }
 
-export async function setup(kind: 'topic' | 'item') {
+export async function setup(kind: 'topic' | 'item', onLearningRead?: (ids: readonly string[]) => void) {
   await startLibraries();
   const peer = createPeer('desktop');
   for (const [index, id] of ['a', 'b', 'c', 'd'].entries()) {
@@ -32,7 +32,10 @@ export async function setup(kind: 'topic' | 'item') {
   }
   const settings = { scope: peer.file, newDayStartsAtHour: 4, pushQueue: schedulerSettings.pushQueue };
   const persistence: DailyFlowPersistence = {
-    learningSnapshot: (db, ids) => loadDailyFlowLearningSnapshot(db, 'desktop', ids),
+    learningSnapshot: (db, ids) => {
+      onLearningRead?.(ids ?? []);
+      return loadDailyFlowLearningSnapshot(db, 'desktop', ids);
+    },
     snapshot: async () => { throw new Error('Expected scoped learning facts'); },
     grade: async (_db, value, opId) => applyReviewGrade(peer.driver, { ...value, opId },
       { hostName: peer.name, createId: () => `${opId}-log` }),

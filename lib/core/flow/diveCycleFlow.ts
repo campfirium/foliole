@@ -5,7 +5,7 @@ import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
-import { isUnreadDiveTopic, readDiveUnreadRound } from './diveUnreadTopics.js';
+import { findNextDiveUnread, isUnreadDiveTopic } from './diveUnreadTopics.js';
 
 function belongsToDive(id: string, topics: ReadonlySet<string>, nodes: Record<string, ReviewQueueNode>) {
   const seen = new Set<string>();
@@ -81,8 +81,7 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   if (!db.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const memberIds = await db.readDiveMembers(dive.id);
   if (dive.phase === 'topics') {
-    const { order, unread } = await readDiveUnreadRound(db, memberIds, dive.memberIds ?? [], dive.position);
-    const current = unread[0] ?? null;
+    const { order, current } = await findNextDiveUnread(db, memberIds, dive.memberIds ?? [], dive.position);
     return displayDiveSession(global, {
       ...dive, memberIds: order, position: current ? order.indexOf(current) + 1 : order.length,
       limit: order.length, hasWork: dive.hasWork || Boolean(current),
@@ -100,8 +99,8 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {
     if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);
   };
-  // Dive reports members that become due later today, so it still visits waiting rows.
-  const args = { mode, now, settings, matches, onSkipped, allRows: true };
+  // Dive reports members that become due later today, so it still visits its waiting rows.
+  const args = { mode, now, settings, matches, onSkipped, allRows: true, nodeIds: memberIds };
   const earlier = resumeAfter && revisit.length ? await selectEarlierMember(db, revisit, resumeAfter, args) : null;
   const cycle = { ...global.cycle!, scanAfter: resumeAfter, lapLimit: dive.limit };
   const row = earlier?.row ?? (members.size ? await scanCycleRange(db, cycle, args) : null);

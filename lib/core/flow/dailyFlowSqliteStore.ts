@@ -23,7 +23,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     },
     readDiveMembers: id => readDiveFlowMembers(db, id),
     readRows: cycleRowsReader(db, rowsById),
-    scanRows: (after, through, count, filter) => scanCycleRows(db, after, through, count, filter),
+    scanRows: (after, through, count, filter, nodeIds) => scanCycleRows(db, after, through, count, filter, nodeIds),
     timedRows: (filter, count) => readTimedCycleRows(db, filter, count),
     readReadiness: () => db.query(`${STORED_ROWS} WHERE e.active=1`),
     async writeRows(rows) {
@@ -81,7 +81,13 @@ function cycleRowsReader(db: DbPort, rowsById: Map<string, CycleRow | undefined>
 }
 
 // Rows the mode hides or that still wait stay in SQLite instead of crossing to the caller.
-function scanCycleRows(db: DbPort, after: number, through: number, count: number, filter?: CycleScanFilter) {
+function scanCycleRows(db: DbPort, after: number, through: number, count: number, filter?: CycleScanFilter,
+  nodeIds?: readonly string[]) {
+  if (nodeIds) {
+    return db.query<CycleStoredRow>(`SELECT * FROM daily_flow_entries WHERE active=1
+      AND order_key > ? AND order_key <= ? AND node_id IN (SELECT value FROM json_each(?)) ORDER BY order_key LIMIT ?`,
+    [after, through, JSON.stringify(nodeIds), count]);
+  }
   return filter
     ? db.query<CycleStoredRow>(`${STORED_ROWS} WHERE e.active=1 AND e.order_key > ? AND e.order_key <= ?
       AND (r.kind IS NULL OR r.kind IN (SELECT value FROM json_each(?))) AND (r.ready_at_ms IS NULL OR r.ready_at_ms <= ?)

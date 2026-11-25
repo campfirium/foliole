@@ -25,7 +25,9 @@ export interface DailyFlowStore {
   readDiveMembers?(id: string): Promise<string[]>;
   readRows(ids?: readonly string[]): Promise<CycleRow[]>;
   /** Rows in order; with a filter, rows known to be hidden by the mode or still waiting are left in the table. */
-  scanRows(after: number, through: number, count: number, filter?: CycleScanFilter): Promise<CycleStoredRow[]>;
+  /** `nodeIds` limits the scan to those entries before any row reaches the caller. */
+  scanRows(after: number, through: number, count: number, filter?: CycleScanFilter,
+    nodeIds?: readonly string[]): Promise<CycleStoredRow[]>;
   /** Waiting rows whose time has come, earliest first. */
   timedRows?(filter: CycleScanFilter, count: number): Promise<CycleStoredRow[]>;
   readReadiness?(): Promise<CycleStoredRow[]>;

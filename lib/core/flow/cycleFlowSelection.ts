@@ -16,6 +16,8 @@ type ScanArgs = { mode: ReviewSessionMode; now: string; settings: DailyFlowSetti
   onSkipped?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => void;
   /** Visit rows that are hidden or still waiting too, for callers that must observe them as skipped. */
   allRows?: boolean;
+  /** Only these entries are scanned; the rest of the daily list is never loaded. */
+  nodeIds?: readonly string[];
   /** Receives rows whose stored readiness was missing or stale so a writer can save the derived values. */
   onReadiness?: (rows: CycleStoredRow[]) => void };
 
@@ -48,7 +50,7 @@ function isExcluded(args: ScanArgs, id: string) {
 export async function scanCycleRange(db: ScanStore, meta: CycleMeta, args: ScanArgs) {
   const filter = args.allRows ? undefined : cycleScanFilter(args.mode, args.now);
   while (meta.scanAfter < meta.lapLimit) {
-    const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE, filter);
+    const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE, filter, args.nodeIds);
     const { snapshot, ready } = await judge(db, rows, args);
     for (const stored of rows) {
       const row = toCycleRow(stored);
