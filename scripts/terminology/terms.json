@@ -1,0 +1,75 @@
+{
+  "$comment": "Machine-readable product terminology. Only English and Simplified Chinese are controlled here; other locales translate from these. Rationale lives in the private terminology spec and term cards. Statuses: decided terms block new UI copy (severity error); open terms only warn until a decision is made.",
+  "version": 1,
+  "controlledLocales": ["en", "zh-Hans"],
+  "terms": [
+    { "id": "folder", "en": "Folder", "zhHans": "文件夹", "status": "decided", "meaning": "Organizing container." },
+    { "id": "topic", "en": "Topic", "zhHans": "主题", "status": "decided", "meaning": "Primary reading unit; imported, authored, extracted, or AI-derived." },
+    { "id": "source-topic", "en": "Source Topic", "zhHans": "源主题", "status": "decided", "meaning": "Upstream, more complete topic such as an imported article." },
+    { "id": "derived-topic", "en": "Derived Topic", "zhHans": "派生主题", "status": "decided", "meaning": "Topic produced from a highlight, excerpt, cloze, split, or AI rewrite." },
+    { "id": "highlight", "en": "Highlight", "zhHans": "高亮", "status": "decided", "meaning": "Selected text range or the act of marking it." },
+    { "id": "excerpt", "en": "Excerpt", "zhHans": "摘录", "status": "decided", "meaning": "Text extracted from a topic; may become a derived topic." },
+    { "id": "region-excerpt", "en": "Region excerpt", "zhHans": "区域摘录", "status": "decided", "meaning": "Excerpt of any rectangular PDF page region; not a screenshot or OCR." },
+    { "id": "cloze", "en": "Cloze", "zhHans": "挖空", "status": "decided", "meaning": "Creating an item by hiding part of a text." },
+    { "id": "import", "en": "Import", "zhHans": "导入", "status": "decided", "meaning": "Creating source topics from outside material." },
+    { "id": "item", "en": "Item", "zhHans": "检测项", "status": "decided", "meaning": "Question, cloze, or front/back item that is reviewed; never a generic folder member." },
+    { "id": "review-queue", "en": "Review queue", "zhHans": "复习队列", "status": "decided", "meaning": "Items waiting for review." },
+    { "id": "inbox", "en": "Inbox", "zhHans": "收件箱", "status": "decided", "meaning": "Default destination for new topics." },
+    { "id": "today", "en": "Today", "zhHans": "今天", "status": "decided", "meaning": "Today's work view; not a container." },
+    { "id": "all-topics", "en": "All topics", "zhHans": "全部主题", "status": "decided", "meaning": "Aggregate view of every topic; not a container." },
+    { "id": "flow", "en": "Flow", "zhHans": "", "status": "open", "meaning": "Reading flow; Chinese wording not recorded here yet." },
+    { "id": "dive", "en": "Dive", "zhHans": "", "status": "open", "meaning": "In use in UI; not yet in the terminology table." },
+    { "id": "virtual-entry", "en": "Virtual entry", "zhHans": "", "status": "open", "meaning": "In use in UI; conflicts with the rejected word Entry until decided." }
+  ],
+  "avoid": [
+    {
+      "id": "tree-children",
+      "en": ["child", "children"],
+      "zhHans": ["子节点"],
+      "prefer": ["topic", "folder"],
+      "status": "decided",
+      "reason": "Internal tree structure; name the actual objects (topics, folders, items) instead."
+    },
+    {
+      "id": "node",
+      "en": ["node", "nodes"],
+      "zhHans": ["节点"],
+      "prefer": ["topic", "folder", "item"],
+      "status": "open",
+      "reason": "Engineering word, yet current settings UI uses it (Node review settings); decide before blocking."
+    },
+    {
+      "id": "note",
+      "en": ["note", "notes"],
+      "zhHans": ["笔记"],
+      "prefer": ["topic"],
+      "status": "open",
+      "reason": "Foliole is not a note app; allowed only for external sources (Obsidian notes) or a user-typed note field."
+    },
+    {
+      "id": "card",
+      "en": ["card", "cards"],
+      "zhHans": ["卡片"],
+      "prefer": ["item"],
+      "status": "open",
+      "reason": "Anki wording for Item; allowed for imported Anki/SuperMemo decks until decided."
+    },
+    {
+      "id": "entry",
+      "en": ["entry", "entries"],
+      "zhHans": ["条目"],
+      "prefer": ["topic", "item"],
+      "status": "open",
+      "reason": "Rejected as an umbrella word, but UI uses it widely (batch actions, Virtual entry); decide before blocking."
+    },
+    {
+      "id": "article",
+      "en": ["article", "articles"],
+      "zhHans": [],
+      "prefer": ["source-topic", "topic"],
+      "status": "open",
+      "reason": "Only for import sources or external formats, not as a Foliole object."
+    }
+  ],
+  "allowPhrases": ["release notes", "Release notes", "发布说明"]
+}

@@ -22,3 +22,7 @@ fi
 if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
   node scripts/check-repository-root-boundary.mjs
 fi
+
+if [[ -f "scripts/terminology/check-terms.mjs" ]]; then
+  node scripts/terminology/check-terms.mjs --staged
+fi

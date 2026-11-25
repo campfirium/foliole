@@ -20,6 +20,7 @@ const REMOTE_COMMIT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'remote
 const SEQUENCE_HISTORY_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'commit-sequence-history.mjs');
 const PATH_DOMAINS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domains.mjs');
 const PATH_DOMAIN_REGISTRY_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-registry.mjs');
+const TERMS_DIR = path.join(REPO_ROOT, 'scripts', 'terminology');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
 const tempDirs = [];
 
@@ -64,6 +65,10 @@ async function createRepo() {
   await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
   await copyFile(PATH_DOMAINS_SCRIPT_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domains.mjs'));
   await copyFile(PATH_DOMAIN_REGISTRY_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domain-registry.mjs'));
+  await mkdir(path.join(repoDir, 'scripts', 'terminology'), { recursive: true });
+  for (const name of ['check-terms.mjs', 'terms.json']) {
+    await copyFile(path.join(TERMS_DIR, name), path.join(repoDir, 'scripts', 'terminology', name));
+  }
   await chmod(path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(
@@ -118,6 +123,20 @@ describe('git hooks', () => {
 
     expect(result.code, result.stderr).toBe(0);
     expect(result.stderr).not.toContain('pre-commit-validation');
+  });
+
+  it('blocks new locale copy that uses a rejected product word', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await mkdir(path.join(repoDir, 'src', 'shared', 'localization', 'locales'), { recursive: true });
+    const catalog = 'src/shared/localization/locales/enSample.ts';
+
+    const blocked = await commitFile(repoDir, catalog, "export const X = {\n  'a.b': 'Delete its children',\n};\n", '000002 add copy');
+    expect(blocked.code).not.toBe(0);
+    expect(blocked.stderr).toContain('"children"');
+
+    const allowed = await commitFile(repoDir, catalog, "export const X = {\n  'a.b': 'Delete its topics',\n};\n", '000002 add copy');
+    expect(allowed.code, allowed.stderr).toBe(0);
   });
 
   it('blocks commit messages that skip the next sequence', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {

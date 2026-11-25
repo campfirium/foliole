@@ -3,3 +3,6 @@ set -euo pipefail
 
 node scripts/git/check-commit-sequence.mjs commit-msg "$1"
 node scripts/git/check-fix-has-test.mjs commit-msg "$1"
+if [[ -f "scripts/terminology/check-terms.mjs" ]]; then
+  node scripts/terminology/check-terms.mjs --message "$1"
+fi
