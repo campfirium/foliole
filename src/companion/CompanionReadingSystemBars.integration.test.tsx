@@ -45,16 +45,16 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 
-it('shows time and battery with reading tools and hides them together without disabling overlay mode', async () => {
+it('keeps the status bar hidden while taps show and hide the reading tools', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
   const view = render(article());
   await applied(true, true);
   host.apply.mockClear();
   fireEvent.click(screen.getByText('Reading body'));
-  await applied(true);
+  expect(screen.getByRole('button', { name: 'More reading actions' })).toBeInTheDocument();
   fireEvent.click(screen.getByText('Reading body'));
-  await applied(true, true);
-  expect(host.apply.mock.calls.every(([value]) => (value as { enabled: boolean }).enabled)).toBe(true);
+  await act(async () => undefined);
+  expect(host.apply).not.toHaveBeenCalled();
   view.rerender(<p>Library</p>);
   await applied(false);
 });
@@ -76,11 +76,10 @@ it('keeps the status bar outside Outline and restores the reading layout after c
   render(article());
   await applied(true, true);
   fireEvent.click(screen.getByText('Reading body'));
-  await applied(true);
   fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
   await applied(false);
   fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Close' }));
-  await applied(true);
+  await applied(true, true);
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true });
 });
 
@@ -89,11 +88,11 @@ it('keeps both preferences independent across articles, reentry and leaving read
   const system = screen.getByRole('switch', { name: 'Hide system status bar' });
   const overlay = screen.getByRole('switch', { name: 'Floating reading toolbars' });
   expect(system).not.toBeChecked(); expect(overlay).not.toBeChecked();
-  fireEvent.click(system); await applied(true);
+  fireEvent.click(system); await applied(true, true);
   expect(overlay).not.toBeChecked();
   fireEvent.click(overlay); expect(system).toBeChecked();
   fireEvent.click(system); await applied(false); expect(overlay).toBeChecked();
-  fireEvent.click(system); await applied(true);
+  fireEvent.click(system); await applied(true, true);
   view.rerender(article('second')); await applied(true, true); more();
   expect(screen.getByRole('switch', { name: 'Hide system status bar' })).toBeChecked();
   expect(screen.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
@@ -101,12 +100,12 @@ it('keeps both preferences independent across articles, reentry and leaving read
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true, overlayToolbars: true });
 });
 
-it('restores normal window layout while editing and reapplies the current chrome state on foreground and rotation', async () => {
+it('restores normal window layout while editing and reapplies the reading state on foreground and rotation', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
   render(article('first', true)); await applied(true, true); more();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   fireEvent.click(screen.getByRole('button', { name: 'Edit content' })); await applied(false);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); await applied(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); await applied(true, true);
   host.apply.mockClear();
   await act(async () => { foreground.forEach(callback => callback()); foreground.forEach(callback => callback()); });
   expect(host.apply).toHaveBeenCalledTimes(1);
@@ -128,7 +127,7 @@ it('keeps failed exit restoration visible in the surviving shell and retries its
 it('preserves saved settings when storage is full, then retries', async () => {
   render(article()); more();
   fireEvent.click(screen.getByRole('switch', { name: 'Floating reading toolbars' }));
-  fireEvent.click(screen.getByRole('switch', { name: 'Hide system status bar' })); await applied(true);
+  fireEvent.click(screen.getByRole('switch', { name: 'Hide system status bar' })); await applied(true, true);
   const stored = localStorage.getItem(key);
   const used = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!)
     .reduce((total, item) => total + item.length + localStorage.getItem(item)!.length, 0);

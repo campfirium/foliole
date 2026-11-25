@@ -9,7 +9,7 @@ import { useCompanionReadingDisplay } from './companionReadingDisplay';
 const RELEASE_GRACE_MS = 1500;
 let pendingRelease: ReturnType<typeof setTimeout> | null = null;
 
-export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisible: boolean) {
+export function useCompanionReadingSystemBars(normalLayout: boolean) {
   useEffect(() => {
     if (pendingRelease) { clearTimeout(pendingRelease); pendingRelease = null; }
     return () => {
@@ -23,8 +23,9 @@ export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisib
   const { hideSystemStatusBar } = useCompanionReadingDisplay();
   useEffect(() => {
     if (!supportsCompanionReadingSystemBars()) return;
+    // Reading toolbars never reveal the status bar; the native window shows it transiently on a top-edge swipe.
     const enabled = hideSystemStatusBar && !normalLayout;
-    const target = { enabled, hidden: enabled && !chromeVisible };
+    const target = { enabled, hidden: enabled };
     void companionReadingSystemBars.request(target);
     const reapply = () => { void companionReadingSystemBars.request(target, true); };
     let active = true;
@@ -39,5 +40,5 @@ export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisib
       unsubscribe?.();
       window.removeEventListener('orientationchange', reapply);
     };
-  }, [hideSystemStatusBar, normalLayout, chromeVisible]);
+  }, [hideSystemStatusBar, normalLayout]);
 }
