@@ -15,7 +15,7 @@
     "plugin": "FolioleCompanionBootstrap",
     "platform": "android",
     "methods": ["setAppearance", "setFlowGestureRegion", "setNativeSelectionMenu", "setReadingSystemBars"],
-    "reason": "存量：JS 只在 Android 调用（窗口底色、返回手势避让、系统选区菜单、阅读系统栏）；iPhone 是否需要对应处理尚未逐项核实"
+    "reason": "JS 只在 Android 调用。setAppearance 给 Android 窗口与 WebView 底层上色，iPhone 状态栏样式走共用 SystemBars、底层色随页面背景（系统默认行为，未真机验证）；setFlowGestureRegion 避让 Android 系统返回手势，iPhone 无此系统手势；缺口：setNativeSelectionMenu（浮动工具栏开启时 iPhone 未抑制系统选区菜单）与 setReadingSystemBars（阅读页“隐藏系统状态栏”开关仅 Android 提供）"
   },
   {
     "plugin": "FolioleCompanionSync",
@@ -33,7 +33,7 @@
     "plugin": "FolioleCompanionSync",
     "platform": "android",
     "methods": ["beginSyncBackgroundWork", "updateSyncBackgroundWork", "endSyncBackgroundWork"],
-    "reason": "存量：Android 前台服务承载后台同步；iPhone 无对应实现，尚未逐项核实"
+    "reason": "Android 用前台服务承载后台同步；iPhone 经 T409-3 实测后台任务保不住 WebView JS（约 17 秒后挂起），决定不采用，维持切走中止、下次续收"
   },
   {
     "plugin": "FolioleReminderNotifications",
