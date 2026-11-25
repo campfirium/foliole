@@ -104,6 +104,8 @@ it('keeps an in-document search match as the new PDF position when the reader cl
     fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Find in document' }));
     const field = await screen.findByRole<HTMLInputElement>('textbox', { name: 'Find in document' });
+    // The sheet focuses the field one frame after opening; a later focus would reopen the editing state.
+    await waitFor(() => expect(field).toHaveFocus());
     fireEvent.change(field, { target: { value: 'Unique search result' } });
     fireEvent.submit(field.form!);
     await waitFor(() => expect(screen.getByTestId('companion-document-search-status')).toHaveTextContent('1 / 1'));
