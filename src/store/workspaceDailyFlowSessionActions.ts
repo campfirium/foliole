@@ -62,7 +62,11 @@ export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceSt
   setState: Set; subscribe(handler: (state: WorkspaceState, previous: WorkspaceState) => void): () => void }) {
   store.subscribe((state, previous) => {
     if (hasWorkspaceBrowserCommit() && !state.browserDailyFlow?.state?.invalidated) return;
-    if (!hasDailyFlowRuntime() || state.reviewSession.dive || !state.reviewSession.daily || (state.nodesById === previous.nodesById && !previous.appActionHistory.pendingAction) ||
+    if (state.reviewSession.dive) {
+      refreshStrandedDive(store, state, previous);
+      return;
+    }
+    if (!hasDailyFlowRuntime() || !state.reviewSession.daily || (state.nodesById === previous.nodesById && !previous.appActionHistory.pendingAction) ||
       state.appActionHistory.applying || state.appActionHistory.pendingAction) return;
     const token = state.reviewSession.daily;
     const prior = previous.reviewSession.daily;
@@ -70,6 +74,22 @@ export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceSt
     void openWorkspaceDailyFlow(store.setState, store.getState, { now: getDemoRuntimeNowIso(),
       preserveCurrent: !hasWorkspaceBrowserCommit(), mode: state.reviewSessionMode, seed: state.reviewSession, preferredNodeId: state.reviewSession.currentNodeId }, undefined, true);
   });
+}
+
+function isStrandedDive(state: WorkspaceState) {
+  const id = state.reviewSession.currentNodeId;
+  return Boolean(state.reviewSession.dive && id && state.trashedNodeIds.includes(id) &&
+    !state.appActionHistory.applying && !state.appActionHistory.pendingAction);
+}
+
+// A Dive keeps its cursor through ordinary changes and moves on only once its current card is settled in Trash,
+// whether a delete, a redo or sync put it there.
+function refreshStrandedDive(store: { getState(): WorkspaceState; setState: Set }, state: WorkspaceState, previous: WorkspaceState) {
+  const session = state.reviewSession;
+  if (!hasDailyFlowRuntime() || !isStrandedDive(state) || (isStrandedDive(previous) && previous.reviewSession === session)) return;
+  const { id, topicIds, mode } = session.dive!;
+  void openWorkspaceDailyFlow(store.setState, store.getState, { now: getDemoRuntimeNowIso(), mode,
+    dive: { id, topicIds }, seed: session });
 }
 
 export async function recoverWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, error: unknown, now: string) {

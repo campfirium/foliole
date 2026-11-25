@@ -20,6 +20,7 @@ import { traceCompanionSyncEvent } from '../sync/diagnostics/companionDesktopSyn
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
+import { reopenCompanionDive } from './companionDailyFlowHistory';
 import { appendCompanionFlowHistory, companionFlowHistoryKey } from './companionFlowHistoryStore';
 import { writeCompanionHistoryReadings } from './companionHistoryLearning';
 import { recordCompanionHistoryOrders, validateCompanionHistoryOrders } from './companionHistoryOrder';
@@ -32,7 +33,9 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   sessions: Pick<WorkspaceNodeMetadataHistoryEntry, 'beforeSession' | 'afterSession'> = { beforeSession: null, afterSession: null },
   hostName?: string) {
   if (!records.length) return;
-  const daily = sessions.beforeSession?.cycle ? await readDailyFlow(db) : null;
+  // A Dive keeps its own cursor beside the global Flow, so its next card comes from reopening that Dive.
+  const diveSource = sessions.beforeSession?.dive ? sessions.beforeSession : null;
+  const daily = !diveSource && sessions.beforeSession?.cycle ? await readDailyFlow(db) : null;
   const now = records[0]!.snapshot.updated_at;
   const flowArgs = { now, mode: daily?.mode as 'recommended' | 'review-first' | 'reading-only' };
   const settings = await dailyFlowSettingsForInstant(db, companionDailyFlowSettings(), now, false, daily);
@@ -62,6 +65,7 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   await writeCompanionHistoryReadings(db, relatedReadings, 'redo');
   if (flowBefore) sessions = { beforeSession: flowBefore, afterSession:
     (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence, true)).session };
+  if (diveSource) sessions = { beforeSession: diveSource, afterSession: await reopenCompanionDive(db, diveSource, now) };
   const entry: WorkspaceNodeMetadataHistoryEntry = {
     type: 'nodes.change', ...sessions, relatedReadings, orders: await recordCompanionHistoryOrders(db, parents), id: createCompanionUuid(), title, rootNodeId: records[0]!.object_id, subtreeNodeIds,
     changes: after.map((node, i) => {
