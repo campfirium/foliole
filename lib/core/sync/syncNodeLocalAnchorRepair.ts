@@ -27,7 +27,7 @@ interface LocalAnchorRow extends DbRow {
  */
 export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSyncNodeRecord) {
   if (!record.parent_version_id || record.snapshot.deleted_at) return false;
-  const [local] = await port.query<LocalAnchorRow>(`SELECT node.id, node.parent_id, node.kind, node.priority, node.desired_retention,
+  const [local] = await port.query<LocalAnchorRow>(`SELECT node.id, node.parent_id, node.kind, node.priority, node.enforce_priority, node.desired_retention,
       node.enable_short_term, node.sequential_reading_enabled, node.shelved_at, node.initial_review_due,
       node.manual_child_order, node.title, node.is_title_manual, node.hide_title_heading, node.body_blob_hash,
       node.opening_text, node.virtual_filter, node.reveal, node.anchor_link, node.anchor_resolution_status,
@@ -63,6 +63,7 @@ function matchesLiveNode(local: LocalAnchorRow, record: NativeSyncNodeRecord) {
   const bodyHash = record.snapshot.body_blob_hash ?? (typeof body === 'string' ? hashTextBody(body) : null);
   if (!bodyHash || local.body_blob_hash !== bodyHash) return false;
   const live = { ...local };
+  live.enforce_priority = local.enforce_priority === 1 ? true : null;
   for (const name of ['is_title_manual', 'hide_title_heading', 'enable_short_term', 'sequential_reading_enabled']) {
     live[name] = local[name] == null ? null : local[name] === 1;
   }

@@ -11,6 +11,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   parent_id: string | null;
   kind: string | null;
   priority: number | null;
+  enforce_priority?: number | null;
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;

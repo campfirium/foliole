@@ -1,3 +1,4 @@
+import { findNearestEnforcedPriority, type PriorityNode } from '../../../../lib/core/nodes/workspaceNodePriorityIndex';
 import {
   normalizeNodeDesiredRetention,
   resolveNodeDesiredRetentionSetting,
@@ -9,11 +10,24 @@ import { normalizePushQueuePriority, type PushQueuePriority } from '../../review
 
 import type { Node } from './nodeTypes';
 
-type ReviewSettingNode = Pick<Node, 'desiredRetention' | 'enableShortTerm' | 'parentNodeId' | 'priority'>;
+type ReviewSettingNode = Pick<Node, 'desiredRetention' | 'enableShortTerm'> & PriorityNode;
+export type ResolvedNodePriority = ResolvedNodeSetting<PushQueuePriority> & { enforced?: true };
 
 export { normalizeNodeDesiredRetention, resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting, type ResolvedNodeSetting };
 
 export function resolveNodePrioritySetting(
+  nodeId: string,
+  nodesById: Record<string, ReviewSettingNode | undefined>,
+  fallback: PushQueuePriority
+): ResolvedNodePriority {
+  const enforced = findNearestEnforcedPriority(nodeId, nodesById, fallback);
+  if (enforced && enforced.ownerNodeId !== nodeId) {
+    return { ...enforced, source: 'inherited', enforced: true };
+  }
+  return resolveUnenforcedNodePriority(nodeId, nodesById, fallback);
+}
+
+export function resolveUnenforcedNodePriority(
   nodeId: string,
   nodesById: Record<string, ReviewSettingNode | undefined>,
   fallback: PushQueuePriority

@@ -21,6 +21,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'node-owned-resource-references-v1',
     'global-object-identity-v2',
     'current-parent-order-sources-v1',
+    'folder-enforced-priority-v1',
     'relayed-node-member-positions-v1',
     'canonical-attachment-storage-key-v1',
     'device-sync-groups-v1',

@@ -112,7 +112,7 @@ Send `include_learning: true` with the material ID to `materials/read`, or pass 
 
 - Topic: `learning` contains the node priority, shelving date, and `reading_schedule` with the next and last handled times, interval in milliseconds, growth factor, repetition count, reading priority, and reading state.
 - Item: `learning` contains the node priority, shelving date, retention and short-term scheduling overrides, initial review due date, and `review_schedule` with the current due date, last review time, FSRS state (0 new, 1 learning, 2 review, 3 relearning), stability, fast stability, difficulty, elapsed and scheduled days, repetitions, and lapses.
-- Ordinary Folder: `learning` contains its explicit `priority`. Descendants without their own priority can inherit this setting.
+- Ordinary Folder: `learning` contains its explicit `priority`. Descendants without their own priority can inherit this setting. A folder can enforce its priority from Review Options. The nearest enforcing folder supplies descendants' effective priority and preserves their stored values.
 
 A missing schedule is null. A null setting override uses Foliole's normal inheritance rules. System and virtual Folders return `learning: null`. The response gives current scheduling state for one material. Review events and reading position use separate product data.
 

@@ -117,6 +117,7 @@ function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
     parent_id: readString(get('parent_id'), true),
     position: readNumber(get('position')),
     priority: readNumber(get('priority')),
+    ...(values.has('enforce_priority') ? { enforce_priority: true as const } : {}),
     ...(resourceReferences === null ? {} : { resource_references: resourceReferences }),
     reveal: readString(get('reveal'), true),
     sequential_reading_enabled: readBool(get('sequential_reading_enabled'), true),

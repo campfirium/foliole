@@ -10,6 +10,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     parent_id TEXT REFERENCES nodes(id),
     kind TEXT NOT NULL DEFAULT 'topic',
     priority INTEGER,
+    enforce_priority INTEGER,
     desired_retention REAL,
     enable_short_term INTEGER,
     sequential_reading_enabled INTEGER,

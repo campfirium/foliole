@@ -1,3 +1,4 @@
+import { findNearestEnforcedPriority, type PriorityNode } from '../../lib/core/nodes/workspaceNodePriorityIndex';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import {
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
@@ -9,21 +10,15 @@ import type { ReadingScheduleCoreFields } from '../features/review/model/unified
 import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
 
-interface PriorityChainNode {
-  id: string;
-  parentNodeId: string | null;
-  priority?: number | null;
-}
-
 export { createEmptyReviewSession, isReviewSessionCompleted, createStartedReviewSession, advanceReviewSession, completeReviewSession } from '../../lib/core/flow/flowSessionState';
 
 export function resolveNodePriorityChain(
   currentNodeId: string,
-  nodesById: Record<string, PriorityChainNode | undefined>
+  nodesById: Record<string, PriorityNode | undefined>
 ) {
   const priorityChain: unknown[] = [];
   const visitedNodeIds = new Set<string>();
-  let currentNode: PriorityChainNode | undefined = nodesById[currentNodeId];
+  let currentNode = nodesById[currentNodeId];
 
   while (currentNode && !visitedNodeIds.has(currentNode.id)) {
     visitedNodeIds.add(currentNode.id);
@@ -37,8 +32,10 @@ export function resolveReadingPriorityChain(args: {
   currentNodeId: string;
   currentReading: NodeReadingProfile | null | undefined;
   defaultPriority: PushQueuePriority;
-  nodesById: Record<string, PriorityChainNode | undefined>;
+  nodesById: Record<string, PriorityNode | undefined>;
 }) {
+  const enforced = findNearestEnforcedPriority(args.currentNodeId, args.nodesById, args.defaultPriority);
+  if (enforced) return [enforced.value];
   const priorityChain = resolveNodePriorityChain(args.currentNodeId, args.nodesById);
   if (priorityChain.some((priority) => priority !== null && priority !== undefined)) {
     return priorityChain;
@@ -70,7 +67,7 @@ export function buildDismissedReadingProfile(args: {
   currentNodeId: string;
   currentReading: NodeReadingProfile | null | undefined;
   defaultPriority: PushQueuePriority;
-  nodesById: Record<string, PriorityChainNode | undefined>;
+  nodesById: Record<string, PriorityNode | undefined>;
   now: string;
 }): NodeReadingProfile {
   const priority =
@@ -102,7 +99,7 @@ export function buildFixedLaterReadingProfile(args: {
   currentNode: Node;
   currentNodeId: string;
   now: string;
-  snapshot: { nodesById: Record<string, PriorityChainNode | undefined> };
+  snapshot: { nodesById: Record<string, PriorityNode | undefined> };
 }, days: number, defaultPriority: PushQueuePriority): NodeReadingProfile {
   const reading = args.currentNode.reading ?? {
     ...buildDismissedReadingProfile({

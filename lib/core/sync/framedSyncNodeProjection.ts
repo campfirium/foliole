@@ -79,6 +79,7 @@ function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: st
     field('parent_id', scalarValue(snapshot.parent_id)),
     field('position', numberValue(snapshot.position)),
     field('priority', numberValue(snapshot.priority)),
+    ...(snapshot.enforce_priority ? [field('enforce_priority', scalarValue(true))] : []),
     field('resource_references', scalarValue(snapshot.resource_references)),
     field('reveal', scalarValue(snapshot.reveal)),
     field('sequential_reading_enabled', scalarValue(snapshot.sequential_reading_enabled)),

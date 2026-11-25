@@ -4,7 +4,7 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
-import { resolveNodePrioritySetting } from '../../features/nodes/model/nodeReviewSettings';
+import { resolveNodePrioritySetting, resolveUnenforcedNodePriority } from '../../features/nodes/model/nodeReviewSettings';
 import { TRASH_NODE_ID, VIRTUAL_PUBLISHED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -18,6 +18,7 @@ import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import type { LinkPanelRecord } from './linkPanelState';
+import { SchedulingPrioritySource } from './SchedulingPrioritySource';
 import { useDocumentPanelFolderListSort } from './useDocumentPanelFolderListSort';
 
 interface DocumentPanelShellProps {
@@ -48,12 +49,18 @@ function ActivePriorityQuickSet({ props }: { props: DocumentPanelSectionProps })
   if (!activeNodeId || !nodesById[activeNodeId]) {
     return null;
   }
-  const { value } = resolveNodePrioritySetting(activeNodeId, nodesById, reviewSchedulerSettings.pushQueue.defaultPriority);
+  const fallback = reviewSchedulerSettings.pushQueue.defaultPriority;
+  const priority = resolveNodePrioritySetting(activeNodeId, nodesById, fallback);
+  const own = priority.enforced ? resolveUnenforcedNodePriority(activeNodeId, nodesById, fallback) : priority;
   return (
     <DocumentPriorityQuickSetHint
       isActive
       {...(onNodePriorityChange ? { onPriorityChange: (priority: number) => onNodePriorityChange(activeNodeId, priority) } : {})}
-      priority={value}
+      effectivePriority={priority.value}
+      inactive={priority.enforced === true}
+      priority={own.value}
+      source={<SchedulingPrioritySource clickable={false} key={activeNodeId} priority={priority} nodesById={nodesById}
+        settings={reviewSchedulerSettings} />}
     />
   );
 }

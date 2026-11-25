@@ -16,6 +16,7 @@ export function topicTextSnapshotHash(snapshot: NativeSyncNodeRecord['snapshot']
     content: snapshot.content ?? '', createdAt: snapshot.created_at, deletedAt: snapshot.deleted_at,
     desiredRetention: snapshot.desired_retention, enableShortTerm: snapshot.enable_short_term ?? null,
     sequentialReadingEnabled: snapshot.sequential_reading_enabled ?? null,
+    enforcePriority: snapshot.enforce_priority ?? null,
     shelvedAt: snapshot.shelved_at ?? null, manualChildOrder: snapshot.manual_child_order ?? null,
     hideTitleHeading: snapshot.hide_title_heading, id: snapshot.id,
     imageRegions: snapshot.image_regions, imageSources: snapshot.image_sources ?? null,

@@ -2,18 +2,14 @@ import type { StoredAnchorLink } from '../database/anchorLinkCodec.js';
 import { normalizePushQueuePriority, type PushQueuePriority, type RegularPushQueuePriority } from '../review/unifiedPushQueueRules.js';
 
 import { updateWorkspaceNodePaths, type WorkspaceNodePaths } from './workspaceNodePaths.js';
-import { createWorkspaceNodePriorityIndex } from './workspaceNodePriorityIndex.js';
+import { isEnforcedPriorityFolder, projectWorkspaceNodePriorities, type PriorityNode } from './workspaceNodePriorityIndex.js';
 
 export type WorkspaceNodeAnchorKinds = ReadonlyMap<string, StoredAnchorLink['kind'] | null>;
 
-export interface PriorityIndexNode {
-  id: string;
+export interface PriorityIndexNode extends PriorityNode {
   title?: string;
-  parentNodeId: string | null;
-  priority?: number | null;
   createdAt?: string | null;
   deletedAt?: string | null;
-  kind?: string | null;
   shelvedAt?: string | null;
   hasContent?: boolean | null;
   hasReveal?: boolean | null;
@@ -24,6 +20,7 @@ export class WorkspaceNodePriorityState {
   private readonly nodes = new Map<string, PriorityIndexNode>();
   private readonly children = new Map<string, Set<string>>();
   private readonly values = new Map<string, PushQueuePriority>();
+  private readonly enforced = new Map<string, PushQueuePriority>();
   private readonly pathValues = new Map<string, readonly string[]>();
 
   constructor(nodes: Iterable<PriorityIndexNode>, private defaultPriority: RegularPushQueuePriority) {
@@ -45,14 +42,19 @@ export class WorkspaceNodePriorityState {
   update(nodes: Iterable<PriorityIndexNode>, removed: readonly string[] = []) {
     let orderChanged = removed.length > 0;
     const roots = new Set<string>();
+    const forceRoots = new Set<string>();
     const pathRoots = new Set<string>();
     for (const id of removed) {
       pathRoots.add(id);
-      for (const child of this.children.get(id) ?? []) roots.add(child);
+      for (const child of this.children.get(id) ?? []) {
+        roots.add(child);
+        forceRoots.add(child);
+      }
       const previous = this.nodes.get(id);
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, id);
       this.nodes.delete(id);
       this.values.delete(id);
+      this.enforced.delete(id);
     }
     for (const node of nodes) {
       const previous = this.nodes.get(node.id);
@@ -64,22 +66,17 @@ export class WorkspaceNodePriorityState {
         || previous?.anchorKind !== node.anchorKind;
       orderChanged ||= changed;
       if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
-      if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) {
+      const forceChanged = isEnforcedPriorityFolder(previous) !== isEnforcedPriorityFolder(node);
+      if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null) && !forceChanged) {
         if (changed || eligibilityChanged) this.store(node);
         continue;
       }
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, node.id);
       this.store(node);
       roots.add(node.id);
+      if (forceChanged || isEnforcedPriorityFolder(node) || previous?.parentNodeId !== node.parentNodeId) forceRoots.add(node.id);
     }
-    const pending = [...roots];
-    for (let cursor = 0; cursor < pending.length; cursor++) {
-      for (const child of this.children.get(pending[cursor]!) ?? []) {
-        if (roots.has(child) || this.nodes.get(child)?.priority != null) continue;
-        roots.add(child);
-        pending.push(child);
-      }
-    }
+    this.collectPriorityDescendants(roots, forceRoots);
     this.resolve(roots);
     const affected = [...pathRoots];
     for (let cursor = 0; cursor < affected.length; cursor++) {
@@ -99,8 +96,25 @@ export class WorkspaceNodePriorityState {
     if (!siblings?.size) this.children.delete(parent);
   }
 
+  private collectPriorityDescendants(roots: Set<string>, forceRoots: Set<string>) {
+    const pending = [...roots];
+    for (let cursor = 0; cursor < pending.length; cursor++) {
+      const id = pending[cursor]!;
+      const force = forceRoots.has(id);
+      for (const child of this.children.get(id) ?? []) {
+        if (force) {
+          if (forceRoots.has(child)) continue;
+          forceRoots.add(child);
+        } else if (roots.has(child) || this.nodes.get(child)?.priority != null) continue;
+        roots.add(child);
+        pending.push(child);
+      }
+    }
+  }
+
   private store(node: PriorityIndexNode) {
     this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
+      enforcePriority: node.enforcePriority === true,
       ...(node.title === undefined ? {} : { title: node.title }),
       createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null,
       kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null,
@@ -121,11 +135,18 @@ export class WorkspaceNodePriorityState {
       input[id] = node;
       const parent = node.parentNodeId;
       if (parent && !ids.has(parent) && this.nodes.has(parent)) {
-        input[parent] = { id: parent, parentNodeId: null,
+        const enforcePriority = this.enforced.has(parent);
+        input[parent] = { id: parent, parentNodeId: null, kind: 'folder', enforcePriority,
           priority: normalizePushQueuePriority(this.values.get(parent), this.defaultPriority) };
       }
     }
-    const resolved = createWorkspaceNodePriorityIndex(input, this.defaultPriority);
-    for (const id of ids) if (this.nodes.has(id)) this.values.set(id, resolved.get(id)!);
+    const resolved = projectWorkspaceNodePriorities(input, this.defaultPriority);
+    for (const id of ids) {
+      if (!this.nodes.has(id)) continue;
+      this.values.set(id, resolved.priorities.get(id)!);
+      const value = resolved.enforced.get(id);
+      if (value === undefined) this.enforced.delete(id);
+      else this.enforced.set(id, value);
+    }
   }
 }

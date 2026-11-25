@@ -60,7 +60,7 @@ export interface WorkspaceState {
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string, options?: Pick<WorkspaceNodeContentOptions, 'historySave' | 'newImageReferences'>) => Promise<boolean>;
-  updateNodePriority: (nodeId: string, priority: number | null) => void;
+  updateNodePriority: (nodeId: string, priority: number | null, enforcePriority?: boolean) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean | Promise<boolean>;

@@ -33,6 +33,7 @@ interface SyncNodeRow extends DatabaseRow {
   priority: number | null;
   reveal: string | null;
   sequential_reading_enabled: number | null;
+  enforce_priority: number | null;
   snapshot_json: string | null;
   title: string;
   updated_at: string;
@@ -103,6 +104,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     priority: row.priority,
     reveal: row.reveal,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
+    ...(row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
     title: row.title,
     updated_at: row.updated_at,
     virtual_filter: row.virtual_filter
@@ -150,6 +152,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.desired_retention,
   n.enable_short_term,
   n.sequential_reading_enabled,
+  n.enforce_priority,
   n.shelved_at,
   n.manual_child_order,
   n.title,

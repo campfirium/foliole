@@ -11,6 +11,7 @@ interface LearningRow extends DbRow {
   parent_id?: string | null;
   kind?: string | null;
   priority?: number | null;
+  enforce_priority?: number | null;
   shelved_at?: string | null;
   created_at?: string;
   deleted_at?: string | null;
@@ -23,7 +24,7 @@ type NodeMetadata = ReadonlyMap<string, Readonly<PriorityIndexNode>>;
 const CONTENT_COLUMNS = `CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
     CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal`;
 const ANCHOR_COLUMN = `CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link`;
-const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.created_at, n.deleted_at, n.kind, n.shelved_at, ${CONTENT_COLUMNS}, ${ANCHOR_COLUMN}`;
+const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.enforce_priority, n.created_at, n.deleted_at, n.kind, n.shelved_at, ${CONTENT_COLUMNS}, ${ANCHOR_COLUMN}`;
 const PREPARED_NODE_COLUMNS = 'n.id';
 const PROFILE_COLUMNS = `    rd.interval_duration_ms AS reading_interval_duration_ms,
     rd.interval_growth_factor AS reading_interval_growth_factor,
@@ -98,6 +99,7 @@ function learningNode(row: LearningRow, profile?: ProfileRow, metadata?: NodeMet
   const anchorKind = cached ? cached.anchorKind : parseStoredAnchorLink(row.anchor_link ?? null)?.kind ?? null;
   return { id: row.id, parentNodeId, kind: isNodeKind(kind) ? kind : 'topic',
     priority: (cached ? cached.priority : row.priority) ?? null, shelvedAt, createdAt,
+    enforcePriority: cached ? cached.enforcePriority === true : row.enforce_priority === 1,
     deletedAt: (cached ? cached.deletedAt : row.deleted_at) ?? null,
     hasContent: cached ? cached.hasContent! : row.has_content === 1,
     hasReveal: cached ? cached.hasReveal! : row.has_reveal === 1,

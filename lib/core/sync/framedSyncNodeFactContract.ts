@@ -21,7 +21,7 @@ export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyTextTransport: 'required BLOB_ROLE_NODE_BODY unless body_retired declares identity-only history',
   factKind: 2,
   factObjectType: 'node',
-  optionalSnapshotFields: ['initial_review_due'],
+  optionalSnapshotFields: ['initial_review_due', 'enforce_priority'],
   globalIdSource: 'NativeSyncNodeRecord.object_id',
   snapshotFields: [
     'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'attachments',
@@ -99,6 +99,12 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
   );
   const get = (name: string) => required(fields, name);
   if (fields.has('initial_review_due')) z.iso.datetime({ offset: true }).parse(stringValue(get('initial_review_due')));
+  if (fields.has('enforce_priority')) {
+    const enforced = get('enforce_priority');
+    if (enforced.kind !== 'bool' || !enforced.value || stringValue(get('kind')) !== 'folder') {
+      throw new Error('node_version_fact_enforce_priority_invalid');
+    }
+  }
   for (const name of [
     'anchor_link', 'anchor_source_version_id', 'deleted_at', 'image_regions', 'image_sources',
     'import_content_fingerprint', 'import_source_fingerprint', 'manual_child_order',

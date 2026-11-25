@@ -94,3 +94,24 @@ it('keeps failed refreshes unavailable and repairs every pending changed node', 
     }, { kind: 'business' });
   } finally { await library.close(); }
 });
+
+it.each(['android', 'ios'] as const)('%s refreshes enforcement without losing an existing own priority', async platform => {
+  const library = createDisplayLibrary(platform);
+  runtime.owner = library.owner;
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now });
+    await library.owner.runWriter(async db => {
+      await db.run(`INSERT INTO nodes (id, kind, parent_id, priority, enforce_priority, title, created_at, updated_at)
+        VALUES ('folder', 'folder', NULL, 3, 1, 'Folder', ?, ?),
+          ('material', 'topic', 'folder', 9, NULL, 'Material', ?, ?)`, [now, now, now, now]);
+    }, { kind: 'business' });
+    await refreshCompanionWorkspaceSnapshot();
+    const values = () => library.owner.read(db => library.owner.readNodePriorities(db, 5));
+    expect((await values()).get('material')).toBe(3);
+    await library.owner.runWriter(async db => {
+      await db.transaction(tx => tx.run("UPDATE nodes SET enforce_priority=NULL WHERE id='folder'"));
+      await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: ['folder'] }, db);
+    }, { kind: 'business' });
+    expect((await values()).get('material')).toBe(9);
+  } finally { await library.close(); }
+});

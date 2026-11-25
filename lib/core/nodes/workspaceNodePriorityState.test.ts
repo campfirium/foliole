@@ -2,6 +2,25 @@ import { expect, it } from 'vitest';
 
 import { WorkspaceNodePriorityState } from './workspaceNodePriorityState.js';
 
+it('tracks the nearest enforced folder across changes and moves without replacing a material priority', () => {
+  const outer = { id: 'outer', kind: 'folder', parentNodeId: null, priority: 3, enforcePriority: true };
+  const inner = { id: 'inner', kind: 'folder', parentNodeId: 'outer', priority: 2 };
+  const topic = { id: 'topic', kind: 'topic', parentNodeId: 'inner', priority: 9 };
+  const card = { id: 'card', kind: 'item', parentNodeId: 'topic', priority: 8 };
+  const index = new WorkspaceNodePriorityState([outer, inner, topic, card], 5);
+  expect([index.priorities.get('topic'), index.priorities.get('card')]).toEqual([3, 3]);
+  index.update([{ ...inner, enforcePriority: true }]);
+  expect([index.priorities.get('topic'), index.priorities.get('card')]).toEqual([2, 2]);
+  index.update([{ ...topic, priority: 7 }]);
+  expect(index.priorities.get('topic')).toBe(2);
+  index.update([{ ...topic, parentNodeId: 'outer', priority: 7 }]);
+  expect([index.priorities.get('topic'), index.priorities.get('card')]).toEqual([3, 3]);
+  index.update([{ ...outer, priority: 0 }]);
+  expect([index.priorities.get('topic'), index.priorities.get('card')]).toEqual([0, 0]);
+  index.update([{ ...outer, priority: 0, enforcePriority: false }]);
+  expect([index.priorities.get('topic'), index.priorities.get('card')]).toEqual([7, 8]);
+});
+
 it('updates moved and reprioritized subtrees while preserving independent branches', () => {
   const index = new WorkspaceNodePriorityState([
     { id: 'a', parentNodeId: null, priority: 2 }, { id: 'b', parentNodeId: null, priority: 8 },

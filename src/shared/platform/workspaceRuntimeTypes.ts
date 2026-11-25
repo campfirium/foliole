@@ -35,6 +35,7 @@ export interface WorkspaceRuntimeNode {
   kind: NodeKind;
   parentNodeId: string | null;
   priority?: number | null;
+  enforcePriority?: boolean | null;
   reading?: NativeNodeSnapshotArgs['reading'];
   review?: NativeNodeSnapshotArgs['review'];
   reveal: string | null;

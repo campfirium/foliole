@@ -19,6 +19,7 @@ function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node
     kind: snapshot.kind,
     ...(current?.specialKind ? { specialKind: current.specialKind } : {}),
     priority: snapshot.priority ?? null,
+    enforcePriority: snapshot.enforcePriority === true,
     desiredRetention: snapshot.desiredRetention ?? null,
     enableShortTerm: snapshot.enableShortTerm ?? null,
     sequentialReadingEnabled: snapshot.sequentialReadingEnabled ?? null,

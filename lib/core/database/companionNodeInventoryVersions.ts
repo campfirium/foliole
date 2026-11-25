@@ -22,4 +22,10 @@ export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentV
     for (const sql of NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA) await db.run(sql);
   }
   if (currentVersion < 125 && targetVersion >= 125) await db.run(LEGACY_REVIEW_CALENDAR_INDEX);
+  if (currentVersion < 126 && targetVersion >= 126) {
+    const columns = await db.query<{ name: string }>('PRAGMA table_info(nodes)');
+    if (!columns.some(column => column.name === 'enforce_priority')) {
+      await db.run('ALTER TABLE nodes ADD COLUMN enforce_priority INTEGER');
+    }
+  }
 }

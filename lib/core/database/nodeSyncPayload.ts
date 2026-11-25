@@ -36,6 +36,7 @@ export interface NodeSyncHashInput {
   parentId: string | null;
   position?: number | null;
   priority: number | null;
+  enforcePriority?: boolean | null;
   reveal: string | null;
   title: string;
   updatedAt: string;
@@ -94,6 +95,7 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     opening_text: normalizeNullableText(input.openingText),
     parent_id: normalizeNullableText(input.parentId),
     priority: input.priority ?? null,
+    ...(input.kind === 'folder' && input.enforcePriority === true ? { enforce_priority: true as const } : {}),
     reveal: normalizeNullableText(input.reveal),
     title: input.title,
     updated_at: normalizeIso(input.updatedAt),

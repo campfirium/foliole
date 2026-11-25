@@ -1,6 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-import { resolveNodePrioritySetting } from '../features/nodes/model/nodeReviewSettings';
+import { resolveUnenforcedNodePriority } from '../features/nodes/model/nodeReviewSettings';
 import {
   getCurrentReviewSchedulerSettings,
   subscribeReviewSchedulerSettings
@@ -80,7 +80,7 @@ export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }:
   if (!isAvailableNativeAndroidCompanionRuntime() || !actions || !nodes || !node || node.deletedAt ||
     node.virtualFilter || node.id.startsWith('special-') || (node.kind !== 'topic' && node.kind !== 'item')) return null;
   if (actions.flowActive && !(allowFlowTopic && node.kind === 'topic')) return null;
-  const { value } = resolveNodePrioritySetting(node.id, nodes, settings.pushQueue.defaultPriority);
+  const { value } = resolveUnenforcedNodePriority(node.id, nodes, settings.pushQueue.defaultPriority);
 
   return <>
     <PriorityRange key={node.id} value={value} disabled={actions.busy || actions.pending}

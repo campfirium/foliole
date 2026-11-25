@@ -67,7 +67,7 @@ export function canMergeWorkspaceTrashProjection(
 }
 
 // Metadata writes may change these facts; the merge re-derives the order of every parent they touch.
-const METADATA_FIELDS = ['title', 'isTitleManual', 'parentNodeId', 'deletedAt', 'priority', 'shelvedAt'] as const;
+const METADATA_FIELDS = ['title', 'isTitleManual', 'parentNodeId', 'deletedAt', 'priority', 'enforcePriority', 'shelvedAt'] as const;
 const ORDER_FIELDS = ['title', 'parentNodeId', 'createdAt', 'deletedAt'] as const;
 
 /**

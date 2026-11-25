@@ -99,6 +99,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
     kind: asNodeKind(args.kind, 'kind'),
     priority: asNullableInteger(args.priority, 'priority'),
+    enforcePriority: args.enforcePriority == null ? null : asBoolean(args.enforcePriority, 'enforcePriority'),
     desiredRetention: asNullableFiniteNumber(args.desiredRetention, 'desiredRetention'),
     enableShortTerm: args.enableShortTerm === undefined || args.enableShortTerm === null
       ? null

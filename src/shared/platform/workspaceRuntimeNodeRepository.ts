@@ -35,6 +35,7 @@ export function createWorkspaceRuntimeNodeSnapshot(
     parentNodeId: node.parentNodeId,
     kind: node.kind,
     priority: node.priority ?? null,
+    enforcePriority: node.enforcePriority === true,
     desiredRetention: node.desiredRetention ?? null,
     enableShortTerm: node.enableShortTerm ?? null,
     sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,

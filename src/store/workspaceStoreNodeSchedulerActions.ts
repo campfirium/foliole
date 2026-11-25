@@ -13,7 +13,7 @@ type WorkspaceSet = (
 ) => void;
 
 export function createUpdateNodePriorityAction(set: WorkspaceSet): WorkspaceState['updateNodePriority'] {
-  return (nodeId, priority) => {
+  return (nodeId, priority, enforcePriority) => {
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
@@ -23,6 +23,8 @@ export function createUpdateNodePriorityAction(set: WorkspaceSet): WorkspaceStat
       const nextNode = {
         ...node,
         priority: priority === null ? null : normalizePushQueuePriority(priority),
+        ...(node.kind === 'folder' && (enforcePriority !== undefined || priority === null)
+          ? { enforcePriority: priority !== null && enforcePriority === true } : {}),
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;

@@ -14,15 +14,16 @@ export interface SyncNodeStatement {
 }
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
-  id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
+  id, parent_id, kind, priority, enforce_priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references,
   import_source_fingerprint, import_content_fingerprint,
   current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
   priority = excluded.priority,
+  enforce_priority = excluded.enforce_priority,
   desired_retention = excluded.desired_retention,
   enable_short_term = excluded.enable_short_term,
   sequential_reading_enabled = excluded.sequential_reading_enabled,
@@ -52,7 +53,7 @@ ON CONFLICT(id) DO UPDATE SET
   deleted_at = excluded.deleted_at`;
 
 export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
-  parent_id = ?, kind = ?, priority = ?, desired_retention = ?, enable_short_term = ?,
+  parent_id = ?, kind = ?, priority = ?, enforce_priority = ?, desired_retention = ?, enable_short_term = ?,
   sequential_reading_enabled = ?, shelved_at = ?, manual_child_order = ?, title = ?,
   is_title_manual = ?, hide_title_heading = ?, content = ?, body_blob_hash = ?,
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
@@ -114,6 +115,7 @@ export function buildRemoteNodeMetadataParams(record: FramedSyncNodeMetadata, bo
       snapshot.parent_id,
       snapshot.kind,
       snapshot.priority,
+      snapshot.kind === 'folder' && snapshot.enforce_priority === true ? 1 : null,
       snapshot.desired_retention,
       snapshot.enable_short_term == null ? null : snapshot.enable_short_term ? 1 : 0,
       snapshot.sequential_reading_enabled == null ? null : snapshot.sequential_reading_enabled ? 1 : 0,

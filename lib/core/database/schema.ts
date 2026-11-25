@@ -5,6 +5,7 @@ export const nodes = sqliteTable('nodes', {
   parentId: text('parent_id'),
   kind: text('kind').notNull().default('topic'),
   priority: integer('priority'),
+  enforcePriority: integer('enforce_priority', { mode: 'boolean' }),
   desiredRetention: real('desired_retention'),
   enableShortTerm: integer('enable_short_term', { mode: 'boolean' }),
   sequentialReadingEnabled: integer('sequential_reading_enabled', { mode: 'boolean' }),

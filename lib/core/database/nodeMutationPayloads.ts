@@ -63,6 +63,7 @@ export interface UpsertNodeSnapshotInput {
   parentNodeId: string | null;
   kind: NodeKind;
   priority?: number | null;
+  enforcePriority?: boolean | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;

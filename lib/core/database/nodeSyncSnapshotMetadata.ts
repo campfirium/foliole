@@ -22,6 +22,7 @@ export function nodeSyncSnapshotHashMetadata(snapshot: NativeSyncNodeRecord['sna
     importSourceFingerprint: snapshot.import_source_fingerprint ?? null,
     isTitleManual: snapshot.is_title_manual, kind: snapshot.kind, openingText: snapshot.opening_text,
     parentId: snapshot.parent_id, priority: snapshot.priority, reveal: snapshot.reveal,
+    enforcePriority: snapshot.enforce_priority ?? null,
     title: snapshot.title, updatedAt: snapshot.updated_at, virtualFilter: snapshot.virtual_filter
   };
 }

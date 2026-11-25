@@ -3,6 +3,7 @@ import { FSRS7_DEFAULT_WEIGHTS, curve } from 'ts-fsrs/models/fsrs-7';
 import {
   resolveNodeDesiredRetentionSetting,
   resolveNodePrioritySetting,
+  type ResolvedNodePriority,
   type ResolvedNodeSetting
 } from '../../features/nodes/model/nodeReviewSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -21,7 +22,7 @@ export interface SchedulingPanelData {
   kind: 'item' | 'topic' | 'unsupported';
   nextReadingAt: string;
   node: Node;
-  priority: ResolvedNodeSetting<number>;
+  priority: ResolvedNodePriority;
   priorityRatio: number;
   readingGrowthFactor: number;
   retrievability: number | null;

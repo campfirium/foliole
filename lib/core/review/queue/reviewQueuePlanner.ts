@@ -23,7 +23,9 @@ export interface ReviewQueuePlan {
   readingQueueNodeIds: string[];
 }
 
-export type ReviewQueueNode = ReviewItemNodeLike & Pick<WorkspaceNodeSnapshot, 'createdAt' | 'deletedAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'shelvedAt'> & Partial<Pick<WorkspaceNodeSnapshot, 'content' | 'reading'>>;
+export type ReviewQueueNode = ReviewItemNodeLike & Pick<WorkspaceNodeSnapshot,
+  'createdAt' | 'deletedAt' | 'enforcePriority' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'shelvedAt'
+> & Partial<Pick<WorkspaceNodeSnapshot, 'content' | 'reading'>>;
 
 function resolveReadingQueueNodeIds(args: {
   candidates: ReviewQueueNode[];

@@ -6,7 +6,7 @@ export const COMPANION_SNAPSHOT_NODE_QUERY = {
   resultKey: 'nodes',
   sql:
     `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
-    'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.initial_review_due, n.manual_child_order, n.title, n.is_title_manual, ' +
+    'SELECT n.id, n.parent_id, n.kind, n.priority, n.enforce_priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.initial_review_due, n.manual_child_order, n.title, n.is_title_manual, ' +
     "n.hide_title_heading, '' AS content, n.opening_text, " +
     "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END AS body_status, " +
     "CASE WHEN LENGTH(TRIM(COALESCE(n.content, ''))) > 0 THEN 1 ELSE 0 END AS has_content, " +
@@ -32,6 +32,7 @@ export const COMPANION_SNAPSHOT_NODE_QUERY = {
     { key: 'parent_id', source: 'parent_id', type: 'nullableString' },
     { key: 'kind', source: 'kind', type: 'nullableString' },
     { key: 'priority', source: 'priority', type: 'long' },
+    { key: 'enforce_priority', source: 'enforce_priority', type: 'long' },
     { key: 'desired_retention', source: 'desired_retention', type: 'double' },
     { key: 'enable_short_term', source: 'enable_short_term', type: 'long' },
     { key: 'sequential_reading_enabled', source: 'sequential_reading_enabled', type: 'long' },

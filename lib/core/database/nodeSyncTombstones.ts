@@ -27,6 +27,7 @@ function snapshotHashInput(snapshot: NativeSyncNodeRecord['snapshot']) {
     desiredRetention: snapshot.desired_retention,
     enableShortTerm: snapshot.enable_short_term ?? null,
     sequentialReadingEnabled: snapshot.sequential_reading_enabled ?? null,
+    enforcePriority: snapshot.enforce_priority ?? null,
     shelvedAt: snapshot.shelved_at ?? null,
     initialReviewDue: snapshot.initial_review_due ?? null,
     manualChildOrder: snapshot.manual_child_order ?? null,

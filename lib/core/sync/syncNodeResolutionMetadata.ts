@@ -40,6 +40,7 @@ export function normalizeResolutionMetadataSnapshot(
     import_source_fingerprint: snapshot.import_source_fingerprint ?? null,
     manual_child_order: snapshot.manual_child_order ?? null,
     sequential_reading_enabled: snapshot.sequential_reading_enabled ?? null,
+    ...(snapshot.enforce_priority ? { enforce_priority: true as const } : {}),
     shelved_at: snapshot.shelved_at ?? null,
     updated_at: updatedAt
   };

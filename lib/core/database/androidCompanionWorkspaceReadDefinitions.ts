@@ -46,6 +46,7 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'parentNodeId', rowKey: 'parent_id', type: 'nullableString' },
         { outputKey: 'kind', rowKey: 'kind', type: 'kind' },
         { outputKey: 'priority', rowKey: 'priority', type: 'long', omitWhenNull: true },
+        { outputKey: 'enforcePriority', rowKey: 'enforce_priority', type: 'booleanLong', omitWhenNull: true },
         { outputKey: 'desiredRetention', rowKey: 'desired_retention', type: 'double', omitWhenNull: true },
         { outputKey: 'enableShortTerm', rowKey: 'enable_short_term', type: 'booleanLong', omitWhenNull: true },
         { outputKey: 'sequentialReadingEnabled', rowKey: 'sequential_reading_enabled', type: 'booleanLong', omitWhenNull: true },

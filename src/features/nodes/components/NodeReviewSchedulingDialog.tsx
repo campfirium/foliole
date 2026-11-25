@@ -5,9 +5,12 @@ import {
   resolveNodeDesiredRetentionSetting,
   resolveNodePrioritySetting,
   resolveNodeShortTermSetting,
+  resolveUnenforcedNodePriority,
   type ResolvedNodeSetting
 } from '../model/nodeReviewSettings';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
+
+import { ReviewRetentionRow } from './ReviewRetentionRow';
 
 import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
 import {
@@ -28,7 +31,7 @@ import {
 } from '@/shared/ui';
 
 type ReviewOptionsNode = Pick<WorkspaceListNode,
-  'id' | 'kind' | 'parentNodeId' | 'priority' | 'desiredRetention' | 'enableShortTerm'>;
+  'id' | 'kind' | 'parentNodeId' | 'title' | 'priority' | 'enforcePriority' | 'desiredRetention' | 'enableShortTerm'>;
 
 function getScopeLabel(node: ReviewOptionsNode, t: Translate) {
   if (node.kind === 'folder') {
@@ -71,6 +74,7 @@ function ShortTermControl(props: {
 
 function PriorityControl(props: {
   ariaLabel: string;
+  inactive: boolean;
   onChange: (priority: number) => void;
   value: number;
 }) {
@@ -78,7 +82,7 @@ function PriorityControl(props: {
     <SettingsControlSlot>
       <input
         aria-label={props.ariaLabel}
-        className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
+        className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME + (props.inactive ? ' opacity-[0.46]' : ''))}
         max={9}
         min={0}
         onChange={(event) => props.onChange(Number(event.target.value))}
@@ -86,7 +90,7 @@ function PriorityControl(props: {
         type="range"
         value={props.value}
       />
-      <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>
+      <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME + (props.inactive ? ' opacity-[0.46]' : ''))}>
         P{props.value}
       </span>
     </SettingsControlSlot>
@@ -104,6 +108,7 @@ function useNodeReviewSchedulingDraft(args: {
   const [shortTermDraft, setShortTermDraft] = useState(args.shortTerm.value);
   const [isPriorityDirty, setIsPriorityDirty] = useState(false);
   const [isShortTermDirty, setIsShortTermDirty] = useState(false);
+  const [enforceDraft, setEnforceDraft] = useState(args.node.enforcePriority === true);
 
   useEffect(() => {
     setRetentionDraft(args.node.desiredRetention ?? null);
@@ -112,10 +117,13 @@ function useNodeReviewSchedulingDraft(args: {
     setShortTermDraft(args.shortTerm.value);
     setIsPriorityDirty(false);
     setIsShortTermDirty(false);
-  }, [args.node.id, args.node.desiredRetention, args.priority.value, args.shortTerm.value]);
+    setEnforceDraft(args.node.enforcePriority === true);
+  }, [args.node.id, args.node.desiredRetention, args.node.enforcePriority, args.priority.value, args.shortTerm.value]);
 
   return {
     retentionDraft,
+    enforceDraft,
+    setEnforceDraft,
     isRetentionDirty,
     setRetentionDraft: (value: number | null) => { setRetentionDraft(value); setIsRetentionDirty(true); },
     isPriorityDirty,
@@ -135,45 +143,35 @@ function useNodeReviewSchedulingDraft(args: {
 
 type NodeReviewSchedulingDraft = ReturnType<typeof useNodeReviewSchedulingDraft>;
 
-function RetentionRow({ draft, retention, t }: {
-  draft: NodeReviewSchedulingDraft;
-  retention: ResolvedNodeSetting<number>;
-  t: Translate;
-}) {
-  const inherits = draft.retentionDraft === null;
-  const percent = Math.round((draft.retentionDraft ?? retention.value) * 100);
-  const label = t('desktop.nodeReview.desiredRetention');
-  return (
-    <SettingsRow title={inherits ? t('desktop.nodeReview.desiredRetention.inherited', { label }) : label}>
-      <SettingsControlSlot>
-        {!inherits && (
-          <button className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-            onClick={() => draft.setRetentionDraft(null)} type="button">
-            {t('desktop.nodeReview.desiredRetention.useInherited')}
-          </button>
-        )}
-        <input aria-label={t('desktop.nodeReview.desiredRetention.aria')} aria-valuetext={`${percent}%`}
-          className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)} min={1} max={99} step={1}
-          onChange={event => draft.setRetentionDraft(event.currentTarget.valueAsNumber / 100)}
-          type="range" value={percent} />
-        <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{percent}%</span>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
 function ReviewSchedulingRows(props: {
   draft: NodeReviewSchedulingDraft;
   retention: ResolvedNodeSetting<number>;
   node: ReviewOptionsNode;
+  coveredPriority: { value: number; owner: string } | null;
   t: Translate;
 }) {
+  const inactive = props.coveredPriority !== null && !props.draft.enforceDraft;
+  const description = renderPriorityDescription(props.node, props.t);
   return (
     <SettingsSection ariaLabel={props.t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
-      <RetentionRow draft={props.draft} retention={props.retention} t={props.t} />
-      <SettingsRow description={renderPriorityDescription(props.node, props.t)} title={props.t('desktop.nodeReview.priority')}>
-        <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
+      <ReviewRetentionRow own={props.draft.retentionDraft} inherited={props.retention.value} onChange={props.draft.setRetentionDraft} />
+      <SettingsRow description={inactive && props.coveredPriority ? <>
+          {description}<span className="mt-1 block">{props.t('desktop.nodeReview.priority.effective', {
+            value: `P${props.coveredPriority.value}`, owner: props.coveredPriority.owner
+          })}</span>
+        </> : description}
+        title={inactive ? `${props.t('desktop.nodeReview.priority')} · ${props.t('desktop.nodeReview.priority.inactive')}`
+          : props.t('desktop.nodeReview.priority')}>
+        <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} inactive={inactive}
+          onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
       </SettingsRow>
+      {props.node.kind === 'folder' && (
+        <SettingsRow title={props.t('desktop.nodeReview.priority.enforce')}
+          description={props.t('desktop.nodeReview.priority.enforce.description')}>
+          <ShortTermControl ariaLabel={props.t('desktop.nodeReview.priority.enforce')}
+            onChange={props.draft.setEnforceDraft} value={props.draft.enforceDraft} />
+        </SettingsRow>
+      )}
       <SettingsRow description={renderShortTermDescription(props.t)} title={props.t('desktop.nodeReview.shortTerm')}>
         <ShortTermControl ariaLabel={props.t('desktop.nodeReview.shortTerm')} onChange={props.draft.setShortTermDraft} value={props.draft.shortTermDraft} />
       </SettingsRow>
@@ -189,7 +187,7 @@ export function NodeReviewSchedulingDialog(props: {
   titleQualifier?: string;
   onClose: () => void;
   onDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
-  onPriorityChange: (nodeId: string, priority: number | null) => void;
+  onPriorityChange: (nodeId: string, priority: number | null, enforcePriority?: boolean) => void;
   onShortTermChange: (nodeId: string, enableShortTerm: boolean | null) => void;
 }) {
   const node = props.node;
@@ -198,15 +196,22 @@ export function NodeReviewSchedulingDialog(props: {
   }
   const t = useTranslation();
   const nodeId = node.id;
+  const enforcePriority = node.enforcePriority === true;
   const shortTerm = resolveNodeShortTermSetting(nodeId, props.nodesById);
   const retention = resolveNodeDesiredRetentionSetting(nodeId, { ...props.nodesById,
     [nodeId]: { ...node, desiredRetention: null } }, props.defaultDesiredRetention);
-  const priority = resolveNodePrioritySetting(nodeId, props.nodesById, normalizePushQueuePriority(props.defaultPriority));
+  const fallback = normalizePushQueuePriority(props.defaultPriority);
+  const priority = resolveUnenforcedNodePriority(nodeId, props.nodesById, fallback);
+  const resolved = resolveNodePrioritySetting(nodeId, props.nodesById, fallback);
+  const owner = resolved.enforced && resolved.ownerNodeId ? props.nodesById[resolved.ownerNodeId] : undefined;
+  const coveredPriority = owner ? { value: resolved.value, owner: owner.title } : null;
   const draft = useNodeReviewSchedulingDraft({ node, priority, shortTerm });
 
   function commitAndClose() {
     if (draft.isRetentionDirty) props.onDesiredRetentionChange(nodeId, draft.retentionDraft);
-    if (draft.isPriorityDirty) {
+    if (draft.enforceDraft !== enforcePriority) {
+      props.onPriorityChange(nodeId, draft.priorityDraft, draft.enforceDraft);
+    } else if (draft.isPriorityDirty) {
       props.onPriorityChange(nodeId, draft.priorityDraft);
     }
     if (draft.isShortTermDirty) {
@@ -225,7 +230,8 @@ export function NodeReviewSchedulingDialog(props: {
               {t('desktop.nodeReview.title')}{props.titleQualifier ? ` · ${props.titleQualifier}` : null}
             </AppDialogTitle>
           </div>
-          <ReviewSchedulingRows draft={draft} node={node} retention={retention} t={t} />
+          <ReviewSchedulingRows draft={draft} node={node} retention={retention} t={t}
+            coveredPriority={coveredPriority} />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

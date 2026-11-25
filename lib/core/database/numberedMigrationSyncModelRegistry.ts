@@ -105,5 +105,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 198, migrate: migratePdfAttachmentNodeIndex },
   { version: 199, migrate: migrateWatchedHistoryPathIndex },
   { version: 200, migrate: db => db.exec(LEGACY_REVIEW_CALENDAR_INDEX) },
-  { version: 201, migrate: migrateStoredImportLocatorKeys }
+  { version: 201, migrate: migrateStoredImportLocatorKeys },
+  { version: 202, migrate: db => addColumnIfMissing(db, 'nodes', 'enforce_priority', 'INTEGER') }
 ];

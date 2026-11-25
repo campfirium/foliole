@@ -91,6 +91,7 @@ function runNodeTableUpsert(
     input.parentNodeId,
     input.kind,
     input.priority ?? null,
+    input.kind !== 'folder' || input.priority == null || input.enforcePriority == null ? null : Number(input.enforcePriority),
     input.desiredRetention ?? null,
     input.enableShortTerm == null ? null : input.enableShortTerm ? 1 : 0,
     input.sequentialReadingEnabled == null ? null : input.sequentialReadingEnabled ? 1 : 0,

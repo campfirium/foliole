@@ -150,6 +150,7 @@ export interface NativeSyncNodeRecord {
     parent_id: string | null;
     position?: number | null;
     priority: number | null;
+    enforce_priority?: true;
     reveal: string | null;
     title: string;
     updated_at: string;

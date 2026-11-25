@@ -3,14 +3,16 @@ import type { DatabaseDriver } from './driver.js';
 export function createUpsertNodeStatement(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO nodes (
-     id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
+     id, parent_id, kind, priority, enforce_priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, image_sources,
        current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 1, ?, ?, NULL)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 1, ?, ?, NULL)
      ON CONFLICT(id) DO UPDATE SET
        parent_id = excluded.parent_id,
        kind = excluded.kind,
        priority = excluded.priority,
+       enforce_priority = CASE WHEN excluded.kind <> 'folder' OR excluded.priority IS NULL THEN NULL
+         ELSE COALESCE(excluded.enforce_priority, nodes.enforce_priority) END,
        desired_retention = excluded.desired_retention,
        enable_short_term = excluded.enable_short_term,
        sequential_reading_enabled = excluded.sequential_reading_enabled,

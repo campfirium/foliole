@@ -46,6 +46,7 @@ interface MaterialSnapshotRow extends DatabaseRow, NodeBodyRow {
   priority: number | null;
   reveal: string | null;
   sequential_reading_enabled: number | null;
+  enforce_priority: number | null;
   shelved_at: string | null;
   title: string;
   updated_at: string;
@@ -197,7 +198,7 @@ export function softDeleteAgentControlMaterial(input: {
 function readMaterialSnapshotRow(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<MaterialSnapshotRow>(
     `SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term,
-            n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title,
+            n.sequential_reading_enabled, n.enforce_priority, n.shelved_at, n.manual_child_order, n.title,
             n.is_title_manual, n.hide_title_heading, n.content, n.body_blob_hash, cbd.data AS body_blob_data,
             n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.position,
             n.created_at, n.updated_at, n.deleted_at
@@ -225,6 +226,7 @@ function toUpsertInput(
     createdAt: row.created_at,
     desiredRetention: row.desired_retention,
     enableShortTerm: toOptionalBoolean(row.enable_short_term),
+    enforcePriority: toOptionalBoolean(row.enforce_priority),
     hideTitleHeading: row.hide_title_heading === 1,
     imageRegions: parseJson<NodeImageRegionGroupPayload[]>(row.image_regions),
     isTitleManual: next.isTitleManual ?? row.is_title_manual === 1,

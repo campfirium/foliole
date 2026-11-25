@@ -43,6 +43,7 @@ export interface WorkspaceListNode {
   isDive?: boolean;
   parentNodeId: string | null;
   priority?: number | null;
+  enforcePriority?: boolean | null;
   reading?: WorkspaceListReading | null;
   review: WorkspaceListReview | null;
   specialKind?: NodeSpecialKind;
@@ -77,6 +78,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     ...(readDiveNode(node) ? { isDive: true } : {}),
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,
+    enforcePriority: node.enforcePriority === true,
     reading: projectWorkspaceListReading(nodeReadingSummary(node)),
     review: projectWorkspaceListReview(nodeReviewSummary(node)),
     ...(node.specialKind ? { specialKind: node.specialKind } : {}),
@@ -124,6 +126,7 @@ function isWorkspaceListProjectionReusable(
     Boolean(projectedNode.isDive) === Boolean(readDiveNode(sourceNode)) &&
     projectedNode.parentNodeId === sourceNode.parentNodeId &&
     projectedNode.priority === (sourceNode.priority ?? null) &&
+    projectedNode.enforcePriority === (sourceNode.enforcePriority === true) &&
     isWorkspaceListReadingEqual(projectedNode.reading, nodeReadingSummary(sourceNode)) &&
     isWorkspaceListReviewEqual(projectedNode.review, nodeReviewSummary(sourceNode)) &&
     projectedNode.specialKind === sourceNode.specialKind &&

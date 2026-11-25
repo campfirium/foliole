@@ -16,6 +16,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   desired_retention: number | null;
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
+  enforce_priority: number | null;
   shelved_at: string | null;
   initial_review_due: string | null;
   manual_child_order: string | null;
@@ -42,6 +43,7 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
   return driver.queryOne<NodeSyncVersionSourceRow>(
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
        sequential_reading_enabled, shelved_at, initial_review_due, manual_child_order, title, is_title_manual,
+       enforce_priority,
        hide_title_heading, content, nodes.body_blob_hash,
        opening_text, virtual_filter, reveal,
        anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_content_fingerprint, import_source_fingerprint,
@@ -70,6 +72,7 @@ export function buildNodeSyncSnapshotFromDriver(
     desired_retention: row.desired_retention,
     enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
+    ...(row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
     shelved_at: row.shelved_at,
     manual_child_order: row.manual_child_order,
     hide_title_heading: row.hide_title_heading === 1,
@@ -111,6 +114,7 @@ export function computeNodeSyncVersionHashFromDriver(
     desiredRetention: row.desired_retention,
     enableShortTerm: row.enable_short_term === null ? null : row.enable_short_term === 1,
     sequentialReadingEnabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
+    enforcePriority: row.enforce_priority === 1,
     shelvedAt: row.shelved_at,
     manualChildOrder: row.manual_child_order,
     hideTitleHeading: row.hide_title_heading === 1,

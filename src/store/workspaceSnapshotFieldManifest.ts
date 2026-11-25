@@ -5,6 +5,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'parentNodeId',
   'kind',
   'priority',
+  'enforcePriority',
   'desiredRetention',
   'enableShortTerm',
   'sequentialReadingEnabled',

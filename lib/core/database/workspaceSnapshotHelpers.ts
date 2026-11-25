@@ -48,6 +48,7 @@ export interface WorkspaceNodeSnapshot {
   position?: number | null;
   kind: NodeKind;
   priority?: number | null;
+  enforcePriority?: boolean | null;
   desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
@@ -116,6 +117,7 @@ export interface WorkspaceNodeRowShape {
   opening_text: string | null;
   parent_id: string | null;
   priority: number | null;
+  enforce_priority?: number | null;
   reading_interval_duration_ms: number | null;
   reading_interval_growth_factor: number | null;
   reading_last_handled_at: string | null;
@@ -192,6 +194,7 @@ export function buildWorkspaceSnapshotMetadata(row: Omit<WorkspaceNodeRowShape,
   }
   node.shelvedAt = row.shelved_at ?? null;
   if (row.initial_review_due) node.initialReviewDue = row.initial_review_due;
+  if (row.enforce_priority === 1) node.enforcePriority = true;
   if (node.kind === 'folder') {
     node.manualChildOrder = parseManualChildOrder(row.manual_child_order);
   }

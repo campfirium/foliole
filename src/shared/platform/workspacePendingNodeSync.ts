@@ -118,6 +118,7 @@ function toPendingWorkspaceNode(
     parentNodeId: pendingNode.parentNodeId,
     kind: pendingNode.kind,
     priority: pendingNode.priority ?? null,
+    enforcePriority: pendingNode.enforcePriority === true,
     desiredRetention: pendingNode.desiredRetention ?? null,
     enableShortTerm: pendingNode.enableShortTerm ?? null,
     sequentialReadingEnabled: pendingNode.sequentialReadingEnabled ?? null,

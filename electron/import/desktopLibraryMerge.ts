@@ -67,6 +67,7 @@ export function libraryMergeNodeSnapshot(node: LibraryMergeSourceNode, parentId:
     parentNodeId: parentId,
     position: keepsParent ? node.position as number | null : null,
     priority: node.priority as number | null,
+    enforcePriority: node.enforce_priority === 1,
     reveal: (node.reveal as string | null) ?? null,
     sequentialReadingEnabled: optionalBoolean(node.sequential_reading_enabled),
     shelvedAt: (node.shelved_at as string | null) ?? null,

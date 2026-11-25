@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -5,6 +6,9 @@ import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 interface DocumentPriorityQuickSetHintProps {
   isActive: boolean;
+  inactive?: boolean;
+  effectivePriority?: number;
+  source?: ReactNode;
   onPriorityChange?: (priority: number) => void;
   priority: number;
 }
@@ -45,7 +49,9 @@ function PriorityQuickSetSlider(props: Pick<DocumentPriorityQuickSetHintProps, '
   );
 }
 
-export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, priority }: DocumentPriorityQuickSetHintProps) {
+export function DocumentPriorityQuickSetHint({
+  effectivePriority, isActive, inactive, onPriorityChange, priority, source
+}: DocumentPriorityQuickSetHintProps) {
   const t = useTranslation();
   if (!isActive) {
     return null;
@@ -63,20 +69,30 @@ export function DocumentPriorityQuickSetHint({ isActive, onPriorityChange, prior
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/50">
             <span className="size-2 rounded-full bg-foreground/32" aria-hidden="true" />
             {t('desktop.priorityQuickSet.title')}
+            {inactive && <span className="normal-case tracking-normal text-foreground/70">{t('desktop.nodeReview.priority.inactive')}</span>}
           </div>
-          <div className="flex items-baseline gap-2 text-sm font-semibold tabular-nums">
+          <div className="flex items-baseline gap-2 text-sm font-semibold tabular-nums data-[inactive=true]:opacity-[0.46]"
+            data-inactive={inactive}>
             <span className="text-foreground/82">{normalizePriority(priority)}</span>
             <span className="text-foreground/34">/</span>
             <span className="text-foreground/48">9</span>
           </div>
         </div>
 
-        <PriorityQuickSetSlider {...(onPriorityChange ? { onPriorityChange } : {})} priority={priority} />
+        <div className="data-[inactive=true]:opacity-[0.46]" data-inactive={inactive}>
+          <PriorityQuickSetSlider {...(onPriorityChange ? { onPriorityChange } : {})} priority={priority} />
+        </div>
 
         <div className="flex items-center gap-2 text-xs text-foreground/62">
           <kbd className="rounded-md border border-border px-2 py-0.5 text-xs font-semibold">0-9</kbd>
-          <span>{t('desktop.priorityQuickSet.keyboardHint')}</span>
+          <span>{t(inactive ? 'desktop.priorityQuickSet.setOwn' : 'desktop.priorityQuickSet.keyboardHint')}</span>
         </div>
+        {effectivePriority !== undefined && source !== undefined && (
+          <dl className="pointer-events-auto grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2 text-xs">
+            <dt>{t('desktop.diagnostics.scheduling.priority')}</dt><dd className="text-right">P{effectivePriority}</dd>
+            <dt>{t('desktop.diagnostics.scheduling.prioritySource')}</dt><dd className="text-right">{source}</dd>
+          </dl>
+        )}
       </section>
     </div>,
     document.body

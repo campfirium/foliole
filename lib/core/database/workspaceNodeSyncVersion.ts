@@ -24,6 +24,7 @@ export function canonicalWorkspaceNodePayload(node: WorkspaceNodeSnapshot) {
     desiredRetention: node.desiredRetention ?? null,
     enableShortTerm: node.enableShortTerm ?? null,
     sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
+    enforcePriority: node.enforcePriority ?? null,
     shelvedAt: node.shelvedAt ?? null,
     manualChildOrder: node.kind === 'folder' ? serialize(node.manualChildOrder) : null,
     hideTitleHeading: node.hideTitleHeading,

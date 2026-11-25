@@ -100,6 +100,7 @@ function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
        n.parent_id,
        n.kind,
        n.priority,
+       n.enforce_priority,
        n.desired_retention,
        n.enable_short_term,
        n.sequential_reading_enabled,
