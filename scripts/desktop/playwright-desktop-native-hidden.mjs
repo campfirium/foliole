@@ -69,7 +69,7 @@ export function createNativeHiddenDesktopGateCommand({
   return {
     args: [
       'scripts/with-resource-gate.mjs',
-      'preview',
+      'hidden-desktop',
       '--',
       nodeBin,
       'node_modules/playwright/cli.js',

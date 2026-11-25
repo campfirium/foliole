@@ -133,6 +133,20 @@ describe('resource gate', () => {
     });
   });
 
+  it('lets hidden desktop runs beside the resident preview but not beside node-heavy work', { meta: { calibratedMs: 10000 } }, async () => {
+    await withFixture(async ({ logFile, runtimeDir, stub }) => {
+      const env = { RESOURCE_GATE_LOG: logFile };
+      const resident = runGate({ className: 'resident-preview', command: [process.execPath, stub, 'resident', '400'], env, runtimeDir });
+      await delay(100);
+      const hidden = runGate({ className: 'hidden-desktop', command: [process.execPath, stub, 'hidden', '10'], env, runtimeDir });
+      await Promise.all([resident, hidden]);
+      const log = (await readFile(logFile, 'utf8')).trim().split('\n');
+
+      expect(log.indexOf('hidden:end')).toBeLessThan(log.indexOf('resident:end'));
+      expect(resourcesForClass('hidden-desktop')).toEqual(['node-heavy']);
+    });
+  });
+
   it('passes through when the resource is already held by the current chain', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });

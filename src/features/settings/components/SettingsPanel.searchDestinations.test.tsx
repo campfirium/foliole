@@ -99,7 +99,7 @@ it('opens Windows Default apps from the Markdown setup button', async () => {
   fireEvent.keyDown(settings.input, { key: 'Enter' });
   await settings.finishLoading();
   const section = screen.getByRole('region', { name: '外部 Markdown 文件' });
-  fireEvent.click(within(section).getByRole('button', { name: '设置', exact: true }));
+  fireEvent.click(within(section).getByRole('button', { name: '设置' }));
   await waitFor(() => expect(window.electronAPI?.invoke).toHaveBeenCalledWith('open_windows_default_app_settings'));
 });
 
@@ -110,7 +110,7 @@ it('shows desktop-specific file association instructions for Linux', async () =>
   await settings.finishLoading();
   const section = screen.getByRole('region', { name: '外部 Markdown 文件' });
   expect(within(section).queryByText(/GNOME/)).toBeNull();
-  fireEvent.click(within(section).getByRole('button', { name: '设置', exact: true }));
+  fireEvent.click(within(section).getByRole('button', { name: '设置' }));
   const dialog = screen.getByRole('dialog', { name: '将 Foliole 设为 Markdown 文件的默认应用' });
   expect(dialog).toHaveTextContent(/GNOME.*属性.*打开方式/);
   expect(dialog).toHaveTextContent(/KDE Plasma.*系统设置.*文件关联/);

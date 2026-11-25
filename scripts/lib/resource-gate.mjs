@@ -17,7 +17,9 @@ const RESOURCE_CLASSES = {
   'node-heavy': ['node-heavy'],
   preview: ['node-heavy', 'preview'],
   // A resident desktop debug session stays open for hours; it excludes other previews, not checks and tests.
-  'resident-preview': ['preview']
+  'resident-preview': ['preview'],
+  // Hidden desktop Playwright runs isolated data, user data and instance locks offscreen, so it can run beside the resident preview.
+  'hidden-desktop': ['node-heavy']
 };
 
 export function formatGateQueueMessage({ className, holderPid, resource, seconds }) {
