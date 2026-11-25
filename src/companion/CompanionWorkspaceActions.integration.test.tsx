@@ -118,19 +118,31 @@ it('withdraws a previewed creation after SQLite rejects the write and creates it
   expect(await screen.findByRole('button', { name: 'Created folder' })).toBeVisible();
 });
 
+async function openReviewOptions() {
+  fireEvent.click(screen.getByRole('button', { name: 'Review options' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Review options' });
+  return { dialog, slider: within(dialog).getByRole('slider', { name: 'Priority' }) };
+}
+
+async function closeReviewOptions() {
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Review options' })).getByRole('button', { name: 'Close' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+}
+
 function previewPriorityChange(topic: HTMLElement) {
-  const menu = within(screen.getByRole('dialog'));
-  expect(menu.getByText('3', { exact: true })).toBeVisible();
-  expect(menu.queryByText('0', { exact: true })).toBeNull();
-  expect(menu.queryByText('9', { exact: true })).toBeNull();
+  const sheet = within(screen.getByRole('dialog'));
+  expect(sheet.getByText('P3', { exact: true })).toBeVisible();
+  expect(sheet.queryByText('P0', { exact: true })).toBeNull();
+  expect(sheet.queryByText('P9', { exact: true })).toBeNull();
   fireEvent.change(topic, { target: { value: '3' } });
   expect(screen.getByRole('dialog')).toBeVisible();
   fireEvent.input(topic, { target: { value: '6' } });
-  expect(menu.getByText('6', { exact: true })).toBeVisible();
+  expect(sheet.getByText('P6', { exact: true })).toBeVisible();
   fireEvent.pointerCancel(topic);
-  expect(menu.getByText('3', { exact: true })).toBeVisible();
+  expect(sheet.getByText('P3', { exact: true })).toBeVisible();
+  expect(topic).toHaveValue('3');
   fireEvent.input(topic, { target: { value: '0' } });
-  expect(menu.getByText('0', { exact: true })).toBeVisible();
+  expect(sheet.getByText('P0', { exact: true })).toBeVisible();
 }
 
 async function seedPriorityHierarchy() {
@@ -168,73 +180,81 @@ it('creates the chosen child type from the first-level article menu', async () =
   expect(saved).toMatchObject({ kind: 'item', parentNodeId: 'topic' });
 });
 
-it.each(['android', 'ios'])('saves the priority from the Flow Topic menu and reads it back in Browse on %s', async platform => {
+it.each(['android', 'ios'])('saves the priority from the Flow Topic review options and reads it back in Browse on %s', async platform => {
   host.platform = platform;
   await seedPriorityHierarchy();
   const view = render(<Harness flowNodeId="topic" />);
-  const openReadingMenu = () => {
+  const openFromReadingMenu = () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open reading menu' }));
-    return screen.getByRole('slider', { name: 'Priority' });
+    expect(screen.queryByRole('slider', { name: 'Priority' })).toBeNull();
+    return openReviewOptions();
   };
-  const slider = openReadingMenu();
+  const { slider } = await openFromReadingMenu();
   expect(slider).toHaveValue('3');
   fireEvent.change(slider, { target: { value: '7' } });
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(library.database.prepare('SELECT priority FROM nodes WHERE id = ?').get('topic')).toEqual({ priority: 7 });
-  const reopened = openReadingMenu();
+  await waitFor(() => expect(library.database.prepare('SELECT priority FROM nodes WHERE id = ?').get('topic')).toEqual({ priority: 7 }));
+  await waitFor(() => expect(slider).toBeEnabled());
+  await closeReviewOptions();
+  const { slider: reopened } = await openFromReadingMenu();
   await waitFor(() => expect(reopened).toHaveValue('7'));
   expect(reopened).toBeEnabled();
+  await closeReviewOptions();
 
   view.rerender(<Harness />);
   fireEvent.click(screen.getByRole('button', { name: /: topic$/ }));
-  expect(screen.getByRole('slider', { name: 'Priority' })).toHaveValue('7');
+  expect((await openReviewOptions()).slider).toHaveValue('7');
 });
 
 it('keeps priority hidden in the Flow Item reading menu', async () => {
   await seedPriorityHierarchy();
   render(<Harness flowNodeId="item" />);
   fireEvent.click(screen.getByRole('button', { name: 'Open reading menu' }));
-  expect(screen.getByRole('dialog')).toBeVisible();
+  const menu = within(screen.getByRole('dialog'));
+  expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
+  expect(menu.queryByRole('button', { name: 'Review options' })).toBeNull();
   expect(screen.queryByRole('slider', { name: 'Priority' })).toBeNull();
 });
 
 it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
   await seedPriorityHierarchy();
   render(<Harness />);
-  const open = (name: string) => {
+  const open = async (name: string) => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`: ${name}$`) }));
-    return screen.getByRole('slider', { name: 'Priority' });
+    return (await openReviewOptions()).slider;
   };
   const facts = () => library.database.prepare('SELECT id, priority FROM nodes WHERE id IN (?, ?) ORDER BY id').all('topic', 'item');
 
-  const topic = open('topic');
+  const topic = await open('topic');
   previewPriorityChange(topic);
   expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: null }]);
   fireEvent.change(topic, { target: { value: '0' } });
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]);
+  await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));
+  await waitFor(() => expect(topic).toBeEnabled());
+  await closeReviewOptions();
 
-  const item = open('item');
+  const item = await open('item');
   await waitFor(() => expect(item).toBeEnabled());
   expect(item).toHaveValue('0');
   fireEvent.change(item, { target: { value: '7' } });
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(facts()[0]).toEqual({ id: 'item', priority: 7 });
+  await waitFor(() => expect(facts()[0]).toEqual({ id: 'item', priority: 7 }));
+  await waitFor(() => expect(item).toBeEnabled());
+  await closeReviewOptions();
   const undo = await screen.findByRole('button', { name: 'Undo Priority' });
   await waitFor(() => expect(undo).toBeEnabled());
   fireEvent.click(undo);
   await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));
-  const restored = open('item');
+  const restored = await open('item');
   await waitFor(() => expect(restored).toBeEnabled());
   expect(restored).toHaveValue('0');
 
   library.database.exec(`CREATE TRIGGER reject_priority BEFORE UPDATE OF priority ON nodes
     WHEN NEW.id = 'item' BEGIN SELECT RAISE(ABORT, 'priority rejected'); END`);
+  const sheet = within(screen.getByRole('dialog', { name: 'Review options' }));
   fireEvent.change(restored, { target: { value: '8' } });
   await waitFor(() => {
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(sheet.getByRole('status')).toBeInTheDocument();
     expect(restored).toHaveValue('0');
-    expect(within(screen.getByRole('dialog')).getByText('0', { exact: true })).toBeVisible();
+    expect(sheet.getByText('P0', { exact: true })).toBeVisible();
   });
   expect(facts()[0]).toEqual({ id: 'item', priority: null });
   library.database.exec('DROP TRIGGER reject_priority');
@@ -242,17 +262,19 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   failRefresh = true;
   const blockedRefresh = Promise.withResolvers<void>();
   refreshBarrier = blockedRefresh.promise;
+  await waitFor(() => expect(restored).toBeEnabled());
   fireEvent.change(restored, { target: { value: '8' } });
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
+  await waitFor(() => expect(facts()[0]).toEqual({ id: 'item', priority: 8 }));
   blockedRefresh.resolve();
-  const retry = await screen.findByRole('button', { name: 'Refresh' });
+  const retry = await sheet.findByRole('button', { name: 'Refresh' });
+  expect(sheet.getByRole('status')).toHaveTextContent('Saved. Refresh to show the change.');
   const historyKey = companionFlowHistoryKey('Search');
   const historyBeforeRetry = await loadCompanionFlowHistory(historyKey);
   expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
   failRefresh = false;
   fireEvent.click(retry);
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull());
-  expect(open('item')).toHaveValue('8');
+  await closeReviewOptions();
+  expect(await open('item')).toHaveValue('8');
   expect(await loadCompanionFlowHistory(historyKey)).toEqual(historyBeforeRetry);
 });
