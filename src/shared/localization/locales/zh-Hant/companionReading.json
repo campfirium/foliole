@@ -112,5 +112,6 @@
   "companion.index.addSources": "新增 {count} 個來源",
   "companion.index.removeSources": "移除 {count} 個來源",
   "companion.workspace.failure.relearn": "未能重新學習所選主題。",
+  "companion.workspace.failure.dismissTopic": "無法關閉此主題。",
   "companion.reading.queue": "佇列"
 }

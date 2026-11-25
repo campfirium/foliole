@@ -112,5 +112,6 @@
   "companion.index.addSources": "Dodaj źródła: {count}",
   "companion.index.removeSources": "Usuń źródła: {count}",
   "companion.workspace.failure.relearn": "Nie udało się nauczyć wybranych tematów na nowo.",
+  "companion.workspace.failure.dismissTopic": "Nie udało się odrzucić tego tematu.",
   "companion.reading.queue": "Kolejka"
 }

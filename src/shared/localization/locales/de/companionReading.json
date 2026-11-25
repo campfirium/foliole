@@ -112,5 +112,6 @@
   "companion.index.addSources": "{count} Quellen hinzufügen",
   "companion.index.removeSources": "{count} Quellen entfernen",
   "companion.workspace.failure.relearn": "Die ausgewählten Themen konnten nicht neu gelernt werden.",
+  "companion.workspace.failure.dismissTopic": "Dieses Thema konnte nicht verworfen werden.",
   "companion.reading.queue": "Warteschlange"
 }

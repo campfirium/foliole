@@ -1,12 +1,15 @@
-import { ArchiveRestore, BookMarked, FilePlus2, FolderPlus, ListPlus, MoveRight, Trash2, type LucideIcon } from 'lucide-react';
+import { ArchiveRestore, BookMarked, CalendarClock, CircleOff, FilePlus2, FolderPlus, ListPlus, MoveRight, Trash2, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { canUseDiveSource } from '../../lib/core/database/diveSourceEligibility';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { canCreateChildNodeKind } from '../../lib/core/nodes/folderTopicItemCommands';
 import { AddToDiveMenuIcon, RenameMenuIcon } from '../features/nodes/components/nodeListContextMenuPresentation';
+import { collectTopicDismissIds } from '../features/nodes/model/nodeDismissTargets';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { canDelayTopic } from '../store/topicDelayReading';
+import { canDismissWorkspaceNode } from '../store/workspaceDismissChanges';
 
 import { CompanionMenuRow } from './CompanionMenuSheet';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
@@ -22,6 +25,12 @@ export function getCompanionWorkspaceMenuOptions(node: MenuNodes[string], nodes:
     node.id !== 'special-home' && node.id !== 'special-virtual-root' && !node.virtualFilter && canCreateChildNodeKind(node.kind, kind));
   const parentKind = node.parentNodeId ? nodes[node.parentNodeId]?.kind : undefined;
   return { mutable, childKinds, canAddToDive: canUseDiveSource(node, parentKind) };
+}
+
+/** Whether the desktop "Dismiss topic" would take anything out of learning: the topic or an eligible node below it. */
+export function canDismissCompanionTopicBranch(node: MenuNodes[string], nodes: MenuNodes) {
+  if (node.kind !== 'topic' || node.deletedAt || node.id.startsWith('special-')) return false;
+  return collectTopicDismissIds(node.id, nodes).some(id => canDismissWorkspaceNode(nodes[id]));
 }
 
 /** Same icons as the desktop node context menu for the same commands. */
@@ -70,8 +79,11 @@ export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRe
     {mutable && row(t('desktop.command.rename'), () => select('rename'), false, RenameMenuIcon)}
     {canMove && row(t('desktop.command.moveToNode'), () => select('move'), false, MoveRight)}
     {canAddToDive && row(t('desktop.nodeList.menu.addToDive'), () => select('add-to-dive'), false, AddToDiveMenuIcon)}
+    {mutable && !actions.flowActive && canDelayTopic(node) && row(t('desktop.reviewDelay.dialog'), () => select('postpone'), false, CalendarClock)}
     {mutable && node.kind === 'topic' && !node.anchorLink && row(t(node.shelvedAt ? 'companion.workspace.unshelve' : 'companion.workspace.shelve'),
       () => void actions.execute({ type: node.shelvedAt ? 'unshelve' : 'shelve', nodeId }, onSaved), false, BookMarked)}
+    {mutable && node.currentVersionId && canDismissCompanionTopicBranch(node, nodes) && row(t('desktop.nodeList.menu.dismissTopic'),
+      () => void actions.dismissTopicBranch({ id: nodeId, version: node.currentVersionId! }, onSaved), false, CircleOff)}
     {!hideCreate && childKinds.map(kind => row(t(kind === 'folder' ? 'desktop.command.createFolder' : kind === 'topic' ? 'desktop.command.createTopic' : 'desktop.command.createItem'),
       () => onSelect({ mode: 'create', nodeId: null, parentNodeId: nodeId, kind }), false, createIcons[kind]))}
     {node.deletedAt && !hasRestoreAction && row(t('companion.reading.restoreFromTrash'), () => void actions.execute({ type: 'restore', nodeId }, onSaved), false, ArchiveRestore)}

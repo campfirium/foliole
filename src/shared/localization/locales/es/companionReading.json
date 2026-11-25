@@ -112,5 +112,6 @@
   "companion.index.addSources": "Añadir {count} fuentes",
   "companion.index.removeSources": "Quitar {count} fuentes",
   "companion.workspace.failure.relearn": "No se pudieron reaprender los temas seleccionados.",
+  "companion.workspace.failure.dismissTopic": "No se pudo cerrar este tema.",
   "companion.reading.queue": "Cola"
 }

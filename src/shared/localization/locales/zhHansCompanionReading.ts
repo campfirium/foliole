@@ -41,6 +41,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.index.addSources': '添加 {count} 个来源',
   'companion.index.removeSources': '移除 {count} 个来源',
   'companion.workspace.failure.relearn': '未能重新学习所选主题。',
+  'companion.workspace.failure.dismissTopic': '未能 Dismiss 此主题。',
   'companion.workspace.savedRefreshError': '已保存，请刷新以显示变更。',
   'companion.reading.undoFlow': '撤销复习操作',
   'companion.reading.redoFlow': '重做复习操作',

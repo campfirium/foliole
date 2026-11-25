@@ -10,6 +10,7 @@ import { addCompanionDiveSource, addCompanionDiveSources, removeCompanionDiveSou
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey, type CompanionHistoryTop } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { changeCompanionIndexSources, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
+import { dismissCompanionTopicBranch } from '../shared/platform/companion/runtime/companionTopicBranchDismiss';
 import { relearnCompanionBatch, unshelveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchLearning';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
@@ -41,6 +42,7 @@ type Actions = {
   addBatchToDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): Promise<void>;
   unshelveBatch(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   relearnBatch(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
+  dismissTopicBranch(target: CompanionBatchTarget, onSaved?: () => void): Promise<void>;
   restoreBatch(targets: readonly CompanionBatchTarget[], onSaved: (skipped: number) => void): Promise<void>;
   purgeBatch(plan: CompanionBatchPurgePlan, onSaved: () => void): Promise<void>;
   replay(mode: Mode): void;
@@ -78,7 +80,7 @@ function previewMetadataCommand(command: WorkspaceMetadataCommand, closeSheet: (
   return preview ? () => { const withdraw = preview(); closeSheet(); return withdraw; } : undefined;
 }
 
-function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'unshelveBatch' | 'relearnBatch' | 'purgeBatch'> {
+function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchToTrash' | 'moveBatch' | 'addBatchToDive' | 'unshelveBatch' | 'relearnBatch' | 'dismissTopicBranch' | 'purgeBatch'> {
   return {
     moveBatchToTrash: (targets, onSaved) => run(async () => { await moveCompanionBatchToTrash(targets); }, onSaved, 'companion.batch.error',
       () => { const withdraw = previewCompanionTrash(targets.map(target => target.id)); onSaved(); return withdraw; }),
@@ -87,6 +89,8 @@ function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchT
       'desktop.nodeList.addToDive.saveFailed'),
     unshelveBatch: (targets, onSaved) => run(async () => { await unshelveCompanionBatch(targets); }, onSaved, 'companion.workspace.failure.unshelve'),
     relearnBatch: (targets, onSaved) => run(async () => { await relearnCompanionBatch(targets); }, onSaved, 'companion.workspace.failure.relearn'),
+    dismissTopicBranch: (target, onSaved) => run(async () => { await dismissCompanionTopicBranch(target); }, onSaved,
+      'companion.workspace.failure.dismissTopic'),
     purgeBatch: (plan, onSaved) => run(async () => { await purgeCompanionTrashBatch(plan); }, onSaved, 'companion.batch.error')
   };
 }

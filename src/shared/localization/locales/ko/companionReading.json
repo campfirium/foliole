@@ -112,5 +112,6 @@
   "companion.index.addSources": "소스 {count}개 추가",
   "companion.index.removeSources": "소스 {count}개 제거",
   "companion.workspace.failure.relearn": "선택한 주제를 다시 배우지 못했습니다.",
+  "companion.workspace.failure.dismissTopic": "이 주제를 닫을 수 없습니다.",
   "companion.reading.queue": "대기열"
 }

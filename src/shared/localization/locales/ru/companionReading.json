@@ -112,5 +112,6 @@
   "companion.index.addSources": "Добавить источники: {count}",
   "companion.index.removeSources": "Удалить источники: {count}",
   "companion.workspace.failure.relearn": "Не удалось переучить выбранные темы.",
+  "companion.workspace.failure.dismissTopic": "Не удалось закрыть эту тему.",
   "companion.reading.queue": "Очередь"
 }

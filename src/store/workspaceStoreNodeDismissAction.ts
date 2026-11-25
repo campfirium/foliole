@@ -1,8 +1,5 @@
 import { collectTopicDismissIds } from '../features/nodes/model/nodeDismissTargets';
-import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
-import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
-import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { hasTargetedDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
 import {
@@ -17,14 +14,13 @@ import {
   applyRelatedReadingSnapshots,
   areRelatedReadingsValid} from './workspaceActionHistoryReading';
 import { settleApplicationAction } from './workspaceApplicationActionAdmission';
+import { collectWorkspaceDismissChanges } from './workspaceDismissChanges';
 import { prepareWorkspaceDismissLearning } from './workspaceDismissOperationLearning';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
-import { buildDismissedReadingProfile } from './workspaceReviewReading';
-import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 import {
   createTopicDismissHistoryEntry,
@@ -104,83 +100,13 @@ function finishDismissPersistence(args: {
   });
 }
 
-interface DismissReadingChange {
-  afterReading: Node['reading'];
-  beforeReading: Node['reading'];
-  nodeId: string;
-}
-
-function buildSingleDismissMutation(args: {
-  nodeId: string;
-  now: string;
-  state: WorkspaceState;
-}) {
-  const node = args.state.nodesById[args.nodeId];
-  if (!node || isProtectedRootNode(node) || !hasNodeContent(node) ||
-      !isReadingReviewItemNode(node) || node.reading?.state === 'dismissed') return null;
-  const defaultPriority = getCurrentReviewSchedulerSettings().pushQueue.defaultPriority;
-  const afterReading = buildDismissedReadingProfile({
-    currentNodeId: args.nodeId,
-    currentReading: node.reading,
-    defaultPriority,
-    nodesById: args.state.nodesById,
-    now: args.now
-  });
-  const nextNode: Node = { ...node, reading: afterReading };
-  const nextNodesById = { ...args.state.nodesById, [args.nodeId]: nextNode };
-  const sequentialPatch = buildSequentialReadingDismissPatch({
-    defaultPriority,
-    dismissedNodeId: args.nodeId,
-    nodeOrder: args.state.nodeOrder,
-    nodesById: nextNodesById,
-    now: args.now,
-    trashedNodeIds: args.state.trashedNodeIds
-  });
-  const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
-  return {
-    changes: [{
-      afterReading,
-      beforeReading: node.reading,
-      nodeId: args.nodeId
-    }, ...(sequentialPatch?.changes ?? [])],
-    nodesById: finalNodesById
-  };
-}
-
-function collectDismissChanges(args: {
-  nodeIds: string[];
-  now: string;
-  state: WorkspaceState;
-}) {
-  const changesByNodeId = new Map<string, DismissReadingChange>();
-  let nodesById = args.state.nodesById;
-  for (const nodeId of new Set(args.nodeIds)) {
-    const mutation = buildSingleDismissMutation({
-      nodeId,
-      now: args.now,
-      state: { ...args.state, nodesById }
-    });
-    if (!mutation) continue;
-    nodesById = mutation.nodesById;
-    for (const change of mutation.changes) {
-      const existing = changesByNodeId.get(change.nodeId);
-      changesByNodeId.set(change.nodeId, {
-        afterReading: change.afterReading,
-        beforeReading: existing?.beforeReading ?? change.beforeReading,
-        nodeId: change.nodeId
-      });
-    }
-  }
-  return { changes: [...changesByNodeId.values()], nodesById };
-}
-
 function buildDismissNodesMutation(args: {
   nodeIds: string[];
   now: string;
   state: WorkspaceState;
   withHistory: boolean;
 }) {
-  const mutation = collectDismissChanges(args);
+  const mutation = collectWorkspaceDismissChanges(args);
   const [primaryChange, ...relatedReadings] = mutation.changes;
   if (!primaryChange) return null;
   const nodes = mutation.changes

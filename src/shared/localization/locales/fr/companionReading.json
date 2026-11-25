@@ -112,5 +112,6 @@
   "companion.index.addSources": "Ajouter {count} sources",
   "companion.index.removeSources": "Retirer {count} sources",
   "companion.workspace.failure.relearn": "Impossible de réapprendre les sujets sélectionnés.",
+  "companion.workspace.failure.dismissTopic": "Impossible de fermer ce sujet.",
   "companion.reading.queue": "File d’attente"
 }

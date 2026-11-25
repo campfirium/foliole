@@ -112,5 +112,6 @@
   "companion.index.addSources": "{count} 件のソースを追加",
   "companion.index.removeSources": "{count} 件のソースを削除",
   "companion.workspace.failure.relearn": "選択したトピックを再学習できませんでした。",
+  "companion.workspace.failure.dismissTopic": "このトピックを閉じられませんでした。",
   "companion.reading.queue": "キュー"
 }

@@ -112,5 +112,6 @@
   "companion.index.addSources": "Adicionar {count} fontes",
   "companion.index.removeSources": "Remover {count} fontes",
   "companion.workspace.failure.relearn": "Não foi possível reaprender os tópicos selecionados.",
+  "companion.workspace.failure.dismissTopic": "Não foi possível dispensar este tópico.",
   "companion.reading.queue": "Fila"
 }

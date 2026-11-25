@@ -39,6 +39,7 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.index.addSources': 'Add {count} sources',
   'companion.index.removeSources': 'Remove {count} sources',
   'companion.workspace.failure.relearn': 'Could not relearn the selected Topics.',
+  'companion.workspace.failure.dismissTopic': 'Could not dismiss this Topic.',
   'companion.workspace.savedRefreshError': 'Saved. Refresh to show the change.',
 
   'companion.reading.undoFlow': 'Undo review action',

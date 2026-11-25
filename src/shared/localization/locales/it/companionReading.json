@@ -112,5 +112,6 @@
   "companion.index.addSources": "Aggiungi {count} origini",
   "companion.index.removeSources": "Rimuovi {count} origini",
   "companion.workspace.failure.relearn": "Impossibile imparare di nuovo gli argomenti selezionati.",
+  "companion.workspace.failure.dismissTopic": "Impossibile ignorare questo argomento.",
   "companion.reading.queue": "Coda"
 }

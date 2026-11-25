@@ -112,5 +112,6 @@
   "companion.index.addSources": "{count} स्रोत जोड़ें",
   "companion.index.removeSources": "{count} स्रोत हटाएँ",
   "companion.workspace.failure.relearn": "चुने हुए विषय फिर से नहीं सीखे जा सके।",
+  "companion.workspace.failure.dismissTopic": "इस विषय को Dismiss नहीं किया जा सका।",
   "companion.reading.queue": "कतार"
 }

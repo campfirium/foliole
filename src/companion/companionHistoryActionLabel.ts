@@ -16,6 +16,7 @@ const byTitle: [RegExp, TranslationKey][] = [
   [/^shelve$/i, 'companion.history.action.shelve'],
   [/^unshelve$/i, 'companion.history.action.unshelve'],
   [/^relearn$/i, 'companion.history.action.relearn'],
+  [/^Dismiss Topic$/i, 'companion.history.action.dismiss'],
   [/^Add Index Sources$/i, 'companion.history.action.addSources'],
   [/^Remove Index Sources$/i, 'companion.history.action.removeSources'],
   [/^set-priority$/i, 'companion.history.action.priority'],
