@@ -16,9 +16,10 @@ import { dismissCompanionReviewTopic, postponeCompanionReviewTopic, readCompanio
 import { gradeCompanionReviewCard } from './companionReviewSession';
 import { persistCompanionReviewSyncObject } from './companionReviewSyncPersistence';
 
-export function isCompanionGradeDue(snapshot: WorkspaceSnapshot, nodeId: string, now: string) {
+export function isCompanionGradeDue(snapshot: WorkspaceSnapshot, nodeId: string, now: string,
+  dayWindow: ReviewSessionState['dayWindow']) {
   return isReviewProfileDue(snapshot.nodesById[nodeId]?.review, now,
-    getCurrentReviewSchedulerSettings().newDayStartsAtHour);
+    getCurrentReviewSchedulerSettings().newDayStartsAtHour, dayWindow);
 }
 
 export type FlowMutation = {

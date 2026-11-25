@@ -1,4 +1,5 @@
 import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
+import { activeReviewDayWindow } from '../review/reviewReadiness.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowSettings } from './dailyFlowContract.js';
@@ -9,7 +10,7 @@ export interface DailyFlowDayWindow { start: string; end: string }
 
 export function isFlowWindowUnexpired(window: DailyFlowDayWindow, now: string) {
   // Receiving a known day does not require this device clock to have reached its creator start.
-  return Date.parse(now) < Date.parse(window.end);
+  return Boolean(activeReviewDayWindow(window, now));
 }
 
 export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDayWindow {

@@ -1,4 +1,4 @@
-import { resolveStoredReviewDueAt } from '../reviewDayBoundary.js';
+import { resolveReviewReadyAt } from '../reviewReadiness.js';
 
 import { createReviewQueueDayWindow, type ReviewQueueDayWindow } from './reviewQueueDayWindow.js';
 import type { ReviewQueueNode } from './reviewQueuePlanner.js';
@@ -31,8 +31,7 @@ export function createReviewQueueTimeInput(readingDayStartsAtHour: number, newDa
     if (!node.review) return timestamp(fallback);
     let value = review.get(node);
     if (value === undefined) {
-      value = day.review(node, timestamp(resolveStoredReviewDueAt({ due: node.review.due,
-        scheduledDays: node.review.scheduledDays, newDayStartsAtHour })));
+      value = resolveReviewReadyAt(node.review, newDayStartsAtHour, day.bounds, timestamp);
       review.set(node, value);
     }
     return value;

@@ -56,13 +56,14 @@ function parseTimestamp(timestamp: string) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | undefined, now: string) {
+function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | undefined, now: string,
+  dayWindow: WorkspaceState['reviewSession']['dayWindow']) {
   if (!node) return false;
   const nowMs = parseTimestamp(now);
   if (nowMs === null) return true;
   if (isFsrsReviewItemNode(node)) {
     try {
-      return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour);
+      return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour, dayWindow);
     } catch {
       return true;
     }
@@ -100,7 +101,7 @@ function createGradeReviewCardAction(
     observer?.stage('not-review-item');
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
-    if (!isActionableSessionNode(currentNode, now)) {
+    if (!isActionableSessionNode(currentNode, now, snapshot.reviewSession.dayWindow)) {
       observer?.stage('not-due');
       const dive = snapshot.reviewSession.dive;
       await openWorkspaceDailyFlow(set, get, dive

@@ -147,7 +147,7 @@ async function prepareSurfaceAction(args: CompanionSurfaceActionArgs, token: Tok
     token = prepared;
   }
   if (!token.nodeId || (action === 'grade' && !token.session.isAnswerRevealed)) return null;
-  if (action === 'grade' && !isCompanionGradeDue(snapshot, token.nodeId, now)) {
+  if (action === 'grade' && !isCompanionGradeDue(snapshot, token.nodeId, now, token.session.dayWindow)) {
     await args.flow.resume(token);
     return null;
   }

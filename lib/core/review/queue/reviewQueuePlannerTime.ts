@@ -1,4 +1,4 @@
-import { resolveStoredReviewDueAt } from '../reviewDayBoundary.js';
+import { isReviewReadyAt, type ReviewDayWindow } from '../reviewReadiness.js';
 
 export function parseReviewQueueTimestamp(timestamp: string) {
   const parsed = Date.parse(timestamp);
@@ -8,15 +8,12 @@ export function parseReviewQueueTimestamp(timestamp: string) {
   return parsed;
 }
 
+/** Grading guard: the same readiness rule the planner uses to put the card in today's queue. */
 export function isReviewProfileDue(
   review: { due: string; scheduledDays: number } | null | undefined,
   now: string,
-  newDayStartsAtHour: number
+  newDayStartsAtHour: number,
+  dayWindow?: ReviewDayWindow
 ) {
-  const dueAt = resolveStoredReviewDueAt({
-    due: review?.due ?? now,
-    scheduledDays: review?.scheduledDays ?? 0,
-    newDayStartsAtHour
-  });
-  return parseReviewQueueTimestamp(dueAt) <= parseReviewQueueTimestamp(now);
+  return isReviewReadyAt(review, now, { newDayStartsAtHour, dayWindow });
 }

@@ -2,9 +2,9 @@ import { prepareReviewQueueDayCandidates, buildReviewQueueDayPlan, buildReviewQu
 import { resolveModeQueueNodeIds } from '../review/queue/reviewQueuePlannerMode.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
+import { activeReviewDayWindow } from '../review/reviewReadiness.js';
 
 import type { DailyFlowSettings, DailyFlowLearningSnapshot, DailyFlowOpenArgs } from './dailyFlowContract.js';
-import { isFlowWindowUnexpired } from './dailyFlowDayWindow.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { buildReviewSessionAfterGrade } from './flowGradeSession.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
@@ -12,15 +12,22 @@ import { advanceReviewSession } from './flowSessionState.js';
 
 type FlowPlanningSnapshot = Pick<ReviewQueuePlanInput, 'nodeOrder' | 'nodesById' | 'trashedNodeIds' | 'nodePriorities' | 'nodePaths'>;
 
+/** Every Flow planning step and the grading guard read today's shared day through this one rule. */
+function activeFlowWindow(settings: DailyFlowSettings, now: string) {
+  const window = activeReviewDayWindow(settings.dayWindow, now);
+  return window ? { dayWindow: window } : {};
+}
+
 export function flowDay(now: string, settings: DailyFlowSettings) {
-  if (settings.dayWindow && isFlowWindowUnexpired(settings.dayWindow, now)) return settings.dayWindow.start;
+  const window = activeReviewDayWindow(settings.dayWindow, now);
+  if (window) return window.start;
   return resolveCurrentDayStart(new Date(now), settings.newDayStartsAtHour).toISOString();
 }
 
 export function flowPlan(snapshot: FlowPlanningSnapshot, mode: ReviewSessionMode, now: string,
   settings: DailyFlowSettings, includeScheduled = false, candidateNow = now) {
   return buildReviewQueuePlan({ ...snapshot, mode, now, candidateNow, includeScheduled,
-    ...(settings.dayWindow && isFlowWindowUnexpired(settings.dayWindow, now) ? { dayWindow: settings.dayWindow } : {}),
+    ...activeFlowWindow(settings, now),
     newDayStartsAtHour: settings.newDayStartsAtHour, readingDayStartsAtHour: settings.newDayStartsAtHour,
     pushQueueRules: settings.pushQueue });
 }
@@ -31,7 +38,8 @@ export function fullDayCandidates(snapshot: DailyFlowLearningSnapshot, now: stri
 }
 
 function flowDayEnd(now: string, settings: DailyFlowSettings) {
-  if (settings.dayWindow && isFlowWindowUnexpired(settings.dayWindow, now)) return new Date(Date.parse(settings.dayWindow.end) - 1).toISOString();
+  const window = activeReviewDayWindow(settings.dayWindow, now);
+  if (window) return new Date(Date.parse(window.end) - 1).toISOString();
   const end = resolveNextDayStart(new Date(now), settings.newDayStartsAtHour);
   return new Date(end.getTime() - 1).toISOString();
 }
@@ -43,13 +51,13 @@ function planCandidateIds(plan: ReviewQueuePlan) {
 export function prepareDailyFlowCandidates(snapshot: FlowPlanningSnapshot, now: string, settings: DailyFlowSettings) {
   return prepareReviewQueueDayCandidates({ ...snapshot, now, newDayStartsAtHour: settings.newDayStartsAtHour,
     readingDayStartsAtHour: settings.newDayStartsAtHour, pushQueueRules: settings.pushQueue,
-    ...(settings.dayWindow ? { dayWindow: settings.dayWindow } : {}) }, flowDayEnd(now, settings));
+    ...activeFlowWindow(settings, now) }, flowDayEnd(now, settings));
 }
 
 export function prepareDailyFlowPlans(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
   prepared = prepareDailyFlowCandidates(snapshot, args.now, settings)) {
   const plans = buildReviewQueueDayPlan({ ...snapshot, mode: args.mode, now: args.now,
-    ...(settings.dayWindow ? { dayWindow: settings.dayWindow } : {}),
+    ...activeFlowWindow(settings, args.now),
     newDayStartsAtHour: settings.newDayStartsAtHour, readingDayStartsAtHour: settings.newDayStartsAtHour,
     pushQueueRules: settings.pushQueue }, flowDayEnd(args.now, settings), prepared);
   const { initial } = plans;

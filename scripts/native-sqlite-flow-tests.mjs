@@ -22,6 +22,7 @@ export const controlledFlowSqliteTests = [
   'src/companion/companionDailySoonIntent.integration.test.ts',
   'src/store/workspaceDailyEligibility.integration.test.ts',
   'src/store/workspaceDailySinglePassClear.integration.test.ts',
+  'src/store/workspaceDailyQueueEnd.property.integration.test.ts',
   'src/store/workspaceDailyExceptions.sync.integration.test.ts',
   'src/store/workspaceDailyFlow.integration.test.ts',
   'src/store/workspaceDailyFlow.sync.integration.test.ts',
