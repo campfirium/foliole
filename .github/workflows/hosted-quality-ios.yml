@@ -41,7 +41,7 @@ jobs:
   contract:
     name: iOS contract quality
     if: inputs.run_contract
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 120
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}-${{ github.run_id }}
@@ -49,7 +49,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
@@ -117,7 +117,7 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.simulator_matrix) }}
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 120
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}-${{ github.run_id }}
@@ -125,7 +125,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
       FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}

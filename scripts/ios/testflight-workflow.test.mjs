@@ -10,20 +10,20 @@ const workflow = parse(readFileSync('.github/workflows/release-ios.yml', 'utf8')
 
 it('selects a supported Xcode and refuses SDKs below Apple upload requirements', () => {
   const upload = workflow.jobs['signed-upload'];
-  expect(Number(upload.env.DEVELOPER_DIR?.match(/Xcode_(\d+)/u)?.[1] ?? 0)).toBeGreaterThanOrEqual(26);
+  expect(Number(upload.env.DEVELOPER_DIR?.match(/Xcode_(\d+)/u)?.[1] ?? 0)).toBeGreaterThanOrEqual(27);
   const step = upload.steps.find(entry => entry.id === 'toolchain');
   mkdirSync('.tmp/artifacts', { recursive: true });
   const directory = mkdtempSync(path.resolve('.tmp/artifacts/testflight-sdk-'));
   try {
-    for (const [command, output] of [['xcodebuild', 'Xcode 26.3'], ['xcrun', '$SDK_VERSION']]) {
+    for (const [command, output] of [['xcodebuild', 'Xcode 27.2'], ['xcrun', '$SDK_VERSION']]) {
       const file = path.join(directory, command);
       writeFileSync(file, `#!/bin/sh\necho "${output}"\n`); chmodSync(file, 0o755);
     }
-    for (const SDK_VERSION of ['18.5', '25.4', '26.2', '27.2']) {
+    for (const SDK_VERSION of ['18.5', '26.2', '27.0', '27.2']) {
       const result = spawnSync('bash', ['-e', '-c', step.run], {
         env: { ...process.env, SDK_VERSION, PATH: `${directory}:/usr/bin:/bin` }, encoding: 'utf8'
       });
-      expect(result.status === 0).toBe(Number(SDK_VERSION.split('.')[0]) >= 26);
+      expect(result.status === 0).toBe(Number(SDK_VERSION.split('.')[0]) >= 27);
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -42,7 +42,7 @@ it('reuses the successful upload artifact on a Linux-only retry with a newer run
 });
 
 it('releases macOS after upload and waits for processing only on Linux', () => {
-  expect(workflow.jobs['signed-upload']['runs-on']).toBe('macos-15');
+  expect(workflow.jobs['signed-upload']['runs-on']).toBe('xcode-27');
   expect(workflow.jobs['external-review']['runs-on']).toBe('ubuntu-latest');
   expect(workflow.jobs['external-review'].needs).toBe('signed-upload');
   const uploadCommands = workflow.jobs['signed-upload'].steps.map(step => step.run ?? '').join('\n');

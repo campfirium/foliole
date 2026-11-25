@@ -23,7 +23,7 @@ permissions:
 jobs:
   app-compile:
     name: iOS app compile
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 120
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-app-compile-${{ github.run_id }}
@@ -31,7 +31,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:

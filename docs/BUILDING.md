@@ -68,7 +68,7 @@ Successful installation and successful launch are reported separately. If launch
 
 ## iOS
 
-Install Xcode 26 on a Mac. Run:
+Install Xcode 27 on a Mac. Run:
 
 ```sh
 npm run android:web:build

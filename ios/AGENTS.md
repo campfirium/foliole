@@ -3,7 +3,7 @@
 ## Scope
 
 - Applies to `ios/**`, `scripts/ios/**`, and iPhone/iPad native host integration.
-- The iOS host uses Capacitor 8, Swift Package Manager, and Xcode 26. Follow this file alongside root `AGENTS.md`.
+- The iOS host uses Capacitor 8, Swift Package Manager, and Xcode 27. Follow this file alongside root `AGENTS.md`.
 
 ## iOS Host Rules
 

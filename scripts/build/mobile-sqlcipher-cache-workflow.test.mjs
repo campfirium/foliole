@@ -50,7 +50,7 @@ const appleWorkflows = ['hosted-quality-ios.yml', 'hosted-quality-ios-app-compil
 it.each(appleWorkflows)('%s restores the Apple build right after installing dependencies on every macOS job', file => {
   const { jobs } = parse(readFileSync(`.github/workflows/${file}`, 'utf8'));
   const macJobs = Object.values(jobs).filter(job => job.steps?.some(step => step.run?.includes('hosted-npm-ci.mjs'))
-    && String(job['runs-on']).startsWith('macos'));
+    && /^(macos|xcode)-/u.test(String(job['runs-on'])));
   expect(macJobs.length).toBeGreaterThan(0);
   for (const job of macJobs) {
     const install = job.steps.findIndex(step => step.run?.includes('hosted-npm-ci.mjs'));
