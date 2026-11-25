@@ -57,7 +57,6 @@ export interface SettingsCategoryContentProps {
   mirrorPath: string;
   importCategoryContent?: ReactNode;
   onChangeLocation: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
-  onCloseSettings: () => void;
   onAddExternalSearchFolder: () => void;
   onChooseExternalAttachmentRoot: (folderId: string) => void;
   onChooseExternalSearchFolder: (folderId: string) => void;
@@ -192,7 +191,6 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'general':
       return (
         <SettingsGeneralSection
-          onCloseSettings={props.onCloseSettings}
           {...definedProps({
             previewDesktopSettings: props.previewDesktopSettings
           })}

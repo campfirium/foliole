@@ -20,7 +20,7 @@ export const SETTINGS_SUPER_MEMO_SEARCH_ROW_ID = 'general-supermemo-migration';
 export const SETTINGS_MODELS_SEARCH_ROW_ID = 'general-models';
 
 export const SETTINGS_CAPTURE_SEARCH_ROW_ID = 'general-global-capture';
-export const SETTINGS_LOCAL_FILE_SEARCH_ROW_ID = 'general-open-local-file';
+export const SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID = 'general-markdown-file-association';
 export const SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID = 'capture-confirmation-position';
 export const SETTINGS_BACKUP_SEARCH_ROW_ID = 'backups-search-content';
 export const SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID = 'backups-merge-library';
@@ -38,7 +38,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('general', 'general-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
   row('general', 'general-open-at-login', 'settings.search.generalOpenAtLogin.title', 'settings.search.generalOpenAtLogin.description', 'settings.search.generalOpenAtLogin.terms'),
   row('general', SETTINGS_CAPTURE_SEARCH_ROW_ID, 'settings.capture.sectionTitle', 'settings.capture.searchDescription', 'settings.capture.searchTerms'),
-  row('general', SETTINGS_LOCAL_FILE_SEARCH_ROW_ID, 'settings.localFile.title', 'settings.localFile.description', 'settings.localFile.searchTerms'),
+  row('general', SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID, 'settings.markdownAssociation.title', 'settings.markdownAssociation.description', 'settings.markdownAssociation.searchTerms'),
   row('general', QUIT_ON_CLOSE_SEARCH_ROW_ID, 'settings.general.quitOnClose.title', 'settings.general.quitOnClose.description'),
   row('general', 'general-custom-copy', 'settings.customCopy.row', 'settings.customCopy.description', 'settings.customCopy.searchTerms'),
   row('general', 'general-action-help', 'settings.appearance.actionHelp.row', 'settings.appearance.actionHelp.description'),

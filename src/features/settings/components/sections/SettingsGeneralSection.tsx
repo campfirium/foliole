@@ -36,7 +36,7 @@ import { SettingsCliSection } from './SettingsCliSection';
 import { SettingsExperimentalFeaturesSection } from './SettingsExperimentalFeaturesSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
-import { SettingsLocalFileSection } from './SettingsLocalFileSection';
+import { SettingsMarkdownAssociationSection } from './SettingsMarkdownAssociationSection';
 import { SettingsSearchAliasRow } from './SettingsSearchAliasRow';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -159,10 +159,8 @@ function InterfaceBehaviorSection() {
 }
 
 export function SettingsGeneralSection({
-  onCloseSettings = () => undefined,
   previewDesktopSettings = false
 }: {
-  onCloseSettings?: () => void;
   previewDesktopSettings?: boolean;
 }) {
   const t = useTranslation();
@@ -177,7 +175,7 @@ export function SettingsGeneralSection({
         <SettingsSearchAliasRow preview={previewDesktopSettings} />
       </SettingsSection>
       <SettingsCaptureSection />
-      {showDesktopGroups ? <SettingsLocalFileSection onFileSelected={onCloseSettings} /> : null}
+      {showDesktopGroups ? <SettingsMarkdownAssociationSection /> : null}
       <SettingsSection
         ariaLabel={t('settings.general.aide.aria')}
         searchRowId={SETTINGS_MODELS_SEARCH_ROW_ID}

@@ -59,8 +59,9 @@ function openSettings(platform = 'MacIntel') {
 it.each([
   ['全局剪辑', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
   ['全局捕捉', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
-  ['Markdown', '打开外部 Markdown', '打开外部 Markdown', 'button', '打开文件…'],
-  ['文件权限', '打开外部 Markdown', '打开外部 Markdown', 'button', '打开文件…'],
+  ['Markdown', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
+  ['文件关联', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
+  ['默认应用', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
   ['备份搜索', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['搜索备份内容', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['合并资料库', '并入资料库', '并入资料库设置区', 'button', '选择资料库'],
@@ -90,6 +91,16 @@ it('indexes the capture section on Windows without the Mac-only confirmation pos
   await settings.finishLoading();
   const section = await screen.findByRole('region', { name: '全局剪辑设置' });
   expect(within(section).queryByRole('combobox', { name: '完成提示位置' })).toBeNull();
+});
+
+it('directs Windows users to the system default apps settings for Markdown', async () => {
+  const settings = openSettings('Win32');
+  settings.search('文件关联');
+  fireEvent.keyDown(settings.input, { key: 'Enter' });
+  await settings.finishLoading();
+  const section = screen.getByRole('region', { name: 'Markdown 文件关联' });
+  expect(within(section).getByText(/设置 → 应用 → 默认应用/)).toBeVisible();
+  expect(within(section).queryByRole('button', { name: '打开文件…' })).toBeNull();
 });
 
 it('omits global capture search results on unsupported desktop platforms', async () => {

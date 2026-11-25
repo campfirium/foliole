@@ -19,7 +19,7 @@ import {
   SETTINGS_CUSTOM_CSS_ROW_ID,
   SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID,
   SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID,
-  SETTINGS_LOCAL_FILE_SEARCH_ROW_ID,
+  SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID,
   SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
   SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
 } from '../model/settingsSearchRowCatalog';
@@ -30,7 +30,6 @@ const DESKTOP_ONLY_SEARCH_ROWS = new Set([
   SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
   SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID,
   SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID,
-  SETTINGS_LOCAL_FILE_SEARCH_ROW_ID,
   SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
 ]);
 
@@ -48,15 +47,16 @@ export function useSettingsSearchIndex(previewDesktopSettings = false) {
   const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
   const showDesktopOnlyRows = !previewDesktopSettings && isDesktopRuntime();
   const platform = resolveRuntimeOperatingSystem();
-  const showCapture = showDesktopOnlyRows && platform !== 'other';
+  const showMacOrWindowsRows = showDesktopOnlyRows && platform !== 'other';
   const showCapturePosition = showDesktopOnlyRows && platform === 'macos';
   const rows = useMemo(() => createSettingsSearchRows(t).filter(
     (row) => (hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID)
       && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
-      && (showCapture || row.id !== SETTINGS_CAPTURE_SEARCH_ROW_ID)
+      && (showMacOrWindowsRows || row.id !== SETTINGS_CAPTURE_SEARCH_ROW_ID)
+      && (showMacOrWindowsRows || row.id !== SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID)
       && (showCapturePosition || row.id !== SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID)
       && (showDesktopOnlyRows || !DESKTOP_ONLY_SEARCH_ROWS.has(row.id))
-  ), [hasCustomCss, showCapture, showCapturePosition, showDesktopOnlyRows, showQuitOnClose, t]);
+  ), [hasCustomCss, showCapturePosition, showDesktopOnlyRows, showMacOrWindowsRows, showQuitOnClose, t]);
   return { categories, rows };
 }
 
