@@ -28,6 +28,17 @@ it('reveals a spinner at 300ms and text at 2s without restarting on progress upd
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '75');
 });
 
+it('advances when a timer fires just before the wall clock reaches its delay', async () => {
+  vi.useFakeTimers();
+  const { container } = render(<StartupLoadingSurface title="Starting Foliole" />);
+  vi.setSystemTime(Date.now() - 1);
+  await act(() => vi.advanceTimersByTimeAsync(300));
+  expect(container.querySelector('.animate-spin')).not.toBeNull();
+  vi.setSystemTime(Date.now() - 1);
+  await act(() => vi.advanceTimersByTimeAsync(1700));
+  expect(screen.getByRole('heading')).toHaveTextContent('Starting Foliole');
+});
+
 it.each([100, 800, 2100])('cancels waiting immediately when completed at %dms', async (duration) => {
   vi.useFakeTimers();
   const { container, unmount } = render(<StartupLoadingSurface title="Starting Foliole" />);

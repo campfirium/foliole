@@ -122,7 +122,7 @@ export function SuperMemoPriorityScale(props: ScaleProps) {
           aria-label={t('desktop.superMemoDrafts.priorityBoundary', { left: index, right: index + 1 })}
           aria-valuemin={values[index - 1] ?? 0} aria-valuemax={values[index + 1]} aria-valuenow={value} aria-valuetext={`${value}%`}
           tabIndex={disabled ? -1 : 0} style={{ left: `${value}%` }}
-          className={`group absolute top-6 grid h-8 w-5 -translate-x-1/2 touch-none place-items-center outline-none ${disabled ? '' : 'cursor-ew-resize'} ${index === active ? 'z-10' : 'z-[1]'}`}
+          className={`group absolute top-6 grid h-8 w-5 -translate-x-1/2 touch-none place-items-center outline-none ${disabled ? '' : 'cursor-ew-resize'} ${index === active ? 'z-local-overlay' : 'z-local-raised'}`}
           onFocus={() => setActive(index)} onKeyDown={event => onKeyDown(event, index)}
           onPointerDown={event => startDrag(event, index)} onPointerMove={moveDrag}
           onPointerUp={event => finishDrag(event, true)} onPointerCancel={event => finishDrag(event, false)}
