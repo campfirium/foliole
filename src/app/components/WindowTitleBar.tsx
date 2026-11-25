@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useState, type CSSProperties } from 'reac
 import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { isWorkspaceGlobalCaptureAvailable } from '../../shared/platform/desktopHostCapabilities';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import { usesNativeMacOSWindowControls } from '../../shared/platform/windowChrome';
@@ -142,6 +143,7 @@ function getWindowTitleBarStyle(
   const keepLeftWidth = props.keepFloatingSidebarControls && props.isListFloating;
   const leftRevealed = keepLeftWidth && !props.isListCollapsed;
   const rightRevealed = props.keepFloatingSidebarControls && props.isRightSidebarFloating && !props.isRightSidebarCollapsed;
+  const captureWidth = isWorkspaceGlobalCaptureAvailable() ? WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH : 0;
   return {
     '--workspace-titlebar-sidebar-current-width': rightRevealed ? 'var(--pdf-right-overlay-width)' : undefined,
     '--window-titlebar-left-width': `calc(var(--workspace-rail-width) + ${
@@ -149,8 +151,9 @@ function getWindowTitleBarStyle(
     }px)`,
     '--window-titlebar-controls-width': `${controlsWidth}px`,
     '--window-titlebar-controls-gap': `${controlsWidth > 0 ? WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP : 0}px`,
+    '--window-titlebar-capture-width': `${captureWidth}px`,
     '--window-titlebar-right-width': rightUndocked
-      ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + 8}px`
+      ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + captureWidth + 8}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-titlebar-folder-column-width': leftRevealed

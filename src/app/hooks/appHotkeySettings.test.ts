@@ -2,8 +2,14 @@ import { expect, it, vi } from 'vitest';
 
 import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { preloadTranslationCatalog, translate } from '../../shared/localization/translations';
 
 import { buildHotkeySettings } from './appHotkeySettings';
+
+const english: NonNullable<Parameters<typeof buildHotkeySettings>[2]> = {
+  locale: 'en',
+  t: (key, params) => translate('en', key, params)
+};
 
 it('adds global capture as a standard editable hotkey item', () => {
   const settings = buildHotkeySettings([], {
@@ -18,7 +24,7 @@ it('adds global capture as a standard editable hotkey item', () => {
       }
     },
     updateShortcut: vi.fn()
-  });
+  }, english);
 
   expect(settings.hotkeyItems[0]).toMatchObject({
     commandId: APP_COMMAND_IDS.globalCaptureToInbox,
@@ -28,6 +34,20 @@ it('adds global capture as a standard editable hotkey item', () => {
     title: 'Capture to Inbox (global)'
   });
   expect(settings.onHotkeyUpdate).toBeTypeOf('function');
+});
+
+it('shows the global capture title and category in Simplified Chinese', async () => {
+  await preloadTranslationCatalog('zh-Hans');
+  const settings = buildHotkeySettings([], {
+    overrides: {},
+    resetAllShortcuts: vi.fn(),
+    resetShortcut: vi.fn(),
+    shortcutMap: {},
+    updateShortcut: vi.fn()
+  }, { locale: 'zh-Hans', t: (key, params) => translate('zh-Hans', key, params) });
+
+  expect(settings.hotkeyItems.find((item) => item.commandId === APP_COMMAND_IDS.globalCaptureToInbox))
+    .toMatchObject({ section: '全局剪辑', title: '剪辑到收件箱（全局）' });
 });
 
 it('exposes both Windows redo entries as editable shortcut slots', () => {
@@ -45,7 +65,7 @@ it('exposes both Windows redo entries as editable shortcut slots', () => {
     resetShortcut: vi.fn(),
     shortcutMap: {},
     updateShortcut: vi.fn()
-  });
+  }, english);
 
   expect(settings.hotkeyItems.find((item) => item.commandId === APP_COMMAND_IDS.redo)).toMatchObject({
     primaryShortcutLabel: 'Ctrl+Shift+Z',
@@ -69,7 +89,7 @@ it('shows the macOS annotation default in shortcut settings', () => {
     resetShortcut: vi.fn(),
     shortcutMap: { [APP_COMMAND_IDS.addSelectionNote]: annotationShortcuts },
     updateShortcut: vi.fn()
-  });
+  }, english);
 
   expect(settings.hotkeyItems.find((item) => item.commandId === APP_COMMAND_IDS.addSelectionNote)).toMatchObject({
     primaryShortcutLabel: 'Cmd+Shift+A',

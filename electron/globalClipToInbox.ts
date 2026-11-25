@@ -123,7 +123,7 @@ async function runCopyAttempt(args: {
   };
 }
 
-export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
+export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}, source: 'selection' | 'panel' = 'selection') {
   const clipboardRef = deps.clipboardRef ?? electronClipboardAccess;
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
@@ -141,6 +141,9 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   }
   globalCaptureInFlight = true;
   try {
+    if (source === 'panel') {
+      return await captureFromPanel({ log, presentIssue, runImport, showCapturePanel, showDesktopToast, waitForReady });
+    }
     return await runGlobalClipToInboxOnce({
       clipboardRef,
       log,
@@ -205,14 +208,18 @@ async function runGlobalClipToInboxOnce(args: {
       waitForReady: args.waitForReady
     });
   }
+  return captureFromPanel(args);
+}
+
+async function captureFromPanel(
+  args: Omit<Parameters<typeof handleGlobalCapturePanelResult>[0], 'panelResult'> & {
+    showCapturePanel: () => Promise<GlobalCapturePanelResult>;
+  }
+) {
   args.log('global_clip_opening_capture_panel', {}, 'info');
   return handleGlobalCapturePanelResult({
-    log: args.log,
-    panelResult: await args.showCapturePanel(),
-    runImport: args.runImport,
-    showDesktopToast: args.showDesktopToast,
-    presentIssue: args.presentIssue,
-    waitForReady: args.waitForReady
+    ...args,
+    panelResult: await args.showCapturePanel()
   });
 }
 

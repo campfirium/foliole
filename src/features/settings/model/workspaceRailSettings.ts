@@ -1,3 +1,4 @@
+import { DESKTOP_GLOBAL_CAPTURE_ACTION } from '../../../shared/commands/desktopGlobalCaptureAction';
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
@@ -30,6 +31,7 @@ const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>>
   [APP_COMMAND_IDS.openLocalFile]: 'desktop.command.openFile',
   [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
   [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
+  [DESKTOP_GLOBAL_CAPTURE_ACTION.id]: DESKTOP_GLOBAL_CAPTURE_ACTION.labelKey,
   [APP_COMMAND_IDS.toggleImmersiveMode]: 'settings.rail.item.readingMode',
   [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
   [APP_COMMAND_IDS.openCommandPalette]: 'desktop.command.openCommandPalette',

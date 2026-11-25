@@ -1,5 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { isDesktopRuntime } from './runtime';
+import { resolveRuntimeOperatingSystem } from './runtime/operatingSystem';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export interface DesktopHostCapabilities {
@@ -42,4 +44,14 @@ export async function openGlobalCaptureAccessibilitySettings() {
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('global_capture_accessibility_settings_unavailable');
   await invoke(NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings);
+}
+
+export function isWorkspaceGlobalCaptureAvailable() {
+  return isDesktopRuntime() && resolveRuntimeOperatingSystem() !== 'other';
+}
+
+export function openWorkspaceGlobalCapture() {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.openGlobalCapturePanel).catch(() => {
+    // The native invoke reports the failure through the desktop diagnostics.
+  });
 }

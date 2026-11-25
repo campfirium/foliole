@@ -5,10 +5,12 @@ import { useWorkspaceRailSettings } from '../../features/settings/context/Worksp
 import {
   getWorkspaceRailSectionItems
 } from '../../features/settings/model/workspaceRailSettings';
+import { DESKTOP_GLOBAL_CAPTURE_ACTION } from '../../shared/commands/desktopGlobalCaptureAction';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { openWorkspaceGlobalCapture } from '../../shared/platform/desktopHostCapabilities';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
@@ -84,6 +86,8 @@ function useWorkspaceRailToolbarState({
       } else {
         onStartClipboardImport();
       }
+    } else if (commandId === DESKTOP_GLOBAL_CAPTURE_ACTION.id) {
+      void openWorkspaceGlobalCapture();
     } else {
       onRunRailAction?.(commandId);
     }

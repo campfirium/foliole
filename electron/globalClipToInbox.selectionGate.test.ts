@@ -49,6 +49,23 @@ vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(asyn
 
 import { resolveWindowsCopyCommandForTests, runGlobalClipToInbox } from './globalClipToInbox.js';
 
+it('opens workspace capture without requesting accessibility access or sending a copy shortcut', async () => {
+  const runMacosCopy = vi.fn();
+  const sendCopyShortcut = vi.fn();
+  const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
+
+  await expect(runGlobalClipToInbox({
+    platform: 'darwin',
+    runMacosCopy,
+    sendCopyShortcut,
+    showCapturePanel
+  }, 'panel')).resolves.toBeNull();
+
+  expect(showCapturePanel).toHaveBeenCalledOnce();
+  expect(runMacosCopy).not.toHaveBeenCalled();
+  expect(sendCopyShortcut).not.toHaveBeenCalled();
+});
+
 function createClipboardSnapshotSource(text: string, formats: string[]) {
   return {
     availableFormats: vi.fn(() => formats),

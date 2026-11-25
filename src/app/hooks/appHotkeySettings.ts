@@ -12,7 +12,7 @@ import {
   formatShortcutSetSearchLabel
 } from '../../shared/commands/shortcutDisplay';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { getStoredAppLocale } from '../../shared/localization/appLanguage';
+import type { LocalizationContextValue } from '../../shared/localization/localizationContext';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { mapPaletteItemsToHotkeyItems } from './reviewHotkeysState';
@@ -46,7 +46,8 @@ export function buildHotkeySettings(
       slot: 'primary' | 'secondary',
       nextLabel: string
     ) => HotkeyUpdateResult;
-  }
+  },
+  { locale, t }: Pick<LocalizationContextValue, 'locale' | 't'>
 ): AppHotkeySettings {
   const globalCaptureShortcuts = hotkeys.shortcutMap[APP_COMMAND_IDS.globalCaptureToInbox];
   const globalCaptureItem: HotkeySettingItem = {
@@ -58,10 +59,12 @@ export function buildHotkeySettings(
     secondaryShortcutLabel: globalCaptureShortcuts?.secondary
       ? buildShortcutOverrideLabel(globalCaptureShortcuts.secondary)
       : '',
-    section: 'Capture',
+    section: t('desktop.command.section.capture'),
     shortcutDisplayEntries: formatShortcutSetDisplayEntries(globalCaptureShortcuts),
     shortcutSummaryLabel: formatShortcutSetSearchLabel(globalCaptureShortcuts),
-    title: `Capture to ${resolveSystemEntryDisplayName(getStoredAppLocale(), 'inbox')} (global)`
+    title: t('desktop.command.globalCaptureToInbox', {
+      inbox: resolveSystemEntryDisplayName(locale, 'inbox')
+    })
   };
   return {
     hotkeyItems: [

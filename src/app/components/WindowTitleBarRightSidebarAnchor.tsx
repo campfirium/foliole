@@ -1,13 +1,35 @@
 import { memo, useEffect, useState } from 'react';
 
+import { DESKTOP_GLOBAL_CAPTURE_ACTION } from '../../shared/commands/desktopGlobalCaptureAction';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { isWorkspaceGlobalCaptureAvailable, openWorkspaceGlobalCapture } from '../../shared/platform/desktopHostCapabilities';
+import { LucideCatalogIcon } from '../../shared/ui';
 
+import { WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH } from './windowTitleBarLayout';
 import { WindowTitleBarRightPanelActions } from './WindowTitleBarRightPanelActions';
 import { resolveRightPanelAvailableWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
 import { normalizeWorkspaceRightPanelOrder } from './workspaceRightPanelOrder';
 import { loadWorkspaceRightPanelOrderPreference, saveWorkspaceRightPanelOrderPreference } from './workspaceRightPanelPreference';
 import { WorkspaceSidebarIcon } from './WorkspaceSidebarIcon';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+
+function CapturePanelButton() {
+  const t = useTranslation();
+  const label = t(DESKTOP_GLOBAL_CAPTURE_ACTION.labelKey);
+  return (
+    <div className="window-titlebar-right-expanded-action">
+      <button
+        aria-label={label}
+        className="window-titlebar-leading-button pointer-events-auto"
+        onClick={() => void openWorkspaceGlobalCapture()}
+        title={label}
+        type="button"
+      >
+        <LucideCatalogIcon iconId={DESKTOP_GLOBAL_CAPTURE_ACTION.iconId} />
+      </button>
+    </div>
+  );
+}
 
 function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   const t = useTranslation();
@@ -61,11 +83,13 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   const hidePanelActions = (isCollapsed || props.isRightSidebarFloating) &&
     !(props.keepFloatingSidebarControls && props.isRightSidebarFloating);
   const orderState = useWorkspaceRightPanelOrder();
+  const showCapture = isWorkspaceGlobalCaptureAvailable();
+  const captureWidth = showCapture ? WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH : 0;
   const visiblePanelCount = resolveVisibleRightPanelCount({
     availableWidth: resolveRightPanelAvailableWidth({
       controlsWidth: props.controlsWidth,
       rightSidebarWidth: props.rightSidebarWidth
-    }),
+    }) - captureWidth,
     panelCount: orderState.orderedPanelIds.length
   });
 
@@ -83,6 +107,7 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
                 visiblePanelCount={visiblePanelCount}
               />}
         </div>
+        {showCapture ? <CapturePanelButton /> : null}
         <div className="window-titlebar-right-expanded-action">
           <RightSidebarToggleButton active={toggleActive} onClick={props.onToggleRightSidebarVisibility} />
         </div>

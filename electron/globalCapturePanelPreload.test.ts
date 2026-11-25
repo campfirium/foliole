@@ -161,15 +161,16 @@ it('submits Enter and keeps Shift+Enter for newlines', () => {
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:submit', 'quick thought');
 });
 
-it('clears stale text when the capture panel receives focus for a new entry', () => {
-  const { emitFocus } = executePanelPreload();
+it('preserves a new entry when the capture panel receives focus after typing starts', () => {
+  const { emitFocus, ipcSend } = executePanelPreload();
   const input = document.getElementById('capture') as HTMLTextAreaElement;
-  input.value = 'old entry from the previous open';
+  input.value = 'new capture typed before focus is confirmed';
 
   emitFocus();
+  input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
 
-  expect(input.value).toBe('');
   expect(document.activeElement).toBe(input);
+  expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:submit', 'new capture typed before focus is confirmed');
 });
 
 it('cancels on Escape or close button', () => {

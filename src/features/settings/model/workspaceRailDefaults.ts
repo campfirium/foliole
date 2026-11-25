@@ -1,5 +1,7 @@
+import { DESKTOP_GLOBAL_CAPTURE_ACTION } from '../../../shared/commands/desktopGlobalCaptureAction';
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { isInternalFeaturePreviewBuild } from '../../../shared/config/featurePreviews';
+import { isWorkspaceGlobalCaptureAvailable } from '../../../shared/platform/desktopHostCapabilities';
 import { isDesktopRuntime } from '../../../shared/platform/runtime';
 
 import type { WorkspaceRailItemConfig } from './workspaceRailSettings';
@@ -8,6 +10,7 @@ const SUPER_MEMO_RAIL_ITEM_ID = 'system.import-supermemo';
 
 export function isWorkspaceRailItemAvailable(item: WorkspaceRailItemConfig) {
   if (item.commandId === APP_COMMAND_IDS.openLocalFile) return isDesktopRuntime();
+  if (item.commandId === DESKTOP_GLOBAL_CAPTURE_ACTION.id) return isWorkspaceGlobalCaptureAvailable();
   return item.id !== SUPER_MEMO_RAIL_ITEM_ID || (isInternalFeaturePreviewBuild() && isDesktopRuntime());
 }
 
@@ -95,6 +98,15 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     source: 'system',
     iconId: 'DatabaseBackup',
     labelOverride: 'desktop.command.importSuperMemo'
+  },
+  {
+    id: 'system.global-capture',
+    commandId: DESKTOP_GLOBAL_CAPTURE_ACTION.id,
+    section: 'top',
+    order: 8,
+    visible: true,
+    source: 'system',
+    iconId: DESKTOP_GLOBAL_CAPTURE_ACTION.iconId
   },
   {
     id: 'system.feedback',

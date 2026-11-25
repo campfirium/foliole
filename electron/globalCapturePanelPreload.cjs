@@ -83,7 +83,6 @@ function resizeCaptureSurface() {
 
 function focusCaptureInput() {
   const input = document.getElementById('capture');
-  if (input && typeof input.value === 'string') input.value = '';
   input?.focus();
   resizeCaptureSurface();
 }

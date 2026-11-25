@@ -77,6 +77,7 @@ describe('getAppPaletteCommands localization', () => {
     expect(items.find((item) => item.id === APP_COMMAND_IDS.goBack)?.title).toBe('后退');
     expect(items.find((item) => item.id === APP_COMMAND_IDS.goForward)?.title).toBe('前进');
     expect(items.find((item) => item.id === APP_COMMAND_IDS.goParent)?.title).toBe('返回上级');
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.openYouTubePlaylist)?.title).toBe('打开 YouTube');
     expect(items.find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title).toBe(
       'Publish to the site'
     );

@@ -213,6 +213,8 @@ After a long press in the Android reader, releasing the finger hands the transie
 
 The macOS and Windows preference to quit Foliole when closing its main window is local to the desktop library. It stays in Settings because it controls native window behavior and the availability of background services on that device.
 
+On macOS and Windows, the Global capture buttons in the title bar and left toolbar open the quick capture panel. The panel saves typed text or, when confirmed empty, imports the current clipboard into Inbox. The Agent Control API and CLI do not open this panel or read the system clipboard.
+
 Material History is a desktop navigation surface for the 100 most recently visited materials in the library. The desktop left toolbar, command palette, and shortcut open Material History, which opens materials through the existing navigation flow. Its View options remember the preview line limit, breadcrumb placement, and independent preview and breadcrumb font sizes. History and Search shortcut hints start collapsed and remember each panel’s choice as a desktop UI preference. The Agent Control API and CLI do not expose the visit list, manual pins, most recently edited material, or these display preferences.
 
 Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive editing history stay in the desktop editor. Agent Control continues to use explicit material operations.

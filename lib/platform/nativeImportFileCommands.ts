@@ -1,4 +1,5 @@
 export const NATIVE_IMPORT_FILE_COMMANDS = {
+  openGlobalCapturePanel: 'open_global_capture_panel',
   runClipboardImport: 'run_clipboard_import',
   runDirectoryImport: 'run_directory_import',
   runTextFileImport: 'run_text_file_import',

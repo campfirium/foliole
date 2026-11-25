@@ -62,6 +62,7 @@ export type NativeImportCommandMap = {
     result: NativeTextImportResult | null;
   };
   [NATIVE_COMMANDS.runClipboardImport]: { args: NativeTextImportArgs; result: NativeTextImportResult | null };
+  [NATIVE_COMMANDS.openGlobalCapturePanel]: { args: undefined; result: null };
   [NATIVE_COMMANDS.runDirectoryImport]: {
     args: NativeDirectoryImportArgs;
     result: NativeDirectoryImportResult | null;

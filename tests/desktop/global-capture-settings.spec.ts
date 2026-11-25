@@ -1,7 +1,73 @@
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
-import { openSettingsCategory } from './harness/settings';
+import { loadNodeDocument, loadWorkspaceSnapshot } from './harness/localDataFileAcceptance';
+import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+
+test('localizes the capture and YouTube shortcuts in Simplified Chinese', async ({ desktopWindow }, testInfo) => {
+  await desktopWindow.evaluate(() => {
+    window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+  });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+
+  const hotkeys = await openSettingsCategory(desktopWindow, 'Hotkeys');
+  await expect(hotkeys.getByText('剪辑到收件箱（全局）', { exact: true })).toBeVisible();
+  await expect(hotkeys.getByText('全局剪辑', { exact: true })).toBeVisible();
+  await hotkeys.getByRole('searchbox', { name: '搜索快捷键' }).fill('YouTube');
+  await expect(hotkeys.getByText('打开 YouTube', { exact: true })).toBeVisible();
+  await testInfo.attach('localized-hotkeys', { body: await hotkeys.screenshot(), contentType: 'image/png' });
+});
+
+test('opens quick capture from the title bar and left toolbar', async ({ desktopSession, desktopWindow }, testInfo) => {
+  const { electronApp } = desktopSession;
+  const capture = /^(Global capture|全局剪辑)$/;
+  const toolbar = desktopWindow.getByRole('region', { name: /^(Left toolbar|左侧工具栏)$/ });
+  const titleBarButton = desktopWindow.locator('.window-titlebar').getByRole('button', { name: capture });
+  const text = 'Capture saved from the workspace toolbar';
+  await expectWorkspaceShell(desktopWindow);
+  const screenshotPath = testInfo.outputPath('workspace-capture-buttons.png');
+  await desktopWindow.screenshot({ path: screenshotPath });
+  await testInfo.attach('workspace-capture-buttons', { path: screenshotPath });
+
+  const findPanel = async () => {
+    for (const page of electronApp.windows()) {
+      if (await page.locator('#capture').count()) return page;
+    }
+    return null;
+  };
+  await titleBarButton.click();
+  await expect.poll(findPanel).toBeTruthy();
+  const panel = (await findPanel())!;
+  const input = panel.locator('#capture');
+  await expect(input).toBeFocused();
+  await input.fill('Discard this capture');
+  await input.press('Escape');
+  const panelWindow = await electronApp.browserWindow(panel);
+  await expect.poll(() => panelWindow.evaluate((window) => window.getOpacity())).toBe(0);
+
+  await toolbar.getByRole('button', { name: capture }).click();
+  await expect.poll(() => panelWindow.evaluate((window) => window.getOpacity())).toBe(1);
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('');
+  await input.fill(text);
+  await input.press('Enter');
+  await expect.poll(() => panelWindow.evaluate((window) => window.getOpacity())).toBe(0);
+
+  const findSavedCapture = async () => Object.values((await loadWorkspaceSnapshot(desktopWindow))?.nodesById ?? {})
+    .find((node) => node.title === text)?.id;
+  await expect.poll(findSavedCapture, { message: 'The capture should be saved to the library' }).toBeTruthy();
+  const nodeId = (await findSavedCapture())!;
+
+  const findCapture = (title: string) => desktopWindow.evaluate((targetTitle) =>
+    window.__folioleWorkspaceDebug?.listNodes().find((node) => node.title === targetTitle)?.id, title
+  );
+  await expect.poll(() => findCapture(text)).toBe(nodeId);
+  expect(await findCapture('Discard this capture')).toBeUndefined();
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await expect.poll(async () => (await loadNodeDocument(desktopWindow, nodeId))?.content).toContain(text);
+});
 
 test('organizes controls and keeps capture behavior in General', async ({ desktopSession, desktopWindow }, testInfo) => {
   const general = await openSettingsCategory(desktopWindow, 'General');
@@ -28,7 +94,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
 
   const hotkeys = await openSettingsCategory(desktopWindow, 'Hotkeys');
   const globalCaptureShortcut = hotkeys.getByRole('button', {
-    name: /^(Shortcut for Capture to Inbox \(global\)|Capture to Inbox \(global\) 的快捷键)$/
+    name: /^(Shortcut for Capture to Inbox \(global\)|剪辑到收件箱（全局） 的快捷键)$/
   });
   await expect(globalCaptureShortcut).toHaveText(/⌥ A|Alt\+A/u);
   await globalCaptureShortcut.click();

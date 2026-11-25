@@ -207,6 +207,11 @@ async function handleTextImportCommand(
     notifyIfTextImportChanged(result, originWindow);
     return result;
   }
+  if (request.command === NATIVE_COMMANDS.openGlobalCapturePanel) {
+    const { runGlobalClipToInbox } = await import('../globalClipToInbox.js');
+    await runGlobalClipToInbox({}, 'panel');
+    return null;
+  }
   if (request.command === NATIVE_COMMANDS.runDirectoryImport) {
     const originWindow = resolveTargetWindow(context);
     const result = await runDirectoryImport(originWindow, args).catch(rethrowImportAccessError);

@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeCommandRegistryEntry } from './nativeCommandRegistry.js';
 
 export const NATIVE_IMPORT_FILE_COMMAND_REGISTRY = [
+  { command: NATIVE_COMMANDS.openGlobalCapturePanel, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.runClipboardImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.runDirectoryImport, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.runTextFileImport, route: 'import', capability: 'importMutation' },

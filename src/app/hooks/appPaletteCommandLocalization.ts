@@ -76,6 +76,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.openSupportEmail]: 'desktop.command.emailSupport',
   [APP_COMMAND_IDS.openGitHubIssues]: 'desktop.command.reportIssue',
   [APP_COMMAND_IDS.openGitHubDiscussions]: 'desktop.command.openDiscussions',
+  [APP_COMMAND_IDS.openYouTubePlaylist]: 'desktop.command.openYouTube',
   [APP_COMMAND_IDS.startStudyMode]: 'desktop.command.flow.toggle',
   [APP_COMMAND_IDS.revealReviewAnswer]: 'desktop.command.review.revealAnswer',
   [APP_COMMAND_IDS.gradeReviewAgain]: 'desktop.command.review.gradeAgain',

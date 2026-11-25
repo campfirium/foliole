@@ -2,7 +2,7 @@ import { useEffectEvent, useMemo } from 'react';
 
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
@@ -97,11 +97,11 @@ export function useControllerAuxiliaryState(args: {
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const t = useTranslation();
+  const localization = useLocalization();
   useMaterialHistoryEditTracking();
   const paletteState = buildControllerPaletteState({
     appearance: args.appearance,
-    demoOperationTranslate: t,
+    demoOperationTranslate: localization.t,
     externalView: args.controller.externalView,
     formalImport: args.formalImport,
     isStudyMode: args.isStudyMode,
@@ -130,8 +130,8 @@ export function useControllerAuxiliaryState(args: {
   useAppCommandShortcuts({ controller: args.controller, hotkeys: args.hotkeys, paletteState,
     openDiveFlow: args.layoutProps.review.onOpenDiveFlow });
   const hotkeySettings = useMemo(
-    () => buildHotkeySettings(args.paletteItems, args.hotkeys),
-    [args.paletteItems, args.hotkeys]
+    () => buildHotkeySettings(args.paletteItems, args.hotkeys, localization),
+    [args.paletteItems, args.hotkeys, localization]
   );
 
   return {
