@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.3",
+  "version": "0.8.4",
   "publicationMode": "scoped",
   "selectedPlatforms": [
     "macos",
@@ -10,14 +10,14 @@
     "ios"
   ],
   "scopeBasis": {
-    "macos": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
-    "windows": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
-    "linux": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
-    "android": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize.",
-    "ios": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize."
+    "macos": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize.",
+    "windows": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize.",
+    "linux": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize.",
+    "android": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize.",
+    "ios": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize."
   },
   "syncCompatibility": {
     "mode": "coordinated",
-    "basis": "Sync protocol 39 (raised from 36 since v0.8.2, min 39) is required by the macOS, Windows and Linux desktop hosts and by the Android and iPhone companion contract; all five hosts reject protocol 36 peers, so old and new clients cannot synchronize."
+    "basis": "Since v0.8.3 the sync contract requires two new capabilities (folder-enforced-priority-v1, reading-history-order-v1) while the protocol number stays 39; the macOS, Windows, Linux, Android and iPhone hosts require them, so 0.8.3 and 0.8.4 clients cannot synchronize."
   }
 }
