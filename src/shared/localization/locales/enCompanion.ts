@@ -25,7 +25,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.dive.addSource': 'Add Source',
   'companion.dive.noSourceToAdd': 'Every eligible folder and topic is already in this Dive.',
   'companion.browse.orderBy': 'Order by',
-  'companion.browse.showChildTopics': 'Show child topics',
+  'companion.browse.showChildTopics': 'Show derived topics',
   'companion.browse.sort': 'Sort',
   'companion.browse.sortBy': 'Sort by',
   'companion.browse.sort.dateDeleted': 'Deleted time',

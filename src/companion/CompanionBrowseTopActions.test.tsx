@@ -113,12 +113,12 @@ it('toggles child topics from the Browse list menu only, shown by default', () =
     sortDirection: 'desc' as const, sortKey: 'dateLastOpened' as const };
   const { unmount } = render(<CompanionBrowseTopActions page={{ kind: 'folder', nodeId: 'folder' }} {...props} />);
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Show child topics/ })).not.toBeInTheDocument();
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Show derived topics/ })).not.toBeInTheDocument();
   unmount();
 
   render(<CompanionBrowseTopActions page={{ kind: 'recent' }} {...props} />);
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  const row = within(screen.getByRole('dialog')).getByRole('button', { name: /Show child topics/ });
+  const row = within(screen.getByRole('dialog')).getByRole('button', { name: /Show derived topics/ });
   expect(row.querySelector('svg')).not.toBeNull();
   fireEvent.click(row);
   expect(getCompanionBrowseShowChildTopics()).toBe(false);

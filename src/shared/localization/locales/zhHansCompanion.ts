@@ -27,7 +27,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.dive.addSource': '添加来源',
   'companion.dive.noSourceToAdd': '可加入的文件夹和主题都已在这个专题里。',
   'companion.browse.orderBy': '排序方向',
-  'companion.browse.showChildTopics': '显示子主题',
+  'companion.browse.showChildTopics': '显示派生主题',
   'companion.browse.sort': '排序',
   'companion.browse.sortBy': '排序依据',
   'companion.browse.sort.dateImported': '导入日期',

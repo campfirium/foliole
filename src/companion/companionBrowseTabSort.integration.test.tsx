@@ -178,7 +178,7 @@ it('leaves home on the last opened default when older navigation held the old de
   expect(phoneSortRows()).toEqual([]);
 });
 
-it('keeps Show child topics off in this phone\'s library database, not WebView storage', async () => {
+it('keeps Show derived topics off in this phone\'s library database, not WebView storage', async () => {
   await openBrowse();
   await toggleCompanionBrowseShowChildTopics();
   expect(library.database.prepare(`SELECT scope, form_factor, host_name, value_json FROM setting_records
@@ -194,7 +194,7 @@ it('keeps Show child topics off in this phone\'s library database, not WebView s
 
 const legacyChildTopicsKey = 'foliole-companion-browse-show-child-topics';
 
-it('imports the old Show child topics choice when Browse first opens after an upgrade', async () => {
+it('imports the old Show derived topics choice when Browse first opens after an upgrade', async () => {
   library.database.prepare(`INSERT INTO nodes (id, parent_id, title, kind, content, created_at, updated_at)
     VALUES ('child', 'article', 'Child topic', 'topic', 'Body', '2026-10-25T03:00:00Z', '2026-10-25T03:00:00Z')`).run();
   window.localStorage.setItem(legacyChildTopicsKey, 'false');
