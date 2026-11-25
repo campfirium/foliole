@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
+import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
 import {
   canSaveCompanionAttachment,
   companionPdfStorageKey,
@@ -37,7 +38,11 @@ export function useCompanionAttachmentSave(args: {
     const request = current.current;
     const isCurrent = () => request !== null && current.current === request;
     try {
-      const status = await saveCompanionAttachment(storageKey, args.baseName, args.fallbackName);
+      // Resolving first restores a trashed copy and, for non-display requests, checks the stored bytes.
+      const resolution = await resolveRuntimeAttachmentResource(`asset://${storageKey}`);
+      const status = resolution?.status === 'ready'
+        ? await saveCompanionAttachment(storageKey, args.baseName, args.fallbackName)
+        : 'unavailable';
       if (!isCurrent()) return;
       if (status === 'unavailable') setFailed(true);
       else args.onDone();

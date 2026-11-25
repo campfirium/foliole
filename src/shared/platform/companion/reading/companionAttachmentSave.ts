@@ -5,7 +5,6 @@ import {
   buildCanonicalAttachmentStorageKey,
   parseCanonicalAttachmentStorageKey
 } from '../../../../../lib/platform/attachmentResource';
-import { resolveRuntimeAttachmentResource } from '../../attachmentResources';
 
 export type CompanionAttachmentSaveStatus = 'saved' | 'cancelled' | 'unavailable';
 
@@ -45,12 +44,10 @@ export function companionPdfStorageKey(attachmentId: string) {
   return buildCanonicalAttachmentStorageKey(attachmentId, 'application/pdf');
 }
 
+/** The caller resolves the attachment first; the native side saves the stored bytes. */
 export async function saveCompanionAttachment(storageKey: string, baseName: string | null | undefined, fallbackName: string) {
   const parsed = parseCanonicalAttachmentStorageKey(storageKey);
   if (!parsed) return 'unavailable' as const;
-  // Resolving first restores a trashed copy and, for non-display requests, checks the stored bytes.
-  const resolution = await resolveRuntimeAttachmentResource(`asset://${storageKey}`);
-  if (resolution?.status !== 'ready') return 'unavailable' as const;
   const result = await nativeSave.saveAttachment({
     storage_key: parsed.storageKey,
     content_hash: parsed.contentHash,
