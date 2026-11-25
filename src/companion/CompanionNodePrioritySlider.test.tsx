@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 
@@ -9,8 +9,10 @@ const nodesById = {
   topic: { ...base, id: 'topic', kind: 'topic', title: 'Topic', parentNodeId: 'folder', priority: 7 }
 };
 
-vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
-  isAvailableNativeAndroidCompanionRuntime: () => true
+const host = vi.hoisted(() => ({ platform: 'android' }));
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { getPlatform: () => host.platform, isNativePlatform: () => true, isPluginAvailable: () => false },
+  registerPlugin: vi.fn(() => ({}))
 }));
 vi.mock('./CompanionWorkspaceActions', () => ({
   useCompanionWorkspaceActions: () => ({
@@ -18,7 +20,10 @@ vi.mock('./CompanionWorkspaceActions', () => ({
   })
 }));
 
-it('keeps the stored value editable and names the enforcing folder', () => {
+afterEach(cleanup);
+
+it.each(['android', 'ios'])('keeps the stored value editable and names the enforcing folder on %s', platform => {
+  host.platform = platform;
   render(<CompanionNodePrioritySlider nodeId="topic" onSaved={vi.fn()} />);
 
   expect(screen.getByRole('slider')).toHaveValue('7');

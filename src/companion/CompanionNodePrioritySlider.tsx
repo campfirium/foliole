@@ -6,7 +6,7 @@ import {
   subscribeReviewSchedulerSettings
 } from '../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
@@ -78,7 +78,7 @@ export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }:
   }, []);
   const nodes = actions?.snapshot?.nodesById;
   const node = nodeId ? nodes?.[nodeId] : undefined;
-  if (!isAvailableNativeAndroidCompanionRuntime() || !actions || !nodes || !node || node.deletedAt ||
+  if (!isAvailableNativeCompanionRuntime() || !actions || !nodes || !node || node.deletedAt ||
     node.virtualFilter || node.id.startsWith('special-') || (node.kind !== 'topic' && node.kind !== 'item')) return null;
   if (actions.flowActive && !(allowFlowTopic && node.kind === 'topic')) return null;
   const { value } = resolveUnenforcedNodePriority(node.id, nodes, settings.pushQueue.defaultPriority);

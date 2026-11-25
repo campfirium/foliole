@@ -10,7 +10,6 @@ async function renderAutoSyncHook(
   isPairingReady = true
 ) {
   vi.doMock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
-    isAvailableNativeAndroidCompanionRuntime: () => isNativeRuntime,
     isAvailableNativeCompanionRuntime: () => isNativeRuntime,
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));

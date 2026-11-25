@@ -17,9 +17,10 @@ import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions,
   useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
+const host = vi.hoisted(() => ({ platform: 'android' }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => host.platform, isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let initial: WorkspaceSnapshot;
@@ -27,7 +28,7 @@ let failRefresh = false;
 let refreshBarrier: Promise<void> | undefined;
 const stored = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 beforeEach(async () => { library = await createSearchLibrary(0); initial = await stored(); failRefresh = false; refreshBarrier = undefined; });
-afterEach(async () => { cleanup(); await library.close(); });
+afterEach(async () => { cleanup(); await library.close(); host.platform = 'android'; });
 
 function Menu() {
   const actions = useCompanionWorkspaceActions()!;
@@ -167,7 +168,8 @@ it('creates the chosen child type from the first-level article menu', async () =
   expect(saved).toMatchObject({ kind: 'item', parentNodeId: 'topic' });
 });
 
-it('saves the priority from the active Flow Topic and reads it back in Flow and Browse', async () => {
+it.each(['android', 'ios'])('saves the priority from the Flow Topic menu and reads it back in Browse on %s', async platform => {
+  host.platform = platform;
   await seedPriorityHierarchy();
   const view = render(<Harness flowNodeId="topic" />);
   const openReadingMenu = () => {

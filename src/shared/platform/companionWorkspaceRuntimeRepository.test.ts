@@ -15,7 +15,6 @@ vi.mock('@capacitor/core', () => ({
 
 import {
   beginNativeCompanionSyncRun,
-  isAvailableNativeAndroidCompanionRuntime,
   isAvailableNativeCompanionRuntime,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionAttachmentResourceRuntime,
@@ -52,7 +51,6 @@ function expectIosRuntimeBoundary() {
   capacitorState.getPlatform.mockReturnValue('ios');
   capacitorState.isNativePlatform.mockReturnValue(true);
 
-  expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   expect(isAvailableNativeCompanionRuntime()).toBe(true);
   expectNodeMutationSurfaces(true);
   expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
@@ -93,7 +91,6 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(false);
     expect(isNativeCompanionTopicSearchRuntime()).toBe(false);
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(false);
-    expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
     expect(isAvailableNativeCompanionRuntime()).toBe(false);
     expectNodeMutationSurfaces(true);
   });
@@ -114,7 +111,6 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
     expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
-    expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
     expect(isAvailableNativeCompanionRuntime()).toBe(true);
     expectNodeMutationSurfaces(true);
   });

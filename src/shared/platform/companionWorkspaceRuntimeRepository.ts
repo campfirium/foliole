@@ -104,10 +104,6 @@ export function getNativeCompanionSettingWritePlatform() {
     : null;
 }
 
-export function isAvailableNativeAndroidCompanionRuntime() {
-  return getCompanionRuntimeCapability().kind === 'android-native';
-}
-
 export function isNativeCompanionSyncGroupRuntime() {
   const runtime = getCompanionRuntimeCapability();
   if (!isCompanionRuntimeCapabilityAvailable('sync-group-provider')) return false;
