@@ -153,7 +153,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId), undefined, 'desktop.nodeList.addToDive.saveFailed'),
     removeFromDive: (diveId, sourceIds, onSaved) => void run(() => removeCompanionDiveSources(diveId, sourceIds), onSaved,
       'companion.workspace.failure.removeDiveSource'),
-    ...createBatchWriteActions(run), ...createNodeOptionActions(run),
+    ...createBatchWriteActions(run), ...createNodeOptionActions(run), ...createTopicPostponeAction(run),
     changeIndexSources: (indexId, sourceIds, change) => void run(() => changeCompanionIndexSources(indexId, sourceIds, change),
       undefined, change === 'add' ? 'companion.index.addSourceFailed' : 'companion.index.removeSourceFailed'),
     restoreBatch: (targets, onSaved) => {
@@ -168,7 +168,6 @@ export function CompanionWorkspaceActionsProvider(props: {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
     }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type],
     previewMetadataCommand(command, () => setSheet(null))),
-    ...createTopicPostponeAction(run),
     replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}
