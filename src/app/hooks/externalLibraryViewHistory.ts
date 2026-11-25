@@ -40,7 +40,8 @@ function areExternalLibrarySelectionsEqual(left: ExternalLibrarySelection, right
     return left.directoryPath === right.directoryPath;
   }
   if (left.kind === 'document' && right.kind === 'document') {
-    return left.absolutePath === right.absolutePath;
+    return left.absolutePath === right.absolutePath &&
+      left.aggregateScope?.kind === right.aggregateScope?.kind;
   }
   return left.kind === 'folder' && right.kind === 'folder';
 }

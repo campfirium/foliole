@@ -2,6 +2,7 @@ export {
   buildExternalLibraryFolderBrowseState,
   isReadwiseExternalFolder,
   normalizeExternalDirectoryPath,
+  resolveExternalBrowseSelection,
   resolveExternalEntryDirectoryPath,
   resolveExternalFolderDisplayLabel,
   resolveExternalFolderLabel,

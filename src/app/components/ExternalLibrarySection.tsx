@@ -21,7 +21,7 @@ import {
   type ExternalFolderContextMenuState
 } from './ExternalFolderContextMenu';
 import { ExternalFolderSetupDialog } from './ExternalFolderSetupDialog';
-import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
+import { resolveExternalBrowseSelection, type ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { saveExternalCollapsedRowIds } from './externalLibraryCollapseSettings';
 import { ExternalLibraryRow } from './ExternalLibraryRow';
 import { useExternalFolderDrag } from './ExternalLibrarySectionDrag';
@@ -89,7 +89,9 @@ function useExternalSectionCollapse() {
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const { externalFoldersEnabled } = useExternalFoldersSettings();
-  return externalFoldersEnabled ? <VisibleExternalLibrarySection {...props} /> : null;
+  return externalFoldersEnabled
+    ? <VisibleExternalLibrarySection {...props} selection={resolveExternalBrowseSelection(props.selection)} />
+    : null;
 }
 
 function VisibleExternalLibrarySection(props: ExternalLibrarySectionProps) {

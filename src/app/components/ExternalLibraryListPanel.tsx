@@ -17,6 +17,7 @@ import {
   useExternalDocumentLastOpenedAt
 } from './externalDocumentLastOpenedAt';
 import {
+  resolveExternalBrowseSelection,
   type ExternalLibraryDocumentItem,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
@@ -42,8 +43,9 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
   const contentSort = useWorkspaceContentSort();
   const lastOpenedAtByPath = useExternalDocumentLastOpenedAt();
   const normalizedSort = normalizeWorkspaceContentSort(contentSort.sort, ['modifiedAt', 'lastOpenedAt', 'name']);
+  const browseSelection = resolveExternalBrowseSelection(props.selection);
   const documents = useExternalDocumentListState(
-    props,
+    { ...props, selection: browseSelection },
     searchQuery,
     normalizedSort,
     lastOpenedAtByPath,
@@ -57,7 +59,7 @@ export function ExternalLibraryListPanel(props: ExternalLibraryListPanelProps) {
         normalizedSort={normalizedSort}
         onChangeSearchQuery={setSearchQuery}
         searchQuery={searchQuery}
-        selection={props.selection}
+        selection={browseSelection}
       />
       <div className="app-scrollbar workspace-region-main-topic min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2 pt-2">
         <ExternalDocumentListBody

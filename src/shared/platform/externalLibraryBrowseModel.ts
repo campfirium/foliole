@@ -34,17 +34,25 @@ export interface ExternalLibraryDirectoryNode {
   parentDirectoryPath: string | null;
 }
 
-export type ExternalLibrarySelection =
+type ExternalLibraryAggregateScope =
   | { kind: 'root' }
-  | { kind: 'group'; groupId: 'readwise' }
+  | { kind: 'group'; groupId: 'readwise' };
+
+export type ExternalLibrarySelection =
+  | ExternalLibraryAggregateScope
   | { folderId: string; kind: 'folder' }
   | { directoryPath: string; folderId: string; kind: 'directory' }
   | {
     absolutePath: string;
+    aggregateScope?: ExternalLibraryAggregateScope;
     folderId: string;
     kind: 'document';
     sourceKind?: 'external_document' | 'local_file' | undefined;
   };
+
+export function resolveExternalBrowseSelection(selection: ExternalLibrarySelection): ExternalLibrarySelection {
+  return selection.kind === 'document' ? selection.aggregateScope ?? selection : selection;
+}
 
 export interface ExternalLibraryFolderBrowseState {
   directoryNodes: ExternalLibraryDirectoryNode[];
