@@ -2,6 +2,7 @@ import packageJson from '../../../../package.json';
 import { getCompanionRuntimeCapability } from '../companionRuntimeCapabilities';
 
 import { startAndroidFlowTiming, stopAndroidFlowTiming, validateAndroidFlowTiming } from './androidFlowTiming';
+import { startAndroidReaderVisibility, stopAndroidReaderVisibility, validateAndroidReaderVisibility } from './androidReaderVisibility';
 import { startAndroidSelectionTrace, stopAndroidSelectionTrace, validateAndroidSelectionTrace } from './androidSelectionTrace';
 
 const eventNames = [
@@ -35,9 +36,10 @@ export function provideSupportLogSlowOperations(reader: (() => unknown) | undefi
 
 function makeReport(elapsedMs: number, events: Entry[], dropped: number,
   androidSelection?: ReturnType<typeof stopAndroidSelectionTrace>, appVersion: string = packageJson.version,
-  androidFlow?: ReturnType<typeof stopAndroidFlowTiming>) {
+  androidFlow?: ReturnType<typeof stopAndroidFlowTiming>, androidReader?: ReturnType<typeof stopAndroidReaderVisibility>) {
   return { schemaVersion: 1, appVersion, elapsedMs, events, omittedEventCount: dropped,
-    ...(androidSelection ? { androidSelection } : {}), ...(androidFlow ? { androidFlow } : {}) };
+    ...(androidSelection ? { androidSelection } : {}), ...(androidFlow ? { androidFlow } : {}),
+    ...(androidReader ? { androidReader } : {}) };
 }
 
 function validEntry(value: unknown): value is Entry {
@@ -64,7 +66,8 @@ function loadCompleted() {
       validateAndroidSelectionTrace(report.androidSelection) ? report.androidSelection : undefined,
       typeof report.appVersion === 'string' && /^\d+\.\d+\.\d+(?:[-+][a-z0-9.-]+)?$/iu.test(report.appVersion)
         ? report.appVersion : undefined,
-      validateAndroidFlowTiming(report.androidFlow) ? report.androidFlow : undefined);
+      validateAndroidFlowTiming(report.androidFlow) ? report.androidFlow : undefined,
+      validateAndroidReaderVisibility(report.androidReader) ? report.androidReader : undefined);
     state = { phase: 'ready', startedAt: 0 };
   } catch {
     // An unavailable or unreadable browser store has no previous export.
@@ -112,7 +115,10 @@ export function startSupportLog(androidSelection = false, mobile = false) {
   omitted = 0;
   publish({ phase: 'recording', startedAt: Date.now() });
   if (androidSelection) startAndroidSelectionTrace();
-  else if (mobile && getCompanionRuntimeCapability().kind === 'android-native') startAndroidFlowTiming();
+  else if (mobile && getCompanionRuntimeCapability().kind === 'android-native') {
+    startAndroidFlowTiming();
+    startAndroidReaderVisibility();
+  }
   timer = setTimeout(stopSupportLog, duration);
 }
 
@@ -120,7 +126,8 @@ export function stopSupportLog() {
   if (state.phase !== 'recording') return;
   clearTimeout(timer);
   const elapsed = Math.min(duration, Math.max(0, Date.now() - state.startedAt));
-  completed = makeReport(elapsed, entries, omitted, stopAndroidSelectionTrace(), undefined, stopAndroidFlowTiming());
+  completed = makeReport(elapsed, entries, omitted, stopAndroidSelectionTrace(), undefined, stopAndroidFlowTiming(),
+    stopAndroidReaderVisibility());
   expiresAt = Date.now() + retention;
   try {
     localStorage.setItem(storageKey, JSON.stringify({ report: completed, expiresAt }));
@@ -157,10 +164,11 @@ export function hasAndroidSelectionSupportReport() {
 export function serializeSupportLog(platform: 'desktop' | 'android' | 'ios', androidSelection?: boolean) {
   expireSupportLog();
   if (state.phase !== 'ready' || !completed || !completed.events.every(validEntry)) return null;
-  const { androidSelection: trace, androidFlow, ...report } = completed;
+  const { androidSelection: trace, androidFlow, androidReader, ...report } = completed;
   if (androidSelection && !trace) return null;
   const slowOperations = platform !== 'desktop' && !androidSelection ? readSlowOperations?.() : undefined;
   return JSON.stringify({ ...report, ...(platform === 'android' && !androidSelection && androidFlow ? { androidFlow } : {}),
+    ...(platform === 'android' && !androidSelection && androidReader ? { androidReader } : {}),
     ...(slowOperations ? { slowOperations } : {}), ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
     null, trace && androidSelection !== false ? undefined : 2);
 }
