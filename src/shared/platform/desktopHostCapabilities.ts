@@ -37,3 +37,9 @@ export async function loadDesktopHostCapabilities(): Promise<DesktopHostCapabili
     loginItemSupported: value?.loginItemSupported === true
   };
 }
+
+export async function openGlobalCaptureAccessibilitySettings() {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('global_capture_accessibility_settings_unavailable');
+  await invoke(NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings);
+}

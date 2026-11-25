@@ -1,7 +1,12 @@
 export const EN_SETTINGS_CAPTURE_TRANSLATIONS = {
   'settings.capture.sectionAria': 'Global capture settings',
   'settings.capture.sectionTitle': 'Global capture',
-  'settings.capture.sectionDescription': 'Save selected text from any window, a quick thought, or clipboard content straight to your Inbox.',
+  'settings.capture.sectionDescription': 'Select content in another app and press the shortcut to save it to your Foliole Inbox. With nothing selected, the shortcut opens a text box. Type a note to save it, or leave it empty and press Enter to import the clipboard.',
+  'settings.capture.accessibility.title': 'Accessibility permission',
+  'settings.capture.accessibility.authorized': 'Authorized',
+  'settings.capture.accessibility.unauthorized': 'Not authorized',
+  'settings.capture.accessibility.openSettings': 'Open System Settings',
+  'settings.capture.accessibility.openFailed': 'Could not open System Settings.',
   'settings.capture.searchDescription': 'View global capture options.',
   'settings.capture.searchTerms': 'global clip|global clipping|capture selection|clipboard capture',
   'settings.capture.permission.title': 'Selection access',

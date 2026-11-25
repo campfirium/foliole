@@ -222,3 +222,5 @@ The desktop command palette searches the settings index and opens the selected c
 On supported desktop hosts, Settings → General → Global capture shows the configured shortcut beside the section title. Selecting it opens the matching command in Hotkeys. Shortcut display and configuration are device-local UI actions with no Agent Control API or CLI route.
 
 The desktop editor menu disables Split Topic when the current document cannot be split and explains the reason in the menu. This menu action has no Agent Control API or CLI route.
+
+On macOS, General settings shows the device's Accessibility authorization for Global capture. Users can open the system Accessibility pane when access is missing. Authorization stays in macOS System Settings and has no Agent Control API or CLI route.

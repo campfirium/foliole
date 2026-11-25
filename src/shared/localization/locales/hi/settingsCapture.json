@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "किसी भी ऐप से क्लिप करने की सेटिंग",
   "settings.capture.sectionTitle": "किसी भी ऐप से क्लिप करें",
-  "settings.capture.sectionDescription": "किसी भी विंडो में चुना गया टेक्स्ट, कोई विचार या क्लिपबोर्ड की सामग्री सीधे अपने इनबॉक्स में सहेजें।",
+  "settings.capture.sectionDescription": "दूसरे ऐप में सामग्री चुनें और उसे Foliole के इनबॉक्स में सहेजने के लिए शॉर्टकट दबाएँ। कुछ भी चुना न हो, तो एक टेक्स्ट बॉक्स खुलेगा। उसमें नोट लिखें या उसे खाली छोड़कर क्लिपबोर्ड की सामग्री आयात करने के लिए Enter दबाएँ।",
+  "settings.capture.accessibility.title": "सुलभता की अनुमति",
+  "settings.capture.accessibility.authorized": "अनुमति है",
+  "settings.capture.accessibility.unauthorized": "अनुमति नहीं है",
+  "settings.capture.accessibility.openSettings": "सिस्टम सेटिंग्स खोलें",
+  "settings.capture.accessibility.openFailed": "सिस्टम सेटिंग्स नहीं खोली जा सकीं।",
   "settings.capture.permission.title": "चुनी हुई सामग्री का ऐक्सेस",
   "settings.capture.permission.granted": "जब आप किसी ऐप से क्लिप लेते हैं, तो Foliole चुनी हुई सामग्री कॉपी कर सकता है।",
   "settings.capture.permission.denied": "सिस्टम सेटिंग → निजता और सुरक्षा → ऐक्सेसिबिलिटी में Foliole को अनुमति दें।",

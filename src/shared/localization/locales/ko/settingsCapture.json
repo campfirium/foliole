@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "전역 캡처 설정",
   "settings.capture.sectionTitle": "글로벌 캡처",
-  "settings.capture.sectionDescription": "어느 창에서든 선택한 텍스트, 떠오른 생각 또는 클립보드 내용을 받은 편지함에 바로 저장하세요.",
+  "settings.capture.sectionDescription": "다른 앱에서 내용을 선택하고 단축키를 누르면 Foliole의 받은 편지함에 저장됩니다. 선택한 내용이 없으면 입력 칸이 열립니다. 메모를 입력하거나, 입력 칸을 비운 채 Enter 키를 눌러 클립보드 내용을 가져올 수 있습니다.",
+  "settings.capture.accessibility.title": "손쉬운 사용 권한",
+  "settings.capture.accessibility.authorized": "허용됨",
+  "settings.capture.accessibility.unauthorized": "허용되지 않음",
+  "settings.capture.accessibility.openSettings": "시스템 설정 열기",
+  "settings.capture.accessibility.openFailed": "시스템 설정을 열 수 없습니다.",
   "settings.capture.permission.title": "선택 액세스",
   "settings.capture.permission.granted": "Foliole은 전역 캡처를 실행할 때 현재 선택 항목을 복사할 수 있습니다.",
   "settings.capture.permission.denied": "시스템 설정 → 개인정보 보호 및 보안 → 접근성에서 Foliole을 허용하세요.",

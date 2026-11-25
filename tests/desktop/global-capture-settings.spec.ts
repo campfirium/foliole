@@ -5,7 +5,9 @@ import { openSettingsCategory } from './harness/settings';
 
 test('organizes controls and keeps capture behavior in General', async ({ desktopSession, desktopWindow }, testInfo) => {
   const general = await openSettingsCategory(desktopWindow, 'General');
-  await expect(general.getByText(/^(Selection access|选区访问)$/)).toBeVisible();
+  const captureSettings = general.getByRole('region', { name: /^(Global capture settings|全局剪辑设置)$/ });
+  await expect(captureSettings.getByText(/leave it empty and press Enter|留空直接按回车/i)).toBeVisible();
+  await expect(captureSettings.getByText(/^(Accessibility permission|辅助功能权限)$/)).toBeVisible();
   await expect(general.getByRole('button', { name: /^(Capture|剪辑)$/ })).toHaveCount(0);
   const position = general.getByRole('combobox', { name: /^(Confirmation position|完成提示位置)$/ });
   await expect(position).toHaveValue('top-right');

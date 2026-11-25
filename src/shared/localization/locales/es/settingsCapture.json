@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "Configuración de captura global",
   "settings.capture.sectionTitle": "Captura global",
-  "settings.capture.sectionDescription": "Guarda texto seleccionado en cualquier ventana, una idea rápida o el contenido del portapapeles directamente en tu bandeja de entrada.",
+  "settings.capture.sectionDescription": "Selecciona contenido en otra aplicación y pulsa el atajo para guardarlo en la bandeja de entrada de Foliole. Si no hay nada seleccionado, el atajo abre un campo de texto. Escribe una nota o deja el campo vacío y pulsa Intro para importar el portapapeles.",
+  "settings.capture.accessibility.title": "Permiso de accesibilidad",
+  "settings.capture.accessibility.authorized": "Concedido",
+  "settings.capture.accessibility.unauthorized": "Sin conceder",
+  "settings.capture.accessibility.openSettings": "Abrir Ajustes del Sistema",
+  "settings.capture.accessibility.openFailed": "No se pudieron abrir los Ajustes del Sistema.",
   "settings.capture.permission.title": "Acceso a selección",
   "settings.capture.permission.granted": "Foliole puede copiar la selección actual cuando ejecuta la captura global.",
   "settings.capture.permission.denied": "Permitir Foliole en Configuración del sistema → Privacidad y seguridad → Accesibilidad.",

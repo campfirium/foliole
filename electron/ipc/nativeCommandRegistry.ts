@@ -45,6 +45,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.openExternalUrl, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openImportPermissionSettings, route: 'windowAndUtility', capability: 'externalOpen' },
+  { command: NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openImportRoot, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.listCssSnippetFiles, route: 'storage', capability: 'read' },

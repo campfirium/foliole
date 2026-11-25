@@ -5,6 +5,12 @@ export type GlobalClipIssueStatus = 'copyFailed' | 'empty' | 'importFailed' | 'p
 const MACOS_ACCESSIBILITY_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility';
 
+export async function openGlobalCaptureAccessibilitySettings(platform = process.platform) {
+  if (platform !== 'darwin') throw new Error('global_capture_accessibility_settings_unavailable');
+  await shell.openExternal(MACOS_ACCESSIBILITY_SETTINGS_URL);
+  return null;
+}
+
 export function resolveGlobalClipCopyIssue(permission: 'denied' | 'granted' | 'unavailable') {
   if (permission === 'granted') return null;
   return permission === 'denied' ? 'permissionRequired' as const : 'copyFailed' as const;
@@ -87,7 +93,7 @@ export async function presentGlobalClipIssue(
   try {
     const result = await dialog.showMessageBox(resolveGlobalClipIssueDialogOptions(status, app.getLocale()));
     if (status === 'permissionRequired' && platform === 'darwin' && result.response === 1) {
-      await shell.openExternal(MACOS_ACCESSIBILITY_SETTINGS_URL);
+      await openGlobalCaptureAccessibilitySettings(platform);
     }
     return true;
   } catch (error) {

@@ -9,6 +9,7 @@ import { NATIVE_IMPORT_FILE_COMMANDS } from './nativeImportFileCommands.js';
 import { NATIVE_LOCAL_FILE_COMMANDS } from './nativeLocalFileCommands.js';
 import { NATIVE_REMINDER_COMMANDS } from './nativeReminderContract.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
+import { NATIVE_SYSTEM_SETTINGS_COMMANDS } from './nativeSystemSettingsCommands.js';
 import { NATIVE_WEBDAV_RELAY_COMMANDS } from './nativeWebDavRelayCommands.js';
 
 export const NATIVE_COMMANDS = {
@@ -38,8 +39,7 @@ export const NATIVE_COMMANDS = {
   loadSplitTopicPreview: 'load_split_topic_preview',
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',
-  openImportPermissionSettings: 'open_import_permission_settings',
-  openSyncGroupLocalNetworkSettings: 'open_sync_group_local_network_settings',
+  ...NATIVE_SYSTEM_SETTINGS_COMMANDS,
   openImportRoot: 'open_import_root',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
   previewReadwiseReaderImport: 'preview_readwise_reader_import',

@@ -54,7 +54,12 @@ function readFile(repoRoot, relativePath) {
 
 function collectCommandDefinitions(repoRoot) {
   const sources = [readFile(repoRoot, 'lib/platform/nativeCommands.ts')];
-  for (const file of ['lib/platform/nativeDiveCommands.ts', 'lib/platform/articleTarget.ts', 'lib/platform/nativeBackupToolCommands.ts']) {
+  for (const file of [
+    'lib/platform/nativeDiveCommands.ts',
+    'lib/platform/articleTarget.ts',
+    'lib/platform/nativeBackupToolCommands.ts',
+    'lib/platform/nativeSystemSettingsCommands.ts'
+  ]) {
     if (fs.existsSync(path.join(repoRoot, file))) sources.push(readFile(repoRoot, file));
   }
   return sources.flatMap(source =>

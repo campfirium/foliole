@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "グローバル キャプチャ設定",
   "settings.capture.sectionTitle": "グローバル キャプチャ",
-  "settings.capture.sectionDescription": "任意のウィンドウで選択したテキスト、思いついたアイデア、クリップボードの内容をすぐに受信トレイへ保存できます。",
+  "settings.capture.sectionDescription": "別のアプリで内容を選択してショートカットキーを押すと、Foliole の受信トレイに保存できます。何も選択していない場合は入力欄が開きます。メモを入力するか、空欄のまま Enter キーを押してクリップボードの内容を取り込めます。",
+  "settings.capture.accessibility.title": "アクセシビリティの許可",
+  "settings.capture.accessibility.authorized": "許可済み",
+  "settings.capture.accessibility.unauthorized": "未許可",
+  "settings.capture.accessibility.openSettings": "システム設定を開く",
+  "settings.capture.accessibility.openFailed": "システム設定を開けませんでした。",
   "settings.capture.permission.title": "選択アクセス",
   "settings.capture.permission.granted": "Foliole は、グローバル キャプチャを実行するときに現在の選択内容をコピーできます。",
   "settings.capture.permission.denied": "システム設定 → プライバシーとセキュリティ → アクセシビリティで Foliole を許可します。",

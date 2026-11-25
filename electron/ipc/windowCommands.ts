@@ -9,6 +9,7 @@ import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { loadArticleTargets, selectArticleTarget } from '../edgeReading/articleTargetSettings.js';
 import { sendArticleToEdge } from '../edgeReading/sendArticleToEdge.js';
 import { runFolioleCliInstallAction } from '../folioleCliInstallation.js';
+import { openGlobalCaptureAccessibilitySettings } from '../globalClipIssueDialog.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import {
@@ -147,6 +148,9 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  if (request.command === NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings) {
+    return openGlobalCaptureAccessibilitySettings();
+  }
   if (request.command === NATIVE_COMMANDS.openImportPermissionSettings) {
     return process.platform === 'darwin' ? openSystemSettings() : null;
   }

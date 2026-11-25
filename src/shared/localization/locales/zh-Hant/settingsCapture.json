@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "全域擷取設定",
   "settings.capture.sectionTitle": "全球捕獲",
-  "settings.capture.sectionDescription": "快速擷取任意視窗中的選取文字、即時想法或剪貼簿內容，一鍵存入收件匣。",
+  "settings.capture.sectionDescription": "在其他 App 裡選取內容，按快捷鍵就能存到 Foliole 的收件匣。沒有選取內容時，按同一個快捷鍵會開啟輸入框。可以輸入筆記後儲存，也可以留空直接按 Enter，匯入剪貼簿裡的內容。",
+  "settings.capture.accessibility.title": "輔助使用權限",
+  "settings.capture.accessibility.authorized": "已授權",
+  "settings.capture.accessibility.unauthorized": "未授權",
+  "settings.capture.accessibility.openSettings": "打開系統設定",
+  "settings.capture.accessibility.openFailed": "無法打開系統設定。",
   "settings.capture.permission.title": "選擇訪問",
   "settings.capture.permission.granted": "Foliole 可以在執行全域擷取時複製目前選擇。",
   "settings.capture.permission.denied": "在系統設定 → 隱私和安全性 → 輔助功能中允許 Foliole。",

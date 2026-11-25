@@ -7,6 +7,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   loadDesktopHostCapabilities,
+  openGlobalCaptureAccessibilitySettings,
   type DesktopHostCapabilities
 } from '../../../../shared/platform/desktopHostCapabilities';
 import {
@@ -19,6 +20,7 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
+  settingsButtonClassName,
   settingsFieldClassName,
   settingsHotkeyChipClassName
 } from '../../../../shared/ui';
@@ -35,13 +37,61 @@ function loadToastPosition(): CaptureToastPosition {
     : 'top-right';
 }
 
-function permissionDescription(capabilities: DesktopHostCapabilities | null, t: ReturnType<typeof useTranslation>) {
-  if (!capabilities) return t('settings.capture.permission.checking');
-  if (capabilities.globalCaptureSupported === false) return t('settings.capture.permission.unsupported');
-  if (capabilities.globalCapturePermission === 'granted') return t('settings.capture.permission.granted');
-  if (capabilities.globalCapturePermission === 'denied') return t('settings.capture.permission.denied');
-  if (capabilities.globalCapturePermission === 'unavailable') return t('settings.capture.permission.unavailable');
-  return t('settings.capture.permission.notRequired');
+function CapturePermissionRow({ permission }: { permission: DesktopHostCapabilities['globalCapturePermission'] }) {
+  const t = useTranslation();
+  const [openFailed, setOpenFailed] = useState(false);
+  if (permission === 'notRequired') return null;
+  const denied = permission === 'denied';
+  const status = permission === 'granted' ? t('settings.capture.accessibility.authorized')
+    : denied ? t('settings.capture.accessibility.unauthorized') : t('settings.capture.permission.unavailable');
+  const openSettings = () => {
+    setOpenFailed(false);
+    void openGlobalCaptureAccessibilitySettings().catch(() => setOpenFailed(true));
+  };
+  return (
+    <SettingsRow
+      description={<><span aria-live="polite">{status}</span>{denied && openFailed ? (
+        <span className="block" role="alert">{t('settings.capture.accessibility.openFailed')}</span>
+      ) : null}</>}
+      readonly={!denied}
+      title={t('settings.capture.accessibility.title')}
+    >
+      {denied ? (
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button className={settingsButtonClassName()} onClick={openSettings} type="button">
+            {t('settings.capture.accessibility.openSettings')}
+          </button>
+        </SettingsControlSlot>
+      ) : null}
+    </SettingsRow>
+  );
+}
+
+function useCaptureHostCapabilities() {
+  const [capabilities, setCapabilities] = useState<DesktopHostCapabilities | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
+
+  useEffect(() => {
+    let request = 0;
+    const refresh = () => {
+      const current = ++request;
+      void loadDesktopHostCapabilities().then((value) => {
+        if (current !== request) return;
+        setCapabilities(value);
+        setCheckFailed(false);
+      }).catch(() => {
+        if (current === request) setCheckFailed(true);
+      });
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => {
+      request += 1;
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
+
+  return { capabilities, checkFailed };
 }
 
 function CaptureShortcutButton() {
@@ -75,19 +125,8 @@ function CaptureShortcutButton() {
 export function SettingsCaptureSection() {
   const t = useTranslation();
   const positionRow = useLocalizedSettingsSearchRow(SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID);
-  const [capabilities, setCapabilities] = useState<DesktopHostCapabilities | null>(null);
-  const [checkFailed, setCheckFailed] = useState(false);
+  const { capabilities, checkFailed } = useCaptureHostCapabilities();
   const [position, setPosition] = useState<CaptureToastPosition>(loadToastPosition);
-
-  useEffect(() => {
-    let active = true;
-    void loadDesktopHostCapabilities().then((value) => {
-      if (active) setCapabilities(value);
-    }).catch(() => {
-      if (active) setCheckFailed(true);
-    });
-    return () => { active = false; };
-  }, []);
 
   const updatePosition = (value: string) => {
     const nextPosition = value === 'bottom-right' ? 'bottom-right' : 'top-right';
@@ -100,15 +139,15 @@ export function SettingsCaptureSection() {
       actions={capabilities?.globalCaptureSupported ? <CaptureShortcutButton /> : null}
       ariaLabel={t('settings.capture.sectionAria')}
       className="[&_[data-settings-section-header]_p]:max-w-xl"
-      description={capabilities?.globalCaptureSupported ? t('settings.capture.sectionDescription') : undefined}
+      description={capabilities?.globalCaptureSupported ? t('settings.capture.sectionDescription')
+        : captureAvailabilityDescription(capabilities, checkFailed, t)}
       searchRowId={SETTINGS_CAPTURE_SEARCH_ROW_ID}
       title={t('settings.capture.sectionTitle')}
     >
-      <SettingsRow
-        description={checkFailed ? t('settings.capture.permission.unavailable') : permissionDescription(capabilities, t)}
-        readonly
-        title={t('settings.capture.permission.title')}
-      />
+      {capabilities?.globalCaptureSupported ? (
+        <CapturePermissionRow permission={checkFailed && capabilities.globalCapturePermission !== 'notRequired'
+          ? 'unavailable' : capabilities.globalCapturePermission} />
+      ) : null}
       {capabilities?.globalCaptureToastPositionSupported ? (
         <SettingsRow
           description={positionRow.description}
@@ -130,4 +169,11 @@ export function SettingsCaptureSection() {
       ) : null}
     </SettingsSection>
   );
+}
+
+function captureAvailabilityDescription(
+  capabilities: DesktopHostCapabilities | null, checkFailed: boolean, t: ReturnType<typeof useTranslation>
+) {
+  if (checkFailed) return t('settings.capture.permission.unavailable');
+  return t(capabilities ? 'settings.capture.permission.unsupported' : 'settings.capture.permission.checking');
 }

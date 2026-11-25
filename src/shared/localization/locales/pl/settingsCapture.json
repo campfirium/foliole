@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "Globalne ustawienia przechwytywania",
   "settings.capture.sectionTitle": "Globalne przechwytywanie",
-  "settings.capture.sectionDescription": "Zapisuj tekst zaznaczony w dowolnym oknie, przelotne pomysły lub zawartość schowka bezpośrednio w skrzynce odbiorczej.",
+  "settings.capture.sectionDescription": "Zaznacz treść w innej aplikacji i naciśnij skrót, aby zapisać ją w skrzynce odbiorczej Foliole. Gdy nic nie jest zaznaczone, otworzy się pole tekstowe. Wpisz notatkę albo pozostaw pole puste i naciśnij Enter, aby zaimportować zawartość schowka.",
+  "settings.capture.accessibility.title": "Uprawnienie dostępu w funkcjach dostępności",
+  "settings.capture.accessibility.authorized": "Przyznane",
+  "settings.capture.accessibility.unauthorized": "Nieprzyznane",
+  "settings.capture.accessibility.openSettings": "Otwórz Ustawienia systemowe",
+  "settings.capture.accessibility.openFailed": "Nie można otworzyć Ustawień systemowych.",
   "settings.capture.permission.title": "Dostęp do wyboru",
   "settings.capture.permission.granted": "Foliole może skopiować bieżący wybór po uruchomieniu przechwytywania globalnego.",
   "settings.capture.permission.denied": "Zezwól na Foliole w Ustawieniach systemu → Prywatność i bezpieczeństwo → Dostępność.",

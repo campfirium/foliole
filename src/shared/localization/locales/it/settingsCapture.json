@@ -1,7 +1,12 @@
 {
   "settings.capture.sectionAria": "Impostazioni di acquisizione globali",
   "settings.capture.sectionTitle": "Cattura globale",
-  "settings.capture.sectionDescription": "Salva direttamente nella posta in arrivo il testo selezionato in qualsiasi finestra, un’idea al volo o il contenuto degli appunti.",
+  "settings.capture.sectionDescription": "Seleziona del contenuto in un’altra app e premi la scorciatoia per salvarlo nella posta in arrivo di Foliole. Senza una selezione, si apre un campo di testo. Scrivi una nota oppure lascia il campo vuoto e premi Invio per importare gli appunti.",
+  "settings.capture.accessibility.title": "Autorizzazione di accessibilità",
+  "settings.capture.accessibility.authorized": "Concessa",
+  "settings.capture.accessibility.unauthorized": "Non concessa",
+  "settings.capture.accessibility.openSettings": "Apri Impostazioni di Sistema",
+  "settings.capture.accessibility.openFailed": "Impossibile aprire Impostazioni di Sistema.",
   "settings.capture.permission.title": "Accesso alla selezione",
   "settings.capture.permission.granted": "Foliole può copiare la selezione corrente quando si esegue l'acquisizione globale.",
   "settings.capture.permission.denied": "Consenti Foliole in Impostazioni di sistema → Privacy e sicurezza → Accessibilità.",

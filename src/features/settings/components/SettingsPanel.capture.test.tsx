@@ -39,8 +39,8 @@ it('keeps capture behavior settings in General instead of the hotkey command lis
   fireEvent.click(await screen.findByRole('button', { name: 'General' }));
 
   expect(screen.queryByRole('button', { name: 'Capture' })).not.toBeInTheDocument();
-  expect(await screen.findByText('Selection access')).toBeInTheDocument();
-  expect(screen.getByText('Allow Foliole in System Settings → Privacy & Security → Accessibility.')).toBeInTheDocument();
+  expect(await screen.findByText('Accessibility permission')).toBeInTheDocument();
+  expect(screen.getByText('Not authorized')).toBeInTheDocument();
   const position = screen.getByRole('combobox', { name: 'Confirmation position' });
   expect(position).toHaveValue('top-right');
 
