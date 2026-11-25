@@ -124,7 +124,8 @@ function withEmptyFlowMenu(resolved: Omit<ComponentProps<typeof CompanionTopBar>
     return { ...resolved, rightSlot: createElement(Fragment, null,
       createElement(CompanionFlowCaptureButton),
       createElement(CompanionFlowModeMenu, {
-        controls: { mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode, disabled: !surface.flowReady }
+        controls: { mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode, disabled: !surface.flowReady,
+          sessionTiming: surface.flowSummary }
       })) };
   }
   return resolved;

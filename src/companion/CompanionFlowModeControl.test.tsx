@@ -36,3 +36,29 @@ it('keeps mode switching available without a current article and respects pendin
   fireEvent.click(screen.getByRole('button', { name: 'Review first' }));
   expect(onChange).not.toHaveBeenCalled();
 });
+
+it('shows how long this Flow round spent on review and on reading', () => {
+  render(<CompanionFlowModeContext.Provider value={{ mode: 'recommended', onChange: vi.fn(), disabled: false,
+    sessionTiming: { reviewedItemCount: 3, reviewElapsedMs: 4 * 60_000, readTopicCount: 1, readingElapsedMs: 75 * 60_000 } }}>
+    <ReadingActionsSheet open onFindInDocument={vi.fn()} onOpenChange={vi.fn()} onOpenReadingSheet={vi.fn()} />
+  </CompanionFlowModeContext.Provider>);
+  const summary = screen.getByRole('group', { name: 'Queue summary' });
+  expect(summary).toHaveTextContent('Reviewed3 items4 min');
+  expect(summary).toHaveTextContent('Read1 topic1 hr 15 min');
+});
+
+it('leaves out timing rows for work this Flow round has not done', () => {
+  render(<CompanionFlowModeMenu controls={{ mode: 'recommended', onChange: vi.fn(), disabled: false,
+    sessionTiming: { reviewedItemCount: 0, reviewElapsedMs: 0, readTopicCount: 2, readingElapsedMs: 20_000 } }} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+  const summary = screen.getByRole('group', { name: 'Queue summary' });
+  expect(summary).not.toHaveTextContent('Reviewed');
+  expect(summary).toHaveTextContent('Read2 topics1 min');
+});
+
+it('hides the timing summary before any Flow work', () => {
+  render(<CompanionFlowModeMenu controls={{ mode: 'recommended', onChange: vi.fn(), disabled: false,
+    sessionTiming: { reviewedItemCount: 0, reviewElapsedMs: 0, readTopicCount: 0, readingElapsedMs: 0 } }} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+  expect(screen.queryByRole('group', { name: 'Queue summary' })).not.toBeInTheDocument();
+});

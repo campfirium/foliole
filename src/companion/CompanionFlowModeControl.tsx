@@ -1,6 +1,7 @@
-import { MoreHorizontal, Route } from 'lucide-react';
+import { Clock3, MoreHorizontal, Route } from 'lucide-react';
 import { createContext, useContext, useState } from 'react';
 
+import { formatReviewSessionElapsed } from '../features/review/model/reviewSessionElapsedLabel';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { ReviewToolbarProgressCounts } from '../features/review/model/reviewToolbarProgressLabel';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -13,6 +14,11 @@ export type CompanionFlowModeControls = {
   onChange(mode: ReviewSessionMode): void;
   disabled: boolean;
   progressCounts?: ReviewToolbarProgressCounts | undefined;
+  sessionTiming?: CompanionFlowSessionTiming | undefined;
+};
+/** This Flow round's completed work and the time spent on each kind, as the desktop queue summary shows it. */
+export type CompanionFlowSessionTiming = {
+  reviewedItemCount: number; reviewElapsedMs: number; readTopicCount: number; readingElapsedMs: number;
 };
 export const CompanionFlowModeContext = createContext<CompanionFlowModeControls | null>(null);
 
@@ -42,6 +48,30 @@ export function CompanionFlowModeControl(props: { onSelect(): void }) {
           {t('settings.icons.node.topic')} {controls.progressCounts.completedTopicCount}/{controls.progressCounts.completedTopicCount + controls.progressCounts.queuedTopicCount}</span>
       </div>
     ) : null}
+    {controls.sessionTiming ? <FlowSessionTimingRows timing={controls.sessionTiming} /> : null}
+  </div>;
+}
+
+function FlowSessionTimingRows({ timing }: { timing: CompanionFlowSessionTiming }) {
+  const t = useTranslation();
+  const rows = [
+    { key: 'review', count: timing.reviewedItemCount, elapsedMs: timing.reviewElapsedMs,
+      label: t('desktop.reviewSession.summary.reviewed'),
+      unit: t(timing.reviewedItemCount === 1 ? 'desktop.reviewSession.summary.item' : 'desktop.reviewSession.summary.items') },
+    { key: 'read', count: timing.readTopicCount, elapsedMs: timing.readingElapsedMs,
+      label: t('desktop.reviewSession.summary.read'),
+      unit: t(timing.readTopicCount === 1 ? 'desktop.reviewSession.summary.topic' : 'desktop.reviewSession.summary.topics') }
+  ].filter(row => row.count > 0);
+  if (!rows.length) return null;
+  return <div role="group" aria-label={t('desktop.reviewSession.summary.label')} className="border-b border-companion-divider py-2.5 text-sm">
+    {rows.map((row, index) => (
+      <div key={row.key} className="flex min-h-9 items-center gap-3">
+        <Clock3 aria-hidden="true" className={`h-5 w-5 shrink-0 text-companion-text-secondary ${index === 0 ? '' : 'invisible'}`} />
+        <span className="font-medium">{row.label}</span>
+        <span className="tabular-nums text-companion-text-secondary">{row.count} {row.unit}</span>
+        <span className="ml-auto text-right tabular-nums text-companion-text-secondary">{formatReviewSessionElapsed(row.elapsedMs, t)}</span>
+      </div>
+    ))}
   </div>;
 }
 
