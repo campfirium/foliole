@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Propre",
   "desktop.diagnostics.scheduling.prioritySource.default": "Par défaut",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Héritée)",
+  "companion.reviewOptions.enforcedInheritance": "Imposée",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Imposée)",
   "desktop.diagnostics.scheduling.priorityRatio": "Rapport de poids de la file d'attente",
   "desktop.diagnostics.scheduling.priorityWeight": "Poids actuel de la file d'attente",

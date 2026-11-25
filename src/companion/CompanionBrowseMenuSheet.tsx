@@ -27,9 +27,10 @@ import {
 } from './companionBrowseSortLabels';
 import { useCompanionDirectoryBatchMenuAction, useCompanionEmptyTrashMenuAction } from './CompanionDirectoryBatchMenu';
 import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
+import { CompanionNodeReviewOptionsContent } from './CompanionNodeReviewOptions';
 import { CompanionWorkspaceCreateChoices, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
-type BrowseMenuView = 'menu' | 'new' | 'sort';
+type BrowseMenuView = 'menu' | 'new' | 'sort' | 'review';
 
 function BrowseMenuHeader(props: {
   onBack(): void;
@@ -66,6 +67,7 @@ function BrowseMainMenu(props: {
   page: CompanionBrowsePage;
   onClose(): void;
   onOpenNew(): void;
+  onOpenReview(): void;
   onOpenSort?: () => void;
 }) {
   const t = useTranslation();
@@ -87,7 +89,7 @@ function BrowseMainMenu(props: {
         props.onClose();
         emptyTrash();
       }} />}
-      <CompanionBrowseContainerSection page={props.page} onClose={props.onClose} />
+      <CompanionBrowseContainerSection page={props.page} onClose={props.onClose} onOpenReview={props.onOpenReview} />
     </>
   );
 }
@@ -149,7 +151,10 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
   const canCreate = page.kind === 'folder' || page.kind === 'root';
   const [selectedView, setView] = useState<BrowseMenuView>('menu');
   const canSort = page.kind !== 'root' && page.kind !== 'dive' && !props.diveActions;
-  const view = (selectedView === 'new' && !canCreate) || (selectedView === 'sort' && !canSort) ? 'menu' : selectedView;
+  const view = (selectedView === 'new' && !canCreate) || (selectedView === 'sort' && !canSort) ||
+    (selectedView === 'review' && page.kind !== 'folder') ? 'menu' : selectedView;
+  const titles = { menu: props.menuTitle, new: t('companion.browse.createHere'),
+    sort: t('companion.browse.sort'), review: t('desktop.nodeReview.title') };
   const handleOpenChange = (open: boolean) => {
     if (!open) setView('menu');
     props.onOpenChange(open);
@@ -161,7 +166,7 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
       leadingAction={<BrowseMenuHeader onBack={() => setView('menu')} view={view} />}
       onOpenChange={handleOpenChange}
       open={props.open}
-      title={view === 'menu' ? props.menuTitle : t(view === 'new' ? 'companion.browse.createHere' : 'companion.browse.sort')}
+      title={titles[view]}
     >
       {view === 'menu' ? (
         <BrowseMainMenu
@@ -170,8 +175,11 @@ export function CompanionBrowseMenuSheet(props: CompanionBrowseMenuSheetProps) {
           page={page}
           onClose={close}
           onOpenNew={() => setView('new')}
+          onOpenReview={() => setView('review')}
           {...(canSort ? { onOpenSort: () => setView('sort') } : {})}
         />
+      ) : view === 'review' && page.kind === 'folder' ? (
+        <CompanionNodeReviewOptionsContent nodeId={page.nodeId} />
       ) : view === 'new' && page.kind === 'folder' ? (
         <CompanionFolderCreateChoices nodeId={page.nodeId} onClose={close} />
       ) : view === 'new' && page.kind === 'root' ? (

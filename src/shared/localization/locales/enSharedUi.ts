@@ -103,6 +103,7 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'desktop.diagnostics.scheduling.prioritySource.own': 'Own',
   'desktop.diagnostics.scheduling.prioritySource.default': 'Default',
   'desktop.diagnostics.scheduling.prioritySource.inherited': '(Inherited)',
+  'companion.reviewOptions.enforcedInheritance': 'Enforced inheritance',
   'desktop.diagnostics.scheduling.prioritySource.enforced': '(Enforced)',
   'desktop.diagnostics.scheduling.priorityRatio': 'Queue weight ratio',
   'desktop.diagnostics.scheduling.priorityWeight': 'Current queue weight',

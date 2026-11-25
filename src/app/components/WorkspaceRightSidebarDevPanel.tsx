@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react';
 
 import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTypes';
+import {
+  formatDateTime,
+  formatDurationDays,
+  formatDurationMs,
+  formatNumber,
+  formatPercent,
+  formatPriorityWeight,
+  resolveSchedulingPanelData,
+  type SchedulingPanelData
+} from '../../features/review/model/schedulingPanelData';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
@@ -18,16 +28,6 @@ import {
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { SchedulingPrioritySource } from './SchedulingPrioritySource';
-import {
-  formatDateTime,
-  formatDurationDays,
-  formatDurationMs,
-  formatNumber,
-  formatPercent,
-  formatPriorityWeight,
-  resolveSchedulingPanelData,
-  type SchedulingPanelData
-} from './WorkspaceRightSidebarSchedulingPanelModel';
 
 interface WorkspaceRightSidebarDevPanelProps {
   activeNodeId: string | null;

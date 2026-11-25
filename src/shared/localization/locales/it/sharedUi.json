@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Propria",
   "desktop.diagnostics.scheduling.prioritySource.default": "Predefinita",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Ereditata)",
+  "companion.reviewOptions.enforcedInheritance": "Imposta",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Imposta)",
   "desktop.diagnostics.scheduling.priorityRatio": "Rapporto peso coda",
   "desktop.diagnostics.scheduling.priorityWeight": "Peso corrente della coda",

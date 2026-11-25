@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Собственный",
   "desktop.diagnostics.scheduling.prioritySource.default": "По умолчанию",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Унаследованный)",
+  "companion.reviewOptions.enforcedInheritance": "Принудительный",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Принудительный)",
   "desktop.diagnostics.scheduling.priorityRatio": "Коэффициент веса очереди",
   "desktop.diagnostics.scheduling.priorityWeight": "Текущий вес очереди",

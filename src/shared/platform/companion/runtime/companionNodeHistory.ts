@@ -68,11 +68,12 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
       if (!node) throw new Error('workspace_mutation_not_applied');
       const previous = before[i];
       const priorityChanged = Boolean(previous && (previous.priority ?? null) !== (node.priority ?? null));
+      const enforcementChanged = Boolean(previous && (previous.enforcePriority === true) !== (node.enforcePriority === true));
       const orderChanged = Boolean(previous && JSON.stringify(previous.manualChildOrder ?? null) !== JSON.stringify(node.manualChildOrder ?? null));
       const reviewChanged = Boolean(previous && ((previous.desiredRetention ?? null) !== (node.desiredRetention ?? null) ||
         (previous.enableShortTerm ?? null) !== (node.enableShortTerm ?? null)));
-      return { nodeId: node.id, before: previous ? workspaceNodeMetadata(previous, priorityChanged, orderChanged, reviewChanged) : null,
-        after: workspaceNodeMetadata(node, priorityChanged, orderChanged, reviewChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
+      return { nodeId: node.id, before: previous ? workspaceNodeMetadata(previous, priorityChanged, orderChanged, reviewChanged, enforcementChanged) : null,
+        after: workspaceNodeMetadata(node, priorityChanged, orderChanged, reviewChanged, enforcementChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
     })
   };
   await appendCompanionFlowHistory(db, companionFlowHistoryKey(hostName ?? await iosCompanionHostName(db)), entry);
@@ -227,6 +228,8 @@ export async function createCompanionMetadataVersions(db: DbPort, nodes: readonl
       // A read that never loaded the review options leaves them as they are.
       ...('desiredRetention' in node ? { desired_retention: node.desiredRetention ?? null } : {}),
       ...('enableShortTerm' in node ? { enable_short_term: node.enableShortTerm ?? null } : {}) };
+    if (node.enforcePriority === true && node.kind === 'folder' && node.priority != null) snapshot.enforce_priority = true;
+    else if (node.enforcePriority === false) delete snapshot.enforce_priority;
     records.push({ ...current, snapshot, content_hash: topicTextSnapshotHash(snapshot), host_name: host,
       version_id: versionId ?? `ver_${createCompanionUuid()}`, version_created_at: node.updatedAt, updated_at: node.updatedAt,
       parent_version_id: current.version_id, parent_version_ids: current.version_id ? [current.version_id] : [],

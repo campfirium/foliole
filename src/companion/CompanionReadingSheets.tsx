@@ -12,7 +12,6 @@ import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryAct
 import { CompanionEditorDisplayModeAction } from './CompanionEditorDisplayModeAction';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
-import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { CompanionReadingDisplayControls } from './CompanionReadingDisplayControls';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
@@ -20,6 +19,7 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, companionWorkspaceRowClass } from './CompanionWorkspaceMenuActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
+import { useReadingReviewNavigation } from './useReadingReviewNavigation';
 
 export { ReadingBottomSheet };
 
@@ -82,10 +82,10 @@ function useDocumentSearchFocusHandoff(openSearch: () => void) {
   };
 }
 
-export function ReadingActionsSheet(props: {
+interface ReadingActionsSheetProps {
   editHistory?: CompanionEditHistoryActionsProps;
   nodeId?: string;
-  priorityNodeId?: string;
+  reviewNodeId?: string;
   onFindInDocument(): void;
   onOpenOutline?: () => void;
   onOpenBacklinks?: () => void;
@@ -99,46 +99,52 @@ export function ReadingActionsSheet(props: {
   title?: string;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
-}) {
+}
+
+export function ReadingActionsSheet(props: ReadingActionsSheetProps) {
   const t = useTranslation();
   const restore = useCompanionTrashRestoreAction(props);
   const search = useDocumentSearchFocusHandoff(props.onFindInDocument);
+  const review = useReadingReviewNavigation(props.reviewNodeId, () => props.onOpenChange(false));
   return (
-    <ReadingBottomSheet hideCloseButton showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={props.title || t('companion.reading.actions')}
-      onCloseAutoFocus={search.onCloseAutoFocus}>
-      <ReadingWorkspaceActions nodeId={props.nodeId} onClose={() => props.onOpenChange(false)} hasRestoreAction={Boolean(props.onRestoreFromTrash)}>
-        <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
-        <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
-        <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
-        <CompanionNodePrioritySlider nodeId={props.priorityNodeId} allowFlowTopic onSaved={() => props.onOpenChange(false)} />
-        {props.showEditorDisplayModeToggle ? <CompanionEditorDisplayModeAction onDone={() => props.onOpenChange(false)} /> : null}
-        <ReadingActionRow
-          icon={<Search aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.reading.find')}
-          onClick={search.openSearch}
-        />
-        <ReadingActionRow
-          icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.reading.font')}
-          onClick={() => { props.onOpenChange(false); props.onOpenReadingSheet('font'); }}
-        />
-        {props.onOpenOutline ? <ReadingActionRow
-          icon={<ListTree aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.reading.outline')}
-          onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
-        /> : null}
-        <ReadingBacklinksAction onClose={() => props.onOpenChange(false)} onOpen={props.onOpenBacklinks} />
-        {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
-        {props.articleCopy && <ReadingArticleHandoff {...props.articleCopy} copy />}
-        {props.pdfSave && <ReadingPdfSaveAction {...props.pdfSave} />}
-        {props.onOpenClozeRemoval ? <ReadingActionRow
-          icon={<X aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.selection.deleteCloze')}
-          onClick={props.onOpenClozeRemoval}
-        /> : null}
-        {props.onRestoreFromTrash && <ReadingTrashRestoreAction restore={restore} />}
-      </ReadingWorkspaceActions>
-    </ReadingBottomSheet>
+    <>
+      <ReadingBottomSheet hideCloseButton showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={props.title || t('companion.reading.actions')}
+        onCloseAutoFocus={search.onCloseAutoFocus}>
+        <ReadingWorkspaceActions nodeId={props.nodeId} onClose={() => props.onOpenChange(false)} hasRestoreAction={Boolean(props.onRestoreFromTrash)}>
+          <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
+          <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
+          <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
+          {review.entries}
+          {props.showEditorDisplayModeToggle ? <CompanionEditorDisplayModeAction onDone={() => props.onOpenChange(false)} /> : null}
+          <ReadingActionRow
+            icon={<Search aria-hidden="true" className="h-5 w-5" />}
+            label={t('companion.reading.find')}
+            onClick={search.openSearch}
+          />
+          <ReadingActionRow
+            icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}
+            label={t('companion.reading.font')}
+            onClick={() => { props.onOpenChange(false); props.onOpenReadingSheet('font'); }}
+          />
+          {props.onOpenOutline ? <ReadingActionRow
+            icon={<ListTree aria-hidden="true" className="h-5 w-5" />}
+            label={t('companion.reading.outline')}
+            onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
+          /> : null}
+          <ReadingBacklinksAction onClose={() => props.onOpenChange(false)} onOpen={props.onOpenBacklinks} />
+          {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
+          {props.articleCopy && <ReadingArticleHandoff {...props.articleCopy} copy />}
+          {props.pdfSave && <ReadingPdfSaveAction {...props.pdfSave} />}
+          {props.onOpenClozeRemoval ? <ReadingActionRow
+            icon={<X aria-hidden="true" className="h-5 w-5" />}
+            label={t('companion.selection.deleteCloze')}
+            onClick={props.onOpenClozeRemoval}
+          /> : null}
+          {props.onRestoreFromTrash && <ReadingTrashRestoreAction restore={restore} />}
+        </ReadingWorkspaceActions>
+      </ReadingBottomSheet>
+      {review.sheet}
+    </>
   );
 }
 

@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "자체",
   "desktop.diagnostics.scheduling.prioritySource.default": "기본값",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(상속)",
+  "companion.reviewOptions.enforcedInheritance": "강제 적용",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(강제 적용)",
   "desktop.diagnostics.scheduling.priorityRatio": "대기열 가중치 비율",
   "desktop.diagnostics.scheduling.priorityWeight": "현재 대기열 가중치",

@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "独自",
   "desktop.diagnostics.scheduling.prioritySource.default": "既定",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "（継承）",
+  "companion.reviewOptions.enforcedInheritance": "強制",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "（強制）",
   "desktop.diagnostics.scheduling.priorityRatio": "キューの重み比率",
   "desktop.diagnostics.scheduling.priorityWeight": "現在のキューの重み",

@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "अपनी",
   "desktop.diagnostics.scheduling.prioritySource.default": "डिफ़ॉल्ट",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(विरासत में मिली)",
+  "companion.reviewOptions.enforcedInheritance": "अनिवार्य",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(अनिवार्य)",
   "desktop.diagnostics.scheduling.priorityRatio": "कतार के वज़न का अनुपात",
   "desktop.diagnostics.scheduling.priorityWeight": "कतार का मौजूदा वज़न",

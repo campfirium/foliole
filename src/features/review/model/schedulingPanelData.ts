@@ -1,27 +1,31 @@
 import { FSRS7_DEFAULT_WEIGHTS, curve } from 'ts-fsrs/models/fsrs-7';
 
+import type { ReviewQueueNode } from '../../../../lib/core/review/queue/reviewQueuePlanner';
+import { resolveReviewQueueReadingDueAt } from '../../../../lib/core/review/queue/reviewQueuePlannerReadingPaths';
 import {
   resolveNodeDesiredRetentionSetting,
   resolveNodePrioritySetting,
   type ResolvedNodePriority,
   type ResolvedNodeSetting
-} from '../../features/nodes/model/nodeReviewSettings';
-import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../../features/review/model/reviewItemKind';
+} from '../../nodes/model/nodeReviewSettings';
+import type { Node } from '../../nodes/model/nodeTypes';
+import type { ReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
+
+import { isFsrsReviewItemNode, isReadingReviewItemNode } from './reviewItemKind';
 import {
   getPriorityWeight,
   getReadingIntervalGrowthFactor,
   normalizeRegularPushQueuePriority
-} from '../../features/review/model/unifiedPushQueueRules';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
-import { resolveReviewQueueReadingDueAt } from '../../store/reviewQueuePlannerReadingPaths';
+} from './unifiedPushQueueRules';
+
+type SchedulingNode = ReviewQueueNode & Pick<Node, 'desiredRetention' | 'title'>;
 
 export interface SchedulingPanelData {
   desiredRetention: ResolvedNodeSetting<number>;
   initialReadingIntervalMs: number;
   kind: 'item' | 'topic' | 'unsupported';
   nextReadingAt: string;
-  node: Node;
+  node: SchedulingNode;
   priority: ResolvedNodePriority;
   priorityRatio: number;
   readingGrowthFactor: number;
@@ -77,7 +81,7 @@ function getFsrsRetrievability(review: Node['review'], now: number) {
   return Number.isFinite(retrievability) ? retrievability : null;
 }
 
-function resolveKind(node: Node) {
+function resolveKind(node: SchedulingNode) {
   if (isReadingReviewItemNode(node)) return 'topic';
   if (isFsrsReviewItemNode(node)) return 'item';
   return 'unsupported';
@@ -85,8 +89,8 @@ function resolveKind(node: Node) {
 
 export function resolveSchedulingPanelData(args: {
   activeNodeId: string;
-  node?: Node;
-  nodesById: Record<string, Node>;
+  node?: SchedulingNode;
+  nodesById: Record<string, SchedulingNode>;
   reviewSchedulerSettings: ReviewSchedulerSettings;
 }): SchedulingPanelData | null {
   const node = args.node ?? args.nodesById[args.activeNodeId];

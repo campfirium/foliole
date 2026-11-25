@@ -7,6 +7,7 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 
 import { CompanionDirectoryConversionRows, useDirectoryConversionMenu } from './CompanionDirectoryConversionMenu';
 import { CompanionMenuRow } from './CompanionMenuSheet';
+import { canEditCompanionNodeReviewOptions } from './CompanionNodeReviewOptions';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, getCompanionWorkspaceMenuOptions } from './CompanionWorkspaceMenuActions';
 import type { WorkspaceNodeSheetState } from './CompanionWorkspaceNodeSheet';
@@ -52,8 +53,9 @@ export function CompanionFolderCreateChoices({ nodeId, onClose }: { nodeId: stri
     }} />)}</>;
 }
 
-function FolderSection({ nodeId, onClose }: { nodeId: string; onClose(): void }) {
+function FolderSection({ nodeId, onClose, onOpenReview }: { nodeId: string; onClose(): void; onOpenReview(): void }) {
   const { workspace, ready, title } = useContainerNode(nodeId);
+  const { t } = useLocalization();
   if (!ready || !workspace) return null;
   const open = (state: WorkspaceNodeSheetState) => {
     onClose();
@@ -61,6 +63,9 @@ function FolderSection({ nodeId, onClose }: { nodeId: string; onClose(): void })
   };
   return <>
     <div className={sectionClass}>{title}</div>
+    {workspace.snapshot && canEditCompanionNodeReviewOptions(nodeId, workspace.snapshot.nodesById)
+      && <CompanionMenuRow disabled={workspace.busy || workspace.pending} label={t('desktop.nodeReview.title')}
+        onSelect={onOpenReview} trailingIcon={ChevronRight} />}
     <CompanionWorkspaceMenuActions nodeId={nodeId} menuRows hideCreate onSelect={open} />
   </>;
 }
@@ -116,8 +121,8 @@ export function CompanionBrowseContainerActions({ page, onClose, onOpenCreate }:
 }
 
 /** The section named after the current container: actions on the container itself. */
-export function CompanionBrowseContainerSection({ page, onClose }: { page: CompanionBrowsePage; onClose(): void }) {
-  if (page.kind === 'folder') return <FolderSection nodeId={page.nodeId} onClose={onClose} />;
+export function CompanionBrowseContainerSection({ page, onClose, onOpenReview }: { page: CompanionBrowsePage; onClose(): void; onOpenReview(): void }) {
+  if (page.kind === 'folder') return <FolderSection nodeId={page.nodeId} onClose={onClose} onOpenReview={onOpenReview} />;
   if (page.kind === 'dive') return <DiveSection nodeId={page.nodeId} onClose={onClose} />;
   if (page.kind === 'index') return <IndexSection nodeId={page.nodeId} onClose={onClose} />;
   return null;

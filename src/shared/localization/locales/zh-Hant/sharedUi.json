@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "自身",
   "desktop.diagnostics.scheduling.prioritySource.default": "預設",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "（繼承）",
+  "companion.reviewOptions.enforcedInheritance": "強制繼承",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "（強制繼承）",
   "desktop.diagnostics.scheduling.priorityRatio": "隊列權重比",
   "desktop.diagnostics.scheduling.priorityWeight": "目前隊列權重",

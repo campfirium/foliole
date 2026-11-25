@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Própria",
   "desktop.diagnostics.scheduling.prioritySource.default": "Padrão",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Herdada)",
+  "companion.reviewOptions.enforcedInheritance": "Forçada",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Forçada)",
   "desktop.diagnostics.scheduling.priorityRatio": "Proporção de peso da fila",
   "desktop.diagnostics.scheduling.priorityWeight": "Peso atual da fila",

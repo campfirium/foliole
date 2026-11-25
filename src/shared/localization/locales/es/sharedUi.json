@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Propia",
   "desktop.diagnostics.scheduling.prioritySource.default": "Predeterminada",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Heredada)",
+  "companion.reviewOptions.enforcedInheritance": "Forzada",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Forzada)",
   "desktop.diagnostics.scheduling.priorityRatio": "Proporción de peso de cola",
   "desktop.diagnostics.scheduling.priorityWeight": "Peso de cola actual",

@@ -14,12 +14,19 @@
   --priority-track: rgb(var(--role-ink-rgb) / 0.08);
 }
 
+.desktop-priority-range[data-companion] {
+  height: 44px;
+  margin: 0;
+}
+
+.desktop-priority-range[data-companion]:disabled { opacity: 0.6; }
+
 .desktop-priority-range::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--priority-fill);
+  background: var(--priority-thumb, var(--priority-fill));
 }
 
 .desktop-priority-ring {

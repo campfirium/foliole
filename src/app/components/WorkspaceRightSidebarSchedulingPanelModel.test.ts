@@ -1,9 +1,8 @@
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { resolveSchedulingPanelData } from '../../features/review/model/schedulingPanelData';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
-
-import { resolveSchedulingPanelData } from './WorkspaceRightSidebarSchedulingPanelModel';
 
 function createTopicNode(overrides: Partial<Node> = {}): Node {
   return {

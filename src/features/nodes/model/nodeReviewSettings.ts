@@ -15,6 +15,14 @@ export type ResolvedNodePriority = ResolvedNodeSetting<PushQueuePriority> & { en
 
 export { normalizeNodeDesiredRetention, resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting, type ResolvedNodeSetting };
 
+export function nodePriorityOverride(kind: string, priority: number | null, enforcePriority?: boolean) {
+  return {
+    priority: priority === null ? null : normalizePushQueuePriority(priority),
+    ...(kind === 'folder' && (enforcePriority !== undefined || priority === null)
+      ? { enforcePriority: priority !== null && enforcePriority === true } : {})
+  };
+}
+
 export function resolveNodePrioritySetting(
   nodeId: string,
   nodesById: Record<string, ReviewSettingNode | undefined>,

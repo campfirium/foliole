@@ -6,7 +6,6 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 
 import { useCompanionListInteraction } from './CompanionListViewport';
 import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
-import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { CompanionNodeReviewMenuRows, CompanionNodeReviewOptionsSheet } from './CompanionNodeReviewOptions';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, getCompanionWorkspaceMenuOptions } from './CompanionWorkspaceMenuActions';
@@ -48,7 +47,6 @@ export function CompanionTopicListMenu({ rowMenu, nodeId, title, directDiveId }:
       <CompanionMenuSheet onOpenChange={setOpen} open={open} title={title}>
         <CompanionWorkspaceMenuActions menuRows nodeId={nodeId} onSaved={close}
           onSelect={state => { close(); workspace.open(state); }}>
-          <CompanionNodePrioritySlider nodeId={nodeId} onSaved={close} />
           <CompanionNodeReviewMenuRows nodeId={nodeId} onSaved={close} onOpenOptions={() => { close(); setOptionsOpen(true); }} />
           {directDiveId && <CompanionMenuRow label={t('desktop.nodeList.menu.removeFromDive')} disabled={workspace.busy || workspace.pending}
             onSelect={() => workspace.removeFromDive(directDiveId, [nodeId], close)} />}

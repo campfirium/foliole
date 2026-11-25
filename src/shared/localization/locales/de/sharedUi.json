@@ -103,6 +103,7 @@
   "desktop.diagnostics.scheduling.prioritySource.own": "Eigene",
   "desktop.diagnostics.scheduling.prioritySource.default": "Standard",
   "desktop.diagnostics.scheduling.prioritySource.inherited": "(Geerbt)",
+  "companion.reviewOptions.enforcedInheritance": "Erzwungen",
   "desktop.diagnostics.scheduling.prioritySource.enforced": "(Erzwungen)",
   "desktop.diagnostics.scheduling.priorityRatio": "Warteschlangengewichtsverhältnis",
   "desktop.diagnostics.scheduling.priorityWeight": "Aktuelle Warteschlangengewicht",

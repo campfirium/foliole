@@ -37,7 +37,7 @@ export function canDismissCompanionTopicBranch(node: MenuNodes[string], nodes: M
 const createIcons = { folder: FolderPlus, topic: FilePlus2, item: ListPlus } as const;
 
 /** Icon rows matching the reading sheet's own rows, so one sheet never mixes icon and text-only rows. */
-function IconRow(props: { icon: LucideIcon; label: string; destructive: boolean; disabled: boolean; onClick(): void }) {
+export function CompanionWorkspaceIconRow(props: { icon: LucideIcon; label: string; destructive?: boolean; disabled?: boolean; onClick(): void }) {
   const Icon = props.icon;
   return <button type="button" disabled={props.disabled} onClick={props.onClick}
     className={`${companionWorkspaceRowClass} gap-3 font-medium transition-colors active:bg-companion-subtle/80 ${props.destructive ? 'last:border-b-0 text-error' : 'text-foreground'}`}>
@@ -68,7 +68,7 @@ export function CompanionWorkspaceMenuActions({ nodeId, onSelect, onSaved, hasRe
   const row = (label: string, onClick: () => void, destructive = false, icon?: LucideIcon) => menuRows ? (
     <CompanionMenuRow key={label} label={label} destructive={destructive} disabled={disabled} onSelect={onClick} />
   ) : withIcons && icon ? (
-    <IconRow key={label} icon={icon} label={label} destructive={destructive} disabled={disabled} onClick={onClick} />
+    <CompanionWorkspaceIconRow key={label} icon={icon} label={label} destructive={destructive} disabled={disabled} onClick={onClick} />
   ) : (
     <button key={label} type="button" className={destructive ? `${companionWorkspaceRowClass} last:border-b-0 text-error` : companionWorkspaceRowClass}
       disabled={disabled} onClick={onClick}>{label}</button>
