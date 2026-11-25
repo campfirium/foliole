@@ -10,7 +10,8 @@ export type WorkspaceMetadataCommand =
   | { type: 'create'; kind: 'folder' | 'topic' | 'item'; title: string; parentNodeId: string | null; nodeId: string }
   | { type: 'create-dive'; title: string; nodeId: string; sourceId: string | null }
   | { type: 'create-index'; title: string; nodeId: string; keyword?: string }
-  | { type: 'set-priority'; nodeId: string; priority: number }
+  // A null priority clears the item's own value so it inherits again.
+  | { type: 'set-priority'; nodeId: string; priority: number | null }
   | { type: 'rename'; nodeId: string; title: string }
   | { type: 'move'; nodeId: string; parentNodeId: string | null }
   | { type: 'delete' | 'restore' | 'shelve' | 'unshelve'; nodeId: string };
@@ -51,11 +52,11 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
     next.title = dive ? normalizeDiveTitle(command.title) : command.title.trim();
     next.isTitleManual = true;
   } else if (command.type === 'set-priority') {
-    if ((node.kind !== 'topic' && node.kind !== 'item') ||
-      !Number.isInteger(command.priority) || command.priority < 0 || command.priority > 9) {
+    if ((node.kind !== 'topic' && node.kind !== 'item') || (command.priority !== null &&
+      (!Number.isInteger(command.priority) || command.priority < 0 || command.priority > 9))) {
       throw new Error('node_priority_unavailable');
     }
-    if (node.priority === command.priority) return { nodes: [], subtreeNodeIds: null, title: command.type };
+    if ((node.priority ?? null) === command.priority) return { nodes: [], subtreeNodeIds: null, title: command.type };
     next.priority = command.priority;
   } else if (command.type === 'move') {
     if (!canNodeBeMoved(node)) throw new Error('node_move_unavailable');

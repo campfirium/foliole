@@ -35,7 +35,7 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', as
   return { getIosCompanionDatabaseOwner: () => owner };
 });
 
-it('keeps an offline Android priority after restart and synchronizes the override and undo', { meta: { calibratedMs: 20000 } }, async () => {
+it('keeps an offline Android priority after restart and synchronizes the override, undo and inheritance restore', { meta: { calibratedMs: 20000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const desktop = new Database(host.fixture.rightSnapshot.databasePath, { readonly: true });
   const id = 'priority-topic';
@@ -59,6 +59,15 @@ it('keeps an offline Android priority after restart and synchronizes the overrid
     expect(facts(desktop)).toEqual(facts(host.sqlite));
 
     await replayCompanionFlowHistory(companionFlowHistoryKey('Mobile'), 'undo', createEmptyReviewSession());
+    await host.sync();
+    expect(facts(host.sqlite)).toEqual({ priority: null, content: 'Original body' });
+    expect(facts(desktop)).toEqual(facts(host.sqlite));
+
+    await mutateCompanionWorkspace({ type: 'set-priority', nodeId: id, priority: 4 });
+    await host.sync();
+    expect(facts(desktop)).toMatchObject({ priority: 4 });
+    await mutateCompanionWorkspace({ type: 'set-priority', nodeId: id, priority: null });
+    expect((await loadIosCompanionWorkspaceSnapshot(host.db))?.nodesById[id]?.priority ?? null).toBeNull();
     await host.sync();
     expect(facts(host.sqlite)).toEqual({ priority: null, content: 'Original body' });
     expect(facts(desktop)).toEqual(facts(host.sqlite));

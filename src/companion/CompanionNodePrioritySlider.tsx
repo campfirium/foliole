@@ -86,11 +86,17 @@ export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }:
   const effective = resolveNodePrioritySetting(node.id, nodes, settings.pushQueue.defaultPriority);
   const ownerTitle = (effective.ownerNodeId && nodes[effective.ownerNodeId]?.title) || '';
 
+  const disabled = actions.busy || actions.pending;
+  const save = (priority: number | null) => void actions.execute({ type: 'set-priority', nodeId: node.id, priority }, () => {
+    if (mounted.current) onSaved();
+  });
+
   return <>
-    <PriorityRange key={node.id} value={value} inactive={effective.enforced === true} disabled={actions.busy || actions.pending}
-      onCommit={priority => void actions.execute({ type: 'set-priority', nodeId: node.id, priority }, () => {
-        if (mounted.current) onSaved();
-      })} />
+    <PriorityRange key={node.id} value={value} inactive={effective.enforced === true} disabled={disabled} onCommit={save} />
+    {node.priority != null && <button type="button" className="min-h-11 w-full border-b border-companion-divider text-left text-sm disabled:opacity-40"
+      disabled={disabled} onClick={() => save(null)}>
+      {t('desktop.nodeReview.inherit')}
+    </button>}
     {effective.enforced && <p className="break-words py-2 text-xs">
       {`${t('desktop.nodeReview.priority.inactive')} · P${effective.value} · ${ownerTitle} `}
       {t('desktop.diagnostics.scheduling.prioritySource.enforced')}
