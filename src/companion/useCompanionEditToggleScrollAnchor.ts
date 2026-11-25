@@ -11,7 +11,7 @@ const MAX_ALIGN_FRAMES = 20;
 const STABLE_FRAMES = 3;
 const READER_INPUT_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'beforeinput'] as const;
 
-type Anchor = { atStart: boolean; editing: boolean; expiresAt: number; offset: number; position: number };
+type Anchor = { atStart: boolean; editing: boolean; expiresAt: number; position: number; screenTop: number };
 
 function readAnchor(editor: EditorAdapter, surface: HTMLElement, editing: boolean): Anchor | null {
   const rect = surface.getBoundingClientRect();
@@ -20,8 +20,9 @@ function readAnchor(editor: EditorAdapter, surface: HTMLElement, editing: boolea
   if (position === null) return null;
   const top = editor.getPositionViewportTop?.(position);
   if (top === null || top === undefined) return null;
+  // Reading and editing start their surfaces at different heights, so the line is held on the screen.
   return { atStart: surface.scrollTop <= 0, editing, expiresAt: performance.now() + ANCHOR_LIFETIME_MS,
-    offset: top - rect.top, position };
+    position, screenTop: top };
 }
 
 /**
@@ -37,7 +38,7 @@ function followAnchor(editor: EditorAdapter, surface: HTMLElement, target: Ancho
     frame = null;
     const top = editor.getPositionViewportTop?.(target.position);
     if (top === null || top === undefined || !isCurrent()) return;
-    const delta = target.atStart ? -surface.scrollTop : top - (surface.getBoundingClientRect().top + target.offset);
+    const delta = target.atStart ? -surface.scrollTop : top - target.screenTop;
     if (Math.abs(delta) > 1) {
       surface.scrollTop += delta;
       stable = 0;

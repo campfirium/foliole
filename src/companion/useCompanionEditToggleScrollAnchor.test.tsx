@@ -24,11 +24,12 @@ function createSurface(scrollTop: number) {
 }
 
 function createEditor(surface: HTMLElement, contentTop: number) {
+  const surfaceTop = () => surface.getBoundingClientRect().top;
   return {
     focus: vi.fn(),
     getDocumentPositionAtViewportY: (clientY: number) =>
-      Math.floor((clientY - SURFACE_TOP + surface.scrollTop - contentTop) / LINE_HEIGHT),
-    getPositionViewportTop: (position: number) => SURFACE_TOP + contentTop + position * LINE_HEIGHT - surface.scrollTop,
+      Math.floor((clientY - surfaceTop() + surface.scrollTop - contentTop) / LINE_HEIGHT),
+    getPositionViewportTop: (position: number) => surfaceTop() + contentTop + position * LINE_HEIGHT - surface.scrollTop,
     setSelection: vi.fn()
   } as unknown as EditorAdapter & { focus: ReturnType<typeof vi.fn>; setSelection: ReturnType<typeof vi.fn> };
 }
@@ -63,6 +64,31 @@ describe('useCompanionEditToggleScrollAnchor alignment', () => {
     expect(editing.getPositionViewportTop!(anchoredPosition)).toBe(anchoredTop);
     expect(editing.setSelection).toHaveBeenCalledWith({ from: anchoredPosition, to: anchoredPosition });
     expect(editing.focus).toHaveBeenCalled();
+  });
+
+  // Docked reading starts its surface below the toolbar, while the editing surface covers the whole screen.
+  it.each([
+    { from: 72, to: 0, editing: true, mode: 'entering editing' },
+    { from: 0, to: 72, editing: false, mode: 'leaving editing' }
+  ])('keeps the line at the same screen height when $mode moves the surface top', ({ from, to, editing }) => {
+    const surface = createSurface(2130);
+    const place = (top: number) => { surface.getBoundingClientRect = () => ({ top, height: SURFACE_HEIGHT - top } as DOMRect); };
+    place(from);
+    const { result } = renderHook(() => useCompanionEditToggleScrollAnchor({ current: surface }));
+    const before = createEditor(surface, 56);
+    const position = before.getDocumentPositionAtViewportY(from + (SURFACE_HEIGHT - from) * EDIT_TOGGLE_ANCHOR_RATIO)!;
+    const screenTop = before.getPositionViewportTop!(position)!;
+
+    act(() => { result.current.capture(before, editing); });
+    place(to);
+    surface.scrollTop = 0;
+    const after = createEditor(surface, 56);
+    act(() => {
+      result.current.onEditorReady(after);
+      flushFrames(5);
+    });
+
+    expect(after.getPositionViewportTop!(position)).toBe(screenTop);
   });
 
   it('restores the reading position on exit without moving the caret or focusing', () => {

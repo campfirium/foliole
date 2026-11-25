@@ -177,6 +177,34 @@ test('temporarily restores toolbar space for editing without changing the saved 
   await expect(page.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
 });
 
+for (const floating of [false, true]) {
+  test(`keeps a mid-document line at the same screen height through editing, floating=${floating}`, async ({ page }) => {
+    await openReader(page, false, false, false, false, true);
+    if (floating) {
+      await more(page);
+      await page.getByRole('switch', { name: 'Floating reading toolbars' }).click();
+      await done(page);
+    } else await page.touchscreen.tap(10, 350);
+    const surface = page.locator('[data-companion-reading-surface]');
+    await surface.evaluate(element => {
+      element.scrollTop = (element.scrollHeight - element.clientHeight) / 2;
+    });
+    const line = page.locator('.cm-line', { hasText: 'Paragraph 18.' });
+    // Mid-document and on screen, so neither end of the scroll range can absorb a shift.
+    await line.evaluate(element => element.scrollIntoView({ block: 'center' }));
+    await expect(line).toBeInViewport();
+    const screenTop = () => line.evaluate(element => element.getBoundingClientRect().top);
+    const reading = await screenTop();
+    if (floating && !await page.getByRole('button', { name: 'Edit content', exact: true }).isVisible()) {
+      await page.touchscreen.tap(10, 350);
+    }
+    await page.getByRole('button', { name: 'Edit content', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+    await expect.poll(async () => Math.abs(await screenTop() - reading)).toBeLessThan(3);
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect.poll(async () => Math.abs(await screenTop() - reading)).toBeLessThan(3);
+  });
+}
 
 test('revealed Flow answers gain the toolbar area and can scroll clear of the answer bar', async ({ page }) => {
   await openReader(page, true, true);
