@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "No se pudo dejar de aplazar este tema.",
   "companion.workspace.failure.priority": "No se pudo cambiar la prioridad.",
   "companion.workspace.failure.removeDiveSource": "No se pudo quitar la fuente del Dive.",
+  "companion.workspace.failure.reviewOptions": "No se pudieron cambiar las opciones de repaso.",
+  "companion.workspace.failure.sequentialReading": "No se pudo cambiar la lectura secuencial.",
   "companion.index.sources": "Fuentes de la carpeta virtual",
   "companion.index.addSource": "Añadir fuente",
   "companion.index.removeSource": "Quitar fuente",

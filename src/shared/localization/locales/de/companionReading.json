@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Die Zurückstellung dieses Themas konnte nicht aufgehoben werden.",
   "companion.workspace.failure.priority": "Die Priorität konnte nicht geändert werden.",
   "companion.workspace.failure.removeDiveSource": "Die Quelle konnte nicht aus dem Dive entfernt werden.",
+  "companion.workspace.failure.reviewOptions": "Die Wiederholungsoptionen konnten nicht geändert werden.",
+  "companion.workspace.failure.sequentialReading": "Sequenzielles Lesen konnte nicht geändert werden.",
   "companion.index.sources": "Quellen des virtuellen Ordners",
   "companion.index.addSource": "Quelle hinzufügen",
   "companion.index.removeSource": "Quelle entfernen",

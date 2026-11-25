@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Impossible de ne plus mettre ce sujet de côté.",
   "companion.workspace.failure.priority": "Impossible de modifier la priorité.",
   "companion.workspace.failure.removeDiveSource": "Impossible de retirer la source du Dive.",
+  "companion.workspace.failure.reviewOptions": "Impossible de modifier les options de révision.",
+  "companion.workspace.failure.sequentialReading": "Impossible de modifier la lecture séquentielle.",
   "companion.index.sources": "Sources du dossier virtuel",
   "companion.index.addSource": "Ajouter une source",
   "companion.index.removeSource": "Retirer la source",

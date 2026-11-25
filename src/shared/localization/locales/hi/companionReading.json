@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "इस विषय को बाद के लिए रखने से वापस नहीं लाया जा सका।",
   "companion.workspace.failure.priority": "प्राथमिकता नहीं बदली जा सकी।",
   "companion.workspace.failure.removeDiveSource": "स्रोत को Dive से नहीं हटाया जा सका।",
+  "companion.workspace.failure.reviewOptions": "समीक्षा विकल्प नहीं बदले जा सके।",
+  "companion.workspace.failure.sequentialReading": "क्रमिक पठन नहीं बदला जा सका।",
   "companion.index.sources": "इंडेक्स के स्रोत",
   "companion.index.addSource": "स्रोत जोड़ें",
   "companion.index.removeSource": "स्रोत हटाएँ",

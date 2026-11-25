@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Nie udało się przywrócić tego tematu z odłożonych.",
   "companion.workspace.failure.priority": "Nie udało się zmienić priorytetu.",
   "companion.workspace.failure.removeDiveSource": "Nie udało się usunąć źródła z Dive.",
+  "companion.workspace.failure.reviewOptions": "Nie udało się zmienić opcji powtórek.",
+  "companion.workspace.failure.sequentialReading": "Nie udało się zmienić czytania sekwencyjnego.",
   "companion.index.sources": "Źródła folderu wirtualnego",
   "companion.index.addSource": "Dodaj źródło",
   "companion.index.removeSource": "Usuń źródło",

@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "このトピックの保留を解除できませんでした。",
   "companion.workspace.failure.priority": "優先度を変更できませんでした。",
   "companion.workspace.failure.removeDiveSource": "Dive からソースを削除できませんでした。",
+  "companion.workspace.failure.reviewOptions": "復習オプションを変更できませんでした。",
+  "companion.workspace.failure.sequentialReading": "順次読み取りを変更できませんでした。",
   "companion.index.sources": "仮想フォルダのソース",
   "companion.index.addSource": "ソースを追加",
   "companion.index.removeSource": "ソースを削除",

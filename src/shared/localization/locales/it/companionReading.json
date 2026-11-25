@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Impossibile annullare l’accantonamento di questo argomento.",
   "companion.workspace.failure.priority": "Impossibile cambiare la priorità.",
   "companion.workspace.failure.removeDiveSource": "Impossibile rimuovere l’origine dal Dive.",
+  "companion.workspace.failure.reviewOptions": "Impossibile cambiare le opzioni di ripasso.",
+  "companion.workspace.failure.sequentialReading": "Impossibile cambiare la lettura sequenziale.",
   "companion.index.sources": "Origini della cartella virtuale",
   "companion.index.addSource": "Aggiungi origine",
   "companion.index.removeSource": "Rimuovi origine",

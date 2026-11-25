@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Não foi possível desarquivar este tópico.",
   "companion.workspace.failure.priority": "Não foi possível alterar a prioridade.",
   "companion.workspace.failure.removeDiveSource": "Não foi possível remover a fonte do Dive.",
+  "companion.workspace.failure.reviewOptions": "Não foi possível alterar as opções de revisão.",
+  "companion.workspace.failure.sequentialReading": "Não foi possível alterar a leitura sequencial.",
   "companion.index.sources": "Fontes da pasta virtual",
   "companion.index.addSource": "Adicionar fonte",
   "companion.index.removeSource": "Remover fonte",

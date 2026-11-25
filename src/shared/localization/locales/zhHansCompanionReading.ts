@@ -30,6 +30,8 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.workspace.failure.unshelve': '未能取消搁置主题。',
   'companion.workspace.failure.priority': '未能更改优先级。',
   'companion.workspace.failure.removeDiveSource': '未能从专题移除来源。',
+  'companion.workspace.failure.reviewOptions': '未能更改复习选项。',
+  'companion.workspace.failure.sequentialReading': '未能更改顺序阅读。',
   'companion.index.sources': '索引来源',
   'companion.index.addSource': '添加来源',
   'companion.index.removeSource': '移除来源',

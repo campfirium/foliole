@@ -7,9 +7,11 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../shared/localization/translations';
 import { convertCompanionDiveDirectory } from '../shared/platform/companion/runtime/companionDiveConversion';
 import { addCompanionDiveSource, addCompanionDiveSources, removeCompanionDiveSources } from '../shared/platform/companion/runtime/companionDiveSources';
+import { setCompanionEpubReadingMode } from '../shared/platform/companion/runtime/companionEpubReadingMode';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey, type CompanionHistoryTop } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { changeCompanionIndexSources, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
+import { setCompanionNodeReviewOption, type CompanionNodeReviewOption } from '../shared/platform/companion/runtime/companionNodeReviewOptions';
 import { dismissCompanionTopicBranch } from '../shared/platform/companion/runtime/companionTopicBranchDismiss';
 import { relearnCompanionBatch, unshelveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchLearning';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
@@ -17,6 +19,7 @@ import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../share
 import { restoreCompanionBatchFromTrash } from '../shared/platform/companion/runtime/companionWorkspaceBatchRestore';
 import { moveCompanionBatchToTrash, type CompanionBatchTarget } from '../shared/platform/companion/runtime/companionWorkspaceBatchTrash';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
+import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
@@ -37,6 +40,8 @@ type Actions = {
   addToDive(diveId: string, sourceId: string): void;
   removeFromDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): void;
   changeIndexSources(indexId: string, sourceIds: readonly string[], change: CompanionIndexSourceChange): void;
+  setReviewOption(nodeId: string, option: CompanionNodeReviewOption): void;
+  setSequentialReading(nodeId: string, enabled: boolean, onSaved?: () => void): void;
   moveBatchToTrash(targets: readonly CompanionBatchTarget[], onSaved: () => void): Promise<void>;
   moveBatch(targets: readonly CompanionBatchTarget[], parentNodeId: string | null, onSaved: () => void): Promise<void>;
   addBatchToDive(diveId: string, sourceIds: readonly string[], onSaved: () => void): Promise<void>;
@@ -95,6 +100,17 @@ function createBatchWriteActions(run: TransactionRun): Pick<Actions, 'moveBatchT
   };
 }
 
+/** A folder or book branch's own Sequential Reading and review options, as the desktop node menu sets them. */
+function createNodeOptionActions(run: TransactionRun): Pick<Actions, 'setReviewOption' | 'setSequentialReading'> {
+  return {
+    setReviewOption: (nodeId, option) => void run(async () => { await setCompanionNodeReviewOption(nodeId, option); },
+      undefined, 'companion.workspace.failure.reviewOptions'),
+    setSequentialReading: (nodeId, enabled, onSaved) => void run(async () => {
+      await setCompanionEpubReadingMode(nodeId, enabled, getIosCompanionDatabaseOwner());
+    }, onSaved, 'companion.workspace.failure.sequentialReading')
+  };
+}
+
 export function CompanionWorkspaceActionsProvider(props: {
   children: ReactNode; snapshot: WorkspaceSnapshot | null; refresh(): Promise<unknown>;
   flush(): Promise<unknown>; restoreFlow(session: ReviewSessionState): void;
@@ -129,7 +145,7 @@ export function CompanionWorkspaceActionsProvider(props: {
     addToDive: (diveId, sourceId) => void run(() => addCompanionDiveSource(diveId, sourceId), undefined, 'desktop.nodeList.addToDive.saveFailed'),
     removeFromDive: (diveId, sourceIds, onSaved) => void run(() => removeCompanionDiveSources(diveId, sourceIds), onSaved,
       'companion.workspace.failure.removeDiveSource'),
-    ...createBatchWriteActions(run),
+    ...createBatchWriteActions(run), ...createNodeOptionActions(run),
     changeIndexSources: (indexId, sourceIds, change) => void run(() => changeCompanionIndexSources(indexId, sourceIds, change),
       undefined, change === 'add' ? 'companion.index.addSourceFailed' : 'companion.index.removeSourceFailed'),
     restoreBatch: (targets, onSaved) => {

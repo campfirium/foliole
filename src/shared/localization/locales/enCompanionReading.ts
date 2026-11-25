@@ -28,6 +28,8 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.workspace.failure.unshelve': 'Could not unshelve this Topic.',
   'companion.workspace.failure.priority': 'Could not change the priority.',
   'companion.workspace.failure.removeDiveSource': 'Could not remove the source from the Dive.',
+  'companion.workspace.failure.reviewOptions': 'Could not change the review options.',
+  'companion.workspace.failure.sequentialReading': 'Could not change Sequential Reading.',
   'companion.index.sources': 'Virtual folder sources',
   'companion.index.addSource': 'Add source',
   'companion.index.removeSource': 'Remove source',

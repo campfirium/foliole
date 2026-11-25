@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "이 주제의 보류를 해제할 수 없습니다.",
   "companion.workspace.failure.priority": "우선순위를 변경할 수 없습니다.",
   "companion.workspace.failure.removeDiveSource": "Dive에서 소스를 제거할 수 없습니다.",
+  "companion.workspace.failure.reviewOptions": "복습 옵션을 변경할 수 없습니다.",
+  "companion.workspace.failure.sequentialReading": "순차 읽기를 변경할 수 없습니다.",
   "companion.index.sources": "가상 폴더 소스",
   "companion.index.addSource": "소스 추가",
   "companion.index.removeSource": "소스 제거",

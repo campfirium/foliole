@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "無法取消擱置此主題。",
   "companion.workspace.failure.priority": "無法變更優先順序。",
   "companion.workspace.failure.removeDiveSource": "無法從專題移除來源。",
+  "companion.workspace.failure.reviewOptions": "無法變更複習選項。",
+  "companion.workspace.failure.sequentialReading": "無法變更順序閱讀。",
   "companion.index.sources": "索引來源",
   "companion.index.addSource": "新增來源",
   "companion.index.removeSource": "移除來源",

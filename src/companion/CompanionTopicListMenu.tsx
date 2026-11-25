@@ -7,6 +7,7 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 import { useCompanionListInteraction } from './CompanionListViewport';
 import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
 import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
+import { CompanionNodeReviewMenuRows, CompanionNodeReviewOptionsSheet } from './CompanionNodeReviewOptions';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceMenuActions, getCompanionWorkspaceMenuOptions } from './CompanionWorkspaceMenuActions';
 
@@ -28,14 +29,15 @@ export function CompanionTopicListMenu({ rowMenu, nodeId, title, directDiveId }:
   const t = useTranslation();
   const workspace = useTopicListMenuWorkspace(nodeId, directDiveId);
   const [localOpen, setLocalOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const open = Boolean(workspace && (rowMenu?.open ?? localOpen));
   const setOpen = rowMenu?.onOpenChange ?? setLocalOpen;
   const interaction = useCompanionListInteraction();
   useEffect(() => {
-    if (!open) return;
+    if (!open && !optionsOpen) return;
     interaction(true);
     return () => interaction(false);
-  }, [open, interaction]);
+  }, [open, optionsOpen, interaction]);
   if (!workspace) return null;
   const close = () => setOpen(false);
   return (
@@ -47,10 +49,12 @@ export function CompanionTopicListMenu({ rowMenu, nodeId, title, directDiveId }:
         <CompanionWorkspaceMenuActions menuRows nodeId={nodeId} onSaved={close}
           onSelect={state => { close(); workspace.open(state); }}>
           <CompanionNodePrioritySlider nodeId={nodeId} onSaved={close} />
+          <CompanionNodeReviewMenuRows nodeId={nodeId} onSaved={close} onOpenOptions={() => { close(); setOptionsOpen(true); }} />
           {directDiveId && <CompanionMenuRow label={t('desktop.nodeList.menu.removeFromDive')} disabled={workspace.busy || workspace.pending}
             onSelect={() => workspace.removeFromDive(directDiveId, [nodeId], close)} />}
         </CompanionWorkspaceMenuActions>
       </CompanionMenuSheet>
+      {optionsOpen && <CompanionNodeReviewOptionsSheet nodeId={nodeId} open onOpenChange={setOptionsOpen} />}
     </>
   );
 }

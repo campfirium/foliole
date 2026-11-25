@@ -101,6 +101,8 @@
   "companion.workspace.failure.unshelve": "Не удалось вернуть эту тему из отложенных.",
   "companion.workspace.failure.priority": "Не удалось изменить приоритет.",
   "companion.workspace.failure.removeDiveSource": "Не удалось удалить источник из Dive.",
+  "companion.workspace.failure.reviewOptions": "Не удалось изменить параметры повторения.",
+  "companion.workspace.failure.sequentialReading": "Не удалось изменить последовательное чтение.",
   "companion.index.sources": "Источники виртуальной папки",
   "companion.index.addSource": "Добавить источник",
   "companion.index.removeSource": "Удалить источник",
