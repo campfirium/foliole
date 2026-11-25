@@ -164,3 +164,26 @@ it('stops a reading gesture when editing starts and restores reading gestures on
   expect(nativeSelection.removeAllRanges).toHaveBeenCalledOnce();
   expect(editor.setSelection).toHaveBeenCalledWith({ from: 8, to: 8 });
 });
+
+it('lets the first tap after a created highlight only close its menu', () => {
+  const surface = document.createElement('div');
+  surface.dataset.companionReadingSurface = 'true';
+  const text = document.createElement('p');
+  text.textContent = 'Reading text';
+  surface.append(text);
+  document.body.append(surface);
+  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true, rangeCount: 0 } as unknown as Selection);
+  const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: true, nodeId: 'node-1', snapshot: null
+  }));
+  act(() => result.current.setSelectionToolbar({ existingHighlight: { nodeId: 'h-1', kind: 'highlight' } } as never));
+  const tap = () => {
+    const up = new MouseEvent('pointerup', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 });
+    act(() => touch(text, 'pointerdown', 40, 40));
+    act(() => { text.dispatchEvent(up); });
+    return up.defaultPrevented;
+  };
+  expect(tap()).toBe(true);
+  expect(result.current.selectionToolbar).toBeNull();
+  expect(tap()).toBe(false);
+});

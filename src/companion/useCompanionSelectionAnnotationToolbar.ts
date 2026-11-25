@@ -198,9 +198,14 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     ...toolbarArgs, ...scheduler, hasAdjustableSelection: managed.hasSelection
   });
 
+  const openToolbarRef = useRef(selectionToolbar !== null);
+  openToolbarRef.current = selectionToolbar !== null;
+  const hasOpenSelectionToolbar = useCallback(() => openToolbarRef.current, []);
+
   useCompanionSelectionAnnotationDocumentEvents({
     enabled: props.canCreateAnnotation,
     hasAdjustableSelection: managed.hasSelection,
+    hasOpenSelectionToolbar,
     clearSelectionAndCloseToolbar,
     closeSelectionToolbar,
     editorRef,

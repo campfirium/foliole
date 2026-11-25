@@ -27,6 +27,9 @@ type SelectionAtTap = TapStart & ({
   kind: 'managed';
   editor: EditorAdapter | null;
 } | {
+  /** Only the annotation menu is open, e.g. right after a highlight or cloze was created. */
+  kind: 'menu';
+} | {
   kind: 'native';
   anchorNode: Node | null;
   anchorOffset: number;
@@ -89,6 +92,15 @@ function clearFinishedTap(
     Date.now() - started.startedAt >= 500 || !('clientX' in event) ||
     Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8) return false;
   const editor = args.editorRef.current;
+  if (started.kind === 'menu') {
+    if (!(event.target instanceof Element) || !event.target.closest(READING_SURFACE) ||
+      toolbarDom.isCompanionSelectionToolbarTarget(event.target) ||
+      toolbarDom.isCompanionArticleInteractiveTarget(event.target) || isExistingHighlightTarget(event.target)) return false;
+    // The press already closed the menu; keep the reading surface from also toggling its bars or turning the page.
+    event.preventDefault();
+    suppressCompanionPressClick(event.target.ownerDocument);
+    return true;
+  }
   if (started.kind === 'managed') {
     if (!args.hasAdjustableSelection?.() || started.editor !== editor ||
       toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return false;
@@ -108,6 +120,7 @@ interface SelectionAnnotationDocumentEventsArgs {
   hasAdjustableSelection?: () => boolean;
   clearSelectionAndCloseToolbar: () => void;
   closeSelectionToolbar: () => void;
+  hasOpenSelectionToolbar?: () => boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
@@ -118,9 +131,15 @@ function readPointerDownTap(args: SelectionAnnotationDocumentEventsArgs, pointer
   if (pointer.isPrimary === false || pointer.button !== 0 ||
     toolbarDom.isCompanionSelectionToolbarTarget(pointer.target)) return null;
   const editor = args.editorRef.current;
-  return args.hasAdjustableSelection?.()
-    ? { ...readTapStart(pointer), kind: 'managed', editor }
-    : readSelectionAtTap(editor, pointer);
+  if (args.hasAdjustableSelection?.()) return { ...readTapStart(pointer), kind: 'managed', editor };
+  const selectionTap = readSelectionAtTap(editor, pointer);
+  if (selectionTap || !args.hasOpenSelectionToolbar?.() || hasAnyTextSelection(editor)) return selectionTap;
+  return { ...readTapStart(pointer), kind: 'menu' };
+}
+
+function hasAnyTextSelection(editor: EditorAdapter | null) {
+  const selection = editor?.getSelection();
+  return window.getSelection()?.isCollapsed === false || Boolean(selection && selection.from !== selection.to);
 }
 
 function recordSelectionSnapshot(editor: EditorAdapter | null) {
