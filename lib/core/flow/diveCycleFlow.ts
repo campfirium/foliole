@@ -80,7 +80,7 @@ export function rewindDiveCurrent(dive: DiveFlowCursor, nodeId?: string | null):
 }
 
 export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSession, dive: DiveFlowCursor,
-  now: string, settings: DailyFlowSettings) {
+  now: string, settings: DailyFlowSettings, excluded?: string) {
   if (dive.stop) return displayDiveSession(global, dive, null, null);
   if (!db.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const memberIds = await db.readDiveMembers(dive.id);
@@ -99,7 +99,7 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   const revisit = cursor ? earlierMemberIds(dive, members) : [];
   const healed = new Map<string, CycleStoredRow>();
   const orderedIds = await orderedMemberIds(db, dive, memberIds);
-  const args = { mode: dive.mode, now, settings, nodeIds: memberIds, orderedIds, bounded: true,
+  const args = { mode: dive.mode, now, settings, nodeIds: memberIds, orderedIds, bounded: true, ...(excluded ? { excluded } : {}),
     onReadiness: (rows: CycleStoredRow[]) => rows.forEach(row => healed.set(row.node_id, row)) };
   // The Dive moves its own position over the shared daily list; the global position is never saved from it.
   const meta = { ...global.cycle!, scanAfter: cursor, lapLimit: dive.limit };
