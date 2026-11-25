@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Odłóż",
   "companion.history.action.unshelve": "Przywróć z odłożonych",
   "companion.history.action.relearn": "Naucz się na nowo",
+  "companion.history.action.postpone": "Odłóż",
   "companion.history.action.addSources": "Dodaj źródła",
   "companion.history.action.removeSources": "Usuń źródła",
   "companion.history.action.priority": "Priorytet",

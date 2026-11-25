@@ -13,6 +13,7 @@ import { companionFlowHistoryKey, type CompanionHistoryTop } from '../shared/pla
 import { changeCompanionIndexSources, type CompanionIndexSourceChange } from '../shared/platform/companion/runtime/companionIndexSources';
 import { setCompanionNodeReviewOption, type CompanionNodeReviewOption } from '../shared/platform/companion/runtime/companionNodeReviewOptions';
 import { dismissCompanionTopicBranch } from '../shared/platform/companion/runtime/companionTopicBranchDismiss';
+import { postponeCompanionTopic } from '../shared/platform/companion/runtime/companionTopicPostpone';
 import { relearnCompanionBatch, unshelveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchLearning';
 import { moveCompanionBatch } from '../shared/platform/companion/runtime/companionWorkspaceBatchMove';
 import { purgeCompanionTrashBatch, type CompanionBatchPurgePlan } from '../shared/platform/companion/runtime/companionWorkspaceBatchPurge';
@@ -21,6 +22,7 @@ import { moveCompanionBatchToTrash, type CompanionBatchTarget } from '../shared/
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import type { TopicDelayUnit } from '../store/topicDelayReading';
 import type { WorkspaceMetadataCommand } from '../store/workspaceNodeMetadataMutation';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
@@ -52,6 +54,7 @@ type Actions = {
   purgeBatch(plan: CompanionBatchPurgePlan, onSaved: () => void): Promise<void>;
   replay(mode: Mode): void;
   retryRefresh(): void;
+  postponeTopic(nodeId: string, level: number, unit: TopicDelayUnit, onSaved: () => void): void;
 };
 const Context = createContext<Actions | null>(null);
 export { Context as CompanionWorkspaceActionsContext };
@@ -111,6 +114,11 @@ function createNodeOptionActions(run: TransactionRun): Pick<Actions, 'setReviewO
   };
 }
 
+function createTopicPostponeAction(run: TransactionRun): Pick<Actions, 'postponeTopic'> {
+  return { postponeTopic: (nodeId, level, unit, onSaved) => void run(async () => { await postponeCompanionTopic({ nodeId, level, unit }); },
+    onSaved, 'companion.selection.saveError') };
+}
+
 export function CompanionWorkspaceActionsProvider(props: {
   children: ReactNode; snapshot: WorkspaceSnapshot | null; refresh(): Promise<unknown>;
   flush(): Promise<unknown>; restoreFlow(session: ReviewSessionState): void;
@@ -160,6 +168,7 @@ export function CompanionWorkspaceActionsProvider(props: {
       await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
     }, onSaved, command.type === 'create' ? createFailureKeys[command.kind] : metadataFailureKeys[command.type],
     previewMetadataCommand(command, () => setSheet(null))),
+    ...createTopicPostponeAction(run),
     replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}

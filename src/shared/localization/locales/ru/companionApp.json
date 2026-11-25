@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Отложить",
   "companion.history.action.unshelve": "Вернуть из отложенных",
   "companion.history.action.relearn": "Переучиться",
+  "companion.history.action.postpone": "Отложить",
   "companion.history.action.addSources": "Добавить источники",
   "companion.history.action.removeSources": "Удалить источники",
   "companion.history.action.priority": "Приоритет",

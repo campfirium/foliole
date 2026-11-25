@@ -8,6 +8,7 @@ export const EN_COMPANION_APP_TRANSLATIONS = {
   'companion.history.action.shelve': 'Shelve',
   'companion.history.action.unshelve': 'Unshelve',
   'companion.history.action.relearn': 'Relearn',
+  'companion.history.action.postpone': 'Postpone',
   'companion.history.action.addSources': 'Add Sources',
   'companion.history.action.removeSources': 'Remove Sources',
   'companion.history.action.priority': 'Priority',

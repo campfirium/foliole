@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Zurückstellen",
   "companion.history.action.unshelve": "Zurückstellung aufheben",
   "companion.history.action.relearn": "Neu lernen",
+  "companion.history.action.postpone": "Verschieben",
   "companion.history.action.addSources": "Quellen hinzufügen",
   "companion.history.action.removeSources": "Quellen entfernen",
   "companion.history.action.priority": "Priorität",

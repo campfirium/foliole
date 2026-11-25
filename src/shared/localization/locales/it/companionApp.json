@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Accantona",
   "companion.history.action.unshelve": "Annulla accantonamento",
   "companion.history.action.relearn": "Impara di nuovo",
+  "companion.history.action.postpone": "Rimanda",
   "companion.history.action.addSources": "Aggiungi origini",
   "companion.history.action.removeSources": "Rimuovi origini",
   "companion.history.action.priority": "Priorità",

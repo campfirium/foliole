@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Aplazar",
   "companion.history.action.unshelve": "Dejar de aplazar",
   "companion.history.action.relearn": "Reaprender",
+  "companion.history.action.postpone": "Posponer",
   "companion.history.action.addSources": "Añadir fuentes",
   "companion.history.action.removeSources": "Quitar fuentes",
   "companion.history.action.priority": "Prioridad",

@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Arquivar",
   "companion.history.action.unshelve": "Desarquivar",
   "companion.history.action.relearn": "Reaprender",
+  "companion.history.action.postpone": "Adiar",
   "companion.history.action.addSources": "Adicionar fontes",
   "companion.history.action.removeSources": "Remover fontes",
   "companion.history.action.priority": "Prioridade",

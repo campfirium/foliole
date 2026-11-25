@@ -24,6 +24,7 @@
   "companion.history.action.shelve": "擱置",
   "companion.history.action.unshelve": "取消擱置",
   "companion.history.action.relearn": "重新學習",
+  "companion.history.action.postpone": "延遲",
   "companion.history.action.addSources": "新增來源",
   "companion.history.action.removeSources": "移除來源",
   "companion.history.action.priority": "優先順序",

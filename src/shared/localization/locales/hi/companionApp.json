@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "बाद के लिए रखें",
   "companion.history.action.unshelve": "बाद के लिए रखा वापस लाएँ",
   "companion.history.action.relearn": "फिर से सीखें",
+  "companion.history.action.postpone": "बाद के लिए टालें",
   "companion.history.action.addSources": "स्रोत जोड़ें",
   "companion.history.action.removeSources": "स्रोत हटाएँ",
   "companion.history.action.priority": "प्राथमिकता",

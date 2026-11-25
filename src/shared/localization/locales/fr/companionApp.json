@@ -22,6 +22,7 @@
   "companion.history.action.shelve": "Mettre de côté",
   "companion.history.action.unshelve": "Ne plus mettre de côté",
   "companion.history.action.relearn": "Réapprendre",
+  "companion.history.action.postpone": "Reporter",
   "companion.history.action.addSources": "Ajouter des sources",
   "companion.history.action.removeSources": "Retirer des sources",
   "companion.history.action.priority": "Priorité",
