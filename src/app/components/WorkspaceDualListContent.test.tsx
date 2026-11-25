@@ -1,13 +1,17 @@
-import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import * as externalLibraryRuntime from '../../shared/platform/externalLibraryBrowseRepository';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useExternalLibraryView } from '../hooks/useExternalLibraryView';
 
 import {
   resetExternalCollapsedRowIds,
   saveExternalCollapsedRowIds
 } from './externalLibraryCollapseSettings';
+import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import { createWorkspaceContentNode, renderWorkspaceContent } from './WorkspaceDualListContent.testUtils';
 
 beforeEach(() => {
@@ -18,6 +22,8 @@ beforeEach(() => {
     trashedNodeIds: ['item-a']
   }));
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 const externalFolders = [
   {
@@ -175,4 +181,70 @@ it('ignores old external expansion memory and expands only the selected root', (
 
   expect(screen.getByRole('treeitem', { name: /^sub$/i })).toBeInTheDocument();
   expect(screen.queryByRole('treeitem', { name: /^sync$/i })).toBeNull();
+});
+
+const readwiseFolderIds = ['readwise-reader-import-books', 'readwise-reader-import-articles'];
+const aggregateFolders = [
+  ...externalFolders,
+  ...readwiseFolderIds.map((id) => ({ ...externalFolders[0]!, id, folderPath: `/Readwise/${id}`, documentCount: 1 }))
+];
+const aggregateEntries: Record<string, externalLibraryRuntime.ExternalLibraryBrowseEntry[]> = {
+  ...externalEntriesByFolderId,
+  ...Object.fromEntries(readwiseFolderIds.map((id, index) => [id, [{
+    ...externalEntriesByFolderId['folder-ext'][0]!,
+    absolutePath: `/Readwise/${id}/read.md`, folderId: id, title: index === 0 ? 'Readwise book' : 'Readwise article'
+  }]]))
+};
+const inbox = { [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }) };
+
+function ExternalWorkspace() {
+  const external = useExternalLibraryView();
+  return <WorkspaceDualListContent activeNodeId={null} externalEntriesByFolderId={external.entriesByFolderId}
+    externalFolders={external.folders} externalSelection={external.selection} isExternalViewOpen={external.isExternalViewOpen}
+    isStudyMode={false} isTrashViewOpen={false} isVirtualViewOpen={false} nodesById={inbox} listNodesById={inbox}
+    nodeOrder={[INBOX_NODE_ID]} onOpenExternalSelection={external.openExternalSelection} onOpenMoveToNode={vi.fn()} onOpenNotesView={vi.fn()}
+    onOpenTrashView={vi.fn()} onSelectNode={vi.fn()} onSelectNodeInVirtualView={vi.fn()} onSelectTrashNode={vi.fn()}
+    reviewCurrentNodeId={null} selectedTrashNodeId={null} trashedNodeIds={[]} />;
+}
+
+it('loads reference documents and lets Readwise browse independently of other folders', async () => {
+  let finishRegularLoad!: (entries: typeof externalEntriesByFolderId['folder-ext']) => void;
+  const regularEntries = new Promise<typeof externalEntriesByFolderId['folder-ext']>((resolve) => {
+    finishRegularLoad = resolve;
+  });
+  vi.spyOn(externalLibraryRuntime, 'loadExternalLibraryFolders').mockResolvedValue(aggregateFolders);
+  vi.spyOn(externalLibraryRuntime, 'loadExternalLibraryBrowseEntries').mockImplementation(async (id) =>
+    id === 'folder-ext' ? regularEntries : aggregateEntries[id] ?? []
+  );
+  renderWithLocalization(<ExternalWorkspace />);
+  const readwise = await screen.findByRole('treeitem', { name: 'Readwise' });
+  const heading = screen.getByRole('treeitem', { name: 'External' });
+
+  fireEvent.click(heading);
+  expect(heading).toHaveAttribute('aria-selected', 'true');
+  expect(heading).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('status', { busy: true })).toBeVisible();
+
+  fireEvent.click(readwise);
+  expect(readwise).toHaveAttribute('aria-selected', 'true');
+  expect(heading).toHaveAttribute('aria-selected', 'false');
+  const group = within(await screen.findByRole('tree', { name: 'External folder contents' }));
+  expect(group.getAllByRole('treeitem')).toHaveLength(2);
+  expect(group.getByRole('treeitem', { name: 'Readwise book' })).toBeVisible();
+  expect(group.getByRole('treeitem', { name: 'Readwise article' })).toBeVisible();
+
+  fireEvent.click(heading);
+  expect(screen.getByRole('status', { busy: true })).toBeVisible();
+  await act(async () => finishRegularLoad(externalEntriesByFolderId['folder-ext']));
+  const documents = within(screen.getByRole('tree', { name: 'External folder contents' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: /Sort list by / }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Name' }));
+  expect(documents.getAllByRole('treeitem').map((row) => row.textContent)).toEqual([
+    'Alpha', 'Beta', 'Readwise article', 'Readwise book'
+  ]);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'article' } });
+  expect(documents.getAllByRole('treeitem')).toHaveLength(1);
+  expect(documents.getByRole('treeitem', { name: 'Readwise article' })).toBeVisible();
 });

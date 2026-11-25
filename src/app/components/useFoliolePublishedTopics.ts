@@ -28,10 +28,13 @@ export function useFoliolePublishedTopics(args: {
     return subscribeFoliolePublishedTopicsChanged(() => void load());
   }, [load]);
 
-  const nodes = useMemo(() => (topics ?? []).flatMap((topic) => {
-    const node = args.nodesById[topic.node_id];
-    return node && topic.source_state === 'active' && !args.trashedNodeIds.includes(node.id) ? [node] : [];
-  }), [args.nodesById, args.trashedNodeIds, topics]);
+  const nodes = useMemo(() => {
+    const trashedIds = new Set(args.trashedNodeIds);
+    return (topics ?? []).flatMap((topic) => {
+      const node = args.nodesById[topic.node_id];
+      return node && topic.source_state === 'active' && !trashedIds.has(node.id) ? [node] : [];
+    });
+  }, [args.nodesById, args.trashedNodeIds, topics]);
 
   return { error, load, nodes, topics };
 }

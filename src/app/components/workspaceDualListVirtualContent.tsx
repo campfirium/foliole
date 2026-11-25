@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
@@ -13,6 +15,7 @@ import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
 import { PublishedVirtualResultListPanel } from './PublishedVirtualResultListPanel';
+import { useFoliolePublishedTopics } from './useFoliolePublishedTopics';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import { useVirtualContentItems } from './workspaceVirtualContentModel';
@@ -85,11 +88,12 @@ export function renderVirtualContentColumn(
   virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>,
   t: Translate,
   locale: AppLocale,
-  childrenByParent: Map<string | null, string[]>
+  childrenByParent: Map<string | null, string[]>,
+  homeTopicNodeOrder: string[]
 ) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
-    return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
+    return <VirtualRootContentColumn props={props} topicIds={homeTopicNodeOrder} />;
   }
   if (activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID) {
     return renderPublishedContentColumn(props);
@@ -102,6 +106,34 @@ export function renderVirtualContentColumn(
       props={props}
       t={t}
       virtualResultIndex={virtualResultIndex}
+    />
+  );
+}
+
+function VirtualRootContentColumn({ props, topicIds }: { props: WorkspaceDualListContentProps; topicIds: string[] }) {
+  const { nodesById, trashedNodeIds } = props;
+  const { nodes: publishedNodes } = useFoliolePublishedTopics({ nodesById, trashedNodeIds });
+  const nodes = useMemo(() => {
+    const publishedIds = new Set(publishedNodes.map((node) => node.id));
+    return topicIds.flatMap((id) => {
+      const node = nodesById[id];
+      return node?.kind === 'topic' && !node.anchorLink && !node.specialKind && !node.shelvedAt && !publishedIds.has(id)
+        ? [node]
+        : [];
+    });
+  }, [nodesById, publishedNodes, topicIds]);
+  return (
+    <VirtualResultListPanel
+      activeNodeId={props.activeNodeId}
+      continueAfterDelete={!props.isStudyMode}
+      emptyState={null}
+      header={{ kind: 'root' }}
+      nodeOrder={props.nodeOrder}
+      nodes={nodes}
+      nodesById={nodesById}
+      onSelectNode={props.onSelectNodeInVirtualView}
+      topicFocusAvailable={false}
+      virtualFolderId={VIRTUAL_ROOT_NODE_ID}
     />
   );
 }

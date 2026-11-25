@@ -14,7 +14,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 interface WorkspaceVirtualRowsProps {
   resolveSystemTitle: (nodeId: string, storedTitle: string) => string;
   activeVirtualNodeId?: string | null;
-  onToggleRoot?: () => void;
+  isGrouped?: boolean;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenuVirtualNode: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -136,8 +136,8 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       } : {})}
       onKeyDown={args.onRowKeyDown}
       onSelect={(nodeId) => {
-        if (args.isVirtualRoot && args.props.onToggleRoot) {
-          args.props.onToggleRoot();
+        if (args.isVirtualRoot && args.props.isGrouped) {
+          args.props.onOpenVirtualView?.(nodeId);
           return;
         }
         if (args.isVirtualRoot) toggleCollapsed(nodeId, args.setCollapsedIds);

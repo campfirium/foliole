@@ -47,7 +47,7 @@ interface WorkspaceVirtualSectionProps {
 }
 
 function selectVirtualKeyboardRow(nodeId: string, props: WorkspaceVirtualSectionProps) {
-  if (nodeId === VIRTUAL_REMOVED_NODE_ID || nodeId === VIRTUAL_SHELVED_NODE_ID) {
+  if (nodeId === VIRTUAL_ROOT_NODE_ID || nodeId === VIRTUAL_REMOVED_NODE_ID || nodeId === VIRTUAL_SHELVED_NODE_ID) {
     props.onOpenVirtualView?.(nodeId);
     return;
   }
@@ -136,8 +136,7 @@ function useVirtualFolderActions(
 function useVirtualSectionTreeModel(
   props: WorkspaceVirtualSectionProps,
   collapsedIds: Set<string>,
-  setCollapsedIds: Dispatch<SetStateAction<Set<string>>>,
-  isGrouped: boolean
+  setCollapsedIds: Dispatch<SetStateAction<Set<string>>>
 ) {
   const rows = useMemo(
     () => buildWorkspaceVirtualRows(props, collapsedIds),
@@ -148,12 +147,10 @@ function useVirtualSectionTreeModel(
   const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
   const onRowKeyDown = useMemo(() => createNodeListRowKeydownHandler({
     collapsedNodeIds: collapsedIds,
-    onSelect: (nodeId) => {
-      if (!isGrouped || nodeId !== VIRTUAL_ROOT_NODE_ID) selectVirtualKeyboardRow(nodeId, props);
-    },
+    onSelect: (nodeId) => selectVirtualKeyboardRow(nodeId, props),
     onToggleCollapse: (nodeId) => toggleCollapsed(nodeId, setCollapsedIds),
     rows: keyboardRows
-  }), [collapsedIds, keyboardRows, props, setCollapsedIds, isGrouped]);
+  }), [collapsedIds, keyboardRows, props, setCollapsedIds]);
   return { onRowKeyDown, rows };
 }
 
@@ -174,7 +171,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     ...(props.onOpenVirtualView ? { onOpenVirtualView: props.onOpenVirtualView } : {})
   });
   const drop = useWorkspaceVirtualFolderDrop();
-  const tree = useVirtualSectionTreeModel(props, collapsedIds, setCollapsedIds, Boolean(stack));
+  const tree = useVirtualSectionTreeModel(props, collapsedIds, setCollapsedIds);
 
   if (props.hideInDemo || tree.rows.length === 0) return null;
 
@@ -186,7 +183,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
           onRowKeyDown: tree.onRowKeyDown,
           props: {
             ...props,
-            ...(stack ? { onToggleRoot: () => toggleCollapsed(VIRTUAL_ROOT_NODE_ID, setCollapsedIds) } : {}),
+            isGrouped: Boolean(stack),
             onContextMenuVirtualNode: (nodeId, event) => {
               event.preventDefault();
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });

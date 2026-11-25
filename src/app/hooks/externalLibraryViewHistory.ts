@@ -30,6 +30,9 @@ function areExternalLibrarySelectionsEqual(left: ExternalLibrarySelection, right
   if (left.kind === 'root' || right.kind === 'root') {
     return true;
   }
+  if (left.kind === 'group' || right.kind === 'group') {
+    return left.kind === 'group' && right.kind === 'group' && left.groupId === right.groupId;
+  }
   if (left.folderId !== right.folderId) {
     return false;
   }

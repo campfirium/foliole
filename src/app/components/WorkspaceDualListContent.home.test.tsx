@@ -160,7 +160,7 @@ it.each([false, true])('toggles all four section headings and preserves nested f
   for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('treeitem', { name: 'Folder A' })).toHaveAttribute('aria-expanded', String(expanded));
 
-  fireEvent.click(screen.getByRole('treeitem', { name: 'Virtual' }));
+  fireEvent.click(headings[2]!.querySelector('[data-node-tree-chevron]')!);
   expect(headings[0]).toHaveAttribute('aria-expanded', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
   for (const heading of headings) expect(heading).toHaveAttribute('aria-expanded', 'true');

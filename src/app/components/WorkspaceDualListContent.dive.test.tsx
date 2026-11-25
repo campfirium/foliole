@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { DIVE_NODE_FILTER } from '../../../lib/core/nodes/dive';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -15,31 +15,38 @@ vi.mock('../../shared/platform/desktop/diveRepository', () => ({
   getDiveRepository: () => ({})
 }));
 
+beforeEach(() => window.localStorage.clear());
+
 function Workspace({ nodesById, trashedNodeIds = [] }: { nodesById: Record<string, Node>; trashedNodeIds?: string[] }) {
   const [activeNodeId, setActiveNodeId] = useState(HOME_NODE_ID);
-  return <WorkspaceDualListContent
-    activeNodeId={activeNodeId}
-    externalEntriesByFolderId={{}}
-    externalFolders={[]}
-    externalSelection={{ kind: 'root' }}
-    isExternalViewOpen={false}
-    isStudyMode={false}
-    isTrashViewOpen={false}
-    isVirtualViewOpen={false}
-    listNodesById={projectWorkspaceListNodesById(nodesById)}
-    nodeOrder={Object.keys(nodesById)}
-    nodesById={nodesById}
-    onOpenExternalSelection={vi.fn()}
-    onOpenMoveToNode={vi.fn()}
-    onOpenNotesView={vi.fn()}
-    onOpenTrashView={vi.fn()}
-    onSelectNode={setActiveNodeId}
-    onSelectNodeInVirtualView={vi.fn()}
-    onSelectTrashNode={vi.fn()}
-    reviewCurrentNodeId={null}
-    selectedTrashNodeId={null}
-    trashedNodeIds={trashedNodeIds}
-  />;
+  return (
+    <>
+      <button onClick={() => setActiveNodeId(HOME_NODE_ID)} type="button">Open Home from history</button>
+      <WorkspaceDualListContent
+        activeNodeId={activeNodeId}
+        externalEntriesByFolderId={{}}
+        externalFolders={[]}
+        externalSelection={{ kind: 'root' }}
+        isExternalViewOpen={false}
+        isStudyMode={false}
+        isTrashViewOpen={false}
+        isVirtualViewOpen={false}
+        listNodesById={projectWorkspaceListNodesById(nodesById)}
+        nodeOrder={Object.keys(nodesById)}
+        nodesById={nodesById}
+        onOpenExternalSelection={vi.fn()}
+        onOpenMoveToNode={vi.fn()}
+        onOpenNotesView={vi.fn()}
+        onOpenTrashView={vi.fn()}
+        onSelectNode={setActiveNodeId}
+        onSelectNodeInVirtualView={vi.fn()}
+        onSelectTrashNode={vi.fn()}
+        reviewCurrentNodeId={null}
+        selectedTrashNodeId={null}
+        trashedNodeIds={trashedNodeIds}
+      />
+    </>
+  );
 }
 
 it('keeps the selected Dive live as a subfolder moves out of a source', async () => {
@@ -106,4 +113,42 @@ it('renames the Dive section from its menu and restores the name after remount',
   view.unmount();
   renderWithLocalization(<Workspace nodesById={nodes} />);
   expect(screen.getByRole('treeitem', { name: 'Reading projects' })).toBeVisible();
+});
+
+it('shows the ordered union while the Dive heading is selected', () => {
+  const topic = (id: string, title: string) => createWorkspaceContentNode({ id, kind: 'topic', title });
+  const dive = (id: string, title: string, manualChildOrder: string[]) => createWorkspaceContentNode({
+    id, kind: 'folder', specialKind: 'virtual', title, virtualFilter: DIVE_NODE_FILTER, manualChildOrder
+  });
+  const nodes = {
+    [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
+    first: dive('first', 'First project', ['shared', 'first-topic']),
+    second: dive('second', 'Second project', ['second-topic', 'shared']),
+    shared: topic('shared', 'Shared topic'),
+    'first-topic': topic('first-topic', 'First topic'),
+    'second-topic': topic('second-topic', 'Second topic'),
+    unrelated: topic('unrelated', 'Unrelated topic')
+  };
+  const view = renderWithLocalization(<Workspace nodesById={nodes} />);
+  const heading = within(screen.getByRole('tree', { name: 'Dive' })).getByRole('treeitem', { name: 'Dive' });
+  fireEvent.click(heading);
+  const content = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
+  expect(heading).toHaveAttribute('aria-selected', 'true');
+  expect(heading).toHaveAttribute('aria-expanded', 'true');
+  expect(content.getAllByRole('treeitem').map((row) => row.textContent)).toEqual([
+    'Shared topic', 'First topic', 'Second topic'
+  ]);
+  expect(content.queryByRole('treeitem', { name: 'Unrelated topic' })).toBeNull();
+
+  fireEvent.click(content.getByRole('treeitem', { name: 'Second topic' }));
+  expect(heading).toHaveAttribute('aria-selected', 'true');
+  view.rerender(<Workspace nodesById={nodes} trashedNodeIds={['second-topic']} />);
+  expect(content.queryByRole('treeitem', { name: 'Second topic' })).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open Home from history' }));
+  expect(heading).toHaveAttribute('aria-selected', 'false');
+  fireEvent.click(heading);
+  fireEvent.click(screen.getByRole('treeitem', { name: 'First project' }));
+  expect(heading).toHaveAttribute('aria-selected', 'false');
+  expect(screen.getByRole('treeitem', { name: 'First project' })).toHaveAttribute('aria-selected', 'true');
 });

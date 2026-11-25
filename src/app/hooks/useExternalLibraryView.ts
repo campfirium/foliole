@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useEffectEvent, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   loadExternalLibraryBrowseEntries,
@@ -100,7 +100,7 @@ function createExternalLibraryActions(args: {
     removeExternalFolder: (folderId: string) => void removeExternalFolder(args.folders, folderId).then((nextFolders) => {
       if (!nextFolders) return;
       args.setFolders(nextFolders);
-      if (args.selection.kind !== 'root' && args.selection.folderId === folderId) {
+      if ('folderId' in args.selection && args.selection.folderId === folderId) {
         args.setSelection({ kind: 'root' });
         args.setIsExternalViewOpen(false);
       }
@@ -132,38 +132,20 @@ function usePreloadExternalFolderEntries(
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
   setEntriesByFolderId: Dispatch<SetStateAction<Record<string, ExternalLibraryBrowseEntry[] | undefined>>>
 ) {
+  const isMissing = useEffectEvent((folderId: string) => entriesByFolderId[folderId] === undefined);
   useEffect(() => {
-    const missingFolderIds = folders
-      .map((folder) => folder.id)
-      .filter((folderId) => !Object.prototype.hasOwnProperty.call(entriesByFolderId, folderId));
-    if (missingFolderIds.length === 0) {
-      return;
-    }
     let alive = true;
-    void Promise.all(
-      missingFolderIds.map(async (folderId) => ({
-        folderId,
-        result: await loadExternalLibraryBrowseEntries(folderId)
-      }))
-    ).then((results) => {
-      if (!alive) return;
-      setEntriesByFolderId((current) => {
-        let changed = false;
-        const next = { ...current };
-        results.forEach(({ folderId, result }) => {
-          if (result === null || Object.prototype.hasOwnProperty.call(current, folderId)) {
-            return;
-          }
-          next[folderId] = result;
-          changed = true;
-        });
-        return changed ? next : current;
+    for (const { id } of folders) {
+      if (!isMissing(id)) continue;
+      void loadExternalLibraryBrowseEntries(id).then((result) => {
+        if (!alive || result === null) return;
+        setEntriesByFolderId((current) => current[id] === undefined ? { ...current, [id]: result } : current);
       });
-    });
+    }
     return () => {
       alive = false;
     };
-  }, [entriesByFolderId, folders, setEntriesByFolderId]);
+  }, [folders, setEntriesByFolderId]);
 }
 
 function useExternalFoldersState(
@@ -180,12 +162,7 @@ function useExternalFoldersState(
       }
       setEntriesByFolderId((current) => retainEntriesForCurrentFolders(current, [], result));
       setFolders(result);
-      setSelection((current) => {
-        if (current.kind === 'root') {
-          return current;
-        }
-        return result.some((folder) => folder.id === current.folderId) ? current : { kind: 'root' };
-      });
+      setSelection((current) => resolveExternalSelectionAfterFoldersChanged(current, result));
     });
     return () => {
       alive = false;
@@ -207,7 +184,7 @@ function useExternalFoldersState(
 
 function useExternalFolderEntries(selection: ExternalLibrarySelection) {
   const [entriesByFolderId, setEntriesByFolderId] = useState<Record<string, ExternalLibraryBrowseEntry[] | undefined>>({});
-  const activeFolderId = selection.kind === 'root' ? null : selection.folderId;
+  const activeFolderId = 'folderId' in selection ? selection.folderId : null;
 
   useEffect(() => {
     if (!activeFolderId || Object.prototype.hasOwnProperty.call(entriesByFolderId, activeFolderId)) {

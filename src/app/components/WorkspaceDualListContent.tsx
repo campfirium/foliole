@@ -161,7 +161,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const topicCallbacks = useWorkspaceTopicTreeCallbacks(props);
   const virtualResultIndex = useVirtualNodeResultIndex(props);
 
-  if (!dive.activeDive && !topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
+  if (!dive.showAllDives && !dive.activeDive && !topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
   }
 
@@ -171,26 +171,26 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         <WorkspaceDualListFolderColumn
           diveNavigation={dive.navigation}
           dualListState={dualListState}
-          onSelectFolderColumnNode={(id) => { dive.closeDiveSource(); viewRoot.selectFolderColumnNode(id); }}
+          onSelectFolderColumnNode={(id) => { dive.closeDiveSelection(); viewRoot.selectFolderColumnNode(id); }}
           props={props}
           virtualResultIndex={virtualResultIndex}
         />
       }
       contentColumn={
-        dive.activeDive ? (
+        dive.showAllDives || dive.activeDive ? (
           <WorkspaceDiveContent
             activeNodeId={props.activeNodeId}
             childrenByParent={dualListState.topicChildrenByParent}
-            dive={dive.activeDive}
+            {...(dive.activeDive ? { dive: dive.activeDive } : { dives: dive.navigation.dives })}
             continueAfterDelete={!props.isStudyMode}
-            {...definedProps({ forceVisibleNodeId: followsStudyCursor && studyDiveId ? props.reviewCurrentNodeId : undefined })}
+            {...definedProps({ forceVisibleNodeId: dive.activeDive && followsStudyCursor && studyDiveId ? props.reviewCurrentNodeId : undefined })}
             nodesById={props.listNodesById}
-            onSelectNode={topicCallbacks.onSelectNode}
+            onSelectNode={dive.showAllDives ? dive.onSelectAllDivesTopic : topicCallbacks.onSelectNode}
             workspace={props}
           />
         ) : props.isVirtualViewOpen
           // unstable-reference-ok: useVirtualNodeResultIndex returns its ref-cached index until nodeOrder, nodesById or trashedNodeIds change.
-          ? renderVirtualContentColumn(props, virtualResultIndex, t, locale, dualListState.topicChildrenByParent)
+          ? renderVirtualContentColumn(props, virtualResultIndex, t, locale, dualListState.topicChildrenByParent, dualListState.homeTopicNodeOrder)
             : props.isExternalViewOpen
               ? renderExternalContentColumn(props)
               : topicRootId

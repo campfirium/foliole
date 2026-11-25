@@ -1,4 +1,4 @@
-import type { ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
+import { isReadwiseExternalFolder, type ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
 
 import type {
   ExternalLibraryBrowseEntry,
@@ -41,7 +41,10 @@ export function resolveExternalSelectionAfterFoldersChanged(
   if (current.kind === 'root') {
     return current;
   }
-  return folders.some((folder) => folder.id === current.folderId) ? current : { kind: 'root' };
+  const matchesSelection = current.kind === 'group'
+    ? isReadwiseExternalFolder
+    : (folder: ExternalLibraryFolder) => folder.id === current.folderId;
+  return folders.some(matchesSelection) ? current : { kind: 'root' };
 }
 
 function isExternalFolderEntryCacheCurrent(

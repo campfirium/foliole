@@ -21,7 +21,7 @@ interface ExternalLibraryListToolbarProps {
 
 function useExternalDocumentListRefresh(selection: ExternalLibrarySelection) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const folderId = selection.kind === 'root' ? null : selection.folderId;
+  const folderId = 'folderId' in selection ? selection.folderId : null;
 
   return {
     folderId,

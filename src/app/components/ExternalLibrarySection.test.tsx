@@ -57,7 +57,8 @@ it('shows external folders in the persisted manual order', () => {
   ]);
 });
 
-it('groups Readwise-managed external folders under one Readwise row', () => {
+it('selects the Readwise group independently of its chevron', () => {
+  const onOpenExternalSelection = vi.fn();
   renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
@@ -66,15 +67,21 @@ it('groups Readwise-managed external folders under one Readwise row', () => {
         externalFolder('readwise-reader-import-books', '/library/Books')
       ]}
       isExternalViewOpen={false}
-      onOpenExternalSelection={vi.fn()}
+      onOpenExternalSelection={onOpenExternalSelection}
       selection={{ kind: 'root' }}
     />
   );
 
-  expect(screen.getByRole('treeitem', { name: /^Readwise$/i })).toBeInTheDocument();
+  const group = screen.getByRole('treeitem', { name: /^Readwise$/i });
+  fireEvent.click(group);
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'group', groupId: 'readwise' });
+  expect(group).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('treeitem', { name: /Articles/i })).toBeInTheDocument();
   expect(screen.getByRole('treeitem', { name: /Books/i })).toBeInTheDocument();
   expect(screen.queryByRole('treeitem', { name: /Readwise Articles/i })).toBeNull();
+  fireEvent.click(group.querySelector('[data-node-tree-chevron]')!);
+  expect(onOpenExternalSelection).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('treeitem', { name: /Articles/i })).toBeNull();
 });
 
 it('opens the external root from the setup row keyboard path', () => {
@@ -220,11 +227,12 @@ it('opens external folder context menu actions for regular folders only', () => 
 it.each([
   { folders: [], child: /connect.*folder/i },
   { folders, child: /1act/i }
-])('nests and folds the reference section entries', ({ folders, child }) => {
+])('selects and folds the reference section independently', ({ folders, child }) => {
+  const onOpenExternalSelection = vi.fn();
   renderWithLocalization(
     <FolderSectionStack>
       <ExternalLibrarySection entriesByFolderId={{}} folders={folders} isExternalViewOpen={false}
-        onOpenExternalSelection={vi.fn()} selection={{ kind: 'root' }} />
+        onOpenExternalSelection={onOpenExternalSelection} selection={{ kind: 'root' }} />
     </FolderSectionStack>
   );
 
@@ -233,6 +241,10 @@ it.each([
   expect(screen.getByRole('treeitem', { name: child })).toHaveAttribute('aria-level', '2');
 
   fireEvent.click(heading);
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
+  expect(heading).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(heading.querySelector('[data-node-tree-chevron]')!);
+  expect(onOpenExternalSelection).toHaveBeenCalledTimes(1);
   expect(heading).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('treeitem', { name: child })).toBeNull();
 

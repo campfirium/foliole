@@ -36,6 +36,7 @@ export interface ExternalLibraryDirectoryNode {
 
 export type ExternalLibrarySelection =
   | { kind: 'root' }
+  | { kind: 'group'; groupId: 'readwise' }
   | { folderId: string; kind: 'folder' }
   | { directoryPath: string; folderId: string; kind: 'directory' }
   | {

@@ -17,9 +17,10 @@ import {
   useExternalDocumentLastOpenedAt
 } from './externalDocumentLastOpenedAt';
 import {
-  buildExternalLibraryFolderBrowseState,
+  type ExternalLibraryDocumentItem,
   type ExternalLibrarySelection
 } from './externalLibraryBrowseModel';
+import { resolveExternalDocuments } from './externalLibraryListModel';
 import { ExternalLibraryListToolbar } from './ExternalLibraryListToolbar';
 import { normalizeWorkspaceContentSort, sortExternalDocuments } from './workspaceContentSort';
 import { useStableWorkspaceContentItems } from './workspaceStableContentSort';
@@ -81,19 +82,16 @@ function useExternalDocumentListState(
   lastOpenedAtByPath: Record<string, string | undefined>,
   sortRefreshVersion: number
 ) {
-  const activeFolderId = props.selection.kind === 'root' ? null : props.selection.folderId;
-  const selectedFolder = activeFolderId ? props.folders.find((folder) => folder.id === activeFolderId) ?? null : null;
-  const folderEntries = selectedFolder ? props.entriesByFolderId[selectedFolder.id] : [];
-  const isLoading = selectedFolder ? folderEntries === undefined : false;
-  const browseState = useMemo(
-    () => (!selectedFolder || props.selection.kind === 'root' ? null : buildExternalLibraryFolderBrowseState(selectedFolder, folderEntries ?? [], props.selection)),
-    [folderEntries, props.selection, selectedFolder]
+  const { entriesByFolderId, folders, selection } = props;
+  const { items, isLoading, scopeKey } = useMemo(
+    () => resolveExternalDocuments(folders, entriesByFolderId, selection),
+    [entriesByFolderId, folders, selection]
   );
 
   // A new filtered array or sorter per render re-sorted the whole folder on every render.
   const filteredDocuments = useMemo(
     () =>
-      (browseState?.documentItems ?? []).filter(
+      items.filter(
         (document) =>
           !searchQuery.trim() ||
           containsQuery(document.relativePath, searchQuery) ||
@@ -101,7 +99,7 @@ function useExternalDocumentListState(
           containsQuery(document.title, searchQuery) ||
           containsQuery(document.openingText ?? '', searchQuery)
       ),
-    [browseState, searchQuery]
+    [items, searchQuery]
   );
   const sortItems = useCallback(
     (items: typeof filteredDocuments) => sortExternalDocuments(items, sort, lastOpenedAtByPath),
@@ -111,7 +109,7 @@ function useExternalDocumentListState(
     getItemId: getExternalDocumentId,
     items: filteredDocuments,
     refreshKey: sortRefreshVersion,
-    scopeKey: activeFolderId ?? 'root',
+    scopeKey,
     sort,
     sortItems
   });
@@ -122,7 +120,7 @@ function useExternalDocumentListState(
 }
 
 function ExternalDocumentListBody(props: {
-  documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'];
+  documents: ExternalLibraryDocumentItem[];
   isLoading: boolean;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   selection: ExternalLibrarySelection;
@@ -161,7 +159,7 @@ function ExternalDocumentListBody(props: {
 }
 
 function useExternalDocumentKeyboard(
-  documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'],
+  documents: ExternalLibraryDocumentItem[],
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
 ) {
   return useMemo(
@@ -182,7 +180,7 @@ function useExternalDocumentKeyboard(
 
 function openExternalDocumentSelection(
   absolutePath: string,
-  documents: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'],
+  documents: ExternalLibraryDocumentItem[],
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void
 ) {
   const document = documents.find((candidate) => candidate.absolutePath === absolutePath);
@@ -198,7 +196,7 @@ function openExternalDocumentSelection(
 
 function renderExternalDocumentRow(args: {
   archivedLabel: string;
-  document: ReturnType<typeof buildExternalLibraryFolderBrowseState>['documentItems'][number];
+  document: ExternalLibraryDocumentItem;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void;
   rowSpacing: number;

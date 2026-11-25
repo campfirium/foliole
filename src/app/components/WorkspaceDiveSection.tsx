@@ -207,15 +207,16 @@ export function WorkspaceDiveSection(props: {
   const collapsed = section.collapsed.has(rootId);
   useFolderSectionControl(available, collapsed, () => section.toggle(rootId));
   if (!available) return null;
+  const selected = props.activeDiveId === rootId;
   const title = customTitle || t('desktop.nodeList.dive.tree');
   return (
     <div className="mt-1 flex min-w-0 flex-col">
       <section aria-label={title} className="flex flex-col pt-1" role="tree">
         <FolderSectionRows rows={[
-          <NodeTreeRow key={rootId} depth={0} hasChildren isActive={false} isCollapsed={collapsed} isSelected={false}
+          <NodeTreeRow key={rootId} depth={0} hasChildren isActive={selected} isCollapsed={collapsed} isSelected={selected}
           label={title} nodeId={rootId} rowSpacing={getNodeListRowSpacing()} showIcon={false}
           showLeafChevronPlaceholder={false}
-          onContextMenu={section.openMenu} onRename={renameSection} onSelect={section.toggle}
+          onContextMenu={section.openMenu} onRename={renameSection} onSelect={() => props.onSelectDive(rootId)}
           onKeyDown={(id, event) => {
             if (event.key !== (collapsed ? 'ArrowRight' : 'ArrowLeft')) return;
             event.preventDefault();

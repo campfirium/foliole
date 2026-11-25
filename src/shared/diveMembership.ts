@@ -15,7 +15,7 @@ export function listVisibleDives(snapshot: DiveCatalog) {
   });
 }
 
-export function resolveDiveMembership(snapshot: DiveCatalog, dive: Dive) {
+function createDiveMembershipResolver(snapshot: DiveCatalog) {
   const visible = new Set(selectCanonicalVisibleNodeIds(snapshot));
   const children = new Map<string, string[]>();
   for (const id of visible) {
@@ -30,8 +30,18 @@ export function resolveDiveMembership(snapshot: DiveCatalog, dive: Dive) {
     const node = snapshot.nodesById[id];
     if (visible.has(id) && !node?.anchorLink && !node?.virtualFilter && id !== VIRTUAL_ROOT_NODE_ID) return node?.kind;
   };
-  return {
+  return (dive: Dive) => ({
     sources: dive.directSourceIds.filter(id => Boolean(kindOf(id))),
     topics: resolveDiveTopicIds(dive, { kindOf, childrenOf: id => children.get(id) ?? [] })
-  };
+  });
+}
+
+export function resolveDiveMembership(snapshot: DiveCatalog, dive: Dive) {
+  return createDiveMembershipResolver(snapshot)(dive);
+}
+
+export function collectDiveMembershipTopicIds(snapshot: DiveCatalog, dives: readonly Dive[]) {
+  if (dives.length === 0) return [];
+  const resolveMembership = createDiveMembershipResolver(snapshot);
+  return [...new Set(dives.flatMap((dive) => resolveMembership(dive).topics))];
 }

@@ -1,4 +1,5 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -9,6 +10,11 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
+
+const { loadPublishedTopics } = vi.hoisted(() => ({ loadPublishedTopics: vi.fn() }));
+vi.mock('../../shared/platform/foliolePublishRepository', () => ({
+  loadFoliolePublishedTopicsFromRuntime: loadPublishedTopics
+}));
 
 function createNode(args: {
   id: string;
@@ -95,55 +101,31 @@ function renderVirtualContentColumn() {
   return { onSelectNodeInVirtualView };
 }
 
-function renderVirtualRootAggregate() {
-  renderWithLocalization(
+function VirtualRootWorkspace() {
+  const [virtualId, setVirtualId] = useState<string | null>(null);
+  const nodes = {
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
+    saved: createNode({ id: 'saved', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search A' }),
+    active: createNode({ id: 'active', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Active topic' }),
+    published: createNode({ id: 'published', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Published topic' }),
+    withdrawn: createNode({ id: 'withdrawn', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Withdrawn topic' }),
+    shelved: createNode({ id: 'shelved', kind: 'topic', parentNodeId: INBOX_NODE_ID, shelvedAt: '2026-05-01', title: 'Shelved topic' }),
+    trashed: createNode({ id: 'trashed', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Trashed topic' }),
+    anchor: createNode({ id: 'anchor', kind: 'topic', parentNodeId: INBOX_NODE_ID, anchorLink: { id: 'a', kind: 'highlight' }, title: 'Anchor topic' })
+  };
+  return (
     <WorkspaceDualListContent
-      activeNodeId={VIRTUAL_ROOT_NODE_ID}
-      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
-      externalEntriesByFolderId={{}}
-      externalFolders={[]}
-      externalSelection={{ kind: 'root' }}
-      isExternalViewOpen={false}
-      isStudyMode={false}
-      isTrashViewOpen={false}
-      isVirtualViewOpen
-      nodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
-        [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
-        'virtual-a': {
-          ...createNode({ id: 'virtual-a', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search A' }),
-          virtualFilter: { conditions: [{ field: 'text', operator: 'contains', value: 'alpha' }], match: 'all', version: 1 }
-        },
-        'virtual-b': {
-          ...createNode({ id: 'virtual-b', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search B' }),
-          virtualFilter: { conditions: [{ field: 'text', operator: 'contains', value: 'beta' }], match: 'all', version: 1 }
-        },
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic', content: 'alpha body' }),
-        'topic-b': createNode({ id: 'topic-b', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Beta Topic', content: 'beta body' })
-      }}
-      listNodesById={{
-        [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
-        [VIRTUAL_ROOT_NODE_ID]: createNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
-        'virtual-a': createNode({ id: 'virtual-a', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search A' }),
-        'virtual-b': createNode({ id: 'virtual-b', kind: 'folder', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Saved Search B' }),
-        'topic-a': createNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic' }),
-        'topic-b': createNode({ id: 'topic-b', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Beta Topic' })
-      }}
-      nodeOrder={[INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'virtual-a', 'virtual-b', 'topic-a', 'topic-b']}
-      onOpenMoveToNode={vi.fn()}
-      onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
-      onOpenTrashView={vi.fn()}
-      onOpenVirtualView={vi.fn()}
-      onSelectNode={vi.fn()}
-      onSelectNodeInVirtualView={vi.fn()}
-      onSelectTrashNode={vi.fn()}
-      reviewCurrentNodeId={null}
-      selectedTrashNodeId={null}
-      trashedNodeIds={[]}
+      activeNodeId={null} activeVirtualNodeId={virtualId}
+      externalEntriesByFolderId={{}} externalFolders={[]} externalSelection={{ kind: 'root' }}
+      isExternalViewOpen={false} isStudyMode={false} isTrashViewOpen={false} isVirtualViewOpen={virtualId !== null}
+      nodesById={nodes} listNodesById={nodes} nodeOrder={Object.keys(nodes)}
+      onOpenMoveToNode={vi.fn()} onOpenNotesView={vi.fn()} onOpenExternalSelection={vi.fn()}
+      onOpenTrashView={vi.fn()} onOpenVirtualView={(id) => setVirtualId(id ?? VIRTUAL_ROOT_NODE_ID)}
+      onSelectNode={vi.fn()} onSelectNodeInVirtualView={vi.fn()} onSelectTrashNode={vi.fn()}
+      reviewCurrentNodeId={null} selectedTrashNodeId={null} trashedNodeIds={['trashed']}
     />
   );
-
 }
 
 beforeEach(() => {
@@ -213,19 +195,35 @@ it('lists only directly shelved ordinary topics in the Shelved virtual view', ()
   expect(screen.queryByText('Trashed Topic')).toBeNull();
 });
 
-it('toggles saved searches from the Virtual section title', () => {
-  renderVirtualRootAggregate();
+it('selects the Virtual root, filters its topics as publishing loads, and folds only via the chevron', async () => {
+  let resolvePublished!: (result: { topics: Array<{ node_id: string; source_state: string }> }) => void;
+  loadPublishedTopics.mockReturnValueOnce(new Promise((resolve) => { resolvePublished = resolve; }));
+  renderWithLocalization(<VirtualRootWorkspace />);
   const root = screen.getByRole('treeitem', { name: 'Virtual' });
-
-  fireEvent.doubleClick(root);
+  expect(root).toHaveAttribute('aria-selected', 'false');
   fireEvent.click(root);
 
-  expect(screen.queryByRole('textbox', { name: 'Rename Virtual' })).toBeNull();
-  expect(root).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
-
-  fireEvent.click(root);
+  const content = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
+  expect(root).toHaveAttribute('aria-selected', 'true');
   expect(root).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeVisible();
-  expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeVisible();
+  expect(content.getByRole('treeitem', { name: 'Published topic' })).toBeVisible();
+  expect(content.queryByRole('treeitem', { name: 'Shelved topic' })).toBeNull();
+  expect(content.queryByRole('treeitem', { name: 'Trashed topic' })).toBeNull();
+  expect(content.queryByRole('treeitem', { name: 'Anchor topic' })).toBeNull();
+
+  await act(async () => resolvePublished({
+    topics: [{ node_id: 'published', source_state: 'active' }, { node_id: 'withdrawn', source_state: 'withdrawn' }]
+  }));
+  expect(content.queryByRole('treeitem', { name: 'Published topic' })).toBeNull();
+  expect(content.getByRole('treeitem', { name: 'Active topic' })).toBeVisible();
+  expect(content.getByRole('treeitem', { name: 'Withdrawn topic' })).toBeVisible();
+
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Published' }), { key: 'ArrowUp' });
+  expect(root).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(root.querySelector('[data-node-tree-chevron]')!);
+  expect(root).toHaveAttribute('aria-expanded', 'false');
+  expect(root).toHaveAttribute('aria-selected', 'true');
+  expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
+  expect(content.getByRole('treeitem', { name: 'Active topic' })).toBeVisible();
 });

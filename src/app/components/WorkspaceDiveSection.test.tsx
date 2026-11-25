@@ -1,6 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { DIVE_SECTION_ROW_ID } from '../../../lib/core/nodes/dive';
 import { FolderSectionStack } from '../../features/nodes/components/FolderSectionStack';
 import type { WorkspaceListNode } from '../../features/nodes/model/workspaceListNode';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -19,8 +20,9 @@ function source(id: string, kind: 'folder' | 'topic', title: string): WorkspaceL
 }
 
 it('keeps folder sources available after collapsing and reopening the Dive section', async () => {
+  const onSelectDive = vi.fn();
   renderWithLocalization(
-    <FolderSectionStack><WorkspaceDiveSection activeSource={null} activeDiveId={null} onSelectDive={vi.fn()} onSelectNode={vi.fn()}
+    <FolderSectionStack><WorkspaceDiveSection activeSource={null} activeDiveId={null} onSelectDive={onSelectDive} onSelectNode={vi.fn()}
       dives={[{ id: 'probability', title: 'Probability', directSourceIds: ['folder', 'topic'] }]} nodesById={{
       folder: source('folder', 'folder', 'Probability notes'),
       topic: source('topic', 'topic', 'Bayes’ theorem')
@@ -31,10 +33,15 @@ it('keeps folder sources available after collapsing and reopening the Dive secti
   expect(tree.getByRole('treeitem', { name: 'Probability notes' })).toBeVisible();
 
   fireEvent.click(heading);
+  expect(onSelectDive).toHaveBeenCalledWith(DIVE_SECTION_ROW_ID);
+  expect(heading).toHaveAttribute('aria-expanded', 'true');
+
+  fireEvent.click(heading.querySelector('[data-node-tree-chevron]')!);
+  expect(onSelectDive).toHaveBeenCalledTimes(1);
   expect(heading).toHaveAttribute('aria-expanded', 'false');
   expect(tree.queryByRole('treeitem', { name: 'Probability' })).toBeNull();
 
-  fireEvent.click(heading);
+  fireEvent.click(heading.querySelector('[data-node-tree-chevron]')!);
   expect(heading).toHaveAttribute('aria-expanded', 'true');
   const folder = await tree.findByRole('treeitem', { name: 'Probability notes' });
   expect(folder.querySelector('[data-node-icon], [data-node-tree-chevron-placeholder]')).toBeNull();

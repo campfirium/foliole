@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
@@ -48,21 +48,26 @@ it('shows saved virtual results in the shared list column', () => {
   expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeInTheDocument();
 });
 
-it('leaves the Virtual root content column empty', () => {
+it('supports title search in the read-only Virtual root topic list', () => {
+  const nodes = {
+    [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    [VIRTUAL_ROOT_NODE_ID]: createWorkspaceContentNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
+    'topic-a': createWorkspaceContentNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic' })
+  };
   renderWorkspaceContent({
     activeNodeId: VIRTUAL_ROOT_NODE_ID,
     activeVirtualNodeId: VIRTUAL_ROOT_NODE_ID,
     isVirtualViewOpen: true,
-    nodesById: {
-      [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
-      [VIRTUAL_ROOT_NODE_ID]: createWorkspaceContentNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
-      'topic-a': createWorkspaceContentNode({ id: 'topic-a', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Alpha Topic', content: 'alpha body' })
-    },
-    nodeOrder: [INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'topic-a']
+    nodesById: nodes,
+    listNodesById: nodes,
+    nodeOrder: Object.keys(nodes)
   });
 
+  expect(screen.getByRole('treeitem', { name: 'Alpha Topic' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Create topic' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Open title search' }));
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beta' } });
   expect(screen.queryByRole('treeitem', { name: 'Alpha Topic' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Open title search' })).toBeNull();
 });
 
 it('shows only result topics in the Shelved topic list column', () => {

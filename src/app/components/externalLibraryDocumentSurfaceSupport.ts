@@ -16,6 +16,9 @@ export function resolveExternalSurfaceTitle(
   if (selection.kind === 'root') {
     return t('desktop.externalLibrary.rootTitle');
   }
+  if (selection.kind === 'group') {
+    return 'Readwise';
+  }
   if (selection.kind === 'folder') {
     return selectedFolder ? resolveExternalFolderDisplayLabel(selectedFolder) : t('desktop.externalLibrary.folderFallback');
   }
@@ -34,7 +37,7 @@ export function resolveExternalSurfaceDescription(
   if (error) {
     return error;
   }
-  if (selection.kind === 'root') {
+  if (selection.kind === 'root' || selection.kind === 'group') {
     return t('desktop.externalLibrary.rootDescription');
   }
   if (selection.kind === 'folder') {

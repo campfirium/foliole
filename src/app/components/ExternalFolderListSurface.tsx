@@ -35,13 +35,13 @@ export function buildExternalFolderBrowseProjection(args: {
   folders: ExternalLibraryFolder[];
   selection: ExternalLibrarySelection;
 }) {
-  const activeFolderId = args.selection.kind === 'root' ? null : args.selection.folderId;
+  const activeFolderId = 'folderId' in args.selection ? args.selection.folderId : null;
   const selectedFolder = activeFolderId
     ? args.folders.find((folder) => folder.id === activeFolderId) ?? null
     : null;
   const folderEntries = selectedFolder ? args.entriesByFolderId[selectedFolder.id] ?? [] : [];
   const browseState =
-    !selectedFolder || args.selection.kind === 'root'
+    !selectedFolder || !('folderId' in args.selection)
       ? null
       : buildExternalLibraryFolderBrowseState(selectedFolder, folderEntries, args.selection);
   const documentNodes = (browseState?.documentItems ?? []).map((item) => toExternalDocumentNode(item));

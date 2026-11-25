@@ -60,24 +60,24 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
 }
 
 function renderExternalHeading(
-  stack: ReturnType<typeof useFolderSectionStack>,
   title: string,
   rowSpacing: number,
   collapsed: boolean,
-  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>
+  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>,
+  props: ExternalLibrarySectionProps
 ) {
-  if (!stack) return [];
+  const selected = props.isExternalViewOpen && props.selection.kind === 'root';
   const toggle = () => setCollapsed((value) => !value);
   return [
-    <NodeTreeRow key="heading" depth={0} hasChildren isActive={false} isCollapsed={collapsed}
-      isSelected={false} label={title} nodeId={EXTERNAL_HEADING_ID}
+    <NodeTreeRow key="heading" depth={0} hasChildren isActive={selected} isCollapsed={collapsed}
+      isSelected={selected} label={title} nodeId={EXTERNAL_HEADING_ID}
       rowSpacing={rowSpacing} showIcon={false} showLeafChevronPlaceholder={false}
       onKeyDown={(_id, event) => {
         if (event.key !== (collapsed ? 'ArrowRight' : 'ArrowLeft')) return;
         event.preventDefault();
         toggle();
       }}
-      onSelect={toggle} onToggleCollapse={toggle} />
+      onSelect={() => props.onOpenExternalSelection({ kind: 'root' })} onToggleCollapse={toggle} />
   ];
 }
 
@@ -109,13 +109,13 @@ function VisibleExternalLibrarySection(props: ExternalLibrarySectionProps) {
     <div className="mt-1 flex min-w-0 flex-col">
       <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
         <FolderSectionRows rows={[
-          ...renderExternalHeading(stack, t('desktop.externalLibrary.setupLabel'), rowSpacing, sectionCollapsed, setSectionCollapsed),
+          ...(stack ? renderExternalHeading(t('desktop.externalLibrary.setupLabel'), rowSpacing, sectionCollapsed, setSectionCollapsed, props) : []),
           ...(sectionCollapsed ? [] : props.folders.length === 0 ? [
             <ExternalLibrarySetupRow
               key="setup"
               depth={stack ? 1 : 0}
               label={stack ? t('desktop.externalLibrary.menu.connectFolder') : t('desktop.externalLibrary.setupLabel')}
-              isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}
+              isSelected={!stack && props.isExternalViewOpen && props.selection.kind === 'root'}
               onContextMenu={(event) => openExternalSetupContextMenu(event, setContextMenu)}
               onOpenRoot={() => {
                 props.onOpenExternalSelection({ kind: 'root' });

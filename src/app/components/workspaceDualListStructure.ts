@@ -23,6 +23,7 @@ export interface WorkspaceDualListStructureData {
   folderNodeOrder: string[];
   folderCounts: ReturnType<typeof deriveFolderContentCounts>;
   listIndex: WorkspaceListChildrenIndex;
+  homeTopicNodeOrder: string[];
   topicNodeOrderByFolderId: Map<string, string[]>;
 }
 
@@ -82,10 +83,10 @@ function collectDirectTopicColumnNodeIds(
 function buildTopicNodeOrderByFolderId(
   folderNodeOrder: string[],
   index: WorkspaceListChildrenIndex,
-  nodesById: WorkspaceListNodesById
+  nodesById: WorkspaceListNodesById,
+  homeTopicNodeOrder: string[]
 ) {
   const topicNodeOrderByFolderId = new Map<string, string[]>();
-  const homeTopicNodeOrder = collectHomeTopicColumnNodeIds(index, nodesById);
   for (const folderId of folderNodeOrder) {
     const folderNode = nodesById[folderId];
     topicNodeOrderByFolderId.set(
@@ -124,6 +125,7 @@ export function buildWorkspaceDualListStructureData(
     previous && { index: previous.data.listIndex, nodesById: previous.listNodesById }
   );
   const folderNodeOrder = buildFolderNodeOrderFromIndex(listIndex, args.listNodesById);
+  const homeTopicNodeOrder = collectHomeTopicColumnNodeIds(listIndex, args.listNodesById);
   return {
     folderCounts: deriveFolderContentCounts(
       { index: listIndex, nodesById: args.listNodesById },
@@ -136,10 +138,12 @@ export function buildWorkspaceDualListStructureData(
     ),
     folderNodeOrder,
     listIndex,
+    homeTopicNodeOrder,
     topicNodeOrderByFolderId: buildTopicNodeOrderByFolderId(
       folderNodeOrder,
       listIndex,
-      args.listNodesById
+      args.listNodesById,
+      homeTopicNodeOrder
     )
   };
 }

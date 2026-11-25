@@ -24,7 +24,8 @@ it('opens a simplified external folder setup dialog before connecting a folder',
   });
 
   const setupRow = screen.getByRole('treeitem', { name: 'Connect folder' });
-  expect(setupRow).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('treeitem', { name: 'External' })).toHaveAttribute('aria-selected', 'true');
+  expect(setupRow).toHaveAttribute('aria-selected', 'false');
   expect(screen.queryByRole('dialog', { name: 'Connect an external folder' })).toBeNull();
 
   fireEvent.click(setupRow);
