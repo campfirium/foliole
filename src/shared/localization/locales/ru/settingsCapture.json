@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "Глобальные настройки захвата",
   "settings.capture.sectionTitle": "Глобальный захват",
+  "settings.capture.sectionDescription": "Сохраняйте выделенный текст из любого окна, мимолётные мысли или содержимое буфера обмена прямо во входящих.",
   "settings.capture.permission.title": "Доступ к выбору",
   "settings.capture.permission.granted": "Foliole может скопировать текущий выбор при запуске глобального захвата.",
   "settings.capture.permission.denied": "Разрешите Foliole в настройках системы → Конфиденциальность и безопасность → Доступность.",

@@ -1,6 +1,7 @@
 export const EN_SETTINGS_CAPTURE_TRANSLATIONS = {
   'settings.capture.sectionAria': 'Global capture settings',
   'settings.capture.sectionTitle': 'Global capture',
+  'settings.capture.sectionDescription': 'Save selected text from any window, a quick thought, or clipboard content straight to your Inbox.',
   'settings.capture.searchDescription': 'View global capture options.',
   'settings.capture.searchTerms': 'global clip|global clipping|capture selection|clipboard capture',
   'settings.capture.permission.title': 'Selection access',

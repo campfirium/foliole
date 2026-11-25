@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "Paramètres de capture globaux",
   "settings.capture.sectionTitle": "Capture globale",
+  "settings.capture.sectionDescription": "Enregistrez directement dans votre boîte de réception du texte sélectionné dans n’importe quelle fenêtre, une idée ou le contenu du presse-papiers.",
   "settings.capture.permission.title": "Accès sélection",
   "settings.capture.permission.granted": "Foliole peut copier la sélection actuelle lorsque vous exécutez la capture globale.",
   "settings.capture.permission.denied": "Autorisez Foliole dans Paramètres système → Confidentialité et sécurité → Accessibilité.",

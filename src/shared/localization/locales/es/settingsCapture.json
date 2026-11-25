@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "Configuración de captura global",
   "settings.capture.sectionTitle": "Captura global",
+  "settings.capture.sectionDescription": "Guarda texto seleccionado en cualquier ventana, una idea rápida o el contenido del portapapeles directamente en tu bandeja de entrada.",
   "settings.capture.permission.title": "Acceso a selección",
   "settings.capture.permission.granted": "Foliole puede copiar la selección actual cuando ejecuta la captura global.",
   "settings.capture.permission.denied": "Permitir Foliole en Configuración del sistema → Privacidad y seguridad → Accesibilidad.",

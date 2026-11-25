@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "Globale Erfassungseinstellungen",
   "settings.capture.sectionTitle": "Globale Erfassung",
+  "settings.capture.sectionDescription": "Speichern Sie markierten Text aus beliebigen Fenstern, spontane Gedanken oder den Inhalt der Zwischenablage direkt im Posteingang.",
   "settings.capture.permission.title": "Auswahlzugriff",
   "settings.capture.permission.granted": "Foliole kann die aktuelle Auswahl kopieren, wenn Sie die globale Erfassung ausführen.",
   "settings.capture.permission.denied": "Erlauben Sie Foliole in den Systemeinstellungen → Datenschutz und Sicherheit → Barrierefreiheit.",

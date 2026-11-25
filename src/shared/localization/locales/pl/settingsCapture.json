@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "Globalne ustawienia przechwytywania",
   "settings.capture.sectionTitle": "Globalne przechwytywanie",
+  "settings.capture.sectionDescription": "Zapisuj tekst zaznaczony w dowolnym oknie, przelotne pomysły lub zawartość schowka bezpośrednio w skrzynce odbiorczej.",
   "settings.capture.permission.title": "Dostęp do wyboru",
   "settings.capture.permission.granted": "Foliole może skopiować bieżący wybór po uruchomieniu przechwytywania globalnego.",
   "settings.capture.permission.denied": "Zezwól na Foliole w Ustawieniach systemu → Prywatność i bezpieczeństwo → Dostępność.",

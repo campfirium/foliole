@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "グローバル キャプチャ設定",
   "settings.capture.sectionTitle": "グローバル キャプチャ",
+  "settings.capture.sectionDescription": "任意のウィンドウで選択したテキスト、思いついたアイデア、クリップボードの内容をすぐに受信トレイへ保存できます。",
   "settings.capture.permission.title": "選択アクセス",
   "settings.capture.permission.granted": "Foliole は、グローバル キャプチャを実行するときに現在の選択内容をコピーできます。",
   "settings.capture.permission.denied": "システム設定 → プライバシーとセキュリティ → アクセシビリティで Foliole を許可します。",

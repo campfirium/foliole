@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "किसी भी ऐप से क्लिप करने की सेटिंग",
   "settings.capture.sectionTitle": "किसी भी ऐप से क्लिप करें",
+  "settings.capture.sectionDescription": "किसी भी विंडो में चुना गया टेक्स्ट, कोई विचार या क्लिपबोर्ड की सामग्री सीधे अपने इनबॉक्स में सहेजें।",
   "settings.capture.permission.title": "चुनी हुई सामग्री का ऐक्सेस",
   "settings.capture.permission.granted": "जब आप किसी ऐप से क्लिप लेते हैं, तो Foliole चुनी हुई सामग्री कॉपी कर सकता है।",
   "settings.capture.permission.denied": "सिस्टम सेटिंग → निजता और सुरक्षा → ऐक्सेसिबिलिटी में Foliole को अनुमति दें।",

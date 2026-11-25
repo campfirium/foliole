@@ -58,7 +58,10 @@ function CaptureShortcutButton() {
   return (
     <button
       aria-label={`${actionLabel} (${displayLabel})`}
-      className={settingsHotkeyChipClassName(label ? 'assigned' : 'empty')}
+      className={settingsHotkeyChipClassName(
+        label ? 'assigned' : 'empty',
+        'border-dashed border-settings-control-border bg-transparent hover:border-settings-control-border-hover'
+      )}
       onClick={() => onConfigureShortcut(commandId)}
       title={actionLabel}
       type="button"
@@ -94,10 +97,12 @@ export function SettingsCaptureSection() {
 
   return (
     <SettingsSection
+      actions={capabilities?.globalCaptureSupported ? <CaptureShortcutButton /> : null}
       ariaLabel={t('settings.capture.sectionAria')}
+      className="[&_[data-settings-section-header]_p]:max-w-xl"
+      description={capabilities?.globalCaptureSupported ? t('settings.capture.sectionDescription') : undefined}
       searchRowId={SETTINGS_CAPTURE_SEARCH_ROW_ID}
       title={t('settings.capture.sectionTitle')}
-      titleActions={capabilities?.globalCaptureSupported ? <CaptureShortcutButton /> : null}
     >
       <SettingsRow
         description={checkFailed ? t('settings.capture.permission.unavailable') : permissionDescription(capabilities, t)}

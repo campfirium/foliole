@@ -1,6 +1,7 @@
 {
   "settings.capture.sectionAria": "全域擷取設定",
   "settings.capture.sectionTitle": "全球捕獲",
+  "settings.capture.sectionDescription": "快速擷取任意視窗中的選取文字、即時想法或剪貼簿內容，一鍵存入收件匣。",
   "settings.capture.permission.title": "選擇訪問",
   "settings.capture.permission.granted": "Foliole 可以在執行全域擷取時複製目前選擇。",
   "settings.capture.permission.denied": "在系統設定 → 隱私和安全性 → 輔助功能中允許 Foliole。",
