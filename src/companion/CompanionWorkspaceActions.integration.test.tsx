@@ -157,8 +157,8 @@ it('creates the chosen child type from the first-level article menu', async () =
   expect(menu.getByRole('button', { name: 'Rename' })).toBeVisible();
   expect(menu.getByRole('button', { name: 'Move to...' })).toBeVisible();
   expect(menu.queryByRole('button', { name: 'Info' })).toBeNull();
-  expect(menu.getAllByRole('button').filter(button => button.textContent !== 'Close').slice(-7).map(button => button.textContent)).toEqual([
-    'Rename', 'Move to...', 'Add to Dive…', 'Shelve', 'Create Topic', 'Create Item', 'Move to Trash'
+  expect(menu.getAllByRole('button').filter(button => button.textContent !== 'Close').slice(-8).map(button => button.textContent)).toEqual([
+    'Rename', 'Move to...', 'Add to Dive…', 'Shelve', 'Dismiss topic', 'Create Topic', 'Create Item', 'Move to Trash'
   ]);
   fireEvent.click(menu.getByRole('button', { name: 'Create Item' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Child question' } });

@@ -43,6 +43,7 @@ vi.mock('./liveMarkdown', () => ({
 
 vi.mock('./liveMarkdownState', () => ({
   createLiveMarkdownStateExtensions: vi.fn(() => []),
+  editorDisplayModeOverrideFacet: { of: vi.fn((value) => value) },
   trailingDividerFacet: { of: vi.fn((value) => value) }
 }));
 

@@ -43,14 +43,14 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('toggles the Virtual section without leaving the current folder', async () => {
+it('folds the Virtual section from its chevron or keyboard and opens its view from the row', async () => {
   render(<App />);
 
   const panel = within(await getNodeListPanel());
   const virtual = panel.getByRole('treeitem', { name: 'Virtual' });
   expect(virtual).toHaveAttribute('aria-expanded', 'true');
 
-  fireEvent.click(virtual);
+  fireEvent.click(virtual.querySelector('[data-node-tree-chevron]')!);
   expect(virtual).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('region', { name: 'Virtual search' })).not.toBeInTheDocument();
 
@@ -59,6 +59,12 @@ it('toggles the Virtual section without leaving the current folder', async () =>
   fireEvent.keyDown(virtual, { key: 'ArrowLeft' });
   expect(virtual).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('region', { name: 'Virtual search' })).not.toBeInTheDocument();
+
+  fireEvent.keyDown(virtual, { key: 'ArrowRight' });
+  fireEvent.click(virtual);
+  expect(virtual).toHaveAttribute('aria-expanded', 'true');
+  expect(virtual).toHaveAttribute('aria-selected', 'true');
+  expect(await screen.findByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
 });
 
 it('shows import and clipboard import actions in the left toolbar without Watch Manager', () => {

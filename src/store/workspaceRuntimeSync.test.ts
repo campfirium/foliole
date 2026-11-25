@@ -90,6 +90,7 @@ function expectNodeMutationSync(invoke: ReturnType<typeof vi.fn>, command: 'upda
     parentNodeId: null,
     kind: 'topic',
     priority: 0,
+    enforcePriority: false,
     desiredRetention: 0.81,
     enableShortTerm: null,
     sequentialReadingEnabled: null,

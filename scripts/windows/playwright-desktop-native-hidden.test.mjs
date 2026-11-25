@@ -12,7 +12,7 @@ import {
 } from '../desktop/playwright-desktop-native-hidden.mjs';
 
 describe('playwright desktop native hidden runner', () => {
-  it('runs Playwright through the preview resource gate from the Windows checkout', () => {
+  it('runs Playwright through the hidden-desktop resource gate from the Windows checkout', () => {
     const command = createNativeHiddenDesktopGateCommand({
       argv: ['tests/desktop/startup.spec.ts', '--project=chromium'],
       cwd: 'D:\\C\\foliole',
@@ -24,7 +24,7 @@ describe('playwright desktop native hidden runner', () => {
     expect(command).toMatchObject({
       args: [
         'scripts/with-resource-gate.mjs',
-        'preview',
+        'hidden-desktop',
         '--',
         'C:\\Node\\node.exe',
         'node_modules/playwright/cli.js',
