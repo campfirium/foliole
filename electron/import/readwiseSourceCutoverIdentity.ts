@@ -182,7 +182,7 @@ function legacyAnnotationsFor(
 function loadLegacyAnnotationCandidates(nodeId: string) {
   return openDatabaseConnection().driver.queryAll<LegacyAnnotationCandidate>(`WITH RECURSIVE tree(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
-       UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE n.deleted_at IS NULL
+       UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE +n.deleted_at IS NULL
      ) SELECT n.id, n.title, ${buildNodeBodyContentSql()} AS content, n.anchor_link anchorLink,
        n.is_title_manual isTitleManual, n.created_at createdAt,
        (SELECT COUNT(*) FROM nodes child WHERE child.parent_id=n.id AND child.deleted_at IS NULL) childCount

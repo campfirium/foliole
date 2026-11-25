@@ -15,10 +15,10 @@ export function preserveReadwiseBookExcerpts(input: {
     `WITH RECURSIVE descendants(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
-       WHERE child.deleted_at IS NULL
+       WHERE +child.deleted_at IS NULL
      ), retained(id) AS (
        SELECT id FROM nodes WHERE id IN (SELECT id FROM descendants) AND (anchor_link IS NOT NULL OR kind='item' OR (is_title_manual=0 AND id NOT LIKE 'node-body-part-%'))
-       UNION SELECT child.id FROM nodes child JOIN retained ON child.parent_id=retained.id WHERE child.deleted_at IS NULL
+       UNION SELECT child.id FROM nodes child JOIN retained ON child.parent_id=retained.id WHERE +child.deleted_at IS NULL
      ) SELECT id,parent_id,anchor_link,kind,is_title_manual FROM nodes WHERE id IN (SELECT id FROM retained)`, [input.rootNodeId]
   );
   const excerpts = rows.filter(row => row.anchor_link || row.kind === 'item'

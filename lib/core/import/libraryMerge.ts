@@ -52,7 +52,7 @@ const SPECIAL_NODE_PREFIX = 'special-';
 const SOURCE_OUTLINE_SQL = `WITH RECURSIVE visible(id, parent_id, depth) AS (
   SELECT id, parent_id, 0 FROM nodes WHERE parent_id IS NULL AND deleted_at IS NULL
   UNION ALL SELECT n.id, n.parent_id, visible.depth + 1 FROM nodes n JOIN visible ON n.parent_id = visible.id
-  WHERE n.deleted_at IS NULL AND visible.depth < 100000
+  WHERE +n.deleted_at IS NULL AND visible.depth < 100000
 ) SELECT visible.id, visible.parent_id, visible.depth FROM visible JOIN nodes n ON n.id = visible.id
   WHERE n.virtual_filter IS NULL ORDER BY visible.depth, visible.id`;
 

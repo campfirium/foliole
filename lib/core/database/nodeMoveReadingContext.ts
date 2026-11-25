@@ -25,7 +25,7 @@ function loadReadingNodes(driver: DatabaseDriver, nodeIds: string[]): Sequential
     r.priority AS reading_priority, h.reading_position, r.repetition_count, r.state AS reading_state
     FROM nodes n LEFT JOIN node_reading r ON r.node_id = n.id
     LEFT JOIN node_reading_host_state h ON h.node_id = n.id AND h.host_name = ?
-    WHERE n.id IN (SELECT value FROM json_each(?)) AND n.deleted_at IS NULL`,
+    WHERE n.id IN (SELECT value FROM json_each(?)) AND +n.deleted_at IS NULL`,
   [requireDatabaseHostName(driver), JSON.stringify(nodeIds)]);
   return Object.fromEntries(rows.map((row) => [row.id, {
     id: row.id, parentNodeId: row.parent_id, kind: row.kind, title: row.title, createdAt: row.created_at,

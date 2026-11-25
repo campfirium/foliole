@@ -79,7 +79,7 @@ export function captureReadwiseOriginalEpubSnapshot(target: ReadwiseOriginalEpub
   const rows = driver.queryAll<Record<string, unknown>>(
     `WITH RECURSIVE tree AS (
        SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL
-       UNION ALL SELECT n.id FROM nodes n JOIN tree ON n.parent_id = tree.id WHERE n.deleted_at IS NULL
+       UNION ALL SELECT n.id FROM nodes n JOIN tree ON n.parent_id = tree.id WHERE +n.deleted_at IS NULL
      ) SELECT id, parent_id, title, content, body_blob_hash, anchor_link, image_regions,
        created_at, updated_at, deleted_at FROM nodes WHERE id IN (SELECT id FROM tree) ORDER BY id`,
     [target.nodeId]

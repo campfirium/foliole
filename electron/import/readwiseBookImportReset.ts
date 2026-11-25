@@ -79,7 +79,7 @@ function listDescendantNodeIds(rootNodeId: string) {
          SELECT child.id
          FROM nodes child
          JOIN descendants ON child.parent_id = descendants.id
-         WHERE child.deleted_at IS NULL
+         WHERE +child.deleted_at IS NULL
        )
        SELECT id FROM descendants`,
       [rootNodeId]

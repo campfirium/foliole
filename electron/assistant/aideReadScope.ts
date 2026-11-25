@@ -214,7 +214,7 @@ export function listAideBaseTopicFamily(baseTopicId: string) {
        SELECT id, 0 FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL
        SELECT n.id, family.depth + 1 FROM nodes n JOIN family ON n.parent_id = family.id
-       WHERE n.deleted_at IS NULL AND family.depth < 64
+       WHERE +n.deleted_at IS NULL AND family.depth < 64
      )
      SELECT n.id, n.parent_id, n.kind, n.title FROM family JOIN nodes n ON n.id = family.id
      ORDER BY family.depth, COALESCE(n.position, 999999), n.created_at, n.id

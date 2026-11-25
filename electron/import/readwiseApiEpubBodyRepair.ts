@@ -66,7 +66,7 @@ function readCurrentBodies(rootNodeId: string) {
   }>(`WITH RECURSIVE tree(id, content, title) AS (
       SELECT id, content, title FROM nodes WHERE id = ? AND deleted_at IS NULL
       UNION ALL SELECT child.id, child.content, child.title FROM nodes child
-      JOIN tree ON child.parent_id = tree.id WHERE child.deleted_at IS NULL
+      JOIN tree ON child.parent_id = tree.id WHERE +child.deleted_at IS NULL
     ) SELECT id, content, title FROM tree WHERE id = ? OR id LIKE 'node-epub-%'`,
   [rootNodeId, rootNodeId]);
   return new Map(rows.map((row) => [row.id, row]));

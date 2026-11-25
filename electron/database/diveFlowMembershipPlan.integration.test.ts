@@ -38,7 +38,7 @@ it('walks a moved subtree through the parent index', async () => {
   const driver = {
     ...peer.driver,
     queryAll(sql: string, params: unknown[] = []) {
-      if (sql.includes('subtree')) {
+      if (sql.includes('subtree') || sql.includes('node_reading_host_state h')) {
         const rows = peer.db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params) as { detail: string }[];
         plan.push(...rows.map(row => row.detail));
       }

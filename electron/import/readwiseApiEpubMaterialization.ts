@@ -37,7 +37,7 @@ export function hasPersistedReadwiseApiEpubStructure(rootNodeId: string) {
      `WITH RECURSIVE descendants(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
-       WHERE child.deleted_at IS NULL
+       WHERE +child.deleted_at IS NULL
      ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%' LIMIT 1`, [rootNodeId]
   ));
 }
@@ -158,7 +158,7 @@ export function readReadwiseApiEpubBookBodies(rootNodeId: string) {
     `WITH RECURSIVE descendants(id, created_at) AS (
        SELECT id, created_at FROM nodes WHERE id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id, child.created_at FROM nodes child
-       JOIN descendants ON child.parent_id = descendants.id WHERE child.deleted_at IS NULL
+       JOIN descendants ON child.parent_id = descendants.id WHERE +child.deleted_at IS NULL
      ) SELECT id, created_at FROM descendants
      WHERE id = ? OR substr(id, 1, 10) = 'node-epub-'
      ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, created_at, id`, [rootNodeId, rootNodeId, rootNodeId]
