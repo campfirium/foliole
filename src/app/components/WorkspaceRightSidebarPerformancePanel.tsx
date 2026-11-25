@@ -70,6 +70,15 @@ function readLoadedNodeStats(nodesById: Record<string, Node>) {
   );
 }
 
+function renderSelectionDescription(title: string | null, t: Translate) {
+  if (!title) return t('desktop.diagnostics.performance.selectNode');
+  return (
+    <span className="[overflow-wrap:anywhere]">
+      {t('desktop.diagnostics.performance.latestSelection', { title })}
+    </span>
+  );
+}
+
 export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSidebarPerformancePanelProps) {
   const t = useTranslation();
   const memorySnapshot = usePerformanceMemorySnapshot();
@@ -87,7 +96,7 @@ export function WorkspaceRightSidebarPerformancePanel(props: WorkspaceRightSideb
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <InspectorSection
-        description={activeNodeTitle ? t('desktop.diagnostics.performance.latestSelection', { title: activeNodeTitle }) : t('desktop.diagnostics.performance.selectNode')}
+        description={renderSelectionDescription(activeNodeTitle, t)}
         {...performanceInspectorSectionProps}
         title={t('desktop.diagnostics.performance.timing')}
       >

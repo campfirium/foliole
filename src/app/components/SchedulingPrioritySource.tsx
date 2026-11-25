@@ -28,7 +28,7 @@ export function SchedulingPrioritySource({ clickable = true, priority, nodesById
   return (
     <>
       {owner && (clickable ? (
-        <button className="cursor-pointer underline decoration-foreground/40 underline-offset-2 hover:decoration-current"
+        <button className="max-w-full cursor-pointer text-right [overflow-wrap:anywhere] underline decoration-foreground/40 underline-offset-2 hover:decoration-current"
           onClick={() => setOpen(true)} type="button">
           {owner.title}
         </button>
