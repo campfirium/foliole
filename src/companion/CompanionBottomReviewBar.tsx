@@ -25,7 +25,6 @@ function renderRevealAction(props: ReviewActionButtonPresentation) {
 const actionGroupClassName = 'companion-review-actions w-full';
 
 export function CompanionBottomReviewBar(props: {
-  hasAnswer: boolean;
   disabled?: boolean;
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
@@ -47,7 +46,7 @@ export function CompanionBottomReviewBar(props: {
   if (!props.visible) {
     return null;
   }
-  const canGradeFsrs = props.itemKind === 'fsrs' && props.hasAnswer && props.isAnswerRevealed;
+  const canGradeFsrs = props.itemKind === 'fsrs' && props.isAnswerRevealed;
 
   return (
     <CompanionReviewActionFooter
@@ -69,7 +68,7 @@ export function CompanionBottomReviewBar(props: {
             onDismissReviewTopic={props.onDismissReviewTopic}
           />
         ) : !canGradeFsrs ? (
-          <FsrsRevealAction renderButton={renderRevealAction} disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
+          <FsrsRevealAction renderButton={renderRevealAction} disabled={Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
         ) : (
           <ReviewGradeActions
             buttonClassName="companion-bottom-action min-w-0 flex-1 px-0"

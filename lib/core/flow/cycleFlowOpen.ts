@@ -1,7 +1,7 @@
 import { hasNodeContent } from '../nodes/nodeContentFlags.js';
 import { hasDeletedAncestor, hasShelvedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
+import { isBlankReviewItemNode, isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
 
 import { buildCycle } from './cycleFlowBuild.js';
 import { cycleChanges } from './cycleFlowChanges.js';
@@ -97,7 +97,8 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
     onSkipped: (row, snapshot) => {
       const node = snapshot.nodesById[row.node_id];
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
-        || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)));
+        || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)))
+        || (isFsrsReviewItemNode(node) && isBlankReviewItemNode(node));
       if (!unavailable || !row.initial_task || skipped.has(row.node_id)) return;
       const next = { ...row, initial_task: 0 as const };
       skipped.set(row.node_id, next);

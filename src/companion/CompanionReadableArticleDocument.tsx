@@ -68,7 +68,7 @@ function useReadableArticleEditorState(props: {
 }) {
   const saveContent = props.onSaveContent;
   const editableNode = useRef<string | null>(null);
-  const bodyReady = !props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready';
+  const bodyReady = ['ready', 'empty', undefined].includes(props.readableArticle.bodyStatus);
   if (bodyReady && props.allowContentEditing && saveContent) editableNode.current = props.readableArticle.nodeId;
   if (!props.allowContentEditing || editableNode.current !== props.readableArticle.nodeId) editableNode.current = null;
   const canEdit = Boolean(
@@ -187,7 +187,9 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       pdfReading.hasReadableText ? pdfReading.onBackToText : undefined
     );
   }
-  if (!canEdit && props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
+  // An empty question still has to show the answer that was written for it.
+  const answerOnly = props.readableArticle.bodyStatus === 'empty' && Boolean(props.answer);
+  if (!canEdit && !answerOnly && props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
     return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} title={props.readableArticle.title} />;
   }
 
@@ -197,7 +199,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
         <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf}
           originalUnavailable={pdfReading.originalUnavailable} onDismiss={pdfReading.dismissOriginalUnavailable} />
       ) : null}
-      <CompanionItemReviewLayout active={props.layout === 'review' && props.isReviewItem === true && !canEdit && props.answer != null}
+      <CompanionItemReviewLayout active={props.layout === 'review' && props.isReviewItem === true && !canEdit && Boolean(props.answer)}
         version={`${props.readableArticle.nodeId}:${props.readableArticle.content}:${props.answer}`}>
       <CompanionItemEditLayout active={canEditAnswer} style={typographyStyle(props.readingTypographySettings)} question={
         <ReadableArticleTextDocument

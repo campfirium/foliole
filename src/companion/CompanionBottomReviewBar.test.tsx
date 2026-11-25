@@ -8,7 +8,6 @@ import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 function renderReviewBar(reviewCardKey: string) {
   return renderWithLocalization(
     <CompanionBottomReviewBar
-      hasAnswer={true}
       isAnswerRevealed={false}
       itemKind="reading"
       onReadReviewTopic={vi.fn()}
@@ -32,7 +31,6 @@ describe('CompanionBottomReviewBar', () => {
 
     view.rerender(
       <CompanionBottomReviewBar
-        hasAnswer={true}
         isAnswerRevealed={false}
         itemKind="reading"
         onReadReviewTopic={vi.fn()}
@@ -54,11 +52,11 @@ describe('CompanionBottomReviewBar', () => {
     expect(container.querySelector('footer')?.className).toContain('[padding-bottom:calc(0.5rem+env(safe-area-inset-bottom))]');
   });
 
-  it('does not show grade actions before a synced answer exists', () => {
+  it('holds Show Answer while the card cannot be answered yet', () => {
     renderWithLocalization(
       <CompanionBottomReviewBar
-        hasAnswer={false}
-        isAnswerRevealed={true}
+        disabled
+        isAnswerRevealed={false}
         itemKind="fsrs"
         onReadReviewTopic={vi.fn()}
         onPostponeReviewTopic={vi.fn()}

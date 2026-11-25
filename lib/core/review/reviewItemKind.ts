@@ -1,5 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../database/workspaceSnapshotHelpers.js';
-import { hasNodeReveal } from '../nodes/nodeContentFlags.js';
+import { hasNodeContent, hasNodeReveal } from '../nodes/nodeContentFlags.js';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
 export type ReviewItemNodeLike = Pick<WorkspaceNodeSnapshot, 'kind'> & Partial<Pick<WorkspaceNodeSnapshot, 'review'>> & Partial<Pick<WorkspaceNodeSnapshot, 'reveal' | 'hasReveal'>> & {
@@ -48,4 +48,9 @@ export function isFsrsReviewItemNode(node: ReviewItemNodeLike | null | undefined
 
 export function isReadingReviewItemNode(node: ReviewItemNodeLike | null | undefined) {
   return getReviewItemKind(node) === 'reading';
+}
+
+/** An Item with neither a question nor an answer has nothing to review yet. */
+export function isBlankReviewItemNode(node: ReviewItemNodeLike & { content?: string; hasContent?: boolean }) {
+  return !hasNodeContent(node) && !hasNodeReveal(node);
 }
