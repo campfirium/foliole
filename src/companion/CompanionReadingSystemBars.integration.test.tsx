@@ -106,13 +106,16 @@ it('keeps both preferences independent across articles, reentry and leaving read
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true, overlayToolbars: true });
 });
 
-it('restores normal window layout while editing and reapplies the reading state on foreground and rotation', async () => {
+it('holds the bars through editing and reapplies the reading state on foreground and rotation', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
   render(article('first', true)); await applied(true, true); more();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Edit content' })); await applied(false);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); await applied(true, true);
   host.apply.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit content' }));
+  await act(async () => undefined);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await act(async () => undefined);
+  expect(host.apply).not.toHaveBeenCalled();
   await act(async () => { foreground.forEach(callback => callback()); foreground.forEach(callback => callback()); });
   expect(host.apply).toHaveBeenCalledTimes(1);
   host.apply.mockClear(); await act(async () => { window.dispatchEvent(new Event('orientationchange')); });

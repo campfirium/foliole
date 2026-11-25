@@ -87,6 +87,61 @@ describe('useCompanionEditToggleScrollAnchor alignment', () => {
 
 });
 
+describe('useCompanionEditToggleScrollAnchor late keyboard', () => {
+  useFakeFrames();
+
+  function enterEditing(scrollTop: number) {
+    const surface = createSurface(scrollTop);
+    const { result } = renderHook(() => useCompanionEditToggleScrollAnchor({ current: surface }));
+    act(() => { result.current.capture(createEditor(surface, 56), true); });
+    surface.scrollTop = 0;
+    const editing = createEditor(surface, 120);
+    act(() => {
+      result.current.onEditorReady(editing);
+      flushFrames(5);
+    });
+    return surface;
+  }
+
+  /** The keyboard resizes the window and the platform scrolls the caret on its own. */
+  function openKeyboard(surface: HTMLElement) {
+    act(() => {
+      vi.advanceTimersByTime(900);
+      surface.scrollTop += 300;
+      window.dispatchEvent(new Event('resize'));
+      flushFrames(5);
+    });
+  }
+
+  it('realigns when the keyboard arrives after the line had already settled', () => {
+    const surface = enterEditing(2130);
+    const settled = surface.scrollTop;
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(settled);
+  });
+
+  it('keeps the start of the document clear of the editing toolbar', () => {
+    const surface = enterEditing(0);
+    expect(surface.scrollTop).toBe(0);
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(0);
+  });
+
+  it('leaves the position alone once the reader types', () => {
+    const surface = enterEditing(2130);
+    const settled = surface.scrollTop;
+    act(() => { document.dispatchEvent(new Event('beforeinput')); });
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(settled + 300);
+  });
+});
+
 describe('useCompanionEditToggleScrollAnchor release', () => {
   useFakeFrames();
 

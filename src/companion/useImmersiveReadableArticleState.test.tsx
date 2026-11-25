@@ -22,6 +22,16 @@ describe('useImmersiveReadableArticleState', () => {
     expect(result.current.isChromeVisible).toBe(false);
   });
 
+  it.each([false, true])('leaves editing with the toolbars as they were before, shown=%s', (shown) => {
+    const { result } = renderHook(() => useImmersiveReadableArticleState(), { wrapper: CompanionReadingSessionHost });
+    if (shown) act(() => result.current.handleSurfaceClick(clickEvent(document.createElement('p'))));
+
+    act(() => result.current.enterContentEditing());
+    act(() => result.current.exitContentEditing());
+
+    expect(result.current.isChromeVisible).toBe(shown);
+  });
+
   it('does not toggle chrome from interactive controls', () => {
     const { result } = renderHook(() => useImmersiveReadableArticleState(), { wrapper: CompanionReadingSessionHost });
     const button = document.createElement('button');

@@ -28,7 +28,8 @@ function useReadingSession() {
 export function CompanionReadingSessionHost(props: { children: ReactNode }) {
   const [readers, setReaders] = useState(0);
   const [view, setView] = useState(closedView);
-  useCompanionReadingSystemBars(readers > 0, view.editing || view.outlineOpen);
+  // Editing keeps the bars held, so the keyboard is the only thing that resizes the window then.
+  useCompanionReadingSystemBars(readers > 0, view.outlineOpen);
   const join = useCallback(() => {
     setReaders(count => count + 1);
     return () => setReaders(count => count - 1);

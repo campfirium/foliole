@@ -19,11 +19,7 @@ async function editAndFinish(probe: Probe) {
   await probe.flush(500);
 }
 
-const editingKeepsBars = {
-  expected: seen({ tools: 'visible' }),
-  gap: { closure: '0-5' as const, platforms: ['android' as const],
-    now: seen({ bars: ['shown', 'hidden'], tools: 'visible' }) }
-};
+const editingKeepsBars = { expected: seen({ tools: 'visible' }) };
 
 export const windowRows: ReadingStateRow[] = [
   { scene: 'P8 article', event: 'edit, then done', ...editingKeepsBars,

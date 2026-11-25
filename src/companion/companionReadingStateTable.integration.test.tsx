@@ -118,18 +118,7 @@ describe.each<Platform>(['android', 'ios'])('reading state table on %s', platfor
   const rows = [...sessionRows, ...tapRows, ...windowRows].filter(row => row.platforms?.includes(platform) ?? true);
   for (const row of rows) {
     const name = `${row.scene} | ${row.event}`;
-    const gap = row.gap && (row.gap.platforms?.includes(platform) ?? true) ? row.gap : null;
-    if (!gap) {
-      it(name, async () => {
-        expect(await observeRow(row, platform)).toEqual(onPlatform(row.expected, platform));
-      });
-      continue;
-    }
-    // The passing `now` case proves the scene works, so the expected failure below fails for the recorded gap.
-    it(`${name} | today (T886-${gap.closure} pending)`, async () => {
-      expect(await observeRow(row, platform)).toEqual(onPlatform(gap.now, platform));
-    });
-    it.fails(`${name} | target of T886-${gap.closure}`, async () => {
+    it(name, async () => {
       expect(await observeRow(row, platform)).toEqual(onPlatform(row.expected, platform));
     });
   }

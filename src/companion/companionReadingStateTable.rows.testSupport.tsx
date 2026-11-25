@@ -1,6 +1,4 @@
 // T886 reading state table, paths P1-P4: toolbars and system bars across scene changes.
-// `expected` is the target behaviour. `gap` marks a row the model does not meet yet: `now` records today's
-// behaviour and the target is an expected failure until the named closure removes the gap.
 import { CompanionDirectoryContent } from './CompanionDirectoryContent';
 import { BODY } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
@@ -16,7 +14,6 @@ export interface ReadingStateRow {
   platforms?: Platform[];
   /** Bars are given for Android; the table expects none on iOS, which never hides the status bar. */
   expected: Observation;
-  gap?: { closure: '0-3' | '0-5'; platforms?: Platform[]; now: Observation };
   run(probe: Probe, platform: Platform): Promise<void>;
 }
 

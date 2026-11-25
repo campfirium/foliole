@@ -33,7 +33,6 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
   function enterContentEditing() {
     setIsActionsSheetOpen(false);
     setOpenReadingSheet(null);
-    setIsChromeVisible(true);
     setIsContentEditing(true);
   }
 
