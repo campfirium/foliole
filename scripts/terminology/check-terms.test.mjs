@@ -37,7 +37,14 @@ describe('check-terms', () => {
       expect.objectContaining({ rule: 'tree-children', severity: 'error' })
     ]);
     expect(findTermIssues('Review card', 'en', terms)).toEqual([
-      expect.objectContaining({ rule: 'card', severity: 'warn' })
+      expect.objectContaining({ rule: 'card', severity: 'error' })
+    ]);
+    const withOpenRule = {
+      ...terms,
+      avoid: [{ id: 'pending', en: ['widget'], zhHans: [], prefer: [], status: 'open', reason: 'undecided' }]
+    };
+    expect(findTermIssues('Open widget', 'en', withOpenRule)).toEqual([
+      expect.objectContaining({ rule: 'pending', severity: 'warn' })
     ]);
     expect(findTermIssues('No topics in this folder', 'en', terms)).toEqual([]);
     expect(findTermIssues('Open release notes', 'en', terms)).toEqual([]);
