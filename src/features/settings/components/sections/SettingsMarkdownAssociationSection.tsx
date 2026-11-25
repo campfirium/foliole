@@ -1,7 +1,18 @@
+import { useRef, useState } from 'react';
+
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { openWindowsDefaultAppSettings } from '../../../../shared/platform/desktopHostCapabilities';
 import { resolveRuntimeOperatingSystem } from '../../../../shared/platform/runtime/operatingSystem';
-import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import {
+  AppButton,
+  AppDialog,
+  AppDialogActions,
+  AppDialogBody,
+  AppDialogContent,
+  AppDialogDescription,
+  AppDialogOverlay,
+  AppDialogPortal,
+  AppDialogTitle,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
@@ -10,16 +21,23 @@ import {
 } from '../../../../shared/ui';
 import { SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 
-const MACOS_DEFAULT_APP_GUIDE = 'https://support.apple.com/guide/mac-help/mh35597/mac';
-const WINDOWS_DEFAULT_APP_GUIDE = 'https://support.microsoft.com/en-us/windows/apps/change-default-apps-in-windows';
-
 export function SettingsMarkdownAssociationSection() {
   const t = useTranslation();
   const platform = resolveRuntimeOperatingSystem();
-  if (platform === 'other') return null;
+  const [showInstructions, setShowInstructions] = useState(false);
+  const configureButtonRef = useRef<HTMLButtonElement>(null);
 
-  const isMac = platform === 'macos';
-  const guideUrl = isMac ? MACOS_DEFAULT_APP_GUIDE : WINDOWS_DEFAULT_APP_GUIDE;
+  async function configureDefaultApp() {
+    if (platform === 'windows') {
+      try {
+        await openWindowsDefaultAppSettings();
+        return;
+      } catch {
+        // The dialog includes the manual path when Windows Settings cannot be opened.
+      }
+    }
+    setShowInstructions(true);
+  }
 
   return (
     <SettingsSection
@@ -28,16 +46,38 @@ export function SettingsMarkdownAssociationSection() {
       searchRowId={SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID}
       title={t('settings.markdownAssociation.title')}
     >
-      <SettingsRow
-        description={t(isMac ? 'settings.markdownAssociation.macInstructions' : 'settings.markdownAssociation.windowsInstructions')}
-        title={t('settings.markdownAssociation.defaultApp')}
-      >
+      <SettingsRow title={t('settings.markdownAssociation.defaultApp')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <button className={settingsButtonClassName()} onClick={() => void openExternalUrl(guideUrl)} type="button">
-            {t('settings.markdownAssociation.guide')}
+          <button className={settingsButtonClassName()} onClick={() => void configureDefaultApp()} ref={configureButtonRef} type="button">
+            {t('settings.markdownAssociation.configure')}
           </button>
         </SettingsControlSlot>
       </SettingsRow>
+      <AppDialog open={showInstructions} onOpenChange={setShowInstructions}>
+        <AppDialogPortal>
+          <AppDialogOverlay />
+          <AppDialogContent
+            className="w-[calc(100vw-3rem)] max-w-[480px]"
+            layout="task"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              configureButtonRef.current?.focus();
+            }}
+          >
+            <AppDialogTitle>{t('settings.markdownAssociation.defaultApp')}</AppDialogTitle>
+            <AppDialogBody>
+              <AppDialogDescription className="whitespace-pre-line">
+                {t(platform === 'macos' ? 'settings.markdownAssociation.macInstructions'
+                  : platform === 'windows' ? 'settings.markdownAssociation.windowsInstructions'
+                  : 'settings.markdownAssociation.linuxInstructions')}
+              </AppDialogDescription>
+            </AppDialogBody>
+            <AppDialogActions>
+              <AppButton onClick={() => setShowInstructions(false)}>{t('shared.close')}</AppButton>
+            </AppDialogActions>
+          </AppDialogContent>
+        </AppDialogPortal>
+      </AppDialog>
     </SettingsSection>
   );
 }

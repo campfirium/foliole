@@ -148,6 +148,11 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  if (request.command === NATIVE_COMMANDS.openWindowsDefaultAppSettings) {
+    if (process.platform !== 'win32') throw new Error('windows_default_app_settings_unavailable');
+    await shell.openExternal('ms-settings:defaultapps');
+    return null;
+  }
   if (request.command === NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings) {
     return openGlobalCaptureAccessibilitySettings();
   }

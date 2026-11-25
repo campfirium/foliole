@@ -66,3 +66,20 @@ it('opens only the fixed Accessibility settings pane on macOS', async () => {
     Object.defineProperty(process, 'platform', platform);
   }
 });
+
+it('opens the fixed Default apps page only on Windows', async () => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  const request = { command: NATIVE_COMMANDS.openWindowsDefaultAppSettings };
+  vi.mocked(shell.openExternal).mockClear();
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'darwin' });
+    await expect(handleWindowAndUtilityCommand(request)).rejects.toThrow('unavailable');
+    expect(shell.openExternal).not.toHaveBeenCalled();
+
+    Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+    await expect(handleWindowAndUtilityCommand(request)).resolves.toBeNull();
+    expect(shell.openExternal).toHaveBeenCalledExactlyOnceWith('ms-settings:defaultapps');
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+});

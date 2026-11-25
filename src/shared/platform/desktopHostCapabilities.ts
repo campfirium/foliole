@@ -46,6 +46,12 @@ export async function openGlobalCaptureAccessibilitySettings() {
   await invoke(NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings);
 }
 
+export async function openWindowsDefaultAppSettings() {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('windows_default_app_settings_unavailable');
+  await invoke(NATIVE_COMMANDS.openWindowsDefaultAppSettings);
+}
+
 export function isWorkspaceGlobalCaptureAvailable() {
   return isDesktopRuntime() && resolveRuntimeOperatingSystem() !== 'other';
 }

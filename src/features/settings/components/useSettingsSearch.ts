@@ -30,6 +30,7 @@ const DESKTOP_ONLY_SEARCH_ROWS = new Set([
   SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
   SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID,
   SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID,
+  SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID,
   SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
 ]);
 
@@ -53,7 +54,6 @@ export function useSettingsSearchIndex(previewDesktopSettings = false) {
     (row) => (hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID)
       && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
       && (showMacOrWindowsRows || row.id !== SETTINGS_CAPTURE_SEARCH_ROW_ID)
-      && (showMacOrWindowsRows || row.id !== SETTINGS_MARKDOWN_ASSOCIATION_SEARCH_ROW_ID)
       && (showCapturePosition || row.id !== SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID)
       && (showDesktopOnlyRows || !DESKTOP_ONLY_SEARCH_ROWS.has(row.id))
   ), [hasCustomCss, showCapturePosition, showDesktopOnlyRows, showMacOrWindowsRows, showQuitOnClose, t]);

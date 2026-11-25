@@ -11,6 +11,7 @@ import { NATIVE_IMPORT_FILE_COMMAND_REGISTRY } from './nativeImportFileCommandRe
 import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 import { NATIVE_SPLIT_TOPIC_COMMAND_REGISTRY } from './nativeSplitTopicCommandRegistry.js';
+import { NATIVE_SYSTEM_SETTINGS_COMMAND_REGISTRY } from './nativeSystemSettingsCommandRegistry.js';
 import { NATIVE_WEBDAV_COMMAND_REGISTRY } from './nativeWebDavCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
@@ -44,9 +45,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadLoginItemSettings, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.openExternalUrl, route: 'windowAndUtility', capability: 'externalOpen' },
-  { command: NATIVE_COMMANDS.openImportPermissionSettings, route: 'windowAndUtility', capability: 'externalOpen' },
-  { command: NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings, route: 'windowAndUtility', capability: 'externalOpen' },
-  { command: NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings, route: 'windowAndUtility', capability: 'externalOpen' },
+  ...NATIVE_SYSTEM_SETTINGS_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.openImportRoot, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.listCssSnippetFiles, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.openCssSnippetFolder, route: 'storage', capability: 'filesystemOpen' },

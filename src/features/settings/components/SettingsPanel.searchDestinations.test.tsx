@@ -59,9 +59,9 @@ function openSettings(platform = 'MacIntel') {
 it.each([
   ['全局剪辑', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
   ['全局捕捉', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
-  ['Markdown', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
-  ['文件关联', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
-  ['默认应用', 'Markdown 文件关联', 'Markdown 文件关联', 'button', '系统操作指南'],
+  ['Markdown', '外部 Markdown 文件', '外部 Markdown 文件', 'button', '设置'],
+  ['文件关联', '外部 Markdown 文件', '外部 Markdown 文件', 'button', '设置'],
+  ['默认应用', '外部 Markdown 文件', '外部 Markdown 文件', 'button', '设置'],
   ['备份搜索', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['搜索备份内容', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['合并资料库', '并入资料库', '并入资料库设置区', 'button', '选择资料库'],
@@ -93,14 +93,27 @@ it('indexes the capture section on Windows without the Mac-only confirmation pos
   expect(within(section).queryByRole('combobox', { name: '完成提示位置' })).toBeNull();
 });
 
-it('directs Windows users to the system default apps settings for Markdown', async () => {
+it('opens Windows Default apps from the Markdown setup button', async () => {
   const settings = openSettings('Win32');
   settings.search('文件关联');
   fireEvent.keyDown(settings.input, { key: 'Enter' });
   await settings.finishLoading();
-  const section = screen.getByRole('region', { name: 'Markdown 文件关联' });
-  expect(within(section).getByText(/设置 → 应用 → 默认应用/)).toBeVisible();
-  expect(within(section).queryByRole('button', { name: '打开文件…' })).toBeNull();
+  const section = screen.getByRole('region', { name: '外部 Markdown 文件' });
+  fireEvent.click(within(section).getByRole('button', { name: '设置', exact: true }));
+  await waitFor(() => expect(window.electronAPI?.invoke).toHaveBeenCalledWith('open_windows_default_app_settings'));
+});
+
+it('shows desktop-specific file association instructions for Linux', async () => {
+  const settings = openSettings('Linux x86_64');
+  settings.search('文件关联');
+  fireEvent.keyDown(settings.input, { key: 'Enter' });
+  await settings.finishLoading();
+  const section = screen.getByRole('region', { name: '外部 Markdown 文件' });
+  expect(within(section).queryByText(/GNOME/)).toBeNull();
+  fireEvent.click(within(section).getByRole('button', { name: '设置', exact: true }));
+  const dialog = screen.getByRole('dialog', { name: '将 Foliole 设为 Markdown 文件的默认应用' });
+  expect(dialog).toHaveTextContent(/GNOME.*属性.*打开方式/);
+  expect(dialog).toHaveTextContent(/KDE Plasma.*系统设置.*文件关联/);
 });
 
 it('omits global capture search results on unsupported desktop platforms', async () => {

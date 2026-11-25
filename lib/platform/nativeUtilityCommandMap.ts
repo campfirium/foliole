@@ -90,6 +90,7 @@ export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
   };
   [NATIVE_COMMANDS.openGlobalCaptureAccessibilitySettings]: { args: undefined; result: null };
   [NATIVE_COMMANDS.openImportPermissionSettings]: { args: undefined; result: null };
+  [NATIVE_COMMANDS.openWindowsDefaultAppSettings]: { args: undefined; result: null };
   [NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings]: {
     args: undefined;
     result: null;
