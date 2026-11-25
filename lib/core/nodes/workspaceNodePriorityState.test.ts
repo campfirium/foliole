@@ -72,3 +72,18 @@ it('updates complete UUID paths through explicit overrides and retains unrelated
   index.update([{ id: 'b', parentNodeId: 'a' }]);
   expect(paths.get('leaf')).toEqual(['a', 'b', 'branch', 'override', 'leaf']);
 });
+
+it('applies and releases enforcement when a whole subtree crosses an enforcing folder', () => {
+  const branch = { id: 'branch', kind: 'folder', parentNodeId: 'plain', priority: 8 };
+  const index = new WorkspaceNodePriorityState([
+    { id: 'plain', kind: 'folder', parentNodeId: null },
+    { id: 'strict', kind: 'folder', parentNodeId: null, priority: 1, enforcePriority: true },
+    branch, { id: 'leaf', kind: 'topic', parentNodeId: 'branch', priority: 6 }
+  ], 5);
+  index.update([{ ...branch, parentNodeId: 'strict' }]);
+  expect(index.priorities.get('leaf')).toBe(1);
+  index.update([{ ...branch, parentNodeId: 'plain' }]);
+  expect([index.priorities.get('branch'), index.priorities.get('leaf')]).toEqual([8, 6]);
+  index.update([{ id: 'fresh', kind: 'folder', parentNodeId: 'strict' }, { ...branch, parentNodeId: 'fresh' }]);
+  expect(index.priorities.get('leaf')).toBe(1);
+});

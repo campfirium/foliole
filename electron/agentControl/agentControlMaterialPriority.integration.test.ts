@@ -165,11 +165,25 @@ it('applies a Folder priority only to descendants that inherit priority', async 
 
   const changed = await update(folder.id, folder.updated_at, '8');
   expect(changed).toMatchObject({ status: 0 });
-  expect((await read(folder.id)).learning).toEqual({ priority: 8 });
+  expect((await read(folder.id)).learning).toEqual({ priority: 8, enforce_priority: false, enforced_priority: null });
   expect(priorities().get(inherited.id)).toBe(8);
   expect(priorities().get(explicit.id)).toBe(2);
   expect((await read(inherited.id)).updated_at).toBe(inherited.updated_at);
 
   expect(await update(folder.id, changed.output.material.updated_at, 'inherit')).toMatchObject({ status: 0 });
   expect(priorities().get(inherited.id)).toBe(defaultPriority);
+});
+
+it('reports an enforcing folder and releases enforcement when the folder priority is cleared', async () => {
+  saveAgentControlLearningImportPermission('true');
+  const created = await post('create', { kind: 'folder', parent_id: null, title: 'Strict category' });
+  const folder = created.payload.material as { id: string; updated_at: string };
+  const topic = await createTopic('Covered Topic', 9, folder.id);
+  const { driver } = openDatabaseConnection();
+  driver.execute('UPDATE nodes SET priority = 2, enforce_priority = 1 WHERE id = ?', [folder.id]);
+  expect((await read(topic.id)).learning).toMatchObject({ priority: 9, enforced_priority: { folder_id: folder.id, priority: 2 } });
+
+  expect((await update(folder.id, (await read(folder.id)).updated_at, 'inherit')).status).toBe(0);
+  expect((await read(folder.id)).learning).toEqual({ priority: null, enforce_priority: false, enforced_priority: null });
+  expect(driver.queryOne('SELECT enforce_priority FROM nodes WHERE id = ?', [folder.id])).toEqual({ enforce_priority: null });
 });

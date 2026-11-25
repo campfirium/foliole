@@ -1,6 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-import { resolveUnenforcedNodePriority } from '../features/nodes/model/nodeReviewSettings';
+import { resolveNodePrioritySetting, resolveUnenforcedNodePriority } from '../features/nodes/model/nodeReviewSettings';
 import {
   getCurrentReviewSchedulerSettings,
   subscribeReviewSchedulerSettings
@@ -10,7 +10,7 @@ import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/com
 
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
-function PriorityRange(props: { value: number; disabled: boolean; onCommit(value: number): void }) {
+function PriorityRange(props: { value: number; disabled: boolean; inactive: boolean; onCommit(value: number): void }) {
   const t = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const valueRef = useRef<HTMLSpanElement>(null);
@@ -37,7 +37,8 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
   }, [value, disabled, onCommit]);
 
   return (
-    <label className="flex min-h-11 items-center gap-3 border-b border-companion-divider py-2 text-sm">
+    <label className="flex min-h-11 items-center gap-3 border-b border-companion-divider py-2 text-sm data-[inactive=true]:opacity-[0.46]"
+      data-inactive={props.inactive}>
       <span className="inline-flex items-center gap-1.5">
         <span>{t('desktop.nodeReview.priority')}</span>
         <span ref={valueRef} className="w-3 shrink-0 tabular-nums" aria-hidden="true">{value}</span>
@@ -82,11 +83,18 @@ export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }:
   if (actions.flowActive && !(allowFlowTopic && node.kind === 'topic')) return null;
   const { value } = resolveUnenforcedNodePriority(node.id, nodes, settings.pushQueue.defaultPriority);
 
+  const effective = resolveNodePrioritySetting(node.id, nodes, settings.pushQueue.defaultPriority);
+  const ownerTitle = (effective.ownerNodeId && nodes[effective.ownerNodeId]?.title) || '';
+
   return <>
-    <PriorityRange key={node.id} value={value} disabled={actions.busy || actions.pending}
+    <PriorityRange key={node.id} value={value} inactive={effective.enforced === true} disabled={actions.busy || actions.pending}
       onCommit={priority => void actions.execute({ type: 'set-priority', nodeId: node.id, priority }, () => {
         if (mounted.current) onSaved();
       })} />
+    {effective.enforced && <p className="break-words py-2 text-xs">
+      {`${t('desktop.nodeReview.priority.inactive')} · P${effective.value} · ${ownerTitle} `}
+      {t('desktop.diagnostics.scheduling.prioritySource.enforced')}
+    </p>}
     {actions.failure === 'companion.workspace.failure.priority' && <p role="status" className="py-2 text-sm text-error">
       {t(actions.pending ? 'companion.workspace.savedRefreshError' : actions.failure)}
     </p>}

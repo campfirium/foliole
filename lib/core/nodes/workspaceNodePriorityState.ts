@@ -74,7 +74,10 @@ export class WorkspaceNodePriorityState {
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, node.id);
       this.store(node);
       roots.add(node.id);
-      if (forceChanged || isEnforcedPriorityFolder(node) || previous?.parentNodeId !== node.parentNodeId) forceRoots.add(node.id);
+      // A move only has to override stored values when enforcement applied before or applies at the destination.
+      const crossesEnforcement = previous?.parentNodeId !== node.parentNodeId
+        && (this.enforced.has(node.id) || (node.parentNodeId !== null && this.enforced.has(node.parentNodeId)));
+      if (forceChanged || isEnforcedPriorityFolder(node) || crossesEnforcement) forceRoots.add(node.id);
     }
     this.collectPriorityDescendants(roots, forceRoots);
     this.resolve(roots);

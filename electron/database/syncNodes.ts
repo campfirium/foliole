@@ -104,7 +104,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     priority: row.priority,
     reveal: row.reveal,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
-    ...(row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
+    ...(row.kind === 'folder' && row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
     title: row.title,
     updated_at: row.updated_at,
     virtual_filter: row.virtual_filter

@@ -66,3 +66,24 @@ it('renders a compact priority picker with only priority values', () => {
   expect(screen.queryByText(/priority scaling/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Current/i)).not.toBeInTheDocument();
 });
+
+it('marks the stored value inactive when a folder enforces its priority', () => {
+  const base = { content: '', anchorLink: null, reveal: null, review: null, createdAt: '', updatedAt: '' };
+  render(
+    <DocumentPriorityControl
+      activeNodeId="topic"
+      defaultPriority={5}
+      editableNodeId="topic"
+      nodesById={{
+        folder: { ...base, id: 'folder', kind: 'folder', title: 'Category', parentNodeId: null, priority: 3, enforcePriority: true },
+        topic: { ...base, id: 'topic', kind: 'topic', title: 'Topic', parentNodeId: 'folder', priority: 7 }
+      }}
+      onPriorityChange={vi.fn()}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Priority P3 enforced by Category.' })).toHaveTextContent('P3');
+  expect(screen.getByRole('menuitem', { name: 'P7' }).querySelector('svg')).not.toBeNull();
+  expect(screen.getByRole('menuitem', { name: 'P3' }).querySelector('svg')).toBeNull();
+  expect(screen.getByText('Inactive')).toBeInTheDocument();
+});

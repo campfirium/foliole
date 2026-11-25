@@ -72,7 +72,7 @@ export function buildNodeSyncSnapshotFromDriver(
     desired_retention: row.desired_retention,
     enable_short_term: row.enable_short_term === null ? null : row.enable_short_term === 1,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
-    ...(row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
+    ...(row.kind === 'folder' && row.enforce_priority === 1 ? { enforce_priority: true as const } : {}),
     shelved_at: row.shelved_at,
     manual_child_order: row.manual_child_order,
     hide_title_heading: row.hide_title_heading === 1,

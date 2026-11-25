@@ -1,8 +1,13 @@
 import { Check } from 'lucide-react';
 
-import { resolveNodePrioritySetting } from '../../features/nodes/model/nodeReviewSettings';
+import {
+  resolveNodePrioritySetting,
+  resolveUnenforcedNodePriority,
+  type ResolvedNodePriority
+} from '../../features/nodes/model/nodeReviewSettings';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { PushQueuePriority } from '../../features/review/model/unifiedPushQueueRules';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -31,6 +36,22 @@ function renderPriorityOptionLabel(priority: number, isCurrent: boolean) {
       {isCurrent ? <Check aria-hidden="true" className="size-3.5 text-foreground/65" strokeWidth={2.2} /> : null}
     </>
   );
+}
+
+function EnforcedPriorityNote({ ownerTitle, value }: { ownerTitle: string; value: number }) {
+  const t = useTranslation();
+  return (
+    <div className="mt-1 border-t border-border px-2 py-1.5 text-xs text-foreground/70">
+      <div>{t('desktop.nodeReview.priority.inactive')}</div>
+      <div className="break-words">{`P${value} · ${ownerTitle} `}{t('desktop.diagnostics.scheduling.prioritySource.enforced')}</div>
+    </div>
+  );
+}
+
+function describeTrigger(priority: ResolvedNodePriority, ownerTitle: string, shortcutLabel?: string) {
+  if (!priority.enforced) return describePrioritySource(priority.source, priority.value, shortcutLabel);
+  const suffix = shortcutLabel ? ` Shortcut ${shortcutLabel}.` : '';
+  return `Priority P${priority.value} enforced by ${ownerTitle}.${suffix}`;
 }
 
 interface DocumentPriorityControlProps {
@@ -87,24 +108,28 @@ export function DocumentPriorityControl({
   }
 
   const resolvedPriority = resolveNodePrioritySetting(activeNodeId, nodesById, defaultPriority);
+  const enforced = resolvedPriority.enforced === true;
+  const selected = enforced ? resolveUnenforcedNodePriority(activeNodeId, nodesById, defaultPriority).value : resolvedPriority.value;
+  const ownerTitle = (resolvedPriority.ownerNodeId && nodesById[resolvedPriority.ownerNodeId]?.title) || '';
   const isEditable = editableNodeId === activeNodeId;
-  const buttonLabel = describePrioritySource(resolvedPriority.source, resolvedPriority.value, shortcutLabel);
+  const buttonLabel = describeTrigger(resolvedPriority, ownerTitle, shortcutLabel);
 
   return (
     <AppDropdownMenu>
       <PriorityTrigger buttonLabel={buttonLabel} isEditable={isEditable} value={resolvedPriority.value} />
-      <AppDropdownMenuContent align="end" className="w-24 min-w-0" sideOffset={6}>
+      <AppDropdownMenuContent align="end" className={enforced ? 'w-44 min-w-0' : 'w-24 min-w-0'} sideOffset={6}>
         {Array.from({ length: 10 }, (_, priority) => (
           <AppDropdownMenuItem
-            className={priorityMenuItemClassName(resolvedPriority.value === priority)}
+            className={`${priorityMenuItemClassName(selected === priority)}${enforced ? ' opacity-[0.46]' : ''}`}
             key={priority}
             disabled={!isEditable}
             onSelect={() => onPriorityChange(activeNodeId, priority)}
             title={priority === 0 ? 'P0 comes first and is not delayed by priority scaling.' : undefined}
           >
-            {renderPriorityOptionLabel(priority, resolvedPriority.value === priority)}
+            {renderPriorityOptionLabel(priority, selected === priority)}
           </AppDropdownMenuItem>
         ))}
+        {enforced ? <EnforcedPriorityNote ownerTitle={ownerTitle} value={resolvedPriority.value} /> : null}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

@@ -133,9 +133,9 @@ function nextPriorityRevision(previous: string) {
 function writeMaterialPriority(row: MaterialSnapshotRow, priority: number | null, updatedAt: string) {
   const hostName = loadOrCreateDesktopHostName(updatedAt);
   const result = openDatabaseConnection().driver.execute(
-    `UPDATE nodes SET priority = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
+    `UPDATE nodes SET priority = ?, enforce_priority = CASE WHEN ? IS NULL THEN NULL ELSE enforce_priority END, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
      WHERE id = ? AND updated_at = ? AND deleted_at IS NULL`,
-    [priority, updatedAt, hostName, row.id, row.updated_at]
+    [priority, priority, updatedAt, hostName, row.id, row.updated_at]
   );
   if (result.changes !== 1) throw new AgentMaterialMutationError('conflict', 409);
 }

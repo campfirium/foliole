@@ -9,6 +9,7 @@ import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { prepareDesktopNodeIndex } from './desktopNodeIndex.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { buildNodeSyncSnapshotFromDriver, loadNodeSyncVersionSourceFromDriver } from './nodeSyncVersionSourceFromDriver.js';
 import { restoreFixture, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 import { firstAt, sendReviews } from './reviewProjection.testSupport.js';
 
@@ -75,5 +76,17 @@ it.each(['desktop', 'companion'])('keeps existing priority unforced during the %
     peer.reopen();
     expect(peer.sqlite.prepare("SELECT priority, enforce_priority FROM nodes WHERE id = 'folder'").get())
       .toEqual({ priority: 3, enforce_priority: null });
+  } finally { await fixture.close(); }
+});
+
+it('leaves a leftover enforcement flag out of the sync snapshot once a node is no longer a folder', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  try {
+    const driver = prepareWriter(peer);
+    upsertNodeSnapshot(driver, { ...material('folder', 'folder', null, 3), enforcePriority: true });
+    peer.sqlite.exec("UPDATE nodes SET kind = 'topic' WHERE id = 'folder'");
+    const row = loadNodeSyncVersionSourceFromDriver(driver, 'folder')!;
+    expect(buildNodeSyncSnapshotFromDriver(driver, row, 'folder')).not.toHaveProperty('enforce_priority');
   } finally { await fixture.close(); }
 });
