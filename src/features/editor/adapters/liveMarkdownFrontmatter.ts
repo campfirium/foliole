@@ -2,7 +2,6 @@ import { StateField, type EditorState, type Extension, type Range, type Transact
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 
 import { readDiscoursePublishedMeta } from '../../../../lib/core/discourse/discourseFrontmatter';
-import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import type { FrontmatterDisplayMode } from '../model/frontmatterDisplayModeSetting';
 import { getFrontmatterMetaFields } from '../model/frontmatterMetaFieldsSetting';
 import { collectMarkdownLineClassRanges } from '../model/markdownBlockProjection';
@@ -17,7 +16,7 @@ import {
   setFrontmatterModeEffect
 } from './liveMarkdownFrontmatterWidget';
 import { addLine, addReplace } from './liveMarkdownPrimitives';
-import { activeNodeIdFacet } from './liveMarkdownState';
+import { activeNodeIdFacet, resolveEditorDisplayMode } from './liveMarkdownState';
 
 export { extractFrontmatterEntries, resolveFrontmatterBounds } from '../model/markdownFrontmatterProjection';
 
@@ -103,7 +102,7 @@ function buildFrontmatterDecorationState(
   const projection = projectMarkdownFrontmatter(doc.toString());
   const { bounds } = projection;
 
-  if (getEditorDisplayMode() === 'source') {
+  if (resolveEditorDisplayMode(state) === 'source') {
     return {
       decorations: Decoration.set(ranges, true),
       inspectedUntilLine: projection.inspectedUntilLine

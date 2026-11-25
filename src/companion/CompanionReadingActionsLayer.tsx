@@ -52,7 +52,7 @@ export function ReadingActionsLayer(props: {
       onFindInDocument={props.onFindInDocument}
       onOpenChange={props.onOpenActions}
       onOpenReadingSheet={props.onOpenReadingSheet}
-      open={props.actionsOpen}
+      open={props.actionsOpen} showEditorDisplayModeToggle={handoffContext.isContentEditing}
       title={readableArticle.title}
       {...definedProps({
         editHistory: props.editHistory,

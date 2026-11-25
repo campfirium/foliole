@@ -1,7 +1,6 @@
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { logEditorInputDiagnostic, readEditorInputDiagnosticTime } from '../../../store/workspaceEditorInputDiagnostics';
-import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import { collectImageMatches } from '../model/markdownImageMatches';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
@@ -19,6 +18,7 @@ import {
   imageClozePresentationVersionFacet,
   localDocumentPathFacet,
   missingAttachmentResourceFacet,
+  resolveEditorDisplayMode,
   textAnchorDecorationsFacet
 } from './liveMarkdownState';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
@@ -46,7 +46,7 @@ function parsePreviewMarkdown(view: EditorView): PreviewMarkdownParse {
 
 function buildLineDecorations(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse): DecorationSet {
   const startedAt = readEditorInputDiagnosticTime();
-  const decorations = getEditorDisplayMode() === 'source'
+  const decorations = resolveEditorDisplayMode(view.state) === 'source'
     ? buildSourceDecorationSet(view)
     : buildPreviewDecorationSet(view, parsedPreviewMarkdown, {
       activePosition: view.hasFocus ? view.state.selection.main.head : null,
@@ -67,7 +67,12 @@ function buildLineDecorations(view: EditorView, parsedPreviewMarkdown: PreviewMa
 
 function buildAtomicRanges(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse, decorations: DecorationSet): DecorationSet {
   const startedAt = readEditorInputDiagnosticTime();
-  const ranges = buildPreviewAtomicRangeSet(parsedPreviewMarkdown, getEditedMathRange(view.state), decorations);
+  const ranges = buildPreviewAtomicRangeSet(
+    parsedPreviewMarkdown,
+    getEditedMathRange(view.state),
+    decorations,
+    resolveEditorDisplayMode(view.state)
+  );
   logEditorInputDiagnostic('live-markdown-atomic-ranges', {
     totalMs: readEditorInputDiagnosticTime() - startedAt
   });

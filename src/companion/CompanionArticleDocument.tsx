@@ -10,6 +10,7 @@ import type {
 } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState, MarkdownEditorProps } from '../features/editor/components/markdownEditorTypes';
+import type { EditorDisplayMode } from '../features/editor/model/editorDisplayMode';
 
 import './companionReadableArticleAnchors.css';
 import './companionImageCopy.css';
@@ -22,6 +23,8 @@ import { definedProps } from '@/shared/lib/definedProps';
 interface CompanionArticleDocumentProps {
   content: string;
   ariaLabel?: string;
+  /** Fixed per mount; callers key the document by it so a switch remounts the editor. */
+  displayMode?: EditorDisplayMode;
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
@@ -71,6 +74,7 @@ export function CompanionArticleDocument(props: CompanionArticleDocumentProps) {
         readOnlyInteractionMode={!props.onChange ? 'document' : 'editor'}
         value={props.content}
         {...definedProps({
+          displayMode: props.displayMode,
           hideTitleHeading: props.hideTitleHeading,
           nodeViewState: props.nodeViewState,
           onBlurCapture: props.onBlurCapture,

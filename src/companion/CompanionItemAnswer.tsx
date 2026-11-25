@@ -5,6 +5,7 @@ import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { useCompanionEditorDisplayMode } from './companionEditorDisplayMode';
 
 type Props = {
   answer: string | null;
@@ -20,9 +21,12 @@ type Props = {
 
 export function CompanionItemAnswer(props: Props) {
   const t = useTranslation();
+  const editingDisplayMode = useCompanionEditorDisplayMode();
   if (!props.editing && !props.answer) return null;
+  const displayMode = props.editing ? editingDisplayMode : 'preview';
   return <section style={props.style} className="companion-item-answer border-t border-companion-divider pt-5">
-    <CompanionArticleDocument key={props.editing ? 'editing' : 'reading'} content={props.answer ?? ''} nodeId={props.nodeId + '::answer'}
+    <CompanionArticleDocument key={props.editing ? `editing:${displayMode}` : 'reading'} content={props.answer ?? ''} nodeId={props.nodeId + '::answer'}
+      displayMode={displayMode}
       ariaLabel={t('companion.review.answer')} layout="review" scrollContainer={props.editing ? 'editor' : 'outer'}
       onMissingAttachmentResource={props.onMissingResource}
       {...definedProps({

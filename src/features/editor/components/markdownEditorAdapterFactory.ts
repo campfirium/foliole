@@ -1,6 +1,7 @@
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
+import type { EditorDisplayMode } from '../model/editorDisplayMode';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import type { MarkdownEditorProps } from './markdownEditorTypes';
@@ -8,6 +9,7 @@ import type { MarkdownEditorProps } from './markdownEditorTypes';
 export function createMarkdownEditorAdapter(args: {
   applicationCutEnabled: boolean | undefined;
   debugId: string | undefined;
+  displayMode: EditorDisplayMode | undefined;
   hideTitleHeading: boolean;
   host: HTMLDivElement;
   initialContent: string;
@@ -30,6 +32,7 @@ export function createMarkdownEditorAdapter(args: {
 }) {
   return new CodeMirrorEditorAdapter(args.host, {
     ...(args.applicationCutEnabled !== undefined ? { applicationCutEnabled: args.applicationCutEnabled } : {}),
+    ...(args.displayMode !== undefined ? { displayMode: args.displayMode } : {}),
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
     nodeId: args.nodeId,

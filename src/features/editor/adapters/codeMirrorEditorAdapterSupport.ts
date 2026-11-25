@@ -4,6 +4,7 @@ import { Decoration, EditorView } from '@codemirror/view';
 import { recoverMissingArticleImage } from '../../../shared/platform/external/articleImageRecovery';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorDisplayMode } from '../model/editorDisplayMode';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
@@ -23,6 +24,7 @@ import {
 
 export interface CodeMirrorEditorAdapterOptions {
   applicationCutEnabled?: boolean;
+  displayMode?: EditorDisplayMode;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hideTitleHeading?: boolean;
   initialContent: string;

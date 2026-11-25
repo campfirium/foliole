@@ -9,6 +9,7 @@ import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
+import { CompanionEditorDisplayModeAction } from './CompanionEditorDisplayModeAction';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
 import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
@@ -91,6 +92,7 @@ export function ReadingActionsSheet(props: {
   onOpenChange(open: boolean): void;
   onOpenReadingSheet(sheet: 'font'): void;
   onOpenClozeRemoval?: () => void;
+  showEditorDisplayModeToggle?: boolean;
   articleHandoff?: { run(): void; error: string | null };
   articleCopy?: { run(): void; error: string | null };
   title?: string;
@@ -100,10 +102,6 @@ export function ReadingActionsSheet(props: {
   const t = useTranslation();
   const restore = useCompanionTrashRestoreAction(props);
   const search = useDocumentSearchFocusHandoff(props.onFindInDocument);
-  const openReadingSheet = (sheet: 'font') => {
-    props.onOpenChange(false);
-    props.onOpenReadingSheet(sheet);
-  };
   return (
     <ReadingBottomSheet hideCloseButton showScrollIndicator onOpenChange={props.onOpenChange} open={props.open} title={props.title || t('companion.reading.actions')}
       onCloseAutoFocus={search.onCloseAutoFocus}>
@@ -112,6 +110,7 @@ export function ReadingActionsSheet(props: {
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <CompanionNodePrioritySlider nodeId={props.priorityNodeId} allowFlowTopic onSaved={() => props.onOpenChange(false)} />
+        {props.showEditorDisplayModeToggle ? <CompanionEditorDisplayModeAction onDone={() => props.onOpenChange(false)} /> : null}
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.find')}
@@ -120,7 +119,7 @@ export function ReadingActionsSheet(props: {
         <ReadingActionRow
           icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.font')}
-          onClick={() => openReadingSheet('font')}
+          onClick={() => { props.onOpenChange(false); props.onOpenReadingSheet('font'); }}
         />
         {props.onOpenOutline ? <ReadingActionRow
           icon={<ListTree aria-hidden="true" className="h-5 w-5" />}

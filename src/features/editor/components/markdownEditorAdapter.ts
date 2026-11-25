@@ -4,6 +4,7 @@ import { clearDebugEditorAdapter, registerDebugEditorAdapter } from '../../../sh
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import { EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS, type EditorAdapter, type EditorTextAnchorDecoration } from '../adapters/EditorAdapter';
+import type { EditorDisplayMode } from '../model/editorDisplayMode';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import { createMarkdownEditorAdapter } from './markdownEditorAdapterFactory';
@@ -20,6 +21,7 @@ function syncEditorAdapterInputRefs(
   resolvedTextAnchorDecorations: readonly EditorTextAnchorDecoration[]
 ) {
   refs.applicationCutEnabledRef.current = args.applicationCutEnabled;
+  refs.displayModeRef.current = args.displayMode;
   refs.onChangeRef.current = args.onChange;
   refs.onDocumentInputRef.current = args.onDocumentInput;
   refs.onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
@@ -47,6 +49,7 @@ function useEditorAdapterInputRefs(
 ) {
   return {
     applicationCutEnabledRef: useRef(args.applicationCutEnabled),
+    displayModeRef: useRef(args.displayMode),
     hideTitleHeadingRef: useRef(args.hideTitleHeading),
     initialValueRef: useRef(args.initialValue),
     nodeIdRef: useRef(args.nodeId),
@@ -72,6 +75,7 @@ function useEditorAdapterInputRefs(
 
 function useEditorAdapterInputs(args: {
   applicationCutEnabled: boolean | undefined;
+  displayMode: EditorDisplayMode | undefined;
   hideTitleHeading: boolean;
   initialValue: string;
   nodeId: string | null;
@@ -114,6 +118,7 @@ function useEditorAdapterLifecycle(args: {
     const adapter = createMarkdownEditorAdapter({
       applicationCutEnabled: inputs.applicationCutEnabledRef.current,
       debugId,
+      displayMode: inputs.displayModeRef.current,
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
@@ -173,11 +178,13 @@ export function useEditorAdapter(
   readOnly: boolean | undefined,
   readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'],
   trailingDivider: boolean | undefined,
-  nodeId: string | null
+  nodeId: string | null,
+  displayMode?: EditorDisplayMode
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const inputs = useEditorAdapterInputs({
     applicationCutEnabled,
+    displayMode,
     hideTitleHeading,
     initialValue,
     nodeId,

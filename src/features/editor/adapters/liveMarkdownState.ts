@@ -1,8 +1,9 @@
-import { Facet, type Extension } from '@codemirror/state';
+import { Facet, type EditorState, type Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import { getEditorDisplayMode, type EditorDisplayMode } from '../model/editorDisplayMode';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 import {
@@ -69,6 +70,14 @@ export const pastedAnchorsFacet = Facet.define<
 export const trailingDividerFacet = Facet.define<boolean, boolean>({
   combine: (values) => values[0] ?? false
 });
+
+export const editorDisplayModeOverrideFacet = Facet.define<EditorDisplayMode | null, EditorDisplayMode | null>({
+  combine: (values) => values[0] ?? null
+});
+
+export function resolveEditorDisplayMode(state: EditorState): EditorDisplayMode {
+  return state.facet(editorDisplayModeOverrideFacet) ?? getEditorDisplayMode();
+}
 
 export function createLiveMarkdownStateExtensions(args: {
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];

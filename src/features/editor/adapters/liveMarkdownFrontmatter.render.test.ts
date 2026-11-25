@@ -219,6 +219,20 @@ describe('live markdown frontmatter interactions', () => {
     adapter.destroy();
   });
 
+  it('lets a per-editor display mode override the global setting in both directions', () => {
+    setEditorDisplayMode('preview');
+    const source = createAdapterHost('---\nauthor: Jane\n---\n# Title', { displayMode: 'source' });
+    expect(source.host.querySelector('.cm-md-frontmatter-compact')).toBeNull();
+    expect(source.host.querySelector('.cm-content')?.textContent).toContain('author: Jane');
+    source.adapter.destroy();
+
+    setEditorDisplayMode('source');
+    const preview = createAdapterHost('---\nauthor: Jane\n---\n# Title', { displayMode: 'preview' });
+    expect(preview.host.querySelector('.cm-md-frontmatter-compact')).not.toBeNull();
+    preview.adapter.destroy();
+    setEditorDisplayMode('preview');
+  });
+
 });
 
 describe('live markdown block rendering', () => {

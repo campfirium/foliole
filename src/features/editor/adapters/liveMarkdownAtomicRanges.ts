@@ -2,7 +2,7 @@ import { deleteCharBackward } from '@codemirror/commands';
 import { Prec, type Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, keymap } from '@codemirror/view';
 
-import { getEditorDisplayMode } from '../model/editorDisplayMode';
+import { getEditorDisplayMode, type EditorDisplayMode } from '../model/editorDisplayMode';
 import { collectMarkdownMathRangesFromTree } from '../model/markdownMathRanges';
 
 import type { PreviewMarkdownParse } from './liveMarkdownDecorations';
@@ -11,10 +11,11 @@ import type { EditedMathRange } from './liveMarkdownMathEditState';
 export function buildPreviewAtomicRangeSet(
   parsed: PreviewMarkdownParse,
   editedMathRange: EditedMathRange | null,
-  decorations: DecorationSet
+  decorations: DecorationSet,
+  displayMode: EditorDisplayMode = getEditorDisplayMode()
 ): DecorationSet {
   const ranges: Range<Decoration>[] = [];
-  if (getEditorDisplayMode() === 'source') return Decoration.none;
+  if (displayMode === 'source') return Decoration.none;
   const { markdownTree, source } = parsed;
   decorations.between(0, source.length, (from, to, decoration) => {
     if (decoration.spec.atomicListPrefix === true && !source.slice(from, to).includes('\n')) {

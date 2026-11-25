@@ -5,6 +5,7 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { useCompanionEditorDisplayMode } from './companionEditorDisplayMode';
 import { CompanionItemAnswer } from './CompanionItemAnswer';
 import { CompanionItemEditLayout } from './CompanionItemEditLayout';
 import { CompanionItemReviewLayout } from './CompanionItemReviewLayout';
@@ -109,6 +110,8 @@ function ReadableArticleTextDocument(props: {
     props.onEditorReady?.(adapter);
   }, [props.activity, props.onEditorReady, props.readableArticle.nodeId]);
   const usePdfResume = !props.canEdit && props.readingSelection == null && offset !== undefined;
+  const editingDisplayMode = useCompanionEditorDisplayMode();
+  const displayMode = props.canEdit ? editingDisplayMode : 'preview';
   return (
     <div
       data-reading-contrast={props.readingTypographySettings.contrast}
@@ -119,8 +122,9 @@ function ReadableArticleTextDocument(props: {
     >
       <CompanionArticleDocument
         {...(props.isReviewItem ? { ariaLabel: t('companion.review.question') } : {})}
-        key={props.canEdit ? `${props.readableArticle.nodeId}:editing` : `${props.readableArticle.nodeId}:reading`}
+        key={props.canEdit ? `${props.readableArticle.nodeId}:editing:${displayMode}` : `${props.readableArticle.nodeId}:reading`}
         content={props.editorState.value}
+        displayMode={displayMode}
         layout={props.layout ?? 'article'}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}

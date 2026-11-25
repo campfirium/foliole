@@ -23,7 +23,7 @@ import { preserveDevanagariConjunctPointerSelection } from './devanagariPointerS
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
 import { createApplicationCutExtensions } from './liveMarkdownInteractions';
-import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveMarkdownState';
+import { createLiveMarkdownStateExtensions, editorDisplayModeOverrideFacet, trailingDividerFacet } from './liveMarkdownState';
 import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
 import { markdownInputAssist } from './markdownInputAssist';
 
@@ -132,6 +132,13 @@ function createReadOnlyDocumentDomHandlers(options: CodeMirrorEditorAdapterOptio
   };
 }
 
+function createEditorOptionFacets(options: CodeMirrorEditorAdapterOptions): Extension[] {
+  return [
+    editorDisplayModeOverrideFacet.of(options.displayMode ?? null),
+    trailingDividerFacet.of(options.trailingDivider === true)
+  ];
+}
+
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
@@ -163,7 +170,7 @@ export function createCodeMirrorEditorExtensions(args: {
     args.searchDecorationsCompartment.of(createMappedDecorationsExtension(Decoration.none)),
     args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),
     args.liveMarkdownCompartment.of(args.options.liveMarkdownEnabled === false ? [] : createLiveMarkdownExtensions()),
-    trailingDividerFacet.of(args.options.trailingDivider === true),
+    ...createEditorOptionFacets(args.options),
     trailingDividerExtension,
     args.liveMarkdownStateCompartment.of(
       createLiveMarkdownStateExtensions({

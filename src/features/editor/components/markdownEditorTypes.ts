@@ -12,6 +12,7 @@ import type {
 } from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorDisplayMode } from '../model/editorDisplayMode';
 import type { EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
@@ -33,6 +34,8 @@ export interface MarkdownEditorProps {
   className?: string;
   contentPaddingTop?: string;
   contentPaddingBottom?: string;
+  /** Fixed per mount; remount the editor (e.g. via `key`) to switch. Defaults to the global setting. */
+  displayMode?: EditorDisplayMode;
   fitBlockImagesToViewport?: boolean;
   fullscreenImagePreview?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
