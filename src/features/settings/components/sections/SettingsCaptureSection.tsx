@@ -1,5 +1,8 @@
+import { ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { formatShortcutSetDisplayLabel } from '../../../../shared/commands/shortcutDisplay';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -16,8 +19,10 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  settingsFieldClassName
+  settingsFieldClassName,
+  settingsHotkeyChipClassName
 } from '../../../../shared/ui';
+import { useCommandShortcutMap, useHotkeySettings } from '../../context/HotkeySettingsProvider';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID, SETTINGS_CAPTURE_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
@@ -37,6 +42,31 @@ function permissionDescription(capabilities: DesktopHostCapabilities | null, t: 
   if (capabilities.globalCapturePermission === 'denied') return t('settings.capture.permission.denied');
   if (capabilities.globalCapturePermission === 'unavailable') return t('settings.capture.permission.unavailable');
   return t('settings.capture.permission.notRequired');
+}
+
+function CaptureShortcutButton() {
+  const t = useTranslation();
+  const { hotkeyItems, onConfigureShortcut } = useHotkeySettings();
+  const shortcuts = useCommandShortcutMap();
+  const commandId = APP_COMMAND_IDS.globalCaptureToInbox;
+  const item = hotkeyItems.find((candidate) => candidate.commandId === commandId);
+  if (!item) return null;
+
+  const label = formatShortcutSetDisplayLabel(shortcuts[commandId]);
+  const displayLabel = label || t('settings.hotkeys.filter.unassigned');
+  const actionLabel = t('desktop.palette.command.configureShortcut', { title: item.title });
+  return (
+    <button
+      aria-label={`${actionLabel} (${displayLabel})`}
+      className={settingsHotkeyChipClassName(label ? 'assigned' : 'empty')}
+      onClick={() => onConfigureShortcut(commandId)}
+      title={actionLabel}
+      type="button"
+    >
+      <span className="min-w-0 truncate">{displayLabel}</span>
+      <ChevronRight aria-hidden="true" className="size-3.5 shrink-0" />
+    </button>
+  );
 }
 
 export function SettingsCaptureSection() {
@@ -67,6 +97,7 @@ export function SettingsCaptureSection() {
       ariaLabel={t('settings.capture.sectionAria')}
       searchRowId={SETTINGS_CAPTURE_SEARCH_ROW_ID}
       title={t('settings.capture.sectionTitle')}
+      titleActions={capabilities?.globalCaptureSupported ? <CaptureShortcutButton /> : null}
     >
       <SettingsRow
         description={checkFailed ? t('settings.capture.permission.unavailable') : permissionDescription(capabilities, t)}

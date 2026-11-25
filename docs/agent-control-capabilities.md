@@ -217,4 +217,6 @@ Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary.
 
 The desktop command palette searches the settings index and opens the selected category or setting. The palette matches English and localized labels and descriptions, and shows matching action tips inline. Search in desktop Settings also jumps to Global capture, backup search, library merge, and local attachment cleanup, and shows how to use formatting cleanup, image cloze, and formula cloze in a topic. These desktop UI behaviors have no Agent Control API or CLI route.
 
+On supported desktop hosts, Settings → General → Global capture shows the configured shortcut beside the section title. Selecting it opens the matching command in Hotkeys. Shortcut display and configuration are device-local UI actions with no Agent Control API or CLI route.
+
 The desktop editor menu disables Split Topic when the current document cannot be split and explains the reason in the menu. This menu action has no Agent Control API or CLI route.
