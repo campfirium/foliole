@@ -105,7 +105,8 @@ afterEach(async () => {
   diagnosticWrites.mockClear();
   libraryA.close();
   libraryB.close();
-  rmSync(root, { force: true, recursive: true });
+  // Windows can hold the temporary library files briefly after close.
+  rmSync(root, { force: true, maxRetries: 10, recursive: true, retryDelay: 100 });
 });
 
 async function switchLibrary(beforeSwitch?: () => Promise<void>) {
