@@ -74,7 +74,7 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
   await expect(sourceEntry(dialog, 7)).toBeVisible();
   await expand(dialog, 1);
   await sourceEntry(dialog, 7).click();
-  await expect(document(dialog).getByText(/This entry has no body|此项没有正文/)).toBeVisible();
+  await expect(document(dialog).getByText(/There is no body text|没有正文/)).toBeVisible();
   await expect(folderSwitch(dialog, 7)).toBeChecked();
   await folderSwitch(dialog, 7).click();
   await expect(folderSwitch(dialog, 7)).not.toBeChecked();
@@ -106,7 +106,7 @@ test('keeps independent folder choices and writes the previewed hierarchy and bo
   await expand(restored, 7);
   await sourceEntry(restored, 4).click();
   await expect(document(restored).getByText(/Could not load the original content|无法加载原始正文/)).toBeVisible();
-  await expect(document(restored).getByText(/This entry has no body|此项没有正文/)).toHaveCount(0);
+  await expect(document(restored).getByText(/There is no body text|没有正文/)).toHaveCount(0);
   await rename(moved, original);
   await restored.press('Escape');
   const reopened = await openPreview(desktopWindow);

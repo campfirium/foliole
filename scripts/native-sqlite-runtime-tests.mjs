@@ -42,6 +42,8 @@ export const controlledRuntimeSqliteTests = [
   'scripts/android/schema-inventory-current-schema.test.mjs',
   'src/companion/companionDailyEntry.integration.test.tsx',
   'src/companion/companionDailyHistory.sync.integration.test.ts',
+  'src/companion/companionFlowRoundCompletion.integration.test.tsx',
+  'src/companion/companionNodeReviewOptionsSync.integration.test.ts',
   'src/shared/platform/capacitorSqliteDbPort.batch.sqlite.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncDailyFlowPriority.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncLargeDailyFlow.integration.test.ts',

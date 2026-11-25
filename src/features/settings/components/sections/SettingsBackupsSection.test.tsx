@@ -112,7 +112,7 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.queryByText(/Auto backup .* daily/)).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Source topic handling' })).toBeInTheDocument();
   expect(screen.getByText('Saved source topic handling')).toBeInTheDocument();
-  expect(screen.getByText('2 entries / 2 KB')).toBeInTheDocument();
+  expect(screen.getByText('2 records / 2 KB')).toBeInTheDocument();
 });
 
 it('shows a retry action when backup settings fail to load', async () => {

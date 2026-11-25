@@ -17,7 +17,8 @@ export const SCRIPT_TEST_ROOTS = [
   'scripts/preview',
   'scripts/quality',
   'scripts/sqlite',
-  'scripts/sync'
+  'scripts/sync',
+  'scripts/terminology'
 ];
 const TEST_FILE_PATTERN = /\.test\.mjs$/;
 

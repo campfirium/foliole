@@ -51,7 +51,7 @@ async function mountToolbar(options: { resolve?: () => typeof payload | null; re
 
 it('asks before any permanent write and cancel leaves the source and learning facts intact', async () => {
   const ui = await mountToolbar();
-  expect(screen.getByRole('dialog')).toHaveTextContent('massive card');
+  expect(screen.getByRole('dialog')).toHaveTextContent('overly long item');
   expect(creations()).toEqual([]);
   expect(ui.onApply).not.toHaveBeenCalled();
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));

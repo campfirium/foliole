@@ -35,7 +35,7 @@ test('previews different XML exports and retains the conversion draft after dism
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4|SuperMemo #4/i })).toBeVisible();
-  await dialog.getByRole('button', { name: /^(Expand entry|展开条目) #1$/ }).click();
+  await dialog.getByRole('button', { name: /^(Expand|展开) #1$/ }).click();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
   await expect(preview.getByText('Question', { exact: true })).toBeVisible();
   await expect(preview.getByText('Answer', { exact: true })).toBeVisible();

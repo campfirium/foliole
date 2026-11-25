@@ -82,7 +82,7 @@ it('imports, exports, and clears saved source topic handling from the backup row
     expect(importSourceDispositions).toHaveBeenCalledWith();
   });
   expect(await screen.findByText('Imported 3 saved source topic entries and applied 3.')).toBeInTheDocument();
-  expect(screen.getByText('3 entries / 2 KB')).toBeInTheDocument();
+  expect(screen.getByText('3 records / 2 KB')).toBeInTheDocument();
 
   expect(screen.queryByRole('button', { name: 'Re-apply saved source topic handling' })).not.toBeInTheDocument();
 
@@ -92,5 +92,5 @@ it('imports, exports, and clears saved source topic handling from the backup row
     expect(resetSourceDispositions).toHaveBeenCalledWith();
   });
   expect(await screen.findByText('Cleared saved source topic handling.')).toBeInTheDocument();
-  expect(screen.getByText('0 entries / 0 B')).toBeInTheDocument();
+  expect(screen.getByText('0 records / 0 B')).toBeInTheDocument();
 });

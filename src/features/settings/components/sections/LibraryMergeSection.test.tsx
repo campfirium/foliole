@@ -34,7 +34,7 @@ it('merges the chosen library with the chosen attachments folder and reports wha
   expect(await screen.findByText('Attachments folder: /old/Assets')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
 
-  expect(await screen.findByText(/Added 4 notes, 1 text alternatives and 7 review records/)).toBeTruthy();
+  expect(await screen.findByText(/Added 4 materials, 1 text alternatives and 7 review records/)).toBeTruthy();
   expect(mergeLibraryInRuntime).toHaveBeenCalledWith({ sourcePath: '/old/Backups/foliole-2026.db.gz',
     attachmentsDirectory: '/old/Assets', folderTitle: expect.stringMatching(/^Merged library · foliole-2026\.db\.gz · \d{4}-\d{2}-\d{2}$/) });
 });
@@ -50,7 +50,7 @@ it('takes a phone backup zip with the attachments inside it', async () => {
   expect(screen.queryByRole('button', { name: 'Choose folder' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
 
-  expect(await screen.findByText(/Added 1 notes/)).toBeTruthy();
+  expect(await screen.findByText(/Added 1 materials/)).toBeTruthy();
   expect(mergeLibraryInRuntime).toHaveBeenCalledWith(expect.objectContaining({ sourcePath: '/Downloads/phone-backup.zip', attachmentsDirectory: null }));
 });
 
