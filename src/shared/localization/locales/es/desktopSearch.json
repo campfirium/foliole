@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "Copiar imagen",
   "desktop.editor.imageMenu.cut": "Cortar imagen",
   "desktop.editor.imageMenu.export": "Exportar imagen",
+  "desktop.editor.imageMenu.exportFailed": "No se pudo exportar la imagen.",
   "desktop.editor.imageMenu.delete": "Eliminar imagen",
   "desktop.editor.image.altFallback": "Markdown imagen",
   "desktop.editor.imageFailure.retry": "Reintentar",

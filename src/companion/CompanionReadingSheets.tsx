@@ -1,4 +1,4 @@
-import { ArchiveRestore, ArrowDownLeft, ListTree, Search, Share2, Copy, X, SlidersHorizontal } from 'lucide-react';
+import { ArchiveRestore, ArrowDownLeft, Download, ListTree, Search, Share2, Copy, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
@@ -95,6 +95,7 @@ export function ReadingActionsSheet(props: {
   showEditorDisplayModeToggle?: boolean;
   articleHandoff?: { run(): void; error: string | null };
   articleCopy?: { run(): void; error: string | null };
+  pdfSave?: { run(): void; failed: boolean; saving: boolean };
   title?: string;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
@@ -129,6 +130,7 @@ export function ReadingActionsSheet(props: {
         <ReadingBacklinksAction onClose={() => props.onOpenChange(false)} onOpen={props.onOpenBacklinks} />
         {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
         {props.articleCopy && <ReadingArticleHandoff {...props.articleCopy} copy />}
+        {props.pdfSave && <ReadingPdfSaveAction {...props.pdfSave} />}
         {props.onOpenClozeRemoval ? <ReadingActionRow
           icon={<X aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.selection.deleteCloze')}
@@ -162,6 +164,17 @@ function ReadingArticleHandoff(props: { run(): void; error: string | null; copy?
       <ReadingActionRow icon={<Icon aria-hidden="true" className="h-5 w-5" />}
         label={t(props.copy ? 'companion.reading.copyArticle' : 'companion.reading.shareArticle')} onClick={props.run} />
       {props.error && <p role="status" className="py-2 text-sm text-error">{props.error}</p>}
+    </>
+  );
+}
+
+function ReadingPdfSaveAction(props: { run(): void; failed: boolean; saving: boolean }) {
+  const t = useTranslation();
+  return (
+    <>
+      <ReadingActionRow icon={<Download aria-hidden="true" className="h-5 w-5" />}
+        label={t('desktop.pdf.export.action')} disabled={props.saving} onClick={props.run} />
+      {props.failed && <p role="status" className="py-2 text-sm text-error">{t('desktop.pdf.export.failed')}</p>}
     </>
   );
 }

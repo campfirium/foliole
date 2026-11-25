@@ -7,6 +7,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import { ReadingActionsSheet } from './CompanionReadingSheets';
 import { useCompanionArticleHandoff } from './useCompanionArticleHandoff';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionPdfSave } from './useCompanionAttachmentSave';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
@@ -33,17 +34,11 @@ export function ReadingActionsLayer(props: {
   const node = handoffContext.snapshot?.nodesById[readableArticle.nodeId];
   const canShare = node?.kind === 'topic' && !node.anchorLink && !readableArticle.isTrashed &&
     !handoffContext.isReviewItem && (readableArticle.bodyStatus === 'ready' || handoffContext.isContentEditing);
-  const articleHandoff = useCompanionArticleHandoff(
-    canShare && props.actionsOpen ? readableArticle.nodeId : undefined,
-    handoffContext.activity,
-    () => props.onOpenActions(false)
-  );
-  const articleCopy = useCompanionArticleHandoff(
-    canShare && props.actionsOpen ? readableArticle.nodeId : undefined,
-    handoffContext.activity,
-    () => props.onOpenActions(false),
-    'copy'
-  );
+  const shareNodeId = canShare && props.actionsOpen ? readableArticle.nodeId : undefined;
+  const closeActions = () => props.onOpenActions(false);
+  const articleHandoff = useCompanionArticleHandoff(shareNodeId, handoffContext.activity, closeActions);
+  const articleCopy = useCompanionArticleHandoff(shareNodeId, handoffContext.activity, closeActions, 'copy');
+  const pdfSave = useCompanionPdfSave(props.actionsOpen && !readableArticle.isTrashed ? readableArticle : null, closeActions);
   const backlinks = useCompanionBacklinksSheet({ activity: handoffContext.activity, nodeId: readableArticle.nodeId, snapshot: handoffContext.snapshot, onOpenNode: props.onOpenBacklinkNode, disabled: readableArticle.isTrashed });
   return (<>
     <ReadingActionsSheet
@@ -62,6 +57,7 @@ export function ReadingActionsLayer(props: {
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         articleHandoff,
         articleCopy,
+        pdfSave,
         onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
           ? () => restoreFromTrash(props.readableArticle.nodeId)
           : undefined

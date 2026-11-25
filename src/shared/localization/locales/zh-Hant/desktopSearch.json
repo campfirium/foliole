@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "複製影像",
   "desktop.editor.imageMenu.cut": "剪切影像",
   "desktop.editor.imageMenu.export": "匯出圖片",
+  "desktop.editor.imageMenu.exportFailed": "無法匯出這張圖片。",
   "desktop.editor.imageMenu.delete": "刪除影像",
   "desktop.editor.image.altFallback": "Markdown影像",
   "desktop.editor.imageFailure.retry": "重試",

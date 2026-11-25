@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "이미지 복사",
   "desktop.editor.imageMenu.cut": "컷 이미지",
   "desktop.editor.imageMenu.export": "이미지 내보내기",
+  "desktop.editor.imageMenu.exportFailed": "이미지를 내보낼 수 없습니다.",
   "desktop.editor.imageMenu.delete": "이미지 삭제",
   "desktop.editor.image.altFallback": "Markdown 이미지",
   "desktop.editor.imageFailure.retry": "재시도",

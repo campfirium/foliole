@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "Bild kopieren",
   "desktop.editor.imageMenu.cut": "Bild ausschneiden",
   "desktop.editor.imageMenu.export": "Bild exportieren",
+  "desktop.editor.imageMenu.exportFailed": "Bild konnte nicht exportiert werden.",
   "desktop.editor.imageMenu.delete": "Bild löschen",
   "desktop.editor.image.altFallback": "Markdown Bild",
   "desktop.editor.imageFailure.retry": "Wiederholen",

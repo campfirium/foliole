@@ -1,22 +1,28 @@
 package com.foliole.android;
 
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 
+import androidx.activity.result.ActivityResult;
 import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
@@ -64,6 +70,61 @@ public final class FolioleArticleHandoffPlugin extends Plugin {
             if (file != null) file.delete();
             call.reject("support_log_export_failed");
         }
+    }
+
+    /** Saves one stored library attachment through the system save dialog; bytes never pass through the WebView. */
+    @PluginMethod
+    public void saveAttachment(PluginCall call) {
+        File file = attachmentFile(call);
+        String name = call.getString("file_name");
+        if (file == null || name == null || name.trim().isEmpty()) {
+            resolve(call, "unavailable");
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType(call.getString("mime_type")).putExtra(Intent.EXTRA_TITLE, name.trim());
+        try {
+            startActivityForResult(call, intent, "attachmentSaveTarget");
+        } catch (ActivityNotFoundException error) {
+            resolve(call, "unavailable");
+        }
+    }
+
+    @ActivityCallback
+    private void attachmentSaveTarget(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        Intent data = result.getData();
+        if (result.getResultCode() != Activity.RESULT_OK || data == null || data.getData() == null) {
+            resolve(call, "cancelled");
+            return;
+        }
+        File file = attachmentFile(call);
+        if (file == null) {
+            resolve(call, "unavailable");
+            return;
+        }
+        Uri target = data.getData();
+        new Thread(() -> {
+            try (InputStream input = new FileInputStream(file);
+                 OutputStream output = getContext().getContentResolver().openOutputStream(target, "wt")) {
+                if (output == null) throw new IOException("attachment_target_unavailable");
+                byte[] buffer = new byte[65536];
+                for (int read = input.read(buffer); read != -1; read = input.read(buffer)) output.write(buffer, 0, read);
+                resolve(call, "saved");
+            } catch (IOException | SecurityException | IllegalArgumentException error) {
+                call.reject("attachment_save_failed");
+            }
+        }, "FolioleAttachmentSave").start();
+    }
+
+    private File attachmentFile(PluginCall call) {
+        String storageKey = call.getString("storage_key");
+        String contentHash = call.getString("content_hash");
+        String mimeType = call.getString("mime_type");
+        if (storageKey == null || contentHash == null || mimeType == null ||
+            !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)) return null;
+        File file = new File(new File(getContext().getFilesDir(), "attachments"), storageKey.trim());
+        return file.isFile() ? file : null;
     }
 
     private void shareLogFile(PluginCall call, File file) {

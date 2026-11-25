@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "चित्र कॉपी करें",
   "desktop.editor.imageMenu.cut": "चित्र काटें",
   "desktop.editor.imageMenu.export": "चित्र एक्सपोर्ट करें",
+  "desktop.editor.imageMenu.exportFailed": "चित्र एक्सपोर्ट नहीं किया जा सका।",
   "desktop.editor.imageMenu.delete": "चित्र हटाएँ",
   "desktop.editor.image.resize": "चित्र का आकार बदलें",
   "desktop.editor.image.altFallback": "Markdown चित्र",

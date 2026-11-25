@@ -7,7 +7,8 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleArticleHandoff"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "shareSupportLog", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "shareSupportLog", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveAttachment", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func open(_ call: CAPPluginCall) {
@@ -24,6 +25,39 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         shareFile(call, content: text, name: "Foliole-log.txt")
+    }
+
+    /// Offers one stored library attachment to the system share sheet, which includes Save to Files and Save Image.
+    @objc func saveAttachment(_ call: CAPPluginCall) {
+        guard let storageKey = call.getString("storage_key"), let contentHash = call.getString("content_hash"),
+              let mimeType = call.getString("mime_type"),
+              let name = call.getString("file_name")?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty,
+              !name.contains("/"),
+              FolioleCompanionCanonicalAttachmentKey.matches(
+                contentHash: contentHash, mimeType: mimeType, storageKey: storageKey
+              ) else {
+            call.resolve(["status": "unavailable"])
+            return
+        }
+        let files = FileManager.default
+        let directory = files.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        do {
+            let source = try attachmentRoot(FolioleCompanionContractStore().attachmentResourceContract())
+                .appendingPathComponent(storageKey)
+            guard files.fileExists(atPath: source.path) else {
+                call.resolve(["status": "unavailable"])
+                return
+            }
+            try files.createDirectory(at: directory, withIntermediateDirectories: false)
+            let file = directory.appendingPathComponent(name)
+            try files.copyItem(at: source, to: file)
+            DispatchQueue.main.async {
+                self.presentFile(call, file: file, directory: directory, completedStatus: "saved")
+            }
+        } catch {
+            try? files.removeItem(at: directory)
+            call.reject("attachment_save_failed")
+        }
     }
 
     private func shareFile(_ call: CAPPluginCall, content: String, name: String) {
@@ -43,7 +77,7 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    private func presentFile(_ call: CAPPluginCall, file: URL, directory: URL) {
+    private func presentFile(_ call: CAPPluginCall, file: URL, directory: URL, completedStatus: String = "presented") {
         guard let presenter = bridge?.viewController, presenter.viewIfLoaded?.window != nil,
               presenter.presentedViewController == nil else {
             try? FileManager.default.removeItem(at: directory)
@@ -61,7 +95,7 @@ public final class FolioleArticleHandoffPlugin: CAPPlugin, CAPBridgedPlugin {
             if error != nil {
                 call.reject("article_handoff_failed")
             } else {
-                call.resolve(["status": completed ? "presented" : "cancelled"])
+                call.resolve(["status": completed ? completedStatus : "cancelled"])
             }
         }
         presenter.present(sheet, animated: true)

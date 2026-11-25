@@ -32,7 +32,7 @@ extension FolioleCompanionSyncPlugin {
     }
 }
 
-private func attachmentRoot(_ contract: FolioleCompanionAttachmentResourceContract) throws -> URL {
+func attachmentRoot(_ contract: FolioleCompanionAttachmentResourceContract) throws -> URL {
     let support = try FileManager.default.url(
         for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
     )

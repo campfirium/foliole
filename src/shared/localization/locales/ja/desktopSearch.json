@@ -34,6 +34,7 @@
   "desktop.editor.imageMenu.copy": "画像をコピー",
   "desktop.editor.imageMenu.cut": "カット画像",
   "desktop.editor.imageMenu.export": "画像のエクスポート",
+  "desktop.editor.imageMenu.exportFailed": "画像をエクスポートできませんでした。",
   "desktop.editor.imageMenu.delete": "画像を削除",
   "desktop.editor.image.altFallback": "Markdown 画像",
   "desktop.editor.imageFailure.retry": "再試行",
