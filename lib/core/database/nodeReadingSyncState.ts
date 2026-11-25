@@ -1,3 +1,4 @@
+import { nextReadingHistoryOrderAt } from '../review/readingHistoryOrder.js';
 import type { ReadingState } from '../review/readingState.js';
 
 import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
@@ -21,6 +22,8 @@ export interface WriteNodeReadingSyncInput {
   reading?: NodeReadingSyncPayload | null;
   updatedAt: string;
   completedReviewDay?: string;
+  /** Set by undo and redo: the restored profile must win sync against the reading it replaces. */
+  historyOrder?: boolean;
 }
 
 interface ExistingNodeReadingRow extends DatabaseRow {
@@ -33,12 +36,13 @@ function hasExistingNodeReading(driver: DatabaseDriver, nodeId: string) {
   );
 }
 
-function toNodeReadingHash(nodeId: string, reading: NodeReadingSyncPayload) {
-  return computeSyncContentHash('node_reading', toNodeReadingPayload(nodeId, reading));
+function toNodeReadingHash(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt?: string) {
+  return computeSyncContentHash('node_reading', toNodeReadingPayload(nodeId, reading, historyOrderAt));
 }
 
-function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload) {
+function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt?: string) {
   return {
+    ...(historyOrderAt ? { history_order_at: historyOrderAt } : {}),
     interval_duration_ms: reading.intervalDurationMs,
     interval_growth_factor: reading.intervalGrowthFactor,
     last_handled_at: reading.lastHandledAt,
@@ -73,9 +77,10 @@ function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeRead
 
 function recordNodeReadingUpsert(
   driver: DatabaseDriver,
-  input: WriteNodeReadingSyncInput & { hostName: string; reading: NodeReadingSyncPayload }
+  input: WriteNodeReadingSyncInput & { hostName: string; reading: NodeReadingSyncPayload },
+  historyOrderAt?: string
 ) {
-  const contentHash = toNodeReadingHash(input.nodeId, input.reading);
+  const contentHash = toNodeReadingHash(input.nodeId, input.reading, historyOrderAt);
   upsertSyncObjectState(driver, {
     objectType: 'node_reading',
     objectId: input.nodeId,
@@ -97,6 +102,10 @@ export function writeNodeReadingSnapshotWithSync(
   }
 ) {
   const existed = hasExistingNodeReading(driver, input.nodeId);
+  const historyOrderAt = input.historyOrder && input.reading
+    ? nextReadingHistoryOrderAt(input.updatedAt, driver.queryOne<{ history_order_at: string | null; last_handled_at: string }>(
+      'SELECT last_handled_at, history_order_at FROM node_reading WHERE node_id = ?', [input.nodeId]))
+    : undefined;
   if (!input.reading) {
     statements.deleteReading([input.nodeId]);
     statements.deleteDeviceState([input.nodeId]);
@@ -116,6 +125,10 @@ export function writeNodeReadingSnapshotWithSync(
     input.reading.repetitionCount,
     input.reading.state
   ]);
+  // Ordinary writers leave the column alone, so a pending undo keeps its order until a later act.
+  if (historyOrderAt) {
+    driver.execute('UPDATE node_reading SET history_order_at = ? WHERE node_id = ?', [historyOrderAt, input.nodeId]);
+  }
   if (input.hostName) {
     statements.upsertDeviceState([
       input.nodeId,
@@ -123,7 +136,7 @@ export function writeNodeReadingSnapshotWithSync(
       input.reading.readingPosition,
       input.updatedAt
     ]);
-    recordNodeReadingUpsert(driver, { ...input, hostName: input.hostName, reading: input.reading });
+    recordNodeReadingUpsert(driver, { ...input, hostName: input.hostName, reading: input.reading }, historyOrderAt);
   }
 }
 
@@ -134,9 +147,12 @@ export function saveNodeReadingStateWithSync(driver: DatabaseDriver, input: Writ
     'INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?)'
   );
   const upsertReading = driver.prepare(
-    `INSERT OR REPLACE INTO node_reading (
+    `INSERT INTO node_reading (
       node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET
+      interval_duration_ms = excluded.interval_duration_ms, interval_growth_factor = excluded.interval_growth_factor,
+      last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, priority = excluded.priority,
+      repetition_count = excluded.repetition_count, state = excluded.state`
   );
   driver.transaction(() => {
     if (input.reading === null && input.hostName && !hasExistingNodeReading(driver, input.nodeId)) {

@@ -1,6 +1,7 @@
 import { INSERT_REVIEW_EVENT_SQL } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { readStoredReviewCardWithDb } from '../../../../../lib/core/database/storedReviewCard';
+import { nextReadingHistoryOrderAt } from '../../../../../lib/core/review/readingHistoryOrder';
 import { requireReviewInstant } from '../../../../../lib/core/review/reviewTimestamp';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib/core/sync/syncFactRowSchemas';
@@ -54,8 +55,16 @@ export function saveIosReading(args: { node_id: string; reading_json: string; co
 
 export async function saveIosReadingWithDb(tx: DbPort, args: {
   node_id: string; reading_json: string; completedReviewDay?: string;
+  /** Undo and redo restore a profile that must win sync against the reading it replaces. */
+  historyOrder?: boolean;
 }) {
   const input = parseObject(args.reading_json);
+  delete input.history_order_at;
+  if (args.historyOrder) {
+    const [replaced] = await tx.query<{ history_order_at: string | null; last_handled_at: string }>(
+      'SELECT last_handled_at, history_order_at FROM node_reading WHERE node_id = ?', [args.node_id]);
+    input.history_order_at = nextReadingHistoryOrderAt(new Date().toISOString(), replaced);
+  }
   const hostName = await iosCompanionHostName(tx);
   const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
   const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;

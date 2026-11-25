@@ -42,8 +42,9 @@ export const desktopDailyFlowPersistence: DailyFlowPersistence = {
     return { ...snapshot, nodesById: withLearning(snapshot.nodesById) };
   },
   grade: async (_db, value, opId) => applyReviewGrade({ ...value, opId }),
-  reading: async (_db, value, now) => {
+  reading: async (_db, value, now, options) => {
     saveNodeReadingState({ nodeId: value.nodeId, reading: value.after, updatedAt: now,
+      ...(options?.historyOrder ? { historyOrder: true } : {}),
       ...(value.completedReviewDay === undefined ? {} : { completedReviewDay: value.completedReviewDay }) });
   },
   reviewHistory: async (_db, value, now) => saveNodeReviewState({ nodeId: value.nodeId, review: value.after,

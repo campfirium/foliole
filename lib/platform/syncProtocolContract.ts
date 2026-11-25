@@ -37,6 +37,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     NODE_VERSION_FRONTIER_RETENTION_CAPABILITY,
     'opaque-sync-refs-v1',
     PARENT_CHILD_ORDER_CAPABILITY,
+    'reading-history-order-v1',
     'resource-availability-v1',
     READWISE_LIBRARY_SOURCE_MODE_CAPABILITY,
     'source-host-ownership-v1',

@@ -42,9 +42,10 @@ export const companionDailyFlowPersistence: DailyFlowPersistence = {
     if (!('card' in result)) throw new Error('daily_flow_grade_missing');
     return result.card;
   },
-  reading: async (db, value) => {
+  reading: async (db, value, _now, options) => {
     if (!value.after) return clearCompanionHistoryLearning(db, 'node_reading', value.nodeId);
     await saveIosReadingWithDb(db, { node_id: value.nodeId, reading_json: JSON.stringify(toReadingPayload(value.after)),
+      ...(options?.historyOrder ? { historyOrder: true } : {}),
       ...(value.completedReviewDay === undefined ? {} : { completedReviewDay: value.completedReviewDay }) });
   },
   reviewHistory: async (db, value, now) => {

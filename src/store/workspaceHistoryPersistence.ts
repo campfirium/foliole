@@ -7,10 +7,11 @@ import { hasWorkspaceNodeMutationRuntime, syncNodeContentToRuntimeNow } from './
 
 export interface WorkspaceHistoryPersistenceAdapter {
   persistNodeSnapshots: (nodes: Node[]) => Promise<boolean>;
-  persistReadingSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
+  /** `historyOrder` marks an undo or redo restore, which must win sync against the reading it replaces. */
+  persistReadingSnapshots: (nodes: Node[], updatedAt: string, historyOrder?: boolean) => Promise<boolean>;
   persistReviewSnapshot: (nodeId: string, review: NodeReviewProfile | null, updatedAt: string,
     history?: import('../../lib/core/review/reviewEventIdentity').ReviewHistoryMutation) => Promise<boolean | { review: NodeReviewProfile | null }>;
-  persistShelveSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
+  persistShelveSnapshots: (nodes: Node[], updatedAt: string, historyOrder?: boolean) => Promise<boolean>;
 }
 
 async function persistNodeSnapshots(nodes: Node[]) {
@@ -32,17 +33,17 @@ async function persistNodeSnapshots(nodes: Node[]) {
 
 const runtimePersistence: WorkspaceHistoryPersistenceAdapter = {
   persistNodeSnapshots,
-  persistReadingSnapshots: (nodes, updatedAt) =>
-    runtimeWorkspaceReviewPersistence.persistReadingNodes(nodes, updatedAt),
+  persistReadingSnapshots: (nodes, updatedAt, historyOrder) =>
+    runtimeWorkspaceReviewPersistence.persistReadingNodes(nodes, updatedAt, undefined, historyOrder),
   persistReviewSnapshot: (nodeId, review, updatedAt, history) =>
     saveNodeReviewStateToRuntime({ nodeId, review, updatedAt, ...(history ? { history } : {}) }),
-  persistShelveSnapshots: async (nodes, updatedAt) => {
+  persistShelveSnapshots: async (nodes, updatedAt, historyOrder) => {
     const [rootNode, ...readingNodes] = nodes;
     if (!rootNode) return false;
     const rootPersisted = await syncNodeContentToRuntimeNow(rootNode);
     if (!rootPersisted) return false;
     try {
-      const readingsPersisted = await runtimeWorkspaceReviewPersistence.persistReadingNodes(readingNodes, updatedAt);
+      const readingsPersisted = await runtimeWorkspaceReviewPersistence.persistReadingNodes(readingNodes, updatedAt, undefined, historyOrder);
       if (!readingsPersisted && readingNodes.length > 0) throw new WorkspacePartialPersistenceError();
       return readingsPersisted;
     } catch (error) {

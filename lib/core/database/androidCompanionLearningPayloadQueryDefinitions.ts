@@ -8,7 +8,8 @@ const NODE_READING_COLUMNS = [
   { key: 'next_at', source: 'next_at', type: 'string' },
   { key: 'priority', source: 'priority', type: 'double' },
   { key: 'repetition_count', source: 'repetition_count', type: 'long' },
-  { key: 'state', source: 'state', type: 'string' }
+  { key: 'state', source: 'state', type: 'string' },
+  { key: 'history_order_at', source: 'history_order_at', type: 'string' }
 ];
 
 export const ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS = {
@@ -42,7 +43,7 @@ export const ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS = {
     },
     sql:
       `${VISIBLE_NODES_CTE_SQL} ` +
-      'SELECT node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state ' +
+      'SELECT node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state, history_order_at ' +
       'FROM node_reading INNER JOIN visible_nodes visible ON visible.id = node_reading.node_id WHERE node_id = ? LIMIT 1'
   }
 };

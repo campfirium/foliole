@@ -38,7 +38,8 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   node_reading: `SELECT json_object(
     'node_id', node_id, 'interval_duration_ms', interval_duration_ms,
     'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at,
-    'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state
+    'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state,
+    'history_order_at', history_order_at
   ) AS payload_json FROM node_reading WHERE node_id = ?`,
   node_text_alternative: TOPIC_ALTERNATIVE_PAYLOAD_SQL,
   setting: `SELECT json_object(

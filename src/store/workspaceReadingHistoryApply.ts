@@ -92,7 +92,7 @@ export async function applyWorkspaceReadingHistory(args: {
     const persisted = !args.entry.standalone && hasPersistentDailyFlow(args.get().reviewSession)
       ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp, knownNodes: args.get().nodesById })
       : await getWorkspaceHistoryPersistence()
-      .persistReadingSnapshots(prepared.nodes, args.mutationTimestamp);
+      .persistReadingSnapshots(prepared.nodes, args.mutationTimestamp, true);
     if (!persisted) return { status: 'failed' };
     if (typeof persisted !== 'boolean') {
       dailySession = persisted.session;

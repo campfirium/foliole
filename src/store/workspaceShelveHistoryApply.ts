@@ -74,7 +74,7 @@ export async function applyWorkspaceShelveHistory(args: {
     const persisted = args.entry.databaseMutation
       ? await saveDatabaseShelveCommand(args.entry, args.mode, args.mutationTimestamp,
         sourcePreferences(args.get().nodesById[args.entry.nodeId]!), args.get().nodesById)
-      : await getWorkspaceHistoryPersistence().persistShelveSnapshots(prepared.nodes, args.mutationTimestamp);
+      : await getWorkspaceHistoryPersistence().persistShelveSnapshots(prepared.nodes, args.mutationTimestamp, true);
     if (persisted && typeof persisted !== 'boolean') args.mutationTimestamp = persisted.updatedAt;
     if (!persisted) return { status: 'failed' };
   } catch (error) {

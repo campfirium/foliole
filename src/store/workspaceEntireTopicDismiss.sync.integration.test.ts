@@ -33,17 +33,27 @@ function seed(peer: Peer, id: string, parentNodeId: string | null, kind: 'topic'
   flushNodeSyncVersionWithDriver(peer.driver, id, peer.name, now);
 }
 
+// The child already has reading progress, so undo puts back an older profile instead of deleting one.
+const childReading = { intervalDurationMs: 86_400_000, intervalGrowthFactor: 2, lastHandledAt: '2026-10-20T00:00:00.000Z',
+  nextAt: '2026-10-30T00:00:00.000Z', priority: 50, readingPosition: 3, repetitionCount: 4, state: 'active' as const };
+
+function seedProgress(peer: Peer) {
+  saveNodeReadingStateWithSync(peer.driver, { nodeId: 'child', hostName: peer.name, reading: childReading,
+    updatedAt: childReading.lastHandledAt });
+}
+
 function readSaved(peer: Peer, dismissed: boolean) {
   const reopened = new Database(peer.file, { readonly: true });
   try {
-    const rows = reopened.prepare(`SELECT n.id,n.content,n.parent_id,r.state FROM nodes n
+    const rows = reopened.prepare(`SELECT n.id,n.content,n.parent_id,r.state,r.repetition_count FROM nodes n
       LEFT JOIN node_reading r ON r.node_id=n.id`).all() as
-      Array<{ id: string; content: string; parent_id: string | null; state: string | null }>;
+      Array<{ id: string; content: string; parent_id: string | null; state: string | null; repetition_count: number | null }>;
     for (const id of ['root', 'child', 'deep']) {
       const row = rows.find(value => value.id === id)!;
       expect(row.content).toBe(`Saved ${id}`);
-      expect(row.state).toBe(dismissed ? 'dismissed' : null);
+      expect(row.state).toBe(dismissed ? 'dismissed' : id === 'child' ? 'active' : null);
     }
+    expect(rows.find(row => row.id === 'child')!.repetition_count).toBe(4);
     expect(rows.find(row => row.id === 'card')!.state).toBeNull();
     expect(rows.find(row => row.id === 'other')!.state).toBeNull();
     expect(rows.find(row => row.id === 'deep')!.parent_id).toBe('card');
@@ -62,6 +72,7 @@ it('persists one menu subtree operation, undo and redo through runtime reading w
   seed(local, 'card', 'root', 'item');
   seed(local, 'deep', 'card');
   seed(local, 'other', null);
+  seedProgress(local);
   const sync = async () => {
     await syncRequestLibrary(local, remote);
     await syncRequestLibrary(remote, local);
@@ -85,7 +96,8 @@ it('persists one menu subtree operation, undo and redo through runtime reading w
     return null;
   } } });
   installWorkspaceHistoryPersistence({ persistNodeSnapshots: async () => { throw new Error('whole_node_write'); },
-    persistReadingSnapshots: runtimeWorkspaceReviewPersistence.persistReadingNodes,
+    persistReadingSnapshots: (nodes, updatedAt, historyOrder) =>
+      runtimeWorkspaceReviewPersistence.persistReadingNodes(nodes, updatedAt, undefined, historyOrder),
     persistReviewSnapshot: async () => { throw new Error('review_write'); },
     persistShelveSnapshots: async () => { throw new Error('shelve_write'); } });
   const dismiss = createDismissNodesAction(app.setState, app.getState);

@@ -62,7 +62,8 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     next_at TEXT NOT NULL,
     priority REAL NOT NULL DEFAULT 0,
     repetition_count INTEGER NOT NULL DEFAULT 0,
-    state TEXT NOT NULL DEFAULT 'active'
+    state TEXT NOT NULL DEFAULT 'active',
+    history_order_at TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS node_open_state (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,

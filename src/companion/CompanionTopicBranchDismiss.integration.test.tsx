@@ -26,7 +26,7 @@ function openTopicMenu(title: string) {
   return within(screen.getByRole('dialog', { name: title }));
 }
 
-it('dismisses a topic with its extracts in one undoable step, leaving items alone, and the desktop reads it back', async () => {
+it('dismisses a topic with its extracts in one undoable step, leaving items alone, and the desktop follows dismiss, undo and redo', async () => {
   const library = await createSearchLibrary(0);
   try {
     const peers = await connectCompanionPeer(library);
@@ -68,6 +68,13 @@ it('dismisses a topic with its extracts in one undoable step, leaving items alon
     expect(['Branch', 'Extract', 'Deep extract', 'Card'].map(id => restored[id]?.reading?.state ?? null))
       .toEqual([null, 'active', null, null]);
     expect(restored['Extract']?.reading?.repetitionCount).toBe(4);
+    // The restored progress is older than the dismissal, yet the undo still reaches the desktop.
+    await peers.exchange();
+    const undone = [{ id: 'Branch', state: null }, { id: 'Card', state: null },
+      { id: 'Deep extract', state: null }, { id: 'Extract', state: 'active' }];
+    expect(states()).toEqual(undone);
+    expect(peers.desktop.db.prepare(`SELECT repetition_count FROM node_reading WHERE node_id = 'Extract'`).get())
+      .toEqual({ repetition_count: 4 });
 
     click('Redo Dismiss');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Undo Dismiss' })).toBeEnabled());

@@ -1,4 +1,5 @@
 import { resolveFlowReadingHistoryPreference } from '../flow/dailyFlowReadingHistory.js';
+import { readingOrderAt } from '../review/readingHistoryOrder.js';
 import { isReadingState } from '../review/readingState.js';
 
 import type { DbPort } from './dbPort.js';
@@ -20,7 +21,8 @@ export async function applyNodeReadingObject(
     const payload = asObject(record);
     if (!isReadingState(text(payload.state))) throw new Error('invalid node_reading state');
     const accepted = await shouldApplyNodeReading(port, record,
-      text(payload.last_handled_at) ?? record.updated_at, integer(payload.repetition_count));
+      readingOrderAt(text(payload.last_handled_at) ?? record.updated_at, text(payload.history_order_at)),
+      integer(payload.repetition_count));
     if (!accepted) return false;
   }
   return writeNodeReadingObject(port, record, options);
@@ -48,32 +50,36 @@ export function nodeReadingStatement(record: SyncObjectRecord): DbStatement {
   if (!isReadingState(state)) throw new Error('invalid node_reading state');
   const incomingLastHandledAt = text(payload.last_handled_at) ?? record.updated_at;
   const incomingRepetitionCount = integer(payload.repetition_count);
+  // A payload without the key comes from a writer that does not know the order; keep the stored order then.
+  const carriesOrder = 'history_order_at' in payload;
   return { sql:
-    `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) ` +
-    `VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
+    `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state, history_order_at) ` +
+    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
     `interval_growth_factor = excluded.interval_growth_factor, last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, ` +
-    `priority = excluded.priority, repetition_count = excluded.repetition_count, state = excluded.state`,
+    `priority = excluded.priority, repetition_count = excluded.repetition_count, state = excluded.state` +
+    (carriesOrder ? ', history_order_at = excluded.history_order_at' : ''),
     params: [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
       incomingLastHandledAt, text(payload.next_at) ?? record.updated_at,
-      numberOrNull(payload.priority) ?? 0, incomingRepetitionCount, state]
+      numberOrNull(payload.priority) ?? 0, incomingRepetitionCount, state, text(payload.history_order_at)]
   };
 }
 
 async function shouldApplyNodeReading(
   port: DbPort,
   record: SyncObjectRecord,
-  incomingLastHandledAt: string,
+  incomingOrderAt: string,
   incomingRepetitionCount: number
 ) {
   const preferred = await resolveFlowReadingHistoryPreference(port, record.object_id, asObject(record));
   if (preferred !== undefined) return preferred;
   const existing = (await port.query<{
     content_hash: string | null;
+    history_order_at: string | null;
     last_handled_at: string;
     repetition_count: number;
     updated_at: string | null;
   }>(
-    `SELECT r.last_handled_at, r.repetition_count, s.content_hash, s.updated_at
+    `SELECT r.last_handled_at, r.history_order_at, r.repetition_count, s.content_hash, s.updated_at
      FROM node_reading r LEFT JOIN sync_object_state s
        ON s.object_type = 'node_reading' AND s.object_id = r.node_id
      WHERE r.node_id = ?`,
@@ -81,13 +87,13 @@ async function shouldApplyNodeReading(
   ))[0];
   if (!existing) return true;
   const incomingKey = [
-    incomingLastHandledAt,
+    incomingOrderAt,
     String(incomingRepetitionCount).padStart(12, '0'),
     record.updated_at,
     record.content_hash
   ];
   const existingKey = [
-    existing.last_handled_at,
+    readingOrderAt(existing.last_handled_at, existing.history_order_at),
     String(existing.repetition_count).padStart(12, '0'),
     existing.updated_at ?? '',
     existing.content_hash ?? ''

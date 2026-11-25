@@ -5,4 +5,6 @@ export interface NativeSaveNodeReadingStateArgs {
   reading: NativeWorkspaceReadingProfile | null;
   updatedAt: string;
   completedReviewDay?: string;
+  /** Undo and redo restore a profile that must win sync against the reading it replaces. */
+  historyOrder?: boolean;
 }

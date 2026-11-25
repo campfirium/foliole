@@ -28,4 +28,10 @@ export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentV
       await db.run('ALTER TABLE nodes ADD COLUMN enforce_priority INTEGER');
     }
   }
+  if (currentVersion < 127 && targetVersion >= 127) {
+    const columns = await db.query<{ name: string }>('PRAGMA table_info(node_reading)');
+    if (!columns.some(column => column.name === 'history_order_at')) {
+      await db.run('ALTER TABLE node_reading ADD COLUMN history_order_at TEXT');
+    }
+  }
 }

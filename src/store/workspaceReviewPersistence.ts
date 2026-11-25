@@ -16,17 +16,18 @@ export interface WorkspaceReviewGradePersistencePayload {
 }
 
 export interface WorkspaceReviewPersistenceAdapter {
-  persistReadingNodes: (nodes: Node[], updatedAt?: string, completedReviewDay?: string) => Promise<boolean>;
+  persistReadingNodes: (nodes: Node[], updatedAt?: string, completedReviewDay?: string, historyOrder?: boolean) => Promise<boolean>;
   persistReviewGrade: (payload: WorkspaceReviewGradePersistencePayload) => Promise<boolean | { card: SchedulerCard | null }>;
 }
 
-async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string, completedReviewDay?: string) {
+async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string, completedReviewDay?: string, historyOrder?: boolean) {
   for (const [index, node] of nodes.entries()) {
     try {
       const persisted = await saveNodeReadingStateToRuntime({
         nodeId: node.id,
         reading: node.reading ?? null,
         ...(index === 0 && completedReviewDay ? { completedReviewDay } : {}),
+        ...(historyOrder ? { historyOrder } : {}),
         updatedAt: updatedAt ?? node.reading?.lastHandledAt ?? new Date().toISOString()
       });
       if (!persisted) {

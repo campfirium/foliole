@@ -39,7 +39,9 @@ export function saveDailyFlowSourceSettings(db: DbPort, args: DailyFlowSourceSet
       last_modified_by_host_name=?, sync_dirty=1 WHERE id=?`, [args.after.manualChildOrder === null ? null : JSON.stringify(args.after.manualChildOrder),
       args.after.sequentialReadingEnabled === null ? null : Number(args.after.sequentialReadingEnabled), args.after.shelvedAt, args.now, hostName, args.sourceNodeId]);
     const changes = sourceSettingsReadingChanges(snapshot, args);
-    for (const value of changes) await persistence.reading(tx, value, args.now);
+    // Guarded snapshots only come from shelve history: they put back profiles another device may have moved past.
+    const historyOrder = Boolean(args.guardedReadings);
+    for (const value of changes) await persistence.reading(tx, value, args.now, historyOrder ? { historyOrder } : undefined);
     const released = sourceSettingsReleasedRows(await readDailyFlow(tx), await readCycleRows(tx, [args.sourceNodeId, ...ids]),
       changes.map(value => ({ nodeId: value.nodeId, after: value.after?.state ?? null })),
       args.before.shelvedAt && !args.after.shelvedAt && snapshot.nodesById[args.sourceNodeId]?.kind === 'topic' ? args.sourceNodeId : undefined);

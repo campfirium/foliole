@@ -16,7 +16,8 @@ export async function writeCompanionHistoryReadings(db: DbPort, changes: Workspa
     const expected = mode === 'undo' ? change.afterReading : change.beforeReading;
     if (!node || !isSameReadingProfile(node.reading, expected)) throw new Error('workspace_history_reading_changed');
     const target = mode === 'undo' ? change.beforeReading : change.afterReading;
-    if (target) await saveIosReadingWithDb(db, { node_id: change.nodeId, reading_json: JSON.stringify(toReadingPayload(target)) });
+    if (target) await saveIosReadingWithDb(db, { node_id: change.nodeId, reading_json: JSON.stringify(toReadingPayload(target)),
+      historyOrder: true });
     else await clearCompanionHistoryLearning(db, 'node_reading', change.nodeId);
   }
 }

@@ -103,7 +103,7 @@ function copyReading(driver: DatabaseDriver, sourceId: string, targetId: string)
   const target = driver.queryOne<{ repetition_count: number }>('SELECT repetition_count FROM node_reading WHERE node_id=?', [targetId]);
   if (!target || source.repetition_count > target.repetition_count) {
     driver.execute(`INSERT OR REPLACE INTO node_reading SELECT ?,interval_duration_ms,interval_growth_factor,
-      last_handled_at,next_at,priority,repetition_count,state FROM node_reading WHERE node_id=?`, [targetId, sourceId]);
+      last_handled_at,next_at,priority,repetition_count,state,history_order_at FROM node_reading WHERE node_id=?`, [targetId, sourceId]);
   }
   driver.execute('DELETE FROM node_reading WHERE node_id=?', [sourceId]);
 }

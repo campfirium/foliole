@@ -165,7 +165,7 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
       ...(args.completedReviewDay === undefined ? {} : {
         completedReviewDay: asString(args.completedReviewDay, 'completedReviewDay')
       }),
-      updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
+      ...(args.historyOrder === true ? { historyOrder: true } : {}), updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     }), { kind: 'nodes', nodeIds: [], readingNodeIds: [asString(args.nodeId, 'nodeId')] }, origin);
   }
   if (command === NATIVE_COMMANDS.saveNodeReviewState) {

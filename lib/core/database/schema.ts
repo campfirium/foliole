@@ -67,7 +67,8 @@ export const nodeReading = sqliteTable('node_reading', {
   nextAt: text('next_at').notNull(),
   priority: real('priority').notNull().default(0),
   repetitionCount: integer('repetition_count').notNull().default(0),
-  state: text('state').notNull().default('active')
+  state: text('state').notNull().default('active'),
+  historyOrderAt: text('history_order_at')
 });
 
 export const nodeOpenState = sqliteTable('node_open_state', {

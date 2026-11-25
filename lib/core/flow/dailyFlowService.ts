@@ -23,7 +23,9 @@ export interface DailyFlowPersistence {
   learningSnapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowLearningSnapshot>;
   snapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowSnapshot>;
   grade(db: DbPort, args: NonNullable<DailyFlowCommitArgs['grade']>, opId: string): Promise<SchedulerCard | null>;
-  reading(db: DbPort, value: NonNullable<DailyFlowCommitArgs['readings']>[number], now: string): Promise<void>;
+  /** `options.historyOrder` marks an undo or redo restore that must win sync against the reading it replaces. */
+  reading(db: DbPort, value: NonNullable<DailyFlowCommitArgs['readings']>[number], now: string,
+    options?: { historyOrder?: boolean }): Promise<void>;
   reviewHistory(db: DbPort, value: NonNullable<DailyFlowCommitArgs['reviewHistory']>, now: string): Promise<SchedulerCard | null>;
 }
 
