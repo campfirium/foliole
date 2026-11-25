@@ -13,11 +13,13 @@ export function SimplePdfPage(props: {
   onCropBoxChange(cropBox: PdfCropBox | null): void;
   onLayoutReady?(): void;
   pageNumber: number;
+  rotation?: number;
   width: number | undefined;
 }) {
+  const rotation = props.rotation ?? 0;
   const t = useTranslation();
   const pageRef = useRef<HTMLDivElement | null>(null);
-  const onCropTextLayerReady = useSimplePdfCropMeasurement({ ...props, pageRef });
+  const onCropTextLayerReady = useSimplePdfCropMeasurement({ ...props, pageRef, rotation });
   const drawn = useRef<{ width: number | undefined } | null>(null);
   // Stable per page and width like the measurement callback, or react-pdf would redraw the text layer each render.
   const onTextLayerReady = useCallback(() => {
@@ -48,6 +50,7 @@ export function SimplePdfPage(props: {
             onRenderTextLayerSuccess={onTextLayerReady}
             pageNumber={props.pageNumber}
             renderAnnotationLayer
+            rotate={rotation}
             renderTextLayer
             {...(props.width !== undefined ? { width: props.width } : {})}
           />

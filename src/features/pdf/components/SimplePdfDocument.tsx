@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Document } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -16,7 +16,7 @@ import { configurePdfWorker } from '../model/pdfWorker';
 
 import { SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
 import { SimplePdfPageStack } from './SimplePdfPageStack';
-import type { SimplePdfPositionPersistence } from './useSimplePdfPosition';
+import type { SimplePdfPosition, SimplePdfPositionPersistence } from './useSimplePdfPosition';
 
 configurePdfWorker();
 
@@ -86,6 +86,44 @@ function usePdfReaderSession(attachmentId: string) {
   useEffect(() => beginPdfReaderSession(), [attachmentId]);
 }
 
+// Current page, explicit page jumps, zoom and rotation; rotation is a view setting and is not saved.
+function useSimplePdfView(initialPage: number | undefined, persistence: SimplePdfPositionPersistence | undefined) {
+  const initialPosition = initialPage === undefined ? persistence?.initial : undefined;
+  const requestedPage = initialPage ?? initialPosition?.page;
+  const [currentPage, setCurrentPage] = useState(requestedPage ?? 1);
+  const [jump, setJump] = useState<{ page: number; revision: number } | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const [zoom, setZoom] = useState(100);
+  const onChange = persistence?.onChange;
+  const onPositionChange = useCallback((position: SimplePdfPosition) => {
+    setCurrentPage(position.page);
+    onChange?.(position);
+  }, [onChange]);
+  const onJumpToPage = useCallback((page: number) => {
+    setCurrentPage(page);
+    setJump(current => ({ page, revision: (current?.revision ?? 0) + 1 }));
+    onChange?.({ page, fraction: 0 });
+  }, [onChange]);
+  return {
+    zoom,
+    toolbar: {
+      currentPage,
+      onJumpToPage,
+      onRotate: () => setRotation(current => (current + 90) % 360),
+      onZoomIn: () => setZoom(current => clampPdfZoom(current + PDF_ZOOM_STEP)),
+      onZoomOut: () => setZoom(current => clampPdfZoom(current - PDF_ZOOM_STEP)),
+      zoom
+    },
+    stack: {
+      focusedPage: requestedPage,
+      initialPage: jump?.page ?? requestedPage,
+      jumpRevision: jump?.revision ?? 0,
+      persistence: { ...persistence, initial: jump ? { page: jump.page, fraction: 0 } : initialPosition, onChange: onPositionChange },
+      rotation
+    }
+  };
+}
+
 function clampPdfZoom(value: number) {
   return Math.max(PDF_ZOOM_MIN, Math.min(PDF_ZOOM_MAX, value));
 }
@@ -127,9 +165,8 @@ export function SimplePdfDocument(props: {
   const { source, state } = useAttachmentPdfSource(props.attachmentId, props.onMissingResource);
   const [loadFailed, setLoadFailed] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const initialPosition = props.initialPage === undefined ? props.positionPersistence?.initial : undefined;
-  const pageWidth = width > 0 ? Math.floor((width * PDF_DEFAULT_FIT_RATIO * zoom) / 100) : undefined;
+  const view = useSimplePdfView(props.initialPage, props.positionPersistence);
+  const pageWidth = width > 0 ? Math.floor((width * PDF_DEFAULT_FIT_RATIO * view.zoom) / 100) : undefined;
   usePdfReaderSession(props.attachmentId);
 
   useEffect(() => {
@@ -146,10 +183,8 @@ export function SimplePdfDocument(props: {
       <SimplePdfToolbar
         {...(props.backLabel ? { backLabel: props.backLabel } : {})}
         {...(props.onBackToText ? { onBack: props.onBackToText } : {})}
-        onZoomIn={() => setZoom((current) => clampPdfZoom(current + PDF_ZOOM_STEP))}
-        onZoomOut={() => setZoom((current) => clampPdfZoom(current - PDF_ZOOM_STEP))}
+        {...view.toolbar}
         totalPages={totalPages}
-        zoom={zoom}
       />
       <div className="min-h-0 flex-1 overflow-auto py-3" ref={scrollContainerRef}>
         <Document
@@ -164,8 +199,7 @@ export function SimplePdfDocument(props: {
         >
           {pageWidth && totalPages ? <SimplePdfPageStack
             key={source}
-            initialPage={props.initialPage ?? initialPosition?.page}
-            persistence={props.positionPersistence && { ...props.positionPersistence, initial: initialPosition }}
+            {...view.stack}
             pageWidth={pageWidth}
             scrollRef={scrollContainerRef}
             totalPages={totalPages}

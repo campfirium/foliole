@@ -8,9 +8,10 @@ export function useSimplePdfCropMeasurement(props: {
   onLayoutReady?: (() => void) | undefined;
   pageNumber: number;
   pageRef: RefObject<HTMLDivElement | null>;
+  rotation?: number | undefined;
   width: number | undefined;
 }) {
-  const lifetime = useMemo(() => ({ active: true, cancel: () => {} }), [props.pageNumber, props.width]);
+  const lifetime = useMemo(() => ({ active: true, cancel: () => {} }), [props.pageNumber, props.rotation, props.width]);
   useLayoutEffect(() => {
     lifetime.active = true;
     return () => { lifetime.active = false; lifetime.cancel(); };
@@ -23,6 +24,8 @@ export function useSimplePdfCropMeasurement(props: {
     lifetime.cancel();
     const current = latest.current;
     if (current.cropBox) { current.onLayoutReady?.(); return; }
+    // Auto-crop measures upright text boxes; rotated pages are shown whole.
+    if (current.rotation) { current.onCropBoxChange(null); current.onLayoutReady?.(); return; }
     lifetime.cancel = measureAfterTextLayout(current.pageRef.current, (cropBox) => {
       if (!lifetime.active) return;
       latest.current.onCropBoxChange(cropBox);

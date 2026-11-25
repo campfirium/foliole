@@ -10,6 +10,7 @@ export interface SimplePdfPositionPersistence {
 
 interface SavedPage { anchor: VirtualListAnchor; fraction: number; width: number }
 interface PendingPage { page: number; fraction: number; attempts: number; until: number }
+interface PositionLayout { revision: number; rotation: number }
 interface PositionRefs {
   frame: MutableRefObject<number>;
   pending: MutableRefObject<PendingPage | null>;
@@ -18,13 +19,15 @@ interface PositionRefs {
   persistence: MutableRefObject<SimplePdfPositionPersistence | undefined>;
 }
 
-function usePagePosition(refs: PositionRefs, width: number, initialPage: number) {
+// A new target page or jump revision discards the saved anchor; width and rotation changes keep it.
+function usePagePosition(refs: PositionRefs, width: number, initialPage: number, layout: PositionLayout) {
   const { pending, saved, scrollRef } = refs;
-  const previousTarget = useRef(initialPage);
+  const previousTarget = useRef({ page: initialPage, revision: layout.revision });
   return useMemo(() => {
-    const previous = initialPage === previousTarget.current ? saved.current : undefined;
+    const sameTarget = initialPage === previousTarget.current.page && layout.revision === previousTarget.current.revision;
+    const previous = sameTarget ? saved.current : undefined;
     if (!previous) saved.current = undefined;
-    previousTarget.current = initialPage;
+    previousTarget.current = { page: initialPage, revision: layout.revision };
     const anchor = previous?.anchor ?? { key: String(initialPage), index: initialPage - 1, offset: 0, order: [] };
     const restored = { ...anchor, offset: previous ? anchor.offset * width / previous.width : 0 };
     return {
@@ -38,7 +41,7 @@ function usePagePosition(refs: PositionRefs, width: number, initialPage: number)
         refs.persistence.current?.onChange?.({ page: next.index + 1, fraction });
       }
     };
-  }, [initialPage, pending, saved, scrollRef, width]);
+  }, [initialPage, layout.revision, layout.rotation, pending, saved, scrollRef, width]);
 }
 
 function usePagePositionLifetime(refs: PositionRefs, position: ReturnType<typeof usePagePosition>, initialPage: number) {
@@ -86,14 +89,20 @@ function usePageLayoutCorrection(refs: PositionRefs, width: number) {
 }
 
 // Only this viewer's current page is retained; no PDF resource is owned here.
-export function useSimplePdfPosition(scrollRef: RefObject<HTMLDivElement | null>, width: number, initialPage: number, persistence?: SimplePdfPositionPersistence) {
+export function useSimplePdfPosition(
+  scrollRef: RefObject<HTMLDivElement | null>,
+  width: number,
+  initialPage: number,
+  persistence?: SimplePdfPositionPersistence,
+  layout: PositionLayout = { revision: 0, rotation: 0 }
+) {
   const latestPersistence = useRef(persistence);
   latestPersistence.current = persistence;
   const saved = useRef<SavedPage>(undefined);
   const pending = useRef<PendingPage | null>(null);
   const frame = useRef(0);
   const refs = { frame, pending, saved, scrollRef, persistence: latestPersistence };
-  const position = usePagePosition(refs, width, initialPage);
+  const position = usePagePosition(refs, width, initialPage, layout);
   const pinned = usePagePositionLifetime(refs, position, initialPage);
   const onLayoutReady = usePageLayoutCorrection(refs, width);
   return { onLayoutReady, pinned, position };

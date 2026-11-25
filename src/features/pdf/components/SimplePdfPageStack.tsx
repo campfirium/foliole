@@ -12,37 +12,45 @@ interface PageLayout { cropBox: PdfCropBox | null; height: number }
 const pageKey = (page: number) => String(page);
 
 export function SimplePdfPageStack(props: {
+  /** Page marked as the requested result; defaults to the initial page. */
+  focusedPage?: number | undefined;
   initialPage: number | undefined;
+  /** Bumped for each explicit page jump, so repeating the same page scrolls again. */
+  jumpRevision?: number;
   persistence?: SimplePdfPositionPersistence | undefined;
   pageWidth: number;
+  rotation?: number;
   scrollRef: RefObject<HTMLDivElement | null>;
   totalPages: number;
 }) {
+  const rotation = props.rotation ?? 0;
+  const focusedPage = 'focusedPage' in props ? props.focusedPage : props.initialPage;
   const pages = useMemo(() => Array.from({ length: props.totalPages }, (_, index) => index + 1), [props.totalPages]);
   // Retain only layout metadata when a page leaves the rendering window.
-  const crops = useMemo(() => new Map<number, PageLayout>(), [props.pageWidth]);
-  const [lastPage, setLastPage] = useState<{ width: number; page: number; height: number }>();
+  const crops = useMemo(() => new Map<number, PageLayout>(), [props.pageWidth, rotation]);
+  const [lastPage, setLastPage] = useState<{ width: number; page: number; height: number; rotation: number }>();
   const onMeasured = useCallback((page: number, layout: PageLayout) => {
     crops.set(page, layout);
-    if (page === props.totalPages) setLastPage({ width: props.pageWidth, page, height: layout.height });
-  }, [crops, props.pageWidth, props.totalPages]);
-  const lastHeight = lastPage?.width === props.pageWidth && lastPage.page === props.totalPages
+    if (page === props.totalPages) setLastPage({ width: props.pageWidth, page, height: layout.height, rotation });
+  }, [crops, props.pageWidth, props.totalPages, rotation]);
+  const lastHeight = lastPage?.width === props.pageWidth && lastPage.page === props.totalPages && lastPage.rotation === rotation
     ? lastPage.height : props.pageWidth * 1.414 + 12;
   const paddingBottom = useSimplePdfEndPadding(props.scrollRef, lastHeight);
   const initialPage = Math.max(1, Math.min(props.initialPage ?? 1, props.totalPages));
-  const { onLayoutReady, pinned, position } = useSimplePdfPosition(props.scrollRef, props.pageWidth, initialPage, props.persistence);
+  const { onLayoutReady, pinned, position } = useSimplePdfPosition(props.scrollRef, props.pageWidth, initialPage, props.persistence,
+    { revision: props.jumpRevision ?? 0, rotation });
   const estimateSize = useCallback((index: number) => crops.get(index + 1)?.height ?? props.pageWidth * 1.414 + 12, [crops, props.pageWidth]);
   return (
     <div className="min-w-full" style={{ width: props.pageWidth, paddingBottom }}>
-      <VirtualListSurface key={props.pageWidth} items={pages} getItemKey={pageKey} estimateSize={estimateSize}
+      <VirtualListSurface key={`${props.pageWidth}:${rotation}`} items={pages} getItemKey={pageKey} estimateSize={estimateSize}
         scrollElementRef={props.scrollRef} position={position} pinnedItemKey={pinned === null ? null : String(pinned)}
         accountForOffset measureItems overscan={2} threshold={1} autoScroll={false}
-        renderItem={(page) => <WindowPage onMeasured={onMeasured} crops={crops} page={page} width={props.pageWidth} focused={props.initialPage === page} onLayoutReady={onLayoutReady} />} />
+        renderItem={(page) => <WindowPage onMeasured={onMeasured} crops={crops} page={page} rotation={rotation} width={props.pageWidth} focused={focusedPage === page} onLayoutReady={onLayoutReady} />} />
     </div>
   );
 }
 
-function WindowPage(props: { onMeasured(page: number, layout: PageLayout): void; crops: Map<number, PageLayout>; page: number; width: number; focused: boolean; onLayoutReady(page: number): void }) {
+function WindowPage(props: { onMeasured(page: number, layout: PageLayout): void; crops: Map<number, PageLayout>; page: number; rotation: number; width: number; focused: boolean; onLayoutReady(page: number): void }) {
   const [measured, setMeasured] = useState(() => props.crops.has(props.page));
   const [cropBox, setCropBox] = useState<PdfCropBox | null>(() => props.crops.get(props.page)?.cropBox ?? null);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -51,6 +59,6 @@ function WindowPage(props: { onMeasured(page: number, layout: PageLayout): void;
   }, [cropBox, measured, props.onMeasured, props.focused, props.page]);
   return <div ref={rowRef} className="flex justify-center pb-3" style={measured ? undefined : { minHeight: props.width * 1.414 }}>
     <SimplePdfPage cropBox={cropBox} isFocused={props.focused} onCropBoxChange={(box) => { setCropBox(box); setMeasured(true); }}
-      onLayoutReady={() => props.onLayoutReady(props.page)} pageNumber={props.page} width={props.width} />
+      onLayoutReady={() => props.onLayoutReady(props.page)} pageNumber={props.page} rotation={props.rotation} width={props.width} />
   </div>;
 }
