@@ -191,6 +191,7 @@
   {"id": "setting:backups-search-content", "mobile": "desktopOnly", "reason": "拍板不做跨备份搜索", "capmapRef": "backup-content-search"},
   {"id": "setting:capture-confirmation-position", "mobile": "desktopOnly", "reason": "系统级全局抓取，拍板不做", "capmapRef": "global-clip"},
   {"id": "setting:desktop.nodeReview.desiredRetention.inherited", "mobile": "entry", "mobileEntry": "文件夹／主题长按菜单 → 复习选项", "capmapRef": "entry-node-retention"},
+  {"id": "setting:desktop.nodeReview.priority.forcedLabel", "mobile": "entry", "mobileEntry": "主题／检测项 ⋯ → 复习选项 → 优先级（继承强制优先级时标注）", "capmapRef": "review-priority"},
   {"id": "setting:desktop.readwise.api.activate.title", "mobile": "desktopOnly", "reason": "Readwise Reader 导入拍板等需求再做", "capmapRef": "readwise-reader"},
   {"id": "setting:desktop.readwise.api.connection.title", "mobile": "desktopOnly", "reason": "Readwise Reader 导入拍板等需求再做", "capmapRef": "readwise-reader"},
   {"id": "setting:desktop.readwise.behavior.importTag.title", "mobile": "desktopOnly", "reason": "Readwise Reader 导入拍板等需求再做", "capmapRef": "readwise-reader"},

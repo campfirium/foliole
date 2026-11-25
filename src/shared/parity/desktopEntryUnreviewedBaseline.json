@@ -56,7 +56,6 @@
   "setting:settings.companionSync.expired.title",
   "setting:settings.demoPreview.superMemo.sample.title",
   "setting:settings.import.title.source",
-  "setting:src/features/nodes/components/NodeReviewSchedulingDialog.tsx#SettingsRow",
   "setting:src/features/settings/components/sections/DesktopReminderNotificationNotice.tsx#SettingsRow",
   "setting:src/features/settings/components/sections/FolderSectionSettings.tsx#SettingsRow",
   "setting:src/features/settings/components/sections/SettingsAboutSection.tsx#SettingsRow",

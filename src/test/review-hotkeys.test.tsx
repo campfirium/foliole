@@ -250,10 +250,9 @@ it('supports quick priority changes from the two-step shortcut', () => {
   fireEvent.keyDown(window, { key: 'm', ctrlKey: true });
   const dialog = screen.getByRole('dialog', { name: 'Set priority' });
   expect(within(dialog).getByText('Priority', { selector: 'div' })).toBeInTheDocument();
-  expect(within(dialog).getByText('Priority', { selector: 'dt' }).nextElementSibling).toHaveTextContent('P5');
-  expect(within(dialog).getByText('Source', { selector: 'dt' }).nextElementSibling).toHaveTextContent('Default');
-  expect(within(dialog).getByText('5')).toBeInTheDocument();
-  expect(within(dialog).getByText('9')).toBeInTheDocument();
+  expect(within(dialog).getByRole('slider', { name: 'Priority' })).toHaveValue('5');
+  expect(within(dialog).getByRole('slider', { name: 'Priority' })).toHaveAttribute('aria-valuetext', 'P5');
+  expect(dialog).toHaveTextContent('5 / 9');
   expect(within(dialog).getByText('0-9')).toBeInTheDocument();
   expect(within(dialog).getByText('apply instantly')).toBeInTheDocument();
   expect(within(dialog).queryByText('Esc to cancel')).not.toBeInTheDocument();
