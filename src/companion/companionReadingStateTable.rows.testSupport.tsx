@@ -2,6 +2,7 @@
 // `expected` is the target behaviour. `gap` marks a row the model does not meet yet: `now` records today's
 // behaviour and the target is an expected failure until the named closure removes the gap.
 import { CompanionDirectoryContent } from './CompanionDirectoryContent';
+import { BODY } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 import { article, mount, shell } from './companionReadingStateTable.scenes.testSupport';
 import { bodyText, type Observation, type Platform, type Probe } from './companionReadingStateTable.testSupport';
@@ -15,12 +16,12 @@ export interface ReadingStateRow {
   platforms?: Platform[];
   /** Bars are given for Android; the table expects none on iOS, which never hides the status bar. */
   expected: Observation;
-  gap?: { closure: '0-3' | '0-4' | '0-5'; platforms?: Platform[]; now: Observation };
+  gap?: { closure: '0-3' | '0-5'; platforms?: Platform[]; now: Observation };
   run(probe: Probe, platform: Platform): Promise<void>;
 }
 
 export const seen = (patch: Partial<Observation>): Observation =>
-  ({ body: ['reserved/reserved'], bars: [], tools: 'hidden', selection: 'none', tap: [], ...patch });
+  ({ body: [BODY.article], bars: [], tools: 'hidden', selection: 'none', tap: [], ...patch });
 
 async function enterThenTapTwice(probe: Probe) {
   mount(article());
@@ -53,13 +54,11 @@ export const sessionRows: ReadingStateRow[] = [
   { scene: 'P1 docked reading', event: 'enter, tap, tap',
     expected: seen({ bars: ['hidden'], tap: toggled }), run: enterThenTapTwice },
   { scene: 'P1 floating reading', event: 'enter, tap, tap', display: { overlayToolbars: true },
-    expected: seen({ body: ['edge/edge'], bars: ['hidden'], tap: toggled }),
-    gap: { closure: '0-4', platforms: ['android'],
-      now: seen({ body: ['reserved/edge', 'reserved/reserved'], bars: ['hidden'], tap: toggled }) },
+    expected: seen({ body: [BODY.floating], bars: ['hidden'], tap: toggled }),
     run: enterThenTapTwice },
   // Toolbars start hidden on the next card: each newly mounted article opens a closed view in the session.
   { scene: 'P2 Flow card with toolbars shown', event: 'grade, slow load, next card',
-    expected: seen({ tap: [['toggle-tools']] }),
+    expected: seen({ body: [BODY.flow], tap: [['toggle-tools']] }),
     async run(probe) {
       const view = mount(shell({ nodeId: 'topic-2' }));
       await probe.flush();
@@ -70,10 +69,9 @@ export const sessionRows: ReadingStateRow[] = [
       view.rerender(shell({ nodeId: 'topic-1' }));
       await probe.flush(2000);
     } },
-  // The parent being browsed has no bottom bar; Android lets the body drop to the edge there.
+  // The parent being browsed has no action bar of its own; the body keeps that band.
   { scene: 'P3 Flow child', event: 'breadcrumb to a slow parent, then resume',
-    expected: seen({}),
-    gap: { closure: '0-4', platforms: ['android'], now: seen({ body: ['reserved/edge', 'reserved/reserved'] }) },
+    expected: seen({ body: [BODY.flow] }),
     async run(probe) {
       const view = mount(shell({ nodeId: 'topic-2' }));
       await probe.flush();
@@ -85,7 +83,7 @@ export const sessionRows: ReadingStateRow[] = [
       }
     } },
   { scene: 'P4 reading', event: 'leave for the list',
-    expected: seen({ body: ['reserved/reserved'], bars: ['shown'], tools: 'absent' }),
+    expected: seen({ bars: ['shown'], tools: 'absent' }),
     async run(probe) {
       const view = mount(article());
       await probe.flush();

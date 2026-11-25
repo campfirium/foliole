@@ -3,8 +3,10 @@
 import { act, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BODY } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 import { sessionRows, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
+import { article, mount, shell } from './companionReadingStateTable.scenes.testSupport';
 import { tapRows } from './companionReadingStateTable.tapRows.testSupport';
 import { createProbe, installLayout, removeLayout, type Observation, type Platform } from './companionReadingStateTable.testSupport';
 import { windowRows } from './companionReadingStateTable.windowRows.testSupport';
@@ -87,10 +89,32 @@ async function observeRow(row: ReadingStateRow, platform: Platform) {
   return probe.observe();
 }
 
+const edges = (boundary: string) => boundary.split('/').map(Number) as [number, number];
+
 const onPlatform = (observation: Observation, platform: Platform): Observation =>
   platform === 'ios' ? { ...observation, bars: [] } : observation;
 
 describe.each<Platform>(['android', 'ios'])('reading state table on %s', platform => {
+  it.each(['article', 'flow'] as const)('floating %s reading reaches further than docked at both edges', async layout => {
+    const observed: [number, number][] = [];
+    for (const overlayToolbars of [false, true]) {
+      host.platform = platform;
+      localStorage.setItem('foliole-companion-reading-display', JSON.stringify({ overlayToolbars }));
+      const probe = createProbe();
+      mount(layout === 'flow' ? shell({ nodeId: 'topic-2' }) : article());
+      await probe.flush();
+      const [boundary, ...moved] = probe.observe().body;
+      expect(moved).toEqual([]);
+      expect(boundary).toBe(overlayToolbars ? BODY.floating : BODY[layout]);
+      observed.push(edges(boundary!));
+      cleanup();
+      await probe.flush();
+    }
+    const [docked, floating] = observed as [[number, number], [number, number]];
+    expect(floating[0]).toBeLessThan(docked[0]);
+    expect(floating[1]).toBeLessThan(docked[1]);
+  });
+
   const rows = [...sessionRows, ...tapRows, ...windowRows].filter(row => row.platforms?.includes(platform) ?? true);
   for (const row of rows) {
     const name = `${row.scene} | ${row.event}`;

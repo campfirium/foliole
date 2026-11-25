@@ -2,12 +2,13 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
+import { bodyBoundary } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 
 export type Platform = 'android' | 'ios';
 
 export interface Observation {
-  /** Distinct body boundaries seen at the checkpoints, as `top/bottom`; two entries mean the body moved. */
+  /** Distinct body boundaries seen at the checkpoints, as `top/bottom` px; two entries mean the body moved. */
   body: string[];
   /** System bar requests the Android host received during the row. */
   bars: ('hidden' | 'shown')[];
@@ -28,27 +29,6 @@ function toolsState(): Observation['tools'] {
   return screen.queryByTestId('companion-reading-exit') ? 'visible' : 'hidden';
 }
 
-function pixels(value: string) {
-  const expression = value.replace(/env\([^)]*\)/g, '0px').replace(/var\([^)]*\)/g, '0px')
-    .replace(/([\d.]+)rem/g, (_, n: string) => `${Number(n) * 16}`).replace(/([\d.]+)px/g, '$1')
-    .replace(/calc/g, '').replace(/max/g, 'Math.max');
-  if (!/^[\d\s.+\-*/(),Mathmax]*$/.test(expression)) throw new Error(`Unresolvable boundary: ${value}`);
-  return Number(new Function(`return ${expression || 0};`)());
-}
-
-// jsdom applies no stylesheet. On a bounded (Android) surface the viewport rule in companionReadingDisplay.css
-// places the body from the measured variables and overrides the overlay padding; elsewhere the class decides.
-function bodyBoundary() {
-  const surface = surfaceElement();
-  if (!surface) return null;
-  if (surface.dataset.readingSelectionViewport) {
-    const top = pixels(surface.style.getPropertyValue('--companion-reading-chrome-bottom'));
-    const bottom = pixels(surface.style.getPropertyValue('--companion-reading-viewport-bottom'));
-    return `${top > 0 ? 'reserved' : 'edge'}/${bottom > 0 ? 'reserved' : 'edge'}`;
-  }
-  return surface.classList.contains('companion-reading-overlay') ? 'edge/edge' : 'reserved/reserved';
-}
-
 function rect(top: number, height: number): DOMRect {
   return { x: 0, y: top, top, left: 0, right: 375, width: 375, bottom: top + height, height, toJSON: () => ({}) };
 }
@@ -56,8 +36,6 @@ function rect(top: number, height: number): DOMRect {
 export function installLayout() {
   const original = HTMLElement.prototype.getBoundingClientRect;
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    if (this.classList.contains('companion-reading-top-chrome')) return rect(0, 48);
-    if (this.classList.contains('companion-reading-bottom-chrome')) return rect(window.innerHeight - 64, 64);
     if (this.classList.contains('companion-review-footer')) return rect(window.innerHeight - 80, 80);
     if (this.matches('[data-companion-reading-surface]')) return rect(0, 812);
     return original.call(this);

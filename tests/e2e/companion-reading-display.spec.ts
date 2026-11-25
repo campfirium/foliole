@@ -72,8 +72,8 @@ for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }
   });
 }
 
-test('Android reading keeps its scroll viewport clear of visible controls', async ({ page }) => {
-  await openReader(page, false, false, false, false, true);
+for (const android of [false, true]) test(`reading keeps its scroll viewport clear of visible controls, android=${android}`, async ({ page }) => {
+  await openReader(page, false, false, false, false, android);
   const body = page.locator('[data-companion-reading-surface]');
   const topBar = page.locator('.companion-reading-top-chrome');
   const bottomBar = page.locator('.companion-reading-bottom-chrome');
@@ -99,7 +99,7 @@ test('Android Flow keeps its answer controls outside the scroll viewport', async
 });
 
 async function done(page: Page) {
-  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
 }
 async function more(page: Page) {

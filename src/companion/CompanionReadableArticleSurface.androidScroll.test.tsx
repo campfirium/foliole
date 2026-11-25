@@ -140,8 +140,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
       />
     );
 
-    expect(container.querySelector('section')).toHaveClass('pt-14');
-    expect(container.querySelector('section')).toHaveClass('pb-20');
+    expect(container.querySelector('section')).toHaveAttribute('data-reading-body', 'docked');
   });
 
 
@@ -181,8 +180,7 @@ describe('ImmersiveReadableArticle chrome visibility spacing', () => {
       />
     );
 
-    expect(container.querySelector('section')).toHaveClass('pt-14');
-    expect(container.querySelector('section')).toHaveClass('pb-20');
+    expect(container.querySelector('section')).toHaveAttribute('data-reading-body', 'docked');
     expect(readingChromeMock).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
   });
 });

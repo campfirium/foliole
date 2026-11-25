@@ -35,7 +35,6 @@ import { useCompanionPdfTextScroll } from './useCompanionPdfTextScroll';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
-import { useCompanionReadingSelectionViewport } from './useCompanionReadingSelectionViewport';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSceneSelection } from './useCompanionSceneSelection';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
@@ -121,7 +120,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, 
     toolbar.clearSelectionAndCloseToolbar();
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
-  const surfaceClassName = useCompanionReadingDisplayLayout(props.flow, reading.isContentEditing);
+  const surfaceLayout = useCompanionReadingDisplayLayout(props.flow, reading.isContentEditing, Boolean(props.header || props.flow));
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
   const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
     reading.setIsActionsSheetOpen(false);
@@ -133,7 +132,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, 
     ...toolbarEvents,
     reading,
     selectOutlineItem,
-    surfaceClassName,
+    surfaceLayout,
     toggleContentEditing,
     toolbar
   };
@@ -197,9 +196,7 @@ function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
   const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
     editing: model.reading.isContentEditing, onEditorReady, surface: scrollPosition.surfaceRef,
     onScrollTopChange: props.onScrollTopChange, jump: { commandId: model.reading.readingRestoreCommandId, selection: model.reading.readingSelection } });
-  const bounded = useCompanionReadingSelectionViewport(scrollPosition.surfaceRef, model.reading.isContentEditing,
-    model.reading.isChromeVisible, props.header, props.footer);
-  return { bounded, itemEditing, pagedStyle, pdfScroll, scrollPosition };
+  return { itemEditing, pagedStyle, pdfScroll, scrollPosition };
 }
 
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
@@ -216,14 +213,14 @@ function ReadableArticleReader(props: ImmersiveReadableArticleProps) {
   const model = useImmersiveReadableArticleModel({ ...props, onExit, onBack }, scroll.scrollAnchor);
   const readingTypography = useCompanionReadingTypographySettings();
   const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
-  const { bounded, itemEditing, pagedStyle, pdfScroll, scrollPosition } = useReadableArticleViewport(props, model, pendingReadableArticle, scroll);
+  const { itemEditing, pagedStyle, pdfScroll, scrollPosition } = useReadableArticleViewport(props, model, pendingReadableArticle, scroll);
   return (
     <section
-      data-reading-selection-viewport={bounded || undefined}
+      {...model.surfaceLayout.bodyAttributes}
       data-companion-reading-surface="true"
       data-reading-end-action={Boolean(props.endOfArticleAction) && !model.reading.isContentEditing || undefined}
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
-      className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
+      className={`${model.surfaceLayout.className}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
       onClick={model.handleSurfaceClick}
       onPointerDown={event => {
@@ -240,7 +237,7 @@ function ReadableArticleReader(props: ImmersiveReadableArticleProps) {
       ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={{ ...props, onExit }} model={model} readingTypography={readingTypography} />
-      {props.header || (props.flow && !bounded) ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : null}
+      {props.header || props.flow ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : null}
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}

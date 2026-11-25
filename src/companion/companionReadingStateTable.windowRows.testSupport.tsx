@@ -1,6 +1,7 @@
 // T886 reading state table, paths P8-P12: editing, outline, window changes and the iPhone path.
 import { act, screen, within } from '@testing-library/react';
 
+import { BODY } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 import { seen, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
 import { answeredItem, article, editableArticle, mount } from './companionReadingStateTable.scenes.testSupport';
@@ -58,7 +59,7 @@ export const windowRows: ReadingStateRow[] = [
     } },
   { scene: 'P12 iPhone floating reading', event: 'enter, switch article, leave', platforms: ['ios'],
     display: { overlayToolbars: true },
-    expected: seen({ body: ['edge/edge'], tools: 'absent' }),
+    expected: seen({ body: [BODY.floating], tools: 'absent' }),
     async run(probe) {
       const view = mount(article());
       await probe.flush();

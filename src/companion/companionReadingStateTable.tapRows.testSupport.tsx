@@ -1,6 +1,7 @@
 // T886 reading state table, paths P5-P7: one tap or swipe has one owner while something is selected or open.
 import { screen } from '@testing-library/react';
 
+import { BODY } from './companionReadingStateTable.geometry.testSupport';
 import { seen, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
 import { annotatableArticle, article, highlightedArticle, mount, shell } from './companionReadingStateTable.scenes.testSupport';
 import { bodyText, selectBodyText, selectManagedText, type Probe } from './companionReadingStateTable.testSupport';
@@ -25,13 +26,13 @@ async function openHighlightMenu(probe: Probe) {
 
 export const tapRows: ReadingStateRow[] = [
   { scene: 'P5 cloze review question with a native selection', event: 'tap outside the selection',
-    expected: seen({ tap: [['clear-selection']] }),
+    expected: seen({ body: [BODY.flow], tap: [['clear-selection']] }),
     async run(probe) {
       await reviewQuestionWithSelection(probe);
       await probe.tap(bodyText());
     } },
   { scene: 'P5 cloze review question with a native selection', event: 'show the answer',
-    expected: seen({}),
+    expected: seen({ body: [BODY.flow] }),
     async run(probe) {
       const view = await reviewQuestionWithSelection(probe);
       view.rerender(shell({ nodeId: 'item-1', revealed: true }));
