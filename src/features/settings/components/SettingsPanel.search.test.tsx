@@ -6,6 +6,7 @@ import { APP_LANGUAGE_STORAGE_KEY } from '../../../shared/localization/appLangua
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 import { DesktopCustomCssProvider } from '../context/DesktopCustomCssProvider';
 
+import { defaultSettings } from './sections/SettingsBackupsSection.testUtils';
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 import { SETTINGS_SEARCH_ROWS } from './settingsSearchRows';
@@ -33,6 +34,10 @@ beforeEach(() => {
         globalCaptureToastPositionSupported: true,
         loginItemSupported: false
       };
+    }
+    if (command === 'load_backup_settings') return defaultSettings;
+    if (command === 'maintain_attachments') {
+      return { automatic: false, observationThreshold: 30, usedBytes: 0, eligibleBytes: 0, trashBytes: 0, trash: [] };
     }
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'load_library_path_settings') {
@@ -253,6 +258,8 @@ it('keeps the settings search field in the top bar', () => {
 });
 
 it('keeps registered row anchors renderable in their categories', async () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Macintosh');
   const categories = [...new Set(SETTINGS_SEARCH_ROWS.map((row) => row.categoryId))];
 
   for (const category of categories) {

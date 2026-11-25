@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { isDesktopRuntime } from '../../../shared/platform/runtime';
+import { resolveRuntimeOperatingSystem } from '../../../shared/platform/runtime/operatingSystem';
 import { useDesktopCustomCss } from '../context/DesktopCustomCssProvider';
 import { canShowQuitOnClose, QUIT_ON_CLOSE_SEARCH_ROW_ID } from '../model/quitOnCloseAvailability';
 import { getSettingsCategories, type SettingsCategoryId } from '../model/settingsPanelOptions';
@@ -11,15 +12,23 @@ import {
 } from '../model/settingsSearch';
 import {
   createSettingsSearchRows,
+  SETTINGS_BACKUP_SEARCH_ROW_ID,
+  SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID,
+  SETTINGS_CAPTURE_SEARCH_ROW_ID,
   SETTINGS_CLI_SEARCH_ROW_ID,
   SETTINGS_CUSTOM_CSS_ROW_ID,
+  SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID,
+  SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID,
   SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
   SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
 } from '../model/settingsSearchRowCatalog';
 
 const DESKTOP_ONLY_SEARCH_ROWS = new Set([
+  SETTINGS_BACKUP_SEARCH_ROW_ID,
   SETTINGS_CLI_SEARCH_ROW_ID,
   SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID,
+  SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID,
+  SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID,
   SETTINGS_SUPER_MEMO_SEARCH_ROW_ID
 ]);
 
@@ -36,11 +45,16 @@ export function useSettingsSearchIndex(previewDesktopSettings = false) {
   const hasCustomCss = Boolean(useDesktopCustomCss());
   const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
   const showDesktopOnlyRows = !previewDesktopSettings && isDesktopRuntime();
+  const platform = resolveRuntimeOperatingSystem();
+  const showCapture = showDesktopOnlyRows && platform !== 'other';
+  const showCapturePosition = showDesktopOnlyRows && platform === 'macos';
   const rows = useMemo(() => createSettingsSearchRows(t).filter(
     (row) => (hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID)
       && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
+      && (showCapture || row.id !== SETTINGS_CAPTURE_SEARCH_ROW_ID)
+      && (showCapturePosition || row.id !== SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID)
       && (showDesktopOnlyRows || !DESKTOP_ONLY_SEARCH_ROWS.has(row.id))
-  ), [hasCustomCss, showDesktopOnlyRows, showQuitOnClose, t]);
+  ), [hasCustomCss, showCapture, showCapturePosition, showDesktopOnlyRows, showQuitOnClose, t]);
   return { categories, rows };
 }
 
@@ -91,15 +105,34 @@ export function useSettingsSearchTarget(
   block: ScrollLogicalPosition = 'center'
 ) {
   useEffect(() => {
-    if (!targetRowId) return undefined;
-    const target = scrollContainerRef.current?.querySelector<HTMLElement>(`[data-settings-search-row-id="${targetRowId}"]`);
-    if (!target) return undefined;
-    target.scrollIntoView({ block, behavior: 'smooth' });
-    target.classList.add(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
-    const timeout = window.setTimeout(() => target.classList.remove(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES), 1600);
+    const container = scrollContainerRef.current;
+    if (!container || !targetRowId) return undefined;
+    const selector = `[data-settings-search-row-id="${targetRowId}"]`;
+    let clearHighlight: (() => void) | undefined;
+    const revealTarget = () => {
+      const target = container.querySelector<HTMLElement>(selector);
+      if (!target) return;
+      observer.disconnect();
+      clearHighlight = highlightSearchTarget(target, block);
+    };
+
+    const observer = new MutationObserver(revealTarget);
+    observer.observe(container, { childList: true, subtree: true });
+    revealTarget();
     return () => {
-      window.clearTimeout(timeout);
-      target.classList.remove(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
+      observer.disconnect();
+      clearHighlight?.();
     };
   }, [activeCategory, block, scrollContainerRef, targetRowId]);
+}
+
+function highlightSearchTarget(target: HTMLElement, block: ScrollLogicalPosition) {
+  target.scrollIntoView({ block, behavior: 'smooth' });
+  target.classList.add(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
+  const removeHighlight = () => target.classList.remove(...SETTINGS_SEARCH_HIGHLIGHT_CLASSES);
+  const timeout = window.setTimeout(removeHighlight, 1600);
+  return () => {
+    window.clearTimeout(timeout);
+    removeHighlight();
+  };
 }

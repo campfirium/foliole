@@ -3,6 +3,8 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_CAPTURE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.capture.sectionAria': '全局剪辑设置',
   'settings.capture.sectionTitle': '全局剪辑',
+  'settings.capture.searchDescription': '查看全局剪辑的相关选项。',
+  'settings.capture.searchTerms': '全局捕捉|全局捕获|全局摘录|剪贴板剪辑|划词剪辑',
   'settings.capture.permission.title': '选区访问',
   'settings.capture.permission.granted': '运行全局剪辑时，Foliole 可以复制当前选区。',
   'settings.capture.permission.denied': '请在“系统设置 → 隐私与安全性 → 辅助功能”中允许 Foliole。',

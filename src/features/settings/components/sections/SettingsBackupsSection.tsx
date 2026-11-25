@@ -11,6 +11,7 @@ import {
   SettingsStateAction
 } from '../../../../shared/ui';
 import { requestBackupSearchDialogOpen } from '../../model/backupSearchDialogRequests';
+import { SETTINGS_BACKUP_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 
 import { BackupRetentionRulesSection } from './BackupRetentionRulesSection';
 import {
@@ -126,7 +127,11 @@ export function SettingsBackupsSection() {
 function BackupSearchSettings(props: { isDesktopRuntime: boolean }) {
   const t = useTranslation();
   return (
-    <SettingsSection ariaLabel={t('settings.backups.search.sectionAria')} title={t('settings.backups.search.sectionTitle')}>
+    <SettingsSection
+      ariaLabel={t('settings.backups.search.sectionAria')}
+      searchRowId={SETTINGS_BACKUP_SEARCH_ROW_ID}
+      title={t('settings.backups.search.sectionTitle')}
+    >
       <SettingsRow description={t('settings.backups.search.description')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
           <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isDesktopRuntime} onClick={requestBackupSearchDialogOpen}>

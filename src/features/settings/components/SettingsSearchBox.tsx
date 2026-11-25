@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as Rea
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { getSettingsCategoryOption } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
+import { querySettingsSearchTips } from '../model/settingsSearchTips';
 
 import { cn } from '@/shared/lib/utils';
 import { onWindowEscape } from '@/shared/platform/keyboard';
@@ -22,6 +23,7 @@ export interface SettingsSearchBoxProps {
   placeholder: string;
   query: string;
   results: SettingsSearchResult[];
+  showActionTips: boolean;
 }
 
 function SettingsSearchResultButton(props: {
@@ -50,29 +52,42 @@ function SettingsSearchResultButton(props: {
 
 function SettingsSearchPopover(props: {
   activeResultIndex: number;
-  hasQuery: boolean;
   onSelectResult: (result: SettingsSearchResult) => void;
   results: SettingsSearchResult[];
+  tips: ReturnType<typeof querySettingsSearchTips>;
 }) {
   const t = useTranslation();
+  const tipsLabel = t('desktop.palette.command.actionTips');
   return (
-    <div className={settingsPopoverSurfaceClassName('shell', 'absolute right-0 top-10 z-10 w-full p-2')}>
-      {props.hasQuery ? (
-        <div aria-label={t('settings.search.results.aria')} className="mt-2 max-h-[360px] space-y-1 overflow-auto" role="listbox">
-          {props.results.length ? props.results.map((result, index) => (
+    <div className={settingsPopoverSurfaceClassName('shell', 'absolute right-0 top-10 z-10 max-h-[360px] w-full space-y-1 overflow-auto p-2')}>
+      {props.results.length ? (
+        <div aria-label={t('settings.search.results.aria')} className="space-y-1" role="listbox">
+          {props.results.map((result, index) => (
             <SettingsSearchResultButton
               active={index === props.activeResultIndex}
               key={result.id}
               onSelect={() => props.onSelectResult(result)}
               result={result}
             />
-          )) : (
-            <div className="rounded-md px-3 py-2 text-sm text-foreground/55">
-              {t('settings.search.empty')}
-            </div>
-          )}
+          ))}
         </div>
       ) : null}
+      {props.tips.length ? (
+        <section aria-label={tipsLabel} className="space-y-1" aria-live="polite">
+          <p className="px-3 pt-2 text-xs font-semibold text-foreground/55">{tipsLabel}</p>
+          {props.tips.map((tip) => (
+            <div className="px-3 py-2" key={tip.id}>
+              <p className="text-sm font-medium">{tip.title}</p>
+              <p className="mt-0.5 text-xs text-foreground/55">{tip.path}</p>
+            </div>
+          ))}
+        </section>
+      ) : null}
+      {props.results.length || props.tips.length ? null : (
+        <div className="rounded-md px-3 py-2 text-sm text-foreground/55" role="status">
+          {t('settings.search.empty')}
+        </div>
+      )}
     </div>
   );
 }
@@ -152,6 +167,7 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isOpen, setIsOpen] = useSettingsSearchOpenState(rootRef);
   const hasQuery = props.query.trim().length > 0;
+  const tips = props.showActionTips ? querySettingsSearchTips(props.query, t) : [];
   const { handleKeyDown, selectResult } = useSettingsSearchHandlers({ ...props, hasQuery, setIsOpen });
   useSettingsSearchEscape({ hasQuery, isOpen, onQueryChange: props.onQueryChange, setIsOpen });
   const handleInputPointerDown = (event: ReactMouseEvent<HTMLInputElement>) => {
@@ -183,12 +199,12 @@ export function SettingsSearchBox(props: SettingsSearchBoxProps) {
           value={props.query}
         />
       </div>
-      {isOpen ? (
+      {isOpen && hasQuery ? (
         <SettingsSearchPopover
           activeResultIndex={props.activeResultIndex}
-          hasQuery={hasQuery}
           onSelectResult={selectResult}
           results={props.results}
+          tips={tips}
         />
       ) : null}
     </div>

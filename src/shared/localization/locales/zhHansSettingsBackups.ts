@@ -3,6 +3,7 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.backups.search.sectionAria': '搜索备份设置区',
   'settings.backups.search.sectionTitle': '搜索备份内容',
+  'settings.backups.search.terms': '备份搜索|查找备份内容|搜备份',
   'settings.backups.search.description': '逐份解压现有备份，搜索其中的内容。',
   'settings.backups.search.action': '搜索备份内容',
   'settings.backups.search.title': '搜索备份内容',
@@ -21,6 +22,7 @@ export const ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS: Partial<Record<Transla
   'settings.backups.search.trashed': '在废纸篓',
   'settings.backups.merge.sectionAria': '并入资料库设置区',
   'settings.backups.merge.title': '并入资料库',
+  'settings.backups.merge.searchTerms': '合并资料库|合并库|合并备份|导入备份|并入备份',
   'settings.backups.merge.description': '把另一份资料库里的资料和复习记录并入本库：可以是桌面资料库或备份，也可以是手机备份（.zip，或备份文件夹里的 Foliole.sqlite）。新资料放进单独的文件夹，本库已有内容不会被覆盖。',
   'settings.backups.merge.choose': '选择资料库',
   'settings.backups.merge.noSource': '尚未选择资料库。',

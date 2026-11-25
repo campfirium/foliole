@@ -6,6 +6,7 @@ import { AppButton, AppInput, AppSwitch, SettingsControlSlot, SettingsRow, Setti
 import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
 import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../../../../shared/ui/SettingsTouchSheet';
 import { SettingsValueRow } from '../../../../shared/ui/SettingsValueRow';
+import { SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 
 import { AttachmentCleanupThresholdDialog } from './AttachmentCleanupThresholdDialog';
 import { useAttachmentStorageSettings } from './useAttachmentStorageSettings';
@@ -18,7 +19,10 @@ export function SettingsAttachmentStorageSection({ unavailable = false, mobile =
   if (!status && !error && !unavailable) return null;
   return (
     <>
-    <SettingsSection ariaLabel={t('settings.attachments.title')} {...(!mobile ? { title: t('settings.attachments.title') } : {})}>
+    <SettingsSection
+      ariaLabel={t('settings.attachments.title')}
+      {...(!mobile ? { searchRowId: SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID, title: t('settings.attachments.title') } : {})}
+    >
       {error ? <p role="alert">{t('settings.attachments.error')}</p> : null}
       <SettingsRow controlLayout="inline" title={t('settings.attachments.automatic')} description={t('settings.attachments.automaticHint')}>
         <SettingsControlSlot><AppSwitch aria-label={t('settings.attachments.automatic')} checked={status?.automatic ?? false}

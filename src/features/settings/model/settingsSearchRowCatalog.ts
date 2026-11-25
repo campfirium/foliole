@@ -19,6 +19,12 @@ export const SETTINGS_LEARNING_IMPORT_SEARCH_ROW_ID = 'general-learning-import';
 export const SETTINGS_SUPER_MEMO_SEARCH_ROW_ID = 'general-supermemo-migration';
 export const SETTINGS_MODELS_SEARCH_ROW_ID = 'general-models';
 
+export const SETTINGS_CAPTURE_SEARCH_ROW_ID = 'general-global-capture';
+export const SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID = 'capture-confirmation-position';
+export const SETTINGS_BACKUP_SEARCH_ROW_ID = 'backups-search-content';
+export const SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID = 'backups-merge-library';
+export const SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID = 'library-local-attachments';
+
 export const SETTINGS_CUSTOM_CSS_ROW_ID = 'appearance-css-snippets';
 
 const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
@@ -30,6 +36,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('general', 'general-search-aliases', 'settings.general.searchAliases.title', 'settings.general.searchAliases.description'),
   row('general', 'general-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
   row('general', 'general-open-at-login', 'settings.search.generalOpenAtLogin.title', 'settings.search.generalOpenAtLogin.description', 'settings.search.generalOpenAtLogin.terms'),
+  row('general', SETTINGS_CAPTURE_SEARCH_ROW_ID, 'settings.capture.sectionTitle', 'settings.capture.searchDescription', 'settings.capture.searchTerms'),
   row('general', QUIT_ON_CLOSE_SEARCH_ROW_ID, 'settings.general.quitOnClose.title', 'settings.general.quitOnClose.description'),
   row('general', 'general-custom-copy', 'settings.customCopy.row', 'settings.customCopy.description', 'settings.customCopy.searchTerms'),
   row('general', 'general-action-help', 'settings.appearance.actionHelp.row', 'settings.appearance.actionHelp.description'),
@@ -67,7 +74,10 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
     'settings.search.gestureThreshold.title', 'settings.mouseGestures.trail.opacity.title',
     'settings.mouseGestures.thresholds.pointSpacing.title'),
   row('mouse-gestures', 'mouse-gestures-bindings', 'settings.mouseGestures.bindings.title', 'settings.mouseGestures.enabled.description'),
-  row('general', 'capture-confirmation-position', 'settings.capture.position.title', 'settings.capture.position.description'),
+  row('general', SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID, 'settings.capture.position.title', 'settings.capture.position.description'),
+  row('backups', SETTINGS_BACKUP_SEARCH_ROW_ID, 'settings.backups.search.sectionTitle', 'settings.backups.search.description', 'settings.backups.search.terms'),
+  row('backups', SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID, 'settings.backups.merge.title', 'settings.backups.merge.description', 'settings.backups.merge.searchTerms'),
+  row('library', SETTINGS_LOCAL_ATTACHMENTS_SEARCH_ROW_ID, 'settings.attachments.title', 'settings.attachments.automaticHint', 'settings.attachments.searchTerms'),
   row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
   row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
   row('library', 'library-inbox', 'settings.search.libraryInbox.title', 'settings.search.libraryInbox.description'),

@@ -2,6 +2,7 @@ export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
   'settings.attachments.thresholdCustom': 'Custom days',
   'settings.attachments.daysUnit': 'days',
   'settings.attachments.title': 'Local attachments',
+  'settings.attachments.searchTerms': 'attachment cleanup|clean up attachments|clean attachments|unused attachments',
   'settings.attachments.error': "Could not finish the attachment operation. Please try again.",
   'settings.attachments.used': "Storage used",
   'settings.attachments.refresh': "Refresh",

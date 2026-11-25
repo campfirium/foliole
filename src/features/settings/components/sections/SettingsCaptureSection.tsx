@@ -19,6 +19,7 @@ import {
   settingsFieldClassName
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
+import { SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID, SETTINGS_CAPTURE_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
 type CaptureToastPosition = 'bottom-right' | 'top-right';
@@ -40,7 +41,7 @@ function permissionDescription(capabilities: DesktopHostCapabilities | null, t: 
 
 export function SettingsCaptureSection() {
   const t = useTranslation();
-  const positionRow = useLocalizedSettingsSearchRow('capture-confirmation-position');
+  const positionRow = useLocalizedSettingsSearchRow(SETTINGS_CAPTURE_POSITION_SEARCH_ROW_ID);
   const [capabilities, setCapabilities] = useState<DesktopHostCapabilities | null>(null);
   const [checkFailed, setCheckFailed] = useState(false);
   const [position, setPosition] = useState<CaptureToastPosition>(loadToastPosition);
@@ -62,7 +63,11 @@ export function SettingsCaptureSection() {
   };
 
   return (
-    <SettingsSection ariaLabel={t('settings.capture.sectionAria')} title={t('settings.capture.sectionTitle')}>
+    <SettingsSection
+      ariaLabel={t('settings.capture.sectionAria')}
+      searchRowId={SETTINGS_CAPTURE_SEARCH_ROW_ID}
+      title={t('settings.capture.sectionTitle')}
+    >
       <SettingsRow
         description={checkFailed ? t('settings.capture.permission.unavailable') : permissionDescription(capabilities, t)}
         readonly

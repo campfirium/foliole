@@ -1,6 +1,8 @@
 export const EN_SETTINGS_CAPTURE_TRANSLATIONS = {
   'settings.capture.sectionAria': 'Global capture settings',
   'settings.capture.sectionTitle': 'Global capture',
+  'settings.capture.searchDescription': 'View global capture options.',
+  'settings.capture.searchTerms': 'global clip|global clipping|capture selection|clipboard capture',
   'settings.capture.permission.title': 'Selection access',
   'settings.capture.permission.granted': 'Foliole can copy the current selection when you run global capture.',
   'settings.capture.permission.denied': 'Allow Foliole in System Settings → Privacy & Security → Accessibility.',

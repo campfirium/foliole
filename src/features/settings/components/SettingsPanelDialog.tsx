@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
 import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName } from '../../../shared/ui';
 import { settingsDialogGrid, settingsDialogPane, settingsDialogPaneBody, settingsDialogPaneHeader } from '../../../shared/ui/settingsDialogBounds';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
@@ -82,6 +83,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
                 placeholder={t('settings.search.placeholder')}
                 query={props.searchQuery}
                 results={props.searchResults}
+                showActionTips={!props.categoryProps.previewDesktopSettings && isDesktopRuntime()}
               />
             </>
           )}

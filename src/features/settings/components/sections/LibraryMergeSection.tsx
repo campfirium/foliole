@@ -19,6 +19,7 @@ import {
   type LibraryMergeResult,
   type LibraryMergeSource
 } from '../../model/libraryMerge';
+import { SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID } from '../../model/settingsSearchRowCatalog';
 
 type MergeStatus = { kind: 'done'; result: LibraryMergeResult } | { kind: 'failed'; message: string } | null;
 
@@ -86,7 +87,11 @@ export function LibraryMergeSection(props: { isDesktopRuntime: boolean }) {
     : t('settings.backups.merge.noSource');
   const isArchive = merge.source ? libraryMergeSourceIsArchive(merge.source.sourcePath) : false;
   return (
-    <SettingsSection ariaLabel={t('settings.backups.merge.sectionAria')} title={t('settings.backups.merge.title')}>
+    <SettingsSection
+      ariaLabel={t('settings.backups.merge.sectionAria')}
+      searchRowId={SETTINGS_LIBRARY_MERGE_SEARCH_ROW_ID}
+      title={t('settings.backups.merge.title')}
+    >
       <SettingsRow
         description={<><span className="block">{t('settings.backups.merge.description')}</span>
           <span className="block">{sourceLine}</span>

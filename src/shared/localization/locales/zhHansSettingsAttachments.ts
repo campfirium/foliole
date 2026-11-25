@@ -4,6 +4,7 @@ export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<Translati
   'settings.attachments.thresholdCustom': '自定义天数',
   'settings.attachments.daysUnit': '天',
   'settings.attachments.title': '本机附件',
+  'settings.attachments.searchTerms': '附件清理|清理附件|清理本机附件|清除附件|未使用的附件',
   'settings.attachments.error': "附件操作未完成，请重试。",
   'settings.attachments.used': "占用空间",
   'settings.attachments.refresh': "刷新",

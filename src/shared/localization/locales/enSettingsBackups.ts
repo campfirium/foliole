@@ -1,6 +1,7 @@
 export const EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS = {
   'settings.backups.search.sectionAria': 'Backup search section',
   'settings.backups.search.sectionTitle': 'Search backup content',
+  'settings.backups.search.terms': 'backup search|search backups',
   'settings.backups.search.description': 'Unpack existing backups one at a time and search their contents.',
   'settings.backups.search.action': 'Search backup content',
   'settings.backups.search.title': 'Search backup content',
@@ -19,6 +20,7 @@ export const EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS = {
   'settings.backups.search.trashed': 'In Trash',
   'settings.backups.merge.sectionAria': 'Merge library section',
   'settings.backups.merge.title': 'Merge another library',
+  'settings.backups.merge.searchTerms': 'merge library|combine libraries|merge backup|import backup',
   'settings.backups.merge.description': 'Add the notes and review history of another library to this one: a desktop library or backup, or a phone backup (a .zip, or the Foliole.sqlite inside a backup folder). New notes go into their own folder; nothing already here is overwritten.',
   'settings.backups.merge.choose': 'Choose library',
   'settings.backups.merge.noSource': 'No library chosen.',
