@@ -59,6 +59,8 @@ function openSettings(platform = 'MacIntel') {
 it.each([
   ['全局剪辑', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
   ['全局捕捉', '全局剪辑', '全局剪辑设置', 'heading', '全局剪辑'],
+  ['Markdown', '打开外部 Markdown', '打开外部 Markdown', 'button', '打开文件…'],
+  ['文件权限', '打开外部 Markdown', '打开外部 Markdown', 'button', '打开文件…'],
   ['备份搜索', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['搜索备份内容', '搜索备份内容', '搜索备份设置区', 'button', '搜索备份内容'],
   ['合并资料库', '并入资料库', '并入资料库设置区', 'button', '选择资料库'],

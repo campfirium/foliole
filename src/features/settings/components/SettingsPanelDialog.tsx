@@ -28,7 +28,7 @@ function resolveSettingsOverlayClassName(args: {
 export type SettingsPanelCategoryProps = Omit<
   SettingsCategoryContentProps,
   'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate' |
-  'onRequestedCommandConsumed' | 'requestedCommandId'
+  'onRequestedCommandConsumed' | 'requestedCommandId' | 'onCloseSettings'
 >;
 
 type SettingsPanelDialogProps = {
@@ -105,7 +105,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
             </div>
             <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
           </div>
-          <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
+          <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} onCloseSettings={props.onClose} />
         </div>
       </div>
     </>

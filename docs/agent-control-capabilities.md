@@ -54,6 +54,8 @@ The desktop file import picker imports every selected file, with a separate post
 
 The desktop left toolbar includes a customizable **Open File** action. It uses the existing local-file picker and opens the selected document for editing in place. The Agent Control API and CLI do not expose the picker or external-file editing.
 
+Desktop Settings → General → Open external Markdown explains per-file access and opens the same picker to select a file or renew its access. The picker and file access stay in the desktop app.
+
 The desktop search panel remembers its preview line limit, separate font sizes for result titles, previews, and metadata, and whether to show each result's date and time. These are desktop display preferences. Agent Control search returns bounded excerpts independently of the panel's preview line limit.
 
 ### Retrying material creation
