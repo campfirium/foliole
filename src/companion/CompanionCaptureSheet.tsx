@@ -57,16 +57,16 @@ function CaptureActionRow(props: { icon: LucideIcon; label: string; disabled?: b
   );
 }
 
-function CaptureFileAction(props: { disabled: boolean; onImport(file: SelectedImportFile): Promise<void> }) {
+function CaptureFileAction(props: { disabled: boolean; onImport(files: SelectedImportFile[]): Promise<void> }) {
   const t = useTranslation();
   const input = useRef<HTMLInputElement>(null);
   return <>
-    <input ref={input} type="file" accept={SELECTED_TEXT_IMPORT_ACCEPT} hidden tabIndex={-1}
+    <input ref={input} type="file" accept={SELECTED_TEXT_IMPORT_ACCEPT} multiple hidden tabIndex={-1}
       aria-label={t('companion.capture.upload')} disabled={props.disabled}
       onChange={event => {
-        const file = event.currentTarget.files?.[0];
+        const files = Array.from(event.currentTarget.files ?? []);
         event.currentTarget.value = '';
-        if (file) void props.onImport(file);
+        if (files.length) void props.onImport(files);
       }} />
     <CaptureActionRow icon={Upload} label={t('companion.capture.upload')} disabled={props.disabled}
       onClick={() => input.current?.click()} />
@@ -141,7 +141,7 @@ function resolveCaptureErrorLabel(error: CompanionCaptureTextSaveError | null, t
 export function CompanionCaptureSheet(props: {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
-  onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
+  onImportFile?(files: readonly SelectedImportFile[], signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
   onOpenChange: CompanionCaptureOpenChange;
   open: boolean;
@@ -183,14 +183,14 @@ export function CompanionCaptureSheet(props: {
             <div className="companion-capture-clipboard mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} disabled={isSaving || isSaved || clipboard.isPasting} busy={clipboard.isPasting} onClick={clipboard.paste} />
               {props.onImportFile ? <CaptureFileAction disabled={isSaving || isSaved || clipboard.isPasting}
-                onImport={state.handleImportFile} /> : null}
+                onImport={state.handleImportFiles} /> : null}
               {clipboard.error ? <p className="mt-3 text-sm text-destructive" role="alert">{t(clipboard.error === 'empty' ? 'companion.capture.error.clipboardEmpty' : 'companion.capture.error.clipboardFailed')}</p> : null}
             </div>
           </div>
         </CaptureSheetViewport>
       </AppDialogPortal>}
     </AppDialog>
-    {state.epubMode.choice && !state.importWarning ? <EpubImportReleaseModeChoice fileName={state.epubMode.choice.fileName} mobile
+    {state.epubMode.choice && !state.importWarning ? <EpubImportReleaseModeChoice key={state.epubMode.choice.fileName} fileName={state.epubMode.choice.fileName} mobile
       description={t('companion.capture.import.readingModeDescription')}
       busy={state.epubMode.busy} error={state.epubMode.failed ? t('companion.selection.saveError') : null}
       onSelect={state.epubMode.select} onClose={state.epubMode.close} /> : null}

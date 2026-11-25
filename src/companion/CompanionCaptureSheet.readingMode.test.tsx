@@ -15,7 +15,7 @@ function setup(options: { warning?: boolean; retry?: () => Promise<unknown> } = 
   const apply = vi.fn(async (mode: 'free' | 'sequential') => { void mode; });
   const navigate = vi.fn();
   const onImportFile = vi.fn(async (): Promise<CompanionCaptureTextSaveResult> => ({ nodeId: 'book',
-    epubReadingMode: { fileName: 'Book.epub', apply }, ...(options.warning ? { importWarning: 'conversion' } : {}),
+    epubReadingModes: [{ fileName: 'Book.epub', apply }], ...(options.warning ? { importWarning: 'conversion' } : {}),
     ...(options.retry ? { retryRefresh: options.retry } : {}) }));
   function Surface() {
     const [open, setOpen] = useState(true);
@@ -71,4 +71,21 @@ it('shows the incomplete-import notice before the reading choice', async () => {
   expect(screen.queryByRole('dialog', { name: 'Choose reading mode' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   await screen.findByRole('dialog', { name: 'Choose reading mode' });
+});
+
+it('asks for each imported book in turn after a multi-file import', async () => {
+  const first = vi.fn(async () => {});
+  const second = vi.fn(async () => {});
+  const onImportFile = vi.fn(async (): Promise<CompanionCaptureTextSaveResult> => ({ nodeId: 'second-book',
+    epubReadingModes: [{ fileName: 'First.epub', apply: first }, { fileName: 'Second.epub', apply: second }] }));
+  renderWithLocalization(<CompanionCaptureSheet draftScope="mode-queue" open onOpenChange={vi.fn()} onSave={vi.fn()}
+    onImportFile={onImportFile} onClipboardCreated={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Upload File'), { target: { files: [new File(['a'], 'First.epub'), new File(['b'], 'Second.epub')] } });
+  expect(await screen.findByRole('dialog', { name: 'Choose reading mode' })).toHaveTextContent('First.epub');
+  fireEvent.click(screen.getByRole('button', { name: /Sequential reading/ }));
+  await waitFor(() => expect(screen.getByRole('dialog', { name: 'Choose reading mode' })).toHaveTextContent('Second.epub'));
+  expect(first).toHaveBeenCalledWith('sequential');
+  fireEvent.click(screen.getByRole('button', { name: /Sequential reading/ }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Choose reading mode' })).toBeNull());
+  expect(second).toHaveBeenCalledWith('sequential');
 });

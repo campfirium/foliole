@@ -25,8 +25,8 @@ async function importBook(failRefresh = false) {
     return (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   } })(new File([Uint8Array.from(companionEpubBook(false))], 'Book.epub'));
   if ('error' in result) throw new Error(result.error);
-  expect(result.epubReadingMode).toBeDefined();
-  return { ...result, choice: result.epubReadingMode! };
+  expect(result.epubReadingModes).toHaveLength(1);
+  return { ...result, choice: result.epubReadingModes![0]! };
 }
 const states = () => library.database.prepare(`SELECT n.title,r.state FROM node_reading r
   JOIN nodes n ON n.id=r.node_id ORDER BY n.title`).all();

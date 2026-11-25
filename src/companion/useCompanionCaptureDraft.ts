@@ -47,7 +47,7 @@ export type CompanionCaptureOpenChange = (open: boolean, reason?: 'saving-draft'
 interface CaptureDraftProps {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
-  onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
+  onImportFile?(files: readonly SelectedImportFile[], signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
   onOpenChange: CompanionCaptureOpenChange;
   open: boolean;
@@ -76,32 +76,46 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
     canSave: (Boolean(retryRefresh) || draft.trim().length > 0) && !isSaving,
     handleDraftChange, handleOpenChange, handleSave: () => saveText(draft, false),
     handleSaveClipboard: (text: string) => saveText(text, true), closeForSystemBack,
-    handleImportFile: (file: SelectedImportFile) => saveText(file, true)
+    handleImportFiles: (files: readonly SelectedImportFile[]) => saveText(files, true)
+  };
+}
+
+function createCaptureCompletion(props: CaptureDraftProps, state: ReturnType<typeof useCaptureDraftState>, options: {
+  session: number; clipboard: boolean; handleOpenChange(open: boolean): void;
+  offerEpubMode(choices: readonly CompanionEpubReadingModeChoice[]): void;
+}) {
+  const { draft, attempt, preserveOnClose, setError, setRetryRefresh } = state;
+  return (nodeId: string, warning?: SelectedImportWarning, choices?: readonly CompanionEpubReadingModeChoice[], failedFileCount = 0) => {
+    if (options.session !== attempt.current.session) return;
+    if (failedFileCount) {
+      // Keep the sheet open so a partly failed batch is not mistaken for a complete import.
+      setRetryRefresh(null);
+      setError('save-failed');
+      return;
+    }
+    if (warning) state.setImportWarning(warning);
+    if (options.clipboard) {
+      persistCaptureBackDraft(props.draftScope, draft);
+      preserveOnClose.current = true;
+      setRetryRefresh(null);
+      props.onOpenChange(false);
+      props.onClipboardCreated?.(nodeId);
+      if (choices?.length) options.offerEpubMode(choices);
+    } else options.handleOpenChange(false);
   };
 }
 
 function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<typeof useCaptureDraftState>,
-  handleOpenChange: (open: boolean) => void, offerEpubMode: (choice: CompanionEpubReadingModeChoice) => void) {
+  handleOpenChange: (open: boolean) => void, offerEpubMode: (choices: readonly CompanionEpubReadingModeChoice[]) => void) {
   const { draft, retryRefresh, attempt, preserveOnClose, setError, setIsSaving, setRetryRefresh } = state;
-  return async (text: string | SelectedImportFile, clipboard: boolean) => {
+  return async (text: string | readonly SelectedImportFile[], clipboard: boolean) => {
     if (attempt.current.busy || (!retryRefresh && typeof text === 'string' && !text.trim())) return;
     if (typeof text !== 'string' && !persistCaptureBackDraft(props.draftScope, draft)) {
       setError('save-failed');
       return;
     }
     const session = attempt.current.session;
-    const complete = (nodeId: string, warning?: SelectedImportWarning, choice?: CompanionEpubReadingModeChoice) => {
-      if (session !== attempt.current.session) return;
-      if (warning) state.setImportWarning(warning);
-      if (clipboard) {
-        persistCaptureBackDraft(props.draftScope, draft);
-        preserveOnClose.current = true;
-        setRetryRefresh(null);
-        props.onOpenChange(false);
-        props.onClipboardCreated?.(nodeId);
-        if (choice) offerEpubMode(choice);
-      } else handleOpenChange(false);
-    };
+    const complete = createCaptureCompletion(props, state, { session, clipboard, handleOpenChange, offerEpubMode });
     attempt.current.busy = true;
     const controller = typeof text === 'string' ? null : new AbortController();
     attempt.current.controller = controller;
@@ -123,11 +137,12 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
         const retry = result.retryRefresh;
         const nodeId = result.nodeId;
         const warning = result.importWarning;
-        const choice = result.epubReadingMode;
-        setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning, choice); });
+        const choices = result.epubReadingModes;
+        const failed = result.failedFileCount;
+        setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning, choices, failed); });
       } else if (result && 'nodeId' in result) {
         reopenForRecovery = false;
-        complete(result.nodeId, result.importWarning, result.epubReadingMode);
+        complete(result.nodeId, result.importWarning, result.epubReadingModes, result.failedFileCount);
       }
     } catch {
       if (session === attempt.current.session && !retryRefresh) setError('save-failed');

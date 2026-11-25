@@ -18,6 +18,7 @@ import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runti
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
+import { createCompanionFileImportHandler } from './companionFileImportActions';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import { useCompanionCaptureController } from './useCompanionCaptureController';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -219,4 +220,33 @@ it('opens the imported EPUB root and retains its independent text draft', async 
   expect(library.database.prepare("SELECT count(*) AS count FROM nodes WHERE sequential_reading_enabled=1").get()).toEqual({ count: 1 });
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));
   expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
+});
+
+it('imports every file chosen in one pick and opens the last imported topic', async () => {
+  await openCapture();
+  fireEvent.change(screen.getByLabelText('Upload File'), { target: { files: [
+    new File(['# First pick\n\nOne'], 'first.md'), new File(['# Second pick\n\nTwo'], 'second.md')] } });
+  expect(await screen.findByTestId('imported-topic')).toHaveTextContent('Second pick');
+  expect(runs().map(run => run.source_name).sort()).toEqual(['first.md', 'second.md']);
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
+});
+
+it('keeps the readable files of a batch and reports the one that failed', async () => {
+  await openCapture();
+  fireEvent.change(screen.getByLabelText('Upload File'), { target: { files: [
+    new File(['# Kept pick\n\nBody'], 'kept.md'), new File(['Binary'], 'broken.bin')] } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
+  expect(runs().map(run => run.source_name)).toEqual(['kept.md']);
+  expect(screen.queryByTestId('imported-topic')).toBeNull();
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
+});
+
+it('refreshes the workspace once for a whole batch', async () => {
+  const refreshAfterMutation = vi.fn(async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot);
+  const result = await createCompanionFileImportHandler({ refreshAfterMutation })([
+    new File(['One'], 'one.txt'), new File(['Two'], 'two.txt'), new File(['Three'], 'three.txt')]);
+  expect(result).toMatchObject({ nodeId: expect.any(String) });
+  expect(runs()).toHaveLength(3);
+  expect(refreshAfterMutation).toHaveBeenCalledTimes(1);
 });

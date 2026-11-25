@@ -14,7 +14,14 @@ export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'tar
 
 export type CompanionCaptureTextSaveResult =
   | { error: CompanionCaptureTextSaveError }
-  | { nodeId: string; retryRefresh?: () => Promise<unknown>; importWarning?: SelectedImportWarning; epubReadingMode?: CompanionEpubReadingModeChoice };
+  | {
+    nodeId: string;
+    retryRefresh?: () => Promise<unknown>;
+    importWarning?: SelectedImportWarning;
+    epubReadingModes?: readonly CompanionEpubReadingModeChoice[];
+    /** Files of a multi-file import that could not be imported while the others were saved. */
+    failedFileCount?: number;
+  };
 
 export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi, parentNodeId?: string) {
   return async (text: string): Promise<CompanionCaptureTextSaveResult> => {

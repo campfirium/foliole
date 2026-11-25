@@ -36,7 +36,7 @@ it('imports the chosen file independently and keeps the draft after closing and 
   fireEvent.click(screen.getByRole('button', { name: 'Upload File' }));
   const file = choose();
   await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('imported'));
-  expect(props.onImportFile).toHaveBeenCalledWith(file, expect.any(AbortSignal));
+  expect(props.onImportFile).toHaveBeenCalledWith([file], expect.any(AbortSignal));
   expect(props.onSave).not.toHaveBeenCalled();
   rerender(<CompanionCaptureSheet {...props} open={false} />);
   rerender(<CompanionCaptureSheet {...props} />);
@@ -85,4 +85,24 @@ it('preserves the conversion warning through a refresh-only retry', async () => 
   rerender(<CompanionCaptureSheet {...props} open={false} />);
   expect(await screen.findByRole('alert')).toHaveTextContent('File imported. Some formatting');
   expect(props.onImportFile).toHaveBeenCalledTimes(1);
+});
+
+it('lets the picker select several files and imports them as one batch', async () => {
+  const { props } = setup();
+  const input = screen.getByLabelText('Upload File');
+  expect(input).toHaveAttribute('multiple');
+  const files = [new File(['First'], 'first.md'), new File(['Second'], 'second.pdf')];
+  fireEvent.change(input, { target: { files } });
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('imported'));
+  expect(props.onImportFile).toHaveBeenCalledTimes(1);
+  expect(props.onImportFile).toHaveBeenCalledWith(files, expect.any(AbortSignal));
+});
+
+it('keeps the sheet open with an error when part of a batch fails', async () => {
+  const { props } = setup();
+  props.onImportFile.mockResolvedValueOnce({ nodeId: 'imported', failedFileCount: 1 });
+  fireEvent.change(screen.getByLabelText('Upload File'), { target: { files: [new File(['a'], 'a.md'), new File(['b'], 'b.md')] } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
+  expect(props.onClipboardCreated).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Keep my draft');
 });
