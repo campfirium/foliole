@@ -1,0 +1,44 @@
+[
+  {
+    "plugin": "FolioleCompanionAppData",
+    "platform": "android",
+    "methods": ["clearAppData"],
+    "reason": "iPhone 的同一能力放在 FolioleCompanionSync.clearAppData"
+  },
+  {
+    "plugin": "FolioleCompanionSync",
+    "platform": "ios",
+    "methods": ["clearAppData"],
+    "reason": "Android 的同一能力放在 FolioleCompanionAppData.clearAppData"
+  },
+  {
+    "plugin": "FolioleCompanionBootstrap",
+    "platform": "android",
+    "methods": ["setAppearance", "setFlowGestureRegion", "setNativeSelectionMenu", "setReadingSystemBars"],
+    "reason": "存量：JS 只在 Android 调用（窗口底色、返回手势避让、系统选区菜单、阅读系统栏）；iPhone 是否需要对应处理尚未逐项核实"
+  },
+  {
+    "plugin": "FolioleCompanionSync",
+    "platform": "android",
+    "methods": [
+      "requestWebDavRelay",
+      "cancelWebDavRelay",
+      "prepareWebDavCredentialDelivery",
+      "confirmWebDavCredentialDelivery",
+      "installWebDavCredentialDelivery"
+    ],
+    "reason": "WebDAV 异地中继目前只在 Mac 与 Android 提供（T748，能力地图记为按设计）"
+  },
+  {
+    "plugin": "FolioleCompanionSync",
+    "platform": "android",
+    "methods": ["beginSyncBackgroundWork", "updateSyncBackgroundWork", "endSyncBackgroundWork"],
+    "reason": "存量：Android 前台服务承载后台同步；iPhone 无对应实现，尚未逐项核实"
+  },
+  {
+    "plugin": "FolioleReminderNotifications",
+    "platform": "android",
+    "methods": ["schedule", "cancel", "list"],
+    "reason": "跨端定时提醒仅完成 Android 实现（T751 进行中）"
+  }
+]
