@@ -54,7 +54,11 @@ async function createAnnotation(page) {
   await page.getByTestId('companion-selection-note-text').fill('Quick annotation');
   await page.getByTestId('companion-selection-note-save').click();
   await page.getByTestId('companion-selection-note-text').waitFor({ state: 'hidden' });
-  await page.getByRole('toolbar').getByRole('button', { name: 'Close Highlight', exact: true }).waitFor();
+  const close = page.getByRole('toolbar').getByRole('button', { name: 'Close Highlight', exact: true });
+  await close.waitFor();
+  // The first tap on the text only ends the new annotation's menu; it does not toggle the reading bars.
+  await article.locator('.cm-line').last().click();
+  await close.waitFor({ state: 'hidden' });
 }
 
 async function main() {

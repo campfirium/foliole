@@ -16,6 +16,7 @@ import { getAgentControlApiSessionDescriptor, stopAgentControlApiServer } from '
 import { executeAideTool, type AideToolRequest } from '../assistant/aideToolExecutor.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
 import { FOLIOLE_AIDE_TOOL_PERMISSIONS_KEY, loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
+import { closeAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
@@ -105,8 +106,9 @@ afterEach(async () => {
   diagnosticWrites.mockClear();
   libraryA.close();
   libraryB.close();
-  // Windows can hold the temporary library files briefly after close.
-  rmSync(root, { force: true, maxRetries: 10, recursive: true, retryDelay: 100 });
+  // Aide history lives under the temporary root; Windows refuses to delete it while open.
+  closeAssistantHistoryConnection();
+  rmSync(root, { force: true, recursive: true });
 });
 
 async function switchLibrary(beforeSwitch?: () => Promise<void>) {
