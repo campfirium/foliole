@@ -28,6 +28,7 @@ import {
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { CompanionTestReviewReset } from './CompanionTestReviewReset';
 import { CompanionTextScaleControl } from './CompanionTextScale';
+import { CompanionToolbarAppearanceControls } from './CompanionToolbarAppearanceControls';
 import { CompanionWebLookupSettingsContent } from './CompanionWebLookupSettingsContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -73,6 +74,7 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
     <CompanionLanguageControl />
     <CompanionColorModeControl />
     <CompanionReadingColorControls />
+    <CompanionToolbarAppearanceControls />
     {customCss?.isSupported ? <CompanionCustomCssSettingsContent controller={customCss} /> : <CompanionPlaceholderSettingsContent
       detail={t('companion.settings.appearance.placeholderDetail')}
       title={resolvePlaceholderTitle('appearance', t)} />}

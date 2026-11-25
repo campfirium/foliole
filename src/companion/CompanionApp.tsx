@@ -14,6 +14,7 @@ import {
 
 import { CompanionColorModeProvider } from './CompanionColorModeProvider';
 import { CompanionLibrarySwitchGate } from './CompanionLibrarySwitchGate';
+import { useApplyCompanionToolbarAppearance } from './companionSelectionToolbarPreference';
 import { CompanionShell } from './CompanionShell';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { CompanionTextScaleProvider } from './CompanionTextScale';
@@ -29,6 +30,7 @@ function CompanionAppContent() {
   const bootstrap = useCompanionBootstrap();
   useAttachmentObservation(bootstrap.status === 'ready');
   useCompanionForegroundTime(bootstrap.status === 'ready');
+  useApplyCompanionToolbarAppearance();
   useEffect(() => {
     if (bootstrap.status === 'ready')
       void hydrateCompanionSystemEntryDisplayNames().catch(() => undefined);

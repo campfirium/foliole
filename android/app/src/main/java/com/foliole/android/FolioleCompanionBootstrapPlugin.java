@@ -30,6 +30,21 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setNativeSelectionMenu(PluginCall call) {
+        Boolean enabled = call.getBoolean("enabled");
+        if (enabled == null) {
+            call.reject("Invalid native selection menu state.");
+            return;
+        }
+        if (!(getBridge().getWebView() instanceof FolioleCompanionWebView)) {
+            call.reject("Native selection menu is unavailable.");
+            return;
+        }
+        ((FolioleCompanionWebView) getBridge().getWebView()).setNativeSelectionMenuEnabled(enabled);
+        call.resolve();
+    }
+
+    @PluginMethod
     public void setAppearance(PluginCall call) {
         String background = call.getString("backgroundColor");
         if (background == null || !background.matches("#[0-9a-fA-F]{6}")) {

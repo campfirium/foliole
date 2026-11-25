@@ -16,6 +16,13 @@ public class FolioleCompanionWebView extends CapacitorWebView {
         super(context, attrs);
     }
 
+    // The renderer turns this on when the user disables the app's own reading selection toolbar.
+    private volatile boolean nativeSelectionMenuEnabled;
+
+    void setNativeSelectionMenuEnabled(boolean enabled) {
+        nativeSelectionMenuEnabled = enabled;
+    }
+
     @Override
     public ActionMode startActionMode(ActionMode.Callback callback) {
         return super.startActionMode(createSelectionActionModeCallback(callback));
@@ -33,7 +40,7 @@ public class FolioleCompanionWebView extends CapacitorWebView {
 
     private ActionMode.Callback createSelectionActionModeCallback(ActionMode.Callback callback) {
         // Editable fields keep WebView's clipboard actions and floating-menu positioning.
-        if (onCheckIsTextEditor()) return callback;
+        if (onCheckIsTextEditor() || nativeSelectionMenuEnabled) return callback;
         return new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {

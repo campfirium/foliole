@@ -156,7 +156,8 @@ export function CompanionSelectionToolbarActions(props: {
     });
   }
   return (
-    <div ref={toolbarRef} className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
+    <div ref={toolbarRef} className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar"
+      style={{ opacity: 'var(--app-selection-toolbar-opacity)' }}>
       {props.isExistingHighlight ? (
         <ToolbarButton disabled={props.disabled} label={t(props.isCloze ? 'companion.selection.deleteCloze' : 'companion.selection.closeHighlight')} onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />

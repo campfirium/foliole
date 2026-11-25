@@ -200,3 +200,19 @@ it('edits the growth pair together with desktop copy and commits both values ato
   const row = library.database.prepare("SELECT value_json FROM setting_records WHERE key='review_scheduler_settings'").get() as { value_json: string };
   expect(JSON.parse(row.value_json).pushQueue.readingIntervalGrowthFactorRange).toEqual({ min: 1.2, max: 1.4 });
 });
+
+it('saves both advanced training switches to the shared scheduler record', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const recency = await screen.findByRole('switch', { name: 'Recent review weighting' });
+  const penalties = screen.getByRole('switch', { name: 'Review interval penalties' });
+  expect(recency).toHaveAttribute('aria-checked', 'true');
+  expect(penalties).toHaveAttribute('aria-checked', 'false');
+  fireEvent.click(recency);
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().recencyWeighting).toBe(false));
+  await vi.waitFor(() => expect(penalties).not.toBeDisabled());
+  fireEvent.click(penalties);
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().reviewIntervalPenalties).toBe(true));
+  const saved = library.database.prepare("SELECT value_json FROM setting_records WHERE key='review_scheduler_settings'").get() as { value_json: string };
+  expect(JSON.parse(saved.value_json)).toMatchObject({ recencyWeighting: false, reviewIntervalPenalties: true });
+  await vi.waitFor(() => expect(screen.getByRole('switch', { name: 'Recent review weighting' })).toHaveAttribute('aria-checked', 'false'));
+});

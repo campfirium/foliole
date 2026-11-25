@@ -22,6 +22,7 @@ import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayou
 import { CompanionReviewHeader } from './CompanionReviewHeader';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
+import { useCompanionToolbarAppearance } from './companionSelectionToolbarPreference';
 import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } from './companionSelectionToolbarState';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
@@ -87,8 +88,9 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps, 
     anchor ? 'companion-breadcrumb-anchor' : undefined
   );
   const snapshot = props.snapshot;
+  const toolbarAppearance = useCompanionToolbarAppearance();
   const toolbar = useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) &&
+    canCreateAnnotation: toolbarAppearance.selectionToolbarEnabled && Boolean(props.onCreateSelectionAnnotation) &&
       canCreateSelectionAnnotation(snapshot?.nodesById[props.readableArticle.nodeId]) && !reading.isContentEditing,
     nodeId: props.readableArticle.nodeId,
     snapshot

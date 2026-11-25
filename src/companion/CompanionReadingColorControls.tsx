@@ -3,6 +3,7 @@ import { SettingsSection } from '../shared/ui';
 import { SettingsColorRow } from '../shared/ui/SettingsColorRow';
 
 import { useCompanionColorMode } from './CompanionColorModeProvider';
+import { CompanionImageFocusTransparencyControl } from './CompanionToolbarAppearanceControls';
 import { READING_COLOR_CONTROLS, type ReadingColor } from './useCompanionReadingColors';
 
 export function CompanionReadingColorControls() {
@@ -20,6 +21,7 @@ export function CompanionReadingColorControls() {
         onChange={value => settings.updateReadingColor(key, value)}
         onReset={() => settings.updateReadingColor(key, settings.colorDefaults[key])} />;
     })}
+    <CompanionImageFocusTransparencyControl />
     {settings.colorSaveError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p> : null}
   </SettingsSection>;
 }

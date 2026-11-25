@@ -9,6 +9,7 @@ import { AppButton, SettingsSection } from '../shared/ui';
 
 import { CompanionLearningSettingControl } from './CompanionLearningSettingControl';
 import { COMPANION_LEARNING_SETTING_ROWS } from './companionLearningSettingRows';
+import { CompanionReviewTrainingOptions } from './CompanionReviewTrainingOptions';
 import { CompanionReviewTrainingStatus } from './CompanionReviewTrainingStatus';
 
 export function CompanionLearningSettingsContent() {
@@ -32,5 +33,6 @@ export function CompanionLearningSettingsContent() {
     <CompanionReviewTrainingStatus />
     {COMPANION_LEARNING_SETTING_ROWS.map(row =>
       <CompanionLearningSettingControl row={row} key={row.key} settings={settings} />)}
+    <CompanionReviewTrainingOptions settings={settings} />
   </SettingsSection>;
 }
