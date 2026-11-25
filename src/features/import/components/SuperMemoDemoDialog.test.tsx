@@ -55,7 +55,7 @@ it('walks from the sample source to the demo ending, keeping choices and calling
   expect(screen.getByRole('slider')).toHaveValue('60');
   click('Back');
   // As in the desktop dialog, a branch without folders starts collapsed when the step is shown again.
-  click(/^Expand entry #14$/);
+  click(/^Expand #14$/);
   expect(folderSwitch()).not.toBeChecked();
 
   click('Import settings');
