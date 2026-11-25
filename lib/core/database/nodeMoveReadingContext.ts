@@ -57,9 +57,10 @@ export function captureMoveReadingScope(driver: DatabaseDriver, input: ReadingSc
   const roots = new Set(input.nodes.flatMap((node) => [node.nodeId,
     ...findSequentialReadingSourcesForNode(node.nodeId, ancestors),
     ...findSequentialReadingSourcesForNode(node.nodeId, moved)]));
+  // Unary plus keeps SQLite on the parent index; the deleted_at index rereads the library per node.
   const descendants = driver.queryAll<{ id: string }>(`WITH RECURSIVE subtree(id) AS (
-    SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND deleted_at IS NULL
-    UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE n.deleted_at IS NULL)
+    SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND +deleted_at IS NULL
+    UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE +n.deleted_at IS NULL)
     SELECT id FROM subtree`, [JSON.stringify([...roots])]).map((row) => row.id);
   return { nodeIds: [...new Set([...ancestorIds, ...descendants])], descendantIds: new Set(descendants) };
 }

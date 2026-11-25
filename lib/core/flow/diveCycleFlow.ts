@@ -100,7 +100,7 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
     if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);
   };
   // Dive reports members that become due later today, so it still visits its waiting rows.
-  const args = { mode, now, settings, matches, onSkipped, allRows: true, nodeIds: memberIds };
+  const args = { mode, now, settings, matches, onSkipped, allRows: true, nodeIds: await scannedMemberIds(db, dive, memberIds) };
   const earlier = resumeAfter && revisit.length ? await selectEarlierMember(db, revisit, resumeAfter, args) : null;
   const cycle = { ...global.cycle!, scanAfter: resumeAfter, lapLimit: dive.limit };
   const row = earlier?.row ?? (members.size ? await scanCycleRange(db, cycle, args) : null);
@@ -117,6 +117,12 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
     delete next.revisitIds;
   }
   return displayDiveSession(global, next, row?.node_id ?? null, row ? now : null);
+}
+
+// The first phase can only choose initial tasks, so other members never need their learning facts.
+async function scannedMemberIds(db: DailyFlowStore, dive: DiveFlowCursor, memberIds: string[]) {
+  if (dive.phase !== 'initial' || !memberIds.length) return memberIds;
+  return (await db.readRows(memberIds)).filter(row => row.active && row.initial_task).map(row => row.node_id);
 }
 
 function earlierMemberIds(dive: DiveFlowCursor, members: ReadonlySet<string>) {

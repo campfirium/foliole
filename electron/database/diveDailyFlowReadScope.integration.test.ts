@@ -54,3 +54,16 @@ it('stops reading unread Dive Topics once the next one is found', async () => {
   expect(session).toMatchObject({ currentNodeId: 'topic-040', dive: { position: 41, limit: 200, stop: null } });
   expect(requested.length).toBeLessThanOrEqual(64);
 });
+
+it('loads no learning facts when a large Dive has nothing in the initial queue', async () => {
+  const requested = new Set<string>();
+  const { peer, open, scope } = await setup('topic', ids => ids.forEach(id => requested.add(id)));
+  const members = Array.from({ length: 200 }, (_, index) => `member-${index}`);
+  for (const [index, id] of members.entries()) addNode(peer, id, index % 4, 'topic');
+  await open();
+  peer.db.prepare('UPDATE daily_flow_entries SET initial_task = 0').run();
+  requested.clear();
+  const session = (await open({ dive: scope(members) })).session;
+  expect(session).toMatchObject({ currentNodeId: null, dive: { phase: 'initial', stop: 'empty' } });
+  expect(members.filter(id => requested.has(id))).toEqual([]);
+});
