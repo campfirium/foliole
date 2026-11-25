@@ -12,7 +12,7 @@ import {
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
-import { prepareCodexHelper } from './prepare-codex-helper.mjs';
+import { codexCodeModeHostPath, prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
@@ -65,6 +65,7 @@ export function createGithubBuilderConfig(base, options) {
     extraFiles: [
       ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: options.codexPath, to: 'MacOS/codex' },
+      { from: codexCodeModeHostPath(options.codexPath), to: 'MacOS/codex-code-mode-host' },
       { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' },
       { from: options.folioleCliPath, to: 'Helpers/Foliole CLI.app' }
     ],
@@ -76,7 +77,9 @@ export function createGithubBuilderConfig(base, options) {
     mac: {
       ...base.mac,
       artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
-      binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
+      binaries: [
+        'Contents/MacOS/codex', 'Contents/MacOS/codex-code-mode-host', 'Contents/MacOS/Foliole Global Capture'
+      ],
       entitlements: 'build/entitlements.mac.plist',
       entitlementsInherit: 'build/entitlements.mac.inherit.plist',
       extendInfo: {

@@ -38,6 +38,11 @@ export function verifyPackagedEntitlements(entitlements, mode) {
   requireEntitlements(entitlements.codex, ['com.apple.security.cs.allow-jit'], 'packaged Codex');
   verifySandboxBoundary(entitlements.codex, mode, 'packaged Codex', true);
 
+  requireEntitlements(entitlements.codeModeHost, [
+    'com.apple.security.cs.allow-jit'
+  ], 'packaged Codex code-mode host');
+  verifySandboxBoundary(entitlements.codeModeHost, mode, 'packaged Codex code-mode host', true);
+
   if (mode === 'developer-id') {
     requireEntitlements(entitlements.helper, [
       'com.apple.security.cs.allow-jit', 'com.apple.security.cs.allow-unsigned-executable-memory'

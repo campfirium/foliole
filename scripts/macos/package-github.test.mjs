@@ -51,7 +51,9 @@ describe('GitHub macOS packaging', () => {
     expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
       artifactName: '${productName}-macOS-${arch}-${version}.${ext}',
-      binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
+      binaries: [
+      'Contents/MacOS/codex', 'Contents/MacOS/codex-code-mode-host', 'Contents/MacOS/Foliole Global Capture'
+    ],
       entitlements: 'build/entitlements.mac.plist',
       entitlementsInherit: 'build/entitlements.mac.inherit.plist',
       extendInfo: { ElectronTeamID: 'V589TQH334' },
@@ -64,6 +66,9 @@ describe('GitHub macOS packaging', () => {
       sign: 'scripts/macos/sign-github-app.mjs',
       signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
       target: ['dmg', 'zip']
+    });
+    expect(config.extraFiles).toContainEqual({
+      from: '.tmp/codex-code-mode-host', to: 'MacOS/codex-code-mode-host'
     });
     expect(config.extraFiles).toContainEqual({
       from: '.tmp/Foliole CLI.app', to: 'Helpers/Foliole CLI.app'

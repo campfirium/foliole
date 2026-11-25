@@ -1,5 +1,9 @@
 {
   "assetName": "codex-aarch64-apple-darwin.tar.gz",
+  "codeModeHost": {
+    "assetName": "codex-code-mode-host-aarch64-apple-darwin.tar.gz",
+    "sha256": "876a3e263348ef0edaeae5cf5bc52a5c121141cefd15157ab0eeca305f3eb563"
+  },
   "sha256": "4b22a2a971be2791c3e31f912f3e77a88ebd64a65812a7289ccba65dd6425fe9",
   "version": "0.167.0"
 }

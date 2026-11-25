@@ -127,7 +127,9 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
   expect(config.mac.forceCodeSigning).toBe(true);
   expect(config.mac.target).toEqual(['mas-dev']);
   expect(config.masDev).toMatchObject({
-    binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
+    binaries: [
+      'Contents/MacOS/codex', 'Contents/MacOS/codex-code-mode-host', 'Contents/MacOS/Foliole Global Capture'
+    ],
     entitlements: 'build/entitlements.mas.plist',
     entitlementsInherit: 'build/entitlements.mas.inherit.plist',
     hardenedRuntime: true,
@@ -138,6 +140,10 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
   expect(config.extraFiles).toContainEqual({
     from: codexPath,
     to: 'MacOS/codex'
+  });
+  expect(config.extraFiles).toContainEqual({
+    from: `.tmp/macos/codex/${codexRelease.version}/codex-code-mode-host`,
+    to: 'MacOS/codex-code-mode-host'
   });
   expect(config.extraFiles).toContainEqual({
     from: '.tmp/macos/foliole-cli/Foliole CLI.app',

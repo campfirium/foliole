@@ -56,12 +56,14 @@ function profileFor(path, mode = 'development') {
 function resolveEntitlements(subject, mode) {
   if (mode === 'developer-id') {
     if (subject.endsWith('/Contents/MacOS/codex')) return DIRECT_HELPER_ENTITLEMENTS;
+    if (subject.endsWith('/Contents/MacOS/codex-code-mode-host')) return DIRECT_HELPER_ENTITLEMENTS;
     if (subject.endsWith('/Contents/MacOS/foliole-runtime')) return DIRECT_HELPER_ENTITLEMENTS;
     if (subject.endsWith('Foliole Helper.app')) return DIRECT_HELPER_ENTITLEMENTS;
     if (subject.endsWith('Foliole CLI.app')) return DIRECT_CLI_ENTITLEMENTS;
     return DIRECT_APP_ENTITLEMENTS;
   }
   if (subject.endsWith('/Contents/MacOS/codex')) return CODEX_ENTITLEMENTS;
+  if (subject.endsWith('/Contents/MacOS/codex-code-mode-host')) return CODEX_ENTITLEMENTS;
   if (subject.endsWith('/Contents/MacOS/foliole-runtime')) return CLI_RUNTIME_ENTITLEMENTS;
   if (subject.endsWith('Foliole Helper.app')) return HELPER_ENTITLEMENTS;
   if (subject.endsWith('Foliole CLI.app')) return CLI_ENTITLEMENTS;
@@ -78,7 +80,9 @@ function createRun(options = {}) {
     if (command === 'codesign' && args.includes('-dv')) {
       const bundleId = args.at(-1).endsWith('Foliole CLI.app')
         ? 'com.campfirium.foliole.cli'
-        : 'com.campfirium.foliole';
+        : args.at(-1).endsWith('/codex-code-mode-host')
+          ? 'com.campfirium.foliole.codex-code-mode-host'
+          : 'com.campfirium.foliole';
       const authority = options.signatureMode === 'developer-id'
         ? 'Developer ID Application: CAMPFIRIUM LTD (V589TQH334)'
         : options.signatureMode === 'distribution'
@@ -137,7 +141,9 @@ it('rejects a package whose final app signature lost App Sandbox', async () => {
     if (command === 'codesign' && args.includes('-dv')) {
       const bundleId = args.at(-1).endsWith('Foliole CLI.app')
         ? 'com.campfirium.foliole.cli'
-        : 'com.campfirium.foliole';
+        : args.at(-1).endsWith('/codex-code-mode-host')
+          ? 'com.campfirium.foliole.codex-code-mode-host'
+          : 'com.campfirium.foliole';
       return { status: 0, stderr: `Identifier=${bundleId}\nTeamIdentifier=${TEAM_ID}\nAuthority=Apple Development:` };
     }
     return { status: 0, stderr: args.includes('--entitlements') ? HELPER_ENTITLEMENTS : '' };
@@ -165,6 +171,41 @@ it('rejects a package whose embedded Codex signature cannot execute JIT code', a
     appPath: '/artifacts/Foliole.app',
     run
   })).rejects.toThrow('packaged Codex is missing com.apple.security.cs.allow-jit');
+});
+
+it('rejects a package without the code-mode host next to Codex', async () => {
+  const checkAccess = vi.fn(async (file) => {
+    if (file.endsWith('/Contents/MacOS/codex-code-mode-host')) throw new Error('missing code-mode host');
+  });
+
+  await expect(verifyPackagedMacosApp({
+    access: checkAccess,
+    appPath: '/artifacts/Foliole.app',
+    run: createRun()
+  })).rejects.toThrow('missing code-mode host');
+});
+
+it.each([
+  ['--verify', { status: 1, stderr: 'code object is not signed at all' }, 'not signed at all'],
+  ['--entitlements', { status: 0, stderr: HELPER_ENTITLEMENTS },
+    'packaged Codex code-mode host is missing com.apple.security.cs.allow-jit'],
+  ['--entitlements', { status: 0, stderr: 'com.apple.security.cs.allow-jit' },
+    'packaged Codex code-mode host is missing com.apple.security.app-sandbox']
+])('rejects a code-mode host with a broken signature (%s)', async (flag, result, message) => {
+  const run = createRun();
+  const baseImplementation = run.getMockImplementation();
+  run.mockImplementation((command, args, runOptions) => {
+    if (command === 'codesign' && args.includes(flag) && args.at(-1).endsWith('/codex-code-mode-host')) {
+      return result;
+    }
+    return baseImplementation(command, args, runOptions);
+  });
+
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    run
+  })).rejects.toThrow(message);
 });
 
 it('rejects a package whose CLI runtime cannot execute JIT code', async () => {

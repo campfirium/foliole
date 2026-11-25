@@ -13,6 +13,7 @@ function directEntitlements() {
     app: `${GROUP}\n${FILES}\n${DIRECT_HELPER}`,
     cli: GROUP,
     cliRuntime: DIRECT_HELPER,
+    codeModeHost: DIRECT_HELPER,
     codex: DIRECT_HELPER,
     helper: DIRECT_HELPER
   };

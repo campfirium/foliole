@@ -29,6 +29,12 @@ it('grants JIT only to embedded Codex while keeping ordinary tools on sandbox in
     hardenedRuntime: true,
     timestamp: 'none'
   });
+  expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/codex-code-mode-host')).toMatchObject({
+    additionalArguments: ['--identifier', 'com.campfirium.foliole.codex-code-mode-host'],
+    entitlements: expect.stringMatching(/entitlements\.mas\.codex\.plist$/),
+    hardenedRuntime: true,
+    timestamp: 'none'
+  });
   expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/Foliole Global Capture')).toMatchObject({
     additionalArguments: ['--identifier', 'com.campfirium.foliole.global-capture'],
     entitlements: expect.stringMatching(/entitlements\.mas\.tool\.plist$/),

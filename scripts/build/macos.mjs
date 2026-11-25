@@ -5,7 +5,7 @@ import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { loadPinnedCodexHelperRelease } from '../macos/codex-helper-release.mjs';
-import { prepareCodexHelper } from '../macos/prepare-codex-helper.mjs';
+import { codexCodeModeHostPath, prepareCodexHelper } from '../macos/prepare-codex-helper.mjs';
 import { prepareFolioleCli } from '../macos/prepare-foliole-cli.mjs';
 import { prepareGlobalCaptureHelper } from '../macos/prepare-global-capture-helper.mjs';
 
@@ -25,6 +25,7 @@ async function verifySourceApp() {
   const cli = path.join(contents, 'Helpers/Foliole CLI.app');
   for (const file of [
     path.join(contents, 'MacOS/codex'),
+    path.join(contents, 'MacOS/codex-code-mode-host'),
     path.join(contents, 'MacOS/Foliole Global Capture'),
     path.join(cli, 'Contents/MacOS/foliole')
   ]) await access(file);
@@ -46,6 +47,7 @@ export function createSourceBuilderConfig(base, helpers) {
     extraFiles: [
       ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: helpers.codex, to: 'MacOS/codex' },
+      { from: codexCodeModeHostPath(helpers.codex), to: 'MacOS/codex-code-mode-host' },
       { from: helpers.capture, to: 'MacOS/Foliole Global Capture' },
       { from: helpers.cli, to: 'Helpers/Foliole CLI.app' }
     ],
@@ -58,7 +60,9 @@ export function createSourceBuilderConfig(base, helpers) {
     mac: {
       ...base.mac,
       artifactName: '${productName}-macOS-source-${arch}-${version}.${ext}',
-      binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
+      binaries: [
+        'Contents/MacOS/codex', 'Contents/MacOS/codex-code-mode-host', 'Contents/MacOS/Foliole Global Capture'
+      ],
       entitlements: 'build/entitlements.mac.source.plist',
       entitlementsInherit: 'build/entitlements.mac.inherit.plist',
       extendInfo: {

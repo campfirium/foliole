@@ -13,6 +13,10 @@ it('uses non-sandboxed direct-distribution entitlements for embedded tools', () 
 
   expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/codex').entitlements)
     .toMatch(/entitlements\.mac\.inherit\.plist$/);
+  expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/codex-code-mode-host')).toMatchObject({
+    additionalArguments: ['--identifier', 'com.campfirium.foliole.codex-code-mode-host'],
+    entitlements: expect.stringMatching(/entitlements\.mac\.inherit\.plist$/)
+  });
   expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/Foliole Global Capture').entitlements)
     .toMatch(/entitlements\.mac\.tool\.plist$/);
 });

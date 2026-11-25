@@ -13,7 +13,7 @@ import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
 import { assertMasElectronRuntime } from './mas-electron-runtime.mjs';
-import { prepareCodexHelper } from './prepare-codex-helper.mjs';
+import { codexCodeModeHostPath, prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
@@ -35,7 +35,9 @@ export function createMasBuilderConfig(base, options) {
   const target = options.mode === 'development' ? 'mas-dev' : 'mas';
   const common = {
     appId: 'com.campfirium.foliole',
-    binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
+    binaries: [
+      'Contents/MacOS/codex', 'Contents/MacOS/codex-code-mode-host', 'Contents/MacOS/Foliole Global Capture'
+    ],
     entitlements: 'build/entitlements.mas.plist',
     entitlementsInherit: 'build/entitlements.mas.inherit.plist',
     forceCodeSigning: true,
@@ -53,6 +55,7 @@ export function createMasBuilderConfig(base, options) {
     extraFiles: [
       ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: options.codexPath, to: 'MacOS/codex' },
+      { from: codexCodeModeHostPath(options.codexPath), to: 'MacOS/codex-code-mode-host' },
       { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' },
       { from: options.folioleCliPath, to: 'Helpers/Foliole CLI.app' }
     ],
