@@ -7,10 +7,20 @@ import type { WorkspaceRailItemConfig } from './workspaceRailSettings';
 const SUPER_MEMO_RAIL_ITEM_ID = 'system.import-supermemo';
 
 export function isWorkspaceRailItemAvailable(item: WorkspaceRailItemConfig) {
+  if (item.commandId === APP_COMMAND_IDS.openLocalFile) return isDesktopRuntime();
   return item.id !== SUPER_MEMO_RAIL_ITEM_ID || (isInternalFeaturePreviewBuild() && isDesktopRuntime());
 }
 
 export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
+  {
+    id: 'system.open-file',
+    commandId: APP_COMMAND_IDS.openLocalFile,
+    section: 'top',
+    order: -1,
+    visible: true,
+    source: 'system',
+    iconId: 'FolderOpen'
+  },
   {
     id: 'system.import-file',
     commandId: APP_COMMAND_IDS.importSingleFile,

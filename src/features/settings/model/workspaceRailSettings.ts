@@ -27,6 +27,7 @@ export interface WorkspaceRailItemConfig {
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
 const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
 const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
+  [APP_COMMAND_IDS.openLocalFile]: 'desktop.command.openFile',
   [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
   [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
   [APP_COMMAND_IDS.toggleImmersiveMode]: 'settings.rail.item.readingMode',
@@ -121,8 +122,11 @@ export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = [
     .filter(isValidPersistedItem)
     .map((item) => ({ ...item, commandId: normalizeWorkspaceRailCommandId(item.commandId) }));
   const byId = new Map(persisted.map((item) => [item.id, item]));
+  const hasCustomOpenFile = persisted.some((item) =>
+    item.source === 'user' && item.commandId === APP_COMMAND_IDS.openLocalFile);
 
   const systemItems = DEFAULT_WORKSPACE_RAIL_ITEMS
+    .filter((item) => item.commandId !== APP_COMMAND_IDS.openLocalFile || !hasCustomOpenFile || byId.has(item.id))
     .filter((item) => byId.has(item.id) || isWorkspaceRailItemAvailable(item))
     .map((defaultItem) => {
       seen.add(defaultItem.id);
