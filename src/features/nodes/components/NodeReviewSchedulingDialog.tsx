@@ -10,6 +10,7 @@ import {
 } from '../model/nodeReviewSettings';
 import type { WorkspaceListNode } from '../model/workspaceListNode';
 
+import { DesktopPrioritySlider, type EnforcedPriorityDisplay } from './DesktopPrioritySlider';
 import { ReviewRetentionRow } from './ReviewRetentionRow';
 
 import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
@@ -22,10 +23,8 @@ import {
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
-  SETTINGS_RANGE_WIDTH_CLASS_NAME,
   SETTINGS_VALUE_WIDTH_CLASS_NAME,
   settingsControlValueClassName,
-  settingsRangeClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '@/shared/ui';
@@ -68,31 +67,6 @@ function ShortTermControl(props: {
       >
         <span className={settingsSwitchKnobClassName(props.value)} />
       </button>
-    </SettingsControlSlot>
-  );
-}
-
-function PriorityControl(props: {
-  ariaLabel: string;
-  inactive: boolean;
-  onChange: (priority: number) => void;
-  value: number;
-}) {
-  return (
-    <SettingsControlSlot>
-      <input
-        aria-label={props.ariaLabel}
-        className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME + (props.inactive ? ' opacity-[0.46]' : ''))}
-        max={9}
-        min={0}
-        onChange={(event) => props.onChange(Number(event.target.value))}
-        step={1}
-        type="range"
-        value={props.value}
-      />
-      <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME + (props.inactive ? ' opacity-[0.46]' : ''))}>
-        P{props.value}
-      </span>
     </SettingsControlSlot>
   );
 }
@@ -147,23 +121,28 @@ function ReviewSchedulingRows(props: {
   draft: NodeReviewSchedulingDraft;
   retention: ResolvedNodeSetting<number>;
   node: ReviewOptionsNode;
-  coveredPriority: { value: number; owner: string } | null;
+  coveredPriority: EnforcedPriorityDisplay | undefined;
   t: Translate;
 }) {
-  const inactive = props.coveredPriority !== null && !props.draft.enforceDraft;
-  const description = renderPriorityDescription(props.node, props.t);
+  const { draft, t } = props;
+  const enforced = draft.enforceDraft ? undefined : props.coveredPriority;
+  const priorityLabel = t('desktop.nodeReview.priority');
   return (
-    <SettingsSection ariaLabel={props.t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
-      <ReviewRetentionRow own={props.draft.retentionDraft} inherited={props.retention.value} onChange={props.draft.setRetentionDraft} />
-      <SettingsRow description={inactive && props.coveredPriority ? <>
-          {description}<span className="mt-1 block">{props.t('desktop.nodeReview.priority.effective', {
-            value: `P${props.coveredPriority.value}`, owner: props.coveredPriority.owner
-          })}</span>
-        </> : description}
-        title={inactive ? `${props.t('desktop.nodeReview.priority')} · ${props.t('desktop.nodeReview.priority.inactive')}`
-          : props.t('desktop.nodeReview.priority')}>
-        <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} inactive={inactive}
-          onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
+    <SettingsSection ariaLabel={t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
+      <ReviewRetentionRow own={draft.retentionDraft} inherited={props.retention.value} onChange={draft.setRetentionDraft} />
+      <SettingsRow description={enforced ? t(props.node.kind === 'topic'
+          ? 'desktop.nodeReview.priority.forcedDescription' : 'desktop.nodeReview.priority.forcedDescriptionMaterial')
+          : renderPriorityDescription(props.node, t)}
+        title={enforced ? `${priorityLabel} ${t('desktop.nodeReview.priority.forcedLabel')}` : priorityLabel}>
+        <SettingsControlSlot>
+          <div className="w-[min(9rem,32vw)] [--priority-interactive:rgb(var(--role-accent-rgb))]">
+            <DesktopPrioritySlider ariaLabel={t('desktop.nodeReview.priority.aria')} enforced={enforced}
+              onChange={draft.setPriorityDraft} value={draft.priorityDraft} />
+          </div>
+          <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME + (enforced ? ' text-foreground/44' : ''))}>
+            {enforced && props.node.priority == null && !draft.isPriorityDirty ? '—' : `P${draft.priorityDraft}`}
+          </span>
+        </SettingsControlSlot>
       </SettingsRow>
       {props.node.kind === 'folder' && (
         <SettingsRow title={props.t('desktop.nodeReview.priority.enforce')}
@@ -204,7 +183,9 @@ export function NodeReviewSchedulingDialog(props: {
   const priority = resolveUnenforcedNodePriority(nodeId, props.nodesById, fallback);
   const resolved = resolveNodePrioritySetting(nodeId, props.nodesById, fallback);
   const owner = resolved.enforced && resolved.ownerNodeId ? props.nodesById[resolved.ownerNodeId] : undefined;
-  const coveredPriority = owner ? { value: resolved.value, owner: owner.title } : null;
+  const coveredPriority = resolved.enforced
+    ? { value: resolved.value, ...(owner ? { owner: owner.title } : {}) }
+    : undefined;
   const draft = useNodeReviewSchedulingDraft({ node, priority, shortTerm });
 
   function commitAndClose() {

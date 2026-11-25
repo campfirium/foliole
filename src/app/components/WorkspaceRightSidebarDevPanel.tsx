@@ -24,7 +24,6 @@ import {
   formatDurationMs,
   formatNumber,
   formatPercent,
-  formatPriority,
   formatPriorityWeight,
   resolveSchedulingPanelData,
   type SchedulingPanelData
@@ -101,8 +100,7 @@ function ReadingTopicContent({ data, source, t }: SchedulingContentProps) {
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.previousInterval')} value={previousInterval ? formatDurationMs(previousInterval) : t('desktop.diagnostics.scheduling.none')} />
       </SchedulingSection>
       <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
-        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
-        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.prioritySource')} value={source} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={source} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.growthFactor')} value={formatNumber(data.readingGrowthFactor)} />
@@ -138,8 +136,7 @@ function ReviewItemContent({ data, source, t }: SchedulingContentProps) {
       </SchedulingSection>
 
       <SchedulingSection title={t('desktop.diagnostics.scheduling.decisionParameters')}>
-        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={formatPriority(priority.value)} />
-        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.prioritySource')} value={source} />
+        <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priority')} value={source} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityRatio')} value={formatNumber(data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.priorityWeight')} value={formatPriorityWeight(priority.value, data.priorityRatio)} />
         <SchedulingInfoRow label={t('desktop.diagnostics.scheduling.retention')} value={formatPercent(desiredRetention.value)} />
@@ -190,6 +187,6 @@ export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPan
 
   return (
     <DevPanelContent data={data} t={t}
-      source={<SchedulingPrioritySource key={node.id} priority={data.priority} nodesById={props.nodesById} settings={reviewSchedulerSettings} />} />
+      source={<SchedulingPrioritySource key={node.id} ownPriority={node.priority} priority={data.priority} nodesById={props.nodesById} settings={reviewSchedulerSettings} />} />
   );
 }

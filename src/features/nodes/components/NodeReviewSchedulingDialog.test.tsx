@@ -7,7 +7,8 @@ import type { WorkspaceListNode } from '../model/workspaceListNode';
 
 import { NodeReviewSchedulingDialog } from './NodeReviewSchedulingDialog';
 
-vi.mock('@/shared/ui', () => ({
+vi.mock('@/shared/ui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/shared/ui')>(),
   AppDialog: ({
     children,
     onOpenChange
@@ -124,4 +125,25 @@ it('saves an explicit retention and can restore inheritance without changing pri
   fireEvent.click(screen.getByText('Close'));
   expect(onDesiredRetentionChange).toHaveBeenLastCalledWith('node-1', null);
   expect(onPriorityChange).not.toHaveBeenCalled();
+});
+
+it('keeps the enforcing value visible while editing and saving the topic value', () => {
+  const parent = createNode({ id: 'parent', enforcePriority: true, priority: 2 });
+  const node = createNode({ kind: 'topic', parentNodeId: parent.id, priority: 6 });
+  const onPriorityChange = vi.fn();
+  renderWithLocalization(<NodeReviewSchedulingDialog
+    defaultDesiredRetention={0.9} defaultPriority={5} node={node}
+    nodesById={{ [node.id]: node, parent }} onClose={() => undefined}
+    onDesiredRetentionChange={() => undefined} onPriorityChange={onPriorityChange}
+    onShortTermChange={() => undefined} />);
+
+  const slider = screen.getByRole('slider', { name: 'Review queue priority' });
+  const marker = screen.getByRole('button', { name: 'Effective priority P2' });
+  expect(slider).toHaveValue('6');
+  fireEvent.change(slider, { target: { value: '4' } });
+  expect(slider).toHaveValue('4');
+  expect(marker).toBeVisible();
+  expect(onPriorityChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('Close'));
+  expect(onPriorityChange).toHaveBeenCalledWith(node.id, 4);
 });

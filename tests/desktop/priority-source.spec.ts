@@ -24,20 +24,24 @@ test('shows the effective priority source and opens its review options', async (
   await page.getByRole('button', { name: 'Scheduling panel', exact: true }).click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   await expect(inspector.getByText('P2', { exact: true })).toBeVisible();
-  await expect(inspector.getByText('(Inherited)', { exact: true })).toBeVisible();
-  await inspector.getByRole('button', { name: 'English', exact: true }).click();
+  const tooltip = page.getByRole('tooltip');
+  await expect(tooltip.getByRole('button', { name: 'English', exact: true })).toBeHidden();
+  await inspector.getByRole('button', { name: 'Source', exact: true }).click();
+  await tooltip.getByRole('button', { name: 'English', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Review options · English' });
   const priority = dialog.getByRole('slider', { name: 'Review queue priority' });
   await expect(priority).toHaveValue('2');
   await priority.press('ArrowRight');
   await page.keyboard.press('Escape');
   await expect(inspector.getByText('P3', { exact: true })).toBeVisible();
-  await page.screenshot({ path: path.resolve('.tmp/artifacts/T859/priority-source.png') });
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/T882/priority-source.png') });
   await page.evaluate(() => window.__folioleWorkspaceDebug!.openNode('source-own'));
-  await expect(inspector.getByText('Own', { exact: true })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: 'Source', exact: true })).toBeHidden();
   await expect(inspector.getByText('P9', { exact: true })).toBeVisible();
   await page.evaluate(() => window.__folioleWorkspaceDebug!.openNode('source-default'));
-  await expect(inspector.getByText('Default', { exact: true })).toBeVisible();
+  await expect(inspector.getByText(/^P[0-9]$/)).toBeVisible();
+  await inspector.getByRole('button', { name: 'Source', exact: true }).focus();
+  await expect(page.getByRole('tooltip', { name: 'Default' })).toBeVisible();
 });
 
 
@@ -82,7 +86,8 @@ test('keeps scheduling dates and inherited priorities readable while resizing th
   await setActiveSidebarTierDockedWidths(page, 25, 18);
   for (const [index, title] of titles.entries()) {
     await page.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id), `topic-${index}`);
-    const source = inspector.getByRole('button', { name: title, exact: true });
+    await inspector.getByRole('button', { name: 'Source', exact: true }).click();
+    const source = page.getByRole('tooltip').getByRole('button', { name: title, exact: true });
     await expect(source).toBeVisible();
     await expectSchedulingRowsInBounds(inspector);
     await source.click();
