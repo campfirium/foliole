@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -111,4 +111,44 @@ test('refreshes backlinks continuously across real source edits, renames and tra
     }
     fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(results, null, 2));
   } finally { await source.close(); }
+});
+
+
+async function expectBacklinkTitleInBounds(container: Locator, title: string) {
+  const text = container.getByText(title, { exact: true });
+  await expect(text).toBeVisible();
+  const clipped = await text.evaluate(element => {
+    const row = element.closest('button')!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return Array.from(range.getClientRects()).some(rect => rect.right > row.right + 1);
+  });
+  expect(clipped).toBe(false);
+}
+
+test('wraps long backlinks in the inspector and link references menu', async ({ desktopWindow: page }) => {
+  const title = 'UninterruptedBacklinkSourceTitle'.repeat(3);
+  await page.evaluate(() => localStorage.setItem('foliole-app-language', 'en'));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.evaluate(async ({ title, sourceId, targetId }) => {
+    const api = window.__folioleWorkspaceDebug!;
+    await api.seedNodes([
+      { id: targetId, title: 'Backlink Target', content: 'Target body.' },
+      { id: sourceId, title, content: 'Source body with [[Backlink Target]].' }
+    ], { persist: true });
+    await api.openNode(targetId);
+  }, { title, sourceId, targetId });
+  await showBacklinks(page);
+  const inspector = page.locator('[data-panel-content-root="backlinks"]');
+  await expectBacklinkTitleInBounds(inspector, title);
+  await inspector.getByText(title, { exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'Prompt editor', exact: true });
+  await expect(editor).toContainText('Source body with');
+  await page.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id), targetId);
+  await page.getByRole('button', { name: 'Open link references (1)' }).click();
+  const references = page.getByRole('region', { name: 'Link references' });
+  await expectBacklinkTitleInBounds(references, title);
+  await references.getByText(title, { exact: true }).click();
+  await expect(editor).toContainText('Source body with');
 });

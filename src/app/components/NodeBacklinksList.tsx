@@ -29,8 +29,8 @@ export function NodeBacklinksList({ backlinks, emptyLabel, onSelectNode }: NodeB
             onClick={() => onSelectNode(backlink.sourceNodeId)}
             type="button"
           >
-            <span className={inspectorListTitleClassName}>{backlink.sourceTitle}</span>
-            <span className={`${inspectorListBodyClassName} line-clamp-3 leading-7`}>{backlink.context}</span>
+            <span className={`${inspectorListTitleClassName} [overflow-wrap:anywhere]`}>{backlink.sourceTitle}</span>
+            <span className={`${inspectorListBodyClassName} line-clamp-3 [overflow-wrap:anywhere] leading-7`}>{backlink.context}</span>
             {backlink.matchCount > 1 ? <span className={inspectorListMetaClassName}>{t('desktop.links.mentionedTimes', { count: backlink.matchCount })}</span> : null}
           </InspectorListRow>
         </li>
