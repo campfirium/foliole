@@ -265,7 +265,7 @@
 
 @media (max-width: 1279px) {
   .workspace-responsive-shell:not([data-sidebar-tiers]) {
-    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width) + var(--window-titlebar-capture-width, 0px)) !important;
+    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
     --workspace-right-sidebar-splitter-width: 0px !important;
   }
@@ -275,7 +275,7 @@
   }
 
   .workspace-responsive-shell:not([data-sidebar-tiers]) .window-titlebar {
-    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width) + var(--window-titlebar-capture-width, 0px)) !important;
+    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
   }
 }
