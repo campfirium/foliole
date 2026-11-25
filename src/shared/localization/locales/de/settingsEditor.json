@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "Doppelklick auf Text zum Bearbeiten",
   "settings.search.editorImmersiveDoubleClick.description": "Beim immersiven Lesen doppelklicken Sie auf den Dokumenttext, um ihn zu bearbeiten. Deaktivieren Sie dies, damit ein Doppelklick weiterhin Text auswählt; mit der Eingabetaste kann weiterhin bearbeitet werden.",
+  "settings.search.cleanFormatting.path": "Öffnen Sie ein bearbeitbares Thema und wählen Sie „Formatierung bereinigen...“ im Menü oben rechts im Editor oder im Kontextmenü des Textbereichs.",
+  "settings.search.cleanFormatting.terms": "Formatierungsbereinigung|Formatierung entfernen|Formatierung löschen|Formatierung bereinigen",
+  "settings.search.imageCloze.path": "Ziehen Sie in einem Thema auf einem lokal gespeicherten Bild ein Rechteck über den Bereich, den Sie verdecken möchten. Klicken Sie dann auf das Häkchen.",
+  "settings.search.imageCloze.terms": "Bildmaskierung|Bild-Lückentext|Bildbereich verdecken",
+  "settings.search.formulaCloze.path": "Ziehen Sie in einem Thema über den Teil einer dargestellten Formel, den Sie verdecken möchten.",
+  "settings.search.formulaCloze.terms": "Mathe-Lückentext|Gleichungslücke|Formelmaskierung|Mathe-Maskierung",
   "settings.editor.readingMode.section": "Lesemodus",
   "settings.editor.readingMode.aria": "Einstellungsbereich für den Lesemodus"
 }

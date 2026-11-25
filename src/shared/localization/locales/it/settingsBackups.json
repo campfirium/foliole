@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Sezione di ricerca nei backup",
   "settings.backups.search.sectionTitle": "Cerca nel contenuto dei backup",
+  "settings.backups.search.terms": "ricerca nei backup|cerca nei backup",
   "settings.backups.search.description": "Decomprime i backup esistenti uno alla volta e cerca nel loro contenuto.",
   "settings.backups.search.action": "Cerca nel contenuto dei backup",
   "settings.backups.search.title": "Cerca nel contenuto dei backup",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "Nel cestino",
   "settings.backups.merge.sectionAria": "Sezione unisci libreria",
   "settings.backups.merge.title": "Unisci un'altra libreria",
+  "settings.backups.merge.searchTerms": "unisci libreria|combina librerie|unisci backup|importa backup",
   "settings.backups.merge.description": "Aggiunge i materiali e la cronologia di ripasso di un’altra libreria. Scegli una libreria o un backup desktop oppure un backup del telefono (un .zip o il file Foliole.sqlite nella cartella di backup). I nuovi materiali finiscono in una cartella separata. I contenuti esistenti vengono conservati.",
   "settings.backups.merge.choose": "Scegli libreria",
   "settings.backups.merge.noSource": "Nessuna libreria scelta.",

@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "Kliknij dwukrotnie treść, aby edytować",
   "settings.search.editorImmersiveDoubleClick.description": "W trybie immersyjnego czytania kliknij dwukrotnie treść dokumentu, aby rozpocząć edycję. Wyłącz tę opcję, aby dwukrotne kliknięcie nadal służyło do zaznaczania tekstu; klawisz Enter wciąż uruchamia edycję.",
+  "settings.search.cleanFormatting.path": "Otwórz temat, który można edytować, i wybierz „Wyczyść formatowanie...” z menu w prawym górnym rogu edytora lub z menu kontekstowego treści.",
+  "settings.search.cleanFormatting.terms": "czyszczenie formatowania|usuń formatowanie|skasuj formatowanie|wyczyść formatowanie",
+  "settings.search.imageCloze.path": "W temacie przeciągnij po obrazie zapisanym lokalnie, aby zaznaczyć prostokątny obszar do ukrycia, a następnie kliknij znacznik wyboru.",
+  "settings.search.imageCloze.terms": "zakrywanie obrazu|luka obrazu|maskowanie obrazu",
+  "settings.search.formulaCloze.path": "W temacie przeciągnij po fragmencie wyświetlonego wzoru, który chcesz ukryć.",
+  "settings.search.formulaCloze.terms": "luka matematyczna|luka w równaniu|zakrywanie wzoru|maskowanie wzoru",
   "settings.editor.readingMode.section": "Tryb czytania",
   "settings.editor.readingMode.aria": "Sekcja ustawień trybu czytania"
 }

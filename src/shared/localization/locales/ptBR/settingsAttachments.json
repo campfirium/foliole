@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Dias personalizados",
   "settings.attachments.daysUnit": "dias",
   "settings.attachments.title": "Anexos locais",
+  "settings.attachments.searchTerms": "limpeza de anexos|limpar anexos|remover anexos desnecessários|anexos não utilizados",
   "settings.attachments.error": "Não foi possível concluir a operação com os anexos. Tente novamente.",
   "settings.attachments.used": "Espaço usado",
   "settings.attachments.refresh": "Atualizar",

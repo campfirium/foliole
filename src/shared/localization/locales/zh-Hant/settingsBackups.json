@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "搜尋備份設定區",
   "settings.backups.search.sectionTitle": "搜尋備份內容",
+  "settings.backups.search.terms": "備份搜尋|搜尋備份內容",
   "settings.backups.search.description": "逐份解壓縮現有備份，搜尋其中的內容。",
   "settings.backups.search.action": "搜尋備份內容",
   "settings.backups.search.title": "搜尋備份內容",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "在垃圾桶",
   "settings.backups.merge.sectionAria": "併入資料庫設定區",
   "settings.backups.merge.title": "併入資料庫",
+  "settings.backups.merge.searchTerms": "合併資料庫|併入資料庫|合併備份|匯入備份",
   "settings.backups.merge.description": "將另一份資料庫的材料和複習紀錄併入本庫。可選擇桌面資料庫或備份，也可選擇手機備份（.zip 或備份資料夾內的 Foliole.sqlite）。新材料放進單獨的資料夾。既有內容會原樣保留。",
   "settings.backups.merge.choose": "選擇資料庫",
   "settings.backups.merge.noSource": "尚未選擇資料庫。",

@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Section de recherche dans les sauvegardes",
   "settings.backups.search.sectionTitle": "Rechercher dans le contenu des sauvegardes",
+  "settings.backups.search.terms": "recherche dans les sauvegardes|rechercher dans les sauvegardes",
   "settings.backups.search.description": "Décompresse les sauvegardes existantes une par une et recherche dans leur contenu.",
   "settings.backups.search.action": "Rechercher dans le contenu des sauvegardes",
   "settings.backups.search.title": "Rechercher dans le contenu des sauvegardes",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "Dans la corbeille",
   "settings.backups.merge.sectionAria": "Section fusion de bibliothèque",
   "settings.backups.merge.title": "Fusionner une autre bibliothèque",
+  "settings.backups.merge.searchTerms": "fusionner une bibliothèque|combiner des bibliothèques|fusionner une sauvegarde|importer une sauvegarde",
   "settings.backups.merge.description": "Ajoute les documents et l’historique de révision d’une autre bibliothèque. Choisissez une bibliothèque ou sauvegarde de bureau, ou une sauvegarde de téléphone (un .zip ou le fichier Foliole.sqlite du dossier de sauvegarde). Les nouveaux documents vont dans un dossier distinct. Le contenu existant reste intact.",
   "settings.backups.merge.choose": "Choisir une bibliothèque",
   "settings.backups.merge.noSource": "Aucune bibliothèque choisie.",

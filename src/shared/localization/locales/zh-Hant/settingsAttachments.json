@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "自訂天數",
   "settings.attachments.daysUnit": "天",
   "settings.attachments.title": "本機附件",
+  "settings.attachments.searchTerms": "附件清理|清理附件|清除附件|未使用的附件",
   "settings.attachments.error": "附件操作未完成，請再試一次。",
   "settings.attachments.used": "占用空間",
   "settings.attachments.refresh": "重新整理",

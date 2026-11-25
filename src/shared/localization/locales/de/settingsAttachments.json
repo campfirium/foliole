@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Benutzerdefinierte Tage",
   "settings.attachments.daysUnit": "Tage",
   "settings.attachments.title": "Lokale Anhänge",
+  "settings.attachments.searchTerms": "Anhangsbereinigung|Anhänge bereinigen|Anhänge aufräumen|ungenutzte Anhänge",
   "settings.attachments.error": "Der Anhangsvorgang konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
   "settings.attachments.used": "Belegter Speicher",
   "settings.attachments.refresh": "Aktualisieren",

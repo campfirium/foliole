@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "バックアップ検索セクション",
   "settings.backups.search.sectionTitle": "バックアップの内容を検索",
+  "settings.backups.search.terms": "バックアップ検索|バックアップを検索",
   "settings.backups.search.description": "既存のバックアップを 1 件ずつ展開して、その内容を検索します。",
   "settings.backups.search.action": "バックアップの内容を検索",
   "settings.backups.search.title": "バックアップの内容を検索",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "ゴミ箱内",
   "settings.backups.merge.sectionAria": "ライブラリ統合セクション",
   "settings.backups.merge.title": "別のライブラリを統合",
+  "settings.backups.merge.searchTerms": "ライブラリの統合|ライブラリを結合|バックアップの統合|バックアップをインポート",
   "settings.backups.merge.description": "別のライブラリの資料と復習履歴を追加します。デスクトップのライブラリやバックアップ、スマートフォンのバックアップ（.zip またはバックアップフォルダー内の Foliole.sqlite）を選べます。新しい資料は専用フォルダーに入り、既存の内容はそのまま残ります。",
   "settings.backups.merge.choose": "ライブラリを選択",
   "settings.backups.merge.noSource": "ライブラリが選択されていません。",

@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "未授權",
   "settings.capture.accessibility.openSettings": "打開系統設定",
   "settings.capture.accessibility.openFailed": "無法打開系統設定。",
+  "settings.capture.searchDescription": "查看全域剪輯選項。",
+  "settings.capture.searchTerms": "全域剪輯|全球捕獲|擷取選取內容|擷取剪貼簿",
   "settings.capture.permission.title": "選擇訪問",
   "settings.capture.permission.granted": "Foliole 可以在執行全域擷取時複製目前選擇。",
   "settings.capture.permission.denied": "在系統設定 → 隱私和安全性 → 輔助功能中允許 Foliole。",

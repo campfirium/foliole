@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Días personalizados",
   "settings.attachments.daysUnit": "días",
   "settings.attachments.title": "Adjuntos locales",
+  "settings.attachments.searchTerms": "limpieza de adjuntos|limpiar adjuntos|depurar archivos adjuntos|adjuntos sin usar",
   "settings.attachments.error": "No se pudo completar la operación con los adjuntos. Inténtalo de nuevo.",
   "settings.attachments.used": "Espacio utilizado",
   "settings.attachments.refresh": "Actualizar",

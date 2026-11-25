@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Nombre de jours personnalisé",
   "settings.attachments.daysUnit": "jours",
   "settings.attachments.title": "Pièces jointes locales",
+  "settings.attachments.searchTerms": "nettoyage des pièces jointes|nettoyer les pièces jointes|supprimer les pièces jointes inutiles|pièces jointes inutilisées",
   "settings.attachments.error": "Impossible de terminer l’opération sur les pièces jointes. Veuillez réessayer.",
   "settings.attachments.used": "Espace utilisé",
   "settings.attachments.refresh": "Actualiser",

@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "Verfügbar bis {date}",
   "desktop.sourceUpdate.alternative.hint": "Bis zu 3 alternative Texte, 30 Tage lang aufbewahrt",
+  "desktop.sourceUpdate.previewLoadFailed": "Die Vergleichsvorschau konnte nicht geladen werden.",
   "desktop.sourceUpdate.dialogTitle": "Vergleichsansicht",
   "desktop.sourceUpdate.close": "Quellaktualisierungsfenster schließen",
   "desktop.sourceUpdate.accept": "Aktualisierung akzeptieren",

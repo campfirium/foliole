@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Sección de búsqueda en copias de seguridad",
   "settings.backups.search.sectionTitle": "Buscar en el contenido de las copias",
+  "settings.backups.search.terms": "búsqueda de copias de seguridad|buscar en copias de seguridad",
   "settings.backups.search.description": "Descomprime las copias existentes una por una y busca en su contenido.",
   "settings.backups.search.action": "Buscar en el contenido de las copias",
   "settings.backups.search.title": "Buscar en el contenido de las copias",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "En la papelera",
   "settings.backups.merge.sectionAria": "Sección para combinar biblioteca",
   "settings.backups.merge.title": "Combinar otra biblioteca",
+  "settings.backups.merge.searchTerms": "combinar biblioteca|fusionar bibliotecas|combinar copia de seguridad|importar copia de seguridad",
   "settings.backups.merge.description": "Añade los materiales y el historial de repaso de otra biblioteca. Puedes elegir una biblioteca o copia de escritorio, o una copia del teléfono (un .zip o el Foliole.sqlite de una carpeta de copia). Los materiales nuevos van a su propia carpeta. El contenido actual se conserva.",
   "settings.backups.merge.choose": "Elegir biblioteca",
   "settings.backups.merge.noSource": "No se ha elegido ninguna biblioteca.",

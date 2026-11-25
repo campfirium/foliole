@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "未許可",
   "settings.capture.accessibility.openSettings": "システム設定を開く",
   "settings.capture.accessibility.openFailed": "システム設定を開けませんでした。",
+  "settings.capture.searchDescription": "グローバル キャプチャのオプションを表示します。",
+  "settings.capture.searchTerms": "グローバルクリップ|グローバル キャプチャ|選択範囲を取り込む|クリップボードから取り込む",
   "settings.capture.permission.title": "選択アクセス",
   "settings.capture.permission.granted": "Foliole は、グローバル キャプチャを実行するときに現在の選択内容をコピーできます。",
   "settings.capture.permission.denied": "システム設定 → プライバシーとセキュリティ → アクセシビリティで Foliole を許可します。",

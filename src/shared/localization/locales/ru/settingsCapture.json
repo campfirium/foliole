@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "Не предоставлено",
   "settings.capture.accessibility.openSettings": "Открыть Системные настройки",
   "settings.capture.accessibility.openFailed": "Не удалось открыть Системные настройки.",
+  "settings.capture.searchDescription": "Посмотрите параметры глобального захвата.",
+  "settings.capture.searchTerms": "глобальный клип|глобальный захват|захват выделенного|захват буфера обмена",
   "settings.capture.permission.title": "Доступ к выбору",
   "settings.capture.permission.granted": "Foliole может скопировать текущий выбор при запуске глобального захвата.",
   "settings.capture.permission.denied": "Разрешите Foliole в настройках системы → Конфиденциальность и безопасность → Доступность.",

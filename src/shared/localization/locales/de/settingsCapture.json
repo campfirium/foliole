@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "Nicht erteilt",
   "settings.capture.accessibility.openSettings": "Systemeinstellungen öffnen",
   "settings.capture.accessibility.openFailed": "Die Systemeinstellungen konnten nicht geöffnet werden.",
+  "settings.capture.searchDescription": "Optionen für die globale Erfassung ansehen.",
+  "settings.capture.searchTerms": "globaler Clip|globale Erfassung|Auswahl erfassen|Zwischenablage erfassen",
   "settings.capture.permission.title": "Auswahlzugriff",
   "settings.capture.permission.granted": "Foliole kann die aktuelle Auswahl kopieren, wenn Sie die globale Erfassung ausführen.",
   "settings.capture.permission.denied": "Erlauben Sie Foliole in den Systemeinstellungen → Datenschutz und Sicherheit → Barrierefreiheit.",

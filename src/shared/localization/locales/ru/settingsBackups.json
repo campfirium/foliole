@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Раздел поиска по резервным копиям",
   "settings.backups.search.sectionTitle": "Поиск по содержимому резервных копий",
+  "settings.backups.search.terms": "поиск по резервным копиям|искать в резервных копиях",
   "settings.backups.search.description": "Поочерёдно распаковывать существующие резервные копии и искать в их содержимом.",
   "settings.backups.search.action": "Поиск по содержимому резервных копий",
   "settings.backups.search.title": "Поиск по содержимому резервных копий",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "В корзине",
   "settings.backups.merge.sectionAria": "Раздел объединения библиотеки",
   "settings.backups.merge.title": "Объединить с другой библиотекой",
+  "settings.backups.merge.searchTerms": "объединить библиотеку|объединение библиотек|объединить резервную копию|импортировать резервную копию",
   "settings.backups.merge.description": "Добавляет материалы и историю повторений из другой библиотеки. Выберите библиотеку или резервную копию с компьютера либо резервную копию телефона (файл .zip или Foliole.sqlite из папки копии). Новые материалы попадут в отдельную папку. Существующее содержимое сохранится.",
   "settings.backups.merge.choose": "Выбрать библиотеку",
   "settings.backups.merge.noSource": "Библиотека не выбрана.",

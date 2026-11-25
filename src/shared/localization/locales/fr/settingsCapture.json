@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "Non accordée",
   "settings.capture.accessibility.openSettings": "Ouvrir Réglages Système",
   "settings.capture.accessibility.openFailed": "Impossible d’ouvrir les Réglages Système.",
+  "settings.capture.searchDescription": "Consultez les options de capture globale.",
+  "settings.capture.searchTerms": "extrait global|capture globale|capturer la sélection|capture du presse-papiers",
   "settings.capture.permission.title": "Accès sélection",
   "settings.capture.permission.granted": "Foliole peut copier la sélection actuelle lorsque vous exécutez la capture globale.",
   "settings.capture.permission.denied": "Autorisez Foliole dans Paramètres système → Confidentialité et sécurité → Accessibilité.",

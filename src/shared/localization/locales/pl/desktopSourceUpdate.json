@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "Dostępne do {date}",
   "desktop.sourceUpdate.alternative.hint": "Do 3 alternatywnych treści, przechowywanych przez 30 dni",
+  "desktop.sourceUpdate.previewLoadFailed": "Nie udało się wczytać podglądu porównania.",
   "desktop.sourceUpdate.dialogTitle": "Widok porównawczy",
   "desktop.sourceUpdate.close": "Zamknij panel aktualizacji źródła",
   "desktop.sourceUpdate.accept": "Zaakceptuj aktualizację",

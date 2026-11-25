@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "백업 검색 섹션",
   "settings.backups.search.sectionTitle": "백업 내용 검색",
+  "settings.backups.search.terms": "백업 검색|백업 내용 검색",
   "settings.backups.search.description": "기존 백업을 하나씩 압축 해제하여 내용을 검색합니다.",
   "settings.backups.search.action": "백업 내용 검색",
   "settings.backups.search.title": "백업 내용 검색",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "휴지통에 있음",
   "settings.backups.merge.sectionAria": "라이브러리 병합 섹션",
   "settings.backups.merge.title": "다른 라이브러리 병합",
+  "settings.backups.merge.searchTerms": "라이브러리 병합|라이브러리 합치기|백업 병합|백업 가져오기",
   "settings.backups.merge.description": "다른 라이브러리의 자료와 복습 기록을 추가합니다. 데스크톱 라이브러리나 백업, 또는 휴대폰 백업(.zip 또는 백업 폴더의 Foliole.sqlite)을 선택할 수 있습니다. 새 자료는 별도 폴더에 저장되며 기존 내용은 그대로 유지됩니다.",
   "settings.backups.merge.choose": "라이브러리 선택",
   "settings.backups.merge.noSource": "선택한 라이브러리가 없습니다.",

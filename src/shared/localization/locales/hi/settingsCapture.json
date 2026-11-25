@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "अनुमति नहीं है",
   "settings.capture.accessibility.openSettings": "सिस्टम सेटिंग्स खोलें",
   "settings.capture.accessibility.openFailed": "सिस्टम सेटिंग्स नहीं खोली जा सकीं।",
+  "settings.capture.searchDescription": "ग्लोबल क्लिपिंग के विकल्प देखें।",
+  "settings.capture.searchTerms": "ग्लोबल क्लिप|ग्लोबल क्लिपिंग|चुना हुआ टेक्स्ट क्लिप करें|क्लिपबोर्ड से क्लिप",
   "settings.capture.permission.title": "चुनी हुई सामग्री का ऐक्सेस",
   "settings.capture.permission.granted": "जब आप किसी ऐप से क्लिप लेते हैं, तो Foliole चुनी हुई सामग्री कॉपी कर सकता है।",
   "settings.capture.permission.denied": "सिस्टम सेटिंग → निजता और सुरक्षा → ऐक्सेसिबिलिटी में Foliole को अनुमति दें।",

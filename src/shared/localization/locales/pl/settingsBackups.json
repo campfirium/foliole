@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Sekcja wyszukiwania w kopiach zapasowych",
   "settings.backups.search.sectionTitle": "Przeszukaj zawartość kopii zapasowych",
+  "settings.backups.search.terms": "wyszukiwanie w kopiach zapasowych|przeszukaj kopie zapasowe",
   "settings.backups.search.description": "Rozpakowuj istniejące kopie zapasowe po kolei i przeszukuj ich zawartość.",
   "settings.backups.search.action": "Przeszukaj zawartość kopii zapasowych",
   "settings.backups.search.title": "Przeszukaj zawartość kopii zapasowych",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "W koszu",
   "settings.backups.merge.sectionAria": "Sekcja scalania biblioteki",
   "settings.backups.merge.title": "Scal inną bibliotekę",
+  "settings.backups.merge.searchTerms": "scal bibliotekę|połącz biblioteki|scal kopię zapasową|importuj kopię zapasową",
   "settings.backups.merge.description": "Dodaje materiały i historię powtórek z innej biblioteki. Wybierz bibliotekę lub kopię zapasową z komputera albo kopię z telefonu (plik .zip lub Foliole.sqlite z folderu kopii). Nowe materiały trafią do osobnego folderu. Istniejąca zawartość pozostanie bez zmian.",
   "settings.backups.merge.choose": "Wybierz bibliotekę",
   "settings.backups.merge.noSource": "Nie wybrano biblioteki.",

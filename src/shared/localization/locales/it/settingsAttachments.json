@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Giorni personalizzati",
   "settings.attachments.daysUnit": "giorni",
   "settings.attachments.title": "Allegati locali",
+  "settings.attachments.searchTerms": "pulizia allegati|pulisci allegati|rimuovi allegati inutili|allegati inutilizzati",
   "settings.attachments.error": "Impossibile completare l’operazione sugli allegati. Riprova.",
   "settings.attachments.used": "Spazio utilizzato",
   "settings.attachments.refresh": "Aggiorna",

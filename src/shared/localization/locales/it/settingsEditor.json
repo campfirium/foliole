@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "Doppio clic sul testo per modificare",
   "settings.search.editorImmersiveDoubleClick.description": "Nella lettura immersiva, fai doppio clic sul corpo del documento per modificarlo. Disattiva questa opzione per continuare a usare il doppio clic per selezionare il testo; Invio consente comunque di modificare.",
+  "settings.search.cleanFormatting.path": "Apri un argomento modificabile e scegli «Pulisci formattazione...» dal menu in alto a destra nell’editor o dal menu contestuale del corpo del testo.",
+  "settings.search.cleanFormatting.terms": "pulizia formattazione|rimuovi formattazione|cancella formattazione|pulisci formattazione",
+  "settings.search.imageCloze.path": "In un argomento, trascina per disegnare un rettangolo sulla parte da nascondere di un’immagine salvata in locale, poi fai clic sul segno di spunta.",
+  "settings.search.imageCloze.terms": "occlusione immagine|cloze su immagine|maschera immagine",
+  "settings.search.formulaCloze.path": "In un argomento, trascina il puntatore sulla parte della formula visualizzata che vuoi nascondere.",
+  "settings.search.formulaCloze.terms": "cloze matematico|cloze di equazione|occlusione formula|maschera matematica",
   "settings.editor.readingMode.section": "Modalità di lettura",
   "settings.editor.readingMode.aria": "Sezione delle impostazioni della modalità di lettura"
 }
