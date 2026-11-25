@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Исходное изображение",
   "companion.imageCloze.region": "Маска {number}",
   "companion.imageCloze.missing": "Изображение недоступно. Отмените действие и откройте его снова после восстановления.",
-  "companion.imageCloze.failed": "Не удалось сохранить пропуски на изображении. Изменения сохранены; повторите попытку. Если статья изменилась, отмените действие и откройте изображение снова.",
+  "companion.imageCloze.failed": "Не удалось сохранить пропуски на изображении. Изменения сохранены; повторите попытку. Если тема изменилась, отмените действие и откройте изображение снова.",
   "companion.imageCloze.zoomOut": "Уменьшить масштаб",
   "companion.imageCloze.zoomIn": "Увеличить масштаб",
   "companion.imageCloze.adjust": "Настроить маски",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Убрать фокус",
   "companion.imageCloze.removeCrop": "Убрать обрезку",
   "companion.imageCloze.savingRect": "Сохранение…",
-  "companion.imageCloze.rectFailed": "Не удалось сохранить. Ваши изменения не потеряны; повторите попытку. Если статья изменилась, отмените и снова откройте изображение."
+  "companion.imageCloze.rectFailed": "Не удалось сохранить. Ваши изменения не потеряны; повторите попытку. Если тема изменилась, отмените и снова откройте изображение."
 }

@@ -22,7 +22,7 @@ vi.mock('@capacitor/core', async () => {
 });
 
 const selectionTitle = 'Only check when selected answer is longer than';
-const frontTitle = 'Then guard when generated card front is longer than';
+const frontTitle = 'Then check if the front of the new item is longer than';
 const modeTitle = 'Long cloze mistake guard';
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 const answer = 'Selected answer';

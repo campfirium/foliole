@@ -38,7 +38,7 @@
   "settings.general.dataMigration.section": "Migration de données",
   "settings.general.dataMigration.superMemo": "Migrer depuis SuperMemo",
   "settings.general.agentControl.searchTerms": "Agent Control",
-  "settings.general.agentControl.learningImportDescription": "Laissez la CLI et d’autres outils locaux définir les plannings et les priorités lors de la création de sujets et de cartes dans la bibliothèque actuelle. Ils peuvent aussi modifier la priorité des documents et des dossiers existants.",
+  "settings.general.agentControl.learningImportDescription": "Laissez la CLI et d’autres outils locaux définir les plannings et les priorités lors de la création de sujets et d’éléments dans la bibliothèque actuelle. Ils peuvent aussi modifier la priorité des documents et des dossiers existants.",
   "settings.general.agentControl.learningImportError": "Impossible de charger ou d’enregistrer l’autorisation d’import d’apprentissage.",
   "settings.general.aide.settingsRow": "Réglages d’Aide",
   "settings.general.aide.settingsDescription": "Modèles, données de conversation, et ce qu’Aide peut voir et modifier.",

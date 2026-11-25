@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "Globale Erfassungseinstellungen",
   "settings.capture.sectionTitle": "Globale Erfassung",
-  "settings.capture.sectionDescription": "Markieren Sie Inhalte in einer anderen App und drücken Sie das Tastenkürzel, um sie im Foliole-Posteingang zu speichern. Ohne Auswahl öffnet sich ein Textfeld. Schreiben Sie eine Notiz oder lassen Sie das Feld leer und drücken Sie die Eingabetaste, um die Zwischenablage zu importieren.",
+  "settings.capture.sectionDescription": "Wähle Inhalte in einer anderen App aus und speichere sie per Tastenkürzel im Foliole-Posteingang. Ohne Auswahl öffnet das Kürzel ein Textfeld. Gib Text zum Speichern ein oder drücke im leeren Feld die Eingabetaste, um die Zwischenablage zu importieren.",
   "settings.capture.accessibility.title": "Bedienungshilfen-Berechtigung",
   "settings.capture.accessibility.authorized": "Erteilt",
   "settings.capture.accessibility.unauthorized": "Nicht erteilt",

@@ -42,7 +42,7 @@
   "desktop.editor.imageFailure.forgetLearnedSource": "忘記本網站的學習來源",
   "desktop.editor.openInBrowserHint": "按住 {modifier} 鍵點擊以在瀏覽器中開啟",
   "desktop.clozeGuard.title": "確認動作",
-  "desktop.clozeGuard.description": "在這裡創建完形填空將產生一張巨大的卡片。",
+  "desktop.clozeGuard.description": "在這裡建立挖空會產生過長的檢測項。",
   "desktop.clozeGuard.openSettings": "打開完形填空防護設置",
   "desktop.clozeGuard.settingsTitle": "完形填空防護設置",
   "desktop.clozeGuard.highlight": "亮點",

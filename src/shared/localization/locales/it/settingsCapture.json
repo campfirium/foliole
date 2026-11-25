@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "Impostazioni di acquisizione globali",
   "settings.capture.sectionTitle": "Cattura globale",
-  "settings.capture.sectionDescription": "Seleziona del contenuto in un’altra app e premi la scorciatoia per salvarlo nella posta in arrivo di Foliole. Senza una selezione, si apre un campo di testo. Scrivi una nota oppure lascia il campo vuoto e premi Invio per importare gli appunti.",
+  "settings.capture.sectionDescription": "Seleziona del contenuto in un’altra app e premi la scorciatoia per salvarlo nella posta in arrivo di Foliole. Senza una selezione, si apre un campo di testo. Scrivi del testo per salvarlo o lascia il campo vuoto e premi Invio per importare gli appunti.",
   "settings.capture.accessibility.title": "Autorizzazione di accessibilità",
   "settings.capture.accessibility.authorized": "Concessa",
   "settings.capture.accessibility.unauthorized": "Non concessa",

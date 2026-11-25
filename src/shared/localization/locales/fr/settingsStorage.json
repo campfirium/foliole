@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Gestion du sujet source",
   "settings.backups.sourceHandling.savedTitle": "Gestion des sujets sources enregistrés",
   "settings.backups.sourceHandling.description": "Conserve les états rejetés et supprimés pour les sujets sources des dossiers liés et des sources Readwise Reader, donc la reconnexion ou la resynchronisation de ces sources ne ramène pas les sujets traités comme actifs.",
-  "settings.backups.sourceHandling.meta": "{count} entrées / {size}",
+  "settings.backups.sourceHandling.meta": "{count} enregistrements / {size}",
   "settings.backups.sourceHandling.import": "Gestion des sujets sources enregistrés lors de l'importation",
   "settings.backups.sourceHandling.export": "Exporter la gestion des sujets sources enregistrés",
   "settings.backups.sourceHandling.clear": "Effacer la gestion du sujet source enregistré",

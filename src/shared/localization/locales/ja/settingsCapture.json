@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "グローバル キャプチャ設定",
   "settings.capture.sectionTitle": "グローバル キャプチャ",
-  "settings.capture.sectionDescription": "別のアプリで内容を選択してショートカットキーを押すと、Foliole の受信トレイに保存できます。何も選択していない場合は入力欄が開きます。メモを入力するか、空欄のまま Enter キーを押してクリップボードの内容を取り込めます。",
+  "settings.capture.sectionDescription": "別のアプリで内容を選択してショートカットキーを押すと、Foliole の受信トレイに保存されます。選択していない場合は入力欄が開きます。テキストを入力して保存するか、空欄のまま Enter キーを押してクリップボードから取り込めます。",
   "settings.capture.accessibility.title": "アクセシビリティの許可",
   "settings.capture.accessibility.authorized": "許可済み",
   "settings.capture.accessibility.unauthorized": "未許可",

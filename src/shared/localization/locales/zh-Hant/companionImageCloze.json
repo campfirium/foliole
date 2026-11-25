@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "原始圖片",
   "companion.imageCloze.region": "遮罩 {number}",
   "companion.imageCloze.missing": "圖片無法使用。請取消，待圖片還原後重新開啟。",
-  "companion.imageCloze.failed": "無法儲存圖片挖空。修改仍保留，請重試。若文章已變更，請取消後重新開啟圖片。",
+  "companion.imageCloze.failed": "無法儲存圖片挖空。修改仍保留，請重試。若主題已變更，請取消後重新開啟圖片。",
   "companion.imageCloze.zoomOut": "縮小",
   "companion.imageCloze.zoomIn": "放大",
   "companion.imageCloze.adjust": "調整遮罩",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "移除聚焦",
   "companion.imageCloze.removeCrop": "移除裁切",
   "companion.imageCloze.savingRect": "正在儲存…",
-  "companion.imageCloze.rectFailed": "未能儲存，修改仍會保留。請重試；若文章已變更，請取消後重新開啟圖片。"
+  "companion.imageCloze.rectFailed": "未能儲存，修改仍會保留。請重試；若主題已變更，請取消後重新開啟圖片。"
 }

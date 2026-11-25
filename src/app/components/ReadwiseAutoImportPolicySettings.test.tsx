@@ -33,8 +33,8 @@ function expectSelection(selectName: string, optionName: string) {
 
 it('keeps the folder policy on article and book rows backed by article and EPUB fields', async () => {
   const onChangePolicy = renderPolicy('relay');
-  expectSelection('Articles with highlights destination', 'Inbox');
-  expectSelection('Articles without highlights destination', "Don't import");
+  expectSelection('Source articles with highlights destination', 'Inbox');
+  expectSelection('Source articles without highlights destination', "Don't import");
   expectSelection('Books with highlights destination', 'Inbox');
   expectSelection('Books without highlights destination', 'Inbox');
 
@@ -54,7 +54,7 @@ it('shows fourteen exact defaults across the seven API parent categories', async
   })).toBeInTheDocument());
 
   const selected = [
-    ['Articles', 'Inbox', "Don't import"], ['Emails', 'Inbox', "Don't import"],
+    ['Source articles', 'Inbox', "Don't import"], ['Emails', 'Inbox', "Don't import"],
     ['RSS', 'Inbox', "Don't import"], ['PDFs', 'Inbox', 'Inbox'],
     ['EPUBs', 'Inbox', 'Inbox'], ['Videos', 'Inbox', "Don't import"],
     ['Tweets', 'Inbox', "Don't import"]

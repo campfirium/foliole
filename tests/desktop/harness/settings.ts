@@ -118,7 +118,7 @@ export async function connectAndCutoverReadwiseApi(
   if (destination) {
     const name = destination === 'inbox' ? /^(Inbox|收件箱)$/ : /^(External document library|外部文档库)$/;
     await settingsDialog.getByRole('combobox', {
-      name: /^(Articles without highlights destination|无高亮文章的目标)$/
+      name: /^(Source articles without highlights destination|无高亮的来源文章导入位置)$/
     }).click();
     await windowPage.getByRole('menuitem', { name }).click();
   }

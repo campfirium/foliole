@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "Configurações de captura global",
   "settings.capture.sectionTitle": "Captura global",
-  "settings.capture.sectionDescription": "Selecione conteúdo em outro app e pressione o atalho para salvá-lo na caixa de entrada do Foliole. Sem uma seleção, o atalho abre um campo de texto. Digite uma nota ou deixe o campo vazio e pressione Enter para importar a área de transferência.",
+  "settings.capture.sectionDescription": "Selecione conteúdo em outro app e pressione o atalho para salvá-lo na caixa de entrada do Foliole. Sem uma seleção, o atalho abre um campo de texto. Digite texto para salvá-lo ou deixe o campo vazio e pressione Enter para importar a área de transferência.",
   "settings.capture.accessibility.title": "Permissão de acessibilidade",
   "settings.capture.accessibility.authorized": "Concedida",
   "settings.capture.accessibility.unauthorized": "Não concedida",

@@ -104,10 +104,10 @@ it('separates virtual folder removal from deleting the Topic', () => {
 
   const menu = screen.getByRole('menu');
   const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
-  expect(labels.slice(-2)).toEqual(['Remove from This Virtual Entry', 'Delete']);
-  expect(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' }).className)
+  expect(labels.slice(-2)).toEqual(['Remove from this Virtual folder', 'Delete']);
+  expect(screen.getByRole('menuitem', { name: 'Remove from this Virtual folder' }).className)
     .not.toContain('text-error/90');
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from this Virtual folder' }));
   expect(onRemove).toHaveBeenCalledOnce();
 });
 

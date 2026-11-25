@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "Paramètres de capture globaux",
   "settings.capture.sectionTitle": "Capture globale",
-  "settings.capture.sectionDescription": "Sélectionnez du contenu dans une autre app et utilisez le raccourci pour l’enregistrer dans la boîte de réception de Foliole. Sans sélection, le raccourci ouvre un champ de texte. Saisissez une note ou laissez le champ vide et appuyez sur Entrée pour importer le presse-papiers.",
+  "settings.capture.sectionDescription": "Sélectionnez du contenu dans une autre app et utilisez le raccourci pour l’enregistrer dans la boîte de réception de Foliole. Sans sélection, le raccourci ouvre un champ de texte. Saisissez du texte pour l’enregistrer, ou laissez le champ vide et appuyez sur Entrée pour importer le presse-papiers.",
   "settings.capture.accessibility.title": "Autorisation d’accessibilité",
   "settings.capture.accessibility.authorized": "Accordée",
   "settings.capture.accessibility.unauthorized": "Non accordée",

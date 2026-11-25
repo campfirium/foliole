@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Gestione degli argomenti di origine",
   "settings.backups.sourceHandling.savedTitle": "Gestione degli argomenti di origine salvati",
   "settings.backups.sourceHandling.description": "Mantiene gli stati ignorati ed eliminati per gli argomenti di origine dalle cartelle collegate e dalle origini di Readwise Reader, quindi la riconnessione o la risincronizzazione di tali origini non riporta gli argomenti gestiti come attivi.",
-  "settings.backups.sourceHandling.meta": "{count} voci / {size}",
+  "settings.backups.sourceHandling.meta": "{count} record / {size}",
   "settings.backups.sourceHandling.import": "Importa la gestione degli argomenti di origine salvati",
   "settings.backups.sourceHandling.export": "Esporta la gestione degli argomenti di origine salvati",
   "settings.backups.sourceHandling.clear": "Cancella la gestione degli argomenti di origine salvati",

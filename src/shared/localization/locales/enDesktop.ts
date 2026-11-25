@@ -198,9 +198,9 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.readwise.behavior.withoutHighlights.description': 'Readwise Reader content without highlights can go to Inbox, be added to the external document library, or be left unhandled.',
   'desktop.readwise.behavior.withoutHighlights.aria': 'Content without highlights destination',
   'desktop.readwise.destination.inbox': 'Inbox',
-  'desktop.readwise.behavior.article.title': 'Articles',
-  'desktop.readwise.behavior.article.withHighlights.aria': 'Articles with highlights destination',
-  'desktop.readwise.behavior.article.withoutHighlights.aria': 'Articles without highlights destination',
+  'desktop.readwise.behavior.article.title': 'Source articles',
+  'desktop.readwise.behavior.article.withHighlights.aria': 'Source articles with highlights destination',
+  'desktop.readwise.behavior.article.withoutHighlights.aria': 'Source articles without highlights destination',
   'desktop.readwise.behavior.book.title': 'Books',
   'desktop.readwise.behavior.book.withHighlights.aria': 'Books with highlights destination',
   'desktop.readwise.behavior.book.withoutHighlights.aria': 'Books without highlights destination',
@@ -223,7 +223,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.readwise.parser.highlightSeparator.description': 'How each highlight usually starts, for example - or >. Leave it empty only if your highlights are split by blank lines instead. Use \\n for line breaks.',
   'desktop.readwise.parser.tagKeyword.title': 'Tag starter',
   'desktop.readwise.parser.tagKeyword.description': 'The tag line starter, for example Tags:. Fill only the core starter text, not the leading spaces or list marker.',
-  'desktop.readwise.parser.noteKeyword.title': 'Note marker',
-  'desktop.readwise.parser.noteKeyword.description': 'The note line marker, for example Note:. Fill only the core marker text, not the leading spaces or list marker.',
+  'desktop.readwise.parser.noteKeyword.title': 'Readwise note marker',
+  'desktop.readwise.parser.noteKeyword.description': 'The marker at the start of a Readwise note line, for example Note:. Enter only the marker text, without leading spaces or the list marker.',
   'desktop.readwise.cancel': 'Cancel'
 } as const;

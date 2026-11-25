@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "Sauvegarde vérifiée",
   "companion.settings.storage.restoreSource": "Sauvegarde",
   "companion.settings.storage.restoreMadeOn": "Créée le",
-  "companion.settings.storage.restoreEntries": "Entrées",
+  "companion.settings.storage.restoreEntries": "Documents",
   "companion.settings.storage.restoreLastChanged": "Dernière modification",
   "companion.settings.storage.restoreAttachments": "Pièces jointes",
   "companion.settings.storage.restoreAttachmentsIncluded": "{count} incluses",

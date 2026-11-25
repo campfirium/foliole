@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "소스 주제 처리",
   "settings.backups.sourceHandling.savedTitle": "저장된 소스 주제 처리",
   "settings.backups.sourceHandling.description": "연결된 폴더 및 Readwise 리더 소스의 소스 항목에 대해 해제 및 삭제된 상태를 유지하므로 해당 소스를 다시 연결하거나 다시 동기화해도 처리된 항목이 다시 활성 상태로 돌아가지 않습니다.",
-  "settings.backups.sourceHandling.meta": "{count} 항목 / {size}",
+  "settings.backups.sourceHandling.meta": "기록 {count}개 / {size}",
   "settings.backups.sourceHandling.import": "저장된 소스 주제 처리 가져오기",
   "settings.backups.sourceHandling.export": "저장된 소스 주제 내보내기 처리",
   "settings.backups.sourceHandling.clear": "저장된 소스 주제 처리 지우기",

@@ -151,7 +151,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.restoreReady': '备份已检查',
   'companion.settings.storage.restoreSource': '备份',
   'companion.settings.storage.restoreMadeOn': '来自设备',
-  'companion.settings.storage.restoreEntries': '条目',
+  'companion.settings.storage.restoreEntries': '材料',
   'companion.settings.storage.restoreLastChanged': '最后修改',
   'companion.settings.storage.restoreAttachments': '附件',
   'companion.settings.storage.restoreAttachmentsIncluded': '包含 {count} 个',

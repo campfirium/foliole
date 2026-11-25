@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Imagen original",
   "companion.imageCloze.region": "Máscara {number}",
   "companion.imageCloze.missing": "La imagen no está disponible. Cancela y vuelve a abrirla cuando se restaure.",
-  "companion.imageCloze.failed": "No se pudo guardar la imagen con huecos. Se conservan tus cambios; inténtalo de nuevo. Si el artículo cambió, cancela y vuelve a abrir la imagen.",
+  "companion.imageCloze.failed": "No se pudo guardar la imagen con huecos. Se conservan tus cambios; inténtalo de nuevo. Si el tema cambió, cancela y vuelve a abrir la imagen.",
   "companion.imageCloze.zoomOut": "Alejar",
   "companion.imageCloze.zoomIn": "Acercar",
   "companion.imageCloze.adjust": "Ajustar máscaras",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Quitar enfoque",
   "companion.imageCloze.removeCrop": "Quitar recorte",
   "companion.imageCloze.savingRect": "Guardando…",
-  "companion.imageCloze.rectFailed": "No se pudo guardar. Tus cambios se conservan; inténtalo de nuevo. Si el artículo cambió, cancela y vuelve a abrir la imagen."
+  "companion.imageCloze.rectFailed": "No se pudo guardar. Tus cambios se conservan; inténtalo de nuevo. Si el tema cambió, cancela y vuelve a abrir la imagen."
 }

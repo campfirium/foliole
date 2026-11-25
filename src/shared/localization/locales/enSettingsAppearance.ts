@@ -110,7 +110,7 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.topicList.sectionAria': 'Topic list row spacing settings section',
   'settings.appearance.folderSections.title': 'Folder panel',
   'settings.appearance.folderSections.retainedRows': 'Rows pinned with section titles',
-  'settings.appearance.folderSections.retainedRowsDescription': 'Choose how many entries stay visible with each section title while scrolling.',
+  'settings.appearance.folderSections.retainedRowsDescription': 'Choose how many rows stay visible with each section title while scrolling.',
   'settings.appearance.folderSections.gapDescription': 'Set the space between sections in pixels.',
   'settings.appearance.folderSections.gap': 'Spacing between sections',
   'settings.appearance.topicList.rowSpacing.title': 'Row spacing',

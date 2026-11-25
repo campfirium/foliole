@@ -121,7 +121,7 @@ it('restores all attached content settings from the section header', async () =>
   fireEvent.change(budget, { target: { value: '1800' } });
   fireEvent.click(within(dialog).getByRole('switch', { name: 'Attach Path and membership' }));
   await waitFor(() => expect(previewSections(dialog)).not.toContain('location'));
-  fireEvent.keyDown(within(dialog).getByRole('button', { name: /^Reorder Related notes/u }), { key: 'ArrowUp' });
+  fireEvent.keyDown(within(dialog).getByRole('button', { name: /^Reorder Related annotations/u }), { key: 'ArrowUp' });
   const rows = [...dialog.querySelectorAll('[data-attached-context-item]')].map((node) => node.getAttribute('data-attached-context-item'));
   expect(rows.slice(-2)).toEqual(['annotations', 'location']);
   await waitFor(() => expect(assistantRuntime.saveAssistantAttachedContextSettings).toHaveBeenCalled());

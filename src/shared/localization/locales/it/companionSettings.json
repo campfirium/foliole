@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "Backup verificato",
   "companion.settings.storage.restoreSource": "Backup",
   "companion.settings.storage.restoreMadeOn": "Creato il",
-  "companion.settings.storage.restoreEntries": "Voci",
+  "companion.settings.storage.restoreEntries": "Materiali",
   "companion.settings.storage.restoreLastChanged": "Ultima modifica",
   "companion.settings.storage.restoreAttachments": "Allegati",
   "companion.settings.storage.restoreAttachmentsIncluded": "{count} inclusi",

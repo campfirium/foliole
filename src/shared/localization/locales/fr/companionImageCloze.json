@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Image originale",
   "companion.imageCloze.region": "Masque {number}",
   "companion.imageCloze.missing": "L’image est indisponible. Annulez et rouvrez-la une fois restaurée.",
-  "companion.imageCloze.failed": "Impossible d’enregistrer le texte à trous sur image. Vos modifications sont conservées ; réessayez. Si l’article a changé, annulez et rouvrez l’image.",
+  "companion.imageCloze.failed": "Impossible d’enregistrer le texte à trous sur image. Vos modifications sont conservées ; réessayez. Si le sujet a changé, annulez et rouvrez l’image.",
   "companion.imageCloze.zoomOut": "Zoom arrière",
   "companion.imageCloze.zoomIn": "Zoom avant",
   "companion.imageCloze.adjust": "Ajuster les masques",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Retirer le cadrage",
   "companion.imageCloze.removeCrop": "Retirer le recadrage",
   "companion.imageCloze.savingRect": "Enregistrement…",
-  "companion.imageCloze.rectFailed": "Impossible d’enregistrer. Vos modifications sont conservées ; réessayez. Si l’article a changé, annulez puis rouvrez l’image."
+  "companion.imageCloze.rectFailed": "Impossible d’enregistrer. Vos modifications sont conservées ; réessayez. Si le sujet a changé, annulez puis rouvrez l’image."
 }

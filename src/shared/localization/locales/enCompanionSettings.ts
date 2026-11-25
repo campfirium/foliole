@@ -151,7 +151,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.restoreReady': 'Backup checked',
   'companion.settings.storage.restoreSource': 'Backup',
   'companion.settings.storage.restoreMadeOn': 'Made on',
-  'companion.settings.storage.restoreEntries': 'Entries',
+  'companion.settings.storage.restoreEntries': 'Materials',
   'companion.settings.storage.restoreLastChanged': 'Last changed',
   'companion.settings.storage.restoreAttachments': 'Attachments',
   'companion.settings.storage.restoreAttachmentsIncluded': '{count} included',

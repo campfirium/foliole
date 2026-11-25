@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "전역 캡처 설정",
   "settings.capture.sectionTitle": "글로벌 캡처",
-  "settings.capture.sectionDescription": "다른 앱에서 내용을 선택하고 단축키를 누르면 Foliole의 받은 편지함에 저장됩니다. 선택한 내용이 없으면 입력 칸이 열립니다. 메모를 입력하거나, 입력 칸을 비운 채 Enter 키를 눌러 클립보드 내용을 가져올 수 있습니다.",
+  "settings.capture.sectionDescription": "다른 앱에서 내용을 선택하고 단축키를 누르면 Foliole의 받은 편지함에 저장됩니다. 선택한 내용이 없으면 입력 칸이 열립니다. 텍스트를 입력해 저장하거나, 빈 칸에서 Enter 키를 눌러 클립보드 내용을 가져오세요.",
   "settings.capture.accessibility.title": "손쉬운 사용 권한",
   "settings.capture.accessibility.authorized": "허용됨",
   "settings.capture.accessibility.unauthorized": "허용되지 않음",

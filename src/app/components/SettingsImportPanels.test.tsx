@@ -93,8 +93,8 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   expect(screen.getByText('Set import types and destinations.')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Manual import' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Import settings' })).toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Articles with highlights destination' })).toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Articles without highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Source articles with highlights destination' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Source articles without highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Books with highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Books without highlights destination' })).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Sync frequency' })).toHaveValue('hourly');
@@ -108,7 +108,7 @@ it('shows the restored Readwise Reader setup directly in settings', () => {
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   expect(
     screen
-      .getByRole('combobox', { name: 'Articles with highlights destination' })
+      .getByRole('combobox', { name: 'Source articles with highlights destination' })
       .compareDocumentPosition(screen.getByText('Readwise root folder'))
   ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });

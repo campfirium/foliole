@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "Повторить попытку",
   "settings.appearance.folderSections.title": "Панель папок",
   "settings.appearance.folderSections.retainedRows": "Строки, закрепленные заголовками разделов",
-  "settings.appearance.folderSections.retainedRowsDescription": "Выберите, сколько записей будет отображаться вместе с заголовком каждого раздела при прокрутке.",
+  "settings.appearance.folderSections.retainedRowsDescription": "Выберите, сколько строк остаётся видимыми с заголовком каждого раздела при прокрутке.",
   "settings.appearance.folderSections.gapDescription": "Задайте расстояние между разделами в пикселях.",
   "settings.appearance.folderSections.gap": "Расстояние между секциями",
   "settings.appearance.sidebarLayout.title": "Макет боковых панелей",

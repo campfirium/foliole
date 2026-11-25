@@ -197,9 +197,9 @@
   "desktop.readwise.behavior.withoutHighlights.description": "बिना हाइलाइट वाली Readwise Reader सामग्री इनबॉक्स या बाहरी दस्तावेज़ लाइब्रेरी में जा सकती है। आप उसे छोड़ भी सकते हैं।",
   "desktop.readwise.behavior.withoutHighlights.aria": "बिना हाइलाइट वाली सामग्री कहाँ जाए",
   "desktop.readwise.destination.inbox": "इनबॉक्स",
-  "desktop.readwise.behavior.article.title": "लेख",
-  "desktop.readwise.behavior.article.withHighlights.aria": "हाइलाइट वाले लेख कहाँ जाएँ",
-  "desktop.readwise.behavior.article.withoutHighlights.aria": "बिना हाइलाइट वाले लेख कहाँ जाएँ",
+  "desktop.readwise.behavior.article.title": "स्रोत लेख",
+  "desktop.readwise.behavior.article.withHighlights.aria": "हाइलाइट वाले स्रोत लेखों का गंतव्य",
+  "desktop.readwise.behavior.article.withoutHighlights.aria": "बिना हाइलाइट वाले स्रोत लेखों का गंतव्य",
   "desktop.readwise.behavior.book.title": "किताबें",
   "desktop.readwise.behavior.book.withHighlights.aria": "हाइलाइट वाली किताबें कहाँ जाएँ",
   "desktop.readwise.behavior.book.withoutHighlights.aria": "बिना हाइलाइट वाली किताबें कहाँ जाएँ",
@@ -222,8 +222,8 @@
   "desktop.readwise.parser.highlightSeparator.description": "हर हाइलाइट की सामान्य शुरुआत, जैसे - या >। अगर हाइलाइट सिर्फ़ खाली पंक्तियों से अलग हैं, तभी इसे खाली छोड़ें। नई पंक्ति के लिए \\n लिखें।",
   "desktop.readwise.parser.tagKeyword.title": "टैग लाइन की शुरुआत",
   "desktop.readwise.parser.tagKeyword.description": "टैग लाइन की शुरुआत, जैसे Tags:। सिर्फ़ शुरुआती चिह्न का टेक्स्ट डालें। उससे पहले के स्पेस या सूची चिह्न न डालें।",
-  "desktop.readwise.parser.noteKeyword.title": "नोट लाइन का चिह्न",
-  "desktop.readwise.parser.noteKeyword.description": "नोट लाइन की शुरुआत, जैसे Note:। सिर्फ़ चिह्न का टेक्स्ट डालें। उससे पहले के स्पेस या सूची चिह्न न डालें।",
+  "desktop.readwise.parser.noteKeyword.title": "Readwise नोट का चिह्न",
+  "desktop.readwise.parser.noteKeyword.description": "Readwise नोट की पंक्ति की शुरुआत का चिह्न, जैसे Note:। सिर्फ़ चिह्न का टेक्स्ट डालें, शुरू के स्पेस या सूची का चिह्न छोड़ दें।",
   "desktop.readwise.cancel": "रद्द करें",
   "desktop.palette.command.actionTips": "कार्रवाई के सुझाव"
 }

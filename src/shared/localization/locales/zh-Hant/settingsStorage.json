@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "源主題處理",
   "settings.backups.sourceHandling.savedTitle": "保存的來源主題處理",
   "settings.backups.sourceHandling.description": "保持連結資料夾和 Readwise Reader 來源中來源主題的已關閉和已刪除狀態，因此重新連線或重新同步這些來源不會使已處理的主題恢復為活動狀態。",
-  "settings.backups.sourceHandling.meta": "{count} 條目 / {size}",
+  "settings.backups.sourceHandling.meta": "{count} 筆記錄 / {size}",
   "settings.backups.sourceHandling.import": "導入已儲存的來源主題處理",
   "settings.backups.sourceHandling.export": "匯出已儲存的來源主題處理",
   "settings.backups.sourceHandling.clear": "清除已儲存的來源主題處理",

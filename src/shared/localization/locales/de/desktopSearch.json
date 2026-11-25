@@ -42,7 +42,7 @@
   "desktop.editor.imageFailure.forgetLearnedSource": "Vergessen Sie die gelernte Quelle für diese Site",
   "desktop.editor.openInBrowserHint": "{modifier}-Klick zum Öffnen im Browser",
   "desktop.clozeGuard.title": "Aktion bestätigen",
-  "desktop.clozeGuard.description": "Wenn Sie hier einen Lückentext erstellen, wird die Karte sehr umfangreich.",
+  "desktop.clozeGuard.description": "Ein Lückentext an dieser Stelle würde eine zu lange Aufgabe erzeugen.",
   "desktop.clozeGuard.openSettings": "Lückentext-Einstellungen öffnen",
   "desktop.clozeGuard.settingsTitle": "Lückentext-Einstellungen",
   "desktop.clozeGuard.highlight": "Hervorheben",

@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Manejo del tema fuente",
   "settings.backups.sourceHandling.savedTitle": "Manejo del tema fuente guardado",
   "settings.backups.sourceHandling.description": "Mantiene los estados descartados y eliminados de los temas de origen de las carpetas vinculadas y de los orígenes del lector Readwise, por lo que volver a conectar o sincronizar esos orígenes no hace que los temas manejados vuelvan a estar activos.",
-  "settings.backups.sourceHandling.meta": "{count} entradas / {size}",
+  "settings.backups.sourceHandling.meta": "{count} registros / {size}",
   "settings.backups.sourceHandling.import": "Importar manejo del tema fuente guardado",
   "settings.backups.sourceHandling.export": "Exportar manejo del tema fuente guardado",
   "settings.backups.sourceHandling.clear": "Borrar manejo del tema fuente guardado",

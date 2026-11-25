@@ -200,9 +200,9 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.readwise.behavior.withoutHighlights.description': '无高亮的 Readwise Reader 内容可进入收件箱、纳入外部文档库，或不处理。',
   'desktop.readwise.behavior.withoutHighlights.aria': '无高亮内容目标',
   'desktop.readwise.destination.inbox': '收件箱',
-  'desktop.readwise.behavior.article.title': '文章',
-  'desktop.readwise.behavior.article.withHighlights.aria': '含高亮文章的目标',
-  'desktop.readwise.behavior.article.withoutHighlights.aria': '无高亮文章的目标',
+  'desktop.readwise.behavior.article.title': '来源文章',
+  'desktop.readwise.behavior.article.withHighlights.aria': '含高亮的来源文章导入位置',
+  'desktop.readwise.behavior.article.withoutHighlights.aria': '无高亮的来源文章导入位置',
   'desktop.readwise.behavior.book.title': '书籍',
   'desktop.readwise.behavior.book.withHighlights.aria': '含高亮书籍的目标',
   'desktop.readwise.behavior.book.withoutHighlights.aria': '无高亮书籍的目标',
@@ -225,7 +225,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.readwise.parser.highlightSeparator.description': '每条高亮通常如何开始，例如 - 或 >。只有高亮用空行分隔时才留空。可用 \\n 表示换行。',
   'desktop.readwise.parser.tagKeyword.title': '标签标记',
   'desktop.readwise.parser.tagKeyword.description': '标签行起始标记，例如 Tags:。只填写核心标记文本，不包含前导空格或列表标记。',
-  'desktop.readwise.parser.noteKeyword.title': '备注标记',
-  'desktop.readwise.parser.noteKeyword.description': '备注行起始标记，例如 Note:。只填写核心标记文本，不包含前导空格或列表标记。',
+  'desktop.readwise.parser.noteKeyword.title': 'Readwise 备注标记',
+  'desktop.readwise.parser.noteKeyword.description': 'Readwise 备注行的起始标记，例如 Note:。只填写标记文本，无需输入前导空格或列表标记。',
   'desktop.readwise.cancel': '取消'
 };

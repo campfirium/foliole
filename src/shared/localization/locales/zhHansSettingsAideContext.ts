@@ -18,7 +18,7 @@ export const ZH_HANS_SETTINGS_AIDE_CONTEXT_TRANSLATIONS: Partial<Record<Translat
   'settings.aideDialog.context.item.location.title': '路径与归属',
   'settings.aideDialog.context.item.location.description': '文件夹路径、索引和专题',
   'settings.aideDialog.context.item.annotations.title': '关联批注',
-  'settings.aideDialog.context.item.annotations.description': '上下级条目中的批注、摘录和 Item',
+  'settings.aideDialog.context.item.annotations.description': '上下级材料中的批注、摘录和检测项',
   'settings.aideDialog.context.limit.aria': '{label}初始额度',
   'settings.aideDialog.context.toggle.aria': '附带{label}',
   'settings.aideDialog.context.move.aria': '调整{label}的顺序，用上下方向键移动',

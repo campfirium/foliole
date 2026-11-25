@@ -141,7 +141,7 @@
   "companion.settings.storage.restoreReady": "備份已檢查",
   "companion.settings.storage.restoreSource": "備份",
   "companion.settings.storage.restoreMadeOn": "來自裝置",
-  "companion.settings.storage.restoreEntries": "條目",
+  "companion.settings.storage.restoreEntries": "材料",
   "companion.settings.storage.restoreLastChanged": "最後修改",
   "companion.settings.storage.restoreAttachments": "附件",
   "companion.settings.storage.restoreAttachmentsIncluded": "包含 {count} 個",

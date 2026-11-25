@@ -89,7 +89,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editor.imageFailure.forgetLearnedSource': 'Forget learned source for this site',
   'desktop.editor.openInBrowserHint': '{modifier}-click to open in browser',
   'desktop.clozeGuard.title': 'Confirm action',
-  'desktop.clozeGuard.description': 'Creating a cloze here will result in a massive card.',
+  'desktop.clozeGuard.description': 'Creating a cloze here will produce an overly long item.',
   'desktop.clozeGuard.openSettings': 'Open cloze guard settings',
   'desktop.clozeGuard.settingsTitle': 'Cloze guard settings',
   'desktop.clozeGuard.highlight': 'Highlight',

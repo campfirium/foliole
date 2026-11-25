@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Manipulação de tópico de origem",
   "settings.backups.sourceHandling.savedTitle": "Tratamento de tópico de origem salvo",
   "settings.backups.sourceHandling.description": "Mantém estados descartados e excluídos para tópicos de origem de pastas vinculadas e fontes de leitor Readwise, portanto, reconectar ou ressincronizar essas fontes não traz os tópicos tratados de volta como ativos.",
-  "settings.backups.sourceHandling.meta": "Entradas {count} / {size}",
+  "settings.backups.sourceHandling.meta": "{count} registros / {size}",
   "settings.backups.sourceHandling.import": "Importar tratamento de tópico de origem salvo",
   "settings.backups.sourceHandling.export": "Exportar tratamento de tópico de origem salvo",
   "settings.backups.sourceHandling.clear": "Limpar tratamento de tópico de origem salvo",

@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "Kopia zapasowa sprawdzona",
   "companion.settings.storage.restoreSource": "Kopia zapasowa",
   "companion.settings.storage.restoreMadeOn": "Wykonana na",
-  "companion.settings.storage.restoreEntries": "Pozycje",
+  "companion.settings.storage.restoreEntries": "Materiały",
   "companion.settings.storage.restoreLastChanged": "Ostatnia zmiana",
   "companion.settings.storage.restoreAttachments": "Załączniki",
   "companion.settings.storage.restoreAttachmentsIncluded": "Uwzględniono: {count}",

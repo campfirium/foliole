@@ -43,7 +43,7 @@ it('moves the selected topics to another folder as one action and syncs the new 
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     selectAllInFolder('Inbox A');
     fireEvent.click(within(screen.getByTestId('companion-selection-action-bar')).getByRole('button', { name: 'Move' }));
-    const sheet = within(screen.getByRole('dialog', { name: 'Move 2 entries' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Move 2 materials' }));
     fireEvent.change(sheet.getByRole('searchbox'), { target: { value: 'Archive' } });
     fireEvent.click(sheet.getByRole('button', { name: 'Archive' }));
     fireEvent.click(sheet.getByRole('button', { name: 'Move to...' }));
@@ -73,7 +73,7 @@ it('offers only destinations valid for every selected folder when moving several
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Select' }));
     for (const title of ['Box B', 'Box A']) fireEvent.click(screen.getByRole('checkbox', { name: `Select ${title}` }));
     fireEvent.click(within(screen.getByTestId('companion-selection-action-bar')).getByRole('button', { name: 'Move' }));
-    const sheet = within(screen.getByRole('dialog', { name: 'Move 2 entries' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Move 2 materials' }));
     fireEvent.change(sheet.getByRole('searchbox'), { target: { value: 'Inner' } });
     expect(sheet.queryByRole('button', { name: /Inner/ })).toBeNull();
     fireEvent.change(sheet.getByRole('searchbox'), { target: { value: 'Target' } });
@@ -101,7 +101,7 @@ it('adds the selected topics to a Dive in one write and keeps them in their fold
     renderWithLocalization(<BatchDirectoryFixture initial={await readSnapshot()} />);
     selectAllInFolder('Shelf');
     fireEvent.click(within(screen.getByTestId('companion-selection-action-bar')).getByRole('button', { name: 'Add to Dive' }));
-    const sheet = within(screen.getByRole('dialog', { name: 'Add 2 entries to a Dive' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Add 2 materials to a Dive' }));
     fireEvent.click(sheet.getByRole('button', { name: 'Probability' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await peers.exchange();

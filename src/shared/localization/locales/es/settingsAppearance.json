@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "Reintentar",
   "settings.appearance.folderSections.title": "Panel de carpetas",
   "settings.appearance.folderSections.retainedRows": "Filas fijadas con títulos de sección",
-  "settings.appearance.folderSections.retainedRowsDescription": "Elija cuántas entradas permanecen visibles con el título de cada sección mientras se desplaza.",
+  "settings.appearance.folderSections.retainedRowsDescription": "Elige cuántas filas permanecen visibles con el título de cada sección al desplazarte.",
   "settings.appearance.folderSections.gapDescription": "Establezca el espacio entre secciones en píxeles.",
   "settings.appearance.folderSections.gap": "Espaciado entre secciones",
   "settings.appearance.sidebarLayout.title": "Diseño de la barra lateral",

@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Obsługa tematu źródłowego",
   "settings.backups.sourceHandling.savedTitle": "Zapisana obsługa tematu źródłowego",
   "settings.backups.sourceHandling.description": "Zachowuje stany odrzuconych i usuniętych tematów źródłowych z połączonych folderów i źródeł czytnika Readwise, więc ponowne podłączenie lub ponowna synchronizacja tych źródeł nie przywraca obsługiwanych tematów jako aktywnych.",
-  "settings.backups.sourceHandling.meta": "{count} wpisów / {size}",
+  "settings.backups.sourceHandling.meta": "Rekordy: {count} / {size}",
   "settings.backups.sourceHandling.import": "Importuj zapisaną obsługę tematów źródłowych",
   "settings.backups.sourceHandling.export": "Eksportuj zapisaną obsługę tematów źródłowych",
   "settings.backups.sourceHandling.clear": "Wyczyść zapisaną obsługę tematów źródłowych",

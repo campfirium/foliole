@@ -19,6 +19,6 @@ it('sends the current article from the desktop right-click menu without a select
       top={24}
     />
   );
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Send Article to Edge' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Send topic to Edge' }));
   expect(onRunCommand).toHaveBeenCalledExactlyOnceWith(APP_COMMAND_IDS.sendToEdge);
 });

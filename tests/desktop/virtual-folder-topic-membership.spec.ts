@@ -143,7 +143,7 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   await page.keyboard.press('Escape');
   await virtual.click({ button: 'right' });
   await page.getByRole('menuitem', {
-    name: /^(Remove from This Virtual Entry|从此索引中移除) · Reference source$/
+    name: /^(Remove from this Virtual folder|从此索引中移除) · Reference source$/
   }).click();
   await expect(topic).toHaveCount(0);
   const snapshot = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));

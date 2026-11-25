@@ -1,7 +1,7 @@
 {
   "settings.capture.sectionAria": "Globalne ustawienia przechwytywania",
   "settings.capture.sectionTitle": "Globalne przechwytywanie",
-  "settings.capture.sectionDescription": "Zaznacz treść w innej aplikacji i naciśnij skrót, aby zapisać ją w skrzynce odbiorczej Foliole. Gdy nic nie jest zaznaczone, otworzy się pole tekstowe. Wpisz notatkę albo pozostaw pole puste i naciśnij Enter, aby zaimportować zawartość schowka.",
+  "settings.capture.sectionDescription": "Zaznacz treść w innej aplikacji i naciśnij skrót, aby zapisać ją w skrzynce odbiorczej Foliole. Gdy nic nie jest zaznaczone, skrót otworzy pole tekstowe. Wpisz tekst, aby go zapisać, lub pozostaw pole puste i naciśnij Enter, aby zaimportować schowek.",
   "settings.capture.accessibility.title": "Uprawnienie dostępu w funkcjach dostępności",
   "settings.capture.accessibility.authorized": "Przyznane",
   "settings.capture.accessibility.unauthorized": "Nieprzyznane",

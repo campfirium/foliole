@@ -8,7 +8,7 @@ export const ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.source': '原图',
   'companion.imageCloze.region': '遮罩 {number}',
   'companion.imageCloze.missing': '图片暂不可用，请取消，待图片恢复后重新打开。',
-  'companion.imageCloze.failed': '未能保存图片挖空，修改仍保留。请重试；若文章已变化，请取消后重新打开图片。',
+  'companion.imageCloze.failed': '未能保存图片挖空，修改仍保留。请重试。若主题已变化，请取消后重新打开图片。',
   'companion.imageCloze.zoomOut': '缩小图片',
   'companion.imageCloze.zoomIn': '放大图片',
   'companion.imageCloze.adjust': '调整遮罩',
@@ -29,5 +29,5 @@ export const ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.removeFocus': '移除聚焦',
   'companion.imageCloze.removeCrop': '移除裁剪',
   'companion.imageCloze.savingRect': '正在保存…',
-  'companion.imageCloze.rectFailed': '未能保存，修改仍保留。请重试；若文章已变化，请取消后重新打开图片。',
+  'companion.imageCloze.rectFailed': '未能保存，修改仍保留。请重试。若主题已变化，请取消后重新打开图片。',
 } as const;

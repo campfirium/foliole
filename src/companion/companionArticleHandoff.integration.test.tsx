@@ -58,7 +58,7 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
   };
   const view = renderWithLocalization(<Actions activity={activity} close={close} />);
   try {
-    const share = screen.getByRole('button', { name: 'Share article' });
+    const share = screen.getByRole('button', { name: 'Share topic' });
     fireEvent.click(share);
     fireEvent.click(share);
     expect(nativeOpen).not.toHaveBeenCalled();
@@ -80,7 +80,7 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
     expect(screen.queryByRole('status')).toBeNull();
     expect(close).not.toHaveBeenCalled();
     fireEvent.click(share);
-    await screen.findByText('No app can open the article, or the article has no available text.');
+    await screen.findByText('No app can open the topic, or the topic has no available text.');
     expect(close).not.toHaveBeenCalled();
     fireEvent.click(share);
     await waitFor(() => expect(close).toHaveBeenCalledTimes(1));

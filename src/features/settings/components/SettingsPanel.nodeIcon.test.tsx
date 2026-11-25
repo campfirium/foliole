@@ -197,7 +197,7 @@ it('shows marker rows for the active marker kind', () => {
   openAppearance();
   openIconEditor();
 
-  expect(screen.getByRole('dialog', { name: 'Node icons' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Material icons' })).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Topics' })).not.toBeInTheDocument();
   expect(getMarkerRow('Topic (pending)')).toBeInTheDocument();
   expect(getMarkerRow('Topic (scheduled)')).toBeInTheDocument();
@@ -211,7 +211,7 @@ it('shows marker rows for the active marker kind', () => {
 it('keeps the settings page compact until the icon editor is opened', () => {
   openAppearance();
 
-  expect(screen.getByText('Node icons')).toBeInTheDocument();
+  expect(screen.getByText('Material icons')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Edit' }).querySelector('svg')).toBeNull();
   expect(screen.getAllByRole('group', { name: /^(Topic|Item) (icon|pending|scheduled|dismissed)$/ })).toHaveLength(7);
   expect(screen.queryByRole('group', { name: 'Item dismissed' })).not.toBeInTheDocument();

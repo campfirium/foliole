@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Imagem original",
   "companion.imageCloze.region": "Máscara {number}",
   "companion.imageCloze.missing": "A imagem está indisponível. Cancele e abra novamente após ela ser restaurada.",
-  "companion.imageCloze.failed": "Não foi possível salvar as lacunas em imagem. Suas alterações foram mantidas; tente novamente. Se o artigo mudou, cancele e abra a imagem novamente.",
+  "companion.imageCloze.failed": "Não foi possível salvar as lacunas em imagem. Suas alterações foram mantidas; tente novamente. Se o tópico mudou, cancele e abra a imagem novamente.",
   "companion.imageCloze.zoomOut": "Diminuir zoom",
   "companion.imageCloze.zoomIn": "Ampliar",
   "companion.imageCloze.adjust": "Ajustar máscaras",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Remover foco",
   "companion.imageCloze.removeCrop": "Remover corte",
   "companion.imageCloze.savingRect": "Salvando…",
-  "companion.imageCloze.rectFailed": "Não foi possível salvar. Suas alterações foram mantidas; tente novamente. Se o artigo mudou, cancele e abra a imagem de novo."
+  "companion.imageCloze.rectFailed": "Não foi possível salvar. Suas alterações foram mantidas; tente novamente. Se o tópico mudou, cancele e abra a imagem de novo."
 }

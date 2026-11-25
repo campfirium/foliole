@@ -37,7 +37,7 @@ test('adds an editor command to the right-click menu and runs it', async ({ desk
   await expect(editor).toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: 'Exit Flow', exact: true })).toBeVisible();
   await editor.click({ button: 'right' });
-  await expect(desktopWindow.getByRole('menuitem', { name: 'Send Article to Edge' })).toBeVisible();
+  await expect(desktopWindow.getByRole('menuitem', { name: 'Send topic to Edge' })).toBeVisible();
   await expect(desktopWindow.getByRole('menuitem', { name: 'Exit Flow' })).toHaveCount(0);
   const menuItem = desktopWindow.getByRole('menuitem', { name: 'Find in Topic' });
   await expect(menuItem).toBeVisible();

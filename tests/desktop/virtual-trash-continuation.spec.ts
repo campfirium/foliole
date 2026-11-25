@@ -69,7 +69,7 @@ test('continues in manual reference order and keeps a removed reference out of T
   expect((await collectNode(page, id('Bravo')))?.trashed).toBe(true);
 
   await row('Charlie').click({ button: 'right' });
-  await page.getByRole('menuitem', { name: /^(Remove from This Virtual Entry|从此索引中移除)$/ }).click();
+  await page.getByRole('menuitem', { name: /^(Remove from this Virtual folder|从此索引中移除)$/ }).click();
   await expect(row('Charlie')).toHaveCount(0);
   expect((await collectNode(page, id('Charlie')))?.trashed).toBe(false);
   await expect(body).toContainText('Alpha body');

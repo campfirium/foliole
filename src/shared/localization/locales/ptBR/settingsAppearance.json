@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "Tentar novamente",
   "settings.appearance.folderSections.title": "Painel de pastas",
   "settings.appearance.folderSections.retainedRows": "Linhas fixadas com títulos de seção",
-  "settings.appearance.folderSections.retainedRowsDescription": "Escolha quantas entradas permanecem visíveis com cada título de seção durante a rolagem.",
+  "settings.appearance.folderSections.retainedRowsDescription": "Escolha quantas linhas permanecem visíveis com o título de cada seção durante a rolagem.",
   "settings.appearance.folderSections.gapDescription": "Defina o espaço entre as seções em pixels.",
   "settings.appearance.folderSections.gap": "Espaçamento entre seções",
   "settings.appearance.sidebarLayout.title": "Layout da barra lateral",

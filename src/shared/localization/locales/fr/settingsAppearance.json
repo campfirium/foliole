@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "Réessayer",
   "settings.appearance.folderSections.title": "Panneau de dossiers",
   "settings.appearance.folderSections.retainedRows": "Lignes épinglées avec les titres de section",
-  "settings.appearance.folderSections.retainedRowsDescription": "Choisissez combien d’entrées restent visibles avec chaque titre de section lors du défilement.",
+  "settings.appearance.folderSections.retainedRowsDescription": "Choisissez combien de lignes restent visibles avec chaque titre de section lors du défilement.",
   "settings.appearance.folderSections.gapDescription": "Définissez l'espace entre les sections en pixels.",
   "settings.appearance.folderSections.gap": "Espacement entre les sections",
   "settings.appearance.sidebarLayout.title": "Disposition des barres latérales",

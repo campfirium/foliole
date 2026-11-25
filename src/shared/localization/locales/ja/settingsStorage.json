@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "ソーストピックの処理",
   "settings.backups.sourceHandling.savedTitle": "保存されたソース トピックの処理",
   "settings.backups.sourceHandling.description": "リンクされたフォルダーおよび Readwise リーダー ソースからのソース トピックの却下および削除状態が維持されるため、これらのソースを再接続または再同期しても、処理されたトピックはアクティブに戻りません。",
-  "settings.backups.sourceHandling.meta": "{count} エントリ / {size}",
+  "settings.backups.sourceHandling.meta": "{count} 件の記録 / {size}",
   "settings.backups.sourceHandling.import": "保存されたソース トピックのインポート処理",
   "settings.backups.sourceHandling.export": "保存されたソース トピックのエクスポート処理",
   "settings.backups.sourceHandling.clear": "保存されたソース トピックの処理をクリアします",

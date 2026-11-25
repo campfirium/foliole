@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "バックアップを確認しました",
   "companion.settings.storage.restoreSource": "バックアップ",
   "companion.settings.storage.restoreMadeOn": "作成元",
-  "companion.settings.storage.restoreEntries": "項目",
+  "companion.settings.storage.restoreEntries": "資料",
   "companion.settings.storage.restoreLastChanged": "最終更新",
   "companion.settings.storage.restoreAttachments": "添付ファイル",
   "companion.settings.storage.restoreAttachmentsIncluded": "{count} 個を含む",

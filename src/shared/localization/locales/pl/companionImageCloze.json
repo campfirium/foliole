@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Oryginalny obraz",
   "companion.imageCloze.region": "Maska {number}",
   "companion.imageCloze.missing": "Obraz jest niedostępny. Anuluj i otwórz go ponownie po przywróceniu.",
-  "companion.imageCloze.failed": "Nie udało się zapisać luk na obrazie. Zmiany zostały zachowane; spróbuj ponownie. Jeśli artykuł się zmienił, anuluj i ponownie otwórz obraz.",
+  "companion.imageCloze.failed": "Nie udało się zapisać luk na obrazie. Zmiany zostały zachowane; spróbuj ponownie. Jeśli temat się zmienił, anuluj i ponownie otwórz obraz.",
   "companion.imageCloze.zoomOut": "Pomniejsz",
   "companion.imageCloze.zoomIn": "Powiększ",
   "companion.imageCloze.adjust": "Dostosuj maski",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Usuń wyróżnienie",
   "companion.imageCloze.removeCrop": "Usuń przycięcie",
   "companion.imageCloze.savingRect": "Zapisywanie…",
-  "companion.imageCloze.rectFailed": "Nie udało się zapisać. Zmiany zostały zachowane; spróbuj ponownie. Jeśli artykuł się zmienił, anuluj i otwórz obraz ponownie."
+  "companion.imageCloze.rectFailed": "Nie udało się zapisać. Zmiany zostały zachowane; spróbuj ponownie. Jeśli temat się zmienił, anuluj i otwórz obraz ponownie."
 }

@@ -42,7 +42,7 @@
   "desktop.editor.imageFailure.forgetLearnedSource": "Zapomnij o poznanym źródle tej witryny",
   "desktop.editor.openInBrowserHint": "Kliknij, przytrzymując klawisz {modifier}, aby otworzyć w przeglądarce",
   "desktop.clozeGuard.title": "Potwierdź działanie",
-  "desktop.clozeGuard.description": "Utworzenie tutaj zamknięcia spowoduje powstanie ogromnej karty.",
+  "desktop.clozeGuard.description": "Utworzenie tu luki da zbyt długi element.",
   "desktop.clozeGuard.openSettings": "Otwórz ustawienia ochrony przed zamknięciem",
   "desktop.clozeGuard.settingsTitle": "Zamknij ustawienia strażnika",
   "desktop.clozeGuard.highlight": "Zaznacz",

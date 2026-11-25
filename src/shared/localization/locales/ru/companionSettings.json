@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "Резервная копия проверена",
   "companion.settings.storage.restoreSource": "Резервная копия",
   "companion.settings.storage.restoreMadeOn": "Создана на",
-  "companion.settings.storage.restoreEntries": "Записи",
+  "companion.settings.storage.restoreEntries": "Материалы",
   "companion.settings.storage.restoreLastChanged": "Последнее изменение",
   "companion.settings.storage.restoreAttachments": "Вложения",
   "companion.settings.storage.restoreAttachmentsIncluded": "Включено: {count}",

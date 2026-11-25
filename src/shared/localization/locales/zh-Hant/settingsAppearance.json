@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "重試",
   "settings.appearance.folderSections.title": "資料夾面板",
   "settings.appearance.folderSections.retainedRows": "隨區段標題固定的列數",
-  "settings.appearance.folderSections.retainedRowsDescription": "選擇捲動時隨每個區段標題保持可見的項目數量。",
+  "settings.appearance.folderSections.retainedRowsDescription": "選擇捲動時隨每個區段標題保持可見的列數。",
   "settings.appearance.folderSections.gapDescription": "以像素設定區段間距。",
   "settings.appearance.folderSections.gap": "區段間距",
   "settings.appearance.sidebarLayout.title": "側邊欄配置",

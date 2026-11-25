@@ -8,7 +8,7 @@ export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.source': 'Original image',
   'companion.imageCloze.region': 'Mask {number}',
   'companion.imageCloze.missing': 'The image is unavailable. Cancel and reopen it after the image is restored.',
-  'companion.imageCloze.failed': 'Could not save the image cloze. Your changes are kept; try again. If the article changed, cancel and reopen the image.',
+  'companion.imageCloze.failed': 'Could not save the image cloze. Your changes are kept. Try again. If the topic changed, cancel and reopen the image.',
   'companion.imageCloze.zoomOut': 'Zoom out',
   'companion.imageCloze.zoomIn': 'Zoom in',
   'companion.imageCloze.adjust': 'Adjust masks',
@@ -29,5 +29,5 @@ export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.removeFocus': 'Remove focus',
   'companion.imageCloze.removeCrop': 'Remove crop',
   'companion.imageCloze.savingRect': 'Saving…',
-  'companion.imageCloze.rectFailed': 'Could not save. Your changes are kept; try again. If the article changed, cancel and reopen the image.',
+  'companion.imageCloze.rectFailed': 'Could not save. Your changes are kept. Try again. If the topic changed, cancel and reopen the image.',
 } as const;

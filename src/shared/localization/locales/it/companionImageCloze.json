@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Immagine originale",
   "companion.imageCloze.region": "Maschera {number}",
   "companion.imageCloze.missing": "L’immagine non è disponibile. Annulla e riaprila dopo il ripristino.",
-  "companion.imageCloze.failed": "Impossibile salvare il cloze su immagine. Le modifiche sono conservate; riprova. Se l’articolo è cambiato, annulla e riapri l’immagine.",
+  "companion.imageCloze.failed": "Impossibile salvare il cloze su immagine. Le modifiche sono conservate; riprova. Se l’argomento è cambiato, annulla e riapri l’immagine.",
   "companion.imageCloze.zoomOut": "Rimpicciolisci",
   "companion.imageCloze.zoomIn": "Ingrandisci",
   "companion.imageCloze.adjust": "Regola maschere",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Rimuovi messa a fuoco",
   "companion.imageCloze.removeCrop": "Rimuovi ritaglio",
   "companion.imageCloze.savingRect": "Salvataggio…",
-  "companion.imageCloze.rectFailed": "Impossibile salvare. Le modifiche sono conservate; riprova. Se l’articolo è cambiato, annulla e riapri l’immagine."
+  "companion.imageCloze.rectFailed": "Impossibile salvare. Le modifiche sono conservate; riprova. Se l’argomento è cambiato, annulla e riapri l’immagine."
 }

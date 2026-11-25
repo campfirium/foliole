@@ -27,7 +27,7 @@ it('lets the user choose when a new day starts', async () => {
   openReviewSettings();
 
   expect(screen.getByRole('heading', { level: 4, name: 'New day starts at' })).toBeInTheDocument();
-  expect(screen.getByText('Cards due on a day become available from this local time.')).toBeInTheDocument();
+  expect(screen.getByText('Items due on a given day become available at this local time.')).toBeInTheDocument();
   expect(screen.getByLabelText('New day starts at')).toHaveValue('4');
 
   fireEvent.change(screen.getByLabelText('New day starts at'), {

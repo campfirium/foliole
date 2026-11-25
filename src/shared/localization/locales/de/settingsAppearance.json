@@ -162,7 +162,7 @@
   "settings.appearance.fontWeight.retry": "Wiederholen",
   "settings.appearance.folderSections.title": "Ordnerbereich",
   "settings.appearance.folderSections.retainedRows": "Mit Abschnittstiteln angeheftete Zeilen",
-  "settings.appearance.folderSections.retainedRowsDescription": "Wählen Sie aus, wie viele Einträge beim Scrollen mit jedem Abschnittstitel sichtbar bleiben.",
+  "settings.appearance.folderSections.retainedRowsDescription": "Wähle, wie viele Zeilen beim Scrollen mit jedem Abschnittstitel sichtbar bleiben.",
   "settings.appearance.folderSections.gapDescription": "Legen Sie den Abstand zwischen Abschnitten in Pixel fest.",
   "settings.appearance.folderSections.gap": "Abstand zwischen Abschnitten",
   "settings.appearance.sidebarLayout.title": "Seitenleistenlayout",

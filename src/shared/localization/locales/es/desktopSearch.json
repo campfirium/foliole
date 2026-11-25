@@ -42,7 +42,7 @@
   "desktop.editor.imageFailure.forgetLearnedSource": "Olvidé la fuente aprendida de este sitio",
   "desktop.editor.openInBrowserHint": "{modifier} y clic para abrir en el navegador",
   "desktop.clozeGuard.title": "Confirmar acción",
-  "desktop.clozeGuard.description": "Crear un cloze aquí dará como resultado una tarjeta enorme.",
+  "desktop.clozeGuard.description": "Crear un hueco aquí generará un ítem demasiado largo.",
   "desktop.clozeGuard.openSettings": "Abrir configuración de protección de cierre",
   "desktop.clozeGuard.settingsTitle": "Configuración de protección Cloze",
   "desktop.clozeGuard.highlight": "Destacado",

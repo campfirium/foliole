@@ -42,7 +42,7 @@
   "desktop.editor.imageFailure.forgetLearnedSource": "Забудьте учебный источник для этого сайта",
   "desktop.editor.openInBrowserHint": "Щёлкните, удерживая {modifier}, чтобы открыть в браузере",
   "desktop.clozeGuard.title": "Подтвердить действие",
-  "desktop.clozeGuard.description": "Создание замыкания здесь приведет к получению массивной карты.",
+  "desktop.clozeGuard.description": "Создание пропуска здесь приведёт к слишком длинному заданию.",
   "desktop.clozeGuard.openSettings": "Открыть настройки защиты от закрытия",
   "desktop.clozeGuard.settingsTitle": "Настройки защиты от закрытия",
   "desktop.clozeGuard.highlight": "Выделить",

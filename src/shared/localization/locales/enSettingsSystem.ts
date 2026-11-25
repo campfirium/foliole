@@ -18,7 +18,7 @@ export const EN_SETTINGS_SYSTEM_TRANSLATIONS = {
   'settings.search.generalOpenAtLogin.description':
     'Start Foliole automatically on supported desktop installations.',
   'settings.search.generalOpenAtLogin.terms': 'startup|launch at startup|boot|background',
-  'settings.general.systemEntryNames.section': 'System entry names',
+  'settings.general.systemEntryNames.section': 'System section names',
   'settings.general.systemEntryNames.description':
     'Custom names are shared with this library. Clear a name to follow the interface language.',
   'settings.general.systemEntryNames.demoDescription':

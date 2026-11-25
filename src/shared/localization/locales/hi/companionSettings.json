@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "बैकअप जाँच लिया गया",
   "companion.settings.storage.restoreSource": "बैकअप",
   "companion.settings.storage.restoreMadeOn": "बनाया गया",
-  "companion.settings.storage.restoreEntries": "एंट्री",
+  "companion.settings.storage.restoreEntries": "सामग्री",
   "companion.settings.storage.restoreLastChanged": "आखिरी बदलाव",
   "companion.settings.storage.restoreAttachments": "अटैचमेंट",
   "companion.settings.storage.restoreAttachmentsIncluded": "{count} शामिल",

@@ -123,7 +123,7 @@
   "settings.backups.sourceHandling.title": "Behandlung des Quellthemas",
   "settings.backups.sourceHandling.savedTitle": "Gespeicherte Quellthemenbehandlung",
   "settings.backups.sourceHandling.description": "Behält den Status „Verworfen“ und „Gelöscht“ für Quellthemen aus verknüpften Ordnern und Readwise Reader-Quellen bei, so dass das erneute Verbinden oder erneute Synchronisieren dieser Quellen behandelte Themen nicht wieder als aktiv anzeigt.",
-  "settings.backups.sourceHandling.meta": "{count} Einträge / {size}",
+  "settings.backups.sourceHandling.meta": "{count} Datensätze / {size}",
   "settings.backups.sourceHandling.import": "Gespeicherte Quellthemenbehandlung importieren",
   "settings.backups.sourceHandling.export": "Gespeicherte Quellthemenbehandlung exportieren",
   "settings.backups.sourceHandling.clear": "Löscht die Behandlung gespeicherter Quellthemen",

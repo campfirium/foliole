@@ -41,7 +41,7 @@ export async function verifyVirtualFolderEntryMenu(args: {
   const topicRow = args.contentPanel.getByRole('treeitem', { name: args.topicTitle });
   await topicRow.click({ button: 'right' });
   const removeMembership = args.desktopWindow.getByRole('menuitem', {
-    name: /^(Remove from This Virtual Entry|从此索引中移除)$/
+    name: /^(Remove from this Virtual folder|从此索引中移除)$/
   });
   await expect(removeMembership).toBeVisible();
   await expect(args.desktopWindow.getByRole('menuitem', { name: /^(Move to…|移动到\.\.\.)$/ })).toHaveCount(0);

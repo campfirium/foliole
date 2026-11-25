@@ -183,7 +183,7 @@ it.each(['android', 'ios'])('permanently deletes within a Trash folder and keeps
     expect(screen.getByText('2 / 2 selected')).toBeVisible();
     click('Delete Permanently');
     let confirmation = screen.getByRole('dialog', { name: 'Delete Permanently' });
-    expect(within(confirmation).getByText(/2 selected entries.*2 entries.*cannot be undone/)).toBeVisible();
+    expect(within(confirmation).getByText(/2 selected materials.*2 materials.*cannot be undone/)).toBeVisible();
     fireEvent.click(within(confirmation).getByRole('button', { name: 'Cancel' }));
     expect(nodeIds(library.database)).toEqual(['Child A1', 'Child A2', 'Child B', 'Folder A', 'Folder B']);
     click('Delete Permanently');
@@ -223,7 +223,7 @@ it('rejects a confirmed subtree that has changed before the permanent write', as
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Folder B' }));
     click('Delete Permanently');
     const confirmation = screen.getByRole('dialog', { name: 'Delete Permanently' });
-    expect(within(confirmation).getByText(/2 selected entries.*3 entries/)).toBeVisible();
+    expect(within(confirmation).getByText(/2 selected materials.*3 materials/)).toBeVisible();
     const snapshot = await readSnapshot();
     await restoreCompanionBatchFromTrash([{ id: 'Child A', version: snapshot.nodesById['Child A']!.currentVersionId! }]);
     fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete Permanently' }));

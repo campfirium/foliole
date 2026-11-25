@@ -29,11 +29,11 @@ it('inserts the destination before Clean formatting in an existing menu and upda
   const row = screen.getByTestId('context-command-row-system.send-to-edge');
   const clean = screen.getByTestId('context-command-row-system.clean-formatting');
   expect(row.compareDocumentPosition(clean) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  const selector = within(row).getByRole('combobox', { name: 'Article destination' });
+  const selector = within(row).getByRole('combobox', { name: 'Topic destination' });
   await within(selector).findByRole('option', { name: 'Firefox' });
   expect(within(selector).queryByRole('option', { name: 'Chrome' })).toBeNull();
   fireEvent.change(selector, { target: { value: 'firefox' } });
 
-  expect(await within(row).findByText('Send Article to Firefox')).toBeInTheDocument();
+  expect(await within(row).findByText('Send topic to Firefox')).toBeInTheDocument();
   expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.selectArticleTarget, { id: 'firefox' });
 });

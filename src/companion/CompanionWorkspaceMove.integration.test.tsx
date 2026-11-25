@@ -66,9 +66,9 @@ function confirm() {
 }
 
 it.each([
-  { action: 'Rename', message: 'Could not rename this entry.' },
-  { action: 'Move to...', message: 'Could not move this entry.' },
-  { action: 'Move to Trash', message: 'Could not move this entry to Trash.' }
+  { action: 'Rename', message: 'Could not rename the selection.' },
+  { action: 'Move to...', message: 'Could not move the selection.' },
+  { action: 'Move to Trash', message: 'Could not move the selection to Trash.' }
 ])('identifies a rejected SQLite write for $action', async ({ action, message }) => {
   render(<Harness />);
   library.database.exec(`CREATE TRIGGER reject_metadata BEFORE UPDATE ON nodes

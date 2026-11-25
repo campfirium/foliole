@@ -43,7 +43,7 @@ it('renders readwise books inside the shared list surface and keeps import actio
   expect(screen.getByText('Atomic Habits')).toBeInTheDocument();
   expect(screen.getByText('Has highlights')).toBeInTheDocument();
   expect(screen.getByText('Loaded')).toBeInTheDocument();
-  expect(screen.getByText('Highlights available. Imported node is ready to open.')).toBeInTheDocument();
+  expect(screen.getByText('Highlights available. The imported topic is ready to open.')).toBeInTheDocument();
   expect(screen.getByLabelText('Date imported 2026-04-10 08:00')).toHaveTextContent('2026-04-10 08:00');
 
   fireEvent.click(screen.getByRole('button', { name: 'Atomic Habits' }));
@@ -79,6 +79,6 @@ it('renders pdf inventory inside the shared list surface', () => {
   expect(screen.getByText('pdf · /library/pdfs/essay.pdf')).toBeInTheDocument();
   expect(screen.getByText('Indexed')).toBeInTheDocument();
   expect(screen.getByText('Loaded')).toBeInTheDocument();
-  expect(screen.getByText('Imported node is available and the PDF index is ready.')).toBeInTheDocument();
+  expect(screen.getByText('The imported topic is available and the PDF index is ready.')).toBeInTheDocument();
   expect(screen.getByLabelText('Date imported 2026-04-10 07:30')).toHaveTextContent('2026-04-10 07:30');
 });

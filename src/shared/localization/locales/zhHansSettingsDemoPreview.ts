@@ -19,7 +19,7 @@ export const ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS: Partial<Record<Translat
   'settings.demoPreview.note.externalFolders': '此 Demo 中的外部文件夹功能经过简化。桌面版包含完整体验。',
   'settings.demoPreview.rail.readwise': '从 Readwise Reader 导入',
   'settings.demoPreview.superMemo.sample.title': '示例资料库',
-  'settings.demoPreview.superMemo.sample.description': '内置的只读示例，含 {topics} 个主题和 {items} 个条目。不会读取你的文件。',
+  'settings.demoPreview.superMemo.sample.description': '内置的只读示例，含 {topics} 个主题和 {items} 个检测项。不会读取你的文件。',
   'settings.demoPreview.superMemo.footnote': '仅为演示，不会导入或保存任何内容。',
   'settings.demoPreview.superMemo.finish': '结束演示',
   'settings.demoPreview.superMemo.done.title': '演示结束',

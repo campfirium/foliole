@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "मूल चित्र",
   "companion.imageCloze.region": "मास्क {number}",
   "companion.imageCloze.missing": "चित्र अभी उपलब्ध नहीं है। रद्द करें और चित्र उपलब्ध होने पर उसे फिर से खोलें।",
-  "companion.imageCloze.failed": "चित्र का छिपाया हुआ हिस्सा सहेजा नहीं जा सका। आपके बदलाव अभी मौजूद हैं; फिर कोशिश करें। अगर लेख बदल गया है, तो रद्द करें और चित्र फिर से खोलें।",
+  "companion.imageCloze.failed": "चित्र का छिपाया हुआ हिस्सा सहेजा नहीं जा सका। आपके बदलाव अभी मौजूद हैं; फिर कोशिश करें। अगर विषय बदल गया है, तो रद्द करें और चित्र फिर से खोलें।",
   "companion.imageCloze.zoomOut": "ज़ूम घटाएँ",
   "companion.imageCloze.zoomIn": "ज़ूम बढ़ाएँ",
   "companion.imageCloze.adjust": "मास्क बदलें",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "फ़ोकस हटाएँ",
   "companion.imageCloze.removeCrop": "क्रॉप हटाएँ",
   "companion.imageCloze.savingRect": "सहेजा जा रहा है…",
-  "companion.imageCloze.rectFailed": "सहेजा नहीं जा सका। आपके बदलाव बने हुए हैं; फिर से कोशिश करें। अगर लेख बदल गया है, तो रद्द करें और चित्र दोबारा खोलें।"
+  "companion.imageCloze.rectFailed": "सहेजा नहीं जा सका। आपके बदलाव बने हुए हैं; फिर से कोशिश करें। अगर विषय बदल गया है, तो रद्द करें और चित्र दोबारा खोलें।"
 }

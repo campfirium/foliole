@@ -86,7 +86,7 @@
   "settings.appearance.topicList.sectionAria": "विषय सूची की पंक्तियों के बीच की दूरी की सेटिंग",
   "settings.appearance.folderSections.title": "फ़ोल्डर पैनल",
   "settings.appearance.folderSections.retainedRows": "सेक्शन के शीर्षक के साथ दिखने वाली पंक्तियाँ",
-  "settings.appearance.folderSections.retainedRowsDescription": "स्क्रोल करते समय हर सेक्शन के शीर्षक के साथ कितनी शुरुआती एंट्री दिखें, यह चुनें।",
+  "settings.appearance.folderSections.retainedRowsDescription": "स्क्रोल करते समय हर सेक्शन के शीर्षक के साथ कितनी पंक्तियाँ दिखें, यह चुनें।",
   "settings.appearance.folderSections.gapDescription": "सेक्शन के बीच की खाली जगह पिक्सेल में तय करें।",
   "settings.appearance.folderSections.gap": "सेक्शन के बीच की दूरी",
   "settings.appearance.topicList.rowSpacing.title": "पंक्तियों के बीच की दूरी",

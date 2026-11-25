@@ -11,7 +11,7 @@
   "settings.search.generalOpenAtLogin.title": "Iniciar Foliole automaticamente",
   "settings.search.generalOpenAtLogin.description": "Inicie Foliole automaticamente em instalações de desktop suportadas.",
   "settings.search.generalOpenAtLogin.terms": "inicialização | inicialização na inicialização | inicialização | plano de fundo",
-  "settings.general.systemEntryNames.section": "Nomes das entradas do sistema",
+  "settings.general.systemEntryNames.section": "Nomes das seções do sistema",
   "settings.general.systemEntryNames.description": "Os nomes personalizados são compartilhados com esta biblioteca. Limpe um nome para voltar a seguir o idioma da interface.",
   "settings.general.systemEntryNames.demoDescription": "Esses nomes são salvos apenas nesta demonstração do navegador. Limpe um nome para voltar a seguir o idioma da interface.",
   "settings.general.systemEntryNames.saveFailed": "Não foi possível salvar o nome. Os últimos nomes salvos continuam em uso.",

@@ -148,7 +148,7 @@
   "companion.settings.storage.restoreReady": "백업 확인됨",
   "companion.settings.storage.restoreSource": "백업",
   "companion.settings.storage.restoreMadeOn": "만든 곳",
-  "companion.settings.storage.restoreEntries": "항목",
+  "companion.settings.storage.restoreEntries": "자료",
   "companion.settings.storage.restoreLastChanged": "마지막 변경",
   "companion.settings.storage.restoreAttachments": "첨부 파일",
   "companion.settings.storage.restoreAttachmentsIncluded": "{count}개 포함됨",

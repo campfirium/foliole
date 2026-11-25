@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "元の画像",
   "companion.imageCloze.region": "マスク {number}",
   "companion.imageCloze.missing": "画像を利用できません。キャンセルし、画像が復元された後で開き直してください。",
-  "companion.imageCloze.failed": "画像穴埋めを保存できませんでした。変更は保持されています。再試行してください。記事が変更された場合は、キャンセルして画像を開き直してください。",
+  "companion.imageCloze.failed": "画像穴埋めを保存できませんでした。変更は保持されています。再試行してください。トピックが変更された場合は、キャンセルして画像を開き直してください。",
   "companion.imageCloze.zoomOut": "ズームアウト",
   "companion.imageCloze.zoomIn": "ズームイン",
   "companion.imageCloze.adjust": "マスクを調整",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "フォーカスを解除",
   "companion.imageCloze.removeCrop": "トリミングを解除",
   "companion.imageCloze.savingRect": "保存中…",
-  "companion.imageCloze.rectFailed": "保存できませんでした。変更は保持されています。もう一度お試しください。記事が変更された場合は、キャンセルして画像を開き直してください。"
+  "companion.imageCloze.rectFailed": "保存できませんでした。変更は保持されています。もう一度お試しください。トピックが変更された場合は、キャンセルして画像を開き直してください。"
 }

@@ -147,7 +147,7 @@ export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   'settings.backups.sourceHandling.title': 'Source topic handling',
   'settings.backups.sourceHandling.savedTitle': 'Saved source topic handling',
   'settings.backups.sourceHandling.description': 'Keeps dismissed and deleted states for source topics from linked folders and Readwise Reader sources, so reconnecting or resyncing those sources does not bring handled topics back as active.',
-  'settings.backups.sourceHandling.meta': '{count} entries / {size}',
+  'settings.backups.sourceHandling.meta': '{count} records / {size}',
   'settings.backups.sourceHandling.import': 'Import saved source topic handling',
   'settings.backups.sourceHandling.export': 'Export saved source topic handling',
   'settings.backups.sourceHandling.clear': 'Clear saved source topic handling',

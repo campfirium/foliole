@@ -3,7 +3,7 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_SETTINGS_CAPTURE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.capture.sectionAria': '全局剪辑设置',
   'settings.capture.sectionTitle': '全局剪辑',
-  'settings.capture.sectionDescription': '在其他应用里选中内容，按快捷键就能存到 Foliole 的收件箱。没有选中内容时，按同一个快捷键会打开输入框。可以输入笔记后保存，也可以留空直接按回车，导入剪贴板里的内容。',
+  'settings.capture.sectionDescription': '在其他应用里选中内容，按快捷键就能存到 Foliole 的收件箱。没有选中内容时，快捷键会打开输入框。可以输入文字后保存，也可以留空直接按回车，导入剪贴板里的内容。',
   'settings.capture.accessibility.title': '辅助功能权限',
   'settings.capture.accessibility.authorized': '已授权',
   'settings.capture.accessibility.unauthorized': '未授权',

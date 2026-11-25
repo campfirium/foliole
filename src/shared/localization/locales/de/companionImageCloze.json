@@ -8,7 +8,7 @@
   "companion.imageCloze.source": "Originalbild",
   "companion.imageCloze.region": "Maske {number}",
   "companion.imageCloze.missing": "Das Bild ist nicht verfügbar. Brechen Sie ab und öffnen Sie es erneut, sobald es wiederhergestellt wurde.",
-  "companion.imageCloze.failed": "Der Bildlückentext konnte nicht gespeichert werden. Ihre Änderungen bleiben erhalten; versuchen Sie es erneut. Falls sich der Artikel geändert hat, brechen Sie ab und öffnen Sie das Bild erneut.",
+  "companion.imageCloze.failed": "Der Bildlückentext konnte nicht gespeichert werden. Ihre Änderungen bleiben erhalten; versuchen Sie es erneut. Falls sich das Thema geändert hat, brechen Sie ab und öffnen Sie das Bild erneut.",
   "companion.imageCloze.zoomOut": "Verkleinern",
   "companion.imageCloze.zoomIn": "Vergrößern",
   "companion.imageCloze.adjust": "Masken anpassen",
@@ -29,5 +29,5 @@
   "companion.imageCloze.removeFocus": "Fokus entfernen",
   "companion.imageCloze.removeCrop": "Zuschnitt entfernen",
   "companion.imageCloze.savingRect": "Speichern…",
-  "companion.imageCloze.rectFailed": "Speichern nicht möglich. Deine Änderungen bleiben erhalten; versuche es erneut. Falls sich der Artikel geändert hat, brich ab und öffne das Bild erneut."
+  "companion.imageCloze.rectFailed": "Speichern nicht möglich. Deine Änderungen bleiben erhalten; versuche es erneut. Falls sich das Thema geändert hat, brich ab und öffne das Bild erneut."
 }
