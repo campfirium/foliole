@@ -37,6 +37,18 @@ export function deriveCycleReadiness(snapshot: DailyFlowLearningSnapshot, ids: r
   }));
 }
 
+/**
+ * Whether stored readiness must be rewritten. A time that has arrived on a doable entry stays, so the entry
+ * keeps its place ahead of the ordered queue until it is served.
+ */
+export function isCycleReadinessStale(stored: Partial<CycleReadiness> | undefined, derived: CycleReadiness,
+  doable: boolean, now: string) {
+  if (stored?.kind !== derived.kind) return true;
+  const at = stored.ready_at_ms ?? null;
+  if (doable && derived.ready_at_ms === null && at !== null && at <= Date.parse(now)) return false;
+  return at !== derived.ready_at_ms;
+}
+
 export function withCycleReadiness(rows: readonly CycleRow[], readiness: ReadonlyMap<string, CycleReadiness>): CycleStoredRow[] {
   return rows.map(row => ({ ...row, ...(readiness.get(row.node_id) ?? {}) }));
 }

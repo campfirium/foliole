@@ -30,7 +30,8 @@ export function createBrowserDailyFlowStore(get: () => BrowserFlowWorkspace,
       (!nodeIds || nodeIds.includes(row.node_id)) &&
       (!filter || ((!row.kind || filter.kinds.includes(row.kind)) && (row.ready_at_ms == null || row.ready_at_ms <= filter.nowMs))))
       .sort((a, b) => a.order_key - b.order_key).slice(0, count).map(row => ({ ...row })),
-    timedRows: async (filter, count) => stored().filter(row => row.active && row.kind && filter.kinds.includes(row.kind) &&
+    timedRows: async (filter, count, nodeIds) => stored().filter(row => row.active && row.kind && filter.kinds.includes(row.kind) &&
+      (!nodeIds || nodeIds.includes(row.node_id)) &&
       row.ready_at_ms != null && row.ready_at_ms <= filter.nowMs)
       .sort((a, b) => a.ready_at_ms! - b.ready_at_ms! || a.order_key - b.order_key).slice(0, count).map(row => ({ ...row })),
     readReadiness: async () => stored().filter(row => row.active).map(row => ({ ...row })),

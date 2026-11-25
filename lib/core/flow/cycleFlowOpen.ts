@@ -5,7 +5,7 @@ import { isBlankReviewItemNode, isFsrsReviewItemNode, isReadingReviewItemNode } 
 
 import { buildCycle } from './cycleFlowBuild.js';
 import { cycleChanges } from './cycleFlowChanges.js';
-import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
+import { deriveCycleReadiness, isCycleReadinessStale, withCycleReadiness } from './cycleFlowReadiness.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
 import type { CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
@@ -63,7 +63,8 @@ async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | '
   const stale = active.filter(row => {
     const before = stored.get(row.node_id);
     const after = derived.get(row.node_id);
-    return !touched.has(row.node_id) && after && (before?.kind !== after.kind || (before?.ready_at_ms ?? null) !== after.ready_at_ms);
+    // Active rows here already passed the day's eligibility, so a derived row without a time is doable.
+    return !touched.has(row.node_id) && after && isCycleReadinessStale(before, after, true, now);
   });
   await db.writeRows(withCycleReadiness(stale, derived));
 }

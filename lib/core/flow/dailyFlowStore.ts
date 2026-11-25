@@ -29,7 +29,7 @@ export interface DailyFlowStore {
   scanRows(after: number, through: number, count: number, filter?: CycleScanFilter,
     nodeIds?: readonly string[]): Promise<CycleStoredRow[]>;
   /** Waiting rows whose time has come, earliest first. */
-  timedRows?(filter: CycleScanFilter, count: number): Promise<CycleStoredRow[]>;
+  timedRows?(filter: CycleScanFilter, count: number, nodeIds?: readonly string[]): Promise<CycleStoredRow[]>;
   readReadiness?(): Promise<CycleStoredRow[]>;
   writeRows(rows: CycleStoredRow[]): Promise<void>;
   deleteRows(ids: readonly string[]): Promise<void>;

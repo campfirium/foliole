@@ -64,7 +64,8 @@ export function useDailyFlowView(args: ViewContext) {
     const dive = args.followDive ? args.reviewSession.dive : undefined;
     void loadDailyFlowViewRuntime({ now: args.now, mode: args.reviewSessionMode,
       includeEntries: args.includeEntries, continueNodeId: args.reviewSession.continueNodeId ?? null,
-      ...(dive ? { dive: { id: dive.id, mode: dive.mode, phase: dive.phase, position: dive.resumeAfter ?? dive.position,
+      ...(dive ? { dive: { id: dive.id, mode: dive.mode, phase: dive.phase, position: dive.resumeAfter ??
+          (dive.timedResume?.key === dive.position ? dive.timedResume.after : dive.position),
         limit: dive.limit, currentNodeId: args.reviewSession.currentNodeId, revisitIds: dive.revisitIds ?? [],
         ...(dive.phase === 'topics' && dive.memberIds ? { memberIds: dive.memberIds } : {}),
         stopped: Boolean(dive.stop) } } : {}) },

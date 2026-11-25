@@ -43,8 +43,8 @@ export function timeFlowScan<T>(timing: FlowTiming | undefined, store: FlowScanS
       rows += result.length;
       return result;
     },
-    ...(store.timedRows ? { timedRows: async (filter, count) => {
-      const result = await store.timedRows!(filter, count);
+    ...(store.timedRows ? { timedRows: async (filter, count, nodeIds) => {
+      const result = await store.timedRows!(filter, count, nodeIds);
       batches += 1;
       rows += result.length;
       return result;

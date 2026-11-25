@@ -9,12 +9,13 @@ import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings
 import { readDailyFlowFact } from './dailyFlowFactStorage.js';
 import { applyLocalDailyFlowOperations, readLocalDailyFlowFacts } from './dailyFlowLocalApplication.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
+import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
-import { rewindDiveCurrent, selectDiveCurrent } from './diveCycleFlow.js';
+import { displayDiveSession, isDiveCurrentReady, rewindDiveCurrent, selectDiveCurrent } from './diveCycleFlow.js';
 
 async function persistTargetLearning(db: DbPort, args: DailyFlowCommitArgs, facts: DailyFlowSyncFact[],
   target: DailyFlowSyncFact, persistence: DailyFlowPersistence) {
@@ -121,7 +122,7 @@ async function reconcileDiveHistory(db: DbPort, args: DailyFlowCommitArgs, now: 
 }
 
 async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStore>, args: DailyFlowCommitArgs,
-  global: import('./dailyFlowSession.js').DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
+  global: DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
   const current = args.sourceSession?.dive;
   const prior = args.historyMode === 'undo' ? args.nextSession : args.historySourceSession;
   const before = prior?.dive;
@@ -129,6 +130,22 @@ async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStor
   if (!before || current.id !== before.id || current.phase !== before.phase || current.limit !== before.limit) {
     return selectDiveCurrent(store, global, rewindDiveCurrent(current, args.sourceSession?.currentNodeId), now, settings);
   }
+  const undone = args.historyMode === 'undo' ? prior?.currentNodeId : null;
+  const restored = undone ? await restoreUndoneDiveCard(store, global, before, undone, now, settings) : null;
+  if (restored) return restored;
   const cursor = args.historyMode === 'undo' ? rewindDiveCurrent(before, prior?.currentNodeId) : before;
   return selectDiveCurrent(store, global, { ...cursor, stop: null }, now, settings);
+}
+
+// Undo shows the card it undid, even when another entry has become due or the card now sits elsewhere in the list.
+async function restoreUndoneDiveCard(store: ReturnType<typeof createSqliteDailyFlowStore>,
+  global: DailyFlowSession, before: DiveFlowCursor, nodeId: string, now: string,
+  settings: DailyFlowSettings) {
+  const [row] = await store.readRows([nodeId]);
+  if (!row?.active) return null;
+  const dive = row.order_key === before.position ? before : { ...before, position: row.order_key,
+    timedResume: { key: row.order_key, after: before.timedResume?.after ?? Math.max(0, before.position - 1) } };
+  const session = displayDiveSession(global, { ...dive, stop: null }, nodeId, now);
+  const snapshot = await store.scopedLearningSnapshot([nodeId]);
+  return await isDiveCurrentReady(store, session, snapshot, now, settings) ? session : null;
 }
