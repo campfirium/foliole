@@ -172,6 +172,23 @@ cleanup still owed by its owner.
 
 | Proposal | Reviewed head | Target | Adoption | Local evidence | Required QA |
 | --- | --- | --- | --- | --- | --- |
+| [#310](https://github.com/campfirium/foliole/pull/310) | `b624d531cad2beadfb74e048b978a5f66b783a85` | lucide-react 1.74.0 | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
+| [#309](https://github.com/campfirium/foliole/pull/309) | `b205147c3beb7d7ce8482dfcb053a6200dda8b6b` | @typescript-eslint/eslint-plugin and parser 8.73.0 | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
+| [#308](https://github.com/campfirium/foliole/pull/308) | `3dbf893788900765be4a78e146079098d1f5b4b2` | minimatch 11.0.9 override | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
+
+November 25 pre-release batch: all three heads are verified `app/renovate`
+proposals against `dev`, adopted together in `d72e5ed7f`. Local checks passed:
+`npm ls --all`, production audit (zero vulnerabilities), desktop and Android
+type checks, desktop and companion web builds, targeted lint, and 47 of 49
+tests for matcher, installer, toolchain, lint routing and icon catalog behavior.
+The two failures are both cases of
+`scripts/security/minimatch-security.test.mjs`: the pathological `**/..`
+pattern now raises `RangeError` instead of returning a bounded set. Installed
+11.0.8 raises the same error, so 11.0.9 does not introduce it. The central QA
+owner must decide whether the thrown limit satisfies the bounded-expansion
+contract and repair the test or the dependency before closing #308.
+TypeScript 7 (#193) remains deferred: typescript-eslint 8.73.0 still requires
+TypeScript below 6.1 and its TS 7.1 backend is experimental.
 
 ### Completed November 23 centralized batch
 
