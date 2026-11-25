@@ -23,6 +23,7 @@ import {
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
@@ -191,17 +192,20 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
   };
   const exitPending = useCompanionArticleExit(() => props.onExitArticle(parentSelection ?? { kind: 'root' }));
 
-  if (props.selection.kind === 'externalDocument' && externalDocument) {
+  const openDocument = props.selection.kind === 'externalDocument' ? externalDocument : null;
+  if (openDocument || props.articleOnly) {
     return (
-      <ImmersiveReadableArticle
-        onExit={() => props.onExitArticle(parentSelection ?? { kind: 'root' })}
-        readableArticle={toReadableExternalArticle(externalDocument)}
-        snapshot={null}
-      />
+      <CompanionReadingSession>
+        {openDocument ? (
+          <ImmersiveReadableArticle
+            onExit={() => props.onExitArticle(parentSelection ?? { kind: 'root' })}
+            readableArticle={toReadableExternalArticle(openDocument)}
+            snapshot={null}
+          />
+        ) : <ExternalArticleFallback document={externalDocument} onExit={exitPending} />}
+      </CompanionReadingSession>
     );
   }
-
-  if (props.articleOnly) return <ExternalArticleFallback document={externalDocument} onExit={exitPending} />;
 
   return <CompanionDirectoryListContent
     directory={directory} onStartDive={props.onStartDive}

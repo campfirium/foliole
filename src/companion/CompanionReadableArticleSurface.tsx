@@ -19,6 +19,7 @@ import { CompanionPdfResumeNotice } from './CompanionPdfResumeNotice';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayout';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import { CompanionReviewHeader } from './CompanionReviewHeader';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
@@ -202,6 +203,10 @@ function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
 }
 
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
+  return <CompanionReadingSession><ReadableArticleReader {...props} /></CompanionReadingSession>;
+}
+
+function ReadableArticleReader(props: ImmersiveReadableArticleProps) {
   const exitReader = useCompanionArticleExit(props.onExit);
   // Popping a backlink keeps the reader on screen.
   const onExit = props.onReturnFromBacklink ?? exitReader;

@@ -60,8 +60,8 @@ beforeEach(() => {
 
 afterEach(async () => {
   cleanup();
-  // An unmounted reader releases the system bars late; let that finish before the next row.
-  await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+  // Let the unmounted reader hand the system bars back before the next row.
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   vi.useRealTimers();
   vi.restoreAllMocks();
   removeLayout();

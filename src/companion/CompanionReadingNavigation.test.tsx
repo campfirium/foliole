@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
+import { CompanionReadingSessionHost } from './CompanionReadingSession';
 import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
@@ -28,7 +29,7 @@ function ReadingRoute() {
 }
 
 it('closes document search and secondary sheets before explicitly exiting reading', async () => {
-  renderWithLocalization(<ReadingRoute />);
+  renderWithLocalization(<CompanionReadingSessionHost><ReadingRoute /></CompanionReadingSessionHost>);
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   fireEvent.click(screen.getByRole('button', { name: 'Find in document' }));
   const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Find in document' });
@@ -54,7 +55,7 @@ it('closes document search and secondary sheets before explicitly exiting readin
 
 
 it('keeps search available while reading between matches and lets the reader recover from no results', async () => {
-  renderWithLocalization(<ReadingRoute />);
+  renderWithLocalization(<CompanionReadingSessionHost><ReadingRoute /></CompanionReadingSessionHost>);
   const opener = screen.getByRole('button', { name: 'More reading actions' });
   opener.focus();
   fireEvent.click(opener);

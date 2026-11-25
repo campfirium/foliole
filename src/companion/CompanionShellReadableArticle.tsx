@@ -10,6 +10,7 @@ import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionReadingClozeLayers } from './CompanionFormulaClozeLayer';
 import { CompanionFlowNextTopicFooter, CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewLoading } from './CompanionReviewLoading';
@@ -121,7 +122,17 @@ function selectCompanionBreadcrumb(
   else selectNode(nodeId);
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined; surface: Surface; workspaceSync: WorkspaceSync }) {
+type ShellReadableArticleProps = {
+  flow?: boolean;
+  searchMatch?: CompanionSearchMatch | null | undefined;
+  navigation?: CompanionReadingNavigation | undefined;
+  onExit: () => void;
+  onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined;
+  surface: Surface;
+  workspaceSync: WorkspaceSync;
+};
+
+function ShellReader(props: ShellReadableArticleProps) {
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const current = props.surface.effectiveReviewSession.currentCard;
   const flowTopicId = props.flow && current?.itemKind === 'reading' && isAvailableNativeCompanionRuntime()
@@ -180,4 +191,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
     </CompanionReadingClozeLayers>
     </FlowExitHereContext.Provider>
   );
+}
+
+export function CompanionShellReadableArticle(props: ShellReadableArticleProps) {
+  return <CompanionReadingSession><ShellReader {...props} /></CompanionReadingSession>;
 }

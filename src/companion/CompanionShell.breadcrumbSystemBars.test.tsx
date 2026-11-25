@@ -18,7 +18,7 @@ vi.mock('../shared/platform/companion/reading/companionReadingSystemBars', async
   return { supportsCompanionReadingSystemBars: () => true, companionReadingSystemBars: new ReadingSystemBarOwner(host.apply) };
 });
 
-it('keeps the status bar hidden from a Flow child to its parent breadcrumb and back', async () => {
+it('holds the status bar in one reading session from a Flow child to its parent breadcrumb and back', async () => {
   localStorage.setItem('foliole-companion-reading-display', JSON.stringify({ hideSystemStatusBar: true }));
   useFloatingBarVisibility.mockReturnValue({ handleContainerScroll: vi.fn(), handleTouchEnd: vi.fn(), handleTouchMove: vi.fn(),
     handleTouchStart: vi.fn(), isVisible: true, revealBar: vi.fn() });
@@ -44,7 +44,7 @@ it('keeps the status bar hidden from a Flow child to its parent breadcrumb and b
   const view = renderWithLocalization(shell());
   const wait = (ms: number) => act(async () => { await new Promise(resolve => setTimeout(resolve, ms)); });
   await wait(50);
-  // The parent body loads slower than the unmount grace before its reader mounts.
+  // The shell switches reader branches here, and the parent body arrives late.
   fireEvent.click(screen.getByRole('button', { name: 'Topic node…' }));
   useCompanionArticleSurface.mockReturnValue({ ...child, activeAction: 'recent', isFlowBrowsing: true, selectedBrowseNodeId: 'topic-1', readableArticle: null });
   view.rerender(shell()); await wait(1700);

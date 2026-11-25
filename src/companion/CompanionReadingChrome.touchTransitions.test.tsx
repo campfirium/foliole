@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { ReadingChrome } from './CompanionReadingChrome';
+import { CompanionReadingSessionHost } from './CompanionReadingSession';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
@@ -30,7 +31,7 @@ function EditingRoute() {
 }
 
 it('keeps editing open when the touch click lands on the replacement Done button', async () => {
-  render(<EditingRoute />);
+  render(<CompanionReadingSessionHost><EditingRoute /></CompanionReadingSessionHost>);
   const edit = screen.getByRole('button', { name: 'Edit content' });
   touch(edit, 'pointerdown');
   touch(edit, 'pointerup');
@@ -105,7 +106,7 @@ function RevealRoute() {
 }
 
 it('reveals reading controls without also activating a newly revealed button', () => {
-  render(<RevealRoute />);
+  render(<CompanionReadingSessionHost><RevealRoute /></CompanionReadingSessionHost>);
   expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
   const body = screen.getByText('Body');
   touch(body, 'pointerdown');

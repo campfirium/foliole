@@ -1,20 +1,18 @@
 import { useRef, useState } from 'react';
 
-import { useCompanionReadingSystemBars } from './useCompanionReadingSystemBars';
+import { useCompanionReadingArticleView } from './CompanionReadingSession';
 import { useImmersiveReadingSurfaceTap } from './useImmersiveReadingSurfaceTap';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
 export function useImmersiveReadableArticleState(initialSelection: EditorSelection | null = null, initialCommandId = 'companion-search-match') {
-  const [isChromeVisible, setIsChromeVisible] = useState(false);
-  const [isOutlineOpen, setIsOutlineOpen] = useState(false);
+  const { chromeVisible: isChromeVisible, editing: isContentEditing, outlineOpen: isOutlineOpen,
+    setChromeVisible: setIsChromeVisible, setEditing: setIsContentEditing, setOutlineOpen: setIsOutlineOpen } = useCompanionReadingArticleView();
   const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
-  const [isContentEditing, setIsContentEditing] = useState(false);
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
   const [openReadingSheet, setOpenReadingSheet] = useState<'font' | null>(null);
   const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
   const nextReadingCommandId = useRef(0);
-  useCompanionReadingSystemBars(isContentEditing || isOutlineOpen);
 
   const surfaceTap = useImmersiveReadingSurfaceTap(isContentEditing, setIsChromeVisible);
 

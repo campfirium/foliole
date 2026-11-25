@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createContentSaveMock } from './companionContentEditingTestSupport';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import { CompanionReadingSystemBarNotice } from './CompanionReadingSystemBarNotice';
 
 const foreground = vi.hoisted(() => new Set<() => void>());
@@ -40,8 +42,7 @@ const applied = async (enabled: boolean, hidden = false) => {
 afterEach(async () => {
   host.platform = 'android'; localStorage.clear();
   cleanup();
-  // Let the deferred release from an unmounted reader fire before the next test.
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); });
+  await act(async () => undefined);
   vi.clearAllMocks();
 });
 
@@ -56,19 +57,24 @@ it('keeps the status bar hidden while taps show and hide the reading tools', asy
   await act(async () => undefined);
   expect(host.apply).not.toHaveBeenCalled();
   view.rerender(<p>Library</p>);
-  await applied(false);
+  await act(async () => undefined);
+  expect(host.apply.mock.calls).toEqual([[target(false)]]);
 });
 
-it('keeps the status bar hidden while switching to the next card', async () => {
+it('keeps one session across a slow next card and hands the bar back as soon as reading ends', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
-  const view = render(article());
+  const session = (children: ReactNode) => <CompanionReadingSession>{children}</CompanionReadingSession>;
+  const view = render(session(article()));
   await applied(true, true);
-  view.rerender(<p>Loading</p>);
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
-  view.rerender(article('second'));
-  await applied(true, true);
+  host.apply.mockClear();
+  view.rerender(session(<p>Loading</p>));
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 1800)); });
-  expect(host.apply.mock.calls.some(([value]) => (value as { enabled: boolean }).enabled === false)).toBe(false);
+  view.rerender(session(article('second')));
+  await act(async () => undefined);
+  expect(host.apply).not.toHaveBeenCalled();
+  view.rerender(<p>Library</p>);
+  await act(async () => undefined);
+  expect(host.apply.mock.calls).toEqual([[target(false)]]);
 });
 
 it('keeps the status bar outside Outline and restores the reading layout after closing', async () => {

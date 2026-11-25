@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
+import { CompanionReadingSessionHost } from './CompanionReadingSession';
 import { CompanionSearchExternalArticle } from './CompanionSearchExternalArticle';
 import { resolveCompanionSearchSelection } from './companionSearchMatch';
 import { createCompanionSearchResultsFixture } from './companionSearchTestFixtures';
@@ -56,7 +57,7 @@ it('locates external document body matches and leaves title-only matches without
 it('uses an available body after loading and lets subsequent outline navigation take precedence', () => {
   const match = { matchStart: 20, query: 'alpha' };
   const hook = renderHook(({ content }) => useImmersiveReadableArticleState(resolveCompanionSearchSelection(content, match)), {
-    initialProps: { content: '' }
+    initialProps: { content: '' }, wrapper: CompanionReadingSessionHost
   });
   expect(hook.result.current.readingSelection).toBeNull();
   hook.rerender({ content: body });

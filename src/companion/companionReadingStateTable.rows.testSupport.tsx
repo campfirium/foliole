@@ -17,7 +17,7 @@ export interface ReadingStateRow {
   platforms?: Platform[];
   /** Bars are given for Android; the table expects none on iOS, which never hides the status bar. */
   expected: Observation;
-  gap?: { closure: '0-2' | '0-3' | '0-4' | '0-5'; platforms?: Platform[]; now: Observation };
+  gap?: { closure: '0-3' | '0-4' | '0-5'; platforms?: Platform[]; now: Observation };
   run(probe: Probe, platform: Platform): Promise<void>;
 }
 
@@ -48,7 +48,6 @@ const externalEntryRows: ReadingStateRow[] = (['search', 'directory'] as const).
   scene: `leaving the library through ${entry}`,
   event: 'open an external document whose body is still loading',
   expected: seen({ body: [], bars: ['hidden'], tools: 'absent' }),
-  gap: { closure: '0-2', platforms: ['android'], now: seen({ body: [], tools: 'absent' }) },
   run: probe => openExternalWhileLoading(probe, entry)
 }));
 
@@ -60,7 +59,7 @@ export const sessionRows: ReadingStateRow[] = [
     gap: { closure: '0-4', platforms: ['android'],
       now: seen({ body: ['reserved/edge', 'reserved/reserved'], bars: ['hidden'], tap: toggled }) },
     run: enterThenTapTwice },
-  // Toolbars start hidden on the next card today because the article remounts; the session store must keep that.
+  // Toolbars start hidden on the next card: each newly mounted article opens a closed view in the session.
   { scene: 'P2 Flow card with toolbars shown', event: 'grade, slow load, next card',
     expected: seen({ tap: [['toggle-tools']] }),
     async run(probe) {
@@ -89,7 +88,6 @@ export const sessionRows: ReadingStateRow[] = [
     } },
   { scene: 'P4 reading', event: 'leave for the list',
     expected: seen({ body: ['reserved/reserved'], bars: ['shown'], tools: 'absent' }),
-    gap: { closure: '0-2', platforms: ['android'], now: seen({ tools: 'absent' }) },
     async run(probe) {
       const view = mount(article());
       await probe.flush();
