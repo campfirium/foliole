@@ -13,7 +13,7 @@ test('opens and saves an external Markdown file from the left toolbar', async ({
   }, filePath);
 
   const toolbar = desktopWindow.getByRole('region', { name: /^(Left toolbar|左侧工具栏)$/i });
-  const openFile = toolbar.getByRole('button', { name: /^(Open File|打开文件)$/ });
+  const openFile = toolbar.getByRole('button', { name: /^(Open External Document|打开外部文档)$/ });
   await expect(openFile).toBeVisible();
   await openFile.click();
 

@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "テキストの編集",
   "desktop.command.editorOperation.createAnnotation": "注釈の作成",
   "desktop.command.editorOperation.deleteAnnotation": "注釈の削除",
-  "desktop.command.openFile": "ファイルを開く",
+  "desktop.command.openFile": "外部ドキュメントを開く",
   "desktop.command.importFiles": "ファイルのインポート",
   "desktop.command.importFolder": "インポートフォルダー",
   "desktop.command.importClipboard": "クリップボードをインポート",

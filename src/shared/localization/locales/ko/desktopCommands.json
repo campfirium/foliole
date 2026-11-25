@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "텍스트 편집",
   "desktop.command.editorOperation.createAnnotation": "주석 생성",
   "desktop.command.editorOperation.deleteAnnotation": "주석 삭제",
-  "desktop.command.openFile": "파일 열기",
+  "desktop.command.openFile": "외부 문서 열기",
   "desktop.command.importFiles": "파일 가져오기",
   "desktop.command.importFolder": "폴더 가져오기",
   "desktop.command.importClipboard": "클립보드 가져오기",

@@ -16,15 +16,6 @@ export function isWorkspaceRailItemAvailable(item: WorkspaceRailItemConfig) {
 
 export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
   {
-    id: 'system.open-file',
-    commandId: APP_COMMAND_IDS.openLocalFile,
-    section: 'top',
-    order: -1,
-    visible: true,
-    source: 'system',
-    iconId: 'FileSymlink'
-  },
-  {
     id: 'system.import-file',
     commandId: APP_COMMAND_IDS.importSingleFile,
     section: 'top',
@@ -52,10 +43,28 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'BookOpen'
   },
   {
+    id: 'system.global-capture',
+    commandId: DESKTOP_GLOBAL_CAPTURE_ACTION.id,
+    section: 'top',
+    order: 3,
+    visible: true,
+    source: 'system',
+    iconId: DESKTOP_GLOBAL_CAPTURE_ACTION.iconId
+  },
+  {
+    id: 'system.open-file',
+    commandId: APP_COMMAND_IDS.openLocalFile,
+    section: 'top',
+    order: 4,
+    visible: true,
+    source: 'system',
+    iconId: 'FileSymlink'
+  },
+  {
     id: 'system.review-statistics',
     commandId: APP_COMMAND_IDS.openReviewCalendar,
     section: 'top',
-    order: 3,
+    order: 5,
     visible: true,
     source: 'system',
     iconId: 'ChartNoAxesColumnIncreasing',
@@ -65,7 +74,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     id: 'system.workspace-search',
     commandId: APP_COMMAND_IDS.openWorkspaceSearch,
     section: 'top',
-    order: 4,
+    order: 6,
     visible: true,
     source: 'system',
     iconId: 'Search'
@@ -74,7 +83,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     id: 'system.command-palette',
     commandId: APP_COMMAND_IDS.openCommandPalette,
     section: 'top',
-    order: 5,
+    order: 7,
     visible: true,
     source: 'system',
     iconId: 'SquareChevronRight'
@@ -83,7 +92,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     id: 'system.material-history',
     commandId: APP_COMMAND_IDS.openMaterialHistory,
     section: 'top',
-    order: 6,
+    order: 8,
     visible: true,
     source: 'system',
     iconId: 'Clock',
@@ -93,20 +102,11 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     id: SUPER_MEMO_RAIL_ITEM_ID,
     commandId: APP_COMMAND_IDS.importSuperMemo,
     section: 'top',
-    order: 7,
+    order: 9,
     visible: true,
     source: 'system',
     iconId: 'DatabaseBackup',
     labelOverride: 'desktop.command.importSuperMemo'
-  },
-  {
-    id: 'system.global-capture',
-    commandId: DESKTOP_GLOBAL_CAPTURE_ACTION.id,
-    section: 'top',
-    order: 8,
-    visible: true,
-    source: 'system',
-    iconId: DESKTOP_GLOBAL_CAPTURE_ACTION.iconId
   },
   {
     id: 'system.feedback',

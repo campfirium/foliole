@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "Text bearbeiten",
   "desktop.command.editorOperation.createAnnotation": "Anmerkung erstellen",
   "desktop.command.editorOperation.deleteAnnotation": "Anmerkung löschen",
-  "desktop.command.openFile": "Datei öffnen",
+  "desktop.command.openFile": "Externes Dokument öffnen",
   "desktop.command.importFiles": "Dateien importieren",
   "desktop.command.importFolder": "Ordner importieren",
   "desktop.command.importClipboard": "Zwischenablage importieren",

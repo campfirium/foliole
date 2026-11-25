@@ -24,7 +24,7 @@
   "desktop.command.editorOperation.editText": "編輯文字",
   "desktop.command.editorOperation.createAnnotation": "建立註釋",
   "desktop.command.editorOperation.deleteAnnotation": "刪除註釋",
-  "desktop.command.openFile": "開啟文件",
+  "desktop.command.openFile": "開啟外部文件",
   "desktop.command.importFiles": "導入文件",
   "desktop.command.importFolder": "導入資料夾",
   "desktop.command.importClipboard": "導入剪貼簿",

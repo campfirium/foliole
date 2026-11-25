@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "Редактировать текст",
   "desktop.command.editorOperation.createAnnotation": "Создать аннотацию",
   "desktop.command.editorOperation.deleteAnnotation": "Удалить аннотацию",
-  "desktop.command.openFile": "Открыть файл",
+  "desktop.command.openFile": "Открыть внешний документ",
   "desktop.command.importFiles": "Импортировать файлы",
   "desktop.command.importFolder": "Импортировать папку",
   "desktop.command.importClipboard": "Импортировать буфер обмена",

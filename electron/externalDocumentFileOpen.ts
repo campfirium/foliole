@@ -104,7 +104,7 @@ export async function selectLocalFileToOpen() {
       { extensions: ['txt'], name: 'Text' }
     ],
     properties: ['openFile'],
-    title: 'Open File'
+    title: 'Open External Document'
   });
   if (result.canceled || !result.filePaths[0]) return { status: 'cancelled' as const };
   const absolutePath = path.resolve(result.filePaths[0]);

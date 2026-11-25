@@ -52,7 +52,7 @@ Desktop PDF imports index extracted text by page. Material search returns PDF lo
 
 The desktop file import picker imports every selected file, with a separate post-import reading-mode choice for each EPUB. This OS picker flow stays internal to the desktop app; Agent Control text creation does not expose local file selection.
 
-The desktop left toolbar includes a customizable **Open File** action. It uses the existing local-file picker and opens the selected document for editing in place. The Agent Control API and CLI do not expose the picker or external-file editing.
+The desktop left toolbar includes a customizable **Open External Document** action. It uses the existing local-file picker and opens the selected document for editing in place. The Agent Control API and CLI do not expose the picker or external-file editing.
 
 Desktop Settings → General → External Markdown files opens Windows Default apps and shows in-app file association instructions on macOS and Linux. The operating system owns file associations. These actions stay in the desktop UI.
 

@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "Modifica testo",
   "desktop.command.editorOperation.createAnnotation": "Crea annotazione",
   "desktop.command.editorOperation.deleteAnnotation": "Elimina annotazione",
-  "desktop.command.openFile": "Apri file",
+  "desktop.command.openFile": "Apri documento esterno",
   "desktop.command.importFiles": "Importa file",
   "desktop.command.importFolder": "Cartella di importazione",
   "desktop.command.importClipboard": "Importa appunti",

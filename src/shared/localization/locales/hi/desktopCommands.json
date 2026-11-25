@@ -22,7 +22,7 @@
   "desktop.command.editorOperation.editText": "टेक्स्ट बदलें",
   "desktop.command.editorOperation.createAnnotation": "टिप्पणी बनाएँ",
   "desktop.command.editorOperation.deleteAnnotation": "टिप्पणी मिटाएँ",
-  "desktop.command.openFile": "फ़ाइल खोलें",
+  "desktop.command.openFile": "बाहरी दस्तावेज़ खोलें",
   "desktop.command.importFiles": "फ़ाइलें इंपोर्ट करें",
   "desktop.command.importFolder": "फ़ोल्डर इंपोर्ट करें",
   "desktop.command.importClipboard": "क्लिपबोर्ड से इंपोर्ट करें",
