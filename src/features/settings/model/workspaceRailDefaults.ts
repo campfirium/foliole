@@ -19,7 +19,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     order: -1,
     visible: true,
     source: 'system',
-    iconId: 'FolderOpen'
+    iconId: 'FileSymlink'
   },
   {
     id: 'system.import-file',

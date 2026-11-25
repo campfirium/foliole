@@ -37,6 +37,7 @@ it('adds Open File beside Import and remembers when it is hidden', () => {
   expect(visibleCommands[importIndex - 1]).toBe(APP_COMMAND_IDS.openLocalFile);
 
   const openItem = items.find((item) => item.commandId === APP_COMMAND_IDS.openLocalFile)!;
+  expect(openItem.iconId).toBe('FileSymlink');
   saveWorkspaceRailItems(toggleWorkspaceRailItemVisibility(items, openItem.id, false));
   expect(loadWorkspaceRailItems().find((item) => item.id === openItem.id)?.visible).toBe(false);
 });
