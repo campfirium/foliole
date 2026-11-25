@@ -249,5 +249,5 @@ it('restores the main document when leaving trash after selecting a trashed node
   expect(useWorkspaceStore.getState().activeNodeId).toBeNull();
 
   fireEvent.click(screen.getByRole('treeitem', { name: 'Inbox' }));
-  expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
 });

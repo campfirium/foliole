@@ -14,17 +14,17 @@ vi.mock('../features/pdf/components/SimplePdfDocument', () => ({
 }));
 
 import { saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
-import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { createSearchLibraryWithPdf } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { initialCompanionNavigation } from './companionNavigationState';
 import { installReadingRangeGeometry, ReadingLibraryShell } from './companionReadingPages.testSupport';
 
-let library: Awaited<ReturnType<typeof createSearchLibrary>>;
+let library: Awaited<ReturnType<typeof createSearchLibraryWithPdf>>;
 let restoreRange: () => void;
 beforeAll(() => { restoreRange = installReadingRangeGeometry(); });
 afterAll(() => restoreRange());
-beforeEach(async () => { library = await createSearchLibrary(60, 100); });
+beforeEach(async () => { library = await createSearchLibraryWithPdf(60, 100); });
 afterEach(async () => { cleanup(); await library.close(); });
 
 it.each(['pdf', 'external'])('returns from a search %s to the same expanded result page', async kind => {

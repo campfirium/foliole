@@ -50,8 +50,7 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
   meta.reviewRemaining = remaining.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length;
   delete meta.change;
   if (captureChanges) meta.change = changes.change();
-  const total = (stored.session.readTopicCount ?? 0) + (stored.session.reviewedItemCount ?? 0) + meta.remaining;
-  return { ...stored.session, totalNodeCount: Math.max(stored.session.totalNodeCount, total), cycle: meta };
+  return { ...stored.session, cycle: meta };
 }
 
 async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
@@ -140,7 +139,8 @@ async function resumeStoredCycle(db: DailyFlowStore, session: DailyFlowSession, 
   return session;
 }
 
-export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
+export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
+  captureChanges = false, createdRows?: (rows: CycleRow[]) => void, restoreReplayedTotal = false) {
   let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
   const previousRevision = stored?.revision ?? 0;
@@ -175,6 +175,10 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   } else if (!args.prepareOnly && session.currentNodeId && !session.sessionStartedAt) {
     session = { ...session, sessionStartedAt: args.now, currentItemStartedAt: args.now };
   }
+  if (restoreReplayedTotal) {
+    const total = (session.readTopicCount ?? 0) + (session.reviewedItemCount ?? 0) + session.cycle!.remaining;
+    session = { ...session, totalNodeCount: Math.max(session.totalNodeCount, total) };
+  }
   session = cycleWindow(session);
   if (captureChanges && session.cycle?.change) {
     session.cycle.change.target = cycleMeta(session.cycle);
@@ -189,8 +193,9 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
 }
 
 export function openCycleFlow(db: import('../sync/dbPort.js').DbPort, args: DailyFlowOpenArgs,
-  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false, createdRows?: (rows: CycleRow[]) => void, timing?: FlowTiming) {
+  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence,
+  captureChanges = false, createdRows?: (rows: CycleRow[]) => void, timing?: FlowTiming, restoreReplayedTotal = false) {
   const store = createSqliteDailyFlowStore(db, persistence);
   if (timing) store.timing = timing;
-  return openStoredDailyFlow(store, args, settings, captureChanges, createdRows);
+  return openStoredDailyFlow(store, args, settings, captureChanges, createdRows, restoreReplayedTotal);
 }

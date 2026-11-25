@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../localization/LocalizationProvider';
 import { installDesktopUpdate, readDesktopUpdateState } from '../platform/desktopUpdate';
-import { readUpdateCheckState, refreshCachedUpdateManifest, subscribeUpdateCheckState } from '../platform/updateCheck';
-import type { SyncGatePlatform } from '../platform/updateCheckModel';
 import {
   isSyncWaitSatisfied,
   listSyncWaitTargets,
@@ -13,6 +11,8 @@ import {
   type SyncWait,
   type SyncWaitTarget
 } from '../platform/runtime/updateSyncGate';
+import { readUpdateCheckState, refreshCachedUpdateManifest, subscribeUpdateCheckState } from '../platform/updateCheck';
+import type { SyncGatePlatform } from '../platform/updateCheckModel';
 
 import { requestAppChoice } from './appChoice';
 import { requestAppConfirmation } from './appConfirmation';

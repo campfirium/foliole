@@ -1,5 +1,4 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
-
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../storage';
 import {
   SYNC_GATE_PLATFORMS,
