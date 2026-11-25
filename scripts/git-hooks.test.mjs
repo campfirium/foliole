@@ -15,6 +15,7 @@ const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budg
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
+const STAGED_SCOPE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-staged-scope.mjs');
 const FIX_TEST_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-fix-has-test.mjs');
 const REMOTE_COMMIT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'remote-commit.mjs');
 const SEQUENCE_HISTORY_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'commit-sequence-history.mjs');
@@ -57,6 +58,7 @@ async function createRepo() {
   await mkdir(path.join(repoDir, 'scripts', 'lib'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts', 'quality'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'));
+  await copyFile(STAGED_SCOPE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-staged-scope.mjs'));
   await copyFile(FIX_TEST_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-fix-has-test.mjs'));
   await copyFile(REMOTE_COMMIT_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'remote-commit.mjs'));
   await copyFile(SEQUENCE_HISTORY_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'commit-sequence-history.mjs'));
@@ -137,6 +139,40 @@ describe('git hooks', () => {
 
     const allowed = await commitFile(repoDir, catalog, "export const X = {\n  'a.b': 'Delete its topics',\n};\n", '000002 add copy');
     expect(allowed.code, allowed.stderr).toBe(0);
+  });
+
+  it('keeps another session\'s staged files out of a shared-checkout commit', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
+    const repoDir = await createRepo();
+    await writeFile(path.join(repoDir, 'other.txt'), 'seed\n');
+    await expect(commitFile(repoDir, 'mine.txt', 'seed\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await runCommand('git', ['add', 'other.txt'], repoDir);
+    await runCommand('git', ['commit', '-m', '000002 other seed'], repoDir);
+    await runCommand('git', ['config', 'foliole.pathScopedCommits', 'true'], repoDir);
+
+    await writeFile(path.join(repoDir, 'other.txt'), 'other session\n');
+    await runCommand('git', ['add', 'other.txt'], repoDir);
+    await writeFile(path.join(repoDir, 'mine.txt'), 'mine\n');
+    await runCommand('git', ['add', 'mine.txt'], repoDir);
+
+    const plain = await runCommand('git', ['commit', '-m', '000003 mine'], repoDir);
+    expect(plain.code).not.toBe(0);
+    expect(plain.stderr).toContain('commit with explicit paths');
+
+    const declared = await runCommand('git', ['commit', '-m', '000003 mine'], repoDir, {
+      env: { ...process.env, FOLIOLE_COMMIT_PATHS: 'mine.txt' },
+    });
+    expect(declared.code).not.toBe(0);
+    expect(declared.stderr).toContain('other.txt');
+
+    const scoped = await runCommand('git', ['commit', '-m', '000003 mine', '--', 'mine.txt'], repoDir);
+    expect(scoped.code, scoped.stderr).toBe(0);
+    expect((await runCommand('git', ['show', '--name-only', '--pretty=', 'HEAD'], repoDir)).stdout.trim()).toBe('mine.txt');
+    expect((await runCommand('git', ['diff', '--cached', '--name-only'], repoDir)).stdout.trim()).toBe('other.txt');
+
+    const whole = await runCommand('git', ['commit', '-m', '000004 other'], repoDir, {
+      env: { ...process.env, FOLIOLE_COMMIT_WHOLE_INDEX: '1' },
+    });
+    expect(whole.code, whole.stderr).toBe(0);
   });
 
   it('blocks commit messages that skip the next sequence', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
