@@ -17,7 +17,7 @@ const controlledElectronSqliteTests = [
   'electron/database/diveDailyFlow.integration.test.ts',
   'electron/database/diveTrash.integration.test.ts',
   'electron/database/diveFlowMembershipPlan.integration.test.ts',
-  'electron/database/nodeSubtreeQueryPlans.integration.test.ts',
+  'lib/core/database/nodeDeletedAtIndexRetirement.integration.test.ts',
   'electron/database/reviewEventHistory.integration.test.ts',
   'electron/database/reviewProjection.integration.test.ts',
   'electron/database/nodeRetention.integration.test.ts',

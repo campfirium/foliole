@@ -1,7 +1,7 @@
 import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
 import { retireAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
 import { migrateAttachmentReferenceCache } from './attachmentReferenceCacheSchema.js';
-import { NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
+import { NODE_DELETED_AT_INDEX_RETIREMENT, NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCycleFlow } from './cycleFlowMigration.js';
 import { migrateDailyFlowLocalApplications } from './dailyFlowLocalApplicationMigration.js';
@@ -107,5 +107,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 200, migrate: db => db.exec(LEGACY_REVIEW_CALENDAR_INDEX) },
   { version: 201, migrate: migrateStoredImportLocatorKeys },
   { version: 202, migrate: db => addColumnIfMissing(db, 'nodes', 'enforce_priority', 'INTEGER') },
-  { version: 203, migrate: db => addColumnIfMissing(db, 'node_reading', 'history_order_at', 'TEXT') }
+  { version: 203, migrate: db => addColumnIfMissing(db, 'node_reading', 'history_order_at', 'TEXT') },
+  { version: 204, migrate: db => db.exec(NODE_DELETED_AT_INDEX_RETIREMENT) }
 ];

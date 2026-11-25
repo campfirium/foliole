@@ -102,8 +102,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', async () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Versions up to history ordering (127) install outside the historical beforeVersion plan.
-      Math.max(127, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Versions up to the deleted_at index retirement (128) install outside the historical beforeVersion plan.
+      Math.max(128, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
     const { connection, manager } = harness({ existed: true, storedId: 'ios-device', version: 113 });

@@ -1,6 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import { NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
+import { NODE_DELETED_AT_INDEX_RETIREMENT, NODE_IMPORT_FINGERPRINT_INDEX_SCHEMA } from './coreIndexSchemaStatements.js';
 import { migrateCompanionDailyFlowReadiness } from './dailyFlowReadinessMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS } from './framedSyncDigestSchema.js';
 import { reinstallNodeHistoryInventoryUpdates } from './framedSyncInventorySchema.js';
@@ -34,4 +34,5 @@ export async function migrateCompanionNodeInventoryVersions(db: DbPort, currentV
       await db.run('ALTER TABLE node_reading ADD COLUMN history_order_at TEXT');
     }
   }
+  if (currentVersion < 128 && targetVersion >= 128) await db.run(NODE_DELETED_AT_INDEX_RETIREMENT);
 }
