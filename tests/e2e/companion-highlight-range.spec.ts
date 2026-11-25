@@ -79,13 +79,16 @@ test('keeps the released range visible when an immediate outside tap dismisses t
   await page.mouse.down();
   await page.mouse.move(target.x, target.y, { steps: 8 });
   await expect(page.locator('.cm-md-highlight')).toHaveText('Beta Gamma');
+  // Sample once per rendered frame; DOM states replaced between frames are never shown.
   const observed = await page.evaluateHandle(() => {
-    const ranges: string[] = [];
-    const observer = new MutationObserver(() => {
-      ranges.push(Array.from(document.querySelectorAll('.cm-md-highlight'), element => element.textContent).join(''));
-    });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return { ranges, observer };
+    const result = { ranges: [] as string[], active: true };
+    const sample = () => {
+      if (!result.active) return;
+      result.ranges.push(Array.from(document.querySelectorAll('.cm-md-highlight'), element => element.textContent).join(''));
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    return result;
   });
   await page.mouse.up();
   const pending = await request;
@@ -96,7 +99,7 @@ test('keeps the released range visible when an immediate outside tap dismisses t
   await pending.fulfill({ status: 200, body: 'saved' });
   await expect(page.getByLabel('Saved highlight range')).toHaveText(JSON.stringify({ from: 6, originalText: 'Beta Gamma', to: 16 }));
   await expect(page.locator('.cm-md-highlight')).toHaveText('Beta Gamma');
-  const ranges = await observed.evaluate(result => { result.observer.disconnect(); return result.ranges; });
+  const ranges = await observed.evaluate(result => { result.active = false; return result.ranges; });
   expect(ranges.length).toBeGreaterThan(0);
   expect(ranges.every(range => range === 'Beta Gamma')).toBe(true);
 });
