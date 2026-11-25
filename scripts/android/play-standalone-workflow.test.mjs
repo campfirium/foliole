@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { requirePreviewTip } from './play-standalone-apk.mjs';
 
 const workflow = parse(readFileSync('.github/workflows/android-standalone-apk.yml', 'utf8'));
 const steps = workflow.jobs.apk.steps;
@@ -35,6 +36,14 @@ it('resubmits an earlier run only for the same target and version code without r
   expect(deliver.if).toBeUndefined();
   expect(index('Restore the signed AAB of the earlier run')).toBeLessThan(steps.indexOf(deliver));
   expect(steps.filter(step => step.if === resuming).every(step => !JSON.stringify(step).includes('UPLOAD_KEYSTORE'))).toBe(true);
+});
+
+it('skips the preview gate only when explicitly requested', () => {
+  expect(workflow.on.workflow_dispatch.inputs.skip_preview_gate).toMatchObject({ type: 'boolean', default: false });
+  expect(workflow.jobs.apk.env.SKIP_PREVIEW_GATE).toBe('${{ inputs.skip_preview_gate }}');
+  // A missing repository makes the remote lookup fail, so passing here means no lookup happened.
+  expect(() => requirePreviewTip('0'.repeat(40), '/nonexistent', { SKIP_PREVIEW_GATE: 'true' })).not.toThrow();
+  expect(() => requirePreviewTip('0'.repeat(40), '/nonexistent', { SKIP_PREVIEW_GATE: 'false' })).toThrow();
 });
 
 it('binds a resumed AAB to its signing receipt before talking to Play', () => {

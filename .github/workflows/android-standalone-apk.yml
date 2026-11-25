@@ -1,5 +1,6 @@
 name: Android standalone APK
 # Builds a Play-signed APK for the QA-accepted preview tip and keeps it as a downloadable artifact.
+# skip_preview_gate builds any pushed commit instead; that APK has not passed QA.
 # Play only receives an internal-track draft, so no tester or user is offered an update.
 # The upload-signed AAB is kept before any Play call, so a failed Play step can be retried from it
 # by dispatching again with the same target_sha and version_code plus resume_run_id.
@@ -7,9 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       target_sha:
-        description: Exact preview tip commit SHA
+        description: Exact commit SHA (the preview tip unless the gate is skipped)
         required: true
         type: string
+      skip_preview_gate:
+        description: Build a pushed commit that is not the QA-accepted preview tip
+        required: false
+        default: false
+        type: boolean
       version_code:
         description: Unused Play version code above every uploaded bundle
         required: true
@@ -30,6 +36,7 @@ jobs:
       TARGET_SHA: ${{ inputs.target_sha }}
       VERSION_CODE: ${{ inputs.version_code }}
       RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+      SKIP_PREVIEW_GATE: ${{ inputs.skip_preview_gate }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }

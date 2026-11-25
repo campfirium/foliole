@@ -22,7 +22,8 @@ export function standaloneIdentity(env, root) {
   return { sourceSha, version, versionCode };
 }
 
-function requirePreviewTip(sourceSha, root) {
+export function requirePreviewTip(sourceSha, root, env) {
+  if (env.SKIP_PREVIEW_GATE === 'true') return log(`preview gate skipped: ${sourceSha} has not passed QA`);
   // Only QA finish advances preview, so its tip is the accepted candidate.
   const tip = execFileSync('git', ['ls-remote', 'origin', 'refs/heads/preview'], { cwd: root, encoding: 'utf8' }).split(/\s/u)[0];
   if (tip !== sourceSha) throw new Error(`Target ${sourceSha} is not the QA-accepted preview tip ${tip}`);
@@ -88,7 +89,7 @@ export async function runStandaloneApk(command, env = process.env, root = proces
   const directory = path.join(root, DIRECTORY);
   fs.mkdirSync(directory, { recursive: true });
   if (command === 'build') {
-    requirePreviewTip(identity.sourceSha, root);
+    requirePreviewTip(identity.sourceSha, root, env);
     return buildPlayBundle(identity, root, directory, env);
   }
   if (command === 'sign') return signPlayBundle(directory, env);
