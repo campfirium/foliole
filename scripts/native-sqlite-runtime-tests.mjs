@@ -30,6 +30,7 @@ export const controlledRuntimeSqliteTests = [
   'electron/database/dailyFlowRollover.integration.test.ts',
   'electron/database/dailyFlowSyncSerialization.integration.test.ts',
   'electron/database/desktopNodeIndex.integration.test.ts',
+  'electron/database/enforcedFolderPriority.integration.test.ts',
   'electron/database/pdfIndexing.lookup.integration.test.ts',
   'electron/database/readwiseApiCandidateLookup.integration.test.ts',
   'electron/database/requestSyncOverwriteRound.integration.test.ts',
