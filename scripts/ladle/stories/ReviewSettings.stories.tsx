@@ -1,10 +1,15 @@
+import type { Story } from '@ladle/react';
+import type { ReactNode } from 'react';
+
 import { SettingsReviewSection } from '../../../src/features/settings/components/sections/SettingsReviewSection';
 import { ReviewSchedulerSettingsProvider } from '../../../src/features/settings/context/ReviewSchedulerSettingsProvider';
 import { LocalizationProvider, useTranslation } from '../../../src/shared/localization/LocalizationProvider';
 import { settingsDialogPane, settingsDialogPaneBody } from '../../../src/shared/ui/settingsDialogBounds';
 import { AppTooltipProvider } from '../../../src/shared/ui/Tooltip';
 
-function ReviewSettingsPane() {
+import { ReviewOrderPreview, type ReviewOrderPreviewProps } from './ReviewOrderPreview';
+
+function ReviewSettingsPane({ children }: { children: ReactNode }) {
   const t = useTranslation();
 
   return (
@@ -16,7 +21,7 @@ function ReviewSettingsPane() {
             {t('settings.category.review.description')}
           </p>
         </header>
-        <SettingsReviewSection />
+        {children}
       </div>
     </div>
   );
@@ -27,9 +32,24 @@ export function FullPane() {
     <LocalizationProvider initialLanguagePreference="zh-Hans">
       <AppTooltipProvider>
         <ReviewSchedulerSettingsProvider>
-          <ReviewSettingsPane />
+          <ReviewSettingsPane>
+            <SettingsReviewSection />
+          </ReviewSettingsPane>
         </ReviewSchedulerSettingsProvider>
       </AppTooltipProvider>
     </LocalizationProvider>
   );
 }
+
+export const ReviewOrderProposal: Story<ReviewOrderPreviewProps> = (props) => (
+  <LocalizationProvider initialLanguagePreference="zh-Hans">
+    <ReviewSettingsPane>
+      <ReviewOrderPreview {...props} />
+    </ReviewSettingsPane>
+  </LocalizationProvider>
+);
+
+ReviewOrderProposal.args = {
+  title: '复习顺序',
+  explanation: '先复习 P0 队列中所有到期检测项，再从 P1–P9 的到期队列中按权重抽取。空队列不参与。'
+};

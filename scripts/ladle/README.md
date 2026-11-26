@@ -6,6 +6,8 @@ After installing the repository dependencies, run `npm run ladle` and open
 Open **Review settings → Full pane** to see the entire Review settings pane.
 Use fullscreen to give the pane more room. The **Settings row** stories are
 for editing a single row in isolation.
+Open **Review settings → Review order proposal** to try the queue explanation,
+priority weight, and example probabilities.
 
 Choose a story in the sidebar. Use **Controls** to try copy and input values,
 and the theme and width controls to check how the component looks. Controls
