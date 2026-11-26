@@ -8,7 +8,7 @@ import { assertQualityCommandAllowed } from '../quality/quality-command-contract
 import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-register.mjs';
 import { createMobileGithubApi, listMobileCandidates, registerMobileCandidate, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { extractSignedPlayArchive, readPlayRegistration } from '../mobile/mobile-candidate-read.mjs';
-import { MOBILE_REPOSITORY } from '../mobile/mobile-candidate-provenance.mjs';
+import { differingRunFields, MOBILE_REPOSITORY, PLAY_ACTIVE_RUN_STATUSES } from '../mobile/mobile-candidate-provenance.mjs';
 import { playAccessToken, createPlayApi, createPlayApkDownloader } from './play-api.mjs';
 import { requirePlayReservation } from './play-preparation-state.mjs';
 import { deliverRegisteredPlayCandidate } from './play-delivery.mjs';
@@ -21,11 +21,20 @@ export async function resolvePlayDeliveryRegistration(github, env, registrarSha)
   const run = await github('GET', `actions/runs/${runId}`);
   const branch = { 'release-t7': 'release', 'qa-mobile-beta': 'review' }[env.EXECUTION_LANE];
   const workflow = branch === 'release' ? '.github/workflows/t7-release.yml' : '.github/workflows/remote-quality.yml';
-  if (!branch || run.head_branch !== branch || run.path !== workflow || run.status !== 'in_progress' ||
-      !['push', 'workflow_dispatch'].includes(run.event) || run.head_repository?.full_name !== MOBILE_REPOSITORY ||
-      run.head_sha !== env.TARGET_SHA || env.GITHUB_SHA !== run.head_sha ||
-      env.GITHUB_REF !== `refs/heads/${branch}` || env.TRIGGER_REF !== env.GITHUB_REF ||
-      run.run_attempt !== Number(env.GITHUB_RUN_ATTEMPT)) throw new Error('Actual delivery run differs from the accepted lane');
+  const differing = differingRunFields([
+    ['EXECUTION_LANE', env.EXECUTION_LANE, Boolean(branch)],
+    ['head_branch', run.head_branch, run.head_branch === branch],
+    ['path', run.path, run.path === workflow],
+    ['status', run.status, PLAY_ACTIVE_RUN_STATUSES.includes(run.status)],
+    ['event', run.event, ['push', 'workflow_dispatch'].includes(run.event)],
+    ['head_repository.full_name', run.head_repository?.full_name, run.head_repository?.full_name === MOBILE_REPOSITORY],
+    ['head_sha', run.head_sha, run.head_sha === env.TARGET_SHA],
+    ['GITHUB_SHA', env.GITHUB_SHA, env.GITHUB_SHA === run.head_sha],
+    ['GITHUB_REF', env.GITHUB_REF, env.GITHUB_REF === `refs/heads/${branch}`],
+    ['TRIGGER_REF', env.TRIGGER_REF, env.TRIGGER_REF === env.GITHUB_REF],
+    ['run_attempt', run.run_attempt, run.run_attempt === Number(env.GITHUB_RUN_ATTEMPT)]
+  ]);
+  if (differing) throw new Error(`Actual delivery run differs from the accepted lane (${differing})`);
   const rows = (await listMobileCandidates(github, run.head_sha)).filter(row => row.payload?.runId === runId);
   if (rows.length > 1) throw new Error('Original delivery has multiple durable candidates');
   let row;

@@ -70,3 +70,14 @@ it('refuses to create an inventory snapshot when the ticket cannot record the re
   expect(creates(f)).toHaveLength(0);
   expect(await readPlayPreparation(f.clients().github, f.rows[0])).toEqual({ phase: 'cleared' });
 });
+
+it('prepares while the run reads queued because a sibling job has not started', async () => {
+  const f = await fixture(); f.sources.get('42').run.status = 'queued';
+  expect(await prepare(f)).toMatchObject({ proceed: true, versionCode: 13 });
+});
+
+it('names the differing field when the running job does not match its run', async () => {
+  const f = await fixture();
+  await expect(preparePlaySubmission({ ...f.clients(), env: { ...f.env(), TARGET_VERSION: '0.0.1' },
+    registrarSha: 'e'.repeat(40) })).rejects.toThrow('accepted Android lane (TARGET_VERSION="0.0.1")');
+});

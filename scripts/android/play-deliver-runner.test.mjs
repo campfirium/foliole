@@ -46,3 +46,10 @@ it('blocks a new edit while a previously registered upload remains uncertain', a
   const api = async (...args) => args[1].includes('/statuses?per_page=100') ? [] : f.api(...args);
   await expect(readReservedPlayHistory(api, { highestVersionCode: 3 })).rejects.toThrow(/earlier Play operation remains unresolved/u);
 });
+
+it('delivers while the run reads queued and names the field of a refused run', async () => {
+  const f = fixture('release-t7'); f.run.status = 'queued';
+  expect(await resolvePlayDeliveryRegistration(f.api, f.env)).toEqual(f.rows[0]);
+  f.run.status = 'completed';
+  await expect(resolvePlayDeliveryRegistration(f.api, f.env)).rejects.toThrow('accepted lane (status="completed")');
+});

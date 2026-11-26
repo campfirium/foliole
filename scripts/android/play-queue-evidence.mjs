@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { allPages } from '../mobile/mobile-candidate-read.mjs';
-import { verifyPlayQuality, verifyPlaySource } from '../mobile/mobile-candidate-provenance.mjs';
+import { PLAY_ACTIVE_RUN_STATUSES, verifyPlayQuality, verifyPlaySource } from '../mobile/mobile-candidate-provenance.mjs';
 import { readReceipt } from '../quality/chain-verdict-read.mjs';
 
 export const PLAY_ADMISSION_JOB = 'Admit Android submission or wait for review';
@@ -34,8 +34,12 @@ export async function readPlayQueueEvidence(github, runId, jobName = PLAY_ADMISS
   const version = JSON.parse(Buffer.from(pkg.content, 'base64').toString()).version;
   if (!/^\d+\.\d+\.\d+$/u.test(version)) throw new Error('Queued source version is invalid');
   const latest = await github('GET', base);
-  if (latest.head_sha !== run.head_sha || latest.run_attempt !== run.run_attempt || latest.status !== run.status) {
-    throw new Error('Queued source run changed during verification');
+  // Moving between active statuses only reflects sibling jobs starting or waiting.
+  const sameStatus = latest.status === run.status ||
+    (PLAY_ACTIVE_RUN_STATUSES.includes(latest.status) && PLAY_ACTIVE_RUN_STATUSES.includes(run.status));
+  if (latest.head_sha !== run.head_sha || latest.run_attempt !== run.run_attempt || !sameStatus) {
+    throw new Error(`Queued source run changed during verification (head_sha=${latest.head_sha}, ` +
+      `run_attempt=${latest.run_attempt}, status=${run.status}->${latest.status})`);
   }
   return { run, lane, version, jobId: admission[0].id, qualityArtifact: accepted };
 }

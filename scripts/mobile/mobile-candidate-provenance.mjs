@@ -9,10 +9,26 @@ export const PLAY_CANDIDATE_ENVIRONMENT = 'foliole-play-beta';
 const fail = message => { throw new Error(`Mobile candidate registration refused: ${message}`); };
 const UPLOAD_CERTIFICATE = '3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B';
 
+// The run status aggregates all jobs: a run reads 'queued' while some of its jobs execute and a
+// sibling still waits to start, so a running job may observe either value about its own run.
+// 'pending' and 'waiting' have not been observed alongside a running job and stay refused.
+export const PLAY_ACTIVE_RUN_STATUSES = Object.freeze(['in_progress', 'queued']);
+
+// Names each failed [field, actual value, accepted] check so a refusal is diagnosable from its log.
+export function differingRunFields(checks) {
+  return checks.filter(([, , accepted]) => !accepted)
+    .map(([field, value]) => `${field}=${JSON.stringify(value) ?? 'undefined'}`).join(', ');
+}
+
 export function verifyPlaySourceIdentity(run) {
-  if (run?.head_repository?.full_name !== MOBILE_REPOSITORY ||
-      !Number.isSafeInteger(run.id) || !Number.isSafeInteger(run.run_attempt) ||
-      !['in_progress', 'completed'].includes(run.status)) fail('run or version identity differs');
+  const repository = run?.head_repository?.full_name;
+  const differing = differingRunFields([
+    ['head_repository.full_name', repository, repository === MOBILE_REPOSITORY],
+    ['id', run?.id, Number.isSafeInteger(run?.id)],
+    ['run_attempt', run?.run_attempt, Number.isSafeInteger(run?.run_attempt)],
+    ['status', run?.status, [...PLAY_ACTIVE_RUN_STATUSES, 'completed'].includes(run?.status)]
+  ]);
+  if (differing) fail(`run or version identity differs (${differing})`);
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
   const remote = parseRemoteQualityRun(run);
@@ -25,7 +41,7 @@ export function verifyPlaySourceIdentity(run) {
 
 export function verifyPlaySource(run) {
   const lane = verifyPlaySourceIdentity(run);
-  if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail('source run was cancelled or expired');
+  if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail(`source run was cancelled or expired (conclusion=${JSON.stringify(run.conclusion)})`);
   return lane;
 }
 

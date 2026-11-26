@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
-import { createPlayRegistration } from './mobile-candidate-provenance.mjs';
+import { createPlayRegistration, verifyPlaySource } from './mobile-candidate-provenance.mjs';
 import { registrationFixture } from './mobile-candidate-test-fixtures.mjs';
 
 it.each(['dev-remote', 'release-t7'])('binds a signed candidate to actual run, original attempt and full %s quality', lane => {
@@ -35,4 +35,22 @@ it('rejects foreign workflows, ordinary QA, changed candidates and missing or fa
     const f = registrationFixture(); change(f);
     expect(() => createPlayRegistration(f)).toThrow();
   }
+});
+
+it.each(['in_progress', 'queued'])('accepts a running source reported as %s', status => {
+  const f = registrationFixture('release-t7');
+  f.run.status = status;
+  expect(verifyPlaySource(f.run)).toBe('release-t7');
+});
+
+it.each([
+  [{ status: 'pending' }, 'status="pending"'],
+  [{ status: 'waiting' }, 'status="waiting"'],
+  [{ head_repository: { full_name: 'attacker/foliole' } }, 'head_repository.full_name="attacker/foliole"'],
+  [{ id: '42' }, 'id="42"'],
+  [{ run_attempt: undefined }, 'run_attempt=undefined']
+])('names the offending run field in the refusal for %o', (change, named) => {
+  const f = registrationFixture('release-t7');
+  Object.assign(f.run, change);
+  expect(() => verifyPlaySource(f.run)).toThrow(`run or version identity differs (${named})`);
 });

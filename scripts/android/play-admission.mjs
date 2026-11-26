@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
 import { createMobileGithubApi } from '../mobile/mobile-candidate-store.mjs';
 import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-register.mjs';
+import { differingRunFields, PLAY_ACTIVE_RUN_STATUSES } from '../mobile/mobile-candidate-provenance.mjs';
 import { playAccessToken, createPlayApi, readPlayReleases } from './play-api.mjs';
 import { readPrebuiltPlayCandidate } from './play-prebuilt-candidate.mjs';
 import { readPlayQueueEvidence, PLAY_UPLOAD_ADMISSION_JOB } from './play-queue-evidence.mjs';
@@ -16,12 +17,18 @@ export async function registerAcceptedPlaySubmission({ github, play, env, regist
   const evidence = await readPlayQueueEvidence(github, env.GITHUB_RUN_ID, upload ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
   const { run, lane, version } = evidence;
   const branch = lane === 'release-t7' ? 'release' : 'review';
-  if (run.status !== 'in_progress' || run.run_attempt !== Number(env.GITHUB_RUN_ATTEMPT) ||
-      run.head_sha !== env.TARGET_SHA || env.GITHUB_SHA !== run.head_sha || env.TARGET_VERSION !== version ||
-      env.GITHUB_REF !== `refs/heads/${branch}` || env.TRIGGER_REF !== env.GITHUB_REF ||
-      env.EXECUTION_LANE !== (branch === 'release' ? 'release-t7' : 'qa-mobile-beta')) {
-    throw new Error('Actual queued run differs from the accepted Android lane');
-  }
+  const expectedLane = branch === 'release' ? 'release-t7' : 'qa-mobile-beta';
+  const differing = differingRunFields([
+    ['status', run.status, PLAY_ACTIVE_RUN_STATUSES.includes(run.status)],
+    ['run_attempt', run.run_attempt, run.run_attempt === Number(env.GITHUB_RUN_ATTEMPT)],
+    ['head_sha', run.head_sha, run.head_sha === env.TARGET_SHA],
+    ['GITHUB_SHA', env.GITHUB_SHA, env.GITHUB_SHA === run.head_sha],
+    ['TARGET_VERSION', env.TARGET_VERSION, env.TARGET_VERSION === version],
+    ['GITHUB_REF', env.GITHUB_REF, env.GITHUB_REF === `refs/heads/${branch}`],
+    ['TRIGGER_REF', env.TRIGGER_REF, env.TRIGGER_REF === env.GITHUB_REF],
+    ['EXECUTION_LANE', env.EXECUTION_LANE, env.EXECUTION_LANE === expectedLane]
+  ]);
+  if (differing) throw new Error(`Actual queued run differs from the accepted Android lane (${differing})`);
   const directUpload = prebuilt && env.PLAY_DIRECT_UPLOAD === 'true';
   const releases = prebuilt && (!upload || directUpload) ? [] : await readPlayReleases(play);
   const row = await registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
