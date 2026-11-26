@@ -1,9 +1,11 @@
 // T886: one table of "starting scene x event -> body boundary, system bar requests, toolbars, tap result",
 // run on the real reading components under the Android and iOS runtime capabilities.
+import { readFileSync } from 'node:fs';
+
 import { act, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BODY } from './companionReadingStateTable.geometry.testSupport';
+import { BODY, createBodyBoundaryReader } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 import { sessionRows, type ReadingStateRow } from './companionReadingStateTable.rows.testSupport';
 import { article, mount, shell } from './companionReadingStateTable.scenes.testSupport';
@@ -11,6 +13,10 @@ import { tapRows } from './companionReadingStateTable.tapRows.testSupport';
 import { createProbe, installLayout, removeLayout, type Observation, type Platform } from './companionReadingStateTable.testSupport';
 import { windowRows } from './companionReadingStateTable.windowRows.testSupport';
 import { updateCompanionToolbarAppearance } from './companionSelectionToolbarPreference';
+
+const readBodyBoundary = createBodyBoundaryReader(readFileSync(
+  'src/companion/companionReadingDisplay.css', 'utf8'
+));
 
 vi.mock('@capacitor/core', async original => {
   const actual = await original<typeof import('@capacitor/core')>();
@@ -83,7 +89,7 @@ async function observeRow(row: ReadingStateRow, platform: Platform) {
   localStorage.setItem('foliole-companion-reading-display',
     JSON.stringify({ hideSystemStatusBar: true, ...row.display }));
   if (row.paged) localStorage.setItem('foliole-companion-reading-mode', 'paged');
-  const probe = createProbe();
+  const probe = createProbe(readBodyBoundary);
   await row.run(probe, platform);
   probe.checkpoint();
   return probe.observe();
@@ -100,7 +106,7 @@ describe.each<Platform>(['android', 'ios'])('reading state table on %s', platfor
     for (const overlayToolbars of [false, true]) {
       host.platform = platform;
       localStorage.setItem('foliole-companion-reading-display', JSON.stringify({ overlayToolbars }));
-      const probe = createProbe();
+      const probe = createProbe(readBodyBoundary);
       mount(layout === 'flow' ? shell({ nodeId: 'topic-2' }) : article());
       await probe.flush();
       const [boundary, ...moved] = probe.observe().body;

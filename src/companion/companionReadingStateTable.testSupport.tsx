@@ -2,7 +2,6 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
-import { bodyBoundary } from './companionReadingStateTable.geometry.testSupport';
 import { host } from './companionReadingStateTable.host.testSupport';
 
 export type Platform = 'android' | 'ios';
@@ -64,11 +63,11 @@ function touchTap(target: HTMLElement, x: number) {
   fireEvent.click(target, { detail: 1, clientX: x, clientY: 300 });
 }
 
-export function createProbe() {
+export function createProbe(readBodyBoundary: () => string | null) {
   const body: string[] = [];
   const taps: string[][] = [];
   const checkpoint = () => {
-    const value = bodyBoundary();
+    const value = readBodyBoundary();
     if (value && !body.includes(value)) body.push(value);
   };
   const flush = async (ms = 0) => {

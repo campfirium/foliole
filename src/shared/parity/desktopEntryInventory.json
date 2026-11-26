@@ -284,7 +284,7 @@
   {"id": "setting:settings.mouseGestures.display.trail", "mobile": "desktopOnly", "reason": "鼠标手势仅桌面", "capmapRef": "mouse-gestures"},
   {"id": "setting:settings.mouseGestures.thresholds.pointSpacing.title", "mobile": "desktopOnly", "reason": "鼠标手势仅桌面", "capmapRef": "mouse-gestures"},
   {"id": "setting:settings.mouseGestures.trail.opacity.title", "mobile": "desktopOnly", "reason": "鼠标手势仅桌面", "capmapRef": "mouse-gestures"},
-  {"id": "setting:settings.review.later.title", "mobile": "entry", "mobileEntry": "设置 → 学习 → Later 间隔", "capmapRef": "scheduler-settings"},
+  {"id": "setting:settings.scheduling.laterTitle", "mobile": "entry", "mobileEntry": "设置 → 学习 → Later 间隔", "capmapRef": "scheduler-settings"},
   {"id": "setting:settings.review.optimization", "mobile": "entry", "mobileEntry": "设置 → 学习 → 自动复习优化", "capmapRef": "scheduler-settings"},
   {"id": "setting:settings.search.gestureLineColor.title", "mobile": "desktopOnly", "reason": "鼠标手势仅桌面", "capmapRef": "mouse-gestures"},
   {"id": "setting:settings.search.gestureThreshold.title", "mobile": "desktopOnly", "reason": "鼠标手势仅桌面", "capmapRef": "mouse-gestures"},
