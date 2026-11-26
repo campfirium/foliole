@@ -25,7 +25,8 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     readRows: cycleRowsReader(db, rowsById),
     scanRows: (after, through, count, filter, nodeIds) => scanCycleRows(db, after, through, count, filter, nodeIds),
     timedRows: (filter, count, nodeIds) => readTimedCycleRows(db, filter, count, nodeIds),
-    readReadiness: () => db.query(`${STORED_ROWS} WHERE e.active=1`),
+    readReadiness: ids => db.query(`${STORED_ROWS} WHERE e.active=1 ${ids ? NODE_SCOPE : ''}`,
+      ids ? [JSON.stringify(ids)] : []),
     async writeRows(rows) {
       const checkEmpty = initializing && rows.length > 0;
       initializing = false;

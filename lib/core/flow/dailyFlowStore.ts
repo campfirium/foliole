@@ -11,6 +11,9 @@ export type CycleStored = { day_key: string; revision: number; settings_key: str
   session_json: string; invalidated: number; session: DailyFlowSession };
 export type CycleSaveArgs = { dayKey: string; mode: string; settingsKey: string;
   now: string; revision: number; session: DailyFlowSession };
+/** The entries one command changed, with what the stored remaining counts held for them before it. */
+export type CycleTaskCounts = { remaining: number; reviewRemaining: number };
+export type CycleReconcileScope = { ids: readonly string[]; counted: CycleTaskCounts };
 export type DailyFlowOperation = { input_hash: string; revision: number; card_json: string | null;
   source_session_json: string | null };
 
@@ -20,6 +23,8 @@ export type PreparedFlowNavigation = { source: DailyFlowSession; next: DailyFlow
 export interface DailyFlowStore {
   timing?: FlowTiming;
   readingPreservesPosition?: boolean;
+  /** Set when only these entries can be out of date; otherwise a reconcile covers the whole list. */
+  reconcileScope?: CycleReconcileScope;
   preparedNavigation?: PreparedFlowNavigation | undefined;
   readState(): Promise<CycleStored | null>;
   readDiveMembers?(id: string): Promise<string[]>;
@@ -30,7 +35,7 @@ export interface DailyFlowStore {
     nodeIds?: readonly string[]): Promise<CycleStoredRow[]>;
   /** Waiting rows whose time has come, earliest first. */
   timedRows?(filter: CycleScanFilter, count: number, nodeIds?: readonly string[]): Promise<CycleStoredRow[]>;
-  readReadiness?(): Promise<CycleStoredRow[]>;
+  readReadiness?(ids?: readonly string[]): Promise<CycleStoredRow[]>;
   writeRows(rows: CycleStoredRow[]): Promise<void>;
   deleteRows(ids: readonly string[]): Promise<void>;
   resetCycle(): Promise<void>;

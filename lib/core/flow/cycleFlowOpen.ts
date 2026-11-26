@@ -16,7 +16,7 @@ import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
-import type { CycleStored } from './dailyFlowStore.js';
+import type { CycleReconcileScope, CycleStored, CycleTaskCounts } from './dailyFlowStore.js';
 import { timeFlow, timeFlowScan, type FlowTiming } from './flowTiming.js';
 
 export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
@@ -31,11 +31,22 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   return { session, snapshot, rows, mode };
 }
 
-export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows' | 'readReadiness'>, stored: CycleStored, now: string,
-  settings: DailyFlowSettings, captureChanges = false) {
-  const snapshot = await db.learningSnapshot();
+function countCycleTasks(rows: readonly CycleRow[], snapshot: DailyFlowLearningSnapshot): CycleTaskCounts {
+  const tasks = rows.filter(row => row.active && row.initial_task);
+  return { remaining: tasks.length,
+    reviewRemaining: tasks.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length };
+}
+
+export async function readCycleTaskCounts(db: Pick<DailyFlowStore, 'readRows' | 'scopedLearningSnapshot'>,
+  ids: readonly string[]) {
+  return countCycleTasks(await db.readRows(ids), await db.scopedLearningSnapshot(ids));
+}
+
+export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'scopedLearningSnapshot' | 'readRows' | 'writeRows' | 'readReadiness'>,
+  stored: CycleStored, now: string, settings: DailyFlowSettings, captureChanges = false, scope?: CycleReconcileScope) {
+  const snapshot = scope ? await db.scopedLearningSnapshot(scope.ids) : await db.learningSnapshot();
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
-  const rows = await db.readRows();
+  const rows = [...await db.readRows(scope?.ids)].sort((a, b) => a.order_key - b.order_key);
   const meta = { ...stored.session.cycle! };
   const changes = cycleChanges(meta);
   for (const row of rows) {
@@ -44,22 +55,24 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
       cohort: 'none', order_key: allocateCycleKey(meta) });
   }
   const final = new Map([...rows, ...changes.rows()].map(row => [row.node_id, row]));
-  await writeReconciledReadiness(db, [...final.values()].filter(row => row.active), changes.rows(), snapshot, now, settings);
-  const remaining = [...final.values()].filter(row => row.active && row.initial_task);
-  meta.remaining = remaining.length;
-  meta.reviewRemaining = remaining.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length;
+  await writeReconciledReadiness(db, [...final.values()].filter(row => row.active), changes.rows(), snapshot, now, settings, scope?.ids);
+  const counts = countCycleTasks([...final.values()], snapshot);
+  // A scoped reconcile swaps these entries' earlier share of the counts for their current one.
+  meta.remaining = counts.remaining + (scope ? Math.max(0, meta.remaining - scope.counted.remaining) : 0);
+  meta.reviewRemaining = Math.min(meta.remaining, counts.reviewRemaining +
+    (scope ? Math.max(0, meta.reviewRemaining - scope.counted.reviewRemaining) : 0));
   delete meta.change;
   if (captureChanges) meta.change = changes.change();
   return { ...stored.session, cycle: meta };
 }
 
 async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
-  changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings) {
+  changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings, ids?: readonly string[]) {
   const derived = deriveCycleReadiness(snapshot, active.map(row => row.node_id), now, settings);
   await db.writeRows(withCycleReadiness(changed, derived));
   if (!db.readReadiness) return;
   const touched = new Set(changed.map(row => row.node_id));
-  const stored = new Map((await db.readReadiness()).map(row => [row.node_id, row]));
+  const stored = new Map((await db.readReadiness(ids)).map(row => [row.node_id, row]));
   const stale = active.filter(row => {
     const before = stored.get(row.node_id);
     const after = derived.get(row.node_id);
@@ -168,7 +181,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     const reconcile = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
     const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
     session = reconcile
-      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges, db.reconcileScope)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
     session = await resumeStoredCycle(db, session, args, settings, Boolean(stored.invalidated), changes);
     if (changes) session.cycle!.change = changes.change();
   }
