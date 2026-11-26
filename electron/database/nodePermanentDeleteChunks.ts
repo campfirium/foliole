@@ -7,7 +7,7 @@ import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { removePermanentDeleteParentImages } from './nodePermanentDeleteParentImages.js';
 import { flushNodeSyncVersion } from './nodeSyncVersions.js';
-import { recordNodeSourceDisposition } from './sourceDispositionStates.js';
+import { recordTimedNodeSourceDispositions } from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
 
 export interface PermanentDeletePlan {
@@ -56,9 +56,10 @@ export function deletePermanentDeleteChunk(nodeIds: string[]): string[] {
   const deletedAt = new Date().toISOString();
   const hostName = loadOrCreateDesktopHostName(deletedAt);
   const nodeDeletedAt = readNodeDeletedAt(nodeIds, deletedAt);
-  for (const row of nodeDeletedAt) {
-    recordNodeSourceDisposition(row.nodeId, 'hard_deleted', row.deletedAt);
-  }
+  recordTimedNodeSourceDispositions(
+    nodeDeletedAt.map((row) => ({ nodeId: row.nodeId, updatedAt: row.deletedAt })),
+    'hard_deleted'
+  );
   markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
   withTransaction(connection.driver, () => {
     for (const nodeId of nodeIds) {

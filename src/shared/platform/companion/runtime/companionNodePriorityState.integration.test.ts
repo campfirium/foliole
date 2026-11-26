@@ -72,6 +72,32 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
   } finally { await library.close(); }
 });
 
+it.each(['android', 'ios'] as const)('%s keeps the directory order after the first body save', async platform => {
+  const library = createDisplayLibrary(platform);
+  runtime.owner = library.owner;
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now });
+    await library.owner.runWriter(async db => {
+      for (const [id, parent] of [['b', null], ['a', null], ['child', 'a'], ['other', null]] as const) {
+        await db.run(`INSERT INTO nodes (id,parent_id,title,content,created_at,updated_at) VALUES (?,?,?,'',?,?)`,
+          [id, parent, id, now, now]);
+      }
+    }, { kind: 'business' });
+    const before = (await refreshCompanionWorkspaceSnapshot())!.nodeOrder;
+    const fullReads = library.nodeOrderReads.length;
+    await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
+      await tx.run("UPDATE nodes SET content='Edited body' WHERE id='child'");
+    }), { kind: 'business' }), { kind: 'nodes', nodeIds: ['child'] });
+    const after = (await refreshCompanionWorkspaceSnapshot())!.nodeOrder;
+    expect(library.nodeOrderReads).toHaveLength(fullReads);
+    const order = await library.owner.read(db => library.owner.readNodeOrder(db));
+    expect(after).toEqual(before);
+    expect([...order]).toEqual([...before]);
+    library.owner.clearNodePriorities();
+    expect([...await library.owner.read(db => library.owner.readNodeOrder(db))]).toEqual([...before]);
+  } finally { await library.close(); }
+});
+
 it('keeps failed refreshes unavailable and repairs every pending changed node', async () => {
   const library = createDisplayLibrary('android');
   const state = new CompanionNodePriorityState();

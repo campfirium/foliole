@@ -61,10 +61,6 @@ export function flushDirtyNodeSyncVersionBatch(limit: number, now = new Date().t
   });
 }
 
-export function backfillMissingDesktopNodeSyncState() {
-  return backfillMissingNodeSyncState(openDatabaseConnection().driver);
-}
-
 export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
   const nodeIds = driver.queryAll<{ id: string }>(

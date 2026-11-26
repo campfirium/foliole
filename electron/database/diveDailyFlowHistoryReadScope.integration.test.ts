@@ -70,3 +70,26 @@ it.each([['topic', 'dive'], ['topic', 'global'], ['item', 'dive'], ['item', 'glo
     const large = await undoAndRedoReads(kind, entrance, 600);
     expect(large).toEqual(small);
   });
+
+it('reaches the day\'s Flow facts without walking earlier days on undo', async () => {
+  const context = await setup('topic');
+  const { peer, open, commit } = context;
+  const plans: string[] = [];
+  const prepare = peer.db.prepare.bind(peer.db);
+  peer.db.prepare = ((sql: string) => {
+    // The latest-time lookup walks the time index from its newest end and stops at today's first fact.
+    if (/FROM daily_flow_sync_facts/u.test(sql) && /day_end\s*>\s*\?/u.test(sql) && !sql.includes('MAX(')) {
+      plans.push(...(prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...Array.from(sql.matchAll(/\?/gu), () => null)) as
+        { detail: string }[]).map(row => row.detail));
+    }
+    return prepare(sql);
+  }) as typeof peer.db.prepare;
+  const start = (await open()).session;
+  const handled = await action('topic', context, start);
+  const done = await commit(handled.command);
+  const replay = await handled.replay();
+  await commit({ opId: 'undo', now, token: done.session.daily!, historyMode: 'undo', historyTargetOpId: 'handle',
+    sourceSession: done.session, historySourceSession: done.session, nextSession: start, ...replay.undo });
+  expect(plans.length).toBeGreaterThan(0);
+  expect(plans.filter(detail => /^SCAN daily_flow_sync_facts|daily_flow_action_time/u.test(detail))).toEqual([]);
+});

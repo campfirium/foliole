@@ -27,7 +27,9 @@ import { flushDirtyNodeSyncVersions, flushNodeSyncVersionWithDriver } from './no
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import {
   clearNodeSourceDisposition,
-  recordNodeSourceDisposition
+  clearNodeSourceDispositions,
+  recordNodeSourceDisposition,
+  recordNodeSourceDispositions
 } from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
 
@@ -89,7 +91,7 @@ export function softDeleteNodesDeferringSyncVersions(input: SoftDeleteNodesInput
   }
   withTransaction(connection.driver, () => {
     softDeleteNodesViaDriver(connection.driver, input);
-    for (const nodeId of input.nodeIds) recordNodeSourceDisposition(nodeId, 'soft_deleted', input.deletedAt);
+    recordNodeSourceDispositions(input.nodeIds, 'soft_deleted', input.deletedAt);
     connection.driver.execute(
       `UPDATE nodes
        SET last_modified_by_host_name = ?, sync_dirty = 1
@@ -105,7 +107,7 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
     const result = restoreNodesViaDriver(connection.driver, input);
-    for (const nodeId of result.restoredNodeIds) clearNodeSourceDisposition(nodeId);
+    clearNodeSourceDispositions(result.restoredNodeIds);
     if (result.restoredNodeIds.length) {
       connection.driver.execute(
         `UPDATE nodes

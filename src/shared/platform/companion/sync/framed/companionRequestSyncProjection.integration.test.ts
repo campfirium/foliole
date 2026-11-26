@@ -84,7 +84,8 @@ it('finishes a real HTTP update when its snapshot interrupts attachment observat
           ...db,
           async query<T extends DbRow>(sql: string, params?: DbParams) {
             const result = await db.query<T>(sql, params);
-            if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
+            // The library-wide candidate listing is the scan's first background snapshot.
+            if (sql.includes('AS bytes FROM nodes')) {
               batches++;
               foreground ??= library.owner.readSnapshot(read, signal);
             }

@@ -12,6 +12,17 @@ export async function loadCompanionWorkspaceNodeFromDb(db: DbPort, nodeId: strin
   return node;
 }
 
+/** Several `loadCompanionWorkspaceNodeFromDb` results in one statement, in input order; absent ids are skipped. */
+export async function loadCompanionWorkspaceNodeListFromDb(db: DbPort, nodeIds: readonly string[]) {
+  const rows = await db.query<WorkspaceNodeRowShape & DbRow>(
+    'SELECT n.* FROM nodes n WHERE n.id IN (SELECT value FROM json_each(?))', [JSON.stringify([...new Set(nodeIds)])]);
+  const byId = new Map(rows.map(row => [row.id, row]));
+  return nodeIds.flatMap(id => {
+    const row = byId.get(id);
+    return row ? [buildWorkspaceSnapshotNode(row)] : [];
+  });
+}
+
 /** `loadCompanionWorkspaceNodeFromDb` with learning state for several nodes in one statement, keyed by id. */
 export async function loadCompanionWorkspaceNodesFromDb(db: DbPort, nodeIds: readonly string[], learningHost: string) {
   const rows = await db.query<WorkspaceNodeRowShape & DbRow>(

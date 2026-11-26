@@ -44,6 +44,10 @@ it.each(['android', 'ios'] as const)('%s yields an attachment scan to foreground
       VALUES (1) UNION ALL SELECT id + 1 FROM ids WHERE id < 200
     ) INSERT INTO nodes (id, title, content, created_at, updated_at)
       SELECT 'scan-' || id, 'Topic', 'Body', 'now', 'now' FROM ids`), { kind: 'business' });
+    // Only bodies that can hold a reference are read, so every one of these must be read in batches.
+    const image = `${'a'.repeat(64)}.png`;
+    await library.owner.runWriter(db => db.run("UPDATE nodes SET content = ? WHERE id LIKE 'scan-%'", [`Body ![image](asset://${image})`]),
+      { kind: 'business' });
     const original = library.owner.readBackgroundSnapshot.bind(library.owner);
     let foreground: Promise<unknown> | undefined;
     let batches = 0;
@@ -52,7 +56,7 @@ it.each(['android', 'ios'] as const)('%s yields an attachment scan to foreground
       ...db,
       async query<T extends DbRow>(sql: string, params?: DbParams) {
         const result = await db.query<T>(sql, params);
-        if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
+        if (sql.includes('AS content FROM nodes WHERE id IN')) {
           batches += 1;
           foreground ??= library.owner.readSnapshot(reader => reader.query("SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'scan-%'"))
             .then(rows => { batchesWhenForegroundFinished = batches; return rows; });
@@ -60,13 +64,13 @@ it.each(['android', 'ios'] as const)('%s yields an attachment scan to foreground
         return result;
       }
     }), signal);
-    expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
+    expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([image]);
     expect(batchesWhenForegroundFinished).toBe(1);
     expect(batches).toBeGreaterThan(1);
     expect(await foreground).toEqual([{ count: 200 }]);
     library.owner.readBackgroundSnapshot = original;
-    expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
-    expect(await library.owner.read(db => db.query("SELECT COUNT(*) AS count FROM nodes WHERE content = 'Body'")))
+    expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([image]);
+    expect(await library.owner.read(db => db.query("SELECT COUNT(*) AS count FROM nodes WHERE content LIKE 'Body %'")))
       .toEqual([{ count: 200 }]);
   } finally { await library.close(); }
 });
@@ -89,7 +93,7 @@ it.each(['android', 'ios'] as const)('%s eventually completes scanning amid repe
       ...db,
       async query<T extends DbRow>(sql: string, params?: DbParams) {
         const result = await db.query<T>(sql, params);
-        if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
+        if (sql.includes('AS content FROM nodes WHERE id IN')) {
           firstBatches.push(JSON.stringify(params));
           foreground = library.owner.readSnapshot(reader => reader.query('SELECT 1 AS ready'));
         }

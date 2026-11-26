@@ -1,7 +1,7 @@
 import type { DesktopTaskPriority } from '../desktopTaskTypes.js';
 
 import { runDesktopDatabaseWrite } from './desktopDatabaseWriteQueue.js';
-import { backfillMissingDesktopNodeSyncState, flushDirtyNodeSyncVersionBatch } from './nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersionBatch } from './nodeSyncVersions.js';
 
 const BATCH_SIZE = 50;
 
@@ -54,8 +54,7 @@ async function runDrain(priority: () => DesktopTaskPriority) {
     if (batch.length < BATCH_SIZE) break;
     await yieldToEventLoop();
   }
-  for (const nodeId of await runDesktopDatabaseWrite(priority(), backfillMissingDesktopNodeSyncState)) {
-    flushed.add(nodeId);
-  }
+  // Versioned nodes missing their sync state are repaired by the sync round's own flush, which checks the whole
+  // library before it publishes; repeating that walk after every navigation or Trash move only rescanned nodes.
   return [...flushed];
 }

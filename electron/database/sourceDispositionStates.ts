@@ -77,18 +77,32 @@ export function sourceDispositionKeyId(key: SourceDispositionKey) {
   return `${key.sourceKind}\u0000${key.sourceScope}\u0000${key.originalTitle}`;
 }
 
-function readSourceKeyForNode(driver: DatabaseDriver, nodeId: string) {
-  const row = driver.queryOne<SourceKeyRow>(
-    `SELECT item.rule_id, item.source_path, cache.title
+/** One scan for the whole set (last_node_id is not indexed); each node takes its earliest import item. */
+function readSourceKeysForNodes(driver: DatabaseDriver, nodeIds: readonly string[]) {
+  const keys = new Map<string, SourceDispositionKey | null>();
+  if (!nodeIds.length) {
+    return keys;
+  }
+  const rows = driver.queryAll<SourceKeyRow & { node_id: string }>(
+    `SELECT item.last_node_id AS node_id, item.rule_id, item.source_path, cache.title
      FROM keep_import_items item
      LEFT JOIN keep_import_item_cache cache
        ON cache.rule_id = item.rule_id
       AND cache.source_path = item.source_path
-     WHERE item.last_node_id = ?
-     LIMIT 1`,
-    [nodeId]
+     WHERE item.last_node_id IN (SELECT value FROM json_each(?))
+     ORDER BY item.rowid`,
+    [JSON.stringify(nodeIds)]
   );
-  return row ? toSourceDispositionKey(row) : null;
+  if (!rows.length) {
+    return keys;
+  }
+  const readwiseRuleIds = readReadwiseRuleIds();
+  for (const row of rows) {
+    if (!keys.has(row.node_id)) {
+      keys.set(row.node_id, toSourceDispositionKey(row, readwiseRuleIds));
+    }
+  }
+  return keys;
 }
 
 function readSourceKeysByTitle(driver: DatabaseDriver, record: SourceDispositionImportRecord) {
@@ -126,34 +140,58 @@ function runSourceDispositionDelete(driver: DatabaseDriver, key: SourceDispositi
   );
 }
 
+function recordNodeSourceDispositionsWithDriver(
+  driver: DatabaseDriver,
+  entries: ReadonlyArray<{ nodeId: string; updatedAt: string }>,
+  disposition: SourceDisposition
+) {
+  const keys = readSourceKeysForNodes(driver, entries.map((entry) => entry.nodeId));
+  for (const { nodeId, updatedAt } of entries) {
+    if (recordReadwiseApiNodeDisposition(driver, nodeId, disposition, updatedAt)) {
+      continue;
+    }
+    const key = keys.get(nodeId);
+    if (key) {
+      runSourceDispositionUpsert(driver, key, disposition, updatedAt);
+    }
+  }
+}
+
 export function recordNodeSourceDispositionWithDriver(
   driver: DatabaseDriver,
   nodeId: string,
   disposition: SourceDisposition,
   updatedAt: string
 ) {
-  if (recordReadwiseApiNodeDisposition(driver, nodeId, disposition, updatedAt)) {
-    return;
-  }
-  const key = readSourceKeyForNode(driver, nodeId);
-  if (!key) {
-    return;
-  }
-  runSourceDispositionUpsert(driver, key, disposition, updatedAt);
+  recordNodeSourceDispositionsWithDriver(driver, [{ nodeId, updatedAt }], disposition);
 }
 
 export function recordNodeSourceDisposition(nodeId: string, disposition: SourceDisposition, updatedAt: string) {
   recordNodeSourceDispositionWithDriver(openDatabaseConnection().driver, nodeId, disposition, updatedAt);
 }
 
-export function clearNodeSourceDisposition(nodeId: string) {
-  const connection = openDatabaseConnection();
-  clearReadwiseApiNodeDisposition(connection.driver, nodeId);
-  const key = readSourceKeyForNode(connection.driver, nodeId);
-  if (!key) {
-    return;
+export function recordNodeSourceDispositions(nodeIds: readonly string[], disposition: SourceDisposition, updatedAt: string) {
+  recordTimedNodeSourceDispositions(nodeIds.map((nodeId) => ({ nodeId, updatedAt })), disposition);
+}
+
+export function recordTimedNodeSourceDispositions(entries: ReadonlyArray<{ nodeId: string; updatedAt: string }>, disposition: SourceDisposition) {
+  recordNodeSourceDispositionsWithDriver(openDatabaseConnection().driver, entries, disposition);
+}
+
+export function clearNodeSourceDispositions(nodeIds: readonly string[]) {
+  const { driver } = openDatabaseConnection();
+  const keys = readSourceKeysForNodes(driver, nodeIds);
+  for (const nodeId of nodeIds) {
+    clearReadwiseApiNodeDisposition(driver, nodeId);
+    const key = keys.get(nodeId);
+    if (key) {
+      runSourceDispositionDelete(driver, key);
+    }
   }
-  runSourceDispositionDelete(connection.driver, key);
+}
+
+export function clearNodeSourceDisposition(nodeId: string) {
+  clearNodeSourceDispositions([nodeId]);
 }
 
 export function summarizeSourceDispositions(): SourceDispositionSummary {

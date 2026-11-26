@@ -10,8 +10,9 @@ import type { CycleStored } from './dailyFlowStore.js';
 import { readDailyFlowSyncFact, type DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 
 export async function readLocalDailyFlowFacts(db: DbPort, start: string, end: string) {
+  // Reach the day through the day-end index; walking the time index would read every earlier day's facts.
   const headers = await db.query<{ payload_json: string }>(`SELECT payload_json FROM daily_flow_sync_facts
-    WHERE kind!='create' AND day_start<? AND day_end>? ORDER BY occurred_at,id`, [end, start]);
+    WHERE kind!='create' AND +day_start<? AND day_end>? ORDER BY +occurred_at,+id`, [end, start]);
   return selectLocalDailyFlowFacts(headers.map(row => readDailyFlowSyncFact(row.payload_json)), start, end);
 }
 
