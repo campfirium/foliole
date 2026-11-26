@@ -98,6 +98,49 @@ it('still keeps an unpublished local edit made beside the repair', async () => {
     .toEqual({ title: 'Local title', sync_dirty: 1 });
 });
 
+/** The publisher saves the parent and its highlight together, so its child version carries no anchor stamp. */
+async function publishUnstampedSuccessor() {
+  const source = createPeer('source');
+  const target = createPeer('target');
+  joinPeers(source, target);
+  const first = node('parent', textBranch('parent-v1', 'Alpha Beta Gamma', undefined, '2026-09-30T00:00:00.000Z'));
+  const highlight = node('child', textBranch('child-v1', 'Note', undefined, '2026-09-30T00:00:00.000Z'), {
+    parent_id: 'parent',
+    anchor_link: JSON.stringify({ id: 'anchor-1', kind: 'highlight', locator: { from: 6, originalText: 'Beta', to: 10 } })
+  });
+  // Appended text leaves the highlight where it was.
+  const second = node('parent', textBranch('parent-v2', 'Alpha Beta Gamma Delta', first, '2026-09-30T01:00:00.000Z'));
+  for (const peer of [source, target]) {
+    await applyConvergentSyncNodesWithDbPort(peer.port, [first, highlight]);
+    await applyConvergentSyncNodesWithDbPort(peer.port, [second]);
+  }
+  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 1,
+    anchor_source_version_id: 'parent-v2' });
+  source.db.prepare(`UPDATE nodes SET anchor_resolution_status = NULL, anchor_source_version_id = NULL
+    WHERE id = 'child'`).run();
+  const published = flushNodeSyncVersionWithDriver(source.driver, 'child', 'source', '2026-09-30T02:00:00.000Z')!;
+  return { source, target, published };
+}
+
+it('accepts a successor that never recorded the stamp this device added to an unmoved anchor', async () => {
+  const { source, target, published } = await publishUnstampedSuccessor();
+
+  await withLibraryRequestSnapshot(source, target, replay => replay());
+
+  expect(child(target)).toMatchObject({ current_version_id: published, sync_dirty: 0, anchor_source_version_id: null });
+  expect(persisted(target)).toEqual(persisted(source));
+});
+
+it('keeps an unpublished local edit beside a stamp the successor does not carry', async () => {
+  const { source, target } = await publishUnstampedSuccessor();
+  target.db.prepare("UPDATE nodes SET title = 'Local title' WHERE id = 'child'").run();
+  const before = persisted(target);
+
+  await expect(withLibraryRequestSnapshot(source, target, replay => replay())).rejects.toThrow('sync_node_apply_blocked:child');
+
+  expect(persisted(target)).toEqual(before);
+});
+
 function persisted(peer: Peer) {
   const reopened = new Database(peer.file, { readonly: true });
   try {

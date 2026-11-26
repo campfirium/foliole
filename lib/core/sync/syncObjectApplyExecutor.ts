@@ -206,11 +206,18 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord):
   }
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';
+  // Two live readings are ranked by the reading itself; an undo can win with an older write time.
+  if (await competesByReadingOrder(port, record, current)) return 'apply';
   const ownerOrder = await compareReadwiseOwnerEpoch(port, record);
   if (ownerOrder) return ownerOrder;
   const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
   const incomingKey = `${record.updated_at}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
   return currentKey < incomingKey ? 'apply' : 'stale';
+}
+
+async function competesByReadingOrder(port: DbPort, record: SyncObjectRecord, current: ExistingSyncObjectState) {
+  if (record.object_type !== 'node_reading' || record.deleted_at || current.deleted_at) return false;
+  return (await port.query('SELECT 1 FROM node_reading WHERE node_id = ?', [record.object_id])).length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

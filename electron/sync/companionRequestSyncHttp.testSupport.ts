@@ -29,7 +29,8 @@ export async function postCompanionRequestFixture(files: Pick<FramedSyncFilePort
     let detail: unknown;
     try { detail = JSON.parse(body); } catch { detail = null; }
     if (typeof detail === 'object' && detail !== null && 'error' in detail
-      && (detail.error === 'sync_round_busy' || detail.error === 'sync_round_expired')) {
+      && (detail.error === 'sync_round_busy' || detail.error === 'sync_round_expired'
+        || detail.error === 'sync_group_local_adoption_source_unavailable')) {
       throw new Error(`framed_sync_http_${response.status}:${detail.error}`);
     }
     throw new Error(`request_sync_http_${response.status}:${body}`);

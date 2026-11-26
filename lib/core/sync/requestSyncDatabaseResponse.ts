@@ -12,6 +12,7 @@ import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDataba
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { requestSyncPerformance } from './requestSyncPerformance.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
+import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 
 export type RequestSyncDatabaseResponseInput = {
   context: RequestSyncAuthenticatedContext;
@@ -59,6 +60,8 @@ async function respondPrepared<T>(host: RequestSyncDatabaseHost, input: RequestS
     try {
       await host.write(db => db.transaction(tx => flushRequestSyncInventoryDigests(tx, nodeIds)));
       entries = await host.readSnapshot(async db => {
+        // A library that cannot publish yet is not an empty one: the requester must keep waiting.
+        if (await syncGroupLocalPublicationBlockReason(db)) throw new Error('sync_group_local_adoption_source_unavailable');
         const summaries = await readRequestSyncInventorySummaries(db, nodeIds);
         return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(
           db, summaries, request.detailGlobalIds, request.includeAdoptionParents) : summaries;

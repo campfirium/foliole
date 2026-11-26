@@ -8,6 +8,8 @@ import { isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 /** What a device rewrites on its own when an anchored parent's text changes. */
 const ANCHOR_REPAIR_FIELDS = ['anchor_link', 'image_regions', 'anchor_resolution_status', 'anchor_source_version_id',
   'updated_at'] as const;
+/** How the anchor was last checked against its parent: a stamp, not part of the anchor itself. */
+const ANCHOR_STAMP_FIELDS: readonly string[] = ['anchor_resolution_status', 'anchor_source_version_id'];
 
 interface LocalAnchorRow extends DbRow {
   current_version_id: string;
@@ -41,9 +43,15 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
   if (!local) return false;
   const incoming: Record<string, unknown> = record.snapshot;
   const row: Record<string, unknown> = { ...local };
-  if (ANCHOR_REPAIR_FIELDS.some(name => (row[name] ?? null) !== (incoming[name] ?? null))) return false;
+  // A publisher that saved the parent and this child together records no stamp, while this device stamps the
+  // child on receiving that parent. An unmoved anchor then differs only by the local stamp.
+  const unstamped = local.anchor_source_version_id !== null &&
+    ANCHOR_STAMP_FIELDS.every(name => (incoming[name] ?? null) === null);
+  const stampOnly: readonly string[] = unstamped ? ANCHOR_STAMP_FIELDS : [];
+  if (ANCHOR_REPAIR_FIELDS.some(name => !stampOnly.includes(name) &&
+      (row[name] ?? null) !== (incoming[name] ?? null))) return false;
   if (local.body_text !== null && record.body_text !== null && local.body_text !== record.body_text) return false;
-  if (!matchesLiveNode(local, record)) return false;
+  if (!matchesLiveNode(local, record, stampOnly)) return false;
   const stored = JSON.parse(local.snapshot_json) as Record<string, unknown>;
   // Older snapshots leave the text origin implicit: the base version itself.
   if (stored.text_selection == null && record.snapshot.text_selection) {
@@ -58,7 +66,7 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
     || await isStoredAncestorVersion(port, local.current_version_id, record.parent_version_id));
 }
 
-function matchesLiveNode(local: LocalAnchorRow, record: NativeSyncNodeRecord) {
+function matchesLiveNode(local: LocalAnchorRow, record: NativeSyncNodeRecord, stampOnly: readonly string[]) {
   const body = record.body_text ?? record.snapshot.content;
   const bodyHash = record.snapshot.body_blob_hash ?? (typeof body === 'string' ? hashTextBody(body) : null);
   if (!bodyHash || local.body_blob_hash !== bodyHash) return false;
@@ -70,5 +78,5 @@ function matchesLiveNode(local: LocalAnchorRow, record: NativeSyncNodeRecord) {
   // These version-only facts are checked against the immutable parent separately, not the live node row.
   return isSyncNodeSnapshotIdentical(JSON.stringify(live),
     { ...record.snapshot, resource_references: record.snapshot.resource_references ?? '[]' },
-    ['attachments', 'text_selection', 'text_alternatives']);
+    ['attachments', 'text_selection', 'text_alternatives', ...stampOnly]);
 }
