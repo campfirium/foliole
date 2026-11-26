@@ -1,6 +1,10 @@
 import { assertExactReleaseAssets } from './release-asset-contract.mjs';
 import { createPlatformDownloadDirectory, currentPlatformRelease, platformDownloadAddress } from './release-download-directory.mjs';
 import { IOS_INVITATION } from './ios/testflight-candidate.mjs';
+import { PLAY_PACKAGE } from './android/play-api.mjs';
+
+const PLAY_PENDING = 'Play (In Review)';
+const PLAY_LINK = `[Play](https://play.google.com/apps/testing/${PLAY_PACKAGE})`;
 
 const layout = {
   macos: ['macOS', 'Apple Silicon', 'DMG'],
@@ -41,7 +45,11 @@ export function createReleaseDownloadTable({ identity, manifest, candidate, publ
     if (platform.deliveryChannel !== 'github-release') throw new Error('Unsupported release download channel');
     const entry = selected.has(platform.id) ? { ...platformDownloadAddress(platform, intent.version), status: 'available' } : previous.platforms[platform.id];
     const release = selected.has(platform.id) ? candidate : publishedReleases[currentPlatformRelease(manifest, platform.id)?.version];
-    return { header, channel, status: platform.id === 'android' && review.android ? 'Play (In Review)' : undefined,
+    // A new Android build starts as pending; the channel status sync swaps in the Play link once it is available.
+    // A carried-over build is already on Play.
+    const play = platform.id === 'android' && entry?.status === 'available'
+      ? (selected.has(platform.id) ? PLAY_PENDING : PLAY_LINK) : undefined;
+    return { header, channel, status: play,
       version: entry?.status === 'available' ? entry.version : undefined,
       links: platformLinks(platform, entry, release) };
   });
@@ -67,12 +75,10 @@ export function assertReleaseDownloadTable(body, expected) {
   const tail = actual.slice(-approved.length).map(normalize);
   const allowed = approved.map(normalize);
   const android = expected.columns.findIndex(column => column.header === 'Android');
-  if (android >= 0 && !expected.columns[android].status && expected.columns[android].links.length) {
+  if (android >= 0 && expected.columns[android].status === PLAY_PENDING) {
     const cells = tail.at(-1).split('|');
-    if (cells[android + 1]?.endsWith(' · Play (In Review)')) {
-      cells[android + 1] = cells[android + 1].slice(0, -' · Play (In Review)'.length);
-      tail[tail.length - 1] = cells.join('|');
-    }
+    cells[android + 1] = cells[android + 1]?.replace(` · ${PLAY_LINK}`, ` · ${PLAY_PENDING}`);
+    tail[tail.length - 1] = cells.join('|');
   }
   if (tail.some((line, index) => line !== allowed[index]) || tail.length !== allowed.length) {
     throw new Error('Download table must list every active platform with the verified layout, versions, and links');

@@ -32,6 +32,11 @@ latest public APK; before its first public APK it remains unavailable. Linux's
 AppImage must actually exist alongside its DEB. iPhone retains the existing
 TestFlight invitation without inventing a version-specific store URL.
 
+The Android cell always carries Play beside the APK. A new Android build is
+written as `Play (In Review)`, and the mobile channel status sync replaces it with
+the Play link once that build is available; publication accepts either form and
+refuses a cell with neither. A carried-over build is written with the link.
+
 `release-publish.mjs` checks every active platform, each exact destination, and
 visible installer versions before making the Draft public. It refuses missing,
 extra or fabricated links. It does not rewrite copy during publication or copy

@@ -74,6 +74,18 @@ it.each(['draft', 'asset', 'target', 'tag', 'appimage'])(
     expect(() => createReleaseDownloadTable(f)).toThrow();
   });
 
+it('never leaves the Android cell without Play', () => {
+  const link = '[Play](https://play.google.com/apps/testing/com.campfirium.foliole.android)';
+  const selected = createReleaseDownloadTable(fixture(['android']));
+  expect(selected.table).toContain('/v0.7.18/Foliole-Android-0.7.18.apk) · Play (In Review) |');
+  expect(assertReleaseDownloadTable(selected.table, selected)).toBeTruthy();
+  expect(assertReleaseDownloadTable(selected.table.replace('Play (In Review)', link), selected)).toBeTruthy();
+  expect(() => assertReleaseDownloadTable(selected.table.replace(' · Play (In Review)', ''), selected)).toThrow();
+  const carried = createReleaseDownloadTable(fixture());
+  expect(carried.table).toContain(`/v0.7.17/Foliole-Android-0.7.17.apk) · ${link} |`);
+  expect(() => assertReleaseDownloadTable(carried.table.replace(` · ${link}`, ''), carried)).toThrow();
+});
+
 it('rejects missing platforms, forged URLs, false visible versions and extra links before publication', () => {
   const preview = createReleaseDownloadTable(fixture());
   for (const table of [preview.table.replace('| **Android** |', '| **Other** |'), preview.table.replace('/v0.7.17/Foliole-macOS', '/v0.7.18/Foliole-macOS'),
