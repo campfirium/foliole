@@ -117,7 +117,8 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.simulator_matrix) }}
-    runs-on: xcode-27
+    # The Electron Bonjour provider never registers on xcode-27; contract, app compile and signed upload stay on it.
+    runs-on: macos-15
     timeout-minutes: 120
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}-${{ github.run_id }}
@@ -125,7 +126,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
