@@ -69,7 +69,7 @@ export async function saveIosReadingWithDb(tx: DbPort, args: {
   void ignoredHost; void ignoredPosition;
   const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
     writeNodeReadingObject(tx, record, { hostName })
-  ), hashPayload, orderAt);
+  ), hashPayload, orderAt, hostName);
   if (args.completedReviewDay !== undefined) {
     await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);
   }
@@ -125,9 +125,10 @@ async function writeObject(
 
 async function applyLocalObject(
   db: DbPort, objectType: string, objectId: string, payload: Record<string, unknown>,
-  apply: (record: LocalRecord) => Promise<unknown>, hashPayload: unknown = payload, updatedAt?: string
+  apply: (record: LocalRecord) => Promise<unknown>, hashPayload: unknown = payload, updatedAt?: string,
+  knownHostName?: string
 ) {
-  const hostName = await iosCompanionHostName(db);
+  const hostName = knownHostName ?? await iosCompanionHostName(db);
   const now = updatedAt ?? new Date().toISOString();
   const contentHash = await iosCompanionContentHash(hashPayload);
   const record = { content_hash: contentHash, deleted_at: null, object_id: objectId, object_type: objectType, payload_json: JSON.stringify(payload), updated_at: now };

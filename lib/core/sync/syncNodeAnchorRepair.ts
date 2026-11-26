@@ -112,13 +112,9 @@ function writeAnchorStatus(
   sourceVersionId: string | null,
   updatedAt: string
 ) {
-  // Confirming an unmoved anchor is a local stamp, not a change to publish. Losing or regaining it is one.
-  const stampOnly = `(? = 'resolved' AND COALESCE(anchor_resolution_status, 'resolved') = 'resolved')`;
   return port.run(
-    `UPDATE nodes SET anchor_resolution_status = ?, anchor_source_version_id = ?,
-       sync_dirty = CASE WHEN ${stampOnly} THEN sync_dirty ELSE 1 END,
-       updated_at = CASE WHEN ${stampOnly} THEN updated_at ELSE ? END
+    `UPDATE nodes SET anchor_resolution_status = ?, anchor_source_version_id = ?, sync_dirty = 1, updated_at = ?
      WHERE id = ? AND (anchor_resolution_status IS NOT ? OR anchor_source_version_id IS NOT ?)`,
-    [status, sourceVersionId, status, status, updatedAt, nodeId, status, sourceVersionId]
+    [status, sourceVersionId, updatedAt, nodeId, status, sourceVersionId]
   );
 }

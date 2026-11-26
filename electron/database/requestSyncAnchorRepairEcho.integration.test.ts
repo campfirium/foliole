@@ -114,9 +114,9 @@ async function publishUnstampedSuccessor() {
     await applyConvergentSyncNodesWithDbPort(peer.port, [first, highlight]);
     await applyConvergentSyncNodesWithDbPort(peer.port, [second]);
   }
-  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 0,
+  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 1,
     anchor_source_version_id: 'parent-v2' });
-  // Earlier builds also marked the stamp for publishing, and those marks are still stored on devices.
+  // The stamp is marked for publishing; the same mark is stored on devices from earlier builds.
   target.db.prepare("UPDATE nodes SET sync_dirty = 1, updated_at = '2026-09-30T01:00:00.000Z' WHERE id = 'child'").run();
   source.db.prepare(`UPDATE nodes SET anchor_resolution_status = NULL, anchor_source_version_id = NULL, sync_dirty = 1
     WHERE id = 'child'`).run();

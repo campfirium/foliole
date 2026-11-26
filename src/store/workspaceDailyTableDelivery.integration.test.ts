@@ -142,7 +142,7 @@ it('rejects a changed row even when the transport digest is recomputed, without 
   });
 });
 
-it('uses the existing reading conflict order when a newer local reading has an older write timestamp', async () => {
+it('converges on the later-written reading when a newer handled time was written earlier', async () => {
   const [a, b] = await setupPeers();
   node(a, 'topic', 'topic'); node(a, 'other', 'topic');
   await exchange(a, b);
@@ -158,8 +158,12 @@ it('uses the existing reading conflict order when a newer local reading has an o
     vi.setSystemTime('2026-10-29T08:01:00.000Z');
     await persistence.reading(a.port, { nodeId: id, before: null, after: reading('2026-10-26T08:01:00.000Z') }, '2026-10-26T08:01:00.000Z');
   } finally { vi.useRealTimers(); }
-  const expected = b.db.prepare('SELECT * FROM node_reading WHERE node_id=?').get(id);
+  const expected = a.db.prepare('SELECT * FROM node_reading WHERE node_id=?').get(id);
   await exchange(a, b);
+  expect(a.db.prepare('SELECT * FROM node_reading WHERE node_id=?').get(id)).toEqual(expected);
+  const hash = (peer: typeof a) => peer.db.prepare(
+    "SELECT content_hash FROM sync_object_state WHERE object_type='node_reading' AND object_id=?").pluck().get(id);
+  expect(hash(b)).toBe(hash(a));
   expect(b.db.prepare('SELECT * FROM node_reading WHERE node_id=?').get(id)).toEqual(expected);
   expect((await open(b)).currentNodeId).not.toBe(id);
 });
