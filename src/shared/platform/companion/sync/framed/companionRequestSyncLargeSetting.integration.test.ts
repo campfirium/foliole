@@ -8,6 +8,7 @@ import { computeSyncContentHash } from '../../../../../../lib/core/database/sync
 import { buildCanonicalSettingSyncPayload } from '../../../../../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
+import { loadSyncUnsyncedItems } from '../../../../../../lib/core/sync/syncUnsyncedItems.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 
 let receiver: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
@@ -47,18 +48,20 @@ it('receives a shared setting above one MiB through ordinary sync without changi
     .get('readwise_source_cutover_v2')).toEqual({ value_json: setting.value, content_hash: setting.hash });
 });
 
-it('rejects an oversized setting during ordinary sync without changing local data or acknowledging it', { meta: { calibratedMs: 120_000 } }, async () => {
+it('holds back an oversized setting during ordinary sync without applying or acknowledging it, and records it', { meta: { calibratedMs: 120_000 } }, async () => {
   receiver = await createCompanionRequestFixture();
   await receiver.fixture.left.seed({ nodeId: 'old-local', title: 'Protected', content: 'Protected until complete adoption' });
   const setting = await writeLargeSetting(receiver.fixture.rightSnapshot.databasePath, 25_000);
   expect(setting.payloadBytes).toBeGreaterThan(1536 * 1024);
   const before = receiver.sqlite.prepare('SELECT * FROM setting_records').all();
-  await expect(receiver.sync()).rejects.toThrow('canonical_string_limit_exceeded');
+  expect((await receiver.sync()).remainingStructureChangeCount).toBeGreaterThan(0);
   await receiver.restart();
   expect(await loadSyncGroupLocalAdoption(receiver.db)).toBeNull();
   expect(receiver.sqlite.prepare("SELECT content FROM nodes WHERE id = 'old-local'").pluck().get())
     .toBe('Protected until complete adoption');
   expect(receiver.sqlite.prepare('SELECT * FROM setting_records').all()).toEqual(before);
+  expect((await loadSyncUnsyncedItems(receiver.db)).flatMap(record => record.items))
+    .toEqual([expect.objectContaining({ objectType: 'setting', globalId: setting.id })]);
   expect(receiver.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_receipts'").get()).toBeUndefined();
   const source = new Database(receiver.fixture.rightSnapshot.databasePath, { readonly: true });
   try {

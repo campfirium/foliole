@@ -7,6 +7,7 @@ import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOve
 import type { RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { updateSyncUnsyncedItems } from '../../lib/core/sync/syncUnsyncedItems.js';
 import { tryCaptureWebDavRelayCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
@@ -66,6 +67,9 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
       }), input.signal) } : {}) }),
     transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
       differences, { peerState: input.peerState }),
+    recordUnsynced: async update => {
+      if (await updateSyncUnsyncedItems(host, input.peer.peer_device_id, update)) notifyDesktopSyncGroupOverviewChanged();
+    },
     reportObjectError: (difference, error) => appendMainProcessDiagnosticLog('request_sync_object_rejected', {
       objectId: difference.globalId, objectType: difference.objectType,
       sourceDeviceId: difference.direction === 'local_to_remote' ? input.peer.local_device_id : input.peer.peer_device_id,

@@ -8,6 +8,7 @@ import { requestSyncBatchMessages, withRequestSyncBatchSnapshot } from './reques
 import type { RequestSyncDatabaseResponseInput } from './requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
+import { recordRequestSyncServed } from './requestSyncServedUnsynced.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.js';
 
 export async function respondRequestSyncBatch<T>(host: RequestSyncDatabaseHost,
@@ -23,11 +24,15 @@ export async function respondRequestSyncBatch<T>(host: RequestSyncDatabaseHost,
         if (!entry) throw new Error('framed_sync_difference_request_source_changed');
         return resolveFramedSyncDifferenceRequest(entry, request);
       } }));
-    return withRequestSyncBatchSnapshot(host, selections, input.signal, objects =>
-      send(input, contextId => requestSyncBatchMessages(objects, contextId, requestId), consume));
+    return withRequestSyncBatchSnapshot(host, selections, input.signal, async objects => {
+      await recordRequestSyncServed(host, input.context, objects.map(object => object.kind === 'error'
+        ? { ...object.result, failureStage: 'prepare' as const } : { ...object.header, error: '' }), 'responder');
+      return send(input, contextId => requestSyncBatchMessages(objects, contextId, requestId), consume);
+    });
   }
   if (!input.batch) throw new Error('request_sync_peer_state_missing');
   const result = await receiveRequestSyncBatch(host, { ...input, ...input.stream, ...input.batch, author: 'initiator' });
+  await recordRequestSyncServed(host, input.context, result.results, 'initiator');
   return send(input, async function* () {
     for (const object of result.results) yield { payloadCase: 'request_object_result', payload: object };
     yield requestSyncBatchEnd(result.requestId, result.results.length);

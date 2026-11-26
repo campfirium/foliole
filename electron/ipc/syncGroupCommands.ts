@@ -1,9 +1,11 @@
 import { app } from 'electron';
 
+import { loadSyncUnsyncedView } from '../../lib/core/sync/syncUnsyncedView.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalSyncGroupMemberExpired } from '../database/syncGroupCoverageDesktop.js';
 import {
@@ -111,6 +113,7 @@ async function overview() {
       credential_offline_rotation_available: canQueueDesktopWebDavRotation(group.group_id),
       ...await loadDesktopWebDavRelayStatus(), usage: await loadDesktopWebDavUsage() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
+    unsynced_items: group ? await loadSyncUnsyncedView(createBetterSqliteDbPort(openDatabaseConnection().sqlite)) : [],
     removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()
   };

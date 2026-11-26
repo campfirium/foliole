@@ -54,6 +54,8 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     sync_paused: raw.sync_paused === true,
     pending_backup_restore: typeof raw.pending_backup_restore === 'string' ? raw.pending_backup_restore : null,
     expired_member: raw.expired_member === true,
+    unsynced_items: Array.isArray(raw.unsynced_items)
+      ? raw.unsynced_items as NonNullable<DesktopSyncGroupOverviewPayload['unsynced_items']> : [],
     participating: raw.participating === true,
     removing_devices: parseSyncGroupRemovingEntries(raw.removing_devices)
   };

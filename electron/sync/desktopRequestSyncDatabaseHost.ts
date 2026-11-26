@@ -13,6 +13,7 @@ import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonly
 import type { RequestDatabaseTiming } from './companionLanRequestTiming.js';
 import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
 import { reportDesktopSyncGroupObjectCommitted } from './desktopSyncGroupCursorCommit.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourceSession?: string,
@@ -26,6 +27,7 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
   };
   const files = createDesktopRequestSyncFiles(databasePath);
   const host: RequestSyncDatabaseHost = {
+    unsyncedRecordChanged: notifyDesktopSyncGroupOverviewChanged,
     databaseRoundCompleted: async () => {
       const current = await host.write(async db => await refreshDesktopDailyFlowMembership(db)
         ? (await readDailyFlow(db))?.session.currentNodeId : undefined);

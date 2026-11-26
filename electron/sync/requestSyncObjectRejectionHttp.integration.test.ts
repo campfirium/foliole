@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { loadSyncUnsyncedItems } from '../../lib/core/sync/syncUnsyncedItems.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { loadDesktopReadingResume, saveDesktopReadingResume } from '../database/readingResume.js';
 import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
@@ -89,7 +90,7 @@ it.each([
       return;
     }
     if (fault === 'commit') {
-      await assertIsolatedCommitFailure(receiver, run, rejected);
+      await assertIsolatedCommitFailure(receiver, run, rejected, { initiator: source, responder: target });
       return;
     }
     expect(await run()).toMatchObject({ complete: false, pending: withHistory ? 3 : 2, transferred: withHistory ? 3 : 2, onlyRejectedObjectsPending: true });
@@ -174,14 +175,26 @@ async function assertFailedWriteTransaction(receiver: Peer, run: () => Promise<u
 }
 
 /** A commit that fails for one object is replayed object by object, so the others still land. */
-async function assertIsolatedCommitFailure(receiver: Peer, run: () => Promise<unknown>, rejected: string[]) {
+async function assertIsolatedCommitFailure(receiver: Peer, run: () => Promise<unknown>, rejected: string[],
+  sides: { initiator: Peer; responder: Peer }) {
   expect(await run()).toMatchObject({ complete: false, pending: 2, transferred: 2, onlyRejectedObjectsPending: true });
   expect(rejected).toEqual([expect.stringContaining('b:apply:FOREIGN KEY constraint failed')]);
   receiver.reopen();
+  await assertRecorded(sides.initiator, ['aa:sync_item_waiting_parent', 'b:sync_item_constraint_failed']);
+  // The answering device only knows what it was asked to apply: the push it failed on, never a failed pull.
+  await assertRecorded(sides.responder, receiver === sides.responder ? ['b:sync_item_constraint_failed'] : []);
   expect(await receiver.db.query("SELECT id FROM nodes WHERE id IN ('a','aa','b','c') ORDER BY id"))
     .toEqual([{ id: 'a' }, { id: 'c' }]);
   receiver.sqlite.exec('DROP TRIGGER reject_one_object');
   expect(await run()).toMatchObject({ complete: true, pending: 0 });
+  await assertRecorded(sides.initiator, []);
+  await assertRecorded(sides.responder, []);
+}
+
+async function assertRecorded(peer: Peer, expected: string[]) {
+  peer.reopen();
+  const items = (await loadSyncUnsyncedItems(peer.db)).flatMap(record => record.items);
+  expect(items.map(item => `${item.globalId}:${item.code}`)).toEqual(expected);
 }
 
 function observeRejectedWrite(receiver: Peer, fault: 'object' | 'transaction' | 'commit') {

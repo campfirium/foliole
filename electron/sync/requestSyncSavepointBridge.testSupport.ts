@@ -12,9 +12,17 @@ export function observeSavepointBridge(receiver: Peer, failHandoff = false) {
   const applied = vi.fn<(object: { globalId: string }) => void>();
   const notifications = { objectApplied: applied };
   const host = receiver.host;
+  // The bridge port bypasses the connection coordinator, so queue reads behind writes as the devices' own owners do.
+  let tail: Promise<unknown> = Promise.resolve();
+  const queued = <T>(task: () => Promise<T>) => {
+    const next = tail.then(task);
+    tail = next.catch(() => undefined);
+    return next;
+  };
   const spy = vi.spyOn(receiver, 'host', 'get').mockReturnValue({
     ...host,
-    write: async write => {
+    readSnapshot: read => queued(() => host.readSnapshot(read)),
+    write: write => queued(async () => {
       const connection = createFakeCapacitorConnection(receiver.sqlite);
       const { run, executeSet } = connection;
       connection.run = (sql, params) => {
@@ -37,7 +45,7 @@ export function observeSavepointBridge(receiver: Peer, failHandoff = false) {
         return executeSet(set, transaction);
       };
       return write(createCapacitorSqliteDbPort(connection as never, 'android'));
-    },
+    }),
     ...notifications
   });
   return { controls, applied, restore: () => spy.mockRestore() };

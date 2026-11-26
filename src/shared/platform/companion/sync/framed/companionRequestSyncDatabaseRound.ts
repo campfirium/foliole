@@ -11,6 +11,7 @@ import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/reque
 import { requestSyncPerformance } from '../../../../../../lib/core/sync/requestSyncPerformance.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { updateSyncUnsyncedItems } from '../../../../../../lib/core/sync/syncUnsyncedItems';
 import { tryCaptureWebDavRelayCleanup } from '../../../../../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
@@ -96,6 +97,7 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
       input.large!.transferred(results.length);
       return results;
     },
+    recordUnsynced: update => updateSyncUnsyncedItems(host, peerDeviceId, update),
     reportObjectError: input.reportObjectError,
     watchLocalChanges: watchSyncPriorityRequests
   };

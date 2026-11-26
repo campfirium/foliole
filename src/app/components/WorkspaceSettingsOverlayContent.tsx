@@ -4,6 +4,9 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadExternalSourceSettingsFolders } from '../../shared/platform/externalSourceSettingsRepository';
 import { loadRuntimeLibraryPathSettings } from '../../shared/platform/libraryPathsRuntimeRepository';
 import { requestAppConfirmation } from '../../shared/ui';
+import { SyncItemNavigationContext } from '../../shared/ui/SyncItemNavigationContext';
+import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useKeepPreviewDialog } from './importSourceWorkspaceDialogs';
 import { loadImportSourceWorkspaceSettings } from './importSourceWorkspaceSettings';
@@ -48,6 +51,7 @@ export function WorkspaceSettingsOverlayContent({
 
   return (
     <>
+      <SyncItemNavigationContext.Provider value={nodeId => { onClose(); void openSyncItem(nodeId); }}>
       <SettingsPanel
         desktopAdapters={settingsDesktopAdapters}
         importCategoryContent={<ImportCategoryContent importSettings={importSettings} keepPreview={keepPreview} />}
@@ -57,6 +61,7 @@ export function WorkspaceSettingsOverlayContent({
         requestedCategory={requestedCategory}
         requestedRowId={requestedRowId}
       />
+      </SyncItemNavigationContext.Provider>
       {keepPreview.keepPreviewDialog ? (
         <KeepImportPreviewDialog
           onConfirm={keepPreview.handleConfirmKeepPreview}
@@ -68,6 +73,11 @@ export function WorkspaceSettingsOverlayContent({
       ) : null}
     </>
   );
+}
+
+async function openSyncItem(nodeId: string) {
+  const prepared = await openWorkspaceNodeWithPreparedDocument(nodeId, { forceLoad: true, keepWarm: true });
+  if (!prepared && useWorkspaceStore.getState().activeNodeId !== nodeId) useWorkspaceStore.getState().openNode(nodeId);
 }
 
 function ImportCategoryContent(props: {

@@ -6,6 +6,8 @@ import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js
 import { dailyFlowPriorityDifferences } from './requestSyncDailyFlowPriority.js';
 import { analyzeRequestSyncInventories, type RequestSyncInventoryAnalysis } from './requestSyncInventoryAnalysis.js';
 import { isRequestSyncObjectFailure } from './requestSyncObjectFailure.js';
+import { requestSyncDependencyRejection, requestSyncRejection, requestSyncRoundUnsynced, type RequestSyncRejections } from './requestSyncRoundUnsynced.js';
+import type { SyncUnsyncedUpdate } from './syncUnsyncedItems.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
@@ -17,6 +19,8 @@ export interface RequestSyncDatabaseRoundPort {
   exchangeInventory(includeAdoptionParents?: boolean): Promise<RequestSyncInventories>;
   transferObjects(differences: readonly FramedSyncInventoryDifference[]): Promise<readonly RequestSyncObjectResult[]>;
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown, stage?: RequestSyncObjectFailureStage): void;
+  /** Keeps the queryable record of what did not sync, once a round has compared both sides. */
+  recordUnsynced?(update: SyncUnsyncedUpdate): Promise<unknown>;
   /** Starts watching for local changes; when one arrives, the pass stops pulling so it can go out first. */
   watchLocalChanges?(): () => boolean;
   /** Optional duration target for transfers that use the batch-boundary priority check. */
@@ -38,10 +42,12 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   const initialPending = analysis.pending;
   let sourceChanged = Boolean(inventories.inventoryDeferred);
   let committed = false;
-  const rejected = new Set<string>();
-  const result = (pending: number) => ({ complete: pending === 0, pending, transferred,
-    madeProgress: pending < initialPending,
-    ...pendingRoundState(analysis, pending, rejected, sourceChanged && committed && pending >= initialPending) });
+  const rejected: RequestSyncRejections = new Map();
+  const result = async (pending: number) => {
+    await port.recordUnsynced?.(requestSyncRoundUnsynced(analysis, rejected));
+    return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending,
+      ...pendingRoundState(analysis, pending, rejected, sourceChanged && committed && pending >= initialPending) };
+  };
   let yielded = false;
   let prioritize = true;
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
@@ -87,19 +93,19 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   return result(analysis.pending);
 }
 
-function onlyRejectedObjectsPending(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: Set<string>) {
+function onlyRejectedObjectsPending(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: RequestSyncRejections) {
   return pending > 0 && analysis.differences.length === pending &&
     analysis.differences.every(difference => rejected.has(key(difference)));
 }
 
-function pendingRoundState(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: Set<string>, dynamic: boolean) {
+function pendingRoundState(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: RequestSyncRejections, dynamic: boolean) {
   if (onlyRejectedObjectsPending(analysis, pending, rejected)) return { onlyRejectedObjectsPending: true as const };
   return pending > 0 && dynamic ? { dynamicBacklog: true as const } : {};
 }
 
 /** The last pass stopped pulling for a local edit; send it now rather than in the next scheduled round. */
 async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories,
-  analysis: RequestSyncInventoryAnalysis, rejected: Set<string>, signal?: AbortSignal) {
+  analysis: RequestSyncInventoryAnalysis, rejected: RequestSyncRejections, signal?: AbortSignal) {
   const outgoing = analysis.differences
     .filter(difference => difference.direction === 'local_to_remote');
   return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false, rejected) : null;
@@ -107,7 +113,7 @@ async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories:
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal,
-  localChanged = port.watchLocalChanges?.(), rejected = new Set<string>()) {
+  localChanged = port.watchLocalChanges?.(), rejected: RequestSyncRejections = new Map()) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
   const attempted: FramedSyncInventoryDifference[] = [];
   const sizer = pullBatchSizer(Boolean(localChanged), port.pullTargetMs);
@@ -138,7 +144,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       const result = cached && !stale ? cached : (await port.transferObjects([difference]))[0];
       assertRoundObjectResult(result, difference);
       if (result.error && isRequestSyncObjectFailure(result.error)) {
-        rejected.add(key(difference));
+        rejected.set(key(difference), requestSyncRejection(difference, result.error, result.failureStage));
         port.reportObjectError(difference, new Error(result.error), result.failureStage);
         return 'deferred';
       }
@@ -158,9 +164,9 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   return { delivered, deferred, sourceChanged, yielded };
 }
 
-function propagateRejection(rejected: Set<string>) {
+function propagateRejection(rejected: RequestSyncRejections) {
   return (difference: FramedSyncInventoryDifference, parent: FramedSyncInventoryDifference) => {
-    if (rejected.has(key(parent))) rejected.add(key(difference));
+    if (rejected.has(key(parent)) && !rejected.has(key(difference))) rejected.set(key(difference), requestSyncDependencyRejection(difference));
   };
 }
 

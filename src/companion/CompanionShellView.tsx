@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
 
 import { ReminderDraftProvider } from '../features/settings/context/ReminderDraftRequest';
+import { SyncItemNavigationContext } from '../shared/ui/SyncItemNavigationContext';
 
 import {
   companionMainBottomInsetClassName,
@@ -78,7 +79,9 @@ function resolveMainPage(model: CompanionShellModel) {
     {!reading && model.workspaceSync.isWorkspaceSyncStateReady ? <CompanionShellTopBar
       onOpenSyncSettings={() => openCompanionSyncSettings(model)} topBarProps={model.topBarProps}
       workspaceSync={model.workspaceSync} /> : null}
-    {model.workspaceSync.isWorkspaceSyncStateReady ? page.content : <CompanionWorkspaceSyncLoading />}
+    <SyncItemNavigationContext.Provider value={model.surface.handleSelectBrowseNode}>
+      {model.workspaceSync.isWorkspaceSyncStateReady ? page.content : <CompanionWorkspaceSyncLoading />}
+    </SyncItemNavigationContext.Provider>
   </div>;
   return { ...page, reading, content };
 }

@@ -5,6 +5,7 @@ import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchEx
 import { exchangeRequestSyncInventory } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { respondRequestSyncDatabase, type RequestSyncDatabaseResponseInput } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
+import { updateSyncUnsyncedItems } from '../../lib/core/sync/syncUnsyncedItems.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import type { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
@@ -54,6 +55,7 @@ export async function startSyncRound(server: ReturnType<typeof syncServer>, sour
   return () => runRequestSyncDatabaseRound({
     exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
     transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
+    recordUnsynced: update => updateSyncUnsyncedItems(source.host, target.id, update),
     reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
   });
 }

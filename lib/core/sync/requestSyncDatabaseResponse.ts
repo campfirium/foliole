@@ -11,6 +11,7 @@ import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './reque
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { requestSyncPerformance } from './requestSyncPerformance.js';
+import { recordRequestSyncUnready } from './requestSyncServedUnsynced.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 
@@ -67,6 +68,7 @@ async function respondPrepared<T>(host: RequestSyncDatabaseHost, input: RequestS
           db, summaries, request.detailGlobalIds, request.includeAdoptionParents) : summaries;
       }, input.signal);
     } finally { endPreparation?.(); }
+    if (!nodeIds) await recordRequestSyncUnready(host, input.context, entries);
     if (request.bucketSummary) {
       const summary = summarizeInventoryBuckets(entries);
       response = iterateRequestSyncInventory({ entries: [], roundId: request.roundId,

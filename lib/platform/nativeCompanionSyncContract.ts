@@ -245,6 +245,8 @@ export interface DesktopSyncGroupOverviewPayload {
   pending_backup_restore?: string | null;
   /** This device has not completed a sync for longer than the group keeps history for it. */
   expired_member?: boolean;
+  /** Items that did not sync with a peer and are still retried. */
+  unsynced_items?: import('../core/sync/syncUnsyncedView.js').SyncUnsyncedViewItem[];
   discovery_error: 'permission_required' | 'unavailable' | null;
   host_platform: string | null;
   watched_folder_conflicts?: import('./watchedFolderConflictContract.js').WatchedFolderConflict[];

@@ -1,5 +1,6 @@
 import type { DbPort } from './dbPort.js';
 import { clearRestoreWorkspaceSettings } from './syncGroupRestoreSettings.js';
+import { clearSyncUnsyncedItems } from './syncUnsyncedItems.js';
 
 // An explicit overwrite replaces library data while keeping ordinary device preferences.
 // The caller commits this reset together with its durable clear-once progress marker.
@@ -45,6 +46,8 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
       ON CONFLICT(id) DO UPDATE SET started_at = excluded.started_at`, [new Date().toISOString()]);
   }
   await clearRestoreWorkspaceSettings(port, tableNames);
+  // Items held back before the reset describe libraries that no longer exist.
+  if (tableNames.has('sync_group_metadata')) await clearSyncUnsyncedItems(port);
   if (tableNames.has('nodes')) {
     await port.run(`DELETE FROM main.nodes
       WHERE id NOT IN ('special-inbox', 'special-virtual-root')`);

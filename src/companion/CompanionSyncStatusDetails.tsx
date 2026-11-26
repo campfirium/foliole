@@ -1,8 +1,12 @@
+import { countSyncUnsyncedItems } from '../../lib/core/sync/syncUnsyncedView';
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { loadInstalledCompanionVersion } from '../shared/platform/companion/runtime/installedAppVersion';
+import { writeClipboardText } from '../shared/platform/companion/runtime/textClipboard';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
+import { syncUnsyncedDeviceNames, SyncUnsyncedList, visibleSyncUnsyncedItems } from '../shared/ui/SyncUnsyncedList';
 
 import { isReportableSyncEvent } from './companionSyncActivityCopy';
 import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
@@ -14,6 +18,7 @@ import { CompanionSyncGroupOverview } from './CompanionSyncGroupOverview';
 import { CompanionSyncGroupRows } from './CompanionSyncGroupRows';
 import { formatClock, resolveLastSyncRow } from './companionSyncStatusRows';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
+import { useCompanionSyncUnsyncedItems } from './useCompanionSyncUnsyncedItems';
 
 type SyncStatusDetailsProps = {
   endpointUrl: string;
@@ -68,18 +73,29 @@ function SyncActivitySummary(props: { events: NativeCompanionSyncEvent[]; onOpen
   return <SettingsLinkRow label={t('companion.sync.activity.row')} onClick={props.onOpen} value={value} />;
 }
 
+async function loadCompanionReportVersion() {
+  const installed = await loadInstalledCompanionVersion();
+  return installed ? `${installed.version} (${installed.build})` : 'unknown';
+}
+
 function SyncOverview(props: SyncStatusDetailsProps & { provider: ReturnType<typeof useSyncGroupProviderState> }) {
   const t = useTranslation();
   const lastSync = resolveLastSyncRow({ ...props, t });
+  const unsynced = useCompanionSyncUnsyncedItems(props.syncEvents);
+  const deviceNames = syncUnsyncedDeviceNames(props.syncGroup);
+  const unsyncedCount = countSyncUnsyncedItems(visibleSyncUnsyncedItems(unsynced, deviceNames));
+  const partlySynced = unsyncedCount > 0 && props.status === 'idle' && !props.syncProgress && lastSync.valueTone !== 'error';
   return (
     <div className="space-y-5">
       <div className="border-y border-companion-divider">
-        <SettingsRow detail={lastSync.detail} label={lastSync.label} value={lastSync.value}
+        <SettingsRow detail={partlySynced ? t('companion.sync.unsynced.synced', { count: unsyncedCount }) : lastSync.detail} label={lastSync.label} value={lastSync.value}
           valueTone={lastSync.valueTone} />
         {props.syncConflictCount > 0 ? (
           <SettingsRow label={t('companion.sync.issuesToResolve')} value={`${props.syncConflictCount}`} valueTone="error" />
         ) : null}
       </div>
+      <SyncUnsyncedList copyText={writeClipboardText} deviceNames={deviceNames} items={unsynced}
+        loadAppVersion={loadCompanionReportVersion} />
       <CompanionSyncGroupJoinApproval provider={props.provider} />
       <CompanionSyncGroupOverview group={props.syncGroup} isSyncing={props.status === 'syncing'}
         onOpen={() => props.onOpenPage('syncGroup')} sourceHostName={null} />

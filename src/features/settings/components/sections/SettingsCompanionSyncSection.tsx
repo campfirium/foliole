@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
+import { loadAppVersion } from '../../../../shared/platform/appVersion';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -15,6 +16,7 @@ import {
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
 import { SyncProtocolIncompatibleDialog } from '../../../../shared/ui/SyncProtocolIncompatibleDialog';
+import { syncUnsyncedDeviceNames, SyncUnsyncedList } from '../../../../shared/ui/SyncUnsyncedList';
 import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } from '../../../../shared/ui/useSyncProtocolIncompatibleNotice';
 import { isDesktopWebDavSettingsVisible } from '../../model/settingsPanelOptions';
 
@@ -116,6 +118,8 @@ export function SettingsCompanionSyncSection() {
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
       />
+      <SyncUnsyncedList copyText={text => navigator.clipboard.writeText(text)} deviceNames={syncUnsyncedDeviceNames(group)}
+        heading="synced" items={state.overview.unsynced_items ?? []} loadAppVersion={loadAppVersion} />
       <SettingsSyncDiagnosticsRow disabled={!state.isDesktopRuntime} />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
