@@ -556,5 +556,11 @@
         "PDF search results open on the matching page."
       ]
     }
+  },
+  "0.8.5": {
+    "notes": [
+      "Fixed",
+      "Individual sync failures no longer interrupt the entire sync process. Sync settings now show which content failed to sync and why, with an option to copy the diagnostic report."
+    ]
   }
 }
