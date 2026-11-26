@@ -418,6 +418,16 @@ physical Windows provisioning or a new mobile upload.
 
 ### Post-release transitive maintenance
 
+2026-11-27: two peer mismatches are an accepted exception while the repository
+keeps `@ladle/react` 5.1.1 (user decision): `react` 19.3.1 against
+`react-inspector` 6.0.2, and `typescript` 6.0.3 against the optional peer of
+`tsconfck` 3.1.6. No compatible release exists inside Ladle's declared ranges.
+`npm ls --all` may report only these two; any other problem still blocks the
+refresh. Remove this exception when a Ladle update or removal clears them.
+The post-0.8.5 refresh passes desktop and Android type checks, web, Electron and
+companion builds, a Ladle build, the sanitizer and refresh tests, and the
+production audit (zero vulnerabilities).
+
 2026-11-07: npm 12.2.1 lock-only resolution rejected the unchanged bundled
 `@tailwindcss/oxide-wasm32-wasi` registry tarball ([npm/cli#9800](https://github.com/npm/cli/issues/9800)).
 The maintenance entry now uses ordinary `npm update --no-save --ignore-scripts`
