@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { MAX_READING_LATER_DAYS } from '../../../../../lib/core/review/settings';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
@@ -10,7 +8,7 @@ import { ReviewOptimizationRow } from './ReviewOptimizationRow';
 import { ReviewNumberInput } from './reviewSettingsControls';
 import { PushQueueRows, SchedulerCoreRows } from './SettingsReviewRows';
 
-export function SettingsReviewSection({ prioritySettings }: { prioritySettings?: ReactNode } = {}) {
+export function SettingsReviewSection() {
   const t = useTranslation();
   const reviewSettings = useReviewSchedulerSettings();
   const { reviewSchedulerSettings } = reviewSettings;
@@ -38,7 +36,6 @@ export function SettingsReviewSection({ prioritySettings }: { prioritySettings?:
         onReadingIntervalGrowthFactorMaxChange={reviewSettings.onReadingIntervalGrowthFactorMaxChange}
         onReadingIntervalGrowthFactorMinChange={reviewSettings.onReadingIntervalGrowthFactorMinChange}
         priorityRatio={reviewSchedulerSettings.pushQueue.priorityRatio}
-        prioritySettings={prioritySettings}
         queueMixRatioFsrs={reviewSchedulerSettings.pushQueue.queueMixRatio.fsrs}
         queueMixRatioReading={reviewSchedulerSettings.pushQueue.queueMixRatio.reading}
         readingInitialIntervalMs={reviewSchedulerSettings.pushQueue.readingInitialIntervalMs}

@@ -175,30 +175,30 @@ export function PushQueueRows(props: Pick<
   | 'onReadingInitialIntervalDaysChange'
   | 'onReadingIntervalGrowthFactorMinChange'
   | 'onReadingIntervalGrowthFactorMaxChange'
-> & { prioritySettings?: ReactNode }) {
+>) {
   const readingInitialIntervalDays = Number((props.readingInitialIntervalMs / DAY_IN_MS).toFixed(2));
   const t = useTranslation();
   const rows = getReviewRows(t);
   return (
     <>
-      {props.prioritySettings == null ? <ReviewSettingRow
+      <ReviewSettingRow
         searchRow={rows.defaultTopicPriority}
         title={rows.defaultTopicPriority.title}
         description={rows.defaultTopicPriority.description}
         control={<DefaultPriorityControl absoluteLabel={t('settings.review.priorityAbsolute')} ariaLabel={t('settings.review.defaultPriority.aria')} onChange={props.onDefaultPriorityChange} value={props.defaultPriority} />}
-      /> : null}
+      />
       <ReviewSettingRow
         searchRow={rows.readingVsReviewMix}
         title={rows.readingVsReviewMix.title}
         description={rows.readingVsReviewMix.description}
         control={<QueueMixRatioControl fsrs={props.queueMixRatioFsrs} fsrsAriaLabel={t('settings.review.itemQueueMix.aria')} onFsrsChange={props.onQueueMixRatioFsrsChange} onReadingChange={props.onQueueMixRatioReadingChange} reading={props.queueMixRatioReading} readingAriaLabel={t('settings.review.readingQueueMix.aria')} />}
       />
-      {props.prioritySettings ?? <ReviewSettingRow
+      <ReviewSettingRow
         searchRow={rows.priorityWeight}
         title={rows.priorityWeight.title}
         description={rows.priorityWeight.description}
         control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel={t('settings.review.priorityWeight.aria')} min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
-      />}
+      />
       <ReviewSettingRow
         searchRow={rows.readingInitialInterval}
         title={rows.readingInitialInterval.title}
