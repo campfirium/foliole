@@ -39,6 +39,6 @@ export function ReviewOptimizationRow() {
   const status = historyStatus === 'loading' ? t('settings.review.trainingHistoryLoading')
     : historyStatus === 'failed' ? t('settings.review.trainingHistoryFailed') : history;
   return <SettingsRow title={t('settings.review.optimization')}
-    description={t('settings.review.optimizationDescription')}
+    description={t('settings.scheduling.optimization')}
     detail={{ label: t('settings.review.recentTraining'), value: status }} />;
 }

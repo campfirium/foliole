@@ -36,7 +36,7 @@ test('saves a fixed Later delay and applies it once from the Flow toolbar', asyn
   await resetSeededDailyFlow(desktopApp);
   await page.reload();
   const settings = await openSettingsDialog(page);
-  await settings.getByRole('button', { name: 'Review', exact: true }).click();
+  await settings.getByRole('button', { name: 'Scheduling', exact: true }).click();
   const input = settings.getByRole('spinbutton', { name: delayName });
   await expect(input).toHaveValue('0');
   await input.fill('3');

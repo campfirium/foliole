@@ -8,12 +8,12 @@ function ReviewSettingsPane() {
   const t = useTranslation();
 
   return (
-    <div className={settingsDialogPane} style={{ maxWidth: '980px' }}>
+    <div className={settingsDialogPane} style={{ maxHeight: '100dvh', maxWidth: '980px' }}>
       <div className={settingsDialogPaneBody}>
         <header className="mb-7 px-5 pb-6">
-          <h2 className="text-ui-md font-normal text-foreground">{t('settings.category.review.label')}</h2>
+          <h2 className="text-ui-md font-normal text-foreground">{t('settings.scheduling.title')}</h2>
           <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">
-            {t('settings.category.review.description')}
+            {t('settings.scheduling.description')}
           </p>
         </header>
         <SettingsReviewSection />

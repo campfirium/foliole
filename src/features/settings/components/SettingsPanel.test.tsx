@@ -40,7 +40,7 @@ function PushQueueSettingsHarness() {
 function expectPushQueueSemanticCopy() {
   expect(screen.getByRole('heading', { level: 4, name: 'Default topic priority' })).toBeInTheDocument();
   expect(screen.getByText('Reading vs review mix')).toBeInTheDocument();
-  expect(screen.getByText('Priority weight')).toBeInTheDocument();
+  expect(screen.getByText('Priority ratio')).toBeInTheDocument();
   expect(screen.getByText(/fallback priority for new topics/i)).toBeInTheDocument();
 }
 
@@ -100,7 +100,7 @@ it('updates desired retention from review settings slider', async () => {
   });
 
   await waitFor(() => {
-    expect(screen.getByText('0.80')).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Desired retention' })).toHaveAttribute('aria-valuetext', '80%');
   });
 });
 

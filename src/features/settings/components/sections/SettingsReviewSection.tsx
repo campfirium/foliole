@@ -14,7 +14,7 @@ export function SettingsReviewSection() {
   const { reviewSchedulerSettings } = reviewSettings;
 
   return (
-    <SettingsSection ariaLabel={t('settings.review.sectionAria')} title={t('settings.review.section')}>
+    <SettingsSection ariaLabel={t('settings.scheduling.title')}>
       <ReviewOptimizationRow />
       <SchedulerCoreRows
         desiredRetention={reviewSchedulerSettings.desiredRetention}
@@ -42,10 +42,10 @@ export function SettingsReviewSection() {
         readingIntervalGrowthFactorMax={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.max}
         readingIntervalGrowthFactorMin={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.min}
       />
-      <SettingsRow data-settings-search-row-id="review-reading-later" title={t('settings.review.later.title')}
+      <SettingsRow data-settings-search-row-id="review-reading-later" title={t('settings.scheduling.laterTitle')}
         description={t('settings.review.later.description')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <ReviewNumberInput ariaLabel={t('settings.review.later.title')} min={0} max={MAX_READING_LATER_DAYS} step={1}
+          <ReviewNumberInput ariaLabel={t('settings.scheduling.laterTitle')} min={0} max={MAX_READING_LATER_DAYS} step={1}
             value={reviewSchedulerSettings.readingLaterDays ?? 0} onChange={reviewSettings.onReadingLaterDaysChange} />
         </SettingsControlSlot>
       </SettingsRow>

@@ -1,4 +1,5 @@
 import { EN_REMINDER_TRANSLATIONS } from './enReminders';
+import { EN_SCHEDULING_TRANSLATIONS } from './enScheduling';
 import { EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './enSettingsBackups';
 import { EN_SETTINGS_PUBLISHING_TRANSLATIONS } from './enSettingsPublishing';
 import { EN_SETTINGS_STORAGE_TRANSLATIONS } from './enSettingsStorage';
@@ -6,6 +7,7 @@ import { EN_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './enSettingsSyncGroup';
 
 export const EN_SETTINGS_TRANSLATIONS = {
   ...EN_REMINDER_TRANSLATIONS,
+  ...EN_SCHEDULING_TRANSLATIONS,
   'settings.title': 'Settings',
   'settings.description': 'Adjust how Foliole looks and behaves.',
   'settings.search.placeholder': 'Search settings',
@@ -170,7 +172,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.search.reviewInitialInterval.title': 'Reading initial interval',
   'settings.search.reviewInitialInterval.description': 'How long a topic waits after a reading session before returning to the reading queue.',
   'settings.review.later.title': 'Custom Later interval',
-  'settings.review.later.description': 'Set the interval before the material reappears (0 for the default short interval).',
+  'settings.review.later.description': 'Days before a Topic reappears after Later. A value of 0 uses the automatically calculated shorter interval.',
   'settings.review.later.default': 'Default',
   'settings.search.reviewIntervalGrowth.title': 'Reading interval growth',
   'settings.search.reviewIntervalGrowth.description': 'How quickly the reading interval grows after each pass.',

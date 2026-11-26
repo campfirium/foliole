@@ -20,8 +20,8 @@ interface PriorityWeightProps {
 }
 
 const defaultArgs: PriorityWeightProps = {
-  title: EN_SETTINGS_TRANSLATIONS['settings.search.reviewPriorityWeight.title'],
-  description: EN_SETTINGS_TRANSLATIONS['settings.search.reviewPriorityWeight.description'],
+  title: EN_SETTINGS_TRANSLATIONS['settings.scheduling.priorityTitle'],
+  description: EN_SETTINGS_TRANSLATIONS['settings.scheduling.prioritySearch'],
   weight: DEFAULT_UNIFIED_PUSH_QUEUE_RULES.priorityRatio,
   disabled: false
 };
@@ -32,7 +32,7 @@ function PriorityWeightRow({ title, description, weight, disabled }: PriorityWei
   return (
     <div className={settingsDialogPane} style={{ maxWidth: '980px' }}>
       <div className={settingsDialogPaneBody}>
-        <SettingsSection title={EN_SETTINGS_TRANSLATIONS['settings.review.section']}>
+        <SettingsSection title={EN_SETTINGS_TRANSLATIONS['settings.scheduling.title']}>
           <SettingsRow title={title} description={description}>
             <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
               <fieldset className="contents" disabled={disabled}>

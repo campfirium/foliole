@@ -46,13 +46,12 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
 it('keeps settings dividers aligned without title extension lines', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="review" />);
 
-  const pageTitleShell = screen.getByRole('heading', { level: 2, name: 'Review' }).parentElement;
-  const sectionHeader = screen.getByRole('heading', { level: 3, name: 'Scheduler' }).parentElement?.parentElement;
+  const pageTitleShell = screen.getByRole('heading', { level: 2, name: 'Scheduling' }).parentElement;
   const storageGroup = screen.getByText('Storage').closest('.relative');
   const desiredRetentionRow = screen.getByRole('heading', { level: 4, name: 'Desired retention' }).parentElement?.parentElement;
 
   expect(pageTitleShell?.className).not.toContain('border-b');
-  expect(sectionHeader?.className).not.toContain('border-b');
+  expect(screen.queryByRole('heading', { name: 'Scheduler' })).not.toBeInTheDocument();
   expect(storageGroup?.className).toContain('before:left-3');
   expect(storageGroup?.className).toContain('before:right-3');
   expect(storageGroup?.className).toContain('before:border-t');

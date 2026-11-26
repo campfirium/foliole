@@ -82,7 +82,7 @@ it('searches settings rows and jumps to the matching category row', async () => 
   await waitFor(() => {
     expect(row).toHaveClass('bg-[rgb(var(--role-accent-rgb)_/_0.12)]');
   });
-  expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('button', { name: 'Scheduling' })).toHaveAttribute('aria-current', 'page');
 });
 
 it.each([
@@ -153,14 +153,14 @@ it('finds advanced review scheduler rows from settings search', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), {
-    target: { value: 'Priority weight' }
+    target: { value: 'Priority ratio' }
   });
-  fireEvent.click(screen.getByRole('option', { name: /Priority weight/ }));
+  fireEvent.click(screen.getByRole('option', { name: /Priority ratio/ }));
 
   await waitFor(() => {
     expect(document.querySelector('[data-settings-search-row-id="review-priority-weight"]')).not.toBeNull();
   });
-  expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('button', { name: 'Scheduling' })).toHaveAttribute('aria-current', 'page');
 });
 
 it('routes advanced mouse gesture terms to the current appearance section', async () => {
@@ -204,7 +204,7 @@ it('uses the active app language for settings navigation and search results', as
   await waitFor(() => {
     expect(document.querySelector('[data-settings-search-row-id="review-desired-retention"]')).not.toBeNull();
   });
-  expect(screen.getByRole('button', { name: '复习' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('button', { name: '调度' })).toHaveAttribute('aria-current', 'page');
 
   fireEvent.click(screen.getByRole('button', { name: '鼠标手势' }));
   expect(screen.getByText('手势外观')).toBeInTheDocument();
