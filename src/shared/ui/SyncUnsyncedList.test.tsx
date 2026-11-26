@@ -20,7 +20,7 @@ it('opens only items this device holds and copies identities without titles', as
         items={[item('local-id', 'Private title'), item('remote-id', null), item('left-id', 'Gone', 'removed')]} />
     </SyncItemNavigationContext.Provider>
   );
-  expect(screen.getByRole('heading').textContent).toBe('2 items not synced');
+  expect(screen.getByRole('heading').textContent).toBe('Not synced: 2');
   fireEvent.click(screen.getByRole('button', { name: 'Private title' }));
   expect(open).toHaveBeenCalledWith('local-id');
   expect(screen.queryByRole('button', { name: 'Not on this device (node)' })).toBeNull();

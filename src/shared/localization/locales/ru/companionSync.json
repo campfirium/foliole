@@ -36,7 +36,7 @@
   "companion.sync.unsynced.title": "Не синхронизировано элементов: {count}",
   "companion.sync.unsynced.synced": "Синхронизировано, не синхронизировано элементов: {count}",
   "companion.sync.unsynced.reason.unready": "Содержимое неполное и пока не может быть отправлено",
-  "companion.sync.unsynced.reason.waiting": "Ожидание родительского элемента",
+  "companion.sync.unsynced.reason.waiting": "Ожидание синхронизации материала уровнем выше",
   "companion.sync.unsynced.reason.failed": "Не удалось синхронизировать",
   "companion.sync.unsynced.thisDevice": "Это устройство",
   "companion.sync.unsynced.notHere": "Нет на этом устройстве ({type})",

@@ -36,7 +36,7 @@
   "companion.sync.unsynced.title": "{count}개 항목이 동기화되지 않음",
   "companion.sync.unsynced.synced": "동기화됨, {count}개 항목이 동기화되지 않음",
   "companion.sync.unsynced.reason.unready": "내용이 불완전하여 아직 보낼 수 없습니다",
-  "companion.sync.unsynced.reason.waiting": "상위 항목을 기다리는 중",
+  "companion.sync.unsynced.reason.waiting": "상위 콘텐츠가 동기화되기를 기다리는 중",
   "companion.sync.unsynced.reason.failed": "동기화할 수 없습니다",
   "companion.sync.unsynced.thisDevice": "이 기기",
   "companion.sync.unsynced.notHere": "이 기기에 없음 ({type})",
