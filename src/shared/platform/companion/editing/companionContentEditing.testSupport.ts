@@ -5,26 +5,25 @@ import Database from 'better-sqlite3';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
-import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorConnection } from '../../companionSyncNodeVersionsTestSupport';
 import { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 
-export async function openContentEditDatabase(directory: string, now: string) {
+export async function openContentEditDatabase(directory: string, now: string, platform: 'android' | 'ios' = 'ios') {
   const database = new Database(path.join(directory, 'companion.db'));
-  database.transaction(() => {
-    installCompanionNodeSchema(database);
-    database.pragma(`user_version = ${COMPANION_DATABASE_VERSION}`);
-    database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)').run('device_id', 'test-mobile', now);
-  })();
   const connection = { ...createFakeCapacitorConnection(database),
     getUrl: async () => ({ url: path.join(directory, 'companion.db') }) };
   const manager = {
     closeConnection: async () => undefined, createConnection: async () => connection,
-    isConnection: async () => ({ result: true }), isDatabase: async () => ({ result: true }),
+    isConnection: async () => ({ result: true }), isDatabase: async () => ({ result: false }),
     retrieveConnection: async () => connection
   };
-  const owner = new CapacitorCompanionDatabaseOwner(manager as never, 'ios');
-  await owner.open({ expectedHostName: 'mobile', now });
+  const owner = new CapacitorCompanionDatabaseOwner(manager as never, platform);
+  try {
+    await owner.open({ expectedHostName: 'mobile', now });
+  } catch (error) {
+    database.close();
+    throw error;
+  }
   return { database, owner };
 }
 
