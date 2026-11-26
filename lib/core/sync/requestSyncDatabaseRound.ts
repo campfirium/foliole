@@ -5,7 +5,7 @@ import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectFailureStage, type Re
 import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js';
 import { dailyFlowPriorityDifferences } from './requestSyncDailyFlowPriority.js';
 import { analyzeRequestSyncInventories, type RequestSyncInventoryAnalysis } from './requestSyncInventoryAnalysis.js';
-import { isReceivedNodeFactRejection, REQUEST_SYNC_WRITE_REJECTED } from './requestSyncObjectWriteIsolation.js';
+import { isRequestSyncObjectFailure } from './requestSyncObjectFailure.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
@@ -137,7 +137,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       const stale = dependency && completed.has(key({ ...difference, ...dependency }));
       const result = cached && !stale ? cached : (await port.transferObjects([difference]))[0];
       assertRoundObjectResult(result, difference);
-      if (isObjectRejection(result.error, difference)) {
+      if (result.error && isRequestSyncObjectFailure(result.error)) {
         rejected.add(key(difference));
         port.reportObjectError(difference, new Error(result.error), result.failureStage);
         return 'deferred';
@@ -156,18 +156,6 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     }
   }, createFramedSyncInventoryDependencyLookup(inventories), propagateRejection(rejected));
   return { delivered, deferred, sourceChanged, yielded };
-}
-
-function isObjectRejection(error: string, difference: FramedSyncInventoryDifference) {
-  const detail = error.replace(/^framed_sync_http_400:/u, '');
-  return detail === 'request_sync_body_too_large' ||
-    detail.startsWith(REQUEST_SYNC_WRITE_REJECTED) ||
-    detail === 'request_sync_current_version_unavailable' ||
-    detail === 'node_version_graph_cycle' ||
-    detail === 'framed_sync_node_parent_cycle' ||
-    detail.startsWith('node_version_cross_object_parent:') ||
-    detail.startsWith('node_version_parent_identity_mismatch:') ||
-    (difference.objectType === 'node' && (detail === `sync_node_apply_blocked:${difference.globalId}` || isReceivedNodeFactRejection(detail)));
 }
 
 function propagateRejection(rejected: Set<string>) {

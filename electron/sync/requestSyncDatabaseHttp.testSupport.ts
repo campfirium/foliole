@@ -1,6 +1,10 @@
 import http from 'node:http';
 
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
+import { exchangeRequestSyncInventory } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { respondRequestSyncDatabase, type RequestSyncDatabaseResponseInput } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
+import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import type { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
@@ -8,6 +12,7 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
 import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
+import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 
 export const groupKey = new Uint8Array(32).fill(7);
 export const state = (id: string): SyncGroupMemberStatePayload => ({ contract_version: 3, group_id: 'group',
@@ -35,4 +40,20 @@ export function syncServer(source: Peer, target: Peer) {
         }
       }).catch(error => response.destroy(error));
     });
+}
+
+export async function startSyncRound(server: ReturnType<typeof syncServer>, source: Peer, target: Peer, rejected: string[]) {
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('missing_address');
+  const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
+    responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
+  const exchange = createDesktopRequestSyncExchange({ context, groupKey,
+    groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
+  return () => runRequestSyncDatabaseRound({
+    exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
+    transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
+    reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
+  });
 }

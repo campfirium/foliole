@@ -11,6 +11,7 @@ import {
   receivedObjectInput,
   type RequestSyncDatabaseHost
 } from './requestSyncObjectEndpoint.js';
+import { isRequestSyncObjectFailure } from './requestSyncObjectFailure.js';
 import type { RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
 import { createRequestSyncObjectWriteIsolation } from './requestSyncObjectWriteIsolation.js';
 import { hasLearningRowsToCheck, pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
@@ -26,15 +27,24 @@ export async function applyReceivedRequestSyncBatch(host: RequestSyncDatabaseHos
   staged: readonly StagedRequestSyncObject[]): Promise<RequestSyncObjectResult[]> {
   if (staged.length < 2) return applySingleObject(host, input, staged);
   let changed: string[] = [];
-  const applied = await host.write(async db => {
-    const tracked = await db.transaction(tx => trackCommittedAttachmentArticles(tx, host,
-      staged.filter(value => value.header.objectType === 'node').map(value => value.header.globalId),
-      () => applyStagedObjects(tx, host, input, staged)));
-    changed = tracked.changed;
-    const scopes = tracked.result.filter(result => !result.error).map(result => result.workspaceScope);
-    if (scopes.length) await host.refreshNodeIndex?.(db, scopes.reduce(joinWorkspaceScopes));
-    return tracked.result;
-  });
+  let committed = false;
+  let applied: Awaited<ReturnType<typeof applyStagedObjects>>;
+  try {
+    applied = await host.write(async db => {
+      const tracked = await db.transaction(tx => trackCommittedAttachmentArticles(tx, host,
+        staged.filter(value => value.header.objectType === 'node').map(value => value.header.globalId),
+        () => applyStagedObjects(tx, host, input, staged)));
+      committed = true;
+      changed = tracked.changed;
+      const scopes = tracked.result.filter(result => !result.error).map(result => result.workspaceScope);
+      if (scopes.length) await host.refreshNodeIndex?.(db, scopes.reduce(joinWorkspaceScopes));
+      return tracked.result;
+    });
+  } catch (error) {
+    input.signal?.throwIfAborted();
+    if (committed || !isRequestSyncObjectFailure(errorDetail(error))) throw error;
+    return applyOneByOne(host, input, staged);
+  }
   host.attachmentArticlesCommitted?.(changed);
   for (const [index, { header }] of staged.entries()) {
     const result = applied[index]!;
@@ -44,6 +54,15 @@ export async function applyReceivedRequestSyncBatch(host: RequestSyncDatabaseHos
     const error = applied[index]!.error;
     return error ? { ...header, error, failureStage: 'apply' } : { ...header, error: '' };
   });
+}
+
+/** The batch rolled back over one object: apply each in its own transaction so only that one stays behind. */
+async function applyOneByOne(host: RequestSyncDatabaseHost, input: BatchInput,
+  staged: readonly StagedRequestSyncObject[]) {
+  const results = new Map<StagedRequestSyncObject, RequestSyncObjectResult>();
+  const nodesFirst = [...staged].sort((a, b) => Number(b.header.objectType === 'node') - Number(a.header.objectType === 'node'));
+  for (const object of nodesFirst) results.set(object, (await applySingleObject(host, input, [object]))[0]!);
+  return staged.map(object => results.get(object)!);
 }
 
 async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, input: BatchInput,
@@ -93,6 +112,10 @@ async function applySingleObject(host: RequestSyncDatabaseHost, input: BatchInpu
     return [{ ...header, error: '' }];
   } catch (error) {
     input.signal?.throwIfAborted();
-    return [{ ...header, error: error instanceof Error ? error.message : String(error), failureStage: 'apply' }];
+    return [{ ...header, error: errorDetail(error), failureStage: 'apply' }];
   }
+}
+
+function errorDetail(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -96,7 +96,7 @@ function registerRestartTest() {
           WHEN new.object_id = 't326-verified-receiver'
           BEGIN SELECT RAISE(ABORT, 'verified_http_version_rejected'); END`);
       } finally { receiver.close(); }
-      await expect(fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).rejects.toThrow('verified_http_version_rejected');
+      expect(await fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).toMatchObject({ complete: false });
       const failed = verifiedReceiverBusinessEvidence(fixture.rightSnapshot.databasePath, nodeId);
       expect(failed.node).toBeUndefined();
       expect(failed.versions).toEqual([]);

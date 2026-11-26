@@ -104,19 +104,23 @@ it('receives a mixed HTTP batch without resurrecting a node that already has a t
     expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'kept' }]);
   }));
 
-it('rejects a conflicting deletion identity and rolls back the whole batch', () =>
+it('holds back only a conflicting deletion identity and commits the rest of the batch', () =>
   withHttp(async (source, target, exchange) => {
     const prior = deletion('owner', 'shared-deletion');
     await applyRemoteNodeTombstone(target.db, prior, false);
-    await expect(pushHeads(source, exchange, [
-      [record('first', 'first-v1')], [deletion('impostor', 'shared-deletion')], [record('last', 'last-v1')]
-    ])).rejects.toThrow('sync_pack_node_version_immutable_mismatch:shared-deletion');
+    const first = record('first', 'first-v1');
+    const last = record('last', 'last-v1');
+    const rejected = await pushHeads(source, exchange, [
+      [first], [deletion('impostor', 'shared-deletion')], [last]
+    ]);
+    expect(rejected.map(result => result.error)).toEqual(['',
+      expect.stringContaining('sync_pack_node_version_immutable_mismatch:shared-deletion'), '']);
     target.reopen();
     expect(await tombstones(target)).toEqual([identity(prior)]);
-    expect(await target.db.query('SELECT id FROM nodes')).toEqual([]);
-    expect(await target.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
+    expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'first' }, { id: 'last' }]);
+    expect(await target.db.query("SELECT version_id FROM node_sync_versions WHERE object_id = 'impostor'")).toEqual([]);
     const results = await pushHeads(source, exchange, [
-      [record('first', 'first-v1')], [deletion('impostor', 'independent-deletion')], [record('last', 'last-v1')]
+      [first], [deletion('impostor', 'independent-deletion')], [last]
     ]);
     expect(results.map(result => result.error)).toEqual(['', '', '']);
     target.reopen();
