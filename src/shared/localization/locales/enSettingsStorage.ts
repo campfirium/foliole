@@ -67,7 +67,7 @@ export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   'settings.library.importRoot.description': 'Create folders here to import files into matching Foliole folders. Files placed at the same relative path as a Mirror file can be reviewed as updates instead of new topics.',
   'settings.library.importRoot.open': 'Open',
   'settings.library.importRoot.openAria': 'Open Import folder',
-  'settings.library.mirror.description': 'The mirror folder updates with your library. Files you add or change by hand may be overwritten or deleted (except files and folders whose names start with a dot).',
+  'settings.library.mirror.description': 'The mirror folder updates as your library changes. Anything you add or modify manually may be overwritten or deleted (except files and folders whose names start with a dot).',
   'settings.library.mirrorMaintenance.sectionAria': 'Mirror maintenance section',
   'settings.library.mirrorMaintenance.title': 'Mirror maintenance',
   'settings.library.mirrorOutput.aria': 'Rebuild mirror',

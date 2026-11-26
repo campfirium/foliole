@@ -62,7 +62,7 @@ export async function readMirrorFileUpdatedAt(filePath: string) {
 // Hidden entries belong to other tools (such as .obsidian) and survive cleanup.
 // Foliole's own temporary files and Finder metadata do not count as user content.
 function isKeptHiddenEntry(name: string) {
-  return name.startsWith('.') && name !== '.DS_Store' && !name.startsWith('.foliole-mirror-');
+  return name.startsWith('.') && name !== '.DS_Store' && !/^\.foliole-mirror-[0-9a-f-]{36}\.tmp$/.test(name);
 }
 
 async function removeMirrorTree(targetPath: string) {

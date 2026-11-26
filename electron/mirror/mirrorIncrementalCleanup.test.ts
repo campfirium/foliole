@@ -107,7 +107,7 @@ it('does not retire the selected legacy copy when its new output fails', async (
 });
 
 it('keeps hidden files and folders through rebuild and legacy-directory cleanup', async () => {
-  const kept = ['.obsidian/app.json', 'Notes/.hidden', 'Before/.keep'];
+  const kept = ['.obsidian/app.json', 'Notes/.hidden', 'Before/.keep', '.foliole-mirror-notes'];
   for (const relative of [...kept, 'Notes/manual.txt', 'Before/manual.txt']) {
     await fs.mkdir(path.dirname(mirror(relative)), { recursive: true });
     await fs.writeFile(mirror(relative), relative);

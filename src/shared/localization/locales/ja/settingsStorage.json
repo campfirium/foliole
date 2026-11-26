@@ -42,7 +42,7 @@
   "settings.library.paths.error.chooseLibraryHome": "新しいメイン フォルダーを選択できませんでした。",
   "settings.library.paths.error.chooseAssets": "新しい添付ファイル フォルダーを選択できませんでした。",
   "settings.library.paths.error.chooseMirror": "新しいミラー フォルダーを選択できませんでした。",
-  "settings.library.paths.error.mirrorNotEmpty": "ミラーには空のフォルダーを選んでください。",
+  "settings.library.paths.error.mirrorNotEmpty": "ミラー用に空のフォルダーを選択してください。",
   "settings.library.paths.error.chooseInbox": "新しい受信トレイ フォルダーを選択できませんでした。",
   "settings.library.paths.error.restoreLibraryHome": "デフォルトのメインフォルダーを復元できませんでした。",
   "settings.library.paths.error.restoreAssets": "デフォルトの添付ファイル フォルダーを復元できませんでした。",

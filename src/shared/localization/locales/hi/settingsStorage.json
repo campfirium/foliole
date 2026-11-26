@@ -62,7 +62,7 @@
   "settings.library.importRoot.description": "यहाँ बनाए गए फ़ोल्डरों से फ़ाइलें Foliole के उसी नाम वाले फ़ोल्डर में इंपोर्ट होती हैं। मिरर की किसी फ़ाइल के समान सापेक्ष पाथ पर रखी फ़ाइलों को नए विषय बनाने की जगह अपडेट के तौर पर जाँच सकते हैं।",
   "settings.library.importRoot.open": "खोलें",
   "settings.library.importRoot.openAria": "इंपोर्ट फ़ोल्डर खोलें",
-  "settings.library.mirror.description": "मिरर फ़ोल्डर आपकी लाइब्रेरी के साथ अपडेट होता है। हाथ से जोड़ी या बदली गई सामग्री ओवरराइट या हटाई जा सकती है (बिंदु से शुरू होने वाले नाम की फ़ाइलें और फ़ोल्डर छोड़कर)।",
+  "settings.library.mirror.description": "मिरर फ़ोल्डर आपकी लाइब्रेरी में बदलाव के साथ अपडेट होता है। मैन्युअल रूप से जोड़ी या बदली गई सामग्री ओवरराइट या हटाई जा सकती है (उन फ़ाइलों और फ़ोल्डरों को छोड़कर जिनके नाम बिंदु से शुरू होते हैं)।",
   "settings.library.mirrorMaintenance.sectionAria": "मिरर के रखरखाव की सेटिंग",
   "settings.library.mirrorMaintenance.title": "मिरर का रखरखाव",
   "settings.library.mirrorOutput.aria": "मिरर फिर से बनाएँ",
