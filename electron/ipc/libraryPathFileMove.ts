@@ -113,6 +113,37 @@ function isRecoverableMoveError(error: unknown) {
   return code === 'EXDEV' || code === 'EEXIST' || code === 'ENOTEMPTY' || MOVE_RETRY_CODES.has(String(code));
 }
 
+export async function hasVisibleEntries(directoryPath: string) {
+  if (!(await pathExists(directoryPath))) {
+    return false;
+  }
+  return (await fs.readdir(directoryPath)).some((name) => !name.startsWith('.'));
+}
+
+/** Moves the contents, but leaves a hidden entry in place when the target already has its own. */
+export async function moveDirectoryContentsKeepingTargetHidden(sourcePath: string, targetPath: string) {
+  if (sourcePath === targetPath || !(await pathExists(sourcePath)) || !(await pathExists(targetPath))) {
+    await moveDirectoryContents(sourcePath, targetPath);
+    return;
+  }
+  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+  for (const entry of entries) {
+    const currentSourcePath = path.join(sourcePath, entry.name);
+    const currentTargetPath = path.join(targetPath, entry.name);
+    if (entry.name.startsWith('.') && (await pathExists(currentTargetPath))) {
+      continue;
+    }
+    if (entry.isDirectory()) {
+      await moveDirectoryContents(currentSourcePath, currentTargetPath);
+      continue;
+    }
+    await moveFile(currentSourcePath, currentTargetPath);
+  }
+  if ((await fs.readdir(sourcePath)).length === 0) {
+    await fs.rmdir(sourcePath);
+  }
+}
+
 export async function moveDirectoryContents(sourcePath: string, targetPath: string, onBusyRetry?: () => void) {
   if (sourcePath === targetPath) {
     return;

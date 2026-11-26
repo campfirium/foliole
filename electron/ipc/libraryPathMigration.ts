@@ -5,7 +5,12 @@ import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '.
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
-import { moveDirectoryContents, pathExists } from './libraryPathFileMove.js';
+import {
+  hasVisibleEntries,
+  moveDirectoryContents,
+  moveDirectoryContentsKeepingTargetHidden,
+  pathExists
+} from './libraryPathFileMove.js';
 import { markLibraryHomeDatabaseMoved } from './libraryPathMigrationRuntime.js';
 
 let libraryHomeTaskPause: { active: number; resume: Promise<() => void> } | null = null;
@@ -133,7 +138,13 @@ export async function migrateLibraryPathChange(args: {
     if (isPathInside(currentPaths.mirror, nextPaths.mirror)) {
       throw new Error('Target Mirror folder cannot be inside the current Mirror folder.');
     }
-    await moveDirectoryContents(currentPaths.mirror, nextPaths.mirror);
+    // A mirror rebuild clears its folder, so a user-picked folder must start empty.
+    const isNewUserFolder = nextOverrides.mirror !== null &&
+      path.resolve(nextPaths.mirror) !== path.resolve(currentPaths.mirror);
+    if (isNewUserFolder && (await hasVisibleEntries(nextPaths.mirror))) {
+      throw new Error('mirror_folder_not_empty');
+    }
+    await moveDirectoryContentsKeepingTargetHidden(currentPaths.mirror, nextPaths.mirror);
     return;
   }
 
