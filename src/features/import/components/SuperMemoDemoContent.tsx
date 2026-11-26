@@ -5,6 +5,7 @@ import { SUPER_MEMO_DEMO_COLLECTION_NAME } from '../model/superMemoDemoCollectio
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { superMemoMigrationStepLabel } from './SuperMemoMigrationSteps';
 import { SuperMemoPriorityPage } from './SuperMemoPriorityPage';
+import { SuperMemoReferenceSettings } from './SuperMemoReferenceSettings';
 import { SuperMemoSchedulePage } from './SuperMemoSchedulePage';
 import { SuperMemoStructurePage } from './SuperMemoStructurePage';
 import type { SuperMemoDemoWalkthrough } from './useSuperMemoDemoWalkthrough';
@@ -55,8 +56,9 @@ export function SuperMemoDemoContent({ model }: { model: SuperMemoDemoWalkthroug
         setPercent={model.setPercent} busy={false} /> : null}
       {step === 'priority' ? <SuperMemoPriorityPage boundaries={model.boundaries} paired busy={false}
         onChange={model.setBoundaries} /> : null}
-      {step === 'grades' ? <div className="text-sm">
+      {step === 'grades' ? <div className="grid min-w-0 gap-4 text-sm [@media(min-height:880px)]:gap-5">
         <SuperMemoGradeSettings disabled={false} value={model.gradeMap} onChange={model.setGradeMap} />
+        <SuperMemoReferenceSettings disabled={false} mapping={model.referenceMap} onChange={model.setReferenceMap} />
       </div> : null}
     </div>
   );
