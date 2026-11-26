@@ -41,8 +41,6 @@ type Cost = Record<(typeof METRICS)[number], number>;
 
 /** Findings that still follow library size, each with its row in the work amplification checks. Only shrinks. */
 const KNOWN: Record<string, string> = {
-  'grade | scans daily_flow_entries': 'WA-081',
-  'move | scans nodes': 'WA-079',
   'move to Trash | scans sync_object_state': 'WA-080',
   'restore | scans sync_object_state': 'WA-080'
 };
@@ -97,10 +95,7 @@ function inspectPlans() {
   const scans: (Pick<FullScanFinding, 'table' | 'plan' | 'sql' | 'via'> & { phase: string; sourceSql: string })[] = [];
   probe.onExecution = record => {
     const { sqlite, sql, step, lastArgs } = record;
-    // The write-node read plans a walk of `nodes` for its Sequential Reading probe, which never runs when no
-    // subtree is kept (third binding). That plan is judged only when the probe has rows to drive it.
-    const idleProbe = sql.includes('probe(found) AS') && lastArgs[2] === '[]';
-    const key = [sqlite.name, step, idleProbe, sql].join('\0');
+    const key = [sqlite.name, step, sql].join('\0');
     if (planned.has(key)) return;
     // Use the SQL and converted bindings the fake plugin actually executed, on the same connection.
     // The shared scanner treats failed plans as empty, so check the outer plan explicitly.
@@ -111,7 +106,6 @@ function inspectPlans() {
     }
     planned.add(key);
     for (const { table, plan, sql: scannedSql, via } of findLoopFullScans(record)) {
-      if (idleProbe && table === 'nodes') continue;
       if (sqlite.name === library?.database.name) scans.push({ table, plan, sql: scannedSql, via, phase: step, sourceSql: sql });
     }
   };

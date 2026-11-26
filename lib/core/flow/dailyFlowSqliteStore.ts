@@ -102,8 +102,10 @@ function scanCycleRows(db: DbPort, after: number, through: number, count: number
 }
 
 function readTimedCycleRows(db: DbPort, filter: CycleScanFilter, count: number, nodeIds?: readonly string[]) {
+  // Unscoped, CROSS JOIN makes the due times drive the read; SQLite otherwise walks every active entry.
+  const join = nodeIds ? 'JOIN' : 'CROSS JOIN';
   return db.query<CycleStoredRow>(`SELECT e.*, r.kind, r.ready_at_ms FROM daily_flow_entry_readiness r
-    JOIN daily_flow_entries e ON e.node_id = r.node_id WHERE r.ready_at_ms IS NOT NULL AND r.ready_at_ms <= ?
+    ${join} daily_flow_entries e ON e.node_id = r.node_id WHERE r.ready_at_ms IS NOT NULL AND r.ready_at_ms <= ?
     AND r.kind IN (SELECT value FROM json_each(?)) AND e.active=1 ${nodeIds ? NODE_SCOPE : ''}
     ORDER BY r.ready_at_ms, e.order_key LIMIT ?`,
   [filter.nowMs, JSON.stringify(filter.kinds), ...(nodeIds ? [JSON.stringify(nodeIds)] : []), count]);

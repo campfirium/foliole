@@ -6,18 +6,19 @@ import { loadCompanionContentProjection } from '../sync/workspace-state/companio
 
 // Every descendant of the subtree roots plus every ancestor of the subtree and path roots. Kept subtrees are
 // probed in the same read: when one holds an enabled Sequential Reading source or a locked item, its nodes are
-// returned as well and `probed` is 1 on every row.
+// returned as well and `probed` is 1 on every row. The probe's CROSS JOIN keeps the kept subtree as the outer
+// loop; SQLite otherwise walks every node.
 const WRITE_NODE_IDS_SQL = `WITH RECURSIVE descendants(id) AS (
   SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
   UNION SELECT child.id FROM nodes child JOIN descendants parent ON child.parent_id = parent.id
 ), ancestors(id, parent_id) AS (
   SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
-  UNION SELECT parent.id, parent.parent_id FROM nodes parent JOIN ancestors child ON parent.id = child.parent_id
+  UNION SELECT above.id, above.parent_id FROM nodes above JOIN ancestors below ON above.id = below.parent_id
 ), kept(id) AS (
   SELECT id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
   UNION SELECT child.id FROM nodes child JOIN kept parent ON child.parent_id = parent.id
 ), probe(found) AS (
-  SELECT EXISTS (SELECT 1 FROM kept d JOIN nodes n ON n.id = d.id LEFT JOIN node_reading r ON r.node_id = d.id
+  SELECT EXISTS (SELECT 1 FROM kept d CROSS JOIN nodes n ON n.id = d.id LEFT JOIN node_reading r ON r.node_id = d.id
     WHERE n.sequential_reading_enabled = 1 OR r.state = 'locked')
 ) SELECT id, (SELECT found FROM probe) AS probed FROM descendants
   UNION SELECT id, (SELECT found FROM probe) FROM ancestors
