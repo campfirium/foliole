@@ -15,7 +15,7 @@
     "plugin": "FolioleCompanionBootstrap",
     "platform": "android",
     "methods": ["setAppearance", "setFlowGestureRegion", "setNativeSelectionMenu", "setReadingSystemBars"],
-    "reason": "JS 只在 Android 调用。setAppearance 给 Android 窗口与 WebView 底层上色，iPhone 状态栏样式走共用 SystemBars、底层色随页面背景（系统默认行为，未真机验证）；setFlowGestureRegion 避让 Android 系统返回手势，iPhone 无此系统手势；缺口：setNativeSelectionMenu（浮动工具栏开启时 iPhone 未抑制系统选区菜单）与 setReadingSystemBars（阅读页“隐藏系统状态栏”开关仅 Android 提供）"
+    "reason": "JS 只在 Android 调用。setAppearance 给 Android 窗口与 WebView 底层上色，iPhone 状态栏样式走共用 SystemBars、底层色随页面背景（系统默认行为，未真机验证）；setFlowGestureRegion 避让 Android 系统返回手势，iPhone 无此系统手势；setReadingSystemBars 支撑阅读页“隐藏系统状态栏”，iPhone 因刘海屏状态栏区域按设计不提供（2026-11-25 用户确认）；缺口 T852-26：setNativeSelectionMenu（浮动工具栏开启时 iPhone 未抑制系统选区菜单，未真机确认）"
   },
   {
     "plugin": "FolioleCompanionSync",
