@@ -1,9 +1,11 @@
+import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings.js';
 import { createInitialSchedulerCard, mapGradeToRustRating } from '../../lib/core/review/types.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from '../database/searchIndexInvalidationCoalescer.js';
+import { flushMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { handleStorageCommand } from './storageCommands.js';
 
@@ -20,10 +22,21 @@ export const run = <T = unknown>(command: string, args: Record<string, unknown> 
 export const database = () => openDatabaseConnection().sqlite;
 export const body = (id: string) => `# ${id}\n\nBody of ${id} with a Target sentence.`;
 
-/** Finish the work a command leaves behind, so it is not measured against the next action. */
+/** Finish the work a command leaves behind, so it is counted as that action's deferred cost and not the next one's. */
 export async function drain() {
   await flushCoalescedWorkspaceSearchInvalidations();
   await run(NATIVE_COMMANDS.flushDirtyNodeSyncVersions);
+  // The app hands these claimed rows to a worker; the same work runs inline here so it can be counted.
+  const { driver } = openDatabaseConnection();
+  let indexed = 0;
+  for (;;) {
+    const result = processSearchIndexInvalidations(driver);
+    if (result.failed) throw new Error('search_index_invalidation_failed');
+    if (!result.processed) break;
+    indexed += result.processed;
+  }
+  await flushMirrorSync();
+  return indexed;
 }
 
 export async function create(command: string, nodeId: string, parentNodeId: string | null, kind: 'folder' | 'topic' | 'item') {
