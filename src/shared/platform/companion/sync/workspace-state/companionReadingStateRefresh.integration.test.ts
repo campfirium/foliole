@@ -2,7 +2,7 @@
 import { expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../../../../../lib/core/database/workspaceSnapshot';
-import { applyNodeReadingObject } from '../../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
+import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor';
 import { persistFlowMutation } from '../../../../../companion/companionFlowMutation';
 import {
   saveCompanionSyncNodeReadingRecord
@@ -125,13 +125,14 @@ it('still rejects an older remote reading profile after a newer local reading co
   };
   try {
     await saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading });
-    const applied = await library.owner.runWriter(db => applyNodeReadingObject(db, {
+    // The remote record was written before the local commit, so its order is older.
+    const applied = await library.owner.runWriter(db => applySyncObjectInTransaction(db, {
       object_type: 'node_reading', object_id: 'a', content_hash: 'f'.repeat(64), deleted_at: null,
-      updated_at: '2026-10-19T00:00:00.000Z', payload_json: JSON.stringify({
+      updated_at: '2026-10-17T00:00:00.000Z', payload_json: JSON.stringify({
         state: 'locked', last_handled_at: '2026-10-17T00:00:00.000Z', repetition_count: 1
       })
     }), { kind: 'business' });
-    expect(applied).toBe(false);
+    expect(applied).toBeNull();
     expect((await readComplete())?.nodesById.a?.reading).toEqual(reading);
   } finally { await library.close(); }
 });

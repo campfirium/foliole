@@ -1,5 +1,6 @@
 import { loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
 import type { DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
+import { nextReadingOrderAtWithDb } from '../../../../../lib/core/review/readingHistoryOrder';
 import { topicDailyCountId } from '../../../../../lib/core/review/topicDailyCountIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { supportsDbBatch } from '../../../../../lib/core/sync/dbStatements';
@@ -21,14 +22,17 @@ export function companionReadPersistence(): DailyFlowPersistence {
     async reading(db, value, now) {
       if (!value.after) throw new Error('read_intent_learning_missing');
       if (!supportsDbBatch(db)) throw new Error('read_intent_batch_unavailable');
-      const { reading_position: ignored, ...payload } = toReadingPayload(value.after);
+      const { reading_position: ignored, ...reading } = toReadingPayload(value.after);
       void ignored;
       const host = await hostName(db);
+      const orderAt = await nextReadingOrderAtWithDb(db, { nodeId: value.nodeId, now,
+        next: { lastHandledAt: value.after.lastHandledAt, profile: reading } });
+      const payload = { ...reading, history_order_at: orderAt };
       const readingHash = await iosCompanionContentHash({ ...payload, node_id: value.nodeId });
       const statements = [nodeReadingStatement({ object_type: 'node_reading', object_id: value.nodeId,
-        payload_json: JSON.stringify(payload), content_hash: readingHash, updated_at: now, deleted_at: null }),
+        payload_json: JSON.stringify(payload), content_hash: readingHash, updated_at: orderAt, deleted_at: null }),
       companionMutationStatement({ objectType: 'node_reading', objectId: value.nodeId,
-        contentHash: readingHash, hostName: host, updatedAt: now })];
+        contentHash: readingHash, hostName: host, updatedAt: orderAt })];
       if (value.completedReviewDay !== undefined) {
         const day = value.completedReviewDay;
         statements.push(topicDailyCountStatement(day, value.nodeId), companionMutationStatement({

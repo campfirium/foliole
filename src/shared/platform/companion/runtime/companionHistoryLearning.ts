@@ -1,4 +1,5 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import { nextReadingOrderAtWithDb } from '../../../../../lib/core/review/readingHistoryOrder';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { writeNodeReadingObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { isSameReadingProfile } from '../../../../store/workspaceActionHistoryReading';
@@ -23,7 +24,7 @@ export async function writeCompanionHistoryReadings(db: DbPort, changes: Workspa
 }
 
 export async function clearCompanionHistoryLearning(db: DbPort, objectType: 'node_reading', nodeId: string) {
-  const now = new Date().toISOString();
+  const now = await nextReadingOrderAtWithDb(db, { next: null, nodeId, now: new Date().toISOString() });
   const contentHash = await iosCompanionContentHash({ deleted_at: now, node_id: nodeId, object_type: objectType });
   const record = { object_type: objectType, object_id: nodeId, content_hash: contentHash,
     payload_json: '{}', deleted_at: now, updated_at: now };

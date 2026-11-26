@@ -101,11 +101,12 @@ it('propagates later reading state changes without inventing another reading rep
   expect(target.db.prepare(query).get()).toEqual({
     state: 'locked', last_handled_at: reading.lastHandledAt, repetition_count: 0
   });
+  // A later change from a clock that runs behind still comes after what the source already holds.
   saveNodeReadingStateWithSync(source.driver, { nodeId: 'topic', hostName: source.name,
     reading: { ...reading, state: 'active' }, updatedAt: '2026-10-18T02:00:00.000Z' });
   await syncRequestLibrary(source, target);
   expect(target.db.prepare(query).get()).toEqual({
-    state: 'locked', last_handled_at: reading.lastHandledAt, repetition_count: 0
+    state: 'active', last_handled_at: reading.lastHandledAt, repetition_count: 0
   });
   await syncRequestLibrary(target, source);
   expect(source.db.prepare(query).get()).toEqual(target.db.prepare(query).get());

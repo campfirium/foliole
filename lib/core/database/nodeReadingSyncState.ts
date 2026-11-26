@@ -1,4 +1,6 @@
-import { nextReadingHistoryOrderAt } from '../review/readingHistoryOrder.js';
+import {
+  CURRENT_READING_ORDER_SQL, currentReadingOrder, nextReadingOrderAt, type CurrentReadingOrderRow
+} from '../review/readingHistoryOrder.js';
 import type { ReadingState } from '../review/readingState.js';
 
 import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
@@ -22,7 +24,7 @@ export interface WriteNodeReadingSyncInput {
   reading?: NodeReadingSyncPayload | null;
   updatedAt: string;
   completedReviewDay?: string;
-  /** Set by undo and redo: the restored profile must win sync against the reading it replaces. */
+  /** Set by undo and redo: the restore is a deliberate act even though it puts back an older handled time. */
   historyOrder?: boolean;
 }
 
@@ -36,13 +38,13 @@ function hasExistingNodeReading(driver: DatabaseDriver, nodeId: string) {
   );
 }
 
-function toNodeReadingHash(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt?: string) {
+function toNodeReadingHash(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt: string) {
   return computeSyncContentHash('node_reading', toNodeReadingPayload(nodeId, reading, historyOrderAt));
 }
 
-function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt?: string) {
+function toNodeReadingPayload(nodeId: string, reading: NodeReadingSyncPayload, historyOrderAt: string) {
   return {
-    ...(historyOrderAt ? { history_order_at: historyOrderAt } : {}),
+    history_order_at: historyOrderAt,
     interval_duration_ms: reading.intervalDurationMs,
     interval_growth_factor: reading.intervalGrowthFactor,
     last_handled_at: reading.lastHandledAt,
@@ -62,15 +64,30 @@ function toNodeReadingTombstoneHash(nodeId: string, deletedAt: string) {
   });
 }
 
-function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeReadingSyncInput & { hostName: string }) {
-  const contentHash = toNodeReadingTombstoneHash(input.nodeId, input.updatedAt);
+/** The order this write takes in sync, after everything this library already holds for the node. */
+function nextNodeReadingOrderAt(driver: DatabaseDriver, input: WriteNodeReadingSyncInput) {
+  const current = currentReadingOrder(driver.queryOne<CurrentReadingOrderRow>(CURRENT_READING_ORDER_SQL, [input.nodeId]));
+  const reading = input.reading;
+  return nextReadingOrderAt({ current, next: reading ? { lastHandledAt: reading.lastHandledAt, profile: {
+      interval_duration_ms: reading.intervalDurationMs, interval_growth_factor: reading.intervalGrowthFactor,
+      last_handled_at: reading.lastHandledAt, next_at: reading.nextAt, priority: reading.priority,
+      repetition_count: reading.repetitionCount, state: reading.state } } : null,
+    now: input.updatedAt, restore: input.historyOrder === true });
+}
+
+function recordNodeReadingTombstone(
+  driver: DatabaseDriver,
+  input: WriteNodeReadingSyncInput & { hostName: string },
+  orderAt = nextNodeReadingOrderAt(driver, { ...input, reading: null })
+) {
+  const contentHash = toNodeReadingTombstoneHash(input.nodeId, orderAt);
   upsertSyncObjectState(driver, {
     objectType: 'node_reading',
     objectId: input.nodeId,
     contentHash,
-    deletedAt: input.updatedAt,
+    deletedAt: orderAt,
     lastModifiedByHostName: input.hostName,
-    updatedAt: input.updatedAt,
+    updatedAt: orderAt,
     syncDirty: true
   });
 }
@@ -78,7 +95,7 @@ function recordNodeReadingTombstone(driver: DatabaseDriver, input: WriteNodeRead
 function recordNodeReadingUpsert(
   driver: DatabaseDriver,
   input: WriteNodeReadingSyncInput & { hostName: string; reading: NodeReadingSyncPayload },
-  historyOrderAt?: string
+  historyOrderAt: string
 ) {
   const contentHash = toNodeReadingHash(input.nodeId, input.reading, historyOrderAt);
   upsertSyncObjectState(driver, {
@@ -86,7 +103,7 @@ function recordNodeReadingUpsert(
     objectId: input.nodeId,
     contentHash,
     lastModifiedByHostName: input.hostName,
-    updatedAt: input.updatedAt,
+    updatedAt: historyOrderAt,
     syncDirty: true
   });
 }
@@ -102,15 +119,13 @@ export function writeNodeReadingSnapshotWithSync(
   }
 ) {
   const existed = hasExistingNodeReading(driver, input.nodeId);
-  const historyOrderAt = input.historyOrder && input.reading
-    ? nextReadingHistoryOrderAt(input.updatedAt, driver.queryOne<{ history_order_at: string | null; last_handled_at: string }>(
-      'SELECT last_handled_at, history_order_at FROM node_reading WHERE node_id = ?', [input.nodeId]))
-    : undefined;
+  // Computed before the write: the record must come after the one it replaces.
+  const orderAt = input.hostName ? nextNodeReadingOrderAt(driver, input) : undefined;
   if (!input.reading) {
     statements.deleteReading([input.nodeId]);
     statements.deleteDeviceState([input.nodeId]);
     if (existed && input.hostName) {
-      recordNodeReadingTombstone(driver, { ...input, hostName: input.hostName });
+      recordNodeReadingTombstone(driver, { ...input, hostName: input.hostName }, orderAt);
     }
     return;
   }
@@ -125,18 +140,18 @@ export function writeNodeReadingSnapshotWithSync(
     input.reading.repetitionCount,
     input.reading.state
   ]);
-  // Ordinary writers leave the column alone, so a pending undo keeps its order until a later act.
-  if (historyOrderAt) {
-    driver.execute('UPDATE node_reading SET history_order_at = ? WHERE node_id = ?', [historyOrderAt, input.nodeId]);
+  // The stored row carries the same order as the record, so this library compares later records against it.
+  if (orderAt) {
+    driver.execute('UPDATE node_reading SET history_order_at = ? WHERE node_id = ?', [orderAt, input.nodeId]);
   }
-  if (input.hostName) {
+  if (input.hostName && orderAt) {
     statements.upsertDeviceState([
       input.nodeId,
       input.hostName,
       input.reading.readingPosition,
       input.updatedAt
     ]);
-    recordNodeReadingUpsert(driver, { ...input, hostName: input.hostName, reading: input.reading }, historyOrderAt);
+    recordNodeReadingUpsert(driver, { ...input, hostName: input.hostName, reading: input.reading }, orderAt);
   }
 }
 

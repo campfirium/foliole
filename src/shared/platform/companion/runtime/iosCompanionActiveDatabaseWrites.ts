@@ -1,7 +1,7 @@
 import { INSERT_REVIEW_EVENT_SQL } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { readStoredReviewCardWithDb } from '../../../../../lib/core/database/storedReviewCard';
-import { nextReadingHistoryOrderAt } from '../../../../../lib/core/review/readingHistoryOrder';
+import { nextReadingOrderAtWithDb, type ReadingProfileColumns } from '../../../../../lib/core/review/readingHistoryOrder';
 import { requireReviewInstant } from '../../../../../lib/core/review/reviewTimestamp';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib/core/sync/syncFactRowSchemas';
@@ -55,23 +55,21 @@ export function saveIosReading(args: { node_id: string; reading_json: string; co
 
 export async function saveIosReadingWithDb(tx: DbPort, args: {
   node_id: string; reading_json: string; completedReviewDay?: string;
-  /** Undo and redo restore a profile that must win sync against the reading it replaces. */
+  /** Undo and redo: the restore is a deliberate act even though it puts back an older handled time. */
   historyOrder?: boolean;
 }) {
   const input = parseObject(args.reading_json);
-  delete input.history_order_at;
-  if (args.historyOrder) {
-    const [replaced] = await tx.query<{ history_order_at: string | null; last_handled_at: string }>(
-      'SELECT last_handled_at, history_order_at FROM node_reading WHERE node_id = ?', [args.node_id]);
-    input.history_order_at = nextReadingHistoryOrderAt(new Date().toISOString(), replaced);
-  }
+  const orderAt = await nextReadingOrderAtWithDb(tx, { nodeId: args.node_id, now: new Date().toISOString(),
+    next: { lastHandledAt: String(input.last_handled_at ?? ''), profile: input as unknown as ReadingProfileColumns },
+    ...(args.historyOrder ? { restore: true } : {}) });
+  input.history_order_at = orderAt;
   const hostName = await iosCompanionHostName(tx);
   const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
   const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
   void ignoredHost; void ignoredPosition;
   const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
     writeNodeReadingObject(tx, record, { hostName })
-  ), hashPayload);
+  ), hashPayload, orderAt);
   if (args.completedReviewDay !== undefined) {
     await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);
   }
@@ -127,10 +125,10 @@ async function writeObject(
 
 async function applyLocalObject(
   db: DbPort, objectType: string, objectId: string, payload: Record<string, unknown>,
-  apply: (record: LocalRecord) => Promise<unknown>, hashPayload: unknown = payload
+  apply: (record: LocalRecord) => Promise<unknown>, hashPayload: unknown = payload, updatedAt?: string
 ) {
   const hostName = await iosCompanionHostName(db);
-  const now = new Date().toISOString();
+  const now = updatedAt ?? new Date().toISOString();
   const contentHash = await iosCompanionContentHash(hashPayload);
   const record = { content_hash: contentHash, deleted_at: null, object_id: objectId, object_type: objectType, payload_json: JSON.stringify(payload), updated_at: now };
   await apply(record);

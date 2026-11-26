@@ -99,8 +99,9 @@ it('writes sync object state for node reading snapshots and tombstones', () => {
   upsertReadingNode(false);
 
   expect(getNodeReadingRow()).toBeUndefined();
+  // The tombstone is ordered after the reading it removes, even when written with the same clock reading.
   expect(getSyncObjectState()).toMatchObject({
-    deleted_at: '2026-03-06T00:00:00.000Z',
+    deleted_at: '2026-03-06T00:00:00.001Z',
     object_type: 'node_reading',
     sync_dirty: 1
   });

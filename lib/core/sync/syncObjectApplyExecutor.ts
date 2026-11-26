@@ -4,6 +4,9 @@ import { computeSyncContentHash } from '../database/syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 import { dailyFlowFactApplyStatus } from '../flow/dailyFlowSyncApply.js';
+import {
+  CURRENT_READING_ORDER_SQL, readingRecordOrderKey, storedReadingOrderKey, type CurrentReadingOrderRow
+} from '../review/readingHistoryOrder.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
@@ -197,6 +200,7 @@ export async function upsertAppliedSyncObjectState(port: DbPort, record: SyncObj
 
 async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord): Promise<SyncObjectApplyStatus> {
   if (record.object_type === 'daily_flow') return dailyFlowFactApplyStatus(port, record);
+  if (record.object_type === 'node_reading') return nodeReadingApplyStatus(port, record);
   const current = (await port.query<ExistingSyncObjectState>(
     'SELECT content_hash, deleted_at, updated_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     [record.object_type, record.object_id]
@@ -211,6 +215,25 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord):
   const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
   const incomingKey = `${record.updated_at}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
   return currentKey < incomingKey ? 'apply' : 'stale';
+}
+
+/** Reading records compare by one key derived from the record alone, so every peer keeps the same winner. */
+async function nodeReadingApplyStatus(port: DbPort, record: SyncObjectRecord): Promise<SyncObjectApplyStatus> {
+  const [stored] = await port.query<CurrentReadingOrderRow>(CURRENT_READING_ORDER_SQL, [record.object_id]);
+  const currentKey = storedReadingOrderKey(stored);
+  if (currentKey === null) return 'apply';
+  if (stored!.state_content_hash === record.content_hash && stored!.state_deleted_at === record.deleted_at) {
+    return 'already_applied';
+  }
+  const payload = record.deleted_at || !record.payload_json ? {} : JSON.parse(record.payload_json) as Record<string, unknown>;
+  const incomingKey = readingRecordOrderKey({ contentHash: record.content_hash, deletedAt: record.deleted_at,
+    historyOrderAt: stringOrNull(payload.history_order_at), lastHandledAt: stringOrNull(payload.last_handled_at),
+    updatedAt: record.updated_at });
+  return currentKey < incomingKey ? 'apply' : 'stale';
+}
+
+function stringOrNull(value: unknown) {
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
