@@ -66,6 +66,17 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
   return { ...stored.session, cycle: meta };
 }
 
+/**
+ * The pending reconcile of a command, over the recorded changes only where the store can vouch for the rest. It
+ * marks them handled before the command writes, so the command's own learning writes stay recorded for later.
+ */
+export async function reconcilePendingCycle(db: DailyFlowStore, stored: CycleStored, now: string, settings: DailyFlowSettings) {
+  const dirty = await db.dirtyReconcile?.(stored, settings);
+  const session = await reconcileCycle(db, stored, now, settings, false, dirty?.scope);
+  await dirty?.settle();
+  return session;
+}
+
 async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
   changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings, ids?: readonly string[]) {
   const derived = deriveCycleReadiness(snapshot, active.map(row => row.node_id), now, settings);

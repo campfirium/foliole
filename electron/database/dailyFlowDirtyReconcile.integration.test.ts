@@ -11,7 +11,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { loadDerivedNodeOrderWithDbPort } from '../../lib/core/database/parentChildOrder.js';
 import { readDailyFlowFact, storeDailyFlowFact } from '../../lib/core/flow/dailyFlowFactStorage.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
-import { openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
+import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -130,6 +130,25 @@ it.each(['desktop', 'phone'] as const)('bounds SQLite reads when reopening Flow 
     expect(large![metric], `${host} ${metric}: ${small![metric]} -> ${large![metric]}`)
       .toBeLessThanOrEqual(small![metric] * 1.5 + (metric === 'bytes' ? 4096 : 20));
   }
+});
+
+it.each(['desktop', 'phone'] as const)('keeps Soon after another learning write off the whole list on %s', async host => {
+  const targeted = await fixture(host);
+  const full = await fixture(host);
+  const results = [];
+  for (const library of [targeted, full]) {
+    const { session } = await library.open('reading-only');
+    mutate(library.sqlite, 5, true);
+    if (library === full) library.sqlite.exec('UPDATE daily_flow_state SET scope_complete=0');
+    const nodeId = session.currentNodeId!;
+    const reading = (await loadDailyFlowLearningSnapshot(library.db, host, [nodeId])).nodesById[nodeId]!.reading!;
+    results.push(await commitDailyFlow(library.db, { opId: 'soon', now, token: session.daily!, sourceSession: session,
+      readingAction: 'soon', readings: [{ nodeId, before: reading, after: reading }] }, settings, library.persistence));
+  }
+  expect(results[0]).toEqual(results[1]);
+  expect(queue(targeted.sqlite)).toEqual(queue(full.sqlite));
+  expect(targeted.fullReads()).toBe(1);
+  expect(full.fullReads()).toBe(2);
 });
 
 it.each(['reading-only', 'review-first'] as const)('replays a peer action in %s without corrupting task counts', async mode => {

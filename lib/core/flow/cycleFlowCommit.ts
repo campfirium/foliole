@@ -6,7 +6,7 @@ import { advanceCycleFlow } from './cycleFlowAdvance.js';
 import { replayCycleHistory } from './cycleFlowHistory.js';
 import { assertCycleLearningFacts, persistCycleLearning } from './cycleFlowLearning.js';
 import { replayLegacyCycle } from './cycleFlowLegacy.js';
-import { chooseCycleCurrent, isCycleCurrentReady, reconcileCycle } from './cycleFlowOpen.js';
+import { chooseCycleCurrent, isCycleCurrentReady, reconcilePendingCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import { sameCycleProgress } from './cycleFlowState.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
@@ -42,7 +42,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   const mode = stored.mode as ReviewSessionMode;
   const invalidated = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
   const base = invalidated
-    ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored, args.now, settings)) : stored.session;
+    ? await timeFlow(db.timing, 'queue-reconcile', () => reconcilePendingCycle(db, stored, args.now, settings)) : stored.session;
   if (dive && (args.historyMode || args.navigation || args.nextReadingNodeId || (!args.grade && !args.readingAction))) {
     throw new Error('daily_flow_learning_changed');
   }
