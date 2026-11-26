@@ -30,6 +30,10 @@ export const parameters = /^(First review dates|首次到期)$/;
 export const structureStep = /^(Import structure|Confirm structure|导入结构|确认结构)$/;
 export const gradesStep = /^(Import settings|导入设置)$/;
 export const confirmStep = /^(Confirm migration|确认迁移)$/;
+export const priorityStep = /^(Priority mapping|优先级映射)$/;
+export const priorityBoundaryP2P3 = /^(Boundary between P2 and P3|P2 与 P3 的分界)$/;
+export const priorityReset = /^(Reset to defaults|恢复默认值)$/;
+export const priorityScale = /^(SuperMemo priority \(%\)|SuperMemo 优先级（%）)$/;
 
 export async function openSuperMemoUpdateReview(dialog: Locator) {
   await dialog.getByRole('button', { name: gradesStep }).click();
