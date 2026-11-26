@@ -60,4 +60,10 @@ export const controlledRuntimeSqliteTests = [
   'src/store/workspaceStoreNodeRelearn.integration.test.ts',
   'src/store/workspaceStructureMoveHistory.integration.test.ts',
   'src/store/workspaceSubtreeActions.sync.integration.test.ts',
+  'electron/database/backupRestore.idleProof.test.ts',
+  'electron/database/companionLocalDerivedIndexMigration.test.ts',
+  'electron/database/dailyFlowDirtyReconcile.integration.test.ts',
+  'electron/database/localDerivedIndexMigration.integration.test.ts',
+  'electron/database/nodeSyncStateBackfill.integration.test.ts',
+  'src/shared/platform/companion/runtime/companionPdfSearchOwnerScan.sqlite.test.ts',
 ];
