@@ -1,14 +1,15 @@
 import type { SchedulerCard } from '../review/types.js';
 
+import type { DirtyReconcilePlan } from './cycleFlowDirtyScope.js';
 import type { CycleKind, CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
-import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import type { FlowTiming } from './flowTiming.js';
 
 export type CycleScanFilter = { kinds: readonly CycleKind[]; nowMs: number };
 
 export type CycleStored = { day_key: string; revision: number; settings_key: string; mode: string;
-  session_json: string; invalidated: number; session: DailyFlowSession };
+  session_json: string; invalidated: number; scope_complete?: number; session: DailyFlowSession };
 export type CycleSaveArgs = { dayKey: string; mode: string; settingsKey: string;
   now: string; revision: number; session: DailyFlowSession };
 /** The entries one command changed, with what the stored remaining counts held for them before it. */
@@ -25,6 +26,9 @@ export interface DailyFlowStore {
   readingPreservesPosition?: boolean;
   /** Set when only these entries can be out of date; otherwise a reconcile covers the whole list. */
   reconcileScope?: CycleReconcileScope;
+  /** Where the store records changed nodes: how a pending reconcile may narrow, and how it marks them handled. */
+  dirtyReconcile?(stored: CycleStored, settings: DailyFlowSettings): Promise<DirtyReconcilePlan>;
+  completeReconcileScope?(): Promise<void>;
   preparedNavigation?: PreparedFlowNavigation | undefined;
   readState(): Promise<CycleStored | null>;
   readDiveMembers?(id: string): Promise<string[]>;

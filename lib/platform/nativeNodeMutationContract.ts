@@ -11,6 +11,8 @@ type NativeNodeAnchorUpdateArgs = NativeNodeAnchorLocatorUpdateArgs & {
 export interface NativeNodeMutationPatchResult {
   contentEdit?: { currentVersionId: string; submittedVersionId: string };
   activeNodeId?: string | null;
+  /** Visible child sequences of the parents this mutation changed; the rest of the list order is unchanged. */
+  childOrders?: Array<{ parentNodeId: string | null; childIds: string[] }>;
   anchorUpdates?: NativeNodeAnchorUpdateArgs[];
   createdNodeIds?: string[];
   deletedNodeIds?: string[];

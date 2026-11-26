@@ -91,7 +91,8 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);
-  await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined);
+  await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined,
+    scope ? new Set(scope.ids) : undefined);
   const historyNow = new Date(Math.min(Date.parse(args.now), Date.parse(settings.dayWindow!.end) - 1)).toISOString();
   // A new store: the sync application above wrote rows past the first store's cache.
   const settled = createSqliteDailyFlowStore(db, persistence);

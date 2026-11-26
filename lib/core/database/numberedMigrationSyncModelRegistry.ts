@@ -20,6 +20,7 @@ import { migrateIndependentImportHistoryInventory } from './independentImportHis
 import { migrateIndependentTopicAlternatives } from './independentTopicAlternativesMigration.js';
 import { migrateInitialReviewSchedule } from './initialReviewScheduleMigration.js';
 import { retireLegacySyncState } from './legacySyncRetirement.js';
+import { migrateLocalDerivedIndexes } from './localDerivedIndexMigration.js';
 import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
@@ -108,5 +109,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 201, migrate: migrateStoredImportLocatorKeys },
   { version: 202, migrate: db => addColumnIfMissing(db, 'nodes', 'enforce_priority', 'INTEGER') },
   { version: 203, migrate: db => addColumnIfMissing(db, 'node_reading', 'history_order_at', 'TEXT') },
-  { version: 204, migrate: db => db.exec(NODE_DELETED_AT_INDEX_RETIREMENT) }
+  { version: 204, migrate: db => db.exec(NODE_DELETED_AT_INDEX_RETIREMENT) },
+  { version: 205, migrate: migrateLocalDerivedIndexes }
 ];

@@ -60,7 +60,7 @@ async function openGlobalDailyFlow(tx: DbPort, args: DailyFlowOpenArgs, config: 
         now: args.now, revision: stored.revision, session: { ...stored.session, currentNodeId: null,
           cycle: { ...stored.session.cycle!, scanAfter: 0 } } });
       // The rewind only changes the cursor. The replayed rows still need reconciliation.
-      await tx.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
+      await tx.run('UPDATE daily_flow_state SET invalidated=1, scope_complete=0 WHERE id=1');
     }
     result = await openCycleFlow(tx, args, config, persistence, false, undefined, timing, rebuiltWindow);
   }

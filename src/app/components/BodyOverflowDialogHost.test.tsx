@@ -5,16 +5,19 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { savePartitionedWorkspaceBody } from '../../shared/platform/desktop/workspaceBodyPartition';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { requestBodyOverflow } from '../../shared/ui/bodyOverflowRequest';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 
 import { BodyOverflowDialogHost } from './BodyOverflowDialogHost';
 
+vi.mock('../../store/workspaceRefreshScheduler', () => ({ refreshWorkspaceState: vi.fn() }));
 vi.mock('../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 vi.mock('../../shared/platform/desktop/workspaceBodyPartition', () => ({ savePartitionedWorkspaceBody: vi.fn() }));
 vi.mock('../../store/workspaceStoreContentRuntimePersist', () => ({ drainPendingNodeContentRuntimePersists: vi.fn() }));
 
 beforeEach(() => {
+  vi.mocked(refreshWorkspaceState).mockReset();
   vi.mocked(savePartitionedWorkspaceBody).mockReset();
   vi.mocked(drainPendingNodeContentRuntimePersists).mockReset().mockResolvedValue(true);
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-10-08T00:00:00.000Z')));
@@ -51,6 +54,27 @@ it('saves the full candidate after flushing the original draft and selects a sto
   expect(useWorkspaceStore.getState().activeNodeId).toBe('part');
   expect(useWorkspaceStore.getState().nodesById.source?.content).toBe('');
   expect(useWorkspaceStore.getState().nodesById.part?.content).toBe(request.content);
+  expect(refreshWorkspaceState).not.toHaveBeenCalled();
+});
+
+it('reloads the workspace before applying child orders that name a node it lacks', async () => {
+  openRequest();
+  const now = '2026-10-08T00:00:00.000Z';
+  const loaded = { ...useWorkspaceStore.getState().nodesById['node-1']!, id: 'unloaded', parentNodeId: 'source' };
+  vi.mocked(refreshWorkspaceState).mockImplementation(async () => {
+    expect(useWorkspaceStore.getState().activeNodeId).not.toBe('part');
+    useWorkspaceStore.setState((state) => ({ nodesById: { ...state.nodesById, unloaded: loaded } }));
+  });
+  vi.mocked(savePartitionedWorkspaceBody).mockResolvedValue({ activeNodeId: 'part', createdNodeIds: ['part'],
+    childOrders: [{ parentNodeId: 'source', childIds: ['part', 'unloaded'] }], nodes: [
+      { nodeId: 'source', parentNodeId: null, kind: 'topic', isTitleManual: true, title: 'Source', content: '', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now },
+      { nodeId: 'part', parentNodeId: 'source', kind: 'topic', isTitleManual: true, title: 'Part', content: 'part body', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now }
+    ] });
+  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(refreshWorkspaceState).toHaveBeenCalledOnce();
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('part');
+  expect(useWorkspaceStore.getState().nodesById.part?.content).toBe('part body');
 });
 
 it('keeps the candidate available for retry or cancellation when persistence fails', async () => {
@@ -73,4 +97,27 @@ it.each(['item', 'annotation'])('rejects %s overflow without showing the body sp
   expect(savePartitionedWorkspaceBody).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().nodesById).toBe(before);
   expect(showAppRuntimeNotice).toHaveBeenCalled();
+});
+
+it('shows a retired part in Trash as soon as repartitioning succeeds', async () => {
+  const now = '2026-10-08T00:00:00.000Z';
+  const seed = useWorkspaceStore.getState().nodesById['node-1']!;
+  useWorkspaceStore.setState({
+    nodeOrder: ['source', 'retired'],
+    nodesById: { source: { ...seed, id: 'source', kind: 'topic', anchorLink: null },
+      retired: { ...seed, id: 'retired', kind: 'topic', parentNodeId: 'source' } }
+  });
+  openRequest();
+  vi.mocked(savePartitionedWorkspaceBody).mockResolvedValue({ activeNodeId: 'part', createdNodeIds: ['part'],
+    deletedNodeIds: ['retired'], childOrders: [{ parentNodeId: 'source', childIds: ['part'] }], nodes: [
+      { nodeId: 'part', parentNodeId: 'source', kind: 'topic', title: 'Part', isTitleManual: true,
+        content: 'New part', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now }
+    ] });
+  vi.mocked(refreshWorkspaceState).mockImplementation(async () => {
+    useWorkspaceStore.setState({ trashedNodeIds: ['retired'], trashedNodeDeletedAtById: { retired: now } });
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(useWorkspaceStore.getState().trashedNodeIds).toContain('retired');
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('part');
 });

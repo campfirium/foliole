@@ -78,8 +78,8 @@ it.each(['incremental', 'full'] as const)('captures library metadata once and va
   if (mode === 'full') await rebuildAllMirrorOutput();
   else await syncIncrementalMirrorOutput(['first']);
   expect(load.mock.calls.filter(([options]) => options?.includeBody).length).toBe(mode === 'full' ? 1 : 0);
-  // Checking each rendered article must not reload the whole workspace again.
-  expect(load).toHaveBeenCalledTimes(1);
+  // Checking each rendered article must not reload the whole workspace again; a scoped update never loads it.
+  expect(load).toHaveBeenCalledTimes(mode === 'full' ? 1 : 0);
   expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(mode === 'full' ? ['first', 'second', 'third'] : ['first', 'first']);
   await expect(fs.readFile(mirrorPath('first.md'), 'utf8')).resolves.toContain('author: first');
 });

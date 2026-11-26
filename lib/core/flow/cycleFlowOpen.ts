@@ -171,17 +171,21 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     if (!ready.length) args = { ...args, mode: 'recommended' };
   }
   let session: DailyFlowSession;
+  let settle: (() => Promise<void>) | undefined;
   if (!stored) {
     const initial = await timeFlow(db.timing, 'queue-build', () => initializeCycle(db, args, settings));
     session = initial.session;
+    settle = db.completeReconcileScope;
     args = { ...args, mode: initial.mode };
     createdRows?.(initial.rows);
   }
   else {
     const reconcile = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
     const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
+    const dirty = reconcile && !db.reconcileScope ? await db.dirtyReconcile?.(stored, settings) : undefined;
     session = reconcile
-      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges, db.reconcileScope)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges, db.reconcileScope ?? dirty?.scope)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+    settle = dirty?.settle;
     session = await resumeStoredCycle(db, session, args, settings, Boolean(stored.invalidated), changes);
     if (changes) session.cycle!.change = changes.change();
   }
@@ -204,6 +208,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   if (stored && unchanged && !captureChanges && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
   const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: previousRevision + 1, session });
+  await settle?.();
   return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, saved.currentNodeId) };
 }
 

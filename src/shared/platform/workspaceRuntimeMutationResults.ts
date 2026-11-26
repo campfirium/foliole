@@ -100,6 +100,9 @@ export function isNodeMutationPatchResult(value: unknown): value is WorkspaceNod
     (value.anchorUpdates === undefined ||
       (Array.isArray(value.anchorUpdates) && value.anchorUpdates.every(isAnchorUpdateLike))) &&
     (value.nodeOrder === undefined || isStringArray(value.nodeOrder)) &&
+    (value.childOrders === undefined || (Array.isArray(value.childOrders) && value.childOrders.every((order) =>
+      isObjectRecord(order) && (order.parentNodeId === null || typeof order.parentNodeId === 'string') &&
+      isStringArray(order.childIds)))) &&
     (value.activeNodeId === undefined || value.activeNodeId === null || typeof value.activeNodeId === 'string') &&
     (value.createdNodeIds === undefined || isStringArray(value.createdNodeIds)) &&
     (value.updatedNodeIds === undefined || isStringArray(value.updatedNodeIds)) &&

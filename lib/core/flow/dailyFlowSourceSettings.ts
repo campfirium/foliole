@@ -47,7 +47,7 @@ export function saveDailyFlowSourceSettings(db: DbPort, args: DailyFlowSourceSet
       args.before.shelvedAt && !args.after.shelvedAt && snapshot.nodesById[args.sourceNodeId]?.kind === 'topic' ? args.sourceNodeId : undefined);
     if (released) {
       await insertCycleRows(tx, released.rows);
-      await tx.run('UPDATE daily_flow_state SET session_json=?, invalidated=1 WHERE id=1',
+      await tx.run('UPDATE daily_flow_state SET session_json=?, invalidated=1, scope_complete=0 WHERE id=1',
         [JSON.stringify({ ...released.session, daily: undefined })]);
     }
     return { updatedAt: args.now, readings: changes.map(value => ({ nodeId: value.nodeId, reading: value.after })) };

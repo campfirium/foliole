@@ -1,4 +1,5 @@
 import type { WorkspaceNodeMutationPatchResult } from '../../shared/platform/workspaceRuntimeTypes';
+import { canPlaceChildOrders } from '../../store/workspaceChildOrderPlacement';
 import { createWorkspaceNodeMutationPatch } from '../../store/workspaceNodeMutationPatch';
 import { reconcileReviewSession } from '../../store/workspaceReviewSessionSync';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -53,6 +54,9 @@ export function applyImportWorkspacePatch(importId: string | null | undefined, p
   }
   if (appliedImportPatchIds.has(importId)) {
     return true;
+  }
+  if (!canPlaceChildOrders(useWorkspaceStore.getState().nodesById, patch)) {
+    return false;
   }
   useWorkspaceStore.setState((state) => {
     const workspacePatch = createWorkspaceNodeMutationPatch(state, patch);

@@ -9,16 +9,11 @@ import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
-const pdfMountKey = "json_extract(resource.value, '$.storage_key')";
-// PDFs with an active owning Topic. Finding owners needs a pass over nodes; the constant
-// EXISTS gate lets SQLite skip that pass when no page matches. No outer join here: it would
-// stop SQLite from hoisting the gate out of the nodes loop.
-const LIVE_PDF_MOUNT_IDS_SQL = `SELECT substr(${pdfMountKey}, 1, 64)
-  FROM nodes owner, json_each(owner.resource_references) resource
-  WHERE EXISTS (SELECT 1 FROM pdf_page_text WHERE instr(lower(text), ?) > 0)
-    AND owner.deleted_at IS NULL
-    AND json_extract(resource.value, '$.role') = 'reference'
-    AND substr(${pdfMountKey}, 65) = '.pdf'`;
+// A matching page counts when an active Topic still holds its PDF; the local owner index
+// answers that per matching attachment, so a search never walks every node.
+const LIVE_PDF_OWNER_SQL = `EXISTS (SELECT 1 FROM pdf_attachment_nodes mount
+  INNER JOIN nodes owner ON owner.id = mount.node_id
+  WHERE mount.storage_key = pdf_page_text.attachment_id || '.pdf' AND owner.deleted_at IS NULL)`;
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
@@ -53,7 +48,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'max(0, instr(lower(text), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression('text', '?', 80)} AS excerpt ` +
       'FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ' +
-      `AND attachment_id IN (${LIVE_PDF_MOUNT_IDS_SQL}) ` +
+      `AND ${LIVE_PDF_OWNER_SQL} ` +
       'ORDER BY attachment_id ASC, page ASC LIMIT ?',
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },

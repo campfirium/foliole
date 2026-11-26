@@ -30,7 +30,9 @@ function changedMembers(before: ActionGroups, after: ActionGroups) {
 }
 
 /** Apply shared learning effects to this device's rows; foreign positions and cursors are never installed. */
-export async function applyLocalDailyFlowOperations(db: DbPort, now: string, currentState?: CycleStored | null, restoredRows?: ReadonlySet<string>) {
+/** `recounted` names entries whose share of the task counts the caller's scoped reconcile takes back afterwards. */
+export async function applyLocalDailyFlowOperations(db: DbPort, now: string, currentState?: CycleStored | null,
+  restoredRows?: ReadonlySet<string>, recounted?: ReadonlySet<string>) {
   const stored = currentState === undefined ? await readDailyFlow(db) : currentState;
   if (!stored?.session.dayWindow) return false;
   const { start, end } = stored.session.dayWindow;
@@ -66,7 +68,8 @@ export async function applyLocalDailyFlowOperations(db: DbPort, now: string, cur
     } else changes.push({ node_id: id, order_key: allocateCycleKey(cycle), active: latest.action === 'soon' ? 1 : row?.active ?? 0,
       handled: 1, cohort: latest.action === 'soon' ? 'soon' : 'none', initial_task: 0 });
   }
-  await writeCycleRows(db, [...changes, ...await restoreLocalFlowPositions(db, changes, returning, cycle)]);
+  const written = [...changes, ...await restoreLocalFlowPositions(db, changes, returning, cycle)];
+  await writeCycleRows(db, written);
   const stats = localFlowTotals(facts, after, baseline);
   const [initial] = await db.query<{ base_json: string }>('SELECT base_json FROM daily_flow_local_operation_state WHERE day_key=?', [stored.day_key]);
   const base = initial ? JSON.parse(initial.base_json) as typeof stats : { readingElapsedMs: 0, reviewElapsedMs: 0, readTopicCount: 0, reviewedItemCount: 0 };
@@ -74,8 +77,22 @@ export async function applyLocalDailyFlowOperations(db: DbPort, now: string, cur
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now, revision: stored.revision, session: { ...stored.session, ...stats, cycle } });
   await db.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
+  await recordLocalRowChanges(db, written, current, recounted);
   await replaceDailyFlowProjectionFacts(db, ids);
   return true;
+}
+
+// The stored task counts are not adjusted here, so they stay true only while no counted entry joins or leaves.
+// Otherwise only a whole-list check recounts them; either way the rewritten entries need their eligibility checked.
+async function recordLocalRowChanges(db: DbPort, written: CycleRow[], before: ReadonlyMap<string, CycleRow>,
+  recounted?: ReadonlySet<string>) {
+  const counted = (row: CycleRow | undefined) => Boolean(row?.active && row.initial_task);
+  if (written.some(row => !recounted?.has(row.node_id) && counted(row) !== counted(before.get(row.node_id)))) {
+    await db.run('UPDATE daily_flow_state SET scope_complete=0 WHERE id=1');
+    return;
+  }
+  await db.run(`INSERT INTO daily_flow_dirty_nodes (node_id) SELECT value FROM json_each(?) WHERE true
+    ON CONFLICT(node_id) DO NOTHING`, [JSON.stringify(written.map(row => row.node_id))]);
 }
 
 async function restoreLocalFlowPositions(db: DbPort, changes: CycleRow[], returning: CycleRow[], cycle: CycleMeta) {

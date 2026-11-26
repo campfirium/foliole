@@ -29,7 +29,7 @@ const METRICS = ['statements', 'rows', 'argBytes', 'resultBytes', 'deferredState
 type Cost = Record<(typeof METRICS)[number], number>;
 
 /** Actions that still follow library size, each with its row in the work amplification checks. Only shrinks. */
-const KNOWN: Record<string, string> = { 'flow open (after edits)': 'WA-068' };
+const KNOWN: Record<string, string> = {};
 
 const grew = (metric: string, small: number, large: number) => large > small * 1.5 + (metric.endsWith('Bytes') ? 4096 : 20);
 const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? '');

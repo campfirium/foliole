@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { COMPANION_PDF_ATTACHMENT_NODE_INDEX_SCHEMA } from '../../../../../lib/core/database/pdfAttachmentNodeIndex';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import { loadCompanionSearchSnapshot } from './companionSearchSnapshot';
@@ -35,6 +36,7 @@ function seed(padding: number) {
       file_name TEXT, extension TEXT, title TEXT, opening_text TEXT, reference_kind TEXT, reference_json TEXT,
       content TEXT, body_blob_hash TEXT, updated_at TEXT, is_present INTEGER);
   `);
+  db.exec(COMPANION_PDF_ATTACHMENT_NODE_INDEX_SCHEMA.join(';'));
   const node = db.prepare(`INSERT INTO nodes (id, title, content, updated_at, created_at, deleted_at, resource_references)
     VALUES (?, ?, 'body', '1', '1', ?, ?)`);
   const page = db.prepare('INSERT INTO pdf_page_text VALUES (?, ?, ?, NULL, NULL)');
@@ -82,5 +84,6 @@ it('still returns only PDFs that keep a live owning Topic', async () => {
     const result = await measure(padding, 'QUOKKA');
     expect(result.pages).toEqual([hash(1)]);
     expect(result.snapshot).toEqual([hash(1)]);
+    expect(result.decoded).toBe(0);
   }
 });

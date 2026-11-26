@@ -18,6 +18,7 @@ import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowSer
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
 import { compactFlowHistoryEntryAsync, restoreFlowHistoryEntryAsync } from '../../lib/core/flow/flowHistoryEntryAsync.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { companionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
 
 import { createTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
@@ -83,6 +84,7 @@ it('replays tagged old Soon deltas with their original guards and preserves comp
     sqlite.prepare('INSERT INTO companion_meta VALUES (?,?,?)').run('flow_history:test', JSON.stringify({
       undoStack: [await compactFlowHistoryEntryAsync(entry)], redoStack: [] }), now);
     await db.transaction(tx => migrateCompanionDatabase(tx, 103, 104));
+    await db.transaction(tx => migrateCompanionDatabase(tx, 104, COMPANION_DATABASE_VERSION));
     let session = (await openDailyFlow(db, { now, mode: 'reading-only' }, settings, companionDailyFlowPersistence)).session;
     const advanced = await commitDailyFlow(db, { opId: 'new-soon', now, token: session.daily!, sourceSession: session,
       readingAction: 'soon', readings: [{ nodeId: 'b', before: null, after: null }] }, settings, companionDailyFlowPersistence);

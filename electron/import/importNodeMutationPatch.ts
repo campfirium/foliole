@@ -1,6 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { readBodyPartIds } from '../../lib/core/database/partitionedNodeBody.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from '../../lib/core/database/workspaceBodyStatus.js';
@@ -11,6 +10,8 @@ import type {
   NativeTextImportResult
 } from '../../lib/platform/nativeContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
+
+import { loadImportMutationScope, loadVisibleChildOrders } from './importNodeMutationScope.js';
 
 interface ImportedNodeRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
@@ -121,17 +122,12 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
   );
 }
 
-function readNodeOrder(driver: DatabaseDriver) {
-  return loadDerivedNodeOrder(driver);
-}
-
-function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): NativeNodeSnapshotArgs {
+function toNodeMutationSnapshot(row: ImportedNodeRow, positionOf: (nodeId: string) => number | null): NativeNodeSnapshotArgs {
   const body = resolveNodeBody(row);
   const node = buildWorkspaceSnapshotNode({
     ...row,
     content: body.content
   });
-  const position = nodeOrder.indexOf(node.id);
   return {
     nodeId: node.id,
     parentNodeId: node.parentNodeId,
@@ -152,17 +148,20 @@ function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): Nati
     imageRegions: node.imageRegions ?? null,
     reading: node.reading,
     review: node.review,
-    position: position >= 0 ? position : null,
+    position: positionOf(node.id),
     createdAt: node.createdAt,
     updatedAt: node.updatedAt
   };
 }
 
-export function buildPersistedNodeMutationPatch(driver: DatabaseDriver, nodeIds: string[]): NativeNodeMutationPatchResult {
-  const nodeOrder = readNodeOrder(driver);
+/** The named nodes and the visible child sequences of the parents a mutation changed. */
+export function buildScopedNodeMutationPatch(
+  driver: DatabaseDriver, nodeIds: string[], parentNodeIds: Iterable<string | null>
+) {
   const rows = readImportedNodeRows(driver, nodeIds);
   if (rows.length !== nodeIds.length) throw new Error('node_mutation_snapshot_missing');
-  return { nodeOrder, nodes: rows.map((row) => toNodeMutationSnapshot(row, nodeOrder)) };
+  const { childOrders, positionOf } = loadVisibleChildOrders(driver, parentNodeIds);
+  return { childOrders, nodes: rows.map((row) => toNodeMutationSnapshot(row, positionOf)) };
 }
 
 export function buildImportNodeMutationPatch(
@@ -180,23 +179,25 @@ export function buildImportNodeMutationPatch(
   } catch {
     return null;
   }
-  const nodeOrder = readNodeOrder(driver);
   if (nodeIds.some((id) => readBodyPartIds(driver, id).length > 0)) return null;
   const nodeRows = readImportedNodeRows(driver, nodeIds);
-  let nodes: NativeNodeSnapshotArgs[];
-  try {
-    nodes = nodeRows.map((row) => toNodeMutationSnapshot(row, nodeOrder));
-  } catch {
+  if (nodeRows.length !== nodeIds.length) {
     return null;
   }
-  if (nodes.length !== nodeIds.length) {
+  const batchStartedAt = patchable.map((result) => result.imported_at).sort()[0]!;
+  const scope = loadImportMutationScope(driver, nodeRows, batchStartedAt);
+  let nodes: NativeNodeSnapshotArgs[];
+  try {
+    nodes = [...nodeRows, ...readImportedNodeRows(driver, scope.createdNodeIds)]
+      .map((row) => toNodeMutationSnapshot(row, scope.positionOf));
+  } catch {
     return null;
   }
   return {
     createdNodeIds: patchable
       .filter((result) => result.duplicate_semantic === 'new' && result.node_id)
       .map((result) => result.node_id as string),
-    nodeOrder,
+    childOrders: scope.childOrders,
     nodes,
     updatedNodeIds: patchable
       .filter((result) => result.duplicate_semantic === 'updated' && result.node_id)

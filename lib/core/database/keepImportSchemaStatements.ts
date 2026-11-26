@@ -1,3 +1,7 @@
+// Source disposition and reimport look up import items by the node they produced.
+export const KEEP_IMPORT_ITEM_NODE_INDEX =
+  'CREATE INDEX IF NOT EXISTS idx_keep_import_items_last_node ON keep_import_items (last_node_id)';
+
 export const KEEP_IMPORT_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS keep_import_items (
     rule_id TEXT NOT NULL,
@@ -28,5 +32,6 @@ export const KEEP_IMPORT_SCHEMA_STATEMENTS = [
     refreshed_at TEXT NOT NULL,
     refresh_error TEXT,
     PRIMARY KEY (rule_id, source_path)
-  )`
+  )`,
+  KEEP_IMPORT_ITEM_NODE_INDEX
 ];

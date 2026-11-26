@@ -32,6 +32,7 @@ export function upsertNodeSyncState(args: {
   });
 }
 
+/** Pending repairs come from the local queue, so an idle library never rescans its nodes. */
 export function backfillMissingNodeSyncState(
   driver: DatabaseDriver,
   collectIds = true
@@ -47,14 +48,15 @@ export function backfillMissingNodeSyncState(
        n.deleted_at,
        v.host_name,
        v.content_hash
-     FROM nodes n
+     FROM node_sync_state_backfill queued
+     INNER JOIN nodes n ON n.id = queued.node_id
      LEFT JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
      INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
      WHERE n.id != ? AND n.current_version_id IS NOT NULL AND s.object_id IS NULL
      ORDER BY n.updated_at ASC, n.id ASC LIMIT 128`,
     [VIRTUAL_ROOT_NODE_ID]
     );
-    if (!rows.length) return ids;
+    if (!rows.length) break;
     for (const row of rows) {
       upsertNodeSyncState({
         contentHash: row.content_hash,
@@ -67,4 +69,7 @@ export function backfillMissingNodeSyncState(
       if (collectIds) ids.push(row.id);
     }
   }
+  // Whatever is left cannot be repaired now; the queue triggers add it back once it can.
+  driver.execute('DELETE FROM node_sync_state_backfill');
+  return ids;
 }

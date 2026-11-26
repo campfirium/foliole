@@ -9,7 +9,7 @@ import type {
   NativeNodeMutationPatchResult, NativePartitionBodyMutationArgs, NativeSplitTopicMutationArgs, NativeSplitTopicSourceChanged
 } from '../../lib/platform/nativeNodeMutationContract.js';
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
-import { buildPersistedNodeMutationPatch } from '../import/importNodeMutationPatch.js';
+import { buildScopedNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -80,12 +80,14 @@ export function splitTopic(input: NativeSplitTopicMutationArgs): NativeNodeMutat
     return commitSplitTopic(driver, input, source);
   });
   if (!Array.isArray(result)) return result;
-  const movedAnchors = result.length ? buildPersistedNodeMutationPatch(driver, result) : null;
+  // Moved anchors change the generated parts' children; the replaced source also leaves its parent's list.
+  const movedAnchors = result.length ? buildScopedNodeMutationPatch(driver, result,
+    [input.sourceParentNodeId, input.sourceNodeId, ...input.generatedNodes.map((node) => node.nodeId)]) : null;
   return {
     activeNodeId: input.activeNodeId,
     createdNodeIds: input.generatedNodes.map((node) => node.nodeId),
     deletedNodeIds: input.disposition === 'replace' ? [input.sourceNodeId] : [],
-    nodeOrder: movedAnchors?.nodeOrder ?? input.nodeOrder,
+    ...(movedAnchors ? { childOrders: movedAnchors.childOrders } : { nodeOrder: input.nodeOrder }),
     nodes: [...input.generatedNodes, ...(movedAnchors?.nodes ?? [])],
     ...(result.length ? { updatedNodeIds: result } : {})
   };

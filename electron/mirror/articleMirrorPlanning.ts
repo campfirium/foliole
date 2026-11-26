@@ -15,7 +15,7 @@ export interface ArticleMirrorPlan {
   targetPath: string;
 }
 
-function sanitizeArticleTitle(title: string) {
+export function sanitizeArticleTitle(title: string) {
   const cleaned = Array.from(title)
     .map((character) => {
       const code = character.charCodeAt(0);
@@ -33,7 +33,7 @@ function formatTimestamp(timestamp: string) {
   return new Date(parsed).toISOString().slice(2, 19).replaceAll('-', '').replace('T', '').replaceAll(':', '');
 }
 
-function createStableFileName(title: string, createdAt: string, usedNames: Set<string>) {
+export function createStableFileName(title: string, createdAt: string, usedNames: Set<string>) {
   const baseName = sanitizeArticleTitle(title);
   const candidates = [`${baseName}.md`, `${baseName}${formatTimestamp(createdAt)}.md`];
   for (const candidate of candidates) {
@@ -49,7 +49,7 @@ function createStableFileName(title: string, createdAt: string, usedNames: Set<s
   return candidate;
 }
 
-function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
+export function createStableDirectoryName(title: string, nodeId: string, usedNames: Set<string>) {
   const baseName = sanitizeArticleTitle(title);
   if (!usedNames.has(mirrorPathKey(baseName))) {
     usedNames.add(mirrorPathKey(baseName));
@@ -63,14 +63,14 @@ function createStableDirectoryName(title: string, nodeId: string, usedNames: Set
   return candidate;
 }
 
-function resolveSourceUpdatedAt(snapshot: WorkspaceSnapshot, nodeIds: string[], initial: string) {
+export function resolveSourceUpdatedAt(snapshot: WorkspaceSnapshot, nodeIds: string[], initial: string) {
   return nodeIds.reduce((latest, nodeId) => {
     const updatedAt = snapshot.nodesById[nodeId]?.updatedAt;
     return updatedAt && updatedAt > latest ? updatedAt : latest;
   }, initial);
 }
 
-function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
+export function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
   const nodeIdsByParent = new Map<string, string[]>();
   const trashed = new Set(snapshot.trashedNodeIds);
   for (const node of Object.values(snapshot.nodesById)) {
@@ -83,7 +83,7 @@ function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
   return nodeIdsByParent;
 }
 
-function collectDerivedDescendants(parentIds: string[], childrenByParent: Map<string, string[]>) {
+export function collectDerivedDescendants(parentIds: string[], childrenByParent: Map<string, string[]>) {
   const result: string[] = [];
   const visited = new Set(parentIds);
   const pending = [...parentIds];

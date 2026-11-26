@@ -21,7 +21,7 @@ export async function restartDailyFlowItemReviews(db: DbPort, nodeIds: readonly 
         currentNodeId: null, queueNodeIds: [], isAnswerRevealed: false, completedAt: null,
         continueNodeId: null, cycle: { ...cycle, clearKey: cycle.tailKey, scanAfter: 0,
           lapLimit: cycle.tailKey, clearedAt: null } } });
-    await db.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
+    await db.run('UPDATE daily_flow_state SET invalidated=1, scope_complete=0 WHERE id=1');
   }
   return openDailyFlow(db, { now, mode: 'review-first' }, settings, persistence);
 }

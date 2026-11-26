@@ -4,8 +4,10 @@ import type { NativeSplitTopicPreview } from '../../../lib/platform/nativeNodeMu
 import { saveSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
 import { saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
 import type { WorkspaceNodeMutationPatchResult } from '../../shared/platform/workspaceRuntimeTypes';
+import { canPlaceChildOrders } from '../../store/workspaceChildOrderPlacement';
 import { sanitizeNavigationState } from '../../store/workspaceNavigation';
 import { createWorkspaceNodeMutationPatch } from '../../store/workspaceNodeMutationPatch';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { reconcileReviewSession } from '../../store/workspaceReviewSessionSync';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceState } from '../../store/workspaceStoreTypes';
@@ -98,6 +100,8 @@ export async function confirmSplitTopic(args: {
     : await saveSplitTopicWorkspaceMutation({ ...mutationBase, disposition: 'keep-as-parent' });
   if (!result) throw new Error('Split Topic failed.');
   if ('status' in result) return result;
+  // Reload first when the patch cannot be placed; the dialog's selection and Trash state still apply after.
+  if (!canPlaceChildOrders(useWorkspaceStore.getState().nodesById, result)) await refreshWorkspaceState();
   applyResult(result, generatedNodes, timestamp);
   try {
     await saveSplitTopicPreferences({

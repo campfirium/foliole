@@ -1,5 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
+import { completeReconcileScope, planDirtyReconcile } from './cycleFlowDirtyScope.js';
 import { toCycleRow, type CycleRow, type CycleStoredRow } from './cycleFlowTypes.js';
 import { createScopedDailyLearningReader } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
@@ -14,7 +15,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
   const rowsById = new Map<string, CycleRow | undefined>();
   let cleared = false;
   let initializing = false;
-  return {
+  const store: DailyFlowStore = {
     readingPreservesPosition: Boolean(persistence.readingPreservesPosition),
     async readState() {
       const state = await readDailyFlow(db);
@@ -63,8 +64,11 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     snapshot: ids => persistence.snapshot(db, ids),
     grade: (args, opId) => persistence.grade(db, args, opId),
     reading: (value, now) => persistence.reading(db, value, now),
-    reviewHistory: (value, now) => persistence.reviewHistory(db, value, now)
+    reviewHistory: (value, now) => persistence.reviewHistory(db, value, now),
+    dirtyReconcile: (stored, settings) => planDirtyReconcile(db, store, stored, settings),
+    completeReconcileScope: () => completeReconcileScope(db)
   };
+  return store;
 }
 
 function cycleRowsReader(db: DbPort, rowsById: Map<string, CycleRow | undefined>) {

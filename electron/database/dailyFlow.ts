@@ -60,9 +60,10 @@ export async function openDesktopDailyFlow(args: unknown) {
   const input = dailyFlowOpenSchema.parse(args);
   const { sqlite } = openDatabaseConnection();
   const config = await dailyFlowSettingsForInstant(createBetterSqliteDbPort(sqlite), settings(), input.now);
-  const state = sqlite.prepare('SELECT day_key, invalidated, settings_key FROM daily_flow_state WHERE id = 1').get() as
-    { day_key: string; invalidated: number; settings_key: string } | undefined;
-  if (!sqlite.inTransaction && (!state || state.invalidated || state.day_key !== flowDay(input.now, config)
+  const state = sqlite.prepare('SELECT day_key, invalidated, scope_complete, settings_key FROM daily_flow_state WHERE id = 1').get() as
+    { day_key: string; invalidated: number; scope_complete: number; settings_key: string } | undefined;
+  // A reconcile limited to the recorded changes reads no whole-library facts, so it needs no index.
+  if (!sqlite.inTransaction && (!state || (state.invalidated && !state.scope_complete) || state.day_key !== flowDay(input.now, config)
     || state.settings_key !== JSON.stringify(config) || (input.startup && input.mode !== 'recommended'))) {
     prepareDesktopNodeIndex(sqlite, config.pushQueue.defaultPriority);
   }

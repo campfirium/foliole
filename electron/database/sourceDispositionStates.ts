@@ -77,7 +77,7 @@ export function sourceDispositionKeyId(key: SourceDispositionKey) {
   return `${key.sourceKind}\u0000${key.sourceScope}\u0000${key.originalTitle}`;
 }
 
-/** One scan for the whole set (last_node_id is not indexed); each node takes its earliest import item. */
+/** One indexed read (idx_keep_import_items_last_node) for the whole set; each node takes its earliest import item. */
 function readSourceKeysForNodes(driver: DatabaseDriver, nodeIds: readonly string[]) {
   const keys = new Map<string, SourceDispositionKey | null>();
   if (!nodeIds.length) {
