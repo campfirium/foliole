@@ -22,7 +22,7 @@
 चरणबद्ध पठन के लिए एक सहज ऐप।
 
 Foliole अभी बीटा में है और macOS, Windows, Linux (प्रायोगिक), iOS और Android पर उपलब्ध है।<br>
-आप [अंग्रेज़ी ऑनलाइन डेमो](https://foliole.app/en/demo/) में भी Foliole आज़मा सकते हैं।
+आप [ऑनलाइन डेमो](https://foliole.app/hi/demo/) में भी Foliole आज़मा सकते हैं।
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole डेस्कटॉप ऐप में दस्तावेज़ों की लाइब्रेरी, पढ़ने का पैनल और शेड्यूलिंग पैनल।" width="900">
@@ -30,7 +30,7 @@ Foliole अभी बीटा में है और macOS, Windows, Linux (�
 
 ## ऑनलाइन डेमो
 
-[अंग्रेज़ी ऑनलाइन डेमो खोलें](https://foliole.app/en/demo/)
+[ऑनलाइन डेमो खोलें](https://foliole.app/hi/demo/)
 
 यह इंटरैक्टिव डेमो आपके ब्राउज़र में स्थानीय रूप से चलता है। Foliole आज़माने के लिए कुछ भी इंस्टॉल करने की ज़रूरत नहीं है।
 
