@@ -52,6 +52,7 @@ export const controlledRuntimeSqliteTests = [
   'src/store/workspaceDailyFlowRefresh.integration.test.ts',
   'src/store/workspaceDailyFork.sync.integration.test.ts',
   'src/store/workspaceDailyLocalActions.integration.test.ts',
+  'src/companion/companionActionScale.integration.test.ts',
   'src/store/workspaceDailyTableStorage.integration.test.ts',
   'src/store/workspaceFlowSession.sync.integration.test.ts',
   'src/store/workspaceMoveLocal.integration.test.ts',

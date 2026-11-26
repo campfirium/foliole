@@ -205,6 +205,7 @@ describe('quality critical test routes', () => {
       'electron/database/nodeVersionedMutations.ts', 'electron/database/nodeSyncVersions.ts',
       'electron/ipc/storageLocalContentEditCommand.ts', 'lib/core/sync/localContentEdit.ts']) {
       expect(resolveCriticalTestFiles([file], existing)).toContain(budget);
+      expect(resolveCriticalTestFiles([file], existing)).toContain('electron/ipc/actionCostScale.integration.test.ts');
     }
     for (const file of ['electron/database/nodeMutations.test.ts', 'electron/mirror/mirrorTopicMove.test.ts',
       'src/app/components/DocumentPanelHeader.tsx']) {
@@ -213,7 +214,8 @@ describe('quality critical test routes', () => {
   });
 
   it('routes phone write chains to the phone statement budget and leaves their tests alone', () => {
-    const budget = ['src/companion/companionActionSqlStatements.budget.integration.test.ts'];
+    const budget = ['src/companion/companionActionScale.integration.test.ts',
+      'src/companion/companionActionSqlStatements.budget.integration.test.ts'];
     for (const file of ['lib/core/sync/syncNodeApplyExecutor.ts', 'lib/core/flow/dailyFlowService.ts',
       'src/shared/platform/companion/runtime/companionWorkspaceMutations.ts',
       'src/shared/platform/companion/editing/companionContentEditing.ts',
@@ -222,7 +224,7 @@ describe('quality critical test routes', () => {
     }
     for (const file of ['lib/core/sync/syncNodeApplyExecutor.test.ts',
       'src/shared/platform/companion/runtime/companionDailyFlow.integration.test.ts', 'src/companion/CompanionApp.tsx']) {
-      expect(resolveCriticalTestFiles([file], existing)).not.toContain(budget[0]);
+      for (const test of budget) expect(resolveCriticalTestFiles([file], existing)).not.toContain(test);
     }
   });
 });
