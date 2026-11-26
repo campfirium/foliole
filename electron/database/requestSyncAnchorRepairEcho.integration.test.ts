@@ -114,9 +114,11 @@ async function publishUnstampedSuccessor() {
     await applyConvergentSyncNodesWithDbPort(peer.port, [first, highlight]);
     await applyConvergentSyncNodesWithDbPort(peer.port, [second]);
   }
-  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 1,
+  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 0,
     anchor_source_version_id: 'parent-v2' });
-  source.db.prepare(`UPDATE nodes SET anchor_resolution_status = NULL, anchor_source_version_id = NULL
+  // Earlier builds also marked the stamp for publishing, and those marks are still stored on devices.
+  target.db.prepare("UPDATE nodes SET sync_dirty = 1, updated_at = '2026-09-30T01:00:00.000Z' WHERE id = 'child'").run();
+  source.db.prepare(`UPDATE nodes SET anchor_resolution_status = NULL, anchor_source_version_id = NULL, sync_dirty = 1
     WHERE id = 'child'`).run();
   const published = flushNodeSyncVersionWithDriver(source.driver, 'child', 'source', '2026-09-30T02:00:00.000Z')!;
   return { source, target, published };
@@ -139,6 +141,29 @@ it('keeps an unpublished local edit beside a stamp the successor does not carry'
   await expect(withLibraryRequestSnapshot(source, target, replay => replay())).rejects.toThrow('sync_node_apply_blocked:child');
 
   expect(persisted(target)).toEqual(before);
+});
+
+/** The author saved the parent and an unmoved highlight together, then really changed the highlight later. */
+it('accepts a later real change to a child this device only stamped', async () => {
+  const { source, target } = await publishUnstampedSuccessor();
+  source.db.prepare("UPDATE nodes SET title = 'Renamed', sync_dirty = 1, updated_at = '2026-09-30T03:00:00.000Z' WHERE id = 'child'").run();
+  const renamed = flushNodeSyncVersionWithDriver(source.driver, 'child', 'source', '2026-09-30T03:00:00.000Z');
+
+  await withLibraryRequestSnapshot(source, target, replay => replay());
+
+  expect(child(target)).toMatchObject({ current_version_id: renamed, sync_dirty: 0 });
+  expect(persisted(target)).toEqual(persisted(source));
+});
+
+it('accepts a later real change that carries the same moved anchor this device already repaired', async () => {
+  const { source, target } = await repairOnBoth();
+  source.db.prepare("UPDATE nodes SET title = 'Renamed', sync_dirty = 1, updated_at = '2026-09-30T03:00:00.000Z' WHERE id = 'child'").run();
+  const renamed = flushNodeSyncVersionWithDriver(source.driver, 'child', 'source', '2026-09-30T03:00:00.000Z');
+
+  await withLibraryRequestSnapshot(source, target, replay => replay());
+
+  expect(child(target)).toMatchObject({ current_version_id: renamed, sync_dirty: 0 });
+  expect(persisted(target)).toEqual(persisted(source));
 });
 
 function persisted(peer: Peer) {
@@ -193,23 +218,14 @@ it('keeps a different local anchor at the repair timestamp', async () => {
   expect(persisted(target)).toEqual(before);
 });
 
-it.each([false, true])('rejects a different parent version, anchor source or text fact (implicit selection: %s)', async implicitTextSelection => {
+it.each([false, true])('rejects a successor of another version (implicit selection: %s)', async implicitTextSelection => {
   const { source, target } = await repairOnBoth(true, implicitTextSelection);
   const incoming = (await loadCurrentSyncNodeRecord(source.port, 'child'))!;
   expect(await isIncomingLocalAnchorRepair(target.port, incoming)).toBe(true);
   const before = persisted(target);
-  const nonempty = [{ id: 'alternative', body_blob_hash: 'a'.repeat(64), source_host_name: 'other',
-    created_at: '2026-09-30T00:00:00.000Z', expires_at: '2026-10-30T00:00:00.000Z' }];
   for (const record of [
     { ...incoming, parent_version_id: 'another-parent-version' },
-    { ...incoming, snapshot: { ...incoming.snapshot, anchor_source_version_id: 'parent-v1' } },
-    { ...incoming, snapshot: { ...incoming.snapshot, text_selection: {
-      ...incoming.snapshot.text_selection!, version_id: 'different-text-origin'
-    } } },
-    { ...incoming, snapshot: { ...incoming.snapshot, text_selection: {
-      ...incoming.snapshot.text_selection!, created_at: '2026-09-29T00:00:00.000Z'
-    } } },
-    { ...incoming, snapshot: { ...incoming.snapshot, text_alternatives: nonempty } }
+    { ...incoming, snapshot: { ...incoming.snapshot, anchor_link: null } }
   ]) expect(await isIncomingLocalAnchorRepair(target.port, record)).toBe(false);
   expect(persisted(target)).toEqual(before);
 });
