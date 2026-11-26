@@ -87,13 +87,18 @@ function FlowEdgeTouchRegion(props: {
   onMove(event: PointerEvent): void; onCancel(): void;
 }) {
   const tap = useCompanionTouchClick(props.onActivate, { disabled: !props.enabled, preserveSelection: true });
-  return <button type="button" data-testid={`flow-edge-${props.mode}`} aria-label={props.label}
+  return <button type="button" data-companion-reading-edge="" data-testid={`flow-edge-${props.mode}`} aria-label={props.label}
     disabled={!props.enabled} className="pointer-events-auto absolute"
     style={{ width: FLOW_GESTURE_REGION.edgeWidth, height: FLOW_GESTURE_REGION.bandHeight,
       top: `max(0px, calc((100% - ${FLOW_GESTURE_REGION.bandHeight}px) / 2))`,
       [props.mode === 'undo' ? 'left' : 'right']: 0, touchAction: props.paged ? 'pinch-zoom' : 'pan-y pinch-zoom' }}
     onPointerDown={event => { tap.onPointerDown(event); props.onBegin(event); }}
-    onPointerUp={event => { tap.onPointerUp(event); props.onFinish(event); }}
+    onPointerUp={event => {
+      // The reader claims a tap that only dismisses its selection or menu.
+      if (event.defaultPrevented) { tap.onPointerCancel(); props.onCancel(); return; }
+      tap.onPointerUp(event);
+      props.onFinish(event);
+    }}
     onPointerMove={event => { tap.onPointerMove(event); props.onMove(event); }}
     onPointerCancel={() => { tap.onPointerCancel(); props.onCancel(); }} onClick={tap.onClick} />;
 }

@@ -154,6 +154,12 @@ function useOwnedSelectionToolbar(nodeId: string) {
   return [selectionToolbar, setSelectionToolbar] as const;
 }
 
+function useHasOpenToolbar(open: boolean) {
+  const openRef = useRef(open);
+  openRef.current = open;
+  return useCallback(() => openRef.current, []);
+}
+
 function createdHighlightActivation(
   clear: () => void,
   set: (state: CompanionSelectionAnnotationToolbarState) => void,
@@ -167,6 +173,8 @@ function createdHighlightActivation(
 
 export function useCompanionSelectionAnnotationToolbar(props: {
   canCreateAnnotation: boolean;
+  /** While editing, taps and selections belong to the editor. Otherwise dismissing them is basic reading. */
+  editing?: boolean;
   nodeId: string;
   snapshot: WorkspaceSnapshot | null;
 }) {
@@ -198,9 +206,12 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     ...toolbarArgs, ...scheduler, hasAdjustableSelection: managed.hasSelection
   });
 
+  const hasOpenSelectionToolbar = useHasOpenToolbar(selectionToolbar !== null);
+
   useCompanionSelectionAnnotationDocumentEvents({
-    enabled: props.canCreateAnnotation,
+    enabled: !props.editing,
     hasAdjustableSelection: managed.hasSelection,
+    hasOpenSelectionToolbar,
     clearSelectionAndCloseToolbar,
     closeSelectionToolbar,
     editorRef,
@@ -211,6 +222,8 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   useEffect(() => scheduler.clearScheduledOpen, [scheduler.clearScheduledOpen, props.nodeId, props.canCreateAnnotation]);
 
   return {
+    // What a reader sees as selected: a native range or the one Foliole manages. Page turns wait for it.
+    hasReadingSelection: () => managed.hasSelection() || window.getSelection()?.isCollapsed === false,
     activateCreatedHighlight: createdHighlightActivation(clearSelectionAndCloseToolbar, setSelectionToolbar, scheduler),
     closeSelectionToolbar,
     clearSelectionAndCloseToolbar,

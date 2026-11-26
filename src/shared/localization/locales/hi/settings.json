@@ -162,7 +162,7 @@
   "settings.search.reviewInitialInterval.title": "पढ़ने का शुरुआती अंतराल",
   "settings.search.reviewInitialInterval.description": "एक बार पढ़ने के बाद विषय को फिर से पढ़ने की कतार में आने तक कितना इंतज़ार करना होगा।",
   "settings.review.later.title": "Later का कस्टम अंतराल",
-  "settings.review.later.description": "तय करें कि सामग्री फिर कब दिखे (डिफ़ॉल्ट छोटे अंतराल के लिए 0)।",
+  "settings.review.later.description": "Later चुनने के कितने दिन बाद विषय फिर दिखाई दे। 0 रखने पर अपने आप निकाला गया छोटा अंतराल इस्तेमाल होता है।",
   "settings.review.later.default": "डिफ़ॉल्ट",
   "settings.search.reviewIntervalGrowth.title": "पढ़ने के अंतराल में बढ़ोतरी",
   "settings.search.reviewIntervalGrowth.description": "हर बार पढ़ने के बाद अंतराल कितनी तेज़ी से बढ़े।",

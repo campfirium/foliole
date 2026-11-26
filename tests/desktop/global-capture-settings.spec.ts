@@ -19,13 +19,21 @@ test('localizes the capture and YouTube shortcuts in Simplified Chinese', async 
   await testInfo.attach('localized-hotkeys', { body: await hotkeys.screenshot(), contentType: 'image/png' });
 });
 
-test('opens quick capture from the title bar and left toolbar', async ({ desktopSession, desktopWindow }, testInfo) => {
+test('keeps quick capture in the left toolbar and clears the title bar', async ({ desktopSession, desktopWindow }, testInfo) => {
   const { electronApp } = desktopSession;
   const capture = /^(Global capture|全局剪辑)$/;
   const toolbar = desktopWindow.getByRole('region', { name: /^(Left toolbar|左侧工具栏)$/ });
-  const titleBarButton = desktopWindow.locator('.window-titlebar').getByRole('button', { name: capture });
+  const titleBar = desktopWindow.locator('.window-titlebar');
+  const titleBarButton = titleBar.getByRole('button', { name: capture });
+  const inspectorToggle = titleBar.getByRole('button', { name: /^(Toggle right sidebar|切换右侧栏)$/ });
   const text = 'Capture saved from the workspace toolbar';
   await expectWorkspaceShell(desktopWindow);
+  await expect(titleBarButton).toHaveCount(0);
+  const initialSidebar = await inspectorToggle.getAttribute('aria-pressed');
+  await inspectorToggle.click();
+  await expect(inspectorToggle).toHaveAttribute('aria-pressed', initialSidebar === 'true' ? 'false' : 'true');
+  await expect(titleBarButton).toHaveCount(0);
+  await inspectorToggle.click();
   const screenshotPath = testInfo.outputPath('workspace-capture-buttons.png');
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('workspace-capture-buttons', { path: screenshotPath });
@@ -36,7 +44,7 @@ test('opens quick capture from the title bar and left toolbar', async ({ desktop
     }
     return null;
   };
-  await titleBarButton.click();
+  await toolbar.getByRole('button', { name: capture }).click();
   await expect.poll(findPanel).toBeTruthy();
   const panel = (await findPanel())!;
   const input = panel.locator('#capture');

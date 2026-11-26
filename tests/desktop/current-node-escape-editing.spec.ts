@@ -18,6 +18,13 @@ async function seedCurrentNodeWorkspace(desktopWindow: Page, nodeId: string) {
   }, nodeId);
 }
 
+// A new library opens its guided sample in Flow; these cases cover editing outside Flow.
+async function leaveFlow(desktopWindow: Page) {
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  await exitFlow.click();
+  await expect(exitFlow).toBeHidden();
+}
+
 async function focusPromptEditor(desktopWindow: Page) {
   await expect
     .poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', 2, 2) ?? false))
@@ -45,6 +52,7 @@ async function getNodeSnapshot(desktopWindow: Page, nodeId: string) {
 test('Escape leaves current node editing after command palette closes outside Flow', async ({ desktopApp, desktopWindow }) => {
   const nodeId = 'playwright-current-node-escape-topic';
   await expectWorkspaceShell(desktopWindow);
+  await leaveFlow(desktopWindow);
   await seedCurrentNodeWorkspace(desktopWindow, nodeId);
   await focusPromptEditor(desktopWindow);
 
@@ -52,11 +60,15 @@ test('Escape leaves current node editing after command palette closes outside Fl
   await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeVisible();
   await desktopWindow.keyboard.press('Escape');
   await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeHidden();
+  const promptEditor = desktopWindow.getByRole('textbox', { name: 'Prompt editor' });
+  await expect(promptEditor).toBeFocused();
 
   await desktopWindow.keyboard.press('Delete');
   await expect.poll(() => getNodeSnapshot(desktopWindow, nodeId)).toMatchObject({ trashed: false });
 
   await sendNativeEscape(desktopApp);
+  // Native input is delivered asynchronously; press Delete only after the editor has let go of focus.
+  await expect(promptEditor).not.toBeFocused();
   await desktopWindow.keyboard.press('Delete');
 
   await expect.poll(() => getNodeSnapshot(desktopWindow, nodeId), {
@@ -67,6 +79,7 @@ test('Escape leaves current node editing after command palette closes outside Fl
 test('Ctrl+M opens priority quick set while editing outside Flow', async ({ desktopWindow }) => {
   const nodeId = 'playwright-current-node-priority-topic';
   await expectWorkspaceShell(desktopWindow);
+  await leaveFlow(desktopWindow);
   await seedCurrentNodeWorkspace(desktopWindow, nodeId);
   await focusPromptEditor(desktopWindow);
 

@@ -8,17 +8,20 @@ import {
 } from '../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../shared/ui';
 
-import { CompanionMenuRow, CompanionMenuSheet } from './CompanionMenuSheet';
+import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { CompanionMenuRow } from './CompanionMenuSheet';
+import { CompanionReviewPriorityOptions } from './CompanionReviewPriorityOptions';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
 type Nodes = WorkspaceSnapshot['nodesById'];
 
-/** A folder or topic branch whose own review options the phone may change, as the desktop Review options dialog does. */
+/** A material whose own review options the phone may change. */
 export function canEditCompanionNodeReviewOptions(nodeId: string, nodes: Nodes) {
   const node = nodes[nodeId];
   return Boolean(node && !node.deletedAt && !node.virtualFilter && !node.id.startsWith('special-') &&
-    (node.kind === 'folder' || node.kind === 'topic'));
+    (node.kind === 'folder' || node.kind === 'topic' || node.kind === 'item'));
 }
 
 /** Same rule as the desktop node menu: a folder, or a book Topic directly inside a folder. */
@@ -26,7 +29,7 @@ export function canToggleCompanionSequentialReading(nodeId: string, nodes: Nodes
   const node = nodes[nodeId];
   if (!canEditCompanionNodeReviewOptions(nodeId, nodes) || !node) return false;
   if (node.kind === 'folder') return true;
-  return Boolean(node.parentNodeId && nodes[node.parentNodeId]?.kind === 'folder');
+  return Boolean(node.kind === 'topic' && node.parentNodeId && nodes[node.parentNodeId]?.kind === 'folder');
 }
 
 /** Long-press rows for a folder or book: toggle Sequential Reading and open its Review options. */
@@ -79,10 +82,19 @@ function RetentionRange(props: { percent: number; disabled: boolean; onCommit(pe
   </span>;
 }
 
-/** The branch's own desired retention and short-term steps; each choice saves at once and can return to inheriting. */
 export function CompanionNodeReviewOptionsSheet({ nodeId, open, onOpenChange }: {
   nodeId: string; open: boolean; onOpenChange(open: boolean): void;
 }) {
+  const t = useTranslation();
+  const nodes = useCompanionWorkspaceActions()?.snapshot?.nodesById;
+  const node = nodes?.[nodeId];
+  if (!nodes || !node || !canEditCompanionNodeReviewOptions(nodeId, nodes)) return null;
+  return <CompanionBottomSheet onOpenChange={onOpenChange} open={open} title={t('desktop.nodeReview.title')}>
+    <CompanionNodeReviewOptionsContent nodeId={nodeId} />
+  </CompanionBottomSheet>;
+}
+
+export function CompanionNodeReviewOptionsContent({ nodeId }: { nodeId: string }) {
   const actions = useCompanionWorkspaceActions();
   const t = useTranslation();
   const settings = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
@@ -95,16 +107,10 @@ export function CompanionNodeReviewOptionsSheet({ nodeId, open, onOpenChange }: 
     settings.desiredRetention).value;
   const percent = Math.round((ownRetention ?? inheritedRetention) * 100);
   const retentionLabel = t('desktop.nodeReview.desiredRetention');
-  const ownShortTerm = node.enableShortTerm ?? null;
-  const inheritedShortTerm = resolveNodeShortTermSetting(nodeId, { ...nodes, [nodeId]: { ...node, enableShortTerm: null } }).value;
-  const shortTermChoices = [
-    { value: null, label: t('desktop.nodeReview.desiredRetention.useInherited'),
-      status: t(inheritedShortTerm ? 'desktop.nodeReview.enabled' : 'desktop.nodeReview.disabled') },
-    { value: true, label: t('desktop.nodeReview.enabled') },
-    { value: false, label: t('desktop.nodeReview.disabled') }
-  ] as const;
+  const shortTerm = resolveNodeShortTermSetting(nodeId, nodes).value;
+  const shortTermLabel = t('desktop.nodeReview.shortTerm');
 
-  return <CompanionMenuSheet onOpenChange={onOpenChange} open={open} title={node.title}>
+  return <>
     <section aria-label={retentionLabel} className="border-b border-companion-divider py-3">
       <div className="flex min-h-11 items-center justify-between gap-3 text-base font-medium">
         <span>{ownRetention === null ? t('desktop.nodeReview.desiredRetention.inherited', { label: retentionLabel }) : retentionLabel}</span>
@@ -116,15 +122,24 @@ export function CompanionNodeReviewOptionsSheet({ nodeId, open, onOpenChange }: 
       <RetentionRange disabled={disabled} percent={percent}
         onCommit={next => actions.setReviewOption(nodeId, { desiredRetention: next / 100 })} />
     </section>
-    <section aria-label={t('desktop.nodeReview.shortTerm')}>
-      <p className="pt-4 text-base font-medium">{t('desktop.nodeReview.shortTerm')}</p>
-      <p className="pb-2 pt-1 text-sm text-companion-text-tertiary">{t('desktop.nodeReview.shortTerm.description')}</p>
-      {shortTermChoices.map(choice => <CompanionMenuRow key={String(choice.value)} active={ownShortTerm === choice.value}
-        disabled={disabled} label={choice.label} {...('status' in choice ? { status: choice.status } : {})}
-        onSelect={() => actions.setReviewOption(nodeId, { enableShortTerm: choice.value })} />)}
+    <CompanionReviewPriorityOptions key={nodeId} defaultPriority={settings.pushQueue.defaultPriority}
+      disabled={disabled} node={node} nodes={nodes} onCommit={command => void actions.execute(command)} />
+    <section className="flex items-center justify-between gap-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{shortTermLabel}</p>
+        <p className="mt-1 text-xs text-companion-text-secondary">{t('desktop.nodeReview.shortTerm.description')}</p>
+      </div>
+      <button aria-checked={shortTerm} aria-label={shortTermLabel} className="grid min-h-11 min-w-11 shrink-0 place-items-center"
+        disabled={disabled} role="switch" type="button"
+        onClick={() => actions.setReviewOption(nodeId, { enableShortTerm: !shortTerm })}>
+        <span className={settingsSwitchClassName(shortTerm)}><span className={settingsSwitchKnobClassName(shortTerm)} /></span>
+      </button>
     </section>
-    {(actions.failure === 'companion.workspace.failure.reviewOptions') && <p role="status" className="py-2 text-sm text-error">
+    {(actions.failure === 'companion.workspace.failure.reviewOptions' || actions.failure === 'companion.workspace.failure.priority') && <p role="status" className="py-2 text-sm text-error">
       {t(actions.pending ? 'companion.workspace.savedRefreshError' : actions.failure)}
     </p>}
-  </CompanionMenuSheet>;
+    {actions.pending && <button type="button" className="min-h-11 text-sm underline" disabled={actions.busy} onClick={actions.retryRefresh}>
+      {t('companion.selection.refresh')}
+    </button>}
+  </>;
 }

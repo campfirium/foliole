@@ -7,7 +7,7 @@ export function PerformanceInfoRow({ label, value }: { label: string; value: str
   return (
     <>
       <dt className={inspectorDefinitionTermClassName}>{label}</dt>
-      <dd className={`${inspectorDefinitionValueClassName} break-all`}>{value}</dd>
+      <dd className={inspectorDefinitionValueClassName}>{value}</dd>
     </>
   );
 }

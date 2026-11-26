@@ -485,5 +485,76 @@
         "Improved error messages and retries for folder backups."
       ]
     }
+  },
+  "0.8.4": {
+    "notes": [
+      "New",
+      "Enforce Priority: Apply a folder’s priority to all materials within it while preserving their individual settings.",
+      "Fixed",
+      "Flow accepts grades for items queued according to another device’s learning day.",
+      "The current Flow queue retains its initial total count during sync.",
+      "Undoing a dismissal or postponement now syncs to other devices.",
+      "WebDAV sync continues sending available attachments when other attachments are missing."
+    ],
+    "platformNotes": {
+      "macos": [
+        "New",
+        "Desktop update reminders can now be deferred until a selected mobile release channel is ready.",
+        "Improved",
+        "SuperMemo import supports adjustable priority mapping.",
+        "Agent Control supports updating material priorities via the API and CLI.",
+        "Fixed",
+        "Retrying an interrupted library merge recovers missing attachments and resumes PDF indexing.",
+        "Resyncing a Readwise PDF can recover a missing original.",
+        "Aide can use tools in the packaged macOS app."
+      ],
+      "windows": [
+        "New",
+        "Desktop update reminders can now be deferred until a selected mobile release channel is ready.",
+        "Improved",
+        "SuperMemo import supports adjustable priority mapping.",
+        "Agent Control supports updating material priorities via the API and CLI.",
+        "Fixed",
+        "Retrying an interrupted library merge recovers missing attachments and resumes PDF indexing.",
+        "Resyncing a Readwise PDF can recover a missing original."
+      ],
+      "linux": [
+        "New",
+        "Desktop update reminders can now be deferred until a selected mobile release channel is ready.",
+        "Improved",
+        "SuperMemo import supports adjustable priority mapping.",
+        "Agent Control supports updating material priorities via the API and CLI.",
+        "Fixed",
+        "Retrying an interrupted library merge recovers missing attachments and resumes PDF indexing.",
+        "Resyncing a Readwise PDF can recover a missing original."
+      ],
+      "android": [
+        "Improved",
+        "Configure Sequential Reading, desired retention, and short-term learning steps for folders and topics.",
+        "Edit topics in Markdown source mode.",
+        "Support for importing multiple files at once.",
+        "Export images and original PDFs from topics.",
+        "Fixed",
+        "Fixed a security vulnerability in Capacitor. Previously, the vulnerability could be exploited if the app loaded malicious web content. Foliole opens external web links in the system browser or another app, and no way to trigger this vulnerability in Foliole has been identified so far. (https://github.com/ionic-team/capacitor/security/advisories/GHSA-jjx3-p5hf-mvvc)",
+        "Resuming Flow, opening a Dive, or moving to the next material in a Dive no longer causes long delays in large libraries.",
+        "Completely blank items no longer enter Flow.",
+        "After creating a highlight or cloze, tapping the reading text closes the menu without toggling the toolbars or turning the page.",
+        "The status bar stays hidden when opening a parent topic from the breadcrumbs.",
+        "PDF search results open on the matching page."
+      ],
+      "ios": [
+        "Improved",
+        "Configure Sequential Reading, desired retention, and short-term learning steps for folders and topics.",
+        "Edit topics in Markdown source mode.",
+        "Support for importing multiple files at once.",
+        "Export images and original PDFs from topics.",
+        "Fixed",
+        "Fixed a security vulnerability in Capacitor. Previously, the vulnerability could be exploited if the app loaded malicious web content. Foliole opens external web links in the system browser or another app, and no way to trigger this vulnerability in Foliole has been identified so far. (https://github.com/ionic-team/capacitor/security/advisories/GHSA-jjx3-p5hf-mvvc)",
+        "Resuming Flow, opening a Dive, or moving to the next material in a Dive no longer causes long delays in large libraries.",
+        "Completely blank items no longer enter Flow.",
+        "After creating a highlight or cloze, tapping the reading text closes the menu without toggling the toolbars or turning the page.",
+        "PDF search results open on the matching page."
+      ]
+    }
   }
 }

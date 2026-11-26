@@ -4,17 +4,18 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { replayCycleHistory } from './cycleFlowHistory.js';
 import { sameLearningProfile } from './cycleFlowLearning.js';
-import { openCycleFlow, reconcileCycle } from './cycleFlowOpen.js';
+import { openStoredDailyFlow, readCycleTaskCounts, reconcileCycle } from './cycleFlowOpen.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings, type DailyFlowResult } from './dailyFlowContract.js';
 import { readDailyFlowFact } from './dailyFlowFactStorage.js';
 import { applyLocalDailyFlowOperations, readLocalDailyFlowFacts } from './dailyFlowLocalApplication.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
+import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
-import { rewindDiveCurrent, selectDiveCurrent } from './diveCycleFlow.js';
+import { displayDiveSession, isDiveCurrentReady, rewindDiveCurrent, selectDiveCurrent } from './diveCycleFlow.js';
 
 async function persistTargetLearning(db: DbPort, args: DailyFlowCommitArgs, facts: DailyFlowSyncFact[],
   target: DailyFlowSyncFact, persistence: DailyFlowPersistence) {
@@ -82,17 +83,24 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   const reordered = orderChange?.before.some(before => before.node_id === nodeId &&
     target.rows.some(after => after.node_id !== nodeId && after.order_key === before.order_key));
   const restored = reordered ? await replayCycleHistory(store, stored.session, args) : null;
+  // A reconcile already pending before this command still covers the whole list.
+  const scope = stored.invalidated || stored.settings_key !== JSON.stringify(settings) ? null
+    : await historyScope(store, nodeId, args, target, Boolean(restored));
   const desired = restored ?? (diveAction ? { ...stored.session } : { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false });
   delete desired.rebuildSourceRevision;
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);
-  await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined);
+  await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined,
+    scope ? new Set(scope.ids) : undefined);
   const historyNow = new Date(Math.min(Date.parse(args.now), Date.parse(settings.dayWindow!.end) - 1)).toISOString();
+  // A new store: the sync application above wrote rows past the first store's cache.
+  const settled = createSqliteDailyFlowStore(db, persistence);
+  if (scope) settled.reconcileScope = scope;
   const result = diveAction && args.sourceSession?.dive
-    ? await reconcileDiveHistory(db, args, historyNow, settings, persistence)
-    : await openCycleFlow(db, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']>,
-      ...(diveAction ? { returnFromDive: true } : {}) }, settings, persistence);
+    ? await reconcileDiveHistory(settled, args, historyNow, settings)
+    : await openStoredDailyFlow(settled, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']>,
+      ...(diveAction ? { returnFromDive: true } : {}) }, settings);
   await store.saveOperation(args.opId, { input_hash: hash, revision: result.session.daily!.revision,
     card_json: changed.card === undefined ? null : JSON.stringify(changed.card), source_session_json: JSON.stringify(stored.session) });
   return historyReceipt(db, persistence, args, { ...result, ...changed, sourceSession: stored.session });
@@ -110,18 +118,26 @@ async function historyReceipt(db: DbPort, persistence: DailyFlowPersistence, arg
       reading: learning.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
 }
 
-async function reconcileDiveHistory(db: DbPort, args: DailyFlowCommitArgs, now: string,
-  settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
-  const store = createSqliteDailyFlowStore(db, persistence);
+// Undo and redo change learning and rows for the target's own entries only.
+async function historyScope(store: ReturnType<typeof createSqliteDailyFlowStore>, nodeId: string,
+  args: DailyFlowCommitArgs, target: DailyFlowSyncFact, restored: boolean) {
+  const replayed = restored ? [...args.cycleReplay!.before, ...args.cycleReplay!.after].map(row => row.node_id) : [];
+  const ids = [...new Set([nodeId, ...replayed,
+    ...[...args.readings ?? [], ...target.readings ?? []].map(value => value.nodeId)])];
+  return { ids, counted: await readCycleTaskCounts(store, ids) };
+}
+
+async function reconcileDiveHistory(store: ReturnType<typeof createSqliteDailyFlowStore>, args: DailyFlowCommitArgs,
+  now: string, settings: DailyFlowSettings) {
   const stored = (await store.readState())!;
-  const reconciled = await reconcileCycle(store, stored, now, settings);
+  const reconciled = await reconcileCycle(store, stored, now, settings, false, store.reconcileScope);
   const global = await store.saveState({ dayKey: stored.day_key, mode: stored.mode, settingsKey: JSON.stringify(settings),
     now, revision: stored.revision, session: reconciled });
   return { session: await historyDisplay(store, args, global, settings, now) };
 }
 
 async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStore>, args: DailyFlowCommitArgs,
-  global: import('./dailyFlowSession.js').DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
+  global: DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
   const current = args.sourceSession?.dive;
   const prior = args.historyMode === 'undo' ? args.nextSession : args.historySourceSession;
   const before = prior?.dive;
@@ -129,6 +145,22 @@ async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStor
   if (!before || current.id !== before.id || current.phase !== before.phase || current.limit !== before.limit) {
     return selectDiveCurrent(store, global, rewindDiveCurrent(current, args.sourceSession?.currentNodeId), now, settings);
   }
+  const undone = args.historyMode === 'undo' ? prior?.currentNodeId : null;
+  const restored = undone ? await restoreUndoneDiveCard(store, global, before, undone, now, settings) : null;
+  if (restored) return restored;
   const cursor = args.historyMode === 'undo' ? rewindDiveCurrent(before, prior?.currentNodeId) : before;
   return selectDiveCurrent(store, global, { ...cursor, stop: null }, now, settings);
+}
+
+// Undo shows the card it undid, even when another entry has become due or the card now sits elsewhere in the list.
+async function restoreUndoneDiveCard(store: ReturnType<typeof createSqliteDailyFlowStore>,
+  global: DailyFlowSession, before: DiveFlowCursor, nodeId: string, now: string,
+  settings: DailyFlowSettings) {
+  const [row] = await store.readRows([nodeId]);
+  if (!row?.active) return null;
+  const dive = row.order_key === before.position ? before : { ...before, position: row.order_key,
+    timedResume: { key: row.order_key, after: before.timedResume?.after ?? Math.max(0, before.position - 1) } };
+  const session = displayDiveSession(global, { ...dive, stop: null }, nodeId, now);
+  const snapshot = await store.scopedLearningSnapshot([nodeId]);
+  return await isDiveCurrentReady(store, session, snapshot, now, settings) ? session : null;
 }

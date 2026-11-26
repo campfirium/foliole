@@ -76,6 +76,8 @@ async function replaceList(db: DbPort, stored: CycleStored, snapshot: DailyFlowL
   await insertCycleRows(db, rows);
   await saveCycleFlow(db, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings), now,
     revision: stored.revision + 1, session: cycleWindow(session) });
+  // The rebuilt list keeps the displayed entry whatever its eligibility, so only a whole-list check vouches for it.
+  await db.run('UPDATE daily_flow_state SET scope_complete=0 WHERE id=1');
 }
 
 function refreshRows(planned: CycleRow[], old: Map<string, CycleRow>, current: string | null, tailKey: number) {

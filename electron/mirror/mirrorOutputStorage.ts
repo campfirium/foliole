@@ -59,10 +59,39 @@ export async function readMirrorFileUpdatedAt(filePath: string) {
   }
 }
 
+// Hidden entries belong to other tools (such as .obsidian) and survive cleanup.
+// Foliole's own temporary files and Finder metadata do not count as user content.
+function isKeptHiddenEntry(name: string) {
+  return name.startsWith('.') && name !== '.DS_Store' && !/^\.foliole-mirror-[0-9a-f-]{36}\.tmp$/.test(name);
+}
+
+async function removeMirrorTree(targetPath: string) {
+  let stats;
+  try {
+    stats = await fs.lstat(targetPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  if (!stats.isDirectory()) {
+    await fs.rm(targetPath, { force: true });
+    return;
+  }
+  const entries = await fs.readdir(targetPath);
+  await Promise.all(entries.filter((entry) => !isKeptHiddenEntry(entry))
+    .map((entry) => removeMirrorTree(path.join(targetPath, entry))));
+  try {
+    await fs.rmdir(targetPath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'ENOTEMPTY' && code !== 'EEXIST' && code !== 'ENOENT') throw error;
+  }
+}
+
 async function removeUnprotectedMirrorPath(targetPath: string, protectedPaths: Set<string>, recursive = false) {
   if (!protectedPaths.has(mirrorPathKey(path.resolve(targetPath)))) {
     try {
-      await fs.rm(targetPath, { force: true, recursive });
+      await (recursive ? removeMirrorTree(targetPath) : fs.rm(targetPath, { force: true }));
     } catch (error) {
       // A file awaiting relocation can still occupy an ancestor of this absent legacy path.
       if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error;
@@ -82,7 +111,6 @@ export async function removeLegacyMirrorArticleDirectory(filePath: string, prote
 export async function resetMirrorRoot(mirrorRoot: string) {
   await fs.mkdir(mirrorRoot, { recursive: true });
   const entries = await fs.readdir(mirrorRoot);
-  await Promise.all(entries.map((entry) =>
-    fs.rm(path.join(mirrorRoot, entry), { recursive: true, force: true })
-  ));
+  await Promise.all(entries.filter((entry) => !isKeptHiddenEntry(entry))
+    .map((entry) => removeMirrorTree(path.join(mirrorRoot, entry))));
 }

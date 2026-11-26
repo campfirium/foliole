@@ -2,7 +2,8 @@ import { writeSuperMemoPriorityCollection } from '../fixtures/superMemoPriorityC
 
 import { expect, test } from './harness/fixtures';
 import {
-  gradesStep, loadSource, openPreview, openSuperMemoUpdateReview, superMemoImportComplete, superMemoUpdateComplete
+  gradesStep, loadSource, openPreview, openSuperMemoUpdateReview, priorityBoundaryP2P3, priorityStep,
+  superMemoImportComplete, superMemoUpdateComplete
 } from './harness/superMemoImport';
 
 test('previews and applies a changed priority boundary to an existing batch', async ({ desktopApp, desktopWindow }, info) => {
@@ -22,8 +23,8 @@ test('previews and applies a changed priority boundary to an existing batch', as
   await superMemoImportComplete(desktopWindow).press('Escape');
 
   const existing = await openPreview(desktopWindow);
-  await existing.getByRole('button', { name: /^(Priority mapping|优先级映射)$/ }).click();
-  const boundary = existing.getByRole('slider', { name: 'Boundary between P2 and P3' });
+  await existing.getByRole('button', { name: priorityStep }).click();
+  const boundary = existing.getByRole('slider', { name: priorityBoundaryP2P3 });
   await boundary.press('ArrowLeft');
   await boundary.press('ArrowLeft');
   await expect(boundary).toHaveAttribute('aria-valuenow', '20');

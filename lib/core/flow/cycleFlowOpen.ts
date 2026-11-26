@@ -1,11 +1,11 @@
 import { hasNodeContent } from '../nodes/nodeContentFlags.js';
 import { hasDeletedAncestor, hasShelvedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
+import { isBlankReviewItemNode, isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
 
 import { buildCycle } from './cycleFlowBuild.js';
 import { cycleChanges } from './cycleFlowChanges.js';
-import { deriveCycleReadiness, withCycleReadiness } from './cycleFlowReadiness.js';
+import { deriveCycleReadiness, isCycleReadinessStale, withCycleReadiness } from './cycleFlowReadiness.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
 import type { CycleRow, CycleStoredRow } from './cycleFlowTypes.js';
@@ -16,7 +16,7 @@ import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
-import type { CycleStored } from './dailyFlowStore.js';
+import type { CycleReconcileScope, CycleStored, CycleTaskCounts } from './dailyFlowStore.js';
 import { timeFlow, timeFlowScan, type FlowTiming } from './flowTiming.js';
 
 export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
@@ -31,11 +31,22 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   return { session, snapshot, rows, mode };
 }
 
-export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows' | 'readReadiness'>, stored: CycleStored, now: string,
-  settings: DailyFlowSettings, captureChanges = false) {
-  const snapshot = await db.learningSnapshot();
+function countCycleTasks(rows: readonly CycleRow[], snapshot: DailyFlowLearningSnapshot): CycleTaskCounts {
+  const tasks = rows.filter(row => row.active && row.initial_task);
+  return { remaining: tasks.length,
+    reviewRemaining: tasks.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length };
+}
+
+export async function readCycleTaskCounts(db: Pick<DailyFlowStore, 'readRows' | 'scopedLearningSnapshot'>,
+  ids: readonly string[]) {
+  return countCycleTasks(await db.readRows(ids), await db.scopedLearningSnapshot(ids));
+}
+
+export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'scopedLearningSnapshot' | 'readRows' | 'writeRows' | 'readReadiness'>,
+  stored: CycleStored, now: string, settings: DailyFlowSettings, captureChanges = false, scope?: CycleReconcileScope) {
+  const snapshot = scope ? await db.scopedLearningSnapshot(scope.ids) : await db.learningSnapshot();
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
-  const rows = await db.readRows();
+  const rows = [...await db.readRows(scope?.ids)].sort((a, b) => a.order_key - b.order_key);
   const meta = { ...stored.session.cycle! };
   const changes = cycleChanges(meta);
   for (const row of rows) {
@@ -44,26 +55,40 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
       cohort: 'none', order_key: allocateCycleKey(meta) });
   }
   const final = new Map([...rows, ...changes.rows()].map(row => [row.node_id, row]));
-  await writeReconciledReadiness(db, [...final.values()].filter(row => row.active), changes.rows(), snapshot, now, settings);
-  const remaining = [...final.values()].filter(row => row.active && row.initial_task);
-  meta.remaining = remaining.length;
-  meta.reviewRemaining = remaining.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length;
+  await writeReconciledReadiness(db, [...final.values()].filter(row => row.active), changes.rows(), snapshot, now, settings, scope?.ids);
+  const counts = countCycleTasks([...final.values()], snapshot);
+  // A scoped reconcile swaps these entries' earlier share of the counts for their current one.
+  meta.remaining = counts.remaining + (scope ? Math.max(0, meta.remaining - scope.counted.remaining) : 0);
+  meta.reviewRemaining = Math.min(meta.remaining, counts.reviewRemaining +
+    (scope ? Math.max(0, meta.reviewRemaining - scope.counted.reviewRemaining) : 0));
   delete meta.change;
   if (captureChanges) meta.change = changes.change();
   return { ...stored.session, cycle: meta };
 }
 
+/**
+ * The pending reconcile of a command, over the recorded changes only where the store can vouch for the rest. It
+ * marks them handled before the command writes, so the command's own learning writes stay recorded for later.
+ */
+export async function reconcilePendingCycle(db: DailyFlowStore, stored: CycleStored, now: string, settings: DailyFlowSettings) {
+  const dirty = await db.dirtyReconcile?.(stored, settings);
+  const session = await reconcileCycle(db, stored, now, settings, false, dirty?.scope);
+  await dirty?.settle();
+  return session;
+}
+
 async function writeReconciledReadiness(db: Pick<DailyFlowStore, 'writeRows' | 'readReadiness'>, active: CycleRow[],
-  changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings) {
+  changed: CycleRow[], snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings, ids?: readonly string[]) {
   const derived = deriveCycleReadiness(snapshot, active.map(row => row.node_id), now, settings);
   await db.writeRows(withCycleReadiness(changed, derived));
   if (!db.readReadiness) return;
   const touched = new Set(changed.map(row => row.node_id));
-  const stored = new Map((await db.readReadiness()).map(row => [row.node_id, row]));
+  const stored = new Map((await db.readReadiness(ids)).map(row => [row.node_id, row]));
   const stale = active.filter(row => {
     const before = stored.get(row.node_id);
     const after = derived.get(row.node_id);
-    return !touched.has(row.node_id) && after && (before?.kind !== after.kind || (before?.ready_at_ms ?? null) !== after.ready_at_ms);
+    // Active rows here already passed the day's eligibility, so a derived row without a time is doable.
+    return !touched.has(row.node_id) && after && isCycleReadinessStale(before, after, true, now);
   });
   await db.writeRows(withCycleReadiness(stale, derived));
 }
@@ -97,7 +122,8 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
     onSkipped: (row, snapshot) => {
       const node = snapshot.nodesById[row.node_id];
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
-        || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)));
+        || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)))
+        || (isFsrsReviewItemNode(node) && isBlankReviewItemNode(node));
       if (!unavailable || !row.initial_task || skipped.has(row.node_id)) return;
       const next = { ...row, initial_task: 0 as const };
       skipped.set(row.node_id, next);
@@ -156,17 +182,21 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     if (!ready.length) args = { ...args, mode: 'recommended' };
   }
   let session: DailyFlowSession;
+  let settle: (() => Promise<void>) | undefined;
   if (!stored) {
     const initial = await timeFlow(db.timing, 'queue-build', () => initializeCycle(db, args, settings));
     session = initial.session;
+    settle = db.completeReconcileScope;
     args = { ...args, mode: initial.mode };
     createdRows?.(initial.rows);
   }
   else {
     const reconcile = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
     const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
+    const dirty = reconcile && !db.reconcileScope ? await db.dirtyReconcile?.(stored, settings) : undefined;
     session = reconcile
-      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+      ? await timeFlow(db.timing, 'queue-reconcile', () => reconcileCycle(db, stored!, args.now, settings, captureChanges, db.reconcileScope ?? dirty?.scope)) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+    settle = dirty?.settle;
     session = await resumeStoredCycle(db, session, args, settings, Boolean(stored.invalidated), changes);
     if (changes) session.cycle!.change = changes.change();
   }
@@ -189,6 +219,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   if (stored && unchanged && !captureChanges && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
   const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: previousRevision + 1, session });
+  await settle?.();
   return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, saved.currentNodeId) };
 }
 

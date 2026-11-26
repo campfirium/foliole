@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Własna liczba dni",
   "settings.attachments.daysUnit": "dni",
   "settings.attachments.title": "Lokalne załączniki",
+  "settings.attachments.searchTerms": "czyszczenie załączników|wyczyść załączniki|usuń zbędne załączniki|nieużywane załączniki",
   "settings.attachments.error": "Nie udało się dokończyć operacji na załącznikach. Spróbuj ponownie.",
   "settings.attachments.used": "Zajęte miejsce",
   "settings.attachments.refresh": "Odśwież",

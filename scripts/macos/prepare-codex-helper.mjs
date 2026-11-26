@@ -19,22 +19,42 @@ async function hasExpectedHash(file, expected) {
   }
 }
 
+// Codex spawns the code-mode host from its own directory for tool calls, so both ship side by side.
+export function codexCodeModeHostPath(codexPath) {
+  return path.join(path.dirname(codexPath), 'codex-code-mode-host');
+}
+
 export async function prepareCodexHelper(options = {}) {
   const release = options.release ?? await loadPinnedCodexHelperRelease(options.lockPath);
   const root = options.root ?? ROOT;
   const directory = path.join(root, '.tmp/macos/codex', release.version);
-  const archive = await runtimeArchivePath(path.join(directory, release.assetName), release.sha256, options.env);
   const command = path.join(directory, 'codex');
   await mkdir(directory, { recursive: true });
-  if (!await hasExpectedHash(archive, release.sha256)) {
+  await prepareExecutable(options, release.version, release, {
+    command, entry: 'codex-aarch64-apple-darwin', label: 'Codex'
+  });
+  await prepareExecutable(options, release.version, release.codeModeHost, {
+    command: codexCodeModeHostPath(command),
+    entry: 'codex-code-mode-host-aarch64-apple-darwin',
+    label: 'Codex code-mode host'
+  });
+  assertCodexHelperVersion(command, release.version, options.run);
+  return path.relative(root, command);
+}
+
+async function prepareExecutable(options, version, asset, { command, entry, label }) {
+  const directory = path.dirname(command);
+  const archive = await runtimeArchivePath(path.join(directory, asset.assetName), asset.sha256, options.env);
+  await rm(command, { force: true });
+  if (!await hasExpectedHash(archive, asset.sha256)) {
     const temporaryArchive = `${archive}.${process.pid}.tmp`;
     await rm(temporaryArchive, { force: true });
     try {
-      const response = await (options.fetchImpl ?? fetch)(createDownloadUrl(release));
-      if (!response.ok) throw new Error(`Codex download failed: HTTP ${response.status}`);
+      const response = await (options.fetchImpl ?? fetch)(createDownloadUrl(version, asset.assetName));
+      if (!response.ok) throw new Error(`${label} download failed: HTTP ${response.status}`);
       const content = Buffer.from(await response.arrayBuffer());
-      if (createHash('sha256').update(content).digest('hex') !== release.sha256) {
-        throw new Error('Codex SHA-256 mismatch');
+      if (createHash('sha256').update(content).digest('hex') !== asset.sha256) {
+        throw new Error(`${label} SHA-256 mismatch`);
       }
       await writeFile(temporaryArchive, content);
       await rename(temporaryArchive, archive);
@@ -42,13 +62,15 @@ export async function prepareCodexHelper(options = {}) {
       await rm(temporaryArchive, { force: true });
     }
   }
-  if (!await hasExpectedHash(archive, release.sha256)) throw new Error('Codex SHA-256 mismatch');
-  await rm(command, { force: true });
+  if (!await hasExpectedHash(archive, asset.sha256)) throw new Error(`${label} SHA-256 mismatch`);
+  const entries = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8' }).trim();
+  if (entries !== entry) {
+    throw new Error(`${label} archive layout mismatch: expected only ${entry}, received ${entries}`);
+  }
+  await rm(path.join(directory, entry), { force: true });
   execFileSync('tar', ['-xzf', archive, '-C', directory]);
-  await rename(path.join(directory, 'codex-aarch64-apple-darwin'), command);
+  await rename(path.join(directory, entry), command);
   await chmod(command, 0o755);
-  assertCodexHelperVersion(command, release.version, options.run);
-  return path.relative(root, command);
 }
 
 export function assertCodexHelperVersion(command, expectedVersion, run = execFileSync) {
@@ -59,6 +81,6 @@ export function assertCodexHelperVersion(command, expectedVersion, run = execFil
   }
 }
 
-function createDownloadUrl(release) {
-  return `https://github.com/openai/codex/releases/download/rust-v${release.version}/${release.assetName}`;
+function createDownloadUrl(version, assetName) {
+  return `https://github.com/openai/codex/releases/download/rust-v${version}/${assetName}`;
 }

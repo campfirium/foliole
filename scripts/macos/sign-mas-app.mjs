@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 import path from 'node:path';
 
 const CODEX_IDENTIFIER = 'com.campfirium.foliole.codex';
+const CODE_MODE_HOST_IDENTIFIER = 'com.campfirium.foliole.codex-code-mode-host';
 const POST_EVENT_PROBE_IDENTIFIER = 'com.campfirium.foliole.global-capture';
 const CODEX_ENTITLEMENTS = fileURLToPath(
   new URL('../../build/entitlements.mas.codex.plist', import.meta.url)
@@ -12,6 +13,7 @@ const TOOL_ENTITLEMENTS = fileURLToPath(
 
 export function createMacSignOptions(options, entitlements = {}) {
   const codexPath = path.join(options.app, 'Contents', 'MacOS', 'codex');
+  const codeModeHostPath = path.join(options.app, 'Contents', 'MacOS', 'codex-code-mode-host');
   const globalCaptureHelperPath = path.join(options.app, 'Contents', 'MacOS', 'Foliole Global Capture');
   const optionsForFile = options.optionsForFile;
   return {
@@ -33,13 +35,16 @@ export function createMacSignOptions(options, entitlements = {}) {
           entitlements: entitlements.tool ?? TOOL_ENTITLEMENTS
         };
       }
-      if (resolvedFilePath !== path.resolve(codexPath)) return fileOptions;
+      const identifier = resolvedFilePath === path.resolve(codexPath)
+        ? CODEX_IDENTIFIER
+        : resolvedFilePath === path.resolve(codeModeHostPath) ? CODE_MODE_HOST_IDENTIFIER : null;
+      if (!identifier) return fileOptions;
       return {
         ...fileOptions,
         additionalArguments: [
           ...(fileOptions.additionalArguments ?? []),
           '--identifier',
-          CODEX_IDENTIFIER
+          identifier
         ],
         entitlements: entitlements.codex ?? CODEX_ENTITLEMENTS
       };

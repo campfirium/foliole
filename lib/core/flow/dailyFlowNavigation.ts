@@ -1,5 +1,5 @@
 
-import { reconcileCycle } from './cycleFlowOpen.js';
+import { reconcilePendingCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
@@ -13,7 +13,7 @@ export async function commitDailyFlowNavigation(db: DailyFlowStore, stored: Cycl
   if (source.currentNodeId || source.continueNodeId !== args.expectedContinueNodeId ||
     !(source.reviewedItemCount! > 0) || stored.mode === 'review-first') throw new Error('daily_flow_changed');
   const target = args.expectedContinueNodeId!;
-  const base = stored.invalidated ? await reconcileCycle(db, stored, args.now, settings)
+  const base = stored.invalidated ? await reconcilePendingCycle(db, stored, args.now, settings)
     : { ...source, cycle: { ...source.cycle! } };
   const snapshot = await db.scopedLearningSnapshot([target]);
   const [row] = await db.readRows([target]);

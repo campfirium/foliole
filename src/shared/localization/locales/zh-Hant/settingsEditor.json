@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "雙擊正文進入編輯",
   "settings.search.editorImmersiveDoubleClick.description": "在沉浸閱讀中，雙擊正文可進入編輯。關閉後，雙擊不再進入編輯，仍可用於選取文字；按 Enter 仍可進入編輯。",
+  "settings.search.cleanFormatting.path": "開啟可編輯的主題，在編輯器右上角的選單或正文的右鍵選單中選擇「清理格式...」。",
+  "settings.search.cleanFormatting.terms": "格式清理|清除格式|移除格式|清理格式",
+  "settings.search.imageCloze.path": "在主題內的本機圖片上，拖曳矩形框選要遮住的區域，再按一下勾號。",
+  "settings.search.imageCloze.terms": "圖片填空|圖片遮擋|圖片遮罩",
+  "settings.search.formulaCloze.path": "在主題中，於已顯示的公式上拖曳選取要遮住的部分。",
+  "settings.search.formulaCloze.terms": "數學填空|方程式填空|公式遮擋|數學公式遮罩",
   "settings.editor.readingMode.section": "閱讀模式",
   "settings.editor.readingMode.aria": "閱讀模式設定區"
 }

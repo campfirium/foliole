@@ -54,7 +54,7 @@ function readImportedBookSections(rootNodeId: string, unlocatedId: string | null
               book_sections.sort_path || '.' || child.created_at || ':' || child.id
        FROM nodes child
        JOIN book_sections ON child.parent_id = book_sections.id
-       WHERE child.deleted_at IS NULL AND child.id IS NOT ?
+       WHERE +child.deleted_at IS NULL AND child.id IS NOT ?
      )
      SELECT book_sections.id, book_sections.title
      FROM book_sections

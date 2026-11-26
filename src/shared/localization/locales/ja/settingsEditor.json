@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "本文をダブルクリックして編集",
   "settings.search.editorImmersiveDoubleClick.description": "没入型読書では、文書の本文をダブルクリックすると編集を開始できます。この設定をオフにすると、ダブルクリックはテキスト選択に使われます。Enter キーでは引き続き編集できます。",
+  "settings.search.cleanFormatting.path": "編集可能なトピックを開き、エディター右上のメニューか本文の右クリックメニューで「書式をクリーンアップ...」を選びます。",
+  "settings.search.cleanFormatting.terms": "書式のクリーンアップ|書式を削除|書式を解除|書式をクリア",
+  "settings.search.imageCloze.path": "トピック内のローカルに保存された画像で、隠したい範囲をドラッグして四角形で囲み、チェックマークをクリックします。",
+  "settings.search.imageCloze.terms": "画像遮蔽|画像のクローズ|画像のマスク",
+  "settings.search.formulaCloze.path": "トピック内に表示された数式で、隠したい部分をドラッグして選択します。",
+  "settings.search.formulaCloze.terms": "数式のクローズ|方程式の穴埋め|数式の遮蔽|数式のマスク",
   "settings.editor.readingMode.section": "閲覧モード",
   "settings.editor.readingMode.aria": "閲覧モード設定セクション"
 }

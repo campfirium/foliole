@@ -7,6 +7,7 @@ import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js
 import { clearDesktopSyncGroupMemberStateReadiness } from '../sync/desktopSyncGroupMemberStateReadiness.js';
 
 import { commitAutomaticBackupWhenChanged } from './automaticBackupCandidate.js';
+import { backupLibraryWithFingerprint, readLibraryChangeFingerprint } from './automaticBackupProof.js';
 import {
   listManagedDatabaseBackups,
   pruneManagedDatabaseBackups,
@@ -91,14 +92,10 @@ async function createAutomaticBackup(
     destinationPath,
     latestOrdinary,
     sourcePath: await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath),
-    createSnapshot: (candidatePath) => runDesktopDatabaseWrite('startup', () => {
-      const connection = openDatabaseConnection();
-      return backupSqliteDatabase({
-        destinationPath: candidatePath,
-        sourceDatabase: connection.sqlite,
-        sourcePath: connection.dbPath
-      });
-    })
+    readSourceFingerprint: () => runDesktopDatabaseWrite('startup', () =>
+      readLibraryChangeFingerprint(openDatabaseConnection())),
+    createSnapshot: (candidatePath) => runDesktopDatabaseWrite('startup', () =>
+      backupLibraryWithFingerprint(openDatabaseConnection(), candidatePath))
   });
   if (!result) return false;
   registerGeneratedBackup(result.destinationPath, { preserveExisting: true });

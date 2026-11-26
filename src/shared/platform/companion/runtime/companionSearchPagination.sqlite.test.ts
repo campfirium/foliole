@@ -2,7 +2,10 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { createCompanionDatabase } from '../../../../../lib/core/database/companionDatabaseMigrationExecutor';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
+import { createFakeCompanionDatabaseOwner } from '../../companionSyncNodeVersionsTestSupport';
 
 import { searchIosExternalDocuments, searchIosPdfPageText, searchIosTopics } from './iosCompanionActiveDatabaseReads';
 
@@ -14,39 +17,37 @@ vi.mock('./iosCompanionDatabaseBootstrap', () => ({
 const pdfHash = 'a'.repeat(64);
 
 function seedSearchDatabase(db: Database.Database) {
-  db.exec(`
-    CREATE TABLE nodes (id TEXT PRIMARY KEY, parent_id TEXT, title TEXT, opening_text TEXT, content TEXT,
-      body_blob_hash TEXT, updated_at TEXT, created_at TEXT, deleted_at TEXT, resource_references TEXT DEFAULT '[]');
-    CREATE INDEX idx_nodes_parent_id ON nodes(parent_id);
-    CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
-    CREATE TABLE desktop_sources (source_type TEXT, config_ref TEXT, type_settings_json TEXT);
-    CREATE TABLE sync_group_devices (device_identity_key TEXT, state TEXT);
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
-    CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT, page_width REAL, page_height REAL);
-    CREATE TABLE pdf_index_state (attachment_id TEXT PRIMARY KEY, status TEXT, indexed_at TEXT);
-    CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, folder_id TEXT, relative_path TEXT,
-      file_name TEXT, extension TEXT, title TEXT, opening_text TEXT, reference_kind TEXT, reference_json TEXT,
-      content TEXT, body_blob_hash TEXT, updated_at TEXT, is_present INTEGER);
-  `);
+  const insertTopic = db.prepare(`INSERT INTO nodes (id, title, content, updated_at, created_at)
+    VALUES (?, ?, ?, ?, ?)`);
+  const insertPdfPage = db.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)');
+  const insertDocument = db.prepare(`INSERT INTO external_documents (
+    document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at,
+    source_modified_ms, content_hash, title, content, indexed_at, created_at, updated_at
+  ) VALUES (?, 'folder', ?, ?, '.md', 17, ?, 0, ?, ?, 'prefix alpha body', ?, ?, ?)`);
   for (let index = 0; index < 125; index += 1) {
     const id = String(index).padStart(3, '0');
-    db.prepare('INSERT INTO nodes (id,parent_id,title,opening_text,content,body_blob_hash,updated_at,created_at,deleted_at) VALUES (?,NULL,?,NULL,?,NULL,?,?,NULL)').run(id, `Topic ${id}`, 'prefix alpha body', id, id);
-    db.prepare('INSERT INTO pdf_page_text VALUES (?, ?, ?, NULL, NULL)').run(pdfHash, index + 1, 'prefix alpha body');
-    db.prepare('INSERT INTO external_documents VALUES (?,NULL,?,?,NULL,?,NULL,NULL,NULL,?,NULL,?,1)')
-      .run(id, `${id}.md`, `${id}.md`, `External ${id}`, 'prefix alpha body', id);
+    insertTopic.run(id, `Topic ${id}`, 'prefix alpha body', id, id);
+    insertPdfPage.run(pdfHash, index + 1, 'prefix alpha body');
+    insertDocument.run(id, `${id}.md`, `${id}.md`, id, id, `External ${id}`, id, id, id);
   }
-  db.exec("INSERT INTO nodes (id,parent_id,title,opening_text,content,body_blob_hash,updated_at,created_at,deleted_at) VALUES ('hidden',NULL,'alpha',NULL,'alpha',NULL,'999','999','deleted')");
-  db.prepare("UPDATE nodes SET resource_references = ? WHERE id = '000'").run(
-    JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'Search.pdf' }])
-  );
-  db.exec("UPDATE external_documents SET is_present = 0 WHERE document_id = '124'");
+  const hiddenPdfHash = 'b'.repeat(64);
+  insertTopic.run('hidden', 'alpha', 'alpha', '999', '999');
+  insertPdfPage.run(hiddenPdfHash, 1, 'prefix alpha body');
+  const mountPdf = db.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?');
+  mountPdf.run(JSON.stringify([{ role: 'reference', storage_key: `${pdfHash}.pdf`, original_name: 'Search.pdf' }]), '000');
+  mountPdf.run(JSON.stringify([{ role: 'reference', storage_key: `${hiddenPdfHash}.pdf`, original_name: 'Hidden.pdf' }]), 'hidden');
+  db.exec(`UPDATE nodes SET deleted_at = 'deleted' WHERE id = 'hidden';
+    UPDATE external_documents SET is_present = 0 WHERE document_id = '124'`);
 }
 
 it('reaches every result beyond 100 through all three production queries, preserving order and filters', async () => {
   const db = new Database(':memory:');
   try {
+    await createFakeCompanionDatabaseOwner(db).runWriter(async port => {
+      await port.transaction(tx => createCompanionDatabase(tx, COMPANION_DATABASE_VERSION));
+      scope.port = port;
+    });
     seedSearchDatabase(db);
-    scope.port = { query: async (sql: string, params: unknown[] = []) => db.prepare(sql).all(...params) } as DbPort;
     const topics: string[] = [];
     const external: string[] = [];
     const pages: number[] = [];

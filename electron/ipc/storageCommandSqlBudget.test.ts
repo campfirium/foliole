@@ -124,7 +124,8 @@ it.each(POINT_COMMANDS)('keeps SQL work for %s independent of library size', asy
 async function measureBacklinks(topicCount: number) {
   await openLibrary(topicCount);
   const { sqlite } = openDatabaseConnection();
-  sqlite.prepare("UPDATE nodes SET content = 'Plain body without links'").run();
+  // Unrelated wiki links in every other body: they must not reach the JS matcher.
+  sqlite.prepare("UPDATE nodes SET content = 'Body linking [[Other-note]] and [[Reading list]]'").run();
   const update = sqlite.prepare('UPDATE nodes SET content = ? WHERE id = ?');
   update.run('First [[topic-0]]', 'topic-1');
   update.run('Second [[ TOPIC-0 ]]', 'topic-2');

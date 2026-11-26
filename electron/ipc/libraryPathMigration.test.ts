@@ -78,7 +78,7 @@ it('moves existing inbox and mirror content into their new folders', async () =>
   await expect(fs.readFile(path.join(nextMirror, 'entry.md'), 'utf8')).resolves.toBe('# mirror');
 });
 
-it('merges content into an existing target folder instead of renaming over it', async () => {
+it('rejects a mirror folder that already holds visible files and leaves both sides untouched', async () => {
   const initialPaths = await loadLibraryPathSettings();
   await fs.mkdir(initialPaths.mirror, { recursive: true });
   await fs.writeFile(path.join(initialPaths.mirror, 'entry.md'), '# moved');
@@ -87,12 +87,31 @@ it('merges content into an existing target folder instead of renaming over it', 
   await fs.mkdir(existingMirrorDir, { recursive: true });
   await fs.writeFile(path.join(existingMirrorDir, 'keep.md'), '# keep');
 
-  await expect(updateLibraryPathSetting({ location: 'mirror', path: existingMirrorDir })).resolves.toMatchObject({
-    mirror: existingMirrorDir
+  await expect(updateLibraryPathSetting({ location: 'mirror', path: existingMirrorDir }))
+    .rejects.toThrow('mirror_folder_not_empty');
+
+  await expect(loadLibraryPathSettings()).resolves.toMatchObject({ mirror: initialPaths.mirror });
+  await expect(fs.readFile(path.join(initialPaths.mirror, 'entry.md'), 'utf8')).resolves.toBe('# moved');
+  await expect(fs.readdir(existingMirrorDir)).resolves.toEqual(['keep.md']);
+});
+
+it('accepts a mirror folder with only hidden entries and keeps its own copy of them', async () => {
+  const initialPaths = await loadLibraryPathSettings();
+  await fs.mkdir(path.join(initialPaths.mirror, '.obsidian'), { recursive: true });
+  await fs.writeFile(path.join(initialPaths.mirror, '.obsidian', 'app.json'), 'old');
+  await fs.writeFile(path.join(initialPaths.mirror, 'entry.md'), '# moved');
+
+  const nextMirror = path.join(tempRoot, 'HiddenOnlyMirror');
+  await fs.mkdir(path.join(nextMirror, '.obsidian'), { recursive: true });
+  await fs.writeFile(path.join(nextMirror, '.obsidian', 'app.json'), 'target');
+
+  await expect(updateLibraryPathSetting({ location: 'mirror', path: nextMirror })).resolves.toMatchObject({
+    mirror: nextMirror
   });
 
-  await expect(fs.readFile(path.join(existingMirrorDir, 'entry.md'), 'utf8')).resolves.toBe('# moved');
-  await expect(fs.readFile(path.join(existingMirrorDir, 'keep.md'), 'utf8')).resolves.toBe('# keep');
+  await expect(fs.readFile(path.join(nextMirror, 'entry.md'), 'utf8')).resolves.toBe('# moved');
+  await expect(fs.readFile(path.join(nextMirror, '.obsidian', 'app.json'), 'utf8')).resolves.toBe('target');
+  await expect(fs.readFile(path.join(initialPaths.mirror, '.obsidian', 'app.json'), 'utf8')).resolves.toBe('old');
 });
 
 it('moves data and default library folders when library home changes', async () => {

@@ -187,7 +187,7 @@ it('keeps Later automatic by default and shows the saved delay before a single t
   const postpone = vi.fn();
   render(<>
     <CompanionLearningSettingsContent />
-    <CompanionBottomReviewBar hasAnswer={false} isAnswerRevealed={false} itemKind="reading" visible reviewCardKey="000000"
+    <CompanionBottomReviewBar isAnswerRevealed={false} itemKind="reading" visible reviewCardKey="000000"
       onPostponeReviewTopic={postpone} onReadReviewTopic={vi.fn()} onDismissReviewTopic={vi.fn()}
       onGrade={vi.fn()} onRevealAnswer={vi.fn()} />
   </>);

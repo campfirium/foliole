@@ -18,7 +18,6 @@ import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import type { LinkPanelRecord } from './linkPanelState';
-import { SchedulingPrioritySource } from './SchedulingPrioritySource';
 import { useDocumentPanelFolderListSort } from './useDocumentPanelFolderListSort';
 
 interface DocumentPanelShellProps {
@@ -51,16 +50,16 @@ function ActivePriorityQuickSet({ props }: { props: DocumentPanelSectionProps })
   }
   const fallback = reviewSchedulerSettings.pushQueue.defaultPriority;
   const priority = resolveNodePrioritySetting(activeNodeId, nodesById, fallback);
+  const owner = priority.ownerNodeId ? nodesById[priority.ownerNodeId]?.title : undefined;
   const own = priority.enforced ? resolveUnenforcedNodePriority(activeNodeId, nodesById, fallback) : priority;
   return (
     <DocumentPriorityQuickSetHint
       isActive
       {...(onNodePriorityChange ? { onPriorityChange: (priority: number) => onNodePriorityChange(activeNodeId, priority) } : {})}
-      effectivePriority={priority.value}
-      inactive={priority.enforced === true}
+      key={activeNodeId}
+      enforced={priority.enforced ? { value: priority.value, ...(owner === undefined ? {} : { owner }) } : undefined}
+      ownPriority={nodesById[activeNodeId]?.priority ?? null}
       priority={own.value}
-      source={<SchedulingPrioritySource clickable={false} key={activeNodeId} priority={priority} nodesById={nodesById}
-        settings={reviewSchedulerSettings} />}
     />
   );
 }

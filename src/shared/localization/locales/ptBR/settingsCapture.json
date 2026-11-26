@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "Não concedida",
   "settings.capture.accessibility.openSettings": "Abrir Ajustes do Sistema",
   "settings.capture.accessibility.openFailed": "Não foi possível abrir os Ajustes do Sistema.",
+  "settings.capture.searchDescription": "Veja as opções de captura global.",
+  "settings.capture.searchTerms": "recorte global|captura global|capturar seleção|capturar área de transferência",
   "settings.capture.permission.title": "Acesso de seleção",
   "settings.capture.permission.granted": "Foliole pode copiar a seleção atual ao executar a captura global.",
   "settings.capture.permission.denied": "Permitir Foliole em Configurações do sistema → Privacidade e segurança → Acessibilidade.",

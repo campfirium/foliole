@@ -20,11 +20,11 @@ vi.mock('@capacitor/core', () => ({ Capacitor: {
 }, registerPlugin: vi.fn(() => ({})) }));
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => state.owner }));
 
-it.each(['android', 'ios'])('%s content save through the owner preserves its generated sequence and reading facts', async platform => {
+it.each(['android', 'ios'] as const)('%s content save through the owner preserves its generated sequence and reading facts', async platform => {
   state.platform = platform;
   const now = '2026-10-26T08:00:00.000Z';
   const directory = mkdtempSync(path.join(os.tmpdir(), 'foliole-body-flow-'));
-  const host = await openContentEditDatabase(directory, now);
+  const host = await openContentEditDatabase(directory, now, platform);
   state.owner = host.owner;
   try {
     for (const id of ['a', 'b']) await insertContentEditNode(host.owner, {

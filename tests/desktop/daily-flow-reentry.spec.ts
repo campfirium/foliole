@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const session = (page: import('@playwright/test').Page) =>
   page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
 
-test('checks minute eligibility on reentry while retaining the current reading', async ({ desktopWindow: page }) => {
+test('checks minute eligibility on reentry while retaining the current reading', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   const now = new Date();
   const due = new Date(now.getTime() + 60_000);
@@ -26,6 +27,7 @@ test('checks minute eligibility on reentry while retaining the current reading',
           difficulty: 4, elapsedDays: 0, scheduledDays: 0, reps: 1, lapses: 0 } }
     ], { persist: true });
   }, { stamp: now.toISOString(), dueAt: due.toISOString() });
+  await resetDailyFlowGeneration(desktopApp);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
@@ -50,7 +52,7 @@ test('checks minute eligibility on reentry while retaining the current reading',
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(restored, null, 2));
 });
 
-test('rebuilds the learning day before the first action while Flow stays open, then reloads saved facts', async ({ desktopWindow: page }) => {
+test('rebuilds the learning day before the first action while Flow stays open, then reloads saved facts', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   const boundary = new Date();
   boundary.setHours(4, 0, 0, 0);
@@ -72,6 +74,7 @@ test('rebuilds the learning day before the first action while Flow stays open, t
       { id: 'day-second', kind: 'topic', title: 'Day second', content: 'Second readable day topic', createdAt: stamp }
     ], { persist: true });
   }, created);
+  await resetDailyFlowGeneration(desktopApp);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
@@ -88,10 +91,11 @@ test('rebuilds the learning day before the first action while Flow stays open, t
   await expect.poll(async () => (await session(page)).readTopicCount).toBe(1);
   const today = await session(page);
   expect(today.currentNodeId).not.toBe(target);
-  const saved = await page.evaluate(async id => {
+  const savedReading = () => page.evaluate(async id => {
     const snapshot = await window.electronAPI.invoke('load_workspace_snapshot', {});
     return snapshot.nodesById[id]!.reading;
   }, target);
+  const saved = await savedReading();
   expect(saved?.lastHandledAt).toBe(boundary.toISOString());
   await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
   await page.reload();
@@ -99,7 +103,7 @@ test('rebuilds the learning day before the first action while Flow stays open, t
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).toBe(today.currentNodeId);
   expect((await session(page)).readTopicCount).toBe(1);
-  const reloaded = await page.evaluate(id => window.__folioleWorkspaceDebug!.getNode(id)?.reading, target);
+  const reloaded = await savedReading();
   expect(reloaded).toEqual(saved);
   await page.screenshot({ path: path.join(output, 'reloaded-today.png') });
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ yesterday, today, saved, reloaded }, null, 2));

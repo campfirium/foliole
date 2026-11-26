@@ -7,7 +7,6 @@ import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 
 function createProps() {
   return {
-    hasAnswer: true,
     isAnswerRevealed: true,
     itemKind: 'fsrs' as 'fsrs' | 'reading',
     onSoonReviewTopic: vi.fn(),

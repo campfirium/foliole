@@ -3,6 +3,7 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import { DIVE_NODE_FILTER, normalizeDiveTitle, readDiveNode } from '../../lib/core/nodes/dive';
 import { createKeywordVirtualNodeFilter, createManualVirtualNodeFilter, isVirtualIndexFolderNode } from '../../lib/core/nodes/virtualNodeFilter';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
+import { nodePriorityOverride } from '../features/nodes/model/nodeReviewSettings';
 
 import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from './workspaceNodeMetadataHistory';
 
@@ -10,8 +11,8 @@ export type WorkspaceMetadataCommand =
   | { type: 'create'; kind: 'folder' | 'topic' | 'item'; title: string; parentNodeId: string | null; nodeId: string }
   | { type: 'create-dive'; title: string; nodeId: string; sourceId: string | null }
   | { type: 'create-index'; title: string; nodeId: string; keyword?: string }
-  // A null priority clears the item's own value so it inherits again.
-  | { type: 'set-priority'; nodeId: string; priority: number | null }
+  // A null priority clears the override and any folder enforcement.
+  | { type: 'set-priority'; nodeId: string; priority: number | null; enforcePriority?: boolean }
   | { type: 'rename'; nodeId: string; title: string }
   | { type: 'move'; nodeId: string; parentNodeId: string | null }
   | { type: 'delete' | 'restore' | 'shelve' | 'unshelve'; nodeId: string };
@@ -52,12 +53,16 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
     next.title = dive ? normalizeDiveTitle(command.title) : command.title.trim();
     next.isTitleManual = true;
   } else if (command.type === 'set-priority') {
-    if ((node.kind !== 'topic' && node.kind !== 'item') || (command.priority !== null &&
-      (!Number.isInteger(command.priority) || command.priority < 0 || command.priority > 9))) {
+    if (command.enforcePriority !== undefined && node.kind !== 'folder') throw new Error('node_priority_unavailable');
+    if (command.priority !== null && (!Number.isInteger(command.priority) || command.priority < 0 || command.priority > 9)) {
       throw new Error('node_priority_unavailable');
     }
-    if ((node.priority ?? null) === command.priority) return { nodes: [], subtreeNodeIds: null, title: command.type };
-    next.priority = command.priority;
+    const patch = nodePriorityOverride(node.kind, command.priority, command.enforcePriority);
+    if ((node.priority ?? null) === patch.priority &&
+      (patch.enforcePriority === undefined || (node.enforcePriority === true) === patch.enforcePriority)) {
+      return { nodes: [], subtreeNodeIds: null, title: command.type };
+    }
+    Object.assign(next, patch);
   } else if (command.type === 'move') {
     if (!canNodeBeMoved(node)) throw new Error('node_move_unavailable');
     assertWorkspaceMetadataParent(node, command.parentNodeId, nodes);

@@ -47,25 +47,6 @@ function touch(target: Element, name: string, clientX: number, clientY: number) 
   target.dispatchEvent(new MouseEvent(name, { bubbles: true, clientX, clientY }));
 }
 
-it('clears a surviving native and editor selection after tapping outside it', () => {
-  const { editor, nativeSelection, outside } = selectedArticle();
-  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => { callback(0); return 1; });
-  const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: true, nodeId: 'node-1', snapshot: null
-  }));
-  act(() => {
-    result.current.handleEditorReady(editor as never);
-    touch(outside, 'pointerdown', 140, 20);
-  });
-  act(() => {
-    touch(outside, 'pointerup', 140, 20);
-    result.current.openSelectionToolbar({ clientX: 140, clientY: 20, target: outside } as never);
-  });
-  expect(nativeSelection.removeAllRanges).toHaveBeenCalledOnce();
-  expect(editor.setSelection).toHaveBeenCalledWith({ from: 8, to: 8 });
-  expect(result.current.selectionToolbar).toBeNull();
-});
-
 it.each([
   ['the selected text', 50, 20, 'pointerup'],
   ['a drag', 140, 20, 'pointermove']
@@ -114,7 +95,7 @@ it.each([true, false])('preserves editor ownership of selection when readOnly=%s
   vi.spyOn(editor, 'getDocumentPositionAtClientPoint').mockReturnValue(8);
   editor.setSelection({ from: 0, to: 8 });
   const { result, unmount } = renderHook(() => useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: readOnly, nodeId: 'node-1', snapshot: null
+    canCreateAnnotation: readOnly, editing: !readOnly, nodeId: 'node-1', snapshot: null
   }));
   act(() => {
     result.current.handleEditorReady(editor);
@@ -127,10 +108,26 @@ it.each([true, false])('preserves editor ownership of selection when readOnly=%s
   editor.destroy();
 });
 
+// A review item or a disabled floating toolbar cannot annotate, but dismissing the selection is still reading.
+it('collapses the selection after an outside tap when annotating is unavailable', () => {
+  const { editor, nativeSelection, outside } = selectedArticle();
+  const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: false, nodeId: 'node-1', snapshot: null
+  }));
+  act(() => {
+    result.current.handleEditorReady(editor as never);
+    touch(outside, 'pointerdown', 140, 20);
+  });
+  act(() => touch(outside, 'pointerup', 140, 20));
+  expect(nativeSelection.removeAllRanges).toHaveBeenCalledOnce();
+  expect(editor.setSelection).toHaveBeenCalledWith({ from: 8, to: 8 });
+  expect(result.current.selectionToolbar).toBeNull();
+});
+
 it('leaves editable text selection and native context menus to the editor', () => {
   const { article, editor, nativeSelection, outside } = selectedArticle();
   const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: false, nodeId: 'node-1', snapshot: null
+    canCreateAnnotation: false, editing: true, nodeId: 'node-1', snapshot: null
   }));
   act(() => {
     result.current.handleEditorReady(editor as never);
@@ -148,7 +145,7 @@ it('leaves editable text selection and native context menus to the editor', () =
 it('stops a reading gesture when editing starts and restores reading gestures on exit', () => {
   const { editor, nativeSelection, outside } = selectedArticle();
   const { result, rerender } = renderHook(({ reading }) => useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: reading, nodeId: 'node-1', snapshot: null
+    canCreateAnnotation: reading, editing: !reading, nodeId: 'node-1', snapshot: null
   }), { initialProps: { reading: true } });
   act(() => {
     result.current.handleEditorReady(editor as never);

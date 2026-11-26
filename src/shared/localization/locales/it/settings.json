@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Ultima ottimizzazione: {time}",
   "settings.review.optimizationFailed": "Impossibile completare l’ottimizzazione. Riprova.",
   "settings.review.later.title": "Intervallo successivo personalizzato",
-  "settings.review.later.description": "Imposta l'intervallo prima che il materiale ricompaia (0 per l'intervallo breve predefinito).",
+  "settings.review.later.description": "Giorni prima che un argomento ricompaia dopo Later. Il valore 0 usa l’intervallo più breve calcolato automaticamente.",
   "settings.review.later.default": "Predefinito",
   "settings.webLookup.articleTarget": "Destinazione dell’argomento",
   "settings.webLookup.chooseArticleTarget": "Seleziona un'app",

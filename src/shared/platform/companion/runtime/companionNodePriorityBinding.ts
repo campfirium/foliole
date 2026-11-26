@@ -15,7 +15,7 @@ export function bindCompanionNodePriorities(owner: CapacitorCompanionDatabaseOwn
           const anchorKind = anchorKinds.get(node.id);
           if (anchorKind === undefined) throw new Error('workspace_node_anchor_metadata_missing');
           return {
-            id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null, enforcePriority: node.enforcePriority === true,
+            id: node.id, title: node.title, parentNodeId: node.parentNodeId, priority: node.priority ?? null, enforcePriority: node.enforcePriority === true,
             createdAt: node.createdAt, deletedAt: node.deletedAt ?? null, kind: node.kind, shelvedAt: node.shelvedAt ?? null,
             hasContent: node.bodyBlobHash != null || node.hasContent === true, hasReveal: node.hasReveal === true,
             anchorKind

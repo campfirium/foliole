@@ -1,13 +1,12 @@
-import { useEffect, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import { isPagedReadingInteraction, turnCompanionReadingPage } from './companionPagedReading';
 import { useCompanionReadingMode } from './companionReadingMode';
 import { useRegisterCompanionReadingPages } from './CompanionReadingPageNavigation';
 
 type Swipe = { id: number; x: number; y: number; startedAt: number };
-const hasSelection = () => window.getSelection()?.isCollapsed === false;
 
-function attachPagedScrolling(surface: HTMLElement) {
+function attachPagedScrolling(surface: HTMLElement, hasSelection: () => boolean) {
   let swipe: Swipe | null = null;
   let wheelActive = false;
   let wheelEnd: ReturnType<typeof setTimeout> | undefined;
@@ -46,13 +45,17 @@ function attachPagedScrolling(surface: HTMLElement) {
   };
 }
 
-export function useCompanionPagedScroll(surfaceRef: RefObject<HTMLElement | null>, editing: boolean) {
+export function useCompanionPagedScroll(surfaceRef: RefObject<HTMLElement | null>, editing: boolean,
+  hasReadingSelection: () => boolean) {
+  const selectionRef = useRef(hasReadingSelection);
+  selectionRef.current = hasReadingSelection;
+  const hasSelection = useCallback(() => selectionRef.current(), []);
   const mode = useCompanionReadingMode();
   const paged = mode === 'paged' && !editing;
-  useRegisterCompanionReadingPages(surfaceRef, paged);
+  useRegisterCompanionReadingPages(surfaceRef, paged, hasSelection);
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (surface && paged) return attachPagedScrolling(surface);
-  }, [paged, surfaceRef]);
+    if (surface && paged) return attachPagedScrolling(surface, hasSelection);
+  }, [hasSelection, paged, surfaceRef]);
   return paged ? { overflowY: 'hidden' as const, touchAction: 'pan-x pinch-zoom' } : undefined;
 }

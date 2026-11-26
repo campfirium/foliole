@@ -10,6 +10,7 @@ import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionReadingClozeLayers } from './CompanionFormulaClozeLayer';
 import { CompanionFlowNextTopicFooter, CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionReviewLoading } from './CompanionReviewLoading';
@@ -90,9 +91,8 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
 function FlowFooter({ surface }: { surface: Surface }) {
   return (
     <CompanionBottomReviewBar
-      hasAnswer={Boolean(surface.effectiveReviewSession.currentCard?.hasAnswer)}
       disabled={surface.isSubmittingGrade || surface.isSubmittingReadingAction || surface.historyRefreshPending || surface.readingActivity.editing ||
-        (!surface.readableArticle || Boolean(surface.readableArticle.bodyStatus && surface.readableArticle.bodyStatus !== 'ready'))}
+        !surface.readableArticle || !canContinueToNext(surface.readableArticle)}
       isAnswerRevealed={surface.isAnswerRevealed}
       itemKind={surface.effectiveReviewSession.currentCard?.itemKind ?? 'reading'}
       progressCounts={surface.flowSummary.progressCounts}
@@ -122,7 +122,17 @@ function selectCompanionBreadcrumb(
   else selectNode(nodeId);
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined; surface: Surface; workspaceSync: WorkspaceSync }) {
+type ShellReadableArticleProps = {
+  flow?: boolean;
+  searchMatch?: CompanionSearchMatch | null | undefined;
+  navigation?: CompanionReadingNavigation | undefined;
+  onExit: () => void;
+  onSelectBreadcrumbNode?: Surface['handleSelectBrowseNode'] | undefined;
+  surface: Surface;
+  workspaceSync: WorkspaceSync;
+};
+
+function ShellReader(props: ShellReadableArticleProps) {
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const current = props.surface.effectiveReviewSession.currentCard;
   const flowTopicId = props.flow && current?.itemKind === 'reading' && isAvailableNativeCompanionRuntime()
@@ -143,8 +153,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
   const nodeId = props.surface.readableArticle.nodeId;
   const node = props.workspaceSync.state.workspace_snapshot?.nodesById[nodeId];
   const answer = props.flow
-    ? props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null
-    : node?.kind === 'item' ? props.surface.readableArticle.reveal ?? null : null;
+    ? props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? '' : null
+    : node?.kind === 'item' ? props.surface.readableArticle.reveal ?? '' : null;
 
   return (
     <FlowExitHereContext.Provider value={props.surface.isFlowBrowsing ? () => props.surface.handleExitFlowHere(nodeId) : null}>
@@ -181,4 +191,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
     </CompanionReadingClozeLayers>
     </FlowExitHereContext.Provider>
   );
+}
+
+export function CompanionShellReadableArticle(props: ShellReadableArticleProps) {
+  return <CompanionReadingSession><ShellReader {...props} /></CompanionReadingSession>;
 }

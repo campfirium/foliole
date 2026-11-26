@@ -2,6 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import {
+  forgetLibraryProof,
+  libraryProvenUnchanged,
+  readRestorePointIdentity,
+  rememberLibraryProof,
+  restorePointStatKey
+} from './automaticBackupProof.js';
 import type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 import {
   commitVerifiedCompressedSqliteFile,
@@ -14,28 +21,46 @@ import {
 } from './sqliteBackupRestore.js';
 import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
+/** `sourceFingerprint` is the library change fingerprint, set only when it held for the whole snapshot. */
+type AutomaticBackupSnapshot = SqliteBackupResult & { sourceFingerprint?: string | null };
+
 interface CreateAutomaticBackupCandidateOptions extends BackupSqliteDatabaseOptions {
-  createSnapshot?: (destinationPath: string) => Promise<SqliteBackupResult>;
+  createSnapshot?: (destinationPath: string) => Promise<AutomaticBackupSnapshot>;
   destinationPath: string;
   latestOrdinary: ApplicationDatabaseBackupEntry | null;
+  /** Reads the same fingerprint `createSnapshot` reports; without it every cycle copies the library. */
+  readSourceFingerprint?: () => Promise<string | null>;
 }
 
 export async function commitAutomaticBackupWhenChanged(
   options: CreateAutomaticBackupCandidateOptions
 ): Promise<SqliteBackupResult | null> {
+  const libraryPath = path.resolve(options.sourcePath);
+  if (await libraryProvenUnchanged(libraryPath, options.latestOrdinary?.filePath ?? null, options.readSourceFingerprint)) {
+    return null;
+  }
+  forgetLibraryProof(libraryPath);
   const candidatePath = path.join(
     path.dirname(options.destinationPath),
     `.${path.basename(options.destinationPath)}-${randomUUID()}.source.db`
   );
   try {
-    const result = options.createSnapshot
+    const { sourceFingerprint, ...result }: AutomaticBackupSnapshot = options.createSnapshot
       ? await options.createSnapshot(candidatePath)
       : await backupSqliteDatabase({ ...options, destinationPath: candidatePath });
     await verifySqliteDatabaseFileOffMainThread(candidatePath);
-    if (options.latestOrdinary && await matchesRestorePoint(candidatePath, options.latestOrdinary)) {
-      return null;
+    if (options.latestOrdinary) {
+      const restorePointPath = options.latestOrdinary.filePath;
+      const statKey = await restorePointStatKey(restorePointPath).catch(() => undefined);
+      if (await matchesRestorePoint(candidatePath, options.latestOrdinary)) {
+        rememberLibraryProof(libraryPath, sourceFingerprint,
+          statKey ? await readRestorePointIdentity(restorePointPath, statKey) : null);
+        return null;
+      }
     }
     await commitVerifiedCompressedSqliteFile(candidatePath, options.destinationPath);
+    rememberLibraryProof(libraryPath, sourceFingerprint, sourceFingerprint
+      ? await readRestorePointIdentity(options.destinationPath) : null);
     return { ...result, destinationPath: options.destinationPath };
   } finally {
     await removeCandidateGroup(candidatePath);

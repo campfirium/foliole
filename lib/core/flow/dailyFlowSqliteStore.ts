@@ -1,5 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
+import { completeReconcileScope, planDirtyReconcile } from './cycleFlowDirtyScope.js';
 import { toCycleRow, type CycleRow, type CycleStoredRow } from './cycleFlowTypes.js';
 import { createScopedDailyLearningReader } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
@@ -14,7 +15,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
   const rowsById = new Map<string, CycleRow | undefined>();
   let cleared = false;
   let initializing = false;
-  return {
+  const store: DailyFlowStore = {
     readingPreservesPosition: Boolean(persistence.readingPreservesPosition),
     async readState() {
       const state = await readDailyFlow(db);
@@ -23,9 +24,10 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     },
     readDiveMembers: id => readDiveFlowMembers(db, id),
     readRows: cycleRowsReader(db, rowsById),
-    scanRows: (after, through, count, filter) => scanCycleRows(db, after, through, count, filter),
-    timedRows: (filter, count) => readTimedCycleRows(db, filter, count),
-    readReadiness: () => db.query(`${STORED_ROWS} WHERE e.active=1`),
+    scanRows: (after, through, count, filter, nodeIds) => scanCycleRows(db, after, through, count, filter, nodeIds),
+    timedRows: (filter, count, nodeIds) => readTimedCycleRows(db, filter, count, nodeIds),
+    readReadiness: ids => db.query(`${STORED_ROWS} WHERE e.active=1 ${ids ? NODE_SCOPE : ''}`,
+      ids ? [JSON.stringify(ids)] : []),
     async writeRows(rows) {
       const checkEmpty = initializing && rows.length > 0;
       initializing = false;
@@ -62,8 +64,11 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
     snapshot: ids => persistence.snapshot(db, ids),
     grade: (args, opId) => persistence.grade(db, args, opId),
     reading: (value, now) => persistence.reading(db, value, now),
-    reviewHistory: (value, now) => persistence.reviewHistory(db, value, now)
+    reviewHistory: (value, now) => persistence.reviewHistory(db, value, now),
+    dirtyReconcile: (stored, settings) => planDirtyReconcile(db, store, stored, settings),
+    completeReconcileScope: () => completeReconcileScope(db)
   };
+  return store;
 }
 
 function cycleRowsReader(db: DbPort, rowsById: Map<string, CycleRow | undefined>) {
@@ -80,19 +85,28 @@ function cycleRowsReader(db: DbPort, rowsById: Map<string, CycleRow | undefined>
   };
 }
 
+const NODE_SCOPE = 'AND e.node_id IN (SELECT value FROM json_each(?))';
+
 // Rows the mode hides or that still wait stay in SQLite instead of crossing to the caller.
-function scanCycleRows(db: DbPort, after: number, through: number, count: number, filter?: CycleScanFilter) {
+function scanCycleRows(db: DbPort, after: number, through: number, count: number, filter?: CycleScanFilter,
+  nodeIds?: readonly string[]) {
+  const scope = nodeIds ? [JSON.stringify(nodeIds)] : [];
   return filter
     ? db.query<CycleStoredRow>(`${STORED_ROWS} WHERE e.active=1 AND e.order_key > ? AND e.order_key <= ?
       AND (r.kind IS NULL OR r.kind IN (SELECT value FROM json_each(?))) AND (r.ready_at_ms IS NULL OR r.ready_at_ms <= ?)
-      ORDER BY e.order_key LIMIT ?`, [after, through, JSON.stringify(filter.kinds), filter.nowMs, count])
-    : db.query<CycleStoredRow>(`SELECT * FROM daily_flow_entries WHERE active=1
-      AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]);
+      ${nodeIds ? NODE_SCOPE : ''} ORDER BY e.order_key LIMIT ?`,
+    [after, through, JSON.stringify(filter.kinds), filter.nowMs, ...scope, count])
+    : db.query<CycleStoredRow>(`SELECT * FROM daily_flow_entries e WHERE e.active=1
+      AND e.order_key > ? AND e.order_key <= ? ${nodeIds ? NODE_SCOPE : ''} ORDER BY e.order_key LIMIT ?`,
+    [after, through, ...scope, count]);
 }
 
-function readTimedCycleRows(db: DbPort, filter: CycleScanFilter, count: number) {
+function readTimedCycleRows(db: DbPort, filter: CycleScanFilter, count: number, nodeIds?: readonly string[]) {
+  // Unscoped, CROSS JOIN makes the due times drive the read; SQLite otherwise walks every active entry.
+  const join = nodeIds ? 'JOIN' : 'CROSS JOIN';
   return db.query<CycleStoredRow>(`SELECT e.*, r.kind, r.ready_at_ms FROM daily_flow_entry_readiness r
-    JOIN daily_flow_entries e ON e.node_id = r.node_id WHERE r.ready_at_ms IS NOT NULL AND r.ready_at_ms <= ?
-    AND r.kind IN (SELECT value FROM json_each(?)) AND e.active=1 ORDER BY r.ready_at_ms, e.order_key LIMIT ?`,
-  [filter.nowMs, JSON.stringify(filter.kinds), count]);
+    ${join} daily_flow_entries e ON e.node_id = r.node_id WHERE r.ready_at_ms IS NOT NULL AND r.ready_at_ms <= ?
+    AND r.kind IN (SELECT value FROM json_each(?)) AND e.active=1 ${nodeIds ? NODE_SCOPE : ''}
+    ORDER BY r.ready_at_ms, e.order_key LIMIT ?`,
+  [filter.nowMs, JSON.stringify(filter.kinds), ...(nodeIds ? [JSON.stringify(nodeIds)] : []), count]);
 }

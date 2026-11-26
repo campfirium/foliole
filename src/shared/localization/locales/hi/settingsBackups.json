@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "बैकअप खोज की सेटिंग",
   "settings.backups.search.sectionTitle": "बैकअप की सामग्री में खोजें",
+  "settings.backups.search.terms": "बैकअप में खोज|बैकअप खोजें",
   "settings.backups.search.description": "मौजूदा बैकअप एक-एक करके खोलें और उनकी सामग्री में खोजें।",
   "settings.backups.search.action": "बैकअप की सामग्री में खोजें",
   "settings.backups.search.title": "बैकअप की सामग्री में खोजें",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "ट्रैश में",
   "settings.backups.merge.sectionAria": "लाइब्रेरी मिलाने का अनुभाग",
   "settings.backups.merge.title": "दूसरी लाइब्रेरी मिलाएं",
+  "settings.backups.merge.searchTerms": "लाइब्रेरी मिलाएँ|लाइब्रेरियाँ जोड़ें|बैकअप मिलाएँ|बैकअप इंपोर्ट करें",
   "settings.backups.merge.description": "किसी दूसरी लाइब्रेरी की सामग्री और दोहराव इतिहास इस लाइब्रेरी में जोड़ें। डेस्कटॉप लाइब्रेरी या बैकअप, या फ़ोन बैकअप (.zip या बैकअप फ़ोल्डर के अंदर की Foliole.sqlite) चुनें। नई सामग्री अपने अलग फ़ोल्डर में जाती है। मौजूदा सामग्री वैसी ही रहती है।",
   "settings.backups.merge.choose": "लाइब्रेरी चुनें",
   "settings.backups.merge.noSource": "कोई लाइब्रेरी नहीं चुनी गई।",

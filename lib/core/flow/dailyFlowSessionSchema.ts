@@ -19,6 +19,7 @@ const diveCursor = diveFlowScopeSchema.extend({
   waitingIds: z.array(z.string()).optional(),
   resumeAfter: queuePosition.optional(),
   revisitIds: z.array(z.string()).optional(),
+  timedResume: z.object({ key: z.number().int().positive(), after: queuePosition }).optional(),
   stop: z.enum(['empty', 'finished', 'waiting']).nullable()
 }).transform(value => definedProps(value));
 

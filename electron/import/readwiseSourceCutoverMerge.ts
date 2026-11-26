@@ -15,7 +15,7 @@ export function shouldRebuildPristineReadwiseEpub(input: {
     `WITH RECURSIVE tree(id, depth) AS (
        SELECT id, 0 FROM nodes WHERE id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id, tree.depth + 1 FROM nodes child JOIN tree ON child.parent_id = tree.id
-       WHERE child.deleted_at IS NULL
+       WHERE +child.deleted_at IS NULL
      ) SELECT
        SUM(CASE WHEN n.anchor_link IS NULL AND n.created_at <> n.updated_at THEN 1 ELSE 0 END) edited,
        SUM(CASE WHEN tree.depth > 0 AND n.anchor_link IS NULL THEN 1 ELSE 0 END) structural_children

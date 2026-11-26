@@ -48,7 +48,7 @@ it('orders commands, settings, and tips and shows both parts of a tip immediatel
 
   fireEvent.change(input, { target: { value: 'review' } });
   const command = within(palette).getByRole('button', { name: /^open review statistics$/i });
-  const settings = within(palette).getByRole('button', { name: 'Review' });
+  const settings = within(palette).getByRole('button', { name: 'Scheduling' });
   const tipsHeading = within(palette).getByText('Action tips');
   expect(command.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(settings.compareDocumentPosition(tipsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "दिनों की संख्या तय करें",
   "settings.attachments.daysUnit": "दिन",
   "settings.attachments.title": "इस डिवाइस के अटैचमेंट",
+  "settings.attachments.searchTerms": "अटैचमेंट की सफ़ाई|अटैचमेंट साफ़ करें|संलग्न फ़ाइलें साफ़ करें|इस्तेमाल न होने वाले अटैचमेंट",
   "settings.attachments.error": "अटैचमेंट पर कार्रवाई पूरी नहीं हुई। फिर कोशिश करें।",
   "settings.attachments.used": "इस्तेमाल हुई जगह",
   "settings.attachments.refresh": "फिर से लोड करें",

@@ -1,0 +1,32 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_SCHEDULING_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.scheduling.title': '调度',
+  'settings.scheduling.description': '调整阅读与复习的调度规则，让材料尽可能在合适的时间出现。',
+  'settings.scheduling.optimization': '根据复习记录自动训练 FSRS 参数，持续优化复习安排。以文件夹（含子文件夹）为单位，每积累一定数量的复习记录自动训练一次。',
+  'settings.scheduling.retention': '检测项到期时能够成功回忆的目标概率。目标保持率越高，复习间隔通常越短，所需的复习次数也越多。建议设为 80%–95%。',
+  'settings.scheduling.retentionExample': '目标保持率为 {targets} 时，模拟的首年复习次数分别为 {reviews} 次。模拟使用同一个新检测项和默认 FSRS 参数，每次到期就复习且均评为 Good，次数不含首次学习。',
+  'settings.scheduling.intervalTitle': '最大复习间隔（天）',
+  'settings.scheduling.interval': '限制 FSRS 新安排的复习间隔。当计算出的间隔超过此值时，按最大间隔安排。较短的最大间隔会增加长期复习量。',
+  'settings.scheduling.intervalExample': '例如，上限设为 365 天时，即使检测项已经很熟悉，下一次复习也会安排在一年内。调整上限后，已有的到期日仍按原安排执行。',
+  'settings.scheduling.firstReviewTitle': '新检测项首次复习（天）',
+  'settings.scheduling.firstReview': '根据每日复习量，将新生成的检测项均衡安排在从次日起的指定天数内。设为 1 天时，全部安排在次日。',
+  'settings.scheduling.readingInitialTitle': '阅读初始间隔（天）',
+  'settings.scheduling.readingGrowthTitle': '阅读间隔增长系数',
+  'settings.scheduling.readingGrowth': '控制阅读间隔的增长幅度，优先级越高，增长系数越小（P0 同 P1）。',
+  'settings.scheduling.readingGrowthExample': '例如，P1（P9）主题的原阅读间隔为 10 天，下次阅读间隔为 {p1} 天（{p9} 天）。',
+  'settings.scheduling.laterTitle': 'Later 自定义间隔（天）',
+  'settings.scheduling.mix': '设置 Flow 中阅读与复习的交替频率。',
+  'settings.scheduling.mixExample': '混合 Flow 中，两类到期材料都充足时，每复习 {reviews}，安排阅读 {topics}。',
+  'settings.scheduling.mixItems.one': '{count} 个检测项',
+  'settings.scheduling.mixItems.other': '{count} 个检测项',
+  'settings.scheduling.mixTopics.one': '{count} 个主题',
+  'settings.scheduling.mixTopics.other': '{count} 个主题',
+  'settings.scheduling.priorityTitle': '优先级比率',
+  'settings.scheduling.prioritySearch': '设置 P1 队列相对 P9 队列被选中的概率。',
+  'settings.scheduling.priorityOrder': '到期的阅读主题和复习检测项各自按优先级排队。每一类都先取完 P0 的到期材料，再按权重从仍有到期材料的 P1–P9 队列中选择。',
+  'settings.scheduling.priorityRatio': 'P1 和 P9 都有到期材料时，优先级比率表示 P1 被选中的概率是 P9 的几倍。比率为 1 时，各非空常规队列等概率。',
+  'settings.scheduling.priorityTable': '各优先级队列下一次被选中的概率',
+  'settings.scheduling.priorityExample': '比率为 {ratio} 时，若 P0 已取完且 P1–P9 均有到期材料，下一次选中各队列的概率如下。',
+  'settings.scheduling.priorityEmpty': '空队列不参与选择。如果只有 P1 和 P9 有到期材料，它们被选中的概率分别为 {p1} 和 {p9}。'
+};

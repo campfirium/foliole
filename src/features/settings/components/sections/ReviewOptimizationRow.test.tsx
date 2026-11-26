@@ -18,7 +18,7 @@ vi.mock('../../../../store/workspaceStore', () => ({
   })
 }));
 
-const description = 'Automatically train FSRS parameters from review history to continually optimize review scheduling. Train per folder (including subfolders), triggered whenever enough review records accumulate.';
+const description = 'FSRS parameters are trained automatically for each Folder and its subfolders once enough reviews have accumulated.';
 const show = () => render(<LocalizationProvider initialLanguagePreference="en"><ReviewOptimizationRow /></LocalizationProvider>);
 
 beforeEach(() => {

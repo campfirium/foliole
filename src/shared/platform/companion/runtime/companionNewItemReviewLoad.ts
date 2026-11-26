@@ -12,7 +12,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const REVIEW_LOAD_SQL = `WITH RECURSIVE due_items(id, due) AS (
   SELECT n.id, nr.due FROM node_review nr
   INNER JOIN nodes n ON n.id = nr.node_id
-  WHERE nr.due >= ? AND nr.due < ? AND n.kind = 'item' AND n.deleted_at IS NULL
+  WHERE nr.due >= ? AND nr.due < ? AND n.kind = 'item' AND +n.deleted_at IS NULL
 ), ancestry(item_id, node_id) AS (
   SELECT id, id FROM due_items
   UNION

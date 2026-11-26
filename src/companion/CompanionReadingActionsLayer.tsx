@@ -51,7 +51,7 @@ export function ReadingActionsLayer(props: {
       title={readableArticle.title}
       {...definedProps({
         editHistory: props.editHistory,
-        priorityNodeId: props.readableArticle.isTrashed ? undefined : props.readableArticle.nodeId,
+        reviewNodeId: props.readableArticle.isTrashed ? undefined : props.readableArticle.nodeId,
         onOpenOutline: props.onOpenOutline,
         onOpenBacklinks: backlinks.openSheet,
         onOpenClozeRemoval: props.onOpenClozeRemoval,

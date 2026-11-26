@@ -73,7 +73,8 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
         entry.beforeSession?.cycle && entry.afterSession?.cycle ? { source: (mode === 'undo' ? entry.afterSession : entry.beforeSession),
           after: entry.afterSession, mode } : undefined);
       await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, retainLegacyHistoryEncoding(saved, entry), mode),
-        replayReceipt: { id: requestId, mode, ...(restored.daily ? { daily: restored.daily } : {}) } });
+        // A Dive cursor is not the saved global Flow, so a repeated request reads it from the entry instead.
+        replayReceipt: { id: requestId, mode, ...(restored.daily && !restored.dive ? { daily: restored.daily } : {}) } });
       return { session: restored, entry };
     }
     if (entry.type !== 'review.grade' && entry.type !== 'topic.dismiss') throw new Error('flow_history_unavailable');

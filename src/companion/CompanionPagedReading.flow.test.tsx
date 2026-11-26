@@ -54,3 +54,23 @@ it('keeps paging available when no Flow undo or redo action is available', () =>
   tap(next, 370);
   expect(surface.scrollTop).toBeGreaterThan(0);
 });
+
+it('spends a side tap on dismissing a selection before it turns the page', () => {
+  function Wrapper({ children }: { children: ReactNode }) {
+    return <CompanionReadingPageNavigation>{children}<CompanionFlowEdgeGestures enabled canUndo canRedo onApply={vi.fn()} /></CompanionReadingPageNavigation>;
+  }
+  const { surface, body } = mountPagedArticle({ wrapper: Wrapper });
+  chooseMode('Paged scroll');
+  const next = screen.getByTestId('flow-edge-redo');
+  next.setPointerCapture = vi.fn();
+  const range = document.createRange();
+  range.selectNodeContents(body);
+  Object.defineProperty(range, 'getClientRects', { value: () => [] });
+  window.getSelection()!.removeAllRanges();
+  window.getSelection()!.addRange(range);
+  tap(next, 370);
+  expect(window.getSelection()!.isCollapsed).toBe(true);
+  expect(surface.scrollTop).toBe(0);
+  tap(next, 370);
+  expect(surface.scrollTop).toBeGreaterThan(0);
+});

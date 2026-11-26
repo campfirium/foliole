@@ -38,6 +38,7 @@ export function resolveRuntimeLibraryPath(paths: RuntimeLibraryPaths, location: 
 export function formatLibraryPathLocationError(fallbackMessage: string, error: unknown, t: LibraryPathTranslate) {
   if (error instanceof Error && error.message.trim().length > 0) {
     console.warn('[library-paths] settings update failed:', error);
+    if (error.message.includes('mirror_folder_not_empty')) return t('settings.library.paths.error.mirrorNotEmpty');
   }
   return t('settings.library.paths.error.retryWritable', { message: fallbackMessage });
 }

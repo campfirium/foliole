@@ -9,12 +9,15 @@ import { withTransaction } from './transaction.js';
 
 export { flushNodeSyncVersionWithDriver };
 
+/** Reads only the dirty-or-unversioned partial index and the local repair queue, never every node. */
 export function hasPendingNodeSyncVersions(driver: DatabaseDriver) {
-  return Boolean(driver.queryOne(`SELECT 1 FROM nodes n WHERE n.id != ? AND (
-    n.sync_dirty = 1 OR n.current_version_id IS NULL OR (
-      EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = n.current_version_id)
-      AND NOT EXISTS (SELECT 1 FROM sync_object_state s
-        WHERE s.object_type = 'node' AND s.object_id = n.id))) LIMIT 1`, [VIRTUAL_ROOT_NODE_ID]));
+  return Boolean(driver.queryOne(`SELECT 1 FROM nodes WHERE id != ? AND (sync_dirty = 1 OR current_version_id IS NULL)
+    ORDER BY updated_at LIMIT 1`, [VIRTUAL_ROOT_NODE_ID]) ?? driver.queryOne(`SELECT 1 FROM node_sync_state_backfill queued
+    INNER JOIN nodes n ON n.id = queued.node_id
+    WHERE n.id != ? AND n.current_version_id IS NOT NULL
+      AND EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = n.current_version_id)
+      AND NOT EXISTS (SELECT 1 FROM sync_object_state s WHERE s.object_type = 'node' AND s.object_id = n.id)
+    LIMIT 1`, [VIRTUAL_ROOT_NODE_ID]));
 }
 
 export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString()): string | null {
@@ -59,10 +62,6 @@ export function flushDirtyNodeSyncVersionBatch(limit: number, now = new Date().t
     flushNodeSyncVersionsWithDriver(driver, nodeIds, now);
     return nodeIds;
   });
-}
-
-export function backfillMissingDesktopNodeSyncState() {
-  return backfillMissingNodeSyncState(openDatabaseConnection().driver);
 }
 
 export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString()) {

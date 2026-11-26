@@ -44,7 +44,7 @@ test('keeps Outline on screen with the bundled companion styles', async ({ page 
   await expectReadingSheet(page);
   await page.getByRole('button', { name: 'Toggle content for Source heading (2)' }).click();
   await expect(page.getByRole('button', { name: 'Source heading', exact: true })).toBeInViewport();
-  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
 
@@ -104,7 +104,7 @@ test('retains the reading toolbar behind a dismissible Outline sheet and restore
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('document', { name: 'Topic body' })).toBeVisible();
   await page.getByRole('button', { name: 'Outline', exact: true }).click();
-  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const opener = page.getByRole('button', { name: 'Outline', exact: true });
   await expect(opener).toBeFocused();

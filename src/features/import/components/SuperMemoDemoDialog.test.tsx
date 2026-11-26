@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
@@ -22,6 +22,33 @@ afterEach(() => {
 });
 
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole('button', { name }));
+
+it('previews source information mappings and keeps them when returning to Import settings', () => {
+  renderWithLocalization(<SuperMemoDemoDialog onClose={vi.fn()} />);
+  click('Import settings');
+  expect(screen.getByRole('heading', { name: 'Grade mapping' })).toBeVisible();
+  const authorField = () => screen.getByRole('textbox', { name: 'Author import field name' });
+  const preview = () => within(screen.getByRole('article', { name: 'Preview' }));
+  const expandMeta = () => fireEvent.click(preview().getByRole('button', { name: 'meta' }));
+  const finish = screen.getByRole('button', { name: 'Finish demo' });
+
+  expect(authorField()).toHaveValue('Author');
+  expandMeta();
+  expect(preview().getByText(/Author: Campfirium/)).toBeVisible();
+  fireEvent.change(authorField(), { target: { value: 'Title' } });
+  expect(screen.getByRole('alert')).toBeVisible();
+  expect(finish).toBeDisabled();
+  fireEvent.change(authorField(), { target: { value: 'byline' } });
+  expect(preview().getByText(/byline: Campfirium/)).toBeVisible();
+  expect(finish).toBeEnabled();
+
+  click('Finish demo');
+  expect(screen.getByText(/Nothing was imported/)).toBeVisible();
+  click('Back');
+  expect(authorField()).toHaveValue('byline');
+  expandMeta();
+  expect(preview().getByText(/byline: Campfirium/)).toBeVisible();
+});
 
 it('walks from the sample source to the demo ending, keeping choices and calling no runtime', () => {
   const invoke = vi.fn(() => Promise.resolve(null));

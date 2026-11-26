@@ -3,11 +3,14 @@ import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewS
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations.js';
 import type { DailyFlowCommitArgs } from '../../lib/core/flow/dailyFlowContract.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
+import { predictDailyFlowDocument } from '../../lib/core/flow/dailyFlowPrediction.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
+import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession.js';
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler.js';
 import { createReviewSchedulerParameters, DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion } from '../../lib/core/review/settings.js';
 
 import { createDive } from './diveRepository.js';
+import { withRequestSyncReadonlySnapshot } from './requestSyncReadonlySnapshot.js';
 import { createPeer, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 
 export const now = '2026-10-28T08:00:00.000Z';
@@ -23,7 +26,7 @@ export function addNode(peer: Peer, id: string, priority: number, kind: 'topic' 
 
 }
 
-export async function setup(kind: 'topic' | 'item') {
+export async function setup(kind: 'topic' | 'item', onLearningRead?: (ids: readonly string[]) => void) {
   await startLibraries();
   const peer = createPeer('desktop');
   for (const [index, id] of ['a', 'b', 'c', 'd'].entries()) {
@@ -32,7 +35,10 @@ export async function setup(kind: 'topic' | 'item') {
   }
   const settings = { scope: peer.file, newDayStartsAtHour: 4, pushQueue: schedulerSettings.pushQueue };
   const persistence: DailyFlowPersistence = {
-    learningSnapshot: (db, ids) => loadDailyFlowLearningSnapshot(db, 'desktop', ids),
+    learningSnapshot: (db, ids) => {
+      onLearningRead?.(ids ?? []);
+      return loadDailyFlowLearningSnapshot(db, 'desktop', ids);
+    },
     snapshot: async () => { throw new Error('Expected scoped learning facts'); },
     grade: async (_db, value, opId) => applyReviewGrade(peer.driver, { ...value, opId },
       { hostName: peer.name, createId: () => `${opId}-log` }),
@@ -47,7 +53,10 @@ export async function setup(kind: 'topic' | 'item') {
     facts: () => persistence.learningSnapshot(peer.port),
     open: (overrides: Partial<Parameters<typeof openDailyFlow>[1]> = {}) =>
       openDailyFlow(peer.port, { now, mode, ...overrides }, settings, persistence),
-    commit: (command: DailyFlowCommitArgs) => commitDailyFlow(peer.port, command, settings, persistence) };
+    commit: (command: DailyFlowCommitArgs) => commitDailyFlow(peer.port, command, settings, persistence),
+    predict: (session: DailyFlowSession, at = now) => withRequestSyncReadonlySnapshot(peer.file, db =>
+      predictDailyFlowDocument(db, { token: session.daily!, currentNodeId: session.currentNodeId!, now: at,
+        ...(session.dive ? { dive: session.dive } : {}) }, settings, persistence)) };
 }
 
 export const reading = { intervalDurationMs: 86400000, intervalGrowthFactor: 2, lastHandledAt: now,

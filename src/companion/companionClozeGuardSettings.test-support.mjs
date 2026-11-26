@@ -59,10 +59,10 @@ async function verifySavedCreation(page, file) {
 async function verifyRestoredSettings(page, output) {
   await page.getByRole('button', { name: 'Long cloze mistake guard Convert', exact: true }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Only check when selected answer is longer than 0', exact: true }).count(), 1);
-  assert.equal(await page.getByRole('button', { name: 'Then guard when generated card front is longer than 600', exact: true }).count(), 1);
+  assert.equal(await page.getByRole('button', { name: 'Then check if the front of the new item is longer than 600', exact: true }).count(), 1);
   await page.screenshot({ path: path.join(output, 'settings-375.png') });
   await page.setViewportSize({ width: 320, height: 812 });
-  await page.getByRole('button', { name: /^Then guard when/ }).click();
+  await page.getByRole('button', { name: /^Then check if/ }).click();
   const dialog = page.getByRole('dialog');
   assert.equal(await dialog.getByRole('spinbutton').inputValue(), '600');
   const box = await dialog.boundingBox();
@@ -102,7 +102,7 @@ async function main() {
     await page.getByRole('button', { name: 'Read', exact: true }).waitFor();
     await openSettings(page);
     await edit(page, 'Only check when selected answer is longer than', '0');
-    await edit(page, 'Then guard when generated card front is longer than', '600');
+    await edit(page, 'Then check if the front of the new item is longer than', '600');
     await edit(page, 'Long cloze mistake guard', 'convert');
     await context.close();
     context = await launch();

@@ -1,10 +1,10 @@
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
-import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
+import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
 import type { NativePartitionBodyMutationArgs } from '../../lib/platform/nativeNodeMutationContract.js';
-import { buildPersistedNodeMutationPatch } from '../import/importNodeMutationPatch.js';
+import { buildScopedNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -21,6 +21,7 @@ export function partitionEditedBody(input: NativePartitionBodyMutationArgs) {
     const body = loadNodeBodyResolution(driver, input.sourceNodeId);
     if (!body) throw new NodeBodyUnavailableError([input.sourceNodeId]);
     if (body.content !== input.expectedContent) throw new Error('body_partition_source_changed');
+    const previousPartIds = readBodyPartIds(driver, input.sourceNodeId);
     const previous = readPartitionedNodeBody(driver, input.sourceNodeId);
     const content = input.content + previous.slice(body.content.length);
     expandPartitionedNodeForImport(driver, input.sourceNodeId, now);
@@ -31,7 +32,10 @@ export function partitionEditedBody(input: NativePartitionBodyMutationArgs) {
       [input.sourceNodeId, input.sourceNodeId]).map((row) => row.id);
     const updatedNodeIds = [...new Set([input.sourceNodeId, ...affected, ...change.affectedChildIds])];
     for (const id of updatedNodeIds) flushNodeSyncVersionWithDriver(driver, id, hostName, now);
-    const patch = buildPersistedNodeMutationPatch(driver, updatedNodeIds);
-    return { ...patch, activeNodeId: ids[0] ?? input.sourceNodeId, createdNodeIds: ids, updatedNodeIds };
+    const patch = buildScopedNodeMutationPatch(driver, updatedNodeIds, [input.sourceNodeId, ...updatedNodeIds]);
+    const retained = new Set(ids);
+    const deletedNodeIds = previousPartIds.filter(id => !retained.has(id));
+    return { ...patch, activeNodeId: ids[0] ?? input.sourceNodeId, createdNodeIds: ids, updatedNodeIds,
+      ...(deletedNodeIds.length ? { deletedNodeIds } : {}) };
   });
 }

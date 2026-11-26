@@ -37,6 +37,7 @@ import d24 from './fr/desktopSourceUpdate.json';
 import d25 from './fr/desktopWordPress.json';
 import d26 from './fr/feedback.json';
 import reminders from './fr/reminders.json';
+import scheduling from './fr/scheduling.json';
 import d27 from './fr/settings.json';
 import d28 from './fr/settingsAbout.json';
 import settingsAide from './fr/settingsAide.json';
@@ -112,6 +113,7 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...desktopReadwisePolicy,
   ...desktopSourceConnections,
   ...reminders,
+  ...scheduling,
   ...settingsAide,
   ...settingsAttachments,
   ...settingsBackups,

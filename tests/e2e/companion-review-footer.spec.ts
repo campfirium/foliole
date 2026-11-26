@@ -14,6 +14,12 @@ async function openFooter(page: Page, query = '') {
   await expect(page.locator('footer')).toBeVisible();
 }
 
+// Touch cells nearly abut; the spacing users see is between the bordered faces.
+async function faceGaps(page: Page) {
+  return page.locator('footer .companion-review-button-face').evaluateAll(elements => elements.slice(1).map((el, index) =>
+    el.getBoundingClientRect().left - elements[index]!.getBoundingClientRect().right));
+}
+
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 375, 430]) {
     test(`${theme} ${width}px keeps the reading surface continuous and grades easy to tap`, async ({ page }) => {
@@ -22,21 +28,18 @@ for (const theme of ['light', 'dark'] as const) {
       await openFooter(page);
       const footer = page.locator('footer');
       await expect(footer).toHaveCSS('background-color', await page.locator('main').evaluate(el => getComputedStyle(el).backgroundColor));
-      const referenceFont = await page.getByRole('button', { name: 'Desktop reference' }).evaluate(el => getComputedStyle(el).fontSize);
       const buttons = footer.getByRole('button');
       const widths: number[] = [];
       for (const button of await buttons.all()) {
         await expect(button).toBeInViewport({ ratio: 1 });
-        await expect(button).toHaveCSS('font-size', referenceFont);
+        await expect(button).toHaveCSS('font-size', '13px');
         const box = (await button.boundingBox())!;
         expect(box.height).toBeGreaterThanOrEqual(44);
         expect(box.width).toBeGreaterThanOrEqual(44);
         widths.push(box.width);
       }
       expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(1);
-      const gaps = await buttons.evaluateAll(elements => elements.slice(1).map((el, index) =>
-        el.getBoundingClientRect().left - elements[index]!.getBoundingClientRect().right));
-      expect(Math.min(...gaps)).toBeGreaterThanOrEqual(8);
+      expect(Math.min(...await faceGaps(page))).toBeGreaterThanOrEqual(8);
       const first = (await buttons.nth(0).boundingBox())!;
       const last = (await buttons.nth(3).boundingBox())!;
       expect(first.x).toBeLessThanOrEqual(24);
@@ -60,9 +63,8 @@ test('reveal, reading actions, and disabled grades retain their behavior', async
   await expect(page.getByRole('button', { name: 'Good', exact: true })).toBeVisible();
   for (const soon of [false, true]) {
     await page.goto(`/__review-footer?kind=reading&soon=${soon}`);
-    const gaps = await page.locator('footer').getByRole('button').evaluateAll(elements =>
-      elements.slice(1).map(el => parseFloat(getComputedStyle(el).marginLeft)));
-    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(8);
+    await expect(page.locator('footer .companion-review-button-face').first()).toBeVisible();
+    expect(Math.min(...await faceGaps(page))).toBeGreaterThanOrEqual(8);
     for (const label of [...(soon ? ['Soon'] : []), 'Later', 'Read', 'Dismiss']) {
       const button = page.locator('footer').getByRole('button', { name: label, exact: true });
       await expect(button).toBeInViewport({ ratio: 1 });

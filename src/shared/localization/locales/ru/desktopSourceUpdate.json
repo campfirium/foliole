@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "Доступно до {date}",
   "desktop.sourceUpdate.alternative.hint": "До 3 альтернативных текстов, хранятся 30 дней",
+  "desktop.sourceUpdate.previewLoadFailed": "Не удалось загрузить предварительный просмотр сравнения.",
   "desktop.sourceUpdate.dialogTitle": "Сравнительный вид",
   "desktop.sourceUpdate.close": "Закрыть панель обновления исходного кода",
   "desktop.sourceUpdate.accept": "Принять обновление",

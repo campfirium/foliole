@@ -65,7 +65,7 @@ function retireObsoleteBookNodes(
     `WITH RECURSIVE descendants(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
-       WHERE child.deleted_at IS NULL
+       WHERE +child.deleted_at IS NULL
      ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%'`, [rootNodeId]
   );
   const obsoleteIds = generated.map((row) => row.id).filter((nodeId) => !retainedNodeIds.has(nodeId));

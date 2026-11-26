@@ -1,13 +1,22 @@
 // @vitest-environment node
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { createCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { upsertNodeSnapshot, type UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutations.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { prepareDesktopNodeIndex } from './desktopNodeIndex.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { buildNodeSyncSnapshotFromDriver, loadNodeSyncVersionSourceFromDriver } from './nodeSyncVersionSourceFromDriver.js';
 import { restoreFixture, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
@@ -65,18 +74,39 @@ it('preserves nested rules and the original priority through framed sync, reopen
 });
 
 it.each(['desktop', 'companion'])('keeps existing priority unforced during the %s upgrade', async host => {
-  const fixture = await restoreFixture();
-  const peer = fixture.peer('source');
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'foliole-priority-upgrade-'));
+  const file = path.join(directory, 'library.db');
+  let sqlite = new Database(file);
+  const port = createBetterSqliteDbPort(sqlite);
   try {
-    const row = material('folder', 'folder', null, 3);
-    upsertNodeSnapshot(prepareWriter(peer), row);
-    peer.sqlite.exec(`ALTER TABLE nodes DROP COLUMN enforce_priority; PRAGMA user_version = ${host === 'desktop' ? 201 : 125}`);
-    if (host === 'desktop') initializeDatabaseSchema(peer.sqlite);
-    else await peer.db.transaction(db => migrateCompanionDatabase(db, 125, 126));
-    peer.reopen();
-    expect(peer.sqlite.prepare("SELECT priority, enforce_priority FROM nodes WHERE id = 'folder'").get())
+    if (host === 'desktop') {
+      installHistoricalDesktopSchema(sqlite, 201);
+    } else {
+      await port.transaction(tx => createCompanionDatabase(tx, 125));
+      // The versioned creator still uses current base table definitions. Restore the
+      // affected v125 tables before inserting data, while no v129 triggers exist.
+      sqlite.exec(`ALTER TABLE nodes DROP COLUMN enforce_priority;
+        ALTER TABLE node_reading DROP COLUMN history_order_at;`);
+      sqlite.prepare("INSERT INTO companion_meta (key, value, updated_at) VALUES ('device_id', 'mobile', ?)")
+        .run(firstAt);
+    }
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(host === 'desktop' ? 201 : 125);
+    expect(sqlite.prepare("SELECT name FROM pragma_table_info('nodes') WHERE name = 'enforce_priority'").get())
+      .toBeUndefined();
+    sqlite.prepare(`INSERT INTO nodes (id, kind, title, priority, created_at, updated_at)
+      VALUES ('folder', 'folder', 'Folder', 3, ?, ?)`).run(firstAt, firstAt);
+    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    else await bootstrapCompanionDatabase(port, { allowCreate: false, expectedHostName: 'mobile', now: firstAt });
+    sqlite.close();
+    sqlite = new Database(file);
+    expect(sqlite.pragma('user_version', { simple: true }))
+      .toBe(host === 'desktop' ? DATABASE_SCHEMA_VERSION : COMPANION_DATABASE_VERSION);
+    expect(sqlite.prepare("SELECT priority, enforce_priority FROM nodes WHERE id = 'folder'").get())
       .toEqual({ priority: 3, enforce_priority: null });
-  } finally { await fixture.close(); }
+  } finally {
+    sqlite.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 it('leaves a leftover enforcement flag out of the sync snapshot once a node is no longer a folder', async () => {

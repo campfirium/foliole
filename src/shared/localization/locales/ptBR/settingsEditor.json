@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "Clique duas vezes no texto para editar",
   "settings.search.editorImmersiveDoubleClick.description": "Na leitura imersiva, clique duas vezes no corpo do documento para começar a editar. Desative esta opção para manter o clique duplo para selecionar texto; a tecla Enter ainda inicia a edição.",
+  "settings.search.cleanFormatting.path": "Abra um tópico editável e escolha “Limpar formatação...” no menu no canto superior direito do editor ou no menu de contexto do corpo do texto.",
+  "settings.search.cleanFormatting.terms": "limpeza de formatação|remover formatação|apagar formatação|limpar formatação",
+  "settings.search.imageCloze.path": "Em um tópico, arraste para desenhar um retângulo sobre a área que deseja ocultar em uma imagem salva localmente. Em seguida, clique na marca de seleção.",
+  "settings.search.imageCloze.terms": "oclusão de imagem|lacuna da imagem|mascarar imagem",
+  "settings.search.formulaCloze.path": "Em um tópico, arraste sobre a parte da fórmula renderizada que deseja ocultar.",
+  "settings.search.formulaCloze.terms": "lacuna matemática|lacuna em equação|oclusão de fórmula|mascarar fórmula",
   "settings.editor.readingMode.section": "Modo de leitura",
   "settings.editor.readingMode.aria": "Seção de configurações do modo de leitura"
 }

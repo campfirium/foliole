@@ -181,12 +181,10 @@ export async function runTextFileImport(
     }
   }
   return runWithDatabaseConnectionOwner(() => {
-    const patchedResult = withTextImportNodeMutationPatch(lastResult);
-    if (patchedResult?.import_id) {
-      const nodeMutationPatch = buildImportNodeMutationPatch(results);
-      notifyManagedInboxUpdated(patchedResult.import_id, nodeMutationPatch);
-      return nodeMutationPatch ? { ...patchedResult, node_mutation_patch: nodeMutationPatch } : patchedResult;
-    }
-    return patchedResult;
+    if (!lastResult?.import_id) return withTextImportNodeMutationPatch(lastResult);
+    const nodeMutationPatch = buildImportNodeMutationPatch(results);
+    notifyManagedInboxUpdated(lastResult.import_id, nodeMutationPatch);
+    // The last file's own patch is built only when the batch patch is unavailable.
+    return nodeMutationPatch ? { ...lastResult, node_mutation_patch: nodeMutationPatch } : withTextImportNodeMutationPatch(lastResult);
   });
 }

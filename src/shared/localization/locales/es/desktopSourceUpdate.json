@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "Disponible hasta el {date}",
   "desktop.sourceUpdate.alternative.hint": "Hasta 3 textos alternativos, conservados durante 30 días",
+  "desktop.sourceUpdate.previewLoadFailed": "No se pudo cargar la vista previa de la comparación.",
   "desktop.sourceUpdate.dialogTitle": "Vista comparativa",
   "desktop.sourceUpdate.close": "Cerrar panel de actualización de código fuente",
   "desktop.sourceUpdate.accept": "Aceptar actualización",

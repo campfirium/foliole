@@ -113,37 +113,51 @@ export const NODE_BACKLINK_SOURCES_SQL = `SELECT id, title, content
        AND instr(content, '[[') > 0
      ORDER BY rowid`;
 
-function isCaseless(character: string) {
-  return character.toLocaleLowerCase() === character && character.toLocaleUpperCase() === character;
+// Letters another character lowercases into under some locale: K (U+212A) -> k, and
+// I-dot (U+0130, plus Lithuanian accented I) -> i. A link can spell these differently.
+const UNSTABLE_ASCII_LETTERS = new Set(['i', 'k']);
+const COMBINING_MARK = /\p{M}/u;
+
+/** Whether every link that matches the title must contain this character, in ASCII-folded form. */
+function isStableNeedleCharacter(character: string) {
+  const code = character.codePointAt(0) ?? 0;
+  if (code < 0x80) return !UNSTABLE_ASCII_LETTERS.has(character.toLowerCase());
+  // Non-ASCII characters only qualify when caseless; combining marks also appear in
+  // the lowercase of other characters (U+0130 -> i + U+0307), so they never qualify.
+  return character.toLocaleLowerCase() === character && character.toLocaleUpperCase() === character
+    && !COMBINING_MARK.test(character);
+}
+
+function foldAsciiCase(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 }
 
 /**
- * Longest run of caseless characters (CJK, digits, punctuation, inner spaces) in the
- * normalized target title. Every matching link must contain this run verbatim, so it is
- * a lossless SQL prefilter; titles made only of cased letters return null.
+ * Runs of the trimmed target title that every matching link must contain once ASCII case is
+ * folded (SQLite lower() folds ASCII; non-ASCII runs are caseless and kept verbatim). Each run
+ * is a lossless SQL prefilter; titles without stable characters return no needles.
  */
-export function nodeBacklinkCaselessNeedle(title: string) {
-  const normalized = title.trim();
-  let best = '';
+export function nodeBacklinkTitleNeedles(title: string) {
+  const needles = new Set<string>();
   let current = '';
-  for (const character of normalized) {
-    if (isCaseless(character)) {
+  for (const character of `${title.trim()}\n`) {
+    if (character !== '\n' && isStableNeedleCharacter(character)) {
       current += character;
-      if (current.length > best.length) best = current;
-    } else {
-      current = '';
+      continue;
     }
+    if (current.trim()) needles.add(foldAsciiCase(current));
+    current = '';
   }
-  return best.trim() ? best : null;
+  return [...needles];
 }
 
-/** Sources SQL with an optional lossless title prefilter; params: [targetNodeId, needle?]. */
+/** Sources SQL with lossless title prefilters; params: [targetNodeId, ...needles]. */
 export function nodeBacklinkSourcesQuery(targetNodeId: string, targetTitle: string) {
-  const needle = nodeBacklinkCaselessNeedle(targetTitle);
-  if (!needle) return { sql: NODE_BACKLINK_SOURCES_SQL, params: [targetNodeId] };
+  const needles = nodeBacklinkTitleNeedles(targetTitle);
+  const filters = needles.map(() => 'AND instr(lower(content), ?) > 0\n     ').join('');
   return {
-    sql: NODE_BACKLINK_SOURCES_SQL.replace('ORDER BY rowid', 'AND instr(content, ?) > 0\n     ORDER BY rowid'),
-    params: [targetNodeId, needle]
+    sql: NODE_BACKLINK_SOURCES_SQL.replace('ORDER BY rowid', `${filters}ORDER BY rowid`),
+    params: [targetNodeId, ...needles]
   };
 }
 
@@ -176,8 +190,6 @@ export function loadNodeBacklinks(driver: DatabaseDriver, targetNodeId: string):
   if (!normalizeTitle(targetNode?.title ?? '')) {
     return [];
   }
-  return collectNodeBacklinkRecords(
-    targetNode,
-    driver.queryAll<BacklinkSourceRow>(NODE_BACKLINK_SOURCES_SQL, [targetNodeId])
-  );
+  const query = nodeBacklinkSourcesQuery(targetNodeId, targetNode?.title ?? '');
+  return collectNodeBacklinkRecords(targetNode, driver.queryAll<BacklinkSourceRow>(query.sql, query.params));
 }

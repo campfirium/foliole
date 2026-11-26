@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 import { ZH_HANS_REMINDER_TRANSLATIONS } from './zhHansReminders';
+import { ZH_HANS_SCHEDULING_TRANSLATIONS } from './zhHansScheduling';
 import { ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './zhHansSettingsBackups';
 import { ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS } from './zhHansSettingsPublishing';
 import { ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS } from './zhHansSettingsStorage';
@@ -8,6 +9,7 @@ import { ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './zhHansSettingsSyncGr
 
 export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_REMINDER_TRANSLATIONS,
+  ...ZH_HANS_SCHEDULING_TRANSLATIONS,
   'settings.title': '设置',
   'settings.description': '调整 Foliole 的外观和使用方式。',
   'settings.search.placeholder': '搜索设置',
@@ -172,7 +174,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.search.reviewInitialInterval.title': '阅读初始间隔',
   'settings.search.reviewInitialInterval.description': '主题完成一次阅读后，再次进入阅读队列前的等待时间。',
   'settings.review.later.title': 'Later 自定义间隔',
-  'settings.review.later.description': '指定材料再次出现间隔（默认 0 为短间隔）',
+  'settings.review.later.description': '选择 Later 后，主题隔多少天再次出现。设为 0 时，使用系统算出的较短间隔。',
   'settings.review.later.default': '默认',
   'settings.search.reviewIntervalGrowth.title': '阅读间隔增长',
   'settings.search.reviewIntervalGrowth.description': '每次通过后阅读间隔增长的速度。',

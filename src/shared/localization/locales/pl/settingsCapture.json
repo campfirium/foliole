@@ -7,6 +7,8 @@
   "settings.capture.accessibility.unauthorized": "Nieprzyznane",
   "settings.capture.accessibility.openSettings": "Otwórz Ustawienia systemowe",
   "settings.capture.accessibility.openFailed": "Nie można otworzyć Ustawień systemowych.",
+  "settings.capture.searchDescription": "Wyświetl opcje globalnego przechwytywania.",
+  "settings.capture.searchTerms": "wycinek globalny|globalne przechwytywanie|przechwyć zaznaczenie|przechwyć schowek",
   "settings.capture.permission.title": "Dostęp do wyboru",
   "settings.capture.permission.granted": "Foliole może skopiować bieżący wybór po uruchomieniu przechwytywania globalnego.",
   "settings.capture.permission.denied": "Zezwól na Foliole w Ustawieniach systemu → Prywatność i bezpieczeństwo → Dostępność.",

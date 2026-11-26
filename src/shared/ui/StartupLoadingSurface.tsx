@@ -6,8 +6,9 @@ import { AppSpinner } from './EmptyState';
 
 type LoadingPhase = 'quiet' | 'spinner' | 'details';
 
-function phaseAt(startedAt: number): LoadingPhase {
-  const elapsed = Date.now() - startedAt;
+// A timer can fire just before the wall clock reaches its delay, so the fired delay is the lower bound.
+function phaseAt(startedAt: number, reachedMs = 0): LoadingPhase {
+  const elapsed = Math.max(Date.now() - startedAt, reachedMs);
   return elapsed >= 2000 ? 'details' : elapsed >= 300 ? 'spinner' : 'quiet';
 }
 
@@ -16,7 +17,7 @@ function useLoadingPhase(startedAt: number) {
   useEffect(() => {
     setPhase(phaseAt(startedAt));
     const timers = [300, 2000].map((delay) => globalThis.setTimeout(
-      () => setPhase(phaseAt(startedAt)), Math.max(0, startedAt + delay - Date.now())
+      () => setPhase(phaseAt(startedAt, delay)), Math.max(0, startedAt + delay - Date.now())
     ));
     return () => timers.forEach((timer) => globalThis.clearTimeout(timer));
   }, [startedAt]);

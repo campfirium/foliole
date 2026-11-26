@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react';
 import { useId } from 'react';
 
+import { isValidSuperMemoReferenceMap } from '../../../../lib/core/import/superMemoReferenceFields';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, SettingsButton, settingsDialogSurfaceClassName
@@ -58,6 +59,7 @@ export function SuperMemoDemoDialog({ onClose }: { onClose(): void }) {
             </div>
             {step === 'complete' ? <DemoCompleteActions onBack={() => setStep('grades')} onClose={onClose} /> :
               <SuperMemoDraftActions step={step} busy={false} canProceed hasPreview navigate={setStep}
+                referenceMapValid={isValidSuperMemoReferenceMap(model.referenceMap)}
                 convert={() => setStep('complete')} labels={{
                   note: t('settings.demoPreview.superMemo.footnote'),
                   convert: t('settings.demoPreview.superMemo.finish')

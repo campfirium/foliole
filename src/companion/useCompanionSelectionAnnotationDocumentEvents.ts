@@ -15,6 +15,8 @@ import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 
 const ARTICLE_DOCUMENT = '[data-companion-article-document="true"]';
 const READING_SURFACE = '[data-companion-reading-surface="true"]';
+// Flow's side regions sit above the reading surface and turn its pages.
+const READING_EDGE = '[data-companion-reading-edge]';
 
 type TapStart = {
   pointerId: number;
@@ -27,7 +29,12 @@ type SelectionAtTap = TapStart & ({
   kind: 'managed';
   editor: EditorAdapter | null;
 } | {
+  /** Only the annotation menu is open, e.g. right after a highlight or cloze was created. */
+  kind: 'menu';
+} | {
   kind: 'native';
+  /** The reader can see what this tap dismisses, so the tap does nothing else. */
+  claims: boolean;
   anchorNode: Node | null;
   anchorOffset: number;
   editorFrom: number;
@@ -40,10 +47,24 @@ function readTapStart(event: PointerEvent): TapStart {
   return { pointerId: event.pointerId, startedAt: Date.now(), x: event.clientX, y: event.clientY };
 }
 
+const isReadingEdge = (target: EventTarget | null) => target instanceof Element && target.closest(READING_EDGE) !== null;
+
+/** Whether the reading screen itself would act on a tap here: toolbars, page turn or a Flow side region. */
+function isReadingTapArea(target: EventTarget | null): target is Element {
+  return isReadingEdge(target) || (target instanceof Element && target.closest(READING_SURFACE) !== null &&
+    !toolbarDom.isCompanionArticleInteractiveTarget(target));
+}
+
+/** The reading surface, its click and the Flow side regions all leave a claimed tap alone. */
+function claimTap(event: Event) {
+  event.preventDefault();
+  suppressCompanionPressClick((event.target as Element).ownerDocument);
+}
+
 function readSelectionAtTap(editor: EditorAdapter | null, event: PointerEvent): SelectionAtTap | null {
   const target = event.target;
-  if (!(target instanceof Element) || !target.closest(`${ARTICLE_DOCUMENT}, ${READING_SURFACE}`) ||
-    toolbarDom.isCompanionArticleInteractiveTarget(target) || isExistingHighlightTarget(target)) return null;
+  if (!(target instanceof Element) || !target.closest(`${ARTICLE_DOCUMENT}, ${READING_SURFACE}, ${READING_EDGE}`) ||
+    (!isReadingEdge(target) && toolbarDom.isCompanionArticleInteractiveTarget(target)) || isExistingHighlightTarget(target)) return null;
   const native = window.getSelection();
   const selection = editor?.getSelection();
   const hasEditorSelection = selection && selection.from !== selection.to;
@@ -63,6 +84,7 @@ function readSelectionAtTap(editor: EditorAdapter | null, event: PointerEvent): 
   if (overSelection) return null;
   return {
     ...readTapStart(event), kind: 'native',
+    claims: hasArticleNativeSelection,
     anchorNode: native?.anchorNode ?? null,
     anchorOffset: native?.anchorOffset ?? 0,
     editorFrom: selection?.from ?? 0,
@@ -89,16 +111,18 @@ function clearFinishedTap(
     Date.now() - started.startedAt >= 500 || !('clientX' in event) ||
     Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8) return false;
   const editor = args.editorRef.current;
+  if (started.kind === 'menu') {
+    if (!isReadingTapArea(event.target) || isExistingHighlightTarget(event.target)) return false;
+    // The press already closed the menu.
+    claimTap(event);
+    return true;
+  }
   if (started.kind === 'managed') {
     if (!args.hasAdjustableSelection?.() || started.editor !== editor ||
       toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return false;
-  } else if (toolbarDom.isCompanionArticleInteractiveTarget(event.target) ||
+  } else if ((!isReadingEdge(event.target) && toolbarDom.isCompanionArticleInteractiveTarget(event.target)) ||
     isExistingHighlightTarget(event.target) || !selectionStayedAtTap(started, editor)) return false;
-  if (started.kind === 'managed' && event.target instanceof Element &&
-    event.target.closest(READING_SURFACE) && !toolbarDom.isCompanionArticleInteractiveTarget(event.target)) {
-    event.preventDefault();
-    suppressCompanionPressClick(event.target.ownerDocument);
-  }
+  if (started.kind === 'managed' ? isReadingTapArea(event.target) : started.claims) claimTap(event);
   args.clearSelectionAndCloseToolbar();
   return true;
 }
@@ -108,6 +132,7 @@ interface SelectionAnnotationDocumentEventsArgs {
   hasAdjustableSelection?: () => boolean;
   clearSelectionAndCloseToolbar: () => void;
   closeSelectionToolbar: () => void;
+  hasOpenSelectionToolbar?: () => boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
@@ -118,9 +143,16 @@ function readPointerDownTap(args: SelectionAnnotationDocumentEventsArgs, pointer
   if (pointer.isPrimary === false || pointer.button !== 0 ||
     toolbarDom.isCompanionSelectionToolbarTarget(pointer.target)) return null;
   const editor = args.editorRef.current;
-  return args.hasAdjustableSelection?.()
-    ? { ...readTapStart(pointer), kind: 'managed', editor }
-    : readSelectionAtTap(editor, pointer);
+  if (args.hasAdjustableSelection?.()) return { ...readTapStart(pointer), kind: 'managed', editor };
+  const selectionTap = readSelectionAtTap(editor, pointer);
+  if (selectionTap?.kind === 'native' && args.hasOpenSelectionToolbar?.()) selectionTap.claims = true;
+  if (selectionTap || !args.hasOpenSelectionToolbar?.() || hasAnyTextSelection(editor)) return selectionTap;
+  return { ...readTapStart(pointer), kind: 'menu' };
+}
+
+function hasAnyTextSelection(editor: EditorAdapter | null) {
+  const selection = editor?.getSelection();
+  return window.getSelection()?.isCollapsed === false || Boolean(selection && selection.from !== selection.to);
 }
 
 function recordSelectionSnapshot(editor: EditorAdapter | null) {

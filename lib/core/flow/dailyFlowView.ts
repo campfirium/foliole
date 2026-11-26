@@ -2,7 +2,7 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveNextDayStart } from '../review/reviewDayBoundary.js';
 import type { DbPort } from '../sync/dbPort.js';
 
-import { deriveCycleReadiness } from './cycleFlowReadiness.js';
+import { cycleScanFilter, deriveCycleReadiness } from './cycleFlowReadiness.js';
 import { cycleReadyNodeIds } from './cycleFlowSelection.js';
 import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
 import { dailyFlowSettingsForInstant, isFlowWindowUnexpired } from './dailyFlowDayWindow.js';
@@ -82,8 +82,13 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
   const rows = members.length ? (await store.readRows(members)).filter(row => row.active &&
     row.order_key <= dive.limit && (row.order_key > dive.position || revisit.has(row.node_id)))
     .sort((a, b) => a.order_key - b.order_key) : [];
-  const snapshot = await store.scopedLearningSnapshot(rows.map(row => row.node_id));
-  const nodeOrder = rows.filter(row => matchesDivePhase(dive, row, snapshot)).map(row => row.node_id);
+  // Due members come first and are not held to the segment's range.
+  const due = members.length && store.timedRows
+    ? (await store.timedRows(cycleScanFilter('recommended', args.now), members.length, members)).map(row => row.node_id) : [];
+  const scopedIds = [...new Set([...due, ...rows.map(row => row.node_id)])];
+  const snapshot = await store.scopedLearningSnapshot(scopedIds);
+  const nodeOrder = [...new Set([...due,
+    ...rows.filter(row => matchesDivePhase(dive, row, snapshot)).map(row => row.node_id)])];
   const scoped = { ...snapshot, nodeOrder };
   const mode = dive.mode;
   const ready = new Set(cycleReadyNodeIds(scoped, mode, args.now, settings));
@@ -92,6 +97,6 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
   return { status: 'ready', scope: settings.scope ?? '', dayKey: stored.day_key, revision: stored.revision,
     now: args.now, mode, currentNodeId: current, nodeIds, complete: args.includeEntries,
     modeAvailability: { recommended: available('recommended'), 'review-first': available('review-first'),
-      'reading-only': available('reading-only') }, nextChangeAt: nextFlowChangeAt(args.now, settings, snapshot, rows.map(row => row.node_id)),
+      'reading-only': available('reading-only') }, nextChangeAt: nextFlowChangeAt(args.now, settings, snapshot, scopedIds),
     canContinueReading: false };
 }

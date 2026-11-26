@@ -3,6 +3,7 @@ import { cycleWindow } from '../../../../../lib/core/flow/cycleFlowSelection';
 import { dailyFlowHistoryCommand } from '../../../../../lib/core/flow/dailyFlowHistory';
 import { retainDailyFlowRetryAsync } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow, openDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
+import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
 import { createSqliteDailyFlowStore } from '../../../../../lib/core/flow/dailyFlowSqliteStore';
 import { readDailyFlow, saveCycleFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { FlowTiming } from '../../../../../lib/core/flow/flowTiming';
@@ -46,6 +47,7 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
 
 export async function saveReplayedCompanionDailySession(db: DbPort, session: ReviewSessionState, now: string,
   replay?: { source: ReviewSessionState; after: ReviewSessionState; mode: 'undo' | 'redo' }) {
+  if (session.dive) return reopenCompanionDive(db, session, now);
   const state = await readDailyFlow(db);
   if (!state) return session;
   if (!replay || session.flowFormat !== 'cycle-v1' || !session.cycle) {
@@ -59,6 +61,14 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
   const window = cycleWindow(restored);
   return saveCycleFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
     now, revision: state.revision + 1, session: window });
+}
+
+/** Continues the Dive from this session: its current card stays while ready, otherwise the Dive moves on. */
+export async function reopenCompanionDive(db: DbPort, session: ReviewSessionState, now: string) {
+  const dive = session.dive!;
+  const settings = companionDailyFlowSettings();
+  return (await openDailyFlow(db, { now, mode: dive.mode, dive: { id: dive.id, topicIds: dive.topicIds }, seed: session as DailyFlowSession },
+    settings, ownedCompanionDailyFlowPersistence(settings))).session;
 }
 
 export async function replayCompanionDailyHistory(db: DbPort, args: { session: ReviewSessionState;

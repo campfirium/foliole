@@ -16,6 +16,8 @@ import {
 
 const temporaryDirectories = [];
 const ASSET_NAME = 'codex-aarch64-apple-darwin.tar.gz';
+const HOST_NAME = 'codex-code-mode-host-aarch64-apple-darwin.tar.gz';
+const HOST_SHA = 'd'.repeat(64);
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })));
@@ -41,7 +43,7 @@ it('updates an outdated lock only when the write mode is explicitly used', async
 
   expect(result.status).toBe('updated');
   expect(JSON.parse(await readFile(lockPath, 'utf8'))).toEqual({
-    assetName: ASSET_NAME, sha256: 'b'.repeat(64), version: '0.144.4'
+    ...pinned('0.144.4', 'b'.repeat(64))
   });
 });
 
@@ -55,7 +57,7 @@ it('rejects and repairs a same-version lock with a non-official digest', async (
 
   expect(result.status).toBe('updated');
   expect(JSON.parse(await readFile(lockPath, 'utf8'))).toEqual({
-    assetName: ASSET_NAME, sha256: 'b'.repeat(64), version: '0.144.4'
+    ...pinned('0.144.4', 'b'.repeat(64))
   });
 });
 
@@ -65,7 +67,7 @@ it.each([
 ])('rejects prerelease and draft GitHub releases', async (release) => {
   const lockPath = await createLock('0.144.4', 'a'.repeat(64));
   const fetchImpl = vi.fn(async () => ({
-    json: async () => ({ ...release, assets: [officialAsset('a'.repeat(64))] }), ok: true
+    json: async () => ({ ...release, assets: officialAssets('a'.repeat(64)) }), ok: true
   }));
 
   await expect(checkCodexHelperRelease({ fetchImpl, lockPath })).rejects.toThrow('official stable');
@@ -75,12 +77,46 @@ it('rejects a stable asset without an official SHA-256 digest', async () => {
   const lockPath = await createLock('0.144.4', 'a'.repeat(64));
   const fetchImpl = vi.fn(async () => ({
     json: async () => ({
-      assets: [{ digest: null, name: ASSET_NAME }], draft: false, prerelease: false, tag_name: 'rust-v0.144.4'
+      assets: [{ digest: null, name: ASSET_NAME }, officialAssets('a'.repeat(64))[1]], draft: false, prerelease: false, tag_name: 'rust-v0.144.4'
     }),
     ok: true
   }));
 
   await expect(checkCodexHelperRelease({ fetchImpl, lockPath })).rejects.toThrow('trusted SHA-256');
+});
+
+it('treats a changed code-mode host digest as a mismatch and updates both assets together', async () => {
+  const lockPath = await createLock('0.144.4', 'a'.repeat(64));
+  const fetchImpl = vi.fn(async () => ({
+    json: async () => ({
+      assets: officialAssets('a'.repeat(64), 'e'.repeat(64)), draft: false, prerelease: false, tag_name: 'rust-v0.144.4'
+    }),
+    ok: true
+  }));
+
+  await expect(checkCodexHelperRelease({ fetchImpl, lockPath })).resolves.toMatchObject({ status: 'mismatch' });
+  await updateCodexHelperRelease({ fetchImpl, lockPath });
+
+  expect(JSON.parse(await readFile(lockPath, 'utf8')).codeModeHost).toEqual({
+    assetName: HOST_NAME, sha256: 'e'.repeat(64)
+  });
+});
+
+it('keeps the lock unchanged when a newer release lacks the code-mode host', async () => {
+  const lockPath = await createLock('0.144.5', 'a'.repeat(64));
+  const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
+  const prepareRelease = vi.fn();
+  const fetchImpl = vi.fn(async () => ({
+    json: async () => ({
+      assets: [officialAssets('b'.repeat(64))[0]], draft: false, prerelease: false, tag_name: 'rust-v0.144.6'
+    }),
+    ok: true
+  }));
+
+  await expect(rollForwardCodexHelperRelease(snapshot, { fetchImpl, lockPath, prepareRelease }))
+    .rejects.toThrow('code-mode host arm64 asset has no trusted SHA-256');
+  expect(prepareRelease).not.toHaveBeenCalled();
+  expect(JSON.parse(await readFile(lockPath, 'utf8'))).toEqual(snapshot);
 });
 
 it('prepares a newer release before atomically advancing the lock for the next build', async () => {
@@ -93,9 +129,7 @@ it('prepares a newer release before atomically advancing the lock for the next b
   });
 
   expect(result.status).toBe('updated');
-  expect(prepareRelease).toHaveBeenCalledWith({
-    assetName: ASSET_NAME, sha256: 'b'.repeat(64), version: '0.144.6'
-  });
+  expect(prepareRelease).toHaveBeenCalledWith(pinned('0.144.6', 'b'.repeat(64)));
   expect(JSON.parse(await readFile(lockPath, 'utf8'))).toMatchObject({ version: '0.144.6' });
 });
 
@@ -103,9 +137,7 @@ it('preserves a concurrent lock advance instead of overwriting it', async () => 
   const lockPath = await createLock('0.144.5', 'a'.repeat(64));
   const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
   const prepareRelease = vi.fn(async () => {
-    await writeFile(lockPath, `${JSON.stringify({
-      assetName: ASSET_NAME, sha256: 'c'.repeat(64), version: '0.144.7'
-    })}\n`);
+    await writeFile(lockPath, `${JSON.stringify(pinned('0.144.7', 'c'.repeat(64)))}\n`);
   });
 
   const result = await rollForwardCodexHelperRelease(snapshot, {
@@ -147,7 +179,7 @@ it('keeps successful packaging successful when next-build preparation fails', as
 
 it('never attempts roll-forward after package work fails', async () => {
   const prepareRelease = vi.fn();
-  const snapshot = { assetName: ASSET_NAME, sha256: 'a'.repeat(64), version: '0.144.5' };
+  const snapshot = pinned('0.144.5', 'a'.repeat(64));
 
   await expect(runWithCodexHelperRollForward(snapshot, async () => {
     throw new Error('verification failed');
@@ -157,7 +189,7 @@ it('never attempts roll-forward after package work fails', async () => {
 });
 
 it('reports API failures without throwing from the best-effort boundary', async () => {
-  const snapshot = { assetName: ASSET_NAME, sha256: 'a'.repeat(64), version: '0.144.5' };
+  const snapshot = pinned('0.144.5', 'a'.repeat(64));
   const logger = { log: vi.fn(), warn: vi.fn() };
   const result = await bestEffortRollForwardCodexHelperRelease(snapshot, {
     fetchImpl: vi.fn(async () => ({ ok: false, status: 503 })), logger, prepareRelease: vi.fn()
@@ -171,19 +203,26 @@ async function createLock(version, sha256) {
   const directory = await mkdtemp(path.join(tmpdir(), 'foliole-codex-helper-release-'));
   temporaryDirectories.push(directory);
   const lockPath = path.join(directory, 'release.json');
-  await writeFile(lockPath, `${JSON.stringify({ assetName: ASSET_NAME, sha256, version })}\n`);
+  await writeFile(lockPath, `${JSON.stringify(pinned(version, sha256))}\n`);
   return lockPath;
 }
 
 function releaseFetch(version, sha256) {
   return vi.fn(async () => ({
     json: async () => ({
-      assets: [officialAsset(sha256)], draft: false, prerelease: false, tag_name: `rust-v${version}`
+      assets: officialAssets(sha256), draft: false, prerelease: false, tag_name: `rust-v${version}`
     }),
     ok: true
   }));
 }
 
-function officialAsset(sha256) {
-  return { digest: `sha256:${sha256}`, name: ASSET_NAME };
+function officialAssets(sha256, hostSha256 = HOST_SHA) {
+  return [
+    { digest: `sha256:${sha256}`, name: ASSET_NAME },
+    { digest: `sha256:${hostSha256}`, name: HOST_NAME }
+  ];
+}
+
+function pinned(version, sha256) {
+  return { assetName: ASSET_NAME, codeModeHost: { assetName: HOST_NAME, sha256: HOST_SHA }, sha256, version };
 }

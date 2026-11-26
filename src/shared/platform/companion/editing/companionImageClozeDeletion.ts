@@ -34,7 +34,7 @@ export function deleteCompanionImageCloze(request: Request) {
     const affected = new Map<string, WorkspaceNodeSnapshot>();
     for (const target of targets) {
       const subtree = await tx.query<{ id: string }>(`WITH RECURSIVE subtree(id) AS (
-        SELECT id FROM nodes WHERE id = ? UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE n.deleted_at IS NULL
+        SELECT id FROM nodes WHERE id = ? UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE +n.deleted_at IS NULL
       ) SELECT id FROM subtree`, [target]);
       for (const row of subtree) {
         const node = await loadCompanionWorkspaceNodeFromDb(tx, row.id);

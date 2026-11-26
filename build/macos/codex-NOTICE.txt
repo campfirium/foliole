@@ -1,7 +1,8 @@
-Foliole includes the Codex CLI app-server helper from OpenAI.
+Foliole includes the Codex CLI app-server helper and its code-mode host
+(codex-code-mode-host) from OpenAI.
 
 Project: https://github.com/openai/codex
-Bundled version: 0.144.3
+Bundled version: as reported by `Contents/MacOS/codex --version`
 License: Apache License 2.0 (see codex/LICENSE in the application resources)
 
 Codex and OpenAI are trademarks of their respective owners. Foliole is not

@@ -72,7 +72,8 @@ it('updates one article without enumerating the mirror tree or touching unrelate
   save('article', 'Before');
   const enumerate = vi.spyOn(fs, 'readdir');
   await syncIncrementalMirrorOutput(['article']);
-  expect(enumerate).not.toHaveBeenCalled();
+  // Only the retired same-name directory is walked, to spare its hidden entries.
+  expect(enumerate.mock.calls.map(([directory]) => directory)).toEqual([mirror('Before')]);
   expect(await readLeftovers()).toEqual(before);
   expect((await fs.stat(mirror('Unrelated.md'))).mtimeMs).toBe(unrelated.mtimeMs);
   await expect(fs.access(mirror('Before'))).rejects.toMatchObject({ code: 'ENOENT' });
@@ -103,4 +104,20 @@ it('does not retire the selected legacy copy when its new output fails', async (
   vi.spyOn(fs, 'writeFile').mockRejectedValue(new Error('injected output failure'));
   await expect(syncIncrementalMirrorOutput(['article'])).rejects.toThrow('injected output failure');
   await expect(fs.readFile(mirror('Before/manual.txt'), 'utf8')).resolves.toContain('Legacy content');
+});
+
+it('keeps hidden files and folders through rebuild and legacy-directory cleanup', async () => {
+  const kept = ['.obsidian/app.json', 'Notes/.hidden', 'Before/.keep', '.foliole-mirror-notes'];
+  for (const relative of [...kept, 'Notes/manual.txt', 'Before/manual.txt']) {
+    await fs.mkdir(path.dirname(mirror(relative)), { recursive: true });
+    await fs.writeFile(mirror(relative), relative);
+  }
+  save('article', 'Before');
+  await syncIncrementalMirrorOutput(['article']);
+  await expect(fs.readFile(mirror('Before/.keep'), 'utf8')).resolves.toBe('Before/.keep');
+  await expect(fs.access(mirror('Before/manual.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
+
+  await rebuildAllMirrorOutput();
+  for (const relative of kept) await expect(fs.readFile(mirror(relative), 'utf8')).resolves.toBe(relative);
+  await expect(fs.access(mirror('Notes/manual.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
 });

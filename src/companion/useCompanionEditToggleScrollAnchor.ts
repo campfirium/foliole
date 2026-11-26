@@ -9,9 +9,9 @@ export const EDIT_TOGGLE_ANCHOR_RATIO = 0.25;
 const ANCHOR_LIFETIME_MS = 3000;
 const MAX_ALIGN_FRAMES = 20;
 const STABLE_FRAMES = 3;
-const READER_INPUT_EVENTS = ['pointerdown', 'touchstart', 'wheel'] as const;
+const READER_INPUT_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'beforeinput'] as const;
 
-type Anchor = { editing: boolean; expiresAt: number; offset: number; position: number };
+type Anchor = { atStart: boolean; editing: boolean; expiresAt: number; position: number; screenTop: number };
 
 function readAnchor(editor: EditorAdapter, surface: HTMLElement, editing: boolean): Anchor | null {
   const rect = surface.getBoundingClientRect();
@@ -20,7 +20,54 @@ function readAnchor(editor: EditorAdapter, surface: HTMLElement, editing: boolea
   if (position === null) return null;
   const top = editor.getPositionViewportTop?.(position);
   if (top === null || top === undefined) return null;
-  return { editing, expiresAt: performance.now() + ANCHOR_LIFETIME_MS, offset: top - rect.top, position };
+  // Reading and editing start their surfaces at different heights, so the line is held on the screen.
+  return { atStart: surface.scrollTop <= 0, editing, expiresAt: performance.now() + ANCHOR_LIFETIME_MS,
+    position, screenTop: top };
+}
+
+/**
+ * Scrolls until the anchored line sits still, and again after every window resize: the keyboard may open
+ * or close long after the editor is ready. A reader who was at the start of the document stays there, so
+ * the first line never slides under the editing toolbar.
+ */
+function followAnchor(editor: EditorAdapter, surface: HTMLElement, target: Anchor, isCurrent: () => boolean) {
+  let frame: number | null = null;
+  let frames = 0;
+  let stable = 0;
+  const align = () => {
+    frame = null;
+    const top = editor.getPositionViewportTop?.(target.position);
+    if (top === null || top === undefined || !isCurrent()) return;
+    const delta = target.atStart ? -surface.scrollTop : top - target.screenTop;
+    if (Math.abs(delta) > 1) {
+      surface.scrollTop += delta;
+      stable = 0;
+    } else {
+      stable += 1;
+    }
+    frames += 1;
+    if (stable < STABLE_FRAMES && frames < MAX_ALIGN_FRAMES) frame = requestAnimationFrame(align);
+  };
+  const cancel = () => {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+  };
+  const realign = () => {
+    if (!isCurrent() || target.expiresAt < performance.now()) return;
+    cancel();
+    frames = 0;
+    stable = 0;
+    frame = requestAnimationFrame(align);
+  };
+  const viewport = window.visualViewport;
+  window.addEventListener('resize', realign);
+  viewport?.addEventListener('resize', realign);
+  align();
+  return () => {
+    cancel();
+    window.removeEventListener('resize', realign);
+    viewport?.removeEventListener('resize', realign);
+  };
 }
 
 /**
@@ -29,11 +76,11 @@ function readAnchor(editor: EditorAdapter, surface: HTMLElement, editing: boolea
  */
 export function useCompanionEditToggleScrollAnchor(surfaceRef: RefObject<HTMLElement | null>) {
   const anchor = useRef<Anchor | null>(null);
-  const frame = useRef<number | null>(null);
+  const following = useRef<(() => void) | null>(null);
 
   const stop = useCallback(() => {
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = null;
+    following.current?.();
+    following.current = null;
   }, []);
 
   useEffect(() => {
@@ -61,24 +108,8 @@ export function useCompanionEditToggleScrollAnchor(surfaceRef: RefObject<HTMLEle
       editor.setSelection({ from: target.position, to: target.position });
       editor.focus();
     }
-    let frames = 0;
-    let stable = 0;
-    const align = () => {
-      frame.current = null;
-      const surface = surfaceRef.current;
-      const top = editor.getPositionViewportTop?.(target.position);
-      if (!surface || top === null || top === undefined || anchor.current !== target) return;
-      const delta = top - (surface.getBoundingClientRect().top + target.offset);
-      if (Math.abs(delta) > 1) {
-        surface.scrollTop += delta;
-        stable = 0;
-      } else {
-        stable += 1;
-      }
-      frames += 1;
-      if (stable < STABLE_FRAMES && frames < MAX_ALIGN_FRAMES) frame.current = requestAnimationFrame(align);
-    };
-    align();
+    const surface = surfaceRef.current;
+    if (surface) following.current = followAnchor(editor, surface, target, () => anchor.current === target);
   }, [stop, surfaceRef]);
 
   return { capture, onEditorReady };

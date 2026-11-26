@@ -14,7 +14,10 @@ export type DiveFlowCursor = DiveFlowScope & {
   position: number;
   limit: number;
   hasWork: boolean;
+  /** Retired; still accepted so sessions saved by earlier builds load. */
   waitingIds?: string[];
+  /** The ordered position to continue from after a due entry was taken out of order. */
+  timedResume?: { key: number; after: number };
   resumeAfter?: number;
   revisitIds?: string[];
   stop: 'empty' | 'finished' | 'waiting' | null;

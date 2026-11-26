@@ -1,6 +1,6 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 
-import { cycleScanFilter, deriveCycleReadiness } from './cycleFlowReadiness.js';
+import { cycleScanFilter, deriveCycleReadiness, isCycleReadinessStale } from './cycleFlowReadiness.js';
 import { toCycleRow, type CycleMeta, type CycleRow, type CycleStoredRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
@@ -14,8 +14,14 @@ type ScanStore = Pick<DailyFlowStore, 'scanRows' | 'timedRows' | 'scopedLearning
 type ScanArgs = { mode: ReviewSessionMode; now: string; settings: DailyFlowSettings;
   matches?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => boolean; excluded?: string | readonly string[];
   onSkipped?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => void;
-  /** Visit rows that are hidden or still waiting too, for callers that must observe them as skipped. */
-  allRows?: boolean;
+  /** Only these entries are chosen, from either queue; the rest of the daily list is never loaded. */
+  nodeIds?: readonly string[];
+  /** Narrows the ordered queue further; due entries still follow `nodeIds`. */
+  orderedIds?: readonly string[];
+  /** Stop at the end of this lap instead of starting the list again. */
+  bounded?: boolean;
+  /** Entries that go after due ones and before the ordered cursor. */
+  beforeOrdered?: () => Promise<CycleRow | null>;
   /** Receives rows whose stored readiness was missing or stale so a writer can save the derived values. */
   onReadiness?: (rows: CycleStoredRow[]) => void };
 
@@ -34,7 +40,7 @@ async function judge(db: ScanStore, rows: CycleStoredRow[], args: ScanArgs) {
     const derived = deriveCycleReadiness(snapshot, ids, args.now, args.settings);
     const stale = rows.filter(row => {
       const value = derived.get(row.node_id);
-      return value && (row.kind !== value.kind || (row.ready_at_ms ?? null) !== value.ready_at_ms);
+      return value && isCycleReadinessStale(row, value, ready.has(row.node_id), args.now);
     });
     if (stale.length) args.onReadiness(stale.map(row => ({ ...toCycleRow(row), ...derived.get(row.node_id)! })));
   }
@@ -46,9 +52,10 @@ function isExcluded(args: ScanArgs, id: string) {
 }
 
 export async function scanCycleRange(db: ScanStore, meta: CycleMeta, args: ScanArgs) {
-  const filter = args.allRows ? undefined : cycleScanFilter(args.mode, args.now);
+  const filter = cycleScanFilter(args.mode, args.now);
   while (meta.scanAfter < meta.lapLimit) {
-    const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE, filter);
+    const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE, filter,
+      args.orderedIds ?? args.nodeIds);
     const { snapshot, ready } = await judge(db, rows, args);
     for (const stored of rows) {
       const row = toCycleRow(stored);
@@ -73,7 +80,8 @@ function crossClear(meta: CycleMeta, position: number, now: string) {
 // A waiting row whose time has come is taken before the ordered queue; the ready cursor resumes afterwards.
 async function takeTimedRow(db: ScanStore, meta: CycleMeta, args: ScanArgs) {
   if (!db.timedRows) return null;
-  const rows = (await db.timedRows(cycleScanFilter(args.mode, args.now), TIMED_BATCH_SIZE))
+  const rows = (await db.timedRows(cycleScanFilter(args.mode, args.now), TIMED_BATCH_SIZE,
+    args.nodeIds))
     .filter(row => !isExcluded(args, row.node_id));
   const { snapshot, ready } = await judge(db, rows, args);
   const found = rows.find(row => ready.has(row.node_id) && (!args.matches || args.matches(toCycleRow(row), snapshot!)));
@@ -92,8 +100,8 @@ export async function selectCycleSuccessor(db: ScanStore, meta: CycleMeta, args:
     crossClear(meta, meta.timedResume!.after + 1, args.now);
     return timed;
   }
-  const currentLap = await scanCycleRange(db, meta, args);
-  if (currentLap) return currentLap;
+  const currentLap = await args.beforeOrdered?.() ?? await scanCycleRange(db, meta, args);
+  if (currentLap || args.bounded) return currentLap;
   meta.scanAfter = 0;
   meta.lapLimit = meta.tailKey;
   return scanCycleRange(db, meta, args);

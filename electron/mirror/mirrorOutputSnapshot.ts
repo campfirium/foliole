@@ -10,10 +10,20 @@ import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirr
 import { loadMirrorArticleRecords, type MirrorArticleRecord, resolveAbsoluteMirrorPath } from './mirrorOutputStorage.js';
 import { collectProtectedMirrorPaths, mirrorPathKey } from './mirrorPathIdentity.js';
 import { collectChangedMirrorOwners, collectChangedMirrorPaths } from './mirrorPathOwnership.js';
+import { captureScopedMirrorPlans } from './mirrorScopedCapture.js';
+import { loadMirrorNodesByIds } from './mirrorScopedTree.js';
 
 export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: string[]) {
   const paths = loadLibraryPathSettingsSync();
   const scoped = includeBody && Boolean(articleIds?.length);
+  const scopedCapture = scoped ? captureScopedMirrorPlans(articleIds!, paths.mirror) : null;
+  if (scopedCapture) {
+    const selected = new Set(articleIds);
+    const selectedPlans = scopedCapture.plans.filter((plan) => selected.has(plan.articleId));
+    // Recaptures for this pass stay within the same scope; anything it cannot decide falls back to the library.
+    return { ...scopedCapture, paths, scopeArticleIds: [...selected],
+      snapshot: loadMirrorPlanBodies(scopedCapture.snapshot, selectedPlans) as WorkspaceSnapshot | null };
+  }
   let snapshot = loadWorkspaceSnapshot({ includeBody: includeBody && !scoped, includeReveal: includeBody && !scoped });
   const plans = snapshot ? collectArticleMirrorPlans(snapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
@@ -23,7 +33,24 @@ export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: str
     const selectedPlans = plans.filter((plan) => selected.has(plan.articleId) || changedOwners.has(plan.articleId));
     snapshot = loadMirrorPlanBodies(snapshot, selectedPlans);
   }
-  return { paths, plans, recordsByArticleId, snapshot };
+  return { paths, plans, recordsByArticleId, scopeArticleIds: undefined as string[] | undefined, snapshot };
+}
+
+/** A metadata-only recapture covering what `captured` covered. */
+function recaptureMirrorOutput(captured: { scopeArticleIds?: string[] | undefined }): CapturedMirrorOutput {
+  const paths = loadLibraryPathSettingsSync();
+  const scopeArticleIds = captured.scopeArticleIds;
+  const scoped = scopeArticleIds ? captureScopedMirrorPlans(scopeArticleIds, paths.mirror) : null;
+  if (scoped) return { ...scoped, paths, scopeArticleIds, snapshot: scoped.snapshot as WorkspaceSnapshot | null };
+  const full = captureMirrorOutputSnapshot(false);
+  if (!scopeArticleIds || !full.snapshot) return full;
+  // Rendered revisions came from scoped node rows; compare the selected plans against rows of the same shape.
+  const selected = new Set(scopeArticleIds);
+  const nodeIds = full.plans.filter((plan) => selected.has(plan.articleId))
+    .flatMap((plan) => [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds]);
+  const nodesById = { ...full.snapshot.nodesById };
+  for (const { node } of loadMirrorNodesByIds(nodeIds)) nodesById[node.id] = node;
+  return { ...full, scopeArticleIds, snapshot: { ...full.snapshot, nodesById } };
 }
 
 export function captureArticleMirrorSnapshot(articleId: string) {
@@ -83,7 +110,7 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
   const current = () => {
     const token = readDatabaseChangeToken();
     if (token !== verified.token || loadLibraryPathSettingsSync().mirror !== verified.captured.paths.mirror) {
-      const captured = captureMirrorOutputSnapshot(false);
+      const captured = recaptureMirrorOutput(seed);
       changedOwnershipPaths = collectChangedMirrorPaths(expectedRecords, captured.recordsByArticleId);
       verified = { captured, token };
     }

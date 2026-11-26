@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "Своё количество дней",
   "settings.attachments.daysUnit": "дней",
   "settings.attachments.title": "Локальные вложения",
+  "settings.attachments.searchTerms": "очистка вложений|очистить вложения|убрать лишние вложения|неиспользуемые вложения",
   "settings.attachments.error": "Не удалось завершить операцию с вложениями. Повторите попытку.",
   "settings.attachments.used": "Занято места",
   "settings.attachments.refresh": "Обновить",

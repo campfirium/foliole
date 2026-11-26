@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "{date} तक उपलब्ध",
   "desktop.sourceUpdate.alternative.hint": "अधिकतम 3 वैकल्पिक टेक्स्ट, हर एक 30 दिनों तक रखा जाता है",
+  "desktop.sourceUpdate.previewLoadFailed": "तुलना का पूर्वावलोकन लोड नहीं हो सका।",
   "desktop.sourceUpdate.dialogTitle": "तुलना",
   "desktop.sourceUpdate.close": "स्रोत अपडेट पैनल बंद करें",
   "desktop.sourceUpdate.accept": "अपडेट स्वीकार करें",

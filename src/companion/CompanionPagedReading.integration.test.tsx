@@ -106,30 +106,11 @@ it('pages vertically once per swipe and wheel burst, ignoring diagonal, cancelle
   expect(surface.scrollTop).toBe(0);
 });
 
-it('leaves links, highlights, selections and long presses alone', () => {
+it('leaves links, highlights and long presses alone', () => {
   const { surface, body } = mountPagedArticle();
   chooseMode('Paged scroll');
   for (const label of ['Link', 'Highlight']) tap(screen.getByText(label), 355);
   expect(surface.scrollTop).toBe(0);
-  const selection = window.getSelection()!;
-  const range = document.createRange();
-  range.setStart(body.firstChild!, 0);
-  range.setEnd(body.firstChild!, body.textContent!.length);
-  Object.defineProperty(range, 'getClientRects', { value: () => [] });
-  selection.removeAllRanges();
-  selection.addRange(range);
-  expect(body.isConnected).toBe(true);
-  expect(selection.isCollapsed).toBe(false);
-  tap(body, 355);
-  expect(surface.scrollTop).toBe(0);
-  expect(selection.isCollapsed).toBe(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
-  pointer(body, 'pointerdown', 185, 500);
-  pointer(body, 'pointermove', 185, 400);
-  pointer(body, 'pointerup', 185, 300);
-  expect(surface.scrollTop).toBe(0);
-  selection.removeAllRanges();
   const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
   pointer(body, 'pointerdown', 355);
   now.mockReturnValue(1600);

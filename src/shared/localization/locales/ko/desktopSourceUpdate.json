@@ -5,6 +5,7 @@
   "desktop.sourceUpdate.alternative.option": "{host} · {date}",
   "desktop.sourceUpdate.alternative.expires": "{date}까지 사용 가능",
   "desktop.sourceUpdate.alternative.hint": "대체 본문은 최대 3개까지 30일 동안 보관됩니다",
+  "desktop.sourceUpdate.previewLoadFailed": "비교 미리보기를 불러올 수 없습니다.",
   "desktop.sourceUpdate.dialogTitle": "비교 보기",
   "desktop.sourceUpdate.close": "소스 업데이트 패널 닫기",
   "desktop.sourceUpdate.accept": "업데이트 수락",

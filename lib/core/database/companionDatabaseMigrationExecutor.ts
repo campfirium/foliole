@@ -26,7 +26,7 @@ import {
 import { migrateCompanionDeliveryAuthorizations } from './companionDeliveryAuthorizationMigration.js';
 import { migrateCompanionFlowHistory } from './companionFlowHistoryMigration.js';
 import { migrateCompanionHostPermanentState } from './companionHostPermanentStateMigration.js';
-import { migrateCompanionNodeInventoryVersions } from './companionNodeInventoryVersions.js';
+import { migrateCompanionLocalDerivedIndexes, migrateCompanionNodeInventoryVersions } from './companionNodeInventoryVersions.js';
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
 import { migrateCompanionParentChildOrder } from './companionParentChildOrderMigration.js';
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
@@ -215,6 +215,7 @@ export async function createCompanionDatabase(
   if (targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   if (targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
   if (targetVersion >= 115) await installRelayReviewSequence(db);
+  if (targetVersion >= 129) await migrateCompanionLocalDerivedIndexes(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

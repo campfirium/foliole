@@ -81,13 +81,24 @@ it('jumps straight to a typed page, clamps it to the document and saves the new 
 
 it('repeats a jump to the same page and ignores an empty page entry', async () => {
   resourceMock.pages = 50;
+  // The virtual list clamps target offsets to the scrollable height, which jsdom reports as zero.
+  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(100000);
   renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} title="Paper" />);
   await screen.findByText('PDF page 1');
+  const scroller = document.querySelector<HTMLElement>('div.overflow-auto')!;
   typePage('30');
   await waitFor(() => expect(document.querySelector('[data-pdf-page="30"]')).toBeInTheDocument());
-  const scrolls = vi.mocked(HTMLElement.prototype.scrollTo).mock.calls.length;
+  const target = scroller.scrollTop;
+  expect(target).toBeGreaterThan(0);
+
+  // The reader scrolls away by hand, then asks for the same page again.
+  fireEvent.wheel(scroller);
+  scroller.scrollTop = 0;
+  fireEvent.scroll(scroller);
+  expect(scroller.scrollTop).toBe(0);
   typePage('30');
-  await waitFor(() => expect(vi.mocked(HTMLElement.prototype.scrollTo).mock.calls.length).toBeGreaterThan(scrolls));
+  await waitFor(() => expect(scroller.scrollTop).toBe(target));
+
   typePage('');
   expect(screen.getByRole('textbox', { name: 'PDF page' })).toHaveValue('30');
 });

@@ -54,21 +54,21 @@ test('the real reading canvas expands and system chrome toggles without reflow',
     await expect.poll(() => page.evaluate(() => innerHeight)).toBeGreaterThan(normalHeight);
     const expanded = await page.evaluate(() => innerHeight);
     const bodyTop = await page.locator('.cm-content').first().evaluate(element => element.getBoundingClientRect().top);
-    await expect.poll(() => clockVisible(device)).toBe(true);
-    await device.screenshot({ path: '.tmp/artifacts/T701/reopened/native-chrome-visible.png' });
+    await expect.poll(() => clockVisible(device)).toBe(false);
+    await device.screenshot({ path: '.tmp/artifacts/T701/reopened/native-tools-visible.png' });
     await page.getByRole('document', { name: 'Topic body', exact: true }).click();
     await expect(page.getByRole('button', { name: 'More reading actions' })).toBeHidden();
     await expect.poll(() => page.evaluate(() => innerHeight)).toBe(expanded);
     await expect.poll(() => page.locator('.cm-content').first().evaluate(element => element.getBoundingClientRect().top)).toBe(bodyTop);
     await expect.poll(() => clockVisible(device)).toBe(false);
-    await device.screenshot({ path: '.tmp/artifacts/T701/reopened/native-chrome-hidden.png' });
+    await device.screenshot({ path: '.tmp/artifacts/T701/reopened/native-tools-hidden.png' });
     await page.getByRole('document', { name: 'Topic body', exact: true }).click();
     await expect(page.getByRole('button', { name: 'More reading actions' })).toBeVisible();
     await expect.poll(() => page.evaluate(() => innerHeight)).toBe(expanded);
     await expect.poll(() => page.locator('.cm-content').first().evaluate(element => element.getBoundingClientRect().top)).toBe(bodyTop);
-    await expect.poll(() => clockVisible(device)).toBe(true);
+    await expect.poll(() => clockVisible(device)).toBe(false);
     fs.writeFileSync('.tmp/artifacts/T701/reopened/native-result.json', JSON.stringify({
-      session, normalHeight, expandedHeight: expanded, bodyTop, clockShownWithTools: true,
+      session, normalHeight, expandedHeight: expanded, bodyTop, clockHiddenWithTools: true,
       clockHiddenWithoutTools: true, stableCanvasAcrossTaps: true
     }, null, 2));
   } finally {

@@ -127,6 +127,7 @@ it.each([
       parentNodeId: null,
       kind,
       priority: null,
+      enforcePriority: null,
       desiredRetention: null,
       enableShortTerm: null,
       sequentialReadingEnabled: null,

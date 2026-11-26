@@ -6,9 +6,14 @@ import {
 } from './androidCompanionDerivedReadSql.js';
 import { COMPANION_WORKSPACE_DISPLAY_NODE_QUERY } from './companionSnapshotNodeQuery.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
-import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+
+// A matching page counts when an active Topic still holds its PDF; the local owner index
+// answers that per matching attachment, so a search never walks every node.
+const LIVE_PDF_OWNER_SQL = `EXISTS (SELECT 1 FROM pdf_attachment_nodes mount
+  INNER JOIN nodes owner ON owner.id = mount.node_id
+  WHERE mount.storage_key = pdf_page_text.attachment_id || '.pdf' AND owner.deleted_at IS NULL)`;
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
@@ -43,7 +48,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'max(0, instr(lower(text), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression('text', '?', 80)} AS excerpt ` +
       'FROM pdf_page_text WHERE instr(lower(text), ?) > 0 ' +
-      `AND attachment_id IN (SELECT id FROM (${NODE_PDF_RESOURCES_SQL} AND owner.deleted_at IS NULL)) ` +
+      `AND ${LIVE_PDF_OWNER_SQL} ` +
       'ORDER BY attachment_id ASC, page ASC LIMIT ?',
     columns: [
       { key: 'attachment_id', source: 'attachment_id', type: 'string' },

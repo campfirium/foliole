@@ -30,5 +30,5 @@ export async function dailyFlowFactApplyStatus(db: DbPort, record: SyncObjectRec
 export async function applyDailyFlowSyncFact(db: DbPort, record: SyncObjectRecord) {
   const fact = decode(record);
   await storeDailyFlowFact(db, fact);
-  await db.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
+  await db.run('UPDATE daily_flow_state SET invalidated=1, scope_complete=0 WHERE id=1');
 }

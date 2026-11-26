@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
@@ -10,6 +10,7 @@ import {
   settingsControlValueClassName,
   settingsRangeClassName
 } from '../../../../shared/ui';
+import { PriorityQueueExplanation } from '../../../review/components/PriorityQueueExplanation';
 import {
   settingsSearchRowProps,
   type SettingsSearchRowMeta
@@ -23,6 +24,7 @@ import {
   ReadingGrowthFactorRangeControl,
   ReviewNumberInput
 } from './reviewSettingsControls';
+import { ReadingGrowthDescription, RetentionLoadExample, ReviewMixExample, SchedulingExample } from './SchedulingExamples';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -53,7 +55,7 @@ export interface SettingsReviewRowsProps {
 
 interface ReviewSettingRowProps {
   control: ReactNode;
-  description: string;
+  description?: ReactNode;
   searchRow?: SettingsSearchRowMeta;
   title: string;
 }
@@ -113,18 +115,20 @@ export function SchedulerCoreRows(props: Pick<
   | 'onNewDayStartsAtHourChange'
   | 'onNewItemLoadBalancingDaysChange'
 >) {
-  const t = useTranslation();
+  const { locale, t } = useLocalization();
+  const retention = new Intl.NumberFormat(locale, { style: 'percent' }).format(props.desiredRetention);
   const rows = getReviewRows(t);
   return (
     <>
       <ReviewSettingRow
         searchRow={rows.desiredRetention}
         title={rows.desiredRetention.title}
-        description={t('settings.review.desiredRetention.description')}
+        description={rows.desiredRetention.description}
         control={
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
             <input
               aria-label={t('settings.review.desiredRetention.aria')}
+              aria-valuetext={retention}
               className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
               max={0.99}
               min={0.01}
@@ -133,21 +137,22 @@ export function SchedulerCoreRows(props: Pick<
               type="range"
               value={props.desiredRetention}
             />
-            <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{props.desiredRetention.toFixed(2)}</span>
+            <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{retention}</span>
           </SettingsControlSlot>
         }
       />
+      <RetentionLoadExample />
       <ReviewSettingRow
         searchRow={rows.maximumInterval}
         title={rows.maximumInterval.title}
-        description={t('settings.review.maximumInterval.description')}
+        description={rows.maximumInterval.description}
         control={
-          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <span className="sr-only">{t('settings.review.maximumInterval.aria')}</span>
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME + ' [&>input]:w-24'}>
             <ReviewNumberInput ariaLabel={t('settings.review.maximumInterval.aria')} min={1} onChange={props.onMaximumIntervalDaysChange} step={1} value={props.maximumIntervalDays} />
           </SettingsControlSlot>
         }
       />
+      <SchedulingExample><p>{t('settings.scheduling.intervalExample')}</p></SchedulingExample>
       <ReviewSettingRow
         searchRow={rows.newDayStartsAt}
         title={rows.newDayStartsAt.title}
@@ -176,7 +181,6 @@ export function PushQueueRows(props: Pick<
   | 'onReadingIntervalGrowthFactorMinChange'
   | 'onReadingIntervalGrowthFactorMaxChange'
 >) {
-  const readingInitialIntervalDays = Number((props.readingInitialIntervalMs / DAY_IN_MS).toFixed(2));
   const t = useTranslation();
   const rows = getReviewRows(t);
   return (
@@ -193,22 +197,28 @@ export function PushQueueRows(props: Pick<
         description={rows.readingVsReviewMix.description}
         control={<QueueMixRatioControl fsrs={props.queueMixRatioFsrs} fsrsAriaLabel={t('settings.review.itemQueueMix.aria')} onFsrsChange={props.onQueueMixRatioFsrsChange} onReadingChange={props.onQueueMixRatioReadingChange} reading={props.queueMixRatioReading} readingAriaLabel={t('settings.review.readingQueueMix.aria')} />}
       />
+      <ReviewMixExample reading={props.queueMixRatioReading} fsrs={props.queueMixRatioFsrs} />
       <ReviewSettingRow
         searchRow={rows.priorityWeight}
         title={rows.priorityWeight.title}
-        description={rows.priorityWeight.description}
-        control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel={t('settings.review.priorityWeight.aria')} min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
+        control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel={t('settings.scheduling.priorityTitle')} min={1} onChange={props.onPriorityRatioChange} step={0.1} value={props.priorityRatio} /></SettingsControlSlot>}
       />
+      <SchedulingExample><PriorityQueueExplanation ratio={props.priorityRatio} /></SchedulingExample>
       <ReviewSettingRow
         searchRow={rows.readingInitialInterval}
         title={rows.readingInitialInterval.title}
         description={rows.readingInitialInterval.description}
-        control={<SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}><ReviewNumberInput ariaLabel={t('settings.review.readingInitialInterval.aria')} min={0.01} onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={readingInitialIntervalDays} /></SettingsControlSlot>}
+        control={
+          <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+            <ReviewNumberInput ariaLabel={t('settings.review.readingInitialInterval.aria')} min={0.01}
+              onChange={props.onReadingInitialIntervalDaysChange} step={0.25} value={Number((props.readingInitialIntervalMs / DAY_IN_MS).toFixed(2))} />
+          </SettingsControlSlot>
+        }
       />
       <ReviewSettingRow
         searchRow={rows.readingIntervalGrowth}
         title={rows.readingIntervalGrowth.title}
-        description={rows.readingIntervalGrowth.description}
+        description={<ReadingGrowthDescription description={rows.readingIntervalGrowth.description} min={props.readingIntervalGrowthFactorMin} max={props.readingIntervalGrowthFactorMax} minimumIntervalMs={props.readingInitialIntervalMs} />}
         control={<ReadingGrowthFactorRangeControl maxAriaLabel={t('settings.review.readingGrowthMax.aria')} maxValue={props.readingIntervalGrowthFactorMax} minAriaLabel={t('settings.review.readingGrowthMin.aria')} minValue={props.readingIntervalGrowthFactorMin} onMaxChange={props.onReadingIntervalGrowthFactorMaxChange} onMinChange={props.onReadingIntervalGrowthFactorMinChange} rangeLabel={t('settings.review.rangeTo')} />}
       />
     </>

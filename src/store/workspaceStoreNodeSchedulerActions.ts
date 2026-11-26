@@ -1,5 +1,4 @@
-import { normalizeNodeDesiredRetention } from '../features/nodes/model/nodeReviewSettings';
-import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
+import { nodePriorityOverride, normalizeNodeDesiredRetention } from '../features/nodes/model/nodeReviewSettings';
 import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
@@ -22,9 +21,7 @@ export function createUpdateNodePriorityAction(set: WorkspaceSet): WorkspaceStat
       }
       const nextNode = {
         ...node,
-        priority: priority === null ? null : normalizePushQueuePriority(priority),
-        ...(node.kind === 'folder' && (enforcePriority !== undefined || priority === null)
-          ? { enforcePriority: priority !== null && enforcePriority === true } : {}),
+        ...nodePriorityOverride(node.kind, priority, enforcePriority),
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;

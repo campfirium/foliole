@@ -9,6 +9,7 @@ import {
   resetDatabaseReadinessForTests
 } from '../database/databaseReadiness.js';
 
+import { MEASURED_COMMANDS, UNMEASURED_COMMANDS } from './actionCostCommandCoverage.testSupport.js';
 import { buildCommandRouteMap, COMMAND_ROUTE_ENTRIES, resolveCommandRoute } from './commandRoutes.js';
 import { handleInvokeRequest } from './commands.js';
 import {
@@ -92,6 +93,13 @@ describe('native command route registry', () => {
     for (const command of commands) {
       expect(resolveCommandRoute(command)).not.toBeNull();
     }
+  });
+
+  it('records for every native command whether its cost is measured, or why not', () => {
+    // A new command fails here until it joins a scenario or a reason in actionCostCommandCoverage.testSupport.ts.
+    const recorded = [...MEASURED_COMMANDS, ...Object.values(UNMEASURED_COMMANDS).flat()];
+
+    expect(recorded.slice().sort()).toEqual(Object.keys(NATIVE_COMMANDS).sort());
   });
 
   it('rejects duplicate route registrations', () => {

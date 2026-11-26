@@ -105,6 +105,7 @@ export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'desktop.diagnostics.scheduling.prioritySource.own': '自身',
   'desktop.diagnostics.scheduling.prioritySource.default': '默认',
   'desktop.diagnostics.scheduling.prioritySource.inherited': '（继承）',
+  'companion.reviewOptions.enforcedInheritance': '强制继承',
   'desktop.diagnostics.scheduling.prioritySource.enforced': '（强制继承）',
   'desktop.diagnostics.scheduling.priorityRatio': '队列权重倍率',
   'desktop.diagnostics.scheduling.priorityWeight': '当前队列权重',

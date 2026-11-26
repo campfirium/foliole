@@ -1,6 +1,7 @@
 {
   "settings.backups.search.sectionAria": "Bereich für die Sicherungssuche",
   "settings.backups.search.sectionTitle": "Sicherungsinhalte durchsuchen",
+  "settings.backups.search.terms": "Backupsuche|Backups durchsuchen",
   "settings.backups.search.description": "Vorhandene Sicherungen nacheinander entpacken und ihre Inhalte durchsuchen.",
   "settings.backups.search.action": "Sicherungsinhalte durchsuchen",
   "settings.backups.search.title": "Sicherungsinhalte durchsuchen",
@@ -19,6 +20,7 @@
   "settings.backups.search.trashed": "Im Papierkorb",
   "settings.backups.merge.sectionAria": "Bereich Bibliothek zusammenführen",
   "settings.backups.merge.title": "Andere Bibliothek zusammenführen",
+  "settings.backups.merge.searchTerms": "Bibliothek zusammenführen|Bibliotheken vereinen|Backup zusammenführen|Backup importieren",
   "settings.backups.merge.description": "Fügt Materialien und Wiederholungsverlauf einer anderen Bibliothek hinzu. Wähle eine Desktop-Bibliothek oder -Sicherung oder eine Handy-Sicherung (eine .zip-Datei oder die Foliole.sqlite im Sicherungsordner). Neue Materialien kommen in einen eigenen Ordner. Vorhandene Inhalte bleiben unverändert.",
   "settings.backups.merge.choose": "Bibliothek wählen",
   "settings.backups.merge.noSource": "Keine Bibliothek gewählt.",

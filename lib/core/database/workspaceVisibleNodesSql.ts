@@ -9,7 +9,7 @@ function visibleNodesCte(childIndex: string) {
   FROM nodes child${childIndex}
   INNER JOIN visible_nodes parent
     ON parent.id = child.parent_id
-  WHERE child.deleted_at IS NULL
+  WHERE +child.deleted_at IS NULL
 )`;
 }
 

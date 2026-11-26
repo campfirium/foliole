@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -24,14 +25,7 @@ test('continues the saved daily Flow cursor after reloading the desktop renderer
         stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 }
     })), { persist: true });
   });
-  // Build the isolated fixture's first list after seeding, rather than relying on material invalidation.
-  await desktopApp.evaluate(() => {
-    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
-    const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
-    connection.runWithDatabaseConnectionOwner(() => connection.openDatabaseConnection().driver.transaction((driver: { execute(sql: string): void }) => {
-      for (const table of ['daily_flow_entries', 'daily_flow_state', 'daily_flow_operations']) driver.execute(`DELETE FROM ${table}`);
-    }));
-  });
+  await resetDailyFlowGeneration(desktopApp);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();

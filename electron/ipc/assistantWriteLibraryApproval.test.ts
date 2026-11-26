@@ -16,6 +16,7 @@ import { getAgentControlApiSessionDescriptor, stopAgentControlApiServer } from '
 import { executeAideTool, type AideToolRequest } from '../assistant/aideToolExecutor.js';
 import type { AideToolSession } from '../assistant/aideToolSession.js';
 import { FOLIOLE_AIDE_TOOL_PERMISSIONS_KEY, loadFolioleAideToolPermissionSettings } from '../assistant/folioleAideToolPermissionSettings.js';
+import { closeAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
@@ -105,6 +106,8 @@ afterEach(async () => {
   diagnosticWrites.mockClear();
   libraryA.close();
   libraryB.close();
+  // Aide history lives under the temporary root; Windows refuses to delete it while open.
+  closeAssistantHistoryConnection();
   rmSync(root, { force: true, recursive: true });
 });
 

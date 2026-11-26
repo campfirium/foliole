@@ -63,7 +63,8 @@ it.each(['Imported body', '\ufeffOwned 中😀\0 body'])('builds a complete node
     content,
     contentFingerprint: 'content-fp',
     degradedReason: null,
-    importedAt: '2026-06-09T10:00:00.000Z',
+    // Imports happen after the library and its Inbox exist.
+    importedAt: new Date(Date.now() + 60_000).toISOString(),
     nodeTitle: 'Imported note',
     provider: 'desktop_text_file',
     sourceFingerprint: 'source-fp',
@@ -78,7 +79,7 @@ it.each(['Imported body', '\ufeffOwned 中😀\0 body'])('builds a complete node
 
   expect(patch).toMatchObject({
     createdNodeIds: [imported.nodeId],
-    nodeOrder: expect.arrayContaining([imported.nodeId]),
+    childOrders: expect.arrayContaining([{ parentNodeId: 'special-inbox', childIds: expect.arrayContaining([imported.nodeId]) }]),
     nodes: [
       expect.objectContaining({
         content,

@@ -7,6 +7,7 @@ import { CompanionDraftProvider } from './CompanionDraftProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
+import { CompanionReadingSessionHost } from './CompanionReadingSession';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
 import { CompanionShellView } from './CompanionShellView';
@@ -213,7 +214,9 @@ export function CompanionRestoredShell(props: {
           <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
             <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
               <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
-                <CompanionShellView model={model} />
+                <CompanionReadingSessionHost>
+                  <CompanionShellView model={model} />
+                </CompanionReadingSessionHost>
               </CompanionDraftProvider>
             </CompanionShareInboxNotice>
           </CompanionSyncProtocolNotice>

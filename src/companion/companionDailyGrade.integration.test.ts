@@ -106,11 +106,13 @@ it('preserves the next reading while grading five successive items', async () =>
   expect(session.currentNodeId).toBe(initial[6]);
 });
 
-it.each([[false, false], [false, true], [true, true]])('keeps grade node reads bounded (cold=%s, invalidated=%s)', async (cold, invalidated) => {
+it.each([[false, false, false], [false, true, false], [true, true, false], [true, true, true]])(
+  'keeps grade node reads bounded (cold=%s, invalidated=%s, whole=%s)', async (cold, invalidated, whole) => {
   const target = session.currentNodeId!;
   const before = await snapshot();
   if (cold) getIosCompanionDatabaseOwner().clearNodePriorities();
   if (invalidated) library.database.prepare('UPDATE daily_flow_state SET invalidated=1').run();
+  if (whole) library.database.prepare('UPDATE daily_flow_state SET scope_complete=0').run();
   const reads: number[] = [];
   let orders = 0;
   const query = library.connection.query.bind(library.connection);
@@ -125,8 +127,8 @@ it.each([[false, false], [false, true], [true, true]])('keeps grade node reads b
     snapshot: before, history: { key, mode: 'recommended', session } })).session!;
   expect((await snapshot()).nodesById[target]!.review?.reps).toBe(1);
   expect(session.currentNodeId).not.toBe(target);
-  expect(reads).toHaveLength(cold ? 1 : 0);
-  expect(orders).toBe(cold ? 1 : 0);
+  expect(reads).toHaveLength(whole ? 1 : 0);
+  expect(orders).toBe(whole ? 1 : 0);
   expect(library.database.prepare("SELECT COUNT(*) AS n FROM review_log WHERE kind='review'").get()).toEqual({ n: 1 });
 });
 

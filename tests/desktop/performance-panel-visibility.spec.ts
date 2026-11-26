@@ -1,10 +1,10 @@
 import { expect, test } from './harness/fixtures';
 import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
-import { expectWorkspaceShell } from './harness/settings';
+import { expectWorkspaceShell, resizeWorkspaceWindow } from './harness/settings';
 
-test('performance statistics resume after docked, compact and immersive visibility changes', async ({ desktopWindow }) => {
+test('performance statistics resume after docked, compact and immersive visibility changes', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
-  await desktopWindow.setViewportSize({ width: 1400, height: 850 });
+  await resizeWorkspaceWindow(desktopApp, desktopWindow, { percent: 93 });
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
   const palette = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
   await palette.getByRole('textbox').fill('performance');
@@ -21,15 +21,16 @@ test('performance statistics resume after docked, compact and immersive visibili
   await expect(memory).toBeVisible();
   await desktopWindow.screenshot({ path: '.tmp/artifacts/T526/docked.png' });
 
-  await desktopWindow.setViewportSize({ width: 1000, height: 850 });
+  await resizeWorkspaceWindow(desktopApp, desktopWindow, { percent: 40 });
   await expect(memory).toHaveCount(0);
-  await toggle.click();
+  await desktopWindow.mouse.move(desktopWindow.viewportSize()!.width - 60, 400);
   await expect(memory).toBeVisible();
   await desktopWindow.screenshot({ path: '.tmp/artifacts/T526/compact.png' });
   await desktopWindow.keyboard.press('Escape');
+  await desktopWindow.mouse.move(400, 400);
   await expect(memory).toHaveCount(0);
 
-  await desktopWindow.setViewportSize({ width: 1400, height: 850 });
+  await resizeWorkspaceWindow(desktopApp, desktopWindow, { percent: 93 });
   await expect(memory).toBeVisible();
   await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(memory).toHaveCount(0);

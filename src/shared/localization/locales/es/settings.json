@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Última optimización: {time}",
   "settings.review.optimizationFailed": "No se pudo completar la optimización. Inténtalo de nuevo.",
   "settings.review.later.title": "Intervalo posterior personalizado",
-  "settings.review.later.description": "Establezca el intervalo antes de que reaparezca el material (0 para el intervalo corto predeterminado).",
+  "settings.review.later.description": "Días que tarda un tema en reaparecer tras Later. El valor 0 usa el intervalo más corto calculado automáticamente.",
   "settings.review.later.default": "Por defecto",
   "settings.webLookup.articleTarget": "Destino del tema",
   "settings.webLookup.chooseArticleTarget": "Seleccione una aplicación",

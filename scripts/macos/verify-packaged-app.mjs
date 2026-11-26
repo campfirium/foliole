@@ -113,6 +113,7 @@ async function verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess) {
 
 function verifyPackagedSignatures(appPath, mode, run) {
   const codexPath = path.join(appPath, 'Contents/MacOS/codex');
+  const codeModeHostPath = path.join(appPath, 'Contents/MacOS/codex-code-mode-host');
   const helperPath = path.join(appPath, 'Contents/Frameworks/Foliole Helper.app');
   const cliAppPath = path.join(appPath, 'Contents/Helpers/Foliole CLI.app');
   const cliRuntimePath = path.join(cliAppPath, 'Contents/MacOS/foliole-runtime');
@@ -146,6 +147,18 @@ function verifyPackagedSignatures(appPath, mode, run) {
     ['-d', '--entitlements', '-', codexPath],
     run
   );
+  runChecked('Codex code-mode host signature verification', 'codesign', [
+    '--verify', '--strict', codeModeHostPath
+  ], run);
+  requireSignatureDetails(runChecked(
+    'Codex code-mode host signature inspection', 'codesign', ['-dv', '--verbose=4', codeModeHostPath], run
+  ), { bundleId: 'com.campfirium.foliole.codex-code-mode-host' }, mode, 'packaged Codex code-mode host signature');
+  const codeModeHostEntitlements = runChecked(
+    'Codex code-mode host entitlement inspection',
+    'codesign',
+    ['-d', '--entitlements', '-', codeModeHostPath],
+    run
+  );
   const helperEntitlements = runChecked(
     'helper entitlement inspection',
     'codesign',
@@ -165,6 +178,7 @@ function verifyPackagedSignatures(appPath, mode, run) {
     app: appEntitlements,
     cli: cliEntitlements,
     cliRuntime: cliRuntimeEntitlements,
+    codeModeHost: codeModeHostEntitlements,
     codex: codexEntitlements,
     helper: helperEntitlements
   }, mode);
@@ -182,6 +196,7 @@ export async function verifyPackagedMacosApp(options) {
   const cliRuntimePath = path.join(cliAppPath, 'Contents/MacOS/foliole-runtime');
   await checkAccess(path.join(appPath, 'Contents/embedded.provisionprofile'));
   await checkAccess(path.join(cliAppPath, 'Contents/embedded.provisionprofile'));
+  await checkAccess(path.join(appPath, 'Contents/MacOS/codex-code-mode-host'), constants.X_OK);
   await checkAccess(publicLauncherPath, constants.X_OK);
   await checkAccess(cliRuntimePath, constants.X_OK);
   if (mode === 'developer-id') await verifyDeveloperIdUpdaterRuntime(appPath, run, checkAccess);

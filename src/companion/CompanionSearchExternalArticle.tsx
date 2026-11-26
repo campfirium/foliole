@@ -5,14 +5,17 @@ import { AppButton } from '../shared/ui';
 import { useCompanionArticleExit } from './CompanionArticleTransition';
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionReadingSession } from './CompanionReadingSession';
 import type { CompanionSearchMatch } from './companionSearchMatch';
 import { useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
-export function CompanionSearchExternalArticle(props: {
+type SearchExternalArticleProps = {
   document: Pick<CompanionExternalDocumentSearchResult, 'document_id'>;
   searchMatch?: CompanionSearchMatch | null | undefined;
   onExit(): void;
-}) {
+};
+
+function SearchExternalReader(props: SearchExternalArticleProps) {
   const t = useTranslation();
   const exitPending = useCompanionArticleExit(props.onExit);
   const document = useCompanionExternalDocument(props.document.document_id);
@@ -24,4 +27,8 @@ export function CompanionSearchExternalArticle(props: {
     <AppButton onClick={exitPending} variant="ghost">{t('companion.back')}</AppButton>
     <p role="status">{t(document === null ? 'companion.search.unavailable' : 'companion.search.loading')}</p>
   </section>;
+}
+
+export function CompanionSearchExternalArticle(props: SearchExternalArticleProps) {
+  return <CompanionReadingSession><SearchExternalReader {...props} /></CompanionReadingSession>;
 }

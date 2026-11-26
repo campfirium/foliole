@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { CompanionReadingSessionHost } from './CompanionReadingSession';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
 function clickEvent(target: Element) {
@@ -9,7 +10,7 @@ function clickEvent(target: Element) {
 
 describe('useImmersiveReadableArticleState', () => {
   it('starts with chrome hidden and toggles it from ordinary article taps', () => {
-    const { result } = renderHook(() => useImmersiveReadableArticleState());
+    const { result } = renderHook(() => useImmersiveReadableArticleState(), { wrapper: CompanionReadingSessionHost });
     const paragraph = document.createElement('p');
 
     expect(result.current.isChromeVisible).toBe(false);
@@ -21,8 +22,18 @@ describe('useImmersiveReadableArticleState', () => {
     expect(result.current.isChromeVisible).toBe(false);
   });
 
+  it.each([false, true])('leaves editing with the toolbars as they were before, shown=%s', (shown) => {
+    const { result } = renderHook(() => useImmersiveReadableArticleState(), { wrapper: CompanionReadingSessionHost });
+    if (shown) act(() => result.current.handleSurfaceClick(clickEvent(document.createElement('p'))));
+
+    act(() => result.current.enterContentEditing());
+    act(() => result.current.exitContentEditing());
+
+    expect(result.current.isChromeVisible).toBe(shown);
+  });
+
   it('does not toggle chrome from interactive controls', () => {
-    const { result } = renderHook(() => useImmersiveReadableArticleState());
+    const { result } = renderHook(() => useImmersiveReadableArticleState(), { wrapper: CompanionReadingSessionHost });
     const button = document.createElement('button');
 
     act(() => result.current.handleSurfaceClick(clickEvent(button)));

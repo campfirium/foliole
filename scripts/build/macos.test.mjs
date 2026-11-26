@@ -20,6 +20,7 @@ it('packages all macOS helpers under an isolated source identity', () => {
   expect(config.mac.extendInfo).toMatchObject({ CFBundleName: 'Foliole Source', CFBundleDisplayName: 'Foliole' });
   expect(config.extraFiles).toEqual([
     { from: '/tmp/codex', to: 'MacOS/codex' },
+    { from: '/tmp/codex-code-mode-host', to: 'MacOS/codex-code-mode-host' },
     { from: '/tmp/capture', to: 'MacOS/Foliole Global Capture' },
     { from: '/tmp/cli.app', to: 'Helpers/Foliole CLI.app' }
   ]);

@@ -14,7 +14,7 @@ beforeEach(() => {
 
 it('lets users choose a balancing window from one to ninety-nine days', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="review" />);
-  const input = await screen.findByRole('spinbutton', { name: 'New item load balancing' });
+  const input = await screen.findByRole('spinbutton', { name: 'First review for new Items (days)' });
   expect(input).toHaveValue(7);
   expect(input).toHaveAttribute('min', '1');
   expect(input).toHaveAttribute('max', '99');

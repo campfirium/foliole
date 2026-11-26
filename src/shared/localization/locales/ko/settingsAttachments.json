@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "사용자 지정 일수",
   "settings.attachments.daysUnit": "일",
   "settings.attachments.title": "로컬 첨부 파일",
+  "settings.attachments.searchTerms": "첨부 파일 정리|첨부 파일 삭제|불필요한 첨부 파일|사용하지 않는 첨부 파일",
   "settings.attachments.error": "첨부 파일 작업을 완료하지 못했습니다. 다시 시도하세요.",
   "settings.attachments.used": "사용 공간",
   "settings.attachments.refresh": "새로 고침",

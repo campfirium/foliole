@@ -27,7 +27,7 @@ function FlowReader({ save }: { save: ReturnType<typeof createContentSaveMock> }
   return <CompanionDraftProvider>
     <ImmersiveReadableArticle flow activity={activity} readableArticle={article} snapshot={null}
       onExit={() => {}} onSaveArticleContent={save} answer={revealed ? 'Answer' : null}
-      footer={<CompanionBottomReviewBar visible={!activity.editing} itemKind="fsrs" hasAnswer
+      footer={<CompanionBottomReviewBar visible={!activity.editing} itemKind="fsrs"
         isAnswerRevealed={revealed} reviewCardKey="topic" onRevealAnswer={() => setRevealed(true)}
         onGrade={() => {}} onReadReviewTopic={() => {}} onPostponeReviewTopic={() => {}} onDismissReviewTopic={() => {}} />} />
   </CompanionDraftProvider>;

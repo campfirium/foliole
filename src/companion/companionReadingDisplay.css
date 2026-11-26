@@ -1,20 +1,59 @@
-/* Overlay mode reclaims toolbar space while preserving the system safe area. */
-section.companion-reading-overlay {
-  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-page-content-gap));
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--companion-page-content-gap));
+/* The reading body is fixed geometry from the toolbar mode and layout, never from measured toolbars, and is
+   the same on Android and iOS. Docked keeps it between the safe areas and the toolbar bands; floating gives it
+   everything inside the safe areas. */
+section[data-reading-body] {
+  --companion-reading-safe-top: max(env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px));
+  --companion-reading-body-top: var(--companion-reading-safe-top);
+  --companion-reading-body-bottom: env(safe-area-inset-bottom, 0px);
+  top: var(--companion-reading-body-top);
+  bottom: var(--companion-reading-body-bottom);
+  padding-top: var(--companion-page-content-gap);
+  padding-bottom: var(--companion-page-content-gap);
+  /* Paint the strips outside the body so the page underneath never shows through. */
+  box-shadow: 0 calc(0px - var(--companion-reading-body-top)) 0 0 var(--companion-base),
+    0 var(--companion-reading-body-bottom) 0 0 var(--companion-base);
 }
-/* Flow actions stay available. End padding is a scroll runway, not a smaller viewport. */
-section.companion-reading-overlay:has(> .companion-review-footer)::after {
+section[data-reading-body='docked'] {
+  --companion-reading-toolbar-bottom: calc(var(--companion-reading-safe-top) + 3rem);
+  --companion-reading-body-top: var(--companion-reading-toolbar-bottom);
+  --companion-reading-body-bottom: calc(3.5rem + max(env(safe-area-inset-bottom, 0px), 8px));
+}
+/* Flow has no bottom toolbar; its action bar band stays reserved while that bar is loading or replaced. */
+section[data-reading-body='docked'].companion-review-surface {
+  --companion-reading-body-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+section[data-reading-body='docked'][data-reading-breadcrumb] {
+  --companion-reading-breadcrumb-height: calc(36px + var(--companion-page-content-gap));
+  --companion-reading-body-top: calc(var(--companion-reading-toolbar-bottom) + var(--companion-reading-breadcrumb-height));
+  /* The pinned breadcrumb already carries the gap above the first line. */
+  padding-top: 0;
+}
+section[data-reading-body='docked'] > .companion-review-header {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--companion-reading-toolbar-bottom);
+  height: var(--companion-reading-breadcrumb-height);
+  z-index: var(--z-local-raised);
+  padding-inline: 1.25rem;
+  background: var(--companion-base);
+}
+@media (min-width: 640px) {
+  section[data-reading-body='docked'] > .companion-review-header {
+    padding-inline: 1.75rem;
+  }
+}
+/* Floating Flow actions stay available. End padding is a scroll runway, not a smaller viewport. */
+section[data-reading-body='floating'].companion-review-surface::after {
   content: '';
   display: block;
   height: 4rem;
   flex-shrink: 0;
 }
 /* Outer scrolling must include the document's natural height before the end runway. */
-.companion-reading-overlay [data-companion-article-document] > div,
+[data-reading-body='floating'] [data-companion-article-document] > div,
 [data-reading-end-action] [data-companion-article-document] > div,
 [data-reading-end-action] .markdown-editor-host[data-scroll-container='outer'],
-.companion-reading-overlay .markdown-editor-host[data-scroll-container='outer'] {
+[data-reading-body='floating'] .markdown-editor-host[data-scroll-container='outer'] {
   height: auto;
 }
 
@@ -63,32 +102,4 @@ section > .companion-reading-top-chrome {
 [data-companion-reading-surface='true'] .cm-topic-search-match-active {
   background-color: rgb(242 121 85 / 0.49);
   box-shadow: none;
-}
-
-section[data-reading-selection-viewport='true'] {
-  --companion-reading-controls-bottom: max(var(--companion-reading-chrome-bottom, 0px),
-    env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px));
-  top: calc(var(--companion-reading-controls-bottom) + var(--companion-reading-breadcrumb-height, 0px));
-  bottom: var(--companion-reading-viewport-bottom, 0px);
-  padding-top: var(--companion-page-content-gap);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--companion-page-content-gap));
-}
-
-section[data-reading-selection-viewport='true'] > .companion-review-header {
-  position: fixed;
-  inset-inline: 0;
-  top: var(--companion-reading-controls-bottom);
-  z-index: var(--z-local-raised);
-  padding-inline: 1.25rem;
-  background: var(--companion-base);
-}
-
-@media (min-width: 640px) {
-  section[data-reading-selection-viewport='true'] > .companion-review-header {
-    padding-inline: 1.75rem;
-  }
-}
-
-section[data-reading-selection-viewport='true'].companion-reading-overlay:has(> .companion-review-footer)::after {
-  content: none;
 }

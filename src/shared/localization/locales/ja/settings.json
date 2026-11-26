@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "前回の最適化：{time}",
   "settings.review.optimizationFailed": "最適化を完了できませんでした。再試行してください。",
   "settings.review.later.title": "カスタム後の間隔",
-  "settings.review.later.description": "マテリアルが再表示されるまでの間隔を設定します (デフォルトの短い間隔の場合は 0)。",
+  "settings.review.later.description": "Later を選んでからトピックが再表示されるまでの日数です。0 に設定すると、自動で計算した短い間隔を使います。",
   "settings.review.later.default": "デフォルト",
   "settings.webLookup.articleTarget": "トピックの送信先",
   "settings.webLookup.chooseArticleTarget": "アプリを選択してください",

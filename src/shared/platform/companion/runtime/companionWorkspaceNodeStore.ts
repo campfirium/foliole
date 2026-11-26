@@ -1,4 +1,4 @@
-import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import { loadCompanionWorkspaceNodeListFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
@@ -10,12 +10,6 @@ export function loadCompanionWorkspaceNode(nodeId: string) {
 
 export function loadCompanionWorkspaceNodes(nodeIds: readonly string[]) {
   if (nodeIds.length === 0) return Promise.resolve([]);
-  return getIosCompanionDatabaseOwner().read((db) => db.transaction(async (tx) => {
-    const nodes = [];
-    for (const nodeId of nodeIds) {
-      const node = await loadCompanionWorkspaceNodeFromDb(tx, nodeId);
-      if (node) nodes.push(node);
-    }
-    return nodes;
-  }));
+  // One statement reads a consistent state without an explicit transaction.
+  return getIosCompanionDatabaseOwner().read(db => loadCompanionWorkspaceNodeListFromDb(db, nodeIds));
 }

@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "Double-cliquer sur le corps du texte pour modifier",
   "settings.search.editorImmersiveDoubleClick.description": "En lecture immersive, double-cliquez sur le corps du document pour passer en mode modification. Désactivez cette option pour réserver le double-clic à la sélection de texte ; la touche Entrée permet toujours de modifier.",
+  "settings.search.cleanFormatting.path": "Ouvrez un sujet modifiable et choisissez « Nettoyer la mise en forme... » dans le menu en haut à droite de l’éditeur ou dans le menu contextuel du texte.",
+  "settings.search.cleanFormatting.terms": "nettoyage de la mise en forme|effacer la mise en forme|supprimer le formatage|nettoyer la mise en forme",
+  "settings.search.imageCloze.path": "Dans un sujet, tracez un rectangle sur la zone à masquer d’une image enregistrée sur l’appareil, puis cliquez sur la coche.",
+  "settings.search.imageCloze.terms": "masquage d’image|cloze d’image|occlusion d’image",
+  "settings.search.formulaCloze.path": "Dans un sujet, faites glisser le pointeur sur la partie de la formule affichée que vous souhaitez masquer.",
+  "settings.search.formulaCloze.terms": "cloze mathématique|cloze d’équation|masquage de formule|occlusion mathématique",
   "settings.editor.readingMode.section": "Mode lecture",
   "settings.editor.readingMode.aria": "Section des réglages du mode lecture"
 }

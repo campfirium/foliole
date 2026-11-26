@@ -21,6 +21,8 @@ export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | n
   const predict = useCallback(async (args: DailyFlowPredictionArgs, signal: AbortSignal) => {
     if (!snapshot?.nodesById || signal.aborted) return null;
     const next = await timeCompanionActivity('predict-next', async () => {
+      // A Dive keeps its own position, which the read-intent window of global Flow does not know.
+      if (session.dive) return predictCompanionFlowDocument({ ...args, dive: session.dive }, signal);
       if (!engine) return predictCompanionFlowDocument(args, signal);
       const result = await engine.displayPreparation.prepare({ session, mode, now: args.now }, signal);
       return signal.aborted ? null : result.session.currentNodeId;
@@ -28,5 +30,5 @@ export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | n
     if (!signal.aborted) noteAndroidFlowPrediction(args.currentNodeId, next);
     return next;
   }, [snapshot?.nodesById, session, engine, mode]);
-  return useFlowDocumentPrefetch(snapshot && !session.dive ? session : { ...session, currentNodeId: null }, predict, prepare);
+  return useFlowDocumentPrefetch(snapshot ? session : { ...session, currentNodeId: null }, predict, prepare);
 }

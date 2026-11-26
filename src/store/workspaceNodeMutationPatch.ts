@@ -8,6 +8,7 @@ import type {
 import { acknowledgeCreatedContentVersion } from './workspaceContentEditAcknowledgements';
 import { shouldKeepLocalNodeContent, hasUnconfirmedNodeReveal } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
+import { restoreStructureParentOrders } from './workspaceStructureParentOrders';
 
 type WorkspacePatch = Partial<Pick<WorkspaceState, 'activeNodeId' | 'nodeOrder' | 'nodesById'>>;
 
@@ -114,8 +115,18 @@ function mergeNodesByIdWithLocalUserFields(
   return nextNodesById;
 }
 
+function resolveNodeOrder(
+  state: Pick<WorkspaceState, 'nodesById'> & Partial<Pick<WorkspaceState, 'nodeOrder'>>,
+  result: WorkspaceNodeMutationPatchResult,
+  nodesById: WorkspaceState['nodesById']
+) {
+  const nodeOrder = result.nodeOrder ?? state.nodeOrder;
+  if (!result.childOrders) return result.nodeOrder ? [...result.nodeOrder] : undefined;
+  return restoreStructureParentOrders({ nodeOrder: nodeOrder ?? [], nodesById }, result.childOrders);
+}
+
 export function createWorkspaceNodeMutationPatch(
-  state: Pick<WorkspaceState, 'nodesById'>,
+  state: Pick<WorkspaceState, 'nodesById'> & Partial<Pick<WorkspaceState, 'nodeOrder'>>,
   result: WorkspaceNodeMutationPatchResult
 ): WorkspacePatch {
   const nextNodesById = { ...state.nodesById };
@@ -151,9 +162,10 @@ export function createWorkspaceNodeMutationPatch(
       };
     }
   }
+  const nodeOrder = resolveNodeOrder(state, result, nextNodesById);
   return {
     ...(result.activeNodeId !== undefined ? { activeNodeId: result.activeNodeId } : {}),
-    ...(result.nodeOrder ? { nodeOrder: [...result.nodeOrder] } : {}),
+    ...(nodeOrder ? { nodeOrder } : {}),
     nodesById: nextNodesById
   };
 }

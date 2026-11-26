@@ -5,7 +5,9 @@ import { savePartitionedWorkspaceBody } from '../../shared/platform/desktop/work
 import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { listenForBodyOverflow, type BodyOverflowRequest } from '../../shared/ui/bodyOverflowRequest';
 import { isPartitionableNodeBody, showNodeTextLimitNotice } from '../../shared/ui/nodeTextSaveBudget';
+import { canPlaceChildOrders } from '../../store/workspaceChildOrderPlacement';
 import { createWorkspaceNodeMutationPatch } from '../../store/workspaceNodeMutationPatch';
+import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 
@@ -15,6 +17,23 @@ function rejectNonBodyOverflow(request: BodyOverflowRequest) {
   showNodeTextLimitNotice();
   request.cancel();
   return true;
+}
+
+async function applyPartitionResult(result: Awaited<ReturnType<typeof savePartitionedWorkspaceBody>>) {
+  // A retirement also changes Trash membership and timestamps, which are in the full workspace snapshot.
+  const retired = Boolean(result.deletedNodeIds?.length);
+  if (retired || !canPlaceChildOrders(useWorkspaceStore.getState().nodesById, result)) await refreshWorkspaceState();
+  const mutation = { ...result };
+  if (retired) delete mutation.childOrders;
+  useWorkspaceStore.setState((state) => {
+    const patch = createWorkspaceNodeMutationPatch(state, mutation);
+    const nodesById = { ...patch.nodesById };
+    for (const snapshot of result.nodes) {
+      const node = nodesById[snapshot.nodeId];
+      if (node) nodesById[snapshot.nodeId] = { ...node, content: snapshot.content, hasContent: snapshot.content.length > 0 };
+    }
+    return { ...patch, nodesById, rendererBoundaryKeepNodeIds: result.createdNodeIds ?? [] };
+  });
 }
 
 export function BodyOverflowDialogHost() {
@@ -40,15 +59,7 @@ export function BodyOverflowDialogHost() {
       if (!request.prepare() || !await drainPendingNodeContentRuntimePersists()) throw new Error('body_partition_draft_changed');
       const result = await savePartitionedWorkspaceBody({ sourceNodeId: request.nodeId,
         expectedContent: request.previousContent, content: request.content });
-      useWorkspaceStore.setState((state) => {
-        const patch = createWorkspaceNodeMutationPatch(state, result);
-        const nodesById = { ...patch.nodesById };
-        for (const snapshot of result.nodes) {
-          const node = nodesById[snapshot.nodeId];
-          if (node) nodesById[snapshot.nodeId] = { ...node, content: snapshot.content, hasContent: snapshot.content.length > 0 };
-        }
-        return { ...patch, nodesById, rendererBoundaryKeepNodeIds: result.createdNodeIds ?? [] };
-      });
+      await applyPartitionResult(result);
       setRequest(null);
     } catch {
       setError(true);

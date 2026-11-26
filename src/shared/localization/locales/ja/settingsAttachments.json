@@ -2,6 +2,7 @@
   "settings.attachments.thresholdCustom": "日数を指定",
   "settings.attachments.daysUnit": "日",
   "settings.attachments.title": "ローカル添付ファイル",
+  "settings.attachments.searchTerms": "添付ファイルの整理|添付ファイルを整理|添付ファイルのクリーンアップ|未使用の添付ファイル",
   "settings.attachments.error": "添付ファイルの操作を完了できませんでした。もう一度お試しください。",
   "settings.attachments.used": "使用容量",
   "settings.attachments.refresh": "更新",

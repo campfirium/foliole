@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Ostatnia optymalizacja: {time}",
   "settings.review.optimizationFailed": "Nie udało się zakończyć optymalizacji. Spróbuj ponownie.",
   "settings.review.later.title": "Niestandardowy interwał późniejszy",
-  "settings.review.later.description": "Ustaw odstęp czasu, po którym materiał pojawi się ponownie (0 dla domyślnego krótkiego odstępu).",
+  "settings.review.later.description": "Liczba dni do ponownego pojawienia się tematu po wybraniu Later. Wartość 0 oznacza krótszy odstęp obliczony automatycznie.",
   "settings.review.later.default": "Domyślny",
   "settings.webLookup.articleTarget": "Miejsce docelowe tematu",
   "settings.webLookup.chooseArticleTarget": "Wybierz aplikację",

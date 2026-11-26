@@ -1,11 +1,12 @@
 import type { ReviewQueueNode } from '../review/queue/reviewQueuePlanner.js';
 
-import { cycleReadyNodeIds, cycleWindow, scanCycleRange } from './cycleFlowSelection.js';
-import type { CycleRow } from './cycleFlowTypes.js';
+import { cycleScanFilter } from './cycleFlowReadiness.js';
+import { cycleReadyNodeIds, cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
+import type { CycleStoredRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
-import { isUnreadDiveTopic, readDiveUnreadRound } from './diveUnreadTopics.js';
+import { findNextDiveUnread, isUnreadDiveTopic } from './diveUnreadTopics.js';
 
 function belongsToDive(id: string, topics: ReadonlySet<string>, nodes: Record<string, ReviewQueueNode>) {
   const seen = new Set<string>();
@@ -23,7 +24,7 @@ export function matchesDivePhase(dive: Pick<DiveFlowCursor, 'phase'>, row: { nod
     (dive.phase !== 'topics' || snapshot.nodesById[row.node_id]?.kind === 'topic');
 }
 
-async function isDiveCurrentReady(db: DailyFlowStore, source: DailyFlowSession, snapshot: DailyFlowLearningSnapshot,
+export async function isDiveCurrentReady(db: DailyFlowStore, source: DailyFlowSession, snapshot: DailyFlowLearningSnapshot,
   now: string, settings: DailyFlowSettings) {
   const dive = source.dive!;
   const id = source.currentNodeId;
@@ -34,8 +35,10 @@ async function isDiveCurrentReady(db: DailyFlowStore, source: DailyFlowSession, 
   const [row] = await db.readRows([id]);
   // The displayed scope admits the current card. The committed scope is read for its successor.
   const admitted = dive.memberIds ? dive.memberIds.includes(id) : belongsToDive(id, new Set(dive.topicIds), snapshot.nodesById);
-  return Boolean(admitted && row?.active && row.order_key === dive.position && row.order_key <= dive.limit &&
-    matchesDivePhase(dive, row, snapshot) &&
+  // A due entry may sit past the segment's end and no longer be one of the first segment's tasks.
+  const timed = dive.timedResume?.key === dive.position;
+  return Boolean(admitted && row?.active && row.order_key === dive.position &&
+    (timed || (row.order_key <= dive.limit && matchesDivePhase(dive, row, snapshot))) &&
     cycleReadyNodeIds(snapshot, dive.mode, now, settings).includes(id));
 }
 
@@ -71,18 +74,18 @@ export async function openDiveCurrent(db: DailyFlowStore, global: DailyFlowSessi
 
 export function rewindDiveCurrent(dive: DiveFlowCursor, nodeId?: string | null): DiveFlowCursor {
   if (!nodeId) return dive;
-  if (dive.resumeAfter === undefined) return { ...dive, position: Math.max(0, dive.position - 1) };
-  return { ...dive, revisitIds: [nodeId, ...(dive.revisitIds ?? [])] };
+  const { timedResume, ...rest } = dive;
+  if (rest.resumeAfter !== undefined) return { ...rest, revisitIds: [nodeId, ...(rest.revisitIds ?? [])] };
+  return { ...rest, position: timedResume?.key === rest.position ? timedResume.after : Math.max(0, rest.position - 1) };
 }
 
 export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSession, dive: DiveFlowCursor,
-  now: string, settings: DailyFlowSettings) {
+  now: string, settings: DailyFlowSettings, excluded?: string) {
   if (dive.stop) return displayDiveSession(global, dive, null, null);
   if (!db.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const memberIds = await db.readDiveMembers(dive.id);
   if (dive.phase === 'topics') {
-    const { order, unread } = await readDiveUnreadRound(db, memberIds, dive.memberIds ?? [], dive.position);
-    const current = unread[0] ?? null;
+    const { order, current } = await findNextDiveUnread(db, memberIds, dive.memberIds ?? [], dive.position);
     return displayDiveSession(global, {
       ...dive, memberIds: order, position: current ? order.indexOf(current) + 1 : order.length,
       limit: order.length, hasWork: dive.hasWork || Boolean(current),
@@ -90,34 +93,47 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
     }, current, current ? now : null);
   }
   const members = new Set(memberIds);
-  const resumeAfter = dive.resumeAfter ?? dive.position;
-  const revisit = resumeAfter ? earlierMemberIds(dive, members) : [];
-  const waiting = new Set(dive.waitingIds?.filter(id => members.has(id)));
-  const matches = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) =>
-    members.has(row.node_id) && matchesDivePhase(dive, row, snapshot);
-  const mode = dive.mode;
+  // A due or newly admitted entry is taken out of order and leaves this position unchanged.
+  const cursor = dive.resumeAfter ??
+    (dive.timedResume?.key === dive.position ? dive.timedResume.after : dive.position);
+  const revisit = cursor ? earlierMemberIds(dive, members) : [];
+  const healed = new Map<string, CycleStoredRow>();
+  const orderedIds = await orderedMemberIds(db, dive, memberIds);
+  const args = { mode: dive.mode, now, settings, nodeIds: memberIds, orderedIds, bounded: true, ...(excluded ? { excluded } : {}),
+    onReadiness: (rows: CycleStoredRow[]) => rows.forEach(row => healed.set(row.node_id, row)) };
+  // The Dive moves its own position over the shared daily list; the global position is never saved from it.
+  const meta = { ...global.cycle!, scanAfter: cursor, lapLimit: dive.limit };
+  delete meta.timedResume;
+  let earlier = null as Awaited<ReturnType<typeof selectEarlierMember>>;
+  const row = members.size ? await selectCycleSuccessor(db, meta, { ...args, beforeOrdered: async () => {
+    const ordered = new Set(orderedIds);
+    earlier = await selectEarlierMember(db, revisit.filter(id => ordered.has(id)), cursor, args);
+    return earlier?.row ?? null;
+  } }) : null;
+  if (healed.size) await db.writeRows([...healed.values()]);
   const dayEnd = global.dayWindow && new Date(Date.parse(global.dayWindow.end) - 1).toISOString();
-  const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {
-    if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);
-  };
-  // Dive reports members that become due later today, so it still visits waiting rows.
-  const args = { mode, now, settings, matches, onSkipped, allRows: true };
-  const earlier = resumeAfter && revisit.length ? await selectEarlierMember(db, revisit, resumeAfter, args) : null;
-  const cycle = { ...global.cycle!, scanAfter: resumeAfter, lapLimit: dive.limit };
-  const row = earlier?.row ?? (members.size ? await scanCycleRange(db, cycle, args) : null);
-  if (row) waiting.delete(row.node_id);
-  const stillWaiting = !row && dayEnd && await hasWaitingMember(db, [...waiting], args, dayEnd);
+  const stillWaiting = !row && dive.phase !== 'initial' && dayEnd &&
+    await hasWaitingMember(db, memberIds, args, dayEnd);
   const stop = row ? null : stillWaiting ? 'waiting' : dive.hasWork ? 'finished' : 'empty';
-  const next: DiveFlowCursor = { ...dive, memberIds, position: row?.order_key ?? dive.limit, waitingIds: [...waiting],
+  const next: DiveFlowCursor = { ...dive, memberIds, position: row?.order_key ?? dive.limit,
     hasWork: dive.hasWork || Boolean(row), stop };
-  if (earlier) {
-    next.resumeAfter = resumeAfter;
-    next.revisitIds = earlier.remaining;
-  } else {
-    delete next.resumeAfter;
-    delete next.revisitIds;
+  delete next.waitingIds;
+  delete next.resumeAfter;
+  delete next.revisitIds;
+  delete next.timedResume;
+  if (meta.timedResume) next.timedResume = meta.timedResume;
+  const remaining = meta.timedResume ? revisit.filter(id => id !== row!.node_id) : earlier?.remaining;
+  if (remaining && (earlier || remaining.length)) {
+    next.resumeAfter = cursor;
+    next.revisitIds = remaining;
   }
   return displayDiveSession(global, next, row?.node_id ?? null, row ? now : null);
+}
+
+// The first segment orders only initial tasks, so other members never need their learning facts.
+async function orderedMemberIds(db: DailyFlowStore, dive: DiveFlowCursor, memberIds: string[]) {
+  if (dive.phase !== 'initial' || !memberIds.length) return memberIds;
+  return (await db.readRows(memberIds)).filter(row => row.active && row.initial_task).map(row => row.node_id);
 }
 
 function earlierMemberIds(dive: DiveFlowCursor, members: ReadonlySet<string>) {
@@ -129,7 +145,7 @@ function earlierMemberIds(dive: DiveFlowCursor, members: ReadonlySet<string>) {
   return [...revisit];
 }
 
-type DiveSelection = Parameters<typeof scanCycleRange>[2];
+type DiveSelection = { mode: DiveFlowCursor['mode']; now: string; settings: DailyFlowSettings };
 
 async function selectEarlierMember(db: DailyFlowStore, ids: string[], through: number, args: DiveSelection) {
   // Only newly admitted members can use positions this round has already passed.
@@ -139,23 +155,21 @@ async function selectEarlierMember(db: DailyFlowStore, ids: string[], through: n
   const nodeOrder = rows.map(row => row.node_id);
   const snapshot = await db.scopedLearningSnapshot(nodeOrder);
   const ready = new Set(cycleReadyNodeIds({ ...snapshot, nodeOrder }, args.mode, args.now, args.settings));
-  for (const [index, row] of rows.entries()) {
-    if (ready.has(row.node_id) && args.matches!(row, snapshot)) {
-      return { row, remaining: nodeOrder.slice(index + 1) };
-    }
-    if (!ready.has(row.node_id)) args.onSkipped?.(row, snapshot);
-  }
-  return null;
+  const index = rows.findIndex(row => ready.has(row.node_id));
+  return index < 0 ? null : { row: rows[index]!, remaining: nodeOrder.slice(index + 1) };
 }
 
-async function hasWaitingMember(db: DailyFlowStore, ids: string[], args: DiveSelection, dayEnd: string) {
-  if (!ids.length) return false;
-  const rows = (await db.readRows(ids)).filter(row => row.active);
+const WAITING_BATCH_SIZE = 32;
+
+// Members that become due later today are reported wherever they now sit in the daily list.
+async function hasWaitingMember(db: DailyFlowStore, memberIds: string[], args: DiveSelection, dayEnd: string) {
+  if (!db.timedRows || !memberIds.length) return false;
+  const rows = await db.timedRows(cycleScanFilter(args.mode, dayEnd), WAITING_BATCH_SIZE, memberIds);
   const nodeOrder = rows.map(row => row.node_id);
+  if (!nodeOrder.length) return false;
   const snapshot = { ...await db.scopedLearningSnapshot(nodeOrder), nodeOrder };
   const ready = new Set(cycleReadyNodeIds(snapshot, args.mode, args.now, args.settings));
-  const later = new Set(cycleReadyNodeIds(snapshot, args.mode, dayEnd, args.settings));
-  return rows.some(row => args.matches!(row, snapshot) && !ready.has(row.node_id) && later.has(row.node_id));
+  return cycleReadyNodeIds(snapshot, args.mode, dayEnd, args.settings).some(id => !ready.has(id));
 }
 
 export function displayDiveSession(global: DailyFlowSession, dive: DiveFlowCursor, currentNodeId: string | null,

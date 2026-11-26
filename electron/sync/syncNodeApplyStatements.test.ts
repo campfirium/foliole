@@ -57,6 +57,7 @@ it('builds the canonical remote node upsert params', () => {
     null,
     'item',
     2,
+    null,
     0.8,
     1,
     0,
@@ -87,6 +88,15 @@ it('builds the canonical remote node upsert params', () => {
   ]);
 });
 
+it('keeps priority enforcement only for folder snapshots', () => {
+  const enforced = (kind: 'folder' | 'item') => buildRemoteNodeUpsert(createNodeRecord({
+    snapshot: { ...createNodeRecord().snapshot, kind, enforce_priority: true }
+  }), 'body-hash').params[4];
+
+  expect(enforced('folder')).toBe(1);
+  expect(enforced('item')).toBeNull();
+});
+
 it('normalizes incomplete remote provenance to a double null', () => {
   const record = createNodeRecord({
     snapshot: {
@@ -96,7 +106,7 @@ it('normalizes incomplete remote provenance to a double null', () => {
     }
   });
 
-  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(23, 25)).toEqual([null, null]);
+  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(24, 26)).toEqual([null, null]);
 });
 
 it('builds an explicit update for an existing remote node', () => {

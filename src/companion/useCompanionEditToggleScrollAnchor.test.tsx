@@ -24,11 +24,12 @@ function createSurface(scrollTop: number) {
 }
 
 function createEditor(surface: HTMLElement, contentTop: number) {
+  const surfaceTop = () => surface.getBoundingClientRect().top;
   return {
     focus: vi.fn(),
     getDocumentPositionAtViewportY: (clientY: number) =>
-      Math.floor((clientY - SURFACE_TOP + surface.scrollTop - contentTop) / LINE_HEIGHT),
-    getPositionViewportTop: (position: number) => SURFACE_TOP + contentTop + position * LINE_HEIGHT - surface.scrollTop,
+      Math.floor((clientY - surfaceTop() + surface.scrollTop - contentTop) / LINE_HEIGHT),
+    getPositionViewportTop: (position: number) => surfaceTop() + contentTop + position * LINE_HEIGHT - surface.scrollTop,
     setSelection: vi.fn()
   } as unknown as EditorAdapter & { focus: ReturnType<typeof vi.fn>; setSelection: ReturnType<typeof vi.fn> };
 }
@@ -65,6 +66,31 @@ describe('useCompanionEditToggleScrollAnchor alignment', () => {
     expect(editing.focus).toHaveBeenCalled();
   });
 
+  // Docked reading starts its surface below the toolbar, while the editing surface covers the whole screen.
+  it.each([
+    { from: 72, to: 0, editing: true, mode: 'entering editing' },
+    { from: 0, to: 72, editing: false, mode: 'leaving editing' }
+  ])('keeps the line at the same screen height when $mode moves the surface top', ({ from, to, editing }) => {
+    const surface = createSurface(2130);
+    const place = (top: number) => { surface.getBoundingClientRect = () => ({ top, height: SURFACE_HEIGHT - top } as DOMRect); };
+    place(from);
+    const { result } = renderHook(() => useCompanionEditToggleScrollAnchor({ current: surface }));
+    const before = createEditor(surface, 56);
+    const position = before.getDocumentPositionAtViewportY(from + (SURFACE_HEIGHT - from) * EDIT_TOGGLE_ANCHOR_RATIO)!;
+    const screenTop = before.getPositionViewportTop!(position)!;
+
+    act(() => { result.current.capture(before, editing); });
+    place(to);
+    surface.scrollTop = 0;
+    const after = createEditor(surface, 56);
+    act(() => {
+      result.current.onEditorReady(after);
+      flushFrames(5);
+    });
+
+    expect(after.getPositionViewportTop!(position)).toBe(screenTop);
+  });
+
   it('restores the reading position on exit without moving the caret or focusing', () => {
     const surface = createSurface(2251);
     const { result } = renderHook(() => useCompanionEditToggleScrollAnchor({ current: surface }));
@@ -85,6 +111,61 @@ describe('useCompanionEditToggleScrollAnchor alignment', () => {
     expect(reading.focus).not.toHaveBeenCalled();
   });
 
+});
+
+describe('useCompanionEditToggleScrollAnchor late keyboard', () => {
+  useFakeFrames();
+
+  function enterEditing(scrollTop: number) {
+    const surface = createSurface(scrollTop);
+    const { result } = renderHook(() => useCompanionEditToggleScrollAnchor({ current: surface }));
+    act(() => { result.current.capture(createEditor(surface, 56), true); });
+    surface.scrollTop = 0;
+    const editing = createEditor(surface, 120);
+    act(() => {
+      result.current.onEditorReady(editing);
+      flushFrames(5);
+    });
+    return surface;
+  }
+
+  /** The keyboard resizes the window and the platform scrolls the caret on its own. */
+  function openKeyboard(surface: HTMLElement) {
+    act(() => {
+      vi.advanceTimersByTime(900);
+      surface.scrollTop += 300;
+      window.dispatchEvent(new Event('resize'));
+      flushFrames(5);
+    });
+  }
+
+  it('realigns when the keyboard arrives after the line had already settled', () => {
+    const surface = enterEditing(2130);
+    const settled = surface.scrollTop;
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(settled);
+  });
+
+  it('keeps the start of the document clear of the editing toolbar', () => {
+    const surface = enterEditing(0);
+    expect(surface.scrollTop).toBe(0);
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(0);
+  });
+
+  it('leaves the position alone once the reader types', () => {
+    const surface = enterEditing(2130);
+    const settled = surface.scrollTop;
+    act(() => { document.dispatchEvent(new Event('beforeinput')); });
+
+    openKeyboard(surface);
+
+    expect(surface.scrollTop).toBe(settled + 300);
+  });
 });
 
 describe('useCompanionEditToggleScrollAnchor release', () => {

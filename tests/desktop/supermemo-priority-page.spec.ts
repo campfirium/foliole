@@ -2,7 +2,9 @@ import { writeSuperMemoPriorityCollection } from '../fixtures/superMemoPriorityC
 
 import { relaunchGoldenJourney } from './harness/core-product-golden-journey';
 import { expect, test } from './harness/fixtures';
-import { gradesStep, loadSource, openPreview, superMemoImportComplete } from './harness/superMemoImport';
+import {
+  gradesStep, loadSource, openPreview, priorityBoundaryP2P3, priorityReset, priorityScale, priorityStep, superMemoImportComplete
+} from './harness/superMemoImport';
 
 test('restores the edited priority mapping after restart and applies it on import', async ({
   desktopSession, desktopWindow, desktopApp
@@ -11,15 +13,15 @@ test('restores the edited priority mapping after restart and applies it on impor
   const xml = await writeSuperMemoPriorityCollection(directory);
   const dialog = await openPreview(desktopWindow);
   await loadSource(desktopApp, dialog, directory, xml, undefined, directory);
-  await dialog.getByRole('button', { name: 'Priority mapping' }).click();
-  const boundary = dialog.getByRole('slider', { name: 'Boundary between P2 and P3' });
+  await dialog.getByRole('button', { name: priorityStep }).click();
+  const boundary = dialog.getByRole('slider', { name: priorityBoundaryP2P3 });
   await expect(boundary).toHaveAttribute('aria-valuenow', '22');
   await boundary.press('ArrowLeft');
   await boundary.press('ArrowLeft');
   await expect(boundary).toHaveAttribute('aria-valuenow', '20');
-  await dialog.getByRole('button', { name: 'Reset to defaults' }).click();
+  await dialog.getByRole('button', { name: priorityReset }).click();
   await expect(boundary).toHaveAttribute('aria-valuenow', '22');
-  const rail = await dialog.getByRole('group', { name: 'SuperMemo priority (%)' }).boundingBox();
+  const rail = await dialog.getByRole('group', { name: priorityScale }).boundingBox();
   const handle = await boundary.boundingBox();
   if (!rail || !handle) throw new Error('Priority slider is not visible');
   const x = handle.x + handle.width / 2;
@@ -33,8 +35,8 @@ test('restores the edited priority mapping after restart and applies it on impor
   const restarted = await relaunchGoldenJourney(desktopSession);
   try {
     const reopened = await openPreview(restarted.firstWindow);
-    await expect(reopened.getByRole('heading', { name: 'Priority mapping' })).toBeVisible();
-    await expect(reopened.getByRole('slider', { name: 'Boundary between P2 and P3' })).toHaveAttribute('aria-valuenow', '20');
+    await expect(reopened.getByRole('heading', { name: priorityStep })).toBeVisible();
+    await expect(reopened.getByRole('slider', { name: priorityBoundaryP2P3 })).toHaveAttribute('aria-valuenow', '20');
     await reopened.screenshot({ path: info.outputPath('priority-mapping.png') });
     await reopened.getByRole('table').scrollIntoViewIfNeeded();
     await reopened.screenshot({ path: info.outputPath('priority-probabilities.png') });

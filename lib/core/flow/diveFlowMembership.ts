@@ -29,7 +29,8 @@ export async function readDiveFlowMembers(db: DbPort, id: string): Promise<strin
       UNION
       SELECT n.id, n.kind, m.within_topic OR n.kind = 'topic'
       FROM members m JOIN nodes n ON n.parent_id = m.id
-      WHERE n.deleted_at IS NULL AND (m.within_topic OR
+      -- Unary plus keeps SQLite on the parent index; the deleted_at index rereads the library per member.
+      WHERE +n.deleted_at IS NULL AND (m.within_topic OR
         (n.kind IN ('folder', 'topic') AND n.virtual_filter IS NULL AND n.anchor_link IS NULL))
     )
     SELECT DISTINCT id FROM members WHERE within_topic AND kind IN ('topic', 'item') ORDER BY id`,

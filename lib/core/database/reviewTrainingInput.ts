@@ -77,7 +77,7 @@ export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string
 function eventsSql() {
   return `WITH RECURSIVE subtree(id) AS (
       SELECT id FROM nodes WHERE deleted_at IS NULL AND id = ?
-      UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE n.deleted_at IS NULL
+      UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE +n.deleted_at IS NULL
     ) SELECT r.node_id AS nodeId, r.op_id AS opId, r.reviewed_at AS reviewedAt, r.grade, r.kind
       FROM review_log r JOIN subtree s ON s.id = r.node_id
       WHERE r.kind = 'reset' OR (${EFFECTIVE_REVIEW_PREDICATE})

@@ -9,6 +9,8 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
 const LOCK_PATH = path.join(ROOT, 'build/macos/codex-helper-release.json');
 const LATEST_RELEASE_API = 'https://api.github.com/repos/openai/codex/releases/latest';
 const STABLE_VERSION_PATTERN = /^\d+\.\d+\.\d+$/u;
+const CODEX_ASSET_NAME = 'codex-aarch64-apple-darwin.tar.gz';
+const CODE_MODE_HOST_ASSET_NAME = 'codex-code-mode-host-aarch64-apple-darwin.tar.gz';
 
 export async function loadPinnedCodexHelperRelease(lockPath = LOCK_PATH) {
   return parsePinnedRelease(JSON.parse(await readFile(lockPath, 'utf8')));
@@ -26,8 +28,7 @@ export async function checkCodexHelperRelease(options = {}) {
   const pinned = await loadPinnedCodexHelperRelease(options.lockPath);
   const latest = await fetchLatestStableCodexRelease(options.fetchImpl);
   const versionStatus = compareVersions(pinned.version, latest.version);
-  const matchesOfficialAsset = pinned.assetName === latest.assetName && pinned.sha256 === latest.sha256;
-  const status = versionStatus === 'current' && !matchesOfficialAsset ? 'mismatch' : versionStatus;
+  const status = versionStatus === 'current' && !releasesEqual(pinned, latest) ? 'mismatch' : versionStatus;
   return { latest, pinned, status };
 }
 
@@ -35,9 +36,8 @@ export async function updateCodexHelperRelease(options = {}) {
   const result = await checkCodexHelperRelease(options);
   if (result.status === 'ahead') throw new Error('Pinned Codex version is newer than the latest official stable release');
   if (result.status === 'current') return result;
-  const next = { assetName: result.latest.assetName, sha256: result.latest.sha256, version: result.latest.version };
-  await writePinnedReleaseAtomically(next, options);
-  return { ...result, pinned: next, status: 'updated' };
+  await writePinnedReleaseAtomically(result.latest, options);
+  return { ...result, pinned: result.latest, status: 'updated' };
 }
 
 export async function rollForwardCodexHelperRelease(releaseSnapshot, options = {}) {
@@ -84,11 +84,18 @@ export async function assertPinnedCodexHelperIsCurrent(options = {}) {
 
 function parsePinnedRelease(value) {
   if (!value || typeof value !== 'object') throw new Error('Invalid Codex helper release lock');
-  const { assetName, sha256, version } = value;
-  if (typeof assetName !== 'string' || !assetName.endsWith('.tar.gz')) throw new Error('Invalid Codex helper asset name');
-  if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(sha256)) throw new Error('Invalid Codex helper SHA-256');
+  const { version } = value;
+  const codex = parsePinnedAsset(value, 'Codex helper');
+  const codeModeHost = parsePinnedAsset(value.codeModeHost, 'Codex code-mode host');
   if (typeof version !== 'string' || !STABLE_VERSION_PATTERN.test(version)) throw new Error('Codex helper must pin a stable release');
-  return { assetName, sha256, version };
+  return { assetName: codex.assetName, codeModeHost, sha256: codex.sha256, version };
+}
+
+function parsePinnedAsset(value, label) {
+  const { assetName, sha256 } = value ?? {};
+  if (typeof assetName !== 'string' || !assetName.endsWith('.tar.gz')) throw new Error(`Invalid ${label} asset name`);
+  if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(sha256)) throw new Error(`Invalid ${label} SHA-256`);
+  return { assetName, sha256 };
 }
 
 function parseOfficialRelease(value) {
@@ -97,12 +104,16 @@ function parseOfficialRelease(value) {
   }
   const version = typeof value.tag_name === 'string' ? value.tag_name.replace(/^rust-v/u, '') : '';
   if (!STABLE_VERSION_PATTERN.test(version)) throw new Error('GitHub latest Codex tag is not stable');
-  const asset = Array.isArray(value.assets)
-    ? value.assets.find((item) => item?.name === 'codex-aarch64-apple-darwin.tar.gz')
-    : null;
+  const codex = parseOfficialAsset(value.assets, CODEX_ASSET_NAME, 'Codex');
+  const codeModeHost = parseOfficialAsset(value.assets, CODE_MODE_HOST_ASSET_NAME, 'Codex code-mode host');
+  return { assetName: codex.assetName, codeModeHost, sha256: codex.sha256, version };
+}
+
+function parseOfficialAsset(assets, name, label) {
+  const asset = Array.isArray(assets) ? assets.find((item) => item?.name === name) : null;
   const digest = typeof asset?.digest === 'string' ? asset.digest.match(/^sha256:([a-f0-9]{64})$/u) : null;
-  if (!digest) throw new Error('Latest stable Codex arm64 asset has no trusted SHA-256 digest');
-  return { assetName: asset.name, sha256: digest[1], version };
+  if (!digest) throw new Error(`Latest stable ${label} arm64 asset has no trusted SHA-256 digest`);
+  return { assetName: name, sha256: digest[1] };
 }
 
 function compareVersions(pinned, latest) {
@@ -116,7 +127,12 @@ function compareVersions(pinned, latest) {
 }
 
 function releasesEqual(left, right) {
-  return left.assetName === right.assetName && left.sha256 === right.sha256 && left.version === right.version;
+  return left.version === right.version
+    && assetsEqual(left, right) && assetsEqual(left.codeModeHost, right.codeModeHost);
+}
+
+function assetsEqual(left, right) {
+  return left.assetName === right.assetName && left.sha256 === right.sha256;
 }
 
 async function writePinnedReleaseAtomically(release, options) {

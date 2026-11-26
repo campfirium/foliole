@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { applySuperMemoFolderDisplay } from '../../../../lib/core/import/superMemoImportStructure';
 import { DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES } from '../../../../lib/core/import/superMemoPriorityMapping';
+import type { SuperMemoReferenceMap } from '../../../../lib/core/import/superMemoReferenceFields';
 import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { createSuperMemoDemoCollection } from '../model/superMemoDemoCollection';
 
@@ -15,6 +16,7 @@ export function useSuperMemoDemoWalkthrough() {
   const [percent, setPercent] = useState(0);
   const [boundaries, setBoundaries] = useState<readonly number[]>(DEFAULT_SUPER_MEMO_PRIORITY_BOUNDARIES);
   const [gradeMap, setGradeMap] = useState<SuperMemoGradeMap>(DEFAULT_SUPER_MEMO_GRADE_MAP);
+  const [referenceMap, setReferenceMap] = useState<SuperMemoReferenceMap>({});
   const navigation = useSuperMemoPreviewNavigation(undefined);
 
   function changeFolder(id: number, folder: boolean) {
@@ -29,7 +31,7 @@ export function useSuperMemoDemoWalkthrough() {
 
   return {
     ...collection, step, setStep, percent, setPercent, boundaries, setBoundaries,
-    gradeMap, setGradeMap, navigation, changeFolder
+    gradeMap, setGradeMap, referenceMap, setReferenceMap, navigation, changeFolder
   };
 }
 

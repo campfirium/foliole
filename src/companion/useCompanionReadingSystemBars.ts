@@ -1,30 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '../shared/platform/companion/reading/companionReadingSystemBars';
 
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 
-// Moving to the next card unmounts the article before the next one mounts; releasing at once lets Android flash the status bar.
-const RELEASE_GRACE_MS = 1500;
-let pendingRelease: ReturnType<typeof setTimeout> | null = null;
+function release(held: MutableRefObject<boolean>) {
+  if (!held.current) return;
+  held.current = false;
+  void companionReadingSystemBars.request({ enabled: false, hidden: false });
+}
 
-export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisible: boolean) {
-  useEffect(() => {
-    if (pendingRelease) { clearTimeout(pendingRelease); pendingRelease = null; }
-    return () => {
-      if (!supportsCompanionReadingSystemBars()) return;
-      pendingRelease = setTimeout(() => {
-        pendingRelease = null;
-        void companionReadingSystemBars.request({ enabled: false, hidden: false });
-      }, RELEASE_GRACE_MS);
-    };
-  }, []);
+/** Called only by the reading session: holds the bars while reading and hands them back as soon as it ends. */
+export function useCompanionReadingSystemBars(reading: boolean, normalLayout: boolean) {
+  const held = useRef(false);
+  useEffect(() => () => release(held), []);
   const { hideSystemStatusBar } = useCompanionReadingDisplay();
   useEffect(() => {
     if (!supportsCompanionReadingSystemBars()) return;
+    if (!reading) { release(held); return; }
+    held.current = true;
+    // Reading toolbars never reveal the status bar; the native window shows it transiently on a top-edge swipe.
     const enabled = hideSystemStatusBar && !normalLayout;
-    const target = { enabled, hidden: enabled && !chromeVisible };
+    const target = { enabled, hidden: enabled };
     void companionReadingSystemBars.request(target);
     const reapply = () => { void companionReadingSystemBars.request(target, true); };
     let active = true;
@@ -39,5 +37,5 @@ export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisib
       unsubscribe?.();
       window.removeEventListener('orientationchange', reapply);
     };
-  }, [hideSystemStatusBar, normalLayout, chromeVisible]);
+  }, [hideSystemStatusBar, normalLayout, reading]);
 }

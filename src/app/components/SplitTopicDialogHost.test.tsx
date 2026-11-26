@@ -94,10 +94,12 @@ it('previews split Topics and leaves storage untouched when canceled', async () 
   const trace = { startedAt: 1, attempt: 1 };
   act(() => requestSplitTopicDialog('source-topic', trace));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
-  expect(vi.mocked(recordSplitTopicTrace).mock.calls.filter(([recording]) => recording === trace).map(([, detail]) => detail)).toEqual([
+  // The trace effects run after the commit that enables Cancel.
+  await waitFor(() => expect(vi.mocked(recordSplitTopicTrace).mock.calls
+    .filter(([recording]) => recording === trace).map(([, detail]) => detail)).toEqual([
     { event: 'split.topic.stage', stage: 'dialog-opened' },
     { event: 'split.topic.preview', delimiter: 'matched', parts: 2 }
-  ]);
+  ]));
 
   expect(screen.getByRole('heading', { name: 'Split Topic' })).toBeInTheDocument();
   const preview = within(screen.getByRole('region', { name: 'Preview' }));

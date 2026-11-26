@@ -59,6 +59,8 @@ beforeEach(async () => {
   const now = '2026-05-01T00:00:00.000Z';
   insert.run('inbox', null, 'Inbox', 'folder', 0, now, now);
   insert.run('card', 'inbox', 'Card', 'item', 0, now, now);
+  // A blank Item is never scheduled, so the graded card needs a question.
+  database!.prepare("UPDATE nodes SET content='Question' WHERE id='card'").run();
   await saveCompanionSyncNodeReviewRecord({ nodeId: 'card', review: {
     difficulty: 4.2, due: now, elapsedDays: 2, lapses: 0,
     lastReviewAt: now, reps: 3, scheduledDays: 2, stability: 2.1, state: 2

@@ -20,6 +20,7 @@ import { FRAMED_SYNC_INVENTORY_SCHEMA } from './framedSyncInventorySchema.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
+import { DESKTOP_LOCAL_DERIVED_INDEX_SCHEMA } from './localDerivedIndexMigration.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
@@ -79,5 +80,6 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS,
 
   ...FRAMED_SYNC_INVENTORY_SCHEMA,
-  ...FRAMED_SYNC_DIGEST_SCHEMA
+  ...FRAMED_SYNC_DIGEST_SCHEMA,
+  ...DESKTOP_LOCAL_DERIVED_INDEX_SCHEMA
 ].filter((statement) => !isRetiredAttachmentSchema(statement) && !isLegacyOrderingSchema(statement) && !isRetiredSyncSchema(statement));

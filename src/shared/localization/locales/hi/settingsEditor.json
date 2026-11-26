@@ -1,6 +1,12 @@
 {
   "settings.search.editorImmersiveDoubleClick.title": "बदलाव करने के लिए मुख्य टेक्स्ट पर डबल क्लिक करें",
   "settings.search.editorImmersiveDoubleClick.description": "ध्यान से पढ़ने वाले मोड में टेक्स्ट बदलने के लिए दस्तावेज़ के मुख्य हिस्से पर डबल क्लिक करें। इसे बंद करने पर डबल क्लिक टेक्स्ट चुनने के काम आएगा। Enter दबाकर तब भी बदलाव कर सकते हैं।",
+  "settings.search.cleanFormatting.path": "संपादन योग्य विषय खोलें और एडिटर के ऊपर दाईं ओर के मेनू या मुख्य टेक्स्ट के राइट-क्लिक मेनू में «फ़ॉर्मैटिंग साफ़ करें...» चुनें।",
+  "settings.search.cleanFormatting.terms": "फ़ॉर्मैटिंग की सफ़ाई|फ़ॉर्मैटिंग हटाएँ|फ़ॉर्मैट हटाएँ|फ़ॉर्मैटिंग साफ़ करें",
+  "settings.search.imageCloze.path": "किसी विषय में स्थानीय रूप से सहेजे गए चित्र पर जिस हिस्से को छिपाना है उसके ऊपर खींचकर आयत बनाएँ, फिर सही के निशान पर क्लिक करें।",
+  "settings.search.imageCloze.terms": "चित्र का हिस्सा छिपाएँ|चित्र में खाली जगह|चित्र पर मास्क",
+  "settings.search.formulaCloze.path": "किसी विषय में स्क्रीन पर दिख रहे सूत्र के जिस हिस्से को छिपाना है उस पर खींचें।",
+  "settings.search.formulaCloze.terms": "गणित में खाली जगह|समीकरण में खाली जगह|सूत्र का हिस्सा छिपाएँ|गणित पर मास्क",
   "settings.editor.readingMode.section": "पढ़ने का मोड",
   "settings.editor.readingMode.aria": "पढ़ने के मोड की सेटिंग"
 }

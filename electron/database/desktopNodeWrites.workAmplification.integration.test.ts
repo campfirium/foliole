@@ -27,6 +27,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDatabase } from './migrate.js';
 import { drainDirtyNodeSyncVersions } from './nodeSyncVersionDrain.js';
 import { createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
+import { resetSearchInvalidationCoalescerForTests } from './searchIndexInvalidationCoalescer.js';
 
 // Work-amplification check: everyday single-node writes on the desktop, counted in rows read, never durations.
 const at = '2026-11-21T08:00:00.000Z';
@@ -64,6 +65,8 @@ async function openLibrary(folders: number) {
 }
 
 async function closeLibrary() {
+  // A rename or content write leaves a delayed search flush that would reopen the database after it is closed.
+  resetSearchInvalidationCoalescerForTests();
   await drainDirtyNodeSyncVersions();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
