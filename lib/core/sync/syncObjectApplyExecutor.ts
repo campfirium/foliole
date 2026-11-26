@@ -206,37 +206,11 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord):
   }
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';
-  // Two live readings are ranked by the reading itself; an undo can win with an older write time.
-  // The same undo stays ranked by its history order against a deletion, so arrival order cannot matter.
-  if (await competesByReadingOrder(port, record, current)) return 'apply';
   const ownerOrder = await compareReadwiseOwnerEpoch(port, record);
   if (ownerOrder) return ownerOrder;
-  const [currentAt, incomingAt] = await orderTimes(port, record, current);
-  const currentKey = `${currentAt}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
-  const incomingKey = `${incomingAt}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
+  const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
+  const incomingKey = `${record.updated_at}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
   return currentKey < incomingKey ? 'apply' : 'stale';
-}
-
-async function orderTimes(port: DbPort, record: SyncObjectRecord, current: ExistingSyncObjectState) {
-  const times: [string, string] = [current.updated_at, record.updated_at];
-  if (record.object_type !== 'node_reading' || Boolean(record.deleted_at) === Boolean(current.deleted_at)) return times;
-  if (record.deleted_at) {
-    const [row] = await port.query<{ history_order_at: string | null }>(
-      'SELECT history_order_at FROM node_reading WHERE node_id = ?', [record.object_id]);
-    return [later(current.updated_at, row?.history_order_at), record.updated_at];
-  }
-  return [current.updated_at, later(record.updated_at, asObject(record).history_order_at)];
-}
-
-function later(writtenAt: string, orderAt: unknown) {
-  return typeof orderAt === 'string' && orderAt > writtenAt ? orderAt : writtenAt;
-}
-
-async function competesByReadingOrder(port: DbPort, record: SyncObjectRecord, current: ExistingSyncObjectState) {
-  if (record.object_type !== 'node_reading' || record.deleted_at || current.deleted_at) return false;
-  // Only a reading that carries a history order may pass the write-time check.
-  if (typeof asObject(record).history_order_at !== 'string') return false;
-  return (await port.query('SELECT 1 FROM node_reading WHERE node_id = ?', [record.object_id])).length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
