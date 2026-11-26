@@ -23,7 +23,7 @@ it('opens only items this device holds and copies identities without titles', as
   expect(screen.getByRole('heading').textContent).toBe('Not synced: 2');
   fireEvent.click(screen.getByRole('button', { name: 'Private title' }));
   expect(open).toHaveBeenCalledWith('local-id');
-  expect(screen.queryByRole('button', { name: 'Not on this device (node)' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Not on this device' })).toBeNull();
   expect(screen.queryByText('Gone')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Copy all' }));
   await waitFor(() => expect(copyText).toHaveBeenCalled());

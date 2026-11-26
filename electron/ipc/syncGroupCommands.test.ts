@@ -17,6 +17,8 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.7.14' } }));
+vi.mock('../../lib/core/sync/syncUnsyncedView.js', () => ({ loadSyncUnsyncedView: async () => [] }));
+vi.mock('../database/betterSqliteDbPort.js', () => ({ createBetterSqliteDbPort: () => ({}) }));
 vi.mock('../../lib/platform/syncGroupContract.js', () => ({
   resolveLocalSyncGroupDevice: () => ({ device_identity_key: 'device-local' })
 }));

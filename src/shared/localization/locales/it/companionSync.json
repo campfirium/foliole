@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "In attesa della sincronizzazione del contenuto di livello superiore",
   "companion.sync.unsynced.reason.failed": "Impossibile sincronizzare",
   "companion.sync.unsynced.thisDevice": "Questo dispositivo",
-  "companion.sync.unsynced.notHere": "Non presente su questo dispositivo ({type})",
+  "companion.sync.unsynced.notHere": "Non presente su questo dispositivo",
   "companion.sync.unsynced.copy": "Copia",
   "companion.sync.unsynced.copyAll": "Copia tutto",
   "companion.sync.unsynced.copied": "Copiato",

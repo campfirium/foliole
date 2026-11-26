@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "상위 콘텐츠가 동기화되기를 기다리는 중",
   "companion.sync.unsynced.reason.failed": "동기화할 수 없습니다",
   "companion.sync.unsynced.thisDevice": "이 기기",
-  "companion.sync.unsynced.notHere": "이 기기에 없음 ({type})",
+  "companion.sync.unsynced.notHere": "이 기기에 없음",
   "companion.sync.unsynced.copy": "복사",
   "companion.sync.unsynced.copyAll": "모두 복사",
   "companion.sync.unsynced.copied": "복사됨",

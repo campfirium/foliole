@@ -78,7 +78,7 @@ export function SyncUnsyncedList(props: Props) {
 function ItemName({ item, onOpen }: { item: SyncUnsyncedViewItem; onOpen: ((nodeId: string) => void) | undefined }) {
   const t = useTranslation();
   if (item.title === null) {
-    return <p className="break-words">{t('companion.sync.unsynced.notHere', { type: item.objectType })}</p>;
+    return <p className="break-words">{t('companion.sync.unsynced.notHere')}</p>;
   }
   const title = item.title || item.globalId;
   return onOpen

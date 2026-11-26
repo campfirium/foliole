@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "等待上層內容同步",
   "companion.sync.unsynced.reason.failed": "未能同步",
   "companion.sync.unsynced.thisDevice": "本機",
-  "companion.sync.unsynced.notHere": "本機沒有這項內容（{type}）",
+  "companion.sync.unsynced.notHere": "本機沒有這項內容",
   "companion.sync.unsynced.copy": "複製",
   "companion.sync.unsynced.copyAll": "全部複製",
   "companion.sync.unsynced.copied": "已複製",

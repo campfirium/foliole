@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "Ожидание синхронизации материала уровнем выше",
   "companion.sync.unsynced.reason.failed": "Не удалось синхронизировать",
   "companion.sync.unsynced.thisDevice": "Это устройство",
-  "companion.sync.unsynced.notHere": "Нет на этом устройстве ({type})",
+  "companion.sync.unsynced.notHere": "Нет на этом устройстве",
   "companion.sync.unsynced.copy": "Копировать",
   "companion.sync.unsynced.copyAll": "Копировать всё",
   "companion.sync.unsynced.copied": "Скопировано",

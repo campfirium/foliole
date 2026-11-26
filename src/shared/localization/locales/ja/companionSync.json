@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "親項目の同期を待っています",
   "companion.sync.unsynced.reason.failed": "同期できませんでした",
   "companion.sync.unsynced.thisDevice": "このデバイス",
-  "companion.sync.unsynced.notHere": "このデバイスにはありません（{type}）",
+  "companion.sync.unsynced.notHere": "このデバイスにはありません",
   "companion.sync.unsynced.copy": "コピー",
   "companion.sync.unsynced.copyAll": "すべてコピー",
   "companion.sync.unsynced.copied": "コピーしました",

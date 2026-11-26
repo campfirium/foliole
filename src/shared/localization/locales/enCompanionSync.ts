@@ -42,7 +42,7 @@ export const EN_COMPANION_SYNC_TRANSLATIONS = {
   'companion.sync.unsynced.reason.waiting': 'Waiting for its parent to sync',
   'companion.sync.unsynced.reason.failed': 'Could not be synced',
   'companion.sync.unsynced.thisDevice': 'This device',
-  'companion.sync.unsynced.notHere': 'Not on this device ({type})',
+  'companion.sync.unsynced.notHere': 'Not on this device',
   'companion.sync.unsynced.copy': 'Copy',
   'companion.sync.unsynced.copyAll': 'Copy all',
   'companion.sync.unsynced.copied': 'Copied',

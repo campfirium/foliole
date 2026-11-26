@@ -39,7 +39,7 @@
   "companion.sync.unsynced.reason.waiting": "ऊपरी स्तर की सामग्री के सिंक होने का इंतज़ार है",
   "companion.sync.unsynced.reason.failed": "सिंक नहीं हो सका",
   "companion.sync.unsynced.thisDevice": "यह डिवाइस",
-  "companion.sync.unsynced.notHere": "इस डिवाइस पर नहीं है ({type})",
+  "companion.sync.unsynced.notHere": "इस डिवाइस पर नहीं है",
   "companion.sync.unsynced.copy": "कॉपी करें",
   "companion.sync.unsynced.copyAll": "सभी कॉपी करें",
   "companion.sync.unsynced.copied": "कॉपी हो गया",
