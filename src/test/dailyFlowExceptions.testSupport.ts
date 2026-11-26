@@ -4,6 +4,7 @@ import { expect } from 'vitest';
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
 import { createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport';
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { hashTextBody } from '../../lib/core/database/textBodyHash';
 import type { DailyFlowSettings } from '../../lib/core/flow/dailyFlowContract';
@@ -26,7 +27,11 @@ export const settings = (peer: Peer): DailyFlowSettings => ({ scope: hashTextBod
 
 export async function setupPeers() {
   await startLibraries();
-  const peers = [createPeer('desktop'), createPeer('mobile')] as const;
+  const initialize = (db: Database.Database) => {
+    db.pragma('journal_mode = WAL');
+    initializeDatabaseSchema(db);
+  };
+  const peers = [createPeer('desktop', initialize), createPeer('mobile', initialize)] as const;
   joinPeers(...peers);
   for (const peer of peers) {
     peer.db.exec('CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
