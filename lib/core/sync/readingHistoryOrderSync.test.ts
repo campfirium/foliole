@@ -44,7 +44,9 @@ function library(stored: Record<string, unknown>) {
   const receive = (payload: Record<string, unknown>, updatedAt: string) =>
     applySyncObjectInTransaction(port, record(payload, updatedAt));
   const read = () => sqlite.prepare('SELECT state, repetition_count, history_order_at FROM node_reading WHERE node_id = ?').get('n');
-  return { apply, read, receive };
+  const remove = (deletedAt: string) => applySyncObjectInTransaction(port, { object_type: 'node_reading',
+    object_id: 'n', content_hash: `deleted-${deletedAt}`, deleted_at: deletedAt, updated_at: deletedAt, payload_json: null });
+  return { apply, read, receive, remove };
 }
 
 it('lets an undo that restores older progress win over the reading it reversed', async () => {
@@ -81,6 +83,33 @@ it('rejects the reversed reading although its write time is newer than the undo'
   const peer = library({ ...earlier, history_order_at: '2026-11-25T10:00:00.001Z' });
   expect(await peer.receive(dismissed, '2026-11-25T11:00:00.000Z')).toBeNull();
   expect(peer.read()).toMatchObject({ state: 'active' });
+});
+
+it('converges when a deletion older than a slow-clock undo arrives before or after it', async () => {
+  const undo = { ...earlier, history_order_at: '2026-11-25T10:00:00.001Z' };
+  const undoFirst = library(dismissed);
+  await undoFirst.receive(undo, '2026-11-25T09:50:00.000Z');
+  expect(await undoFirst.remove('2026-11-25T09:55:00.000Z')).toBeNull();
+  await undoFirst.receive(dismissed, '2026-11-25T10:00:00.000Z');
+  const removalFirst = library(dismissed);
+  await removalFirst.remove('2026-11-25T09:55:00.000Z');
+  await removalFirst.receive(undo, '2026-11-25T09:50:00.000Z');
+  await removalFirst.receive(dismissed, '2026-11-25T10:00:00.000Z');
+  expect(undoFirst.read()).toEqual(removalFirst.read());
+  expect(undoFirst.read()).toMatchObject({ state: 'active', repetition_count: 4 });
+});
+
+it('lets a deletion later than the undo win in either arrival order', async () => {
+  const undo = { ...earlier, history_order_at: '2026-11-25T10:00:00.001Z' };
+  const undoFirst = library(dismissed);
+  await undoFirst.receive(undo, '2026-11-25T09:50:00.000Z');
+  await undoFirst.remove('2026-11-25T10:02:00.000Z');
+  await undoFirst.receive(dismissed, '2026-11-25T10:00:00.000Z');
+  const removalFirst = library(dismissed);
+  await removalFirst.remove('2026-11-25T10:02:00.000Z');
+  await removalFirst.receive(undo, '2026-11-25T09:50:00.000Z');
+  expect(undoFirst.read()).toBeUndefined();
+  expect(removalFirst.read()).toBeUndefined();
 });
 
 it('keeps the stored history order when a payload does not carry one', async () => {
