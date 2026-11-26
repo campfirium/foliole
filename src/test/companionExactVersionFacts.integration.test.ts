@@ -94,7 +94,11 @@ it.each([false, true])('converges stored concurrent heads after any local blocke
       .run(versions[1]!.content_hash);
     if (dirty) {
       await host.fixture.right.seed({ nodeId: 'independent-node', title: 'Independent', content: 'Still syncs' });
-      for (const db of [host.sqlite, target]) db.prepare("UPDATE nodes SET sync_dirty = 1 WHERE id = 'node-1'").run();
+      // Only a real unpublished edit holds a successor back; a dirty mark that carries no change does not.
+      const title = host.sqlite.prepare("SELECT title FROM nodes WHERE id = 'node-1'").pluck().get() as string | null;
+      for (const db of [host.sqlite, target]) {
+        db.prepare("UPDATE nodes SET sync_dirty = 1, title = 'Unpublished edit' WHERE id = 'node-1'").run();
+      }
       const report = vi.spyOn(console, 'error').mockImplementation(() => {});
       try {
         expect((await host.sync()).remainingStructureChangeCount).toBeGreaterThan(0);
@@ -107,7 +111,9 @@ it.each([false, true])('converges stored concurrent heads after any local blocke
       } finally {
         report.mockRestore();
       }
-      for (const db of [host.sqlite, target]) db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id = 'node-1'").run();
+      for (const db of [host.sqlite, target]) {
+        db.prepare("UPDATE nodes SET sync_dirty = 0, title = ? WHERE id = 'node-1'").run(title);
+      }
     }
     expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
     const state = (db: Database.Database) => db.prepare(
