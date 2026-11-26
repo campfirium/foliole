@@ -5,6 +5,7 @@ import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSync
 import { createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations';
+import type { DatabaseMigrationTarget } from '../../lib/core/database/migrationTypes';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { hashTextBody } from '../../lib/core/database/textBodyHash';
 import type { DailyFlowSettings } from '../../lib/core/flow/dailyFlowContract';
@@ -27,7 +28,7 @@ export const settings = (peer: Peer): DailyFlowSettings => ({ scope: hashTextBod
 
 export async function setupPeers() {
   await startLibraries();
-  const initialize = (db: Database.Database) => {
+  const initialize = (db: DatabaseMigrationTarget) => {
     db.pragma('journal_mode = WAL');
     initializeDatabaseSchema(db);
   };
