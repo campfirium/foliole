@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "마지막 최적화: {time}",
   "settings.review.optimizationFailed": "최적화를 완료하지 못했습니다. 다시 시도하세요.",
   "settings.review.later.title": "사용자 정의 나중에 간격",
-  "settings.review.later.description": "재료가 다시 나타나기 전의 간격을 설정합니다(기본 짧은 간격의 경우 0).",
+  "settings.review.later.description": "Later를 선택한 뒤 주제가 다시 나타나기까지의 일수입니다. 0이면 자동으로 계산된 더 짧은 간격을 사용합니다.",
   "settings.review.later.default": "기본",
   "settings.webLookup.articleTarget": "주제 전송 대상",
   "settings.webLookup.chooseArticleTarget": "앱 선택",

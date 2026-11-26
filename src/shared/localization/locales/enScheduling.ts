@@ -1,7 +1,7 @@
 export const EN_SCHEDULING_TRANSLATIONS = {
   'settings.scheduling.title': 'Scheduling',
   'settings.scheduling.description': 'Adjust when materials appear for reading and review.',
-  'settings.scheduling.optimization': 'Foliole automatically trains FSRS parameters for each Folder and its subfolders after enough reviews accumulate.',
+  'settings.scheduling.optimization': 'FSRS parameters are trained automatically for each Folder and its subfolders once enough reviews have accumulated.',
   'settings.scheduling.retention': 'The target chance of recalling an Item when it is due. A higher target generally means shorter intervals and more reviews. The recommended range is 80%–95%.',
   'settings.scheduling.retentionExample': 'With targets of {targets}, FSRS estimates {reviews} first-year reviews, respectively. This uses the same new Item and default parameters, with each review on time and rated Good. The initial study is excluded.',
   'settings.scheduling.intervalTitle': 'Maximum review interval (days)',
@@ -22,7 +22,7 @@ export const EN_SCHEDULING_TRANSLATIONS = {
   'settings.scheduling.mixTopics.other': '{count} Topics',
   'settings.scheduling.priorityTitle': 'Priority ratio',
   'settings.scheduling.prioritySearch': 'Set how likely the P1 queue is to be selected compared with P9.',
-  'settings.scheduling.priorityOrder': 'Due Topics and Items are queued separately by priority. Within reading or review, Foliole takes all due P0 materials first. It then chooses among the nonempty P1–P9 queues by weight.',
+  'settings.scheduling.priorityOrder': 'Due Topics and Items are queued separately by priority. For both reading and review, all due P0 materials come first, followed by a weighted choice among the nonempty P1–P9 queues.',
   'settings.scheduling.priorityRatio': 'The priority ratio is how many times as likely P1 is to be selected as P9 when both have due materials. A ratio of 1 gives all nonempty regular queues the same chance.',
   'settings.scheduling.priorityTable': 'Chance of selecting each queue next',
   'settings.scheduling.priorityExample': 'With a ratio of {ratio}, after P0 is cleared and while P1–P9 all have due materials, these are the chances of selecting each queue next.',

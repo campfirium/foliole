@@ -105,3 +105,17 @@ it('localizes the repeated Soon notice in every registered interface language', 
     expect(translate(locale, key)).not.toBe(english);
   }
 });
+
+it('uses localized scheduling labels and examples in every interface language', async () => {
+  const titleKey = 'settings.scheduling.title';
+  const exampleKey = 'settings.scheduling.priorityEmpty';
+  const params = { p1: '80%', p9: '20%' };
+  for (const locale of APP_LOCALES.filter(value => value !== 'en')) {
+    expect(await preloadTranslationCatalog(locale)).toBe(true);
+    expect(translate(locale, titleKey), locale).not.toBe(translate('en', titleKey));
+    const example = translate(locale, exampleKey, params);
+    expect(example, locale).not.toBe(translate('en', exampleKey, params));
+    expect(example, locale).toContain(params.p1);
+    expect(example, locale).toContain(params.p9);
+  }
+});

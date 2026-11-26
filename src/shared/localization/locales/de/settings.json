@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Letzte Optimierung: {time}",
   "settings.review.optimizationFailed": "Die Optimierung konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
   "settings.review.later.title": "Benutzerdefiniertes späteres Intervall",
-  "settings.review.later.description": "Legen Sie das Intervall fest, bevor das Material wieder erscheint (0 für das standardmäßige kurze Intervall).",
+  "settings.review.later.description": "Anzahl der Tage, bis ein Thema nach Later wieder erscheint. Bei 0 wird das kürzere Intervall automatisch berechnet.",
   "settings.review.later.default": "Standard",
   "settings.webLookup.articleTarget": "Sendeziel für Themen",
   "settings.webLookup.chooseArticleTarget": "Wählen Sie eine App aus",

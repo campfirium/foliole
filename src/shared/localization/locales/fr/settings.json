@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Dernière optimisation : {time}",
   "settings.review.optimizationFailed": "L’optimisation n’a pas pu se terminer. Réessayez.",
   "settings.review.later.title": "Intervalle ultérieur personnalisé",
-  "settings.review.later.description": "Définissez l'intervalle avant la réapparition du matériau (0 pour l'intervalle court par défaut).",
+  "settings.review.later.description": "Nombre de jours avant qu’un sujet réapparaisse après Later. La valeur 0 utilise l’intervalle plus court calculé automatiquement.",
   "settings.review.later.default": "Défaut",
   "settings.webLookup.articleTarget": "Destination du sujet",
   "settings.webLookup.chooseArticleTarget": "Sélectionnez une application",

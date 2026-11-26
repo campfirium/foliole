@@ -37,6 +37,7 @@ import d24 from './ptBR/desktopSourceUpdate.json';
 import d25 from './ptBR/desktopWordPress.json';
 import d26 from './ptBR/feedback.json';
 import reminders from './ptBR/reminders.json';
+import scheduling from './ptBR/scheduling.json';
 import d27 from './ptBR/settings.json';
 import d28 from './ptBR/settingsAbout.json';
 import settingsAide from './ptBR/settingsAide.json';
@@ -112,6 +113,7 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...desktopReadwisePolicy,
   ...desktopSourceConnections,
   ...reminders,
+  ...scheduling,
   ...settingsAide,
   ...settingsAttachments,
   ...settingsBackups,

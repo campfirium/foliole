@@ -147,7 +147,7 @@
   "settings.search.reviewInitialInterval.title": "讀取初始間隔",
   "settings.search.reviewInitialInterval.description": "主題完成一次閱讀後，再次進入閱讀佇列前的等待時間。",
   "settings.review.later.title": "Later 自訂間隔",
-  "settings.review.later.description": "指定材料再次出現間隔（預設 0 為短間隔）",
+  "settings.review.later.description": "選擇 Later 後，主題再次出現前的天數。設為 0 時，使用自動計算的較短間隔。",
   "settings.review.later.default": "預設",
   "settings.search.reviewIntervalGrowth.title": "閱讀間隔增長",
   "settings.search.reviewIntervalGrowth.description": "每次通過後讀取間隔增長的速度。",

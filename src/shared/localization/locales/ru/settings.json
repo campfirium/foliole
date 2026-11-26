@@ -231,7 +231,7 @@
   "settings.review.lastOptimization": "Последняя оптимизация: {time}",
   "settings.review.optimizationFailed": "Не удалось завершить оптимизацию. Повторите попытку.",
   "settings.review.later.title": "Пользовательский интервал позже",
-  "settings.review.later.description": "Установите интервал перед повторным появлением материала (0 для короткого интервала по умолчанию).",
+  "settings.review.later.description": "Число дней до повторного появления темы после выбора Later. При значении 0 используется автоматически рассчитанный более короткий интервал.",
   "settings.review.later.default": "По умолчанию",
   "settings.webLookup.articleTarget": "Куда отправлять тему",
   "settings.webLookup.chooseArticleTarget": "Выберите приложение",
