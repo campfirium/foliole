@@ -173,8 +173,6 @@ cleanup still owed by its owner.
 | Proposal | Reviewed head | Target | Adoption | Local evidence | Required QA |
 | --- | --- | --- | --- | --- | --- |
 | [#310](https://github.com/campfirium/foliole/pull/310) | `b624d531cad2beadfb74e048b978a5f66b783a85` | lucide-react 1.74.0 | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
-| [#309](https://github.com/campfirium/foliole/pull/309) | `b205147c3beb7d7ce8482dfcb053a6200dda8b6b` | @typescript-eslint/eslint-plugin and parser 8.73.0 | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
-| [#308](https://github.com/campfirium/foliole/pull/308) | `3dbf893788900765be4a78e146079098d1f5b4b2` | minimatch 11.0.9 override | `d72e5ed7f` | See the November 25 notes below | Full and dependency hardening |
 
 November 25 pre-release batch: all three heads are verified `app/renovate`
 proposals against `dev`, adopted together in `d72e5ed7f`. Local checks passed:
@@ -187,6 +185,12 @@ pattern now raises `RangeError` instead of returning a bounded set. Installed
 11.0.8 raises the same error, so 11.0.9 does not introduce it. The central QA
 owner must decide whether the thrown limit satisfies the bounded-expansion
 contract and repair the test or the dependency before closing #308.
+[Full run 45962275259](https://github.com/campfirium/foliole/actions/runs/45962275259)
+passed with dependency hardening for the candidate containing `d72e5ed7f`, which
+reached remote `dev` and `preview`. #309 is closed and its source ref deleted;
+#308 was already closed by the bot and its source ref is absent. #310 stays
+pending because its head moved to a newer lucide-react after review.
+
 TypeScript 7 (#193) remains deferred: typescript-eslint 8.73.0 still requires
 TypeScript below 6.1 and its TS 7.1 backend is experimental.
 
