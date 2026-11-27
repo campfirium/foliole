@@ -52,8 +52,10 @@ export function verifySyncPackAcceptance(
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesOpen(secondBridge.roundtrip?.gates);
   const version = suffix => `ver_00000000-0000-4000-8000-000000000${suffix}`;
-  // Each superseded parent has no body and every member has passed it, so the round reclaims it and keeps the edge.
-  const snapshotPassed = firstSnapshot?.capture_versions === 1 && firstSnapshot?.restore_versions === 1 &&
+  // A superseded parent has no body once every member has passed it. Reclaiming may wait until a later round,
+  // so only the restarted round must have dropped the restore parent; the edge stays either way.
+  const snapshotPassed = firstSnapshot?.capture_versions === 1 && [1, 2].includes(firstSnapshot?.restore_versions) &&
+    secondSnapshot?.restore_versions === 1 &&
     firstSnapshot?.capture_current === version('148') && firstSnapshot?.capture_parent === version('146') &&
     firstSnapshot?.capture_body === 'Mac successor body' && firstSnapshot?.restore_body === 'Restore body' &&
     firstSnapshot?.restore_current === version('147') && firstSnapshot?.restore_parent === version('145') &&
@@ -62,7 +64,7 @@ export function verifySyncPackAcceptance(
     service.received_version_ids?.includes(version('146')) && service.received_version_ids?.includes(version('147')) &&
     service.successor_version_id === version('148');
   if (!firstPassed || !secondPassed || !snapshotPassed || !serviceObserved ||
-      JSON.stringify(secondSnapshot) !== JSON.stringify(firstSnapshot)) {
+      JSON.stringify(secondSnapshot) !== JSON.stringify({ ...firstSnapshot, restore_versions: 1 })) {
     throw new Error('iOS request sync acceptance evidence is incomplete.');
   }
   return { first: firstBridge, first_snapshot: firstSnapshot, second: secondBridge, second_snapshot: secondSnapshot };
