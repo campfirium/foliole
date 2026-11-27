@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "선택한 자료 {count}개와 그 안의 자료를 휴지통으로 이동할까요?",
   "companion.syncSetup.receiving.oversized": "본문이 너무 커서 보낼 수 없습니다. 계속하기 전에 보내는 기기에서 본문을 줄이세요.",
   "companion.syncSetup.receiving.partial": "일부 데이터를 받지 못했습니다.",
+  "companion.syncSetup.receiving.unreachable": "지금은 보내는 기기에 연결할 수 없습니다. 연결되면 수신이 자동으로 계속됩니다.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "이 기기",
   "companion.syncSetup.receiving.sendingDevice": "보내는 기기",

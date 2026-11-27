@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "Przenieść wybrane materiały ({count}) wraz z zawartością do Kosza?",
   "companion.syncSetup.receiving.oversized": "Treść jest zbyt duża, aby ją wysłać. Skróć ją na urządzeniu wysyłającym, zanim przejdziesz dalej.",
   "companion.syncSetup.receiving.partial": "Nie udało się odebrać części danych.",
+  "companion.syncSetup.receiving.unreachable": "Nie można teraz połączyć się z urządzeniem wysyłającym. Odbieranie zostanie wznowione automatycznie, gdy będzie ono dostępne.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "To urządzenie",
   "companion.syncSetup.receiving.sendingDevice": "Urządzenie wysyłające",

@@ -122,6 +122,9 @@ function ReceivingFailure({ run }: { run: AdoptionRun }) {
   const code = issue?.code ?? (run.phase === 'paused' ? null : run.error);
   const oversized = issue?.code === 'request_sync_body_too_large';
   if (!code) return null;
+  if (code === 'sync_peer_unreachable') return (
+    <p className="text-sm text-accent" role="status">{t('companion.syncSetup.receiving.unreachable')}</p>
+  );
   const device = issue?.device === 'peer' ? run.providerName || t('companion.syncSetup.receiving.sendingDevice')
     : t(issue?.device === 'local' ? 'companion.syncSetup.receiving.thisDevice' : 'companion.syncSetup.receiving.unknownDevice');
   const stage = t(issue?.stage === 'prepare' ? 'companion.syncSetup.receiving.prepareStage'
@@ -141,19 +144,21 @@ export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoption
   const t = useTranslation();
   const run = props.run.phase === 'none' ? null : props.run;
   const oversized = run?.phase !== 'failed' && run?.rejection?.code === 'request_sync_body_too_large';
+  // The provider may never come back, so waiting still offers retrying now or leaving.
+  const unreachable = run?.phase === 'receiving' && run.error === 'sync_peer_unreachable';
   return <SyncStatusCard title={t('companion.syncSetup.receiving.title')}
     detail={oversized ? undefined : t('companion.syncSetup.receiving.detail')}>
     <div className="space-y-4" data-phase={run?.phase ?? 'starting'} data-testid="companion-sync-receiving">
       {run ? <ReceivingProgress run={run} /> : <AppSpinner decorative size="sm" />}
       {run?.phase === 'paused' ? <p className="text-sm text-accent">{t('companion.syncSetup.receiving.paused')}</p> : null}
       {run ? <ReceivingFailure run={run} /> : null}
-      {run?.phase === 'failed' || run?.rejection ?
+      {run?.phase === 'failed' || run?.rejection || unreachable ?
         <PrimaryAction onClick={props.onRetry} testId="companion-sync-receiving-retry">
           {t(oversized ? 'companion.syncSetup.receiving.resumeAfterRepair'
             : 'companion.syncSetup.receiving.retry')}
         </PrimaryAction>
       : null}
-      {run?.phase === 'failed' || run?.phase === 'paused' || run?.rejection ?
+      {run?.phase === 'failed' || run?.phase === 'paused' || run?.rejection || unreachable ?
         <CompanionLeaveSyncGroup onLeave={props.onLeave} /> : null}
     </div>
   </SyncStatusCard>;

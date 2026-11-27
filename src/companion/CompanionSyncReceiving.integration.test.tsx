@@ -113,6 +113,30 @@ it('shows the underlying message of an unlisted failure with file paths removed'
   expect(renderCard()).toContain('sync_group_member_state_failed_500 at [path]</code>');
 });
 
+it('waits for an unreachable provider and finishes on the next scheduled run', {
+  meta: { calibratedMs: 20000 }
+}, async () => {
+  host = await createJoiningMobile();
+  const { db } = host;
+  const join = await approveJoin(host);
+  const nativeFailure = Object.assign(new Error('Failed to connect to /192.168.0.2:38643'), { code: 'E_PEER_UNREACHABLE' });
+  const send = mobile.http.getMockImplementation()!;
+  mobile.http.mockImplementation(async request => {
+    if (request.url.endsWith('/sync-group/member-state')) throw nativeFailure;
+    return send(request);
+  });
+  await expect(join()).rejects.toThrow('Failed to connect');
+  mobile.http.mockImplementation(send);
+  expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving', error: 'sync_peer_unreachable' });
+  expect(renderCard()).toContain('continues automatically once it is reachable');
+  expect(renderCard()).not.toContain('Failed to connect');
+  expect(renderCard()).toContain('Try again');
+
+  await expect(runPendingCompanionSyncGroupAdoption()).resolves.toBe(true);
+  expect(await loadSyncGroupLocalAdoption(db)).toBeNull();
+  expect(renderCard()).toBe('');
+});
+
 it('shows an expired receive round while retry remains possible', {
   meta: { calibratedMs: 20000 }
 }, async () => {

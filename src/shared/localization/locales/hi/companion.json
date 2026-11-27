@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "चुनी हुई {count} सामग्री और उसके अंदर की सामग्री ट्रैश में डालें?",
   "companion.syncSetup.receiving.oversized": "एक मुख्य टेक्स्ट भेजने के लिए बहुत बड़ा है। जारी रखने से पहले भेजने वाले डिवाइस पर उसे छोटा करें।",
   "companion.syncSetup.receiving.partial": "कुछ डेटा प्राप्त नहीं हो सका।",
+  "companion.syncSetup.receiving.unreachable": "अभी भेजने वाले डिवाइस से कनेक्ट नहीं हो पा रहा है। कनेक्ट होते ही प्राप्त करना अपने आप जारी रहेगा।",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "यह डिवाइस",
   "companion.syncSetup.receiving.sendingDevice": "भेजने वाला डिवाइस",

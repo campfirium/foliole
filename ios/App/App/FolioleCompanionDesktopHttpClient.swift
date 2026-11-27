@@ -70,3 +70,16 @@ enum FolioleCompanionDesktopHttpClient {
         NSError(domain: "FolioleCompanionDesktopHttp", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 }
+
+/// Code for a request that never completed because the peer connection was missing or dropped.
+/// The localized description follows the device language, so JavaScript cannot classify by message.
+func foliolePeerUnreachableCode(_ error: Error) -> String? {
+    guard let network = error as? URLError else { return nil }
+    switch network.code {
+    case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet, .cannotFindHost,
+         .dnsLookupFailed, .timedOut:
+        return "E_PEER_UNREACHABLE"
+    default:
+        return nil
+    }
+}

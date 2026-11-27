@@ -15,6 +15,15 @@ const visibleCodes = new Set([
   'sync_group_local_adoption_source_mismatch'
 ]);
 
+// Native transports attach these codes; their messages differ by platform and device language.
+const unreachableCodes = new Set<unknown>(['E_PEER_UNREACHABLE', 'ETIMEDOUT']);
+
+export function isCompanionSyncPeerUnreachable(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  if ('code' in error && unreachableCodes.has(error.code)) return true;
+  return 'cause' in error && isCompanionSyncPeerUnreachable(error.cause);
+}
+
 export type CompanionSyncReceiveIssue = {
   code: string;
   device: 'local' | 'peer' | 'unknown';
@@ -33,5 +42,7 @@ export function describeCompanionSyncReceiveIssue(error: unknown, stage?: Reques
   device: CompanionSyncReceiveIssue['device'] = 'unknown'): CompanionSyncReceiveIssue {
   const detail = (error instanceof Error ? error.message : String(error)).replace(/^framed_sync_http_\d{3}:/u, '');
   const code = detail.split(':', 1)[0]!;
-  return { code: visibleCodes.has(code) ? code : 'sync_receive_failed', device, stage: stage ?? 'unknown' };
+  const shown = isCompanionSyncPeerUnreachable(error) ? 'sync_peer_unreachable'
+    : visibleCodes.has(code) ? code : 'sync_receive_failed';
+  return { code: shown, device, stage: stage ?? 'unknown' };
 }

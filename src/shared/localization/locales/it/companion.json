@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "Spostare nel Cestino i {count} materiali selezionati e il loro contenuto?",
   "companion.syncSetup.receiving.oversized": "Un corpo è troppo grande per essere inviato. Accorcialo sul dispositivo mittente prima di continuare.",
   "companion.syncSetup.receiving.partial": "Alcuni dati non sono stati ricevuti.",
+  "companion.syncSetup.receiving.unreachable": "Al momento il dispositivo mittente non è raggiungibile. La ricezione riprenderà automaticamente quando sarà raggiungibile.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Questo dispositivo",
   "companion.syncSetup.receiving.sendingDevice": "Dispositivo mittente",

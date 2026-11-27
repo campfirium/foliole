@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "Переместить выбранные материалы ({count}) и их содержимое в корзину?",
   "companion.syncSetup.receiving.oversized": "Одно из тел слишком велико для отправки. Сократите его на отправляющем устройстве, прежде чем продолжить.",
   "companion.syncSetup.receiving.partial": "Не удалось получить часть данных.",
+  "companion.syncSetup.receiving.unreachable": "Сейчас не удаётся связаться с отправляющим устройством. Приём продолжится автоматически, когда оно станет доступно.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Это устройство",
   "companion.syncSetup.receiving.sendingDevice": "Отправляющее устройство",

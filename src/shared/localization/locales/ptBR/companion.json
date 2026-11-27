@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "Mover os {count} materiais selecionados e seu conteúdo para a Lixeira?",
   "companion.syncSetup.receiving.oversized": "Um corpo de texto é grande demais para ser enviado. Encurte-o no dispositivo de envio antes de continuar.",
   "companion.syncSetup.receiving.partial": "Não foi possível receber alguns dados.",
+  "companion.syncSetup.receiving.unreachable": "Não é possível conectar ao dispositivo de envio no momento. O recebimento continuará automaticamente quando ele estiver acessível.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Este dispositivo",
   "companion.syncSetup.receiving.sendingDevice": "Dispositivo de envio",

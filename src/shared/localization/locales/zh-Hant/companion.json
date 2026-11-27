@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "將選取的 {count} 份材料及其中的內容移到垃圾桶？",
   "companion.syncSetup.receiving.oversized": "有一篇正文太大，無法傳送。請先在傳送裝置上縮短正文，再繼續。",
   "companion.syncSetup.receiving.partial": "部分資料無法接收。",
+  "companion.syncSetup.receiving.unreachable": "暫時無法連上傳送裝置，連上後會自動繼續接收。",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "這部裝置",
   "companion.syncSetup.receiving.sendingDevice": "傳送裝置",

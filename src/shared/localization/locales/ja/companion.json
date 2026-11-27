@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "選択した {count} 件の資料とその中身をゴミ箱に移動しますか？",
   "companion.syncSetup.receiving.oversized": "送信するには本文が大きすぎます。続行する前に、送信側のデバイスで本文を短くしてください。",
   "companion.syncSetup.receiving.partial": "一部のデータを受信できませんでした。",
+  "companion.syncSetup.receiving.unreachable": "現在、送信側のデバイスに接続できません。接続できるようになると、受信は自動的に再開します。",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "このデバイス",
   "companion.syncSetup.receiving.sendingDevice": "送信側のデバイス",

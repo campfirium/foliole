@@ -37,7 +37,9 @@ final class FolioleCompanionRequestSyncHttp {
                     call.resolve(request.execute(connection -> {
                         if (operation != null) operation.opened(connection);
                     }));
-                } catch (Exception error) { call.reject(error.getMessage(), error); }
+                } catch (Exception error) {
+                    call.reject(error.getMessage(), FolioleCompanionPluginErrors.peerUnreachableCode(error), error);
+                }
                 finally { if (id != null) ACTIVE.remove(id, operation); }
             }).start();
         } catch (Exception error) { call.reject(error.getMessage(), error); }
@@ -55,7 +57,7 @@ final class FolioleCompanionRequestSyncHttp {
                     if (operation.cancelled.get() && !(error instanceof FolioleAttachmentReceiveFile.StorageFailure) &&
                         (com.foliole.android.framed.FramedSyncStreamReader.isTransportInterruption(error) || error instanceof InterruptedException)) call.reject("request_sync_http_cancelled", "E_ABORT", error);
                     else if (error instanceof java.net.SocketTimeoutException) call.reject(error.getMessage(), "ETIMEDOUT", error);
-                    else call.reject(error.getMessage(), error);
+                    else call.reject(error.getMessage(), FolioleCompanionPluginErrors.peerUnreachableCode(error), error);
                 }
                 finally { ACTIVE.remove(id, operation); }
             }); } catch (RuntimeException error) {

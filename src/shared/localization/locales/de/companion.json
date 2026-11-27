@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "{count} ausgewählte Materialien samt Inhalt in den Papierkorb verschieben?",
   "companion.syncSetup.receiving.oversized": "Ein Textkörper ist zu groß zum Senden. Kürze ihn auf dem sendenden Gerät, bevor du fortfährst.",
   "companion.syncSetup.receiving.partial": "Einige Daten konnten nicht empfangen werden.",
+  "companion.syncSetup.receiving.unreachable": "Das sendende Gerät ist gerade nicht erreichbar. Sobald es erreichbar ist, wird der Empfang automatisch fortgesetzt.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Dieses Gerät",
   "companion.syncSetup.receiving.sendingDevice": "Sendendes Gerät",

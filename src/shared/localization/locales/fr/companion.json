@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "Mettre à la corbeille les {count} documents sélectionnés et leur contenu ?",
   "companion.syncSetup.receiving.oversized": "Un corps de texte est trop volumineux pour être envoyé. Raccourcissez-le sur l’appareil émetteur avant de continuer.",
   "companion.syncSetup.receiving.partial": "Certaines données n’ont pas pu être reçues.",
+  "companion.syncSetup.receiving.unreachable": "Impossible de joindre l’appareil émetteur pour le moment. La réception reprendra automatiquement dès qu’il sera accessible.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Cet appareil",
   "companion.syncSetup.receiving.sendingDevice": "Appareil émetteur",

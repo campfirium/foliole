@@ -114,6 +114,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.syncSetup.receiving.title': '正在接收同步组资料',
   'companion.syncSetup.receiving.failed': '未能接收同步组资料，请重试同步。',
   'companion.syncSetup.receiving.oversized': '有一篇正文过大，无法发送。请在发送设备上缩短正文后继续。',
+  'companion.syncSetup.receiving.unreachable': '暂时连不上发送设备，连上后会自动继续接收。',
   'companion.syncSetup.receiving.partial': '部分资料未能接收。',
   'companion.syncSetup.receiving.issueLocation': '{device} · {stage}',
   'companion.syncSetup.receiving.thisDevice': '这台设备',

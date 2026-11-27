@@ -5,7 +5,7 @@ import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgro
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { publishCompanionSyncMembershipChanged } from './companionSyncApplied';
-import { describeCompanionSyncReceiveIssue, redactedCompanionSyncErrorDetail,
+import { describeCompanionSyncReceiveIssue, isCompanionSyncPeerUnreachable, redactedCompanionSyncErrorDetail,
   type CompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
 import { leaveCompanionSyncGroupDevice } from './syncGroupStore';
@@ -87,9 +87,10 @@ export function runPendingCompanionSyncGroupAdoption() {
         return false;
       }
       const code = errorCode(error);
-      // Backgrounding pauses; a busy or expired provider round is retried by the scheduler while visible.
+      // Backgrounding pauses; a busy, expired or unreachable provider is retried by the scheduler while visible.
       const phase = code.includes('request_sync_foreground_ended') ? 'paused'
-        : isSyncPeerRoundRetryableError(error) ? 'receiving' : 'failed';
+        
+        : isSyncPeerRoundRetryableError(error) || isCompanionSyncPeerUnreachable(error) ? 'receiving' : 'failed';
       const shown = describeCompanionSyncReceiveIssue(error).code;
       active(phase, { error: shown,
         errorDetail: shown === 'sync_receive_failed' ? redactedCompanionSyncErrorDetail(error) : undefined });

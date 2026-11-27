@@ -187,6 +187,7 @@
   "companion.batch.trashDescription": "¿Mover los {count} materiales seleccionados y su contenido a la papelera?",
   "companion.syncSetup.receiving.oversized": "Un cuerpo es demasiado grande para enviarlo. Acórtalo en el dispositivo emisor antes de continuar.",
   "companion.syncSetup.receiving.partial": "No se pudieron recibir algunos datos.",
+  "companion.syncSetup.receiving.unreachable": "No se puede conectar con el dispositivo emisor en este momento. La recepción continuará automáticamente cuando esté disponible.",
   "companion.syncSetup.receiving.issueLocation": "{device} · {stage}",
   "companion.syncSetup.receiving.thisDevice": "Este dispositivo",
   "companion.syncSetup.receiving.sendingDevice": "Dispositivo emisor",

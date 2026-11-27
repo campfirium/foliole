@@ -41,7 +41,7 @@ extension FolioleCompanionSyncPlugin {
                         call.reject("request_sync_http_cancelled", "E_ABORT")
                     } else if let network = error as? URLError, network.code == .timedOut {
                         call.reject("\(error.localizedDescription)", "ETIMEDOUT")
-                    } else { call.reject("\(error.localizedDescription)") }
+                    } else { call.reject("\(error.localizedDescription)", foliolePeerUnreachableCode(error)) }
                 }
             }
         } catch { call.reject("\(error.localizedDescription)") }

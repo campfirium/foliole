@@ -58,7 +58,9 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve(try await FolioleCompanionDesktopHttpClient.request(
                         url: url, method: method, headers: headers, body: body, contract: contract
                     ))
-                } catch { call.reject("Desktop HTTP request failed: \(error.localizedDescription)") }
+                } catch {
+                    call.reject("Desktop HTTP request failed: \(error.localizedDescription)", foliolePeerUnreachableCode(error))
+                }
             }
             if call.getString("request_id") != nil {
                 _ = try Self.requestHTTPOwner(call)

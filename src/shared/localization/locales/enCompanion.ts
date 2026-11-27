@@ -114,6 +114,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.syncSetup.receiving.title': 'Receiving sync group data',
   'companion.syncSetup.receiving.failed': 'Could not receive the sync group data. Try syncing again.',
   'companion.syncSetup.receiving.oversized': 'A body is too large to send. Shorten it on the sending device before continuing.',
+  'companion.syncSetup.receiving.unreachable': 'Can’t reach the sending device right now. Receiving continues automatically once it is reachable.',
   'companion.syncSetup.receiving.partial': 'Some data could not be received.',
   'companion.syncSetup.receiving.issueLocation': '{device} · {stage}',
   'companion.syncSetup.receiving.thisDevice': 'This device',
