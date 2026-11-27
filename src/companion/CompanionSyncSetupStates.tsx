@@ -132,6 +132,7 @@ function ReceivingFailure({ run }: { run: AdoptionRun }) {
         : run.phase === 'failed' ? 'companion.syncSetup.receiving.failed' : 'companion.syncSetup.receiving.partial')}</p>
       <p className="break-words">{t('companion.syncSetup.receiving.issueLocation', { device, stage })}</p>
       <code className="break-all text-xs">{code}</code>
+      {!issue && run.errorDetail ? <code className="block select-text break-all text-xs">{run.errorDetail}</code> : null}
     </div>
   );
 }

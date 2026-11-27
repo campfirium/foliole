@@ -5,12 +5,14 @@ import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgro
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { publishCompanionSyncMembershipChanged } from './companionSyncApplied';
-import { describeCompanionSyncReceiveIssue, type CompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
+import { describeCompanionSyncReceiveIssue, redactedCompanionSyncErrorDetail,
+  type CompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
 import { leaveCompanionSyncGroupDevice } from './syncGroupStore';
 
 type ActiveAdoptionRun = { phase: 'receiving' | 'paused' | 'failed'; completed: number; total: number | null;
-  lastActivityAt: string | null; error: string | null; rejection?: CompanionSyncReceiveIssue | undefined; providerName?: string | undefined };
+  lastActivityAt: string | null; error: string | null; errorDetail?: string | undefined;
+  rejection?: CompanionSyncReceiveIssue | undefined; providerName?: string | undefined };
 export type CompanionSyncGroupAdoptionRun = { phase: 'none' } | ActiveAdoptionRun;
 
 let current: CompanionSyncGroupAdoptionRun = { phase: 'none' };
@@ -25,7 +27,7 @@ function publish(next: CompanionSyncGroupAdoptionRun) {
 
 function active(phase: ActiveAdoptionRun['phase'], patch: Partial<Omit<ActiveAdoptionRun, 'phase'>> = {}) {
   const previous = current.phase === 'none' ? { completed: 0, total: null, lastActivityAt: null } : current;
-  publish({ ...previous, error: null, ...patch, phase });
+  publish({ ...previous, error: null, errorDetail: undefined, ...patch, phase });
 }
 
 export function readCompanionSyncGroupAdoptionRun() {
@@ -88,7 +90,9 @@ export function runPendingCompanionSyncGroupAdoption() {
       // Backgrounding pauses; a busy or expired provider round is retried by the scheduler while visible.
       const phase = code.includes('request_sync_foreground_ended') ? 'paused'
         : isSyncPeerRoundRetryableError(error) ? 'receiving' : 'failed';
-      active(phase, { error: describeCompanionSyncReceiveIssue(error).code });
+      const shown = describeCompanionSyncReceiveIssue(error).code;
+      active(phase, { error: shown,
+        errorDetail: shown === 'sync_receive_failed' ? redactedCompanionSyncErrorDetail(error) : undefined });
       throw error;
     } finally {
       work.release();
