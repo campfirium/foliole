@@ -63,3 +63,11 @@ it('rejects missing provider persistence and changed restart state', () => {
   expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, capture_versions: 2 }, observations))
     .toThrow('evidence is incomplete');
 });
+it('accepts a restore parent reclaimed only by the restarted round', () => {
+  const { first, second, snapshot, observations } = evidence();
+  const pending = { ...snapshot, restore_versions: 2 };
+  expect(verifySyncPackAcceptance(first, second, pending, snapshot, observations)).toBeTruthy();
+  expect(() => verifySyncPackAcceptance(first, second, pending, pending, observations)).toThrow('evidence is incomplete');
+  expect(() => verifySyncPackAcceptance(first, second, pending, { ...snapshot, restore_body: 'x' }, observations))
+    .toThrow('evidence is incomplete');
+});

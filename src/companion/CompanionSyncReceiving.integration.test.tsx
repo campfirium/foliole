@@ -89,11 +89,28 @@ it('shows a safe code for a session failure and completes normally when the prov
   expect(renderCard()).toContain('sync_receive_failed</code>');
   expect(renderCard()).toContain('Unknown device · Unknown stage');
   expect(renderCard()).not.toMatch(/secret|private\/library|Provider Mac/u);
+  expect(renderCard()).toContain('[url]</code>');
   expect(await loadSyncGroupLocalAdoption(db)).not.toBeNull();
 
   await expect(runPendingCompanionSyncGroupAdoption()).resolves.toBe(true);
   expect(await loadSyncGroupLocalAdoption(db)).toBeNull();
   expect(renderCard()).toBe('');
+});
+
+it('shows the underlying message of an unlisted failure with file paths removed', {
+  meta: { calibratedMs: 20000 }
+}, async () => {
+  host = await createJoiningMobile();
+  const join = await approveJoin(host);
+  const send = mobile.http.getMockImplementation()!;
+  mobile.http.mockImplementation(async request => {
+    if (request.url.endsWith('/sync-group/member-state')) {
+      throw new Error('sync_group_member_state_failed_500 at /data/data/app/library.db');
+    }
+    return send(request);
+  });
+  await expect(join()).rejects.toThrow('sync_group_member_state_failed_500');
+  expect(renderCard()).toContain('sync_group_member_state_failed_500 at [path]</code>');
 });
 
 it('shows an expired receive round while retry remains possible', {
