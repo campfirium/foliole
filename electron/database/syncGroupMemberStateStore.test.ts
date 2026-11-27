@@ -89,11 +89,16 @@ it('completes an offline target removal after every Device in the initiator list
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('active');
 });
 
-it('settles a restore its source withdrew by adopting group data again', async () => {
+it.each(['adopting group data', 'not adopting'])('settles a restore published by a phone that is %s', async (scenario) => {
   const desktop = deviceDatabase(0, [1]);
+  markPhone(desktop, 1);
   const phoneId = identities[1]!.identity_key;
-  const phone = adoptingState(1, identities[0]!.identity_key);
+  const phone = phoneState(1);
   insertPendingRestore(desktop, phoneId);
+  // The source marked its own restore applied; once it adopts group data it no longer reports one.
+  if (scenario === 'adopting group data') phone.adopting_from = identities[0]!.identity_key;
+  else phone.restore = { applied: true, event: { group_id: 'group-1', restore_id: 'stuck',
+    restored_at: '2026-11-01T00:00:00.000Z', source_device_identity_key: phoneId } };
   const port = createBetterSqliteDbPort(desktop);
   use(desktop);
   expect(await syncGroupLocalPublicationBlockReason(port)).toBe('sync_group_restore_pending');
@@ -105,19 +110,18 @@ it('settles a restore its source withdrew by adopting group data again', async (
   expect(await syncGroupLocalPublicationBlockReason(port)).toBeNull();
 });
 
-it.each(['another source', 'a source that is not adopting', 'a half received overwrite'])(
-  'keeps a restore pending for %s', (scenario) => {
-    const desktop = deviceDatabase(0, [1, 2]);
-    const phoneId = identities[1]!.identity_key;
-    const phone = adoptingState(1, identities[0]!.identity_key);
-    if (scenario === 'a source that is not adopting') delete phone.adopting_from;
-    insertPendingRestore(desktop, scenario === 'another source' ? identities[2]!.identity_key : phoneId);
-    if (scenario === 'a half received overwrite') desktop.prepare(`INSERT INTO sync_group_metadata
-      (key, value, updated_at) VALUES ('sync_group_overwrite_progress', '{}', '2026-11-27')`).run();
-    use(desktop);
+it.each(['a computer source', 'a half received overwrite'])('keeps a restore pending for %s', (scenario) => {
+  const desktop = deviceDatabase(0, [1, 2]);
+  markPhone(desktop, 1);
+  const phoneId = identities[1]!.identity_key;
+  const phone = phoneState(1);
+  insertPendingRestore(desktop, scenario === 'a computer source' ? identities[2]!.identity_key : phoneId);
+  if (scenario === 'a half received overwrite') desktop.prepare(`INSERT INTO sync_group_metadata
+    (key, value, updated_at) VALUES ('sync_group_overwrite_progress', '{}', '2026-11-27')`).run();
+  use(desktop);
 
-    expect(applyDesktopSyncGroupMemberState(phone, phoneId).state.restore?.applied).toBe(false);
-  });
+  expect(applyDesktopSyncGroupMemberState(phone, phoneId).state.restore?.applied).toBe(false);
+});
 
 it('ignores a pending restore left behind by a group this device no longer belongs to', async () => {
   const desktop = deviceDatabase(0, [1]);
@@ -127,11 +131,14 @@ it('ignores a pending restore left behind by a group this device no longer belon
   expect(await syncGroupLocalPublicationBlockReason(createBetterSqliteDbPort(desktop))).toBeNull();
 });
 
-function adoptingState(index: number, providerId: string): SyncGroupMemberStatePayload {
+function phoneState(index: number): SyncGroupMemberStatePayload {
   use(deviceDatabase(index, [0]));
-  const state = loadDesktopSyncGroupMemberState();
-  delete state.coverage;
-  return { ...state, adopting_from: providerId, restore: null };
+  return { ...loadDesktopSyncGroupMemberState(), restore: null };
+}
+
+function markPhone(database: Database.Database, index: number) {
+  database.prepare("UPDATE sync_group_devices SET platform = 'android-capacitor' WHERE device_identity_key = ?")
+    .run(identities[index]!.identity_key);
 }
 
 function insertPendingRestore(database: Database.Database, sourceId: string) {

@@ -2,9 +2,12 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { createBetterSqlite3Driver } from '../../../../../../electron/database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
+import { loadDesktopSyncGroupRestoreState,
+  settleUnreceivableDesktopSyncGroupRestore } from '../../../../../../electron/database/syncGroupRestoreState.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import { receiveSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
+import { markSyncGroupRestoreApplied, receiveSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 import { describeCompanionSyncReceiveIssue } from '../companionSyncReceiveIssue.js';
 
@@ -38,5 +41,36 @@ it('keeps first reception pending while the provider cannot publish, then receiv
 
     expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
     expect(received()).toBe(1);
+  } finally { await host.close(); }
+}, 30_000);
+
+it('merges both libraries once a computer settles the overwrite a phone published', async () => {
+  const host = await createCompanionRequestFixture();
+  try {
+    const { fixture } = host;
+    await fixture.right.seed({ content: 'Computer body', nodeId: 't894-computer', title: 'Computer topic' });
+    await fixture.left.seed({ content: 'Phone body', nodeId: 't894-phone', title: 'Phone topic' });
+    const event = { group_id: 't326-group', restore_id: 'phone-overwrite', restored_at: new Date().toISOString(),
+      source_device_identity_key: fixture.leftSnapshot.deviceId };
+    await receiveSyncGroupRestoreEvent(host.db, event);
+    await markSyncGroupRestoreApplied(host.db, event);
+    const computer = new Database(fixture.rightSnapshot.databasePath);
+    try {
+      await receiveSyncGroupRestoreEvent(createBetterSqliteDbPort(computer), event);
+      await expect(host.sync()).rejects.toThrow();
+      computer.prepare("UPDATE sync_group_devices SET platform = 'android-capacitor' WHERE device_identity_key = ?")
+        .run(fixture.leftSnapshot.deviceId);
+      const driver = createBetterSqlite3Driver(computer);
+      settleUnreceivableDesktopSyncGroupRestore(driver,
+        loadDesktopSyncGroupRestoreState(driver, 't326-group'), new Date().toISOString());
+    } finally { computer.close(); }
+
+    await host.sync();
+
+    const ids = "SELECT id FROM nodes WHERE id IN ('t894-computer', 't894-phone') ORDER BY id";
+    expect(host.sqlite.prepare(ids).pluck().all()).toEqual(['t894-computer', 't894-phone']);
+    const merged = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
+    try { expect(merged.prepare(ids).pluck().all()).toEqual(['t894-computer', 't894-phone']); }
+    finally { merged.close(); }
   } finally { await host.close(); }
 }, 30_000);

@@ -23,7 +23,7 @@ import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroup
 import {
   loadDesktopSyncGroupRestoreState,
   receiveDesktopSyncGroupRestoreState,
-  settleAbandonedDesktopSyncGroupRestore,
+  settleUnreceivableDesktopSyncGroupRestore,
   syncGroupRestorePeersReady
 } from './syncGroupRestoreState.js';
 import { leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
@@ -105,8 +105,8 @@ export function applyDesktopSyncGroupMemberState(
   let normalSyncReady = false;
   driver.transaction(() => {
     saveDesktopSyncGroupPeerAdoption(driver, local, incoming, now);
-    const localRestore = settleAbandonedDesktopSyncGroupRestore(driver,
-      receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore), incoming, now);
+    const localRestore = settleUnreceivableDesktopSyncGroupRestore(driver,
+      receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore), now);
     // Coverage is plain fact; even a peer that may not sync yet tells this device how far the group moved.
     if (!local.adopting_from) mergeDesktopSyncGroupCoverage(driver, incoming.group_id, incoming.coverage);
     normalSyncReady = local.adopting_from

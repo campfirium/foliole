@@ -1,21 +1,29 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { syncGroupRestoreAbandonedBySource } from '../../lib/core/sync/syncGroupAbandonedRestore.js';
 import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
-import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import {
   compareSyncGroupRestoreEvents,
   parseSyncGroupRestoreEvent,
   syncGroupRestorePeersReady,
   type SyncGroupRestoreState
 } from '../../lib/platform/syncGroupRestoreContract.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 
 export { syncGroupRestorePeersReady };
 
-export function settleAbandonedDesktopSyncGroupRestore(
-  driver: DatabaseDriver, local: SyncGroupRestoreState | null, incoming: SyncGroupMemberStatePayload, now: string
+/**
+ * Nothing can fetch a library from a phone, so a restore published by one never arrives and would block
+ * this device forever. Settle it so ordinary sync merges instead. A half received overwrite stays
+ * pending because the local library is incomplete then.
+ */
+export function settleUnreceivableDesktopSyncGroupRestore(
+  driver: DatabaseDriver, local: SyncGroupRestoreState | null, now: string
 ) {
-  if (!local || !syncGroupRestoreAbandonedBySource(local, incoming) || driver.queryOne(
+  if (!local || local.applied || driver.queryOne(
     'SELECT 1 AS value FROM sync_group_metadata WHERE key = ?', [SYNC_GROUP_OVERWRITE_PROGRESS_KEY])) return local;
+  const source = driver.queryOne<{ platform: string }>(
+    'SELECT platform FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?',
+    [local.event.group_id, local.event.source_device_identity_key]);
+  if (!source || !isMobileSyncPlatform(source.platform)) return local;
   driver.execute('UPDATE sync_group_restore_events SET applied_at = ? WHERE restore_id = ? AND applied_at IS NULL',
     [now, local.event.restore_id]);
   return { event: local.event, applied: true };

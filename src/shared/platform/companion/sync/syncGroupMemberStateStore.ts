@@ -1,5 +1,4 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { syncGroupRestoreAbandonedBySource } from '../../../../../lib/core/sync/syncGroupAbandonedRestore';
 import { loadSyncGroupCoverage, loadSyncGroupLocalExpiry, mergeIncomingSyncGroupCoverage,
   syncGroupMembersCurrent } from '../../../../../lib/core/sync/syncGroupCoverageStore';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
@@ -20,6 +19,7 @@ import {
   devicePathFlavorFromCanonicalLibraryPath
 } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
+import { isMobileSyncPlatform } from '../../../../../lib/platform/syncSchedulingPlatform';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -71,8 +71,9 @@ async function applyMemberState(tx: DbPort, incoming: SyncGroupMemberStatePayloa
   if (incoming.restore) {
     localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
   }
-  if (localRestore && syncGroupRestoreAbandonedBySource(localRestore, incoming) &&
-      !await loadSyncGroupOverwriteProgress(tx)) {
+  // Nothing can fetch a library from a phone, so another phone's restore would never arrive.
+  if (localRestore && !localRestore.applied && !await loadSyncGroupOverwriteProgress(tx) &&
+      await isMobileDevice(tx, context.groupId, localRestore.event.source_device_identity_key)) {
     await markSyncGroupRestoreApplied(tx, localRestore.event);
     localRestore = { event: localRestore.event, applied: true };
   }
@@ -248,6 +249,12 @@ async function hasActiveRemoval(db: DbPort, groupId: string, deviceId: string) {
   return Boolean((await db.query<DbRow>(`SELECT 1 AS value FROM sync_group_removal_decisions
     WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL LIMIT 1`,
   [groupId, deviceId]))[0]);
+}
+
+async function isMobileDevice(db: DbPort, groupId: string, deviceId: string) {
+  const [device] = await db.query<{ platform: string }>(
+    'SELECT platform FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?', [groupId, deviceId]);
+  return Boolean(device && isMobileSyncPlatform(device.platform));
 }
 
 async function hasSupersededRemoval(db: DbPort, groupId: string, deviceId: string) {
