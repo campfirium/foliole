@@ -82,3 +82,13 @@ it.each(['first', 'final'])('cancels the overwrite when the %s confirmation is d
   fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
   await expect(choice()).resolves.toBeNull();
 });
+
+it('offers only the group data on a phone', async () => {
+  render(<CompanionApp />);
+  let choice!: ReturnType<typeof chooseSyncGroupJoinMode>;
+  act(() => { choice = chooseSyncGroupJoinMode(t, 'Home Library', { allowOverwrite: false }); });
+  expect(await screen.findByRole('dialog')).toHaveTextContent('This device’s data will be replaced');
+  expect(screen.queryByRole('button', { name: 'Other options' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /overwrite this device/ }));
+  await expect(choice).resolves.toBe('use-group');
+});

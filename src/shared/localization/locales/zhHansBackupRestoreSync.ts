@@ -13,6 +13,7 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.backups.restore.sync.pendingDescription': '恢复同步时，当前本机资料（包括之后的编辑）将覆盖整个同步组。',
   'syncGroup.join.mode.title': '加入同步组',
   'syncGroup.join.mode.description': '选择用哪一边的资料覆盖：同步组资料只替换本机，本机资料则替换整个同步组。',
+  'syncGroup.join.mode.useGroupOnlyDescription': '本机资料将被同步组资料替换。',
   'syncGroup.join.mode.overwrite': '用本机资料覆盖整个组',
   'syncGroup.join.mode.useGroup': '用同步组资料覆盖本机',
   'syncGroup.join.mode.more': '其他选项',

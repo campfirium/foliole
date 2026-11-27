@@ -77,6 +77,9 @@ describe('overwrite publication and completion on actual SQLite', () => {
 
   it('blocks publication during pending restore and after the clear-once marker is committed', async () => {
     const { host } = await fixture('restore');
+    await host.port().run(`INSERT INTO sync_group_local_state
+      (singleton_id, group_id, local_device_identity_key, state, updated_at) VALUES (1, ?, ?, 'active', ?)`,
+    [progress.groupId, progress.receiverDeviceId, '2026-10-05']);
     await expect(assertSyncGroupLocalPublicationAllowed(host.port())).rejects.toThrow('sync_group_restore_pending');
     await prepareSyncGroupOverwrite(host.port(), progress);
     const before = overwriteBusinessState(host);

@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "सिंक जारी रखने पर पूरे समूह का डेटा इस डिवाइस की मौजूदा लाइब्रेरी से बदल जाएगा। बाद के बदलाव भी इसमें शामिल होंगे।",
   "syncGroup.join.mode.title": "सिंक समूह में शामिल हों",
   "syncGroup.join.mode.description": "चुनें कि किसका डेटा इस्तेमाल करना है। समूह का डेटा सिर्फ़ इस डिवाइस का डेटा बदलेगा। इस डिवाइस का डेटा पूरे समूह का डेटा बदलेगा।",
+  "syncGroup.join.mode.useGroupOnlyDescription": "इस डिवाइस का डेटा सिंक समूह के डेटा से बदल दिया जाएगा।",
   "syncGroup.join.mode.overwrite": "इस डिवाइस के डेटा से पूरे समूह का डेटा बदलें",
   "syncGroup.join.mode.useGroup": "सिंक समूह के डेटा से इस डिवाइस का डेटा बदलें",
   "syncGroup.join.mode.more": "अन्य विकल्प",

@@ -13,6 +13,7 @@ export const EN_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.backups.restore.sync.pendingDescription': 'When you resume sync, this device’s current library, including later edits, will overwrite the entire sync group.',
   'syncGroup.join.mode.title': 'Join sync group',
   'syncGroup.join.mode.description': 'Choose which data to use: the group’s data replaces only this device, or this device’s data replaces the entire group.',
+  'syncGroup.join.mode.useGroupOnlyDescription': 'This device’s data will be replaced with the sync group’s data.',
   'syncGroup.join.mode.overwrite': 'Use this device’s data to overwrite the entire group',
   'syncGroup.join.mode.useGroup': 'Use the sync group’s data to overwrite this device',
   'syncGroup.join.mode.more': 'Other options',

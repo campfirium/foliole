@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "Po wznowieniu synchronizacji bieżąca biblioteka tego urządzenia, łącznie z późniejszymi zmianami, nadpisze całą grupę synchronizacji.",
   "syncGroup.join.mode.title": "Dołącz do grupy synchronizacji",
   "syncGroup.join.mode.description": "Wybierz, których danych użyć: dane grupy zastępują tylko to urządzenie, a dane tego urządzenia zastępują całą grupę.",
+  "syncGroup.join.mode.useGroupOnlyDescription": "Dane na tym urządzeniu zostaną zastąpione danymi grupy synchronizacji.",
   "syncGroup.join.mode.overwrite": "Nadpisz całą grupę danymi z tego urządzenia",
   "syncGroup.join.mode.useGroup": "Nadpisz to urządzenie danymi grupy synchronizacji",
   "syncGroup.join.mode.more": "Inne opcje",

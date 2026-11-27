@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "繼續同步時，本機目前的資料庫（包括之後的編輯）將覆寫整個同步群組。",
   "syncGroup.join.mode.title": "加入同步群組",
   "syncGroup.join.mode.description": "選擇使用哪一方的資料：同步群組資料只取代本機，本機資料則取代整個群組。",
+  "syncGroup.join.mode.useGroupOnlyDescription": "本機資料將被同步群組資料取代。",
   "syncGroup.join.mode.overwrite": "用本機資料覆寫整個群組",
   "syncGroup.join.mode.useGroup": "用同步群組資料覆寫本機",
   "syncGroup.join.mode.more": "其他選項",

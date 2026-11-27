@@ -1,9 +1,12 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { syncGroupRestoreAbandonedBySource } from '../../../../../lib/core/sync/syncGroupAbandonedRestore';
 import { loadSyncGroupCoverage, loadSyncGroupLocalExpiry, mergeIncomingSyncGroupCoverage,
   syncGroupMembersCurrent } from '../../../../../lib/core/sync/syncGroupCoverageStore';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
+import { loadSyncGroupOverwriteProgress } from '../../../../../lib/core/sync/syncGroupOverwriteProgress';
 import {
   loadLatestSyncGroupRestoreEvent,
+  markSyncGroupRestoreApplied,
   receiveSyncGroupRestoreEvent
 } from '../../../../../lib/core/sync/syncGroupRestoreEvents';
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
@@ -67,6 +70,11 @@ async function applyMemberState(tx: DbPort, incoming: SyncGroupMemberStatePayloa
   let localRestore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
   if (incoming.restore) {
     localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
+  }
+  if (localRestore && syncGroupRestoreAbandonedBySource(localRestore, incoming) &&
+      !await loadSyncGroupOverwriteProgress(tx)) {
+    await markSyncGroupRestoreApplied(tx, localRestore.event);
+    localRestore = { event: localRestore.event, applied: true };
   }
   const adoption = await loadSyncGroupLocalAdoption(tx);
   if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);

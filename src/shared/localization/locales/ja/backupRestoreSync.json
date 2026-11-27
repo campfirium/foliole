@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "同期を再開すると、このデバイスの現在のライブラリ（その後の編集を含む）で同期グループ全体が上書きされます。",
   "syncGroup.join.mode.title": "同期グループに参加",
   "syncGroup.join.mode.description": "使用するデータを選択します。グループのデータはこのデバイスだけを置き換え、このデバイスのデータはグループ全体を置き換えます。",
+  "syncGroup.join.mode.useGroupOnlyDescription": "このデバイスのデータは同期グループのデータに置き換えられます。",
   "syncGroup.join.mode.overwrite": "このデバイスのデータでグループ全体を上書き",
   "syncGroup.join.mode.useGroup": "同期グループのデータでこのデバイスを上書き",
   "syncGroup.join.mode.more": "その他のオプション",

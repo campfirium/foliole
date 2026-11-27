@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "Cuando reanudes la sincronización, la biblioteca actual de este dispositivo, incluidas las ediciones posteriores, sobrescribirá todo el grupo de sincronización.",
   "syncGroup.join.mode.title": "Unirse al grupo de sincronización",
   "syncGroup.join.mode.description": "Elige qué datos usar: los datos del grupo reemplazan solo este dispositivo, o los datos de este dispositivo reemplazan todo el grupo.",
+  "syncGroup.join.mode.useGroupOnlyDescription": "Los datos de este dispositivo se reemplazarán por los del grupo de sincronización.",
   "syncGroup.join.mode.overwrite": "Usar los datos de este dispositivo para sobrescribir todo el grupo",
   "syncGroup.join.mode.useGroup": "Usar los datos del grupo de sincronización para sobrescribir este dispositivo",
   "syncGroup.join.mode.more": "Otras opciones",

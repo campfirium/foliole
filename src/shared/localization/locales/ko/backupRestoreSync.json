@@ -13,6 +13,7 @@
   "settings.backups.restore.sync.pendingDescription": "동기화를 재개하면 이후 편집을 포함한 이 기기의 현재 라이브러리로 동기화 그룹 전체를 덮어씁니다.",
   "syncGroup.join.mode.title": "동기화 그룹 참여",
   "syncGroup.join.mode.description": "사용할 데이터를 선택하세요. 그룹 데이터는 이 기기만 교체하고, 이 기기의 데이터는 그룹 전체를 교체합니다.",
+  "syncGroup.join.mode.useGroupOnlyDescription": "이 기기의 데이터가 동기화 그룹의 데이터로 대체됩니다.",
   "syncGroup.join.mode.overwrite": "이 기기의 데이터로 그룹 전체 덮어쓰기",
   "syncGroup.join.mode.useGroup": "동기화 그룹의 데이터로 이 기기 덮어쓰기",
   "syncGroup.join.mode.more": "기타 옵션",

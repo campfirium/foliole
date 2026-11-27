@@ -4,15 +4,17 @@ import type { Translate } from '../localization/LocalizationProvider';
 import { requestAppChoice } from './appChoice';
 import { requestAppConfirmation, requestAppTextInput } from './appConfirmation';
 
-export async function chooseSyncGroupJoinMode(t: Translate, groupName: string): Promise<SyncGroupJoinMode | null> {
+export async function chooseSyncGroupJoinMode(
+  t: Translate, groupName: string, { allowOverwrite = true } = {}
+): Promise<SyncGroupJoinMode | null> {
+  const useGroup = { value: 'use-group', label: t('syncGroup.join.mode.useGroup'), tone: 'primary' as const };
   const choice = await requestAppChoice({
     title: t('syncGroup.join.mode.title'),
-    description: t('syncGroup.join.mode.description'),
-    moreLabel: t('syncGroup.join.mode.more'),
-    choices: [
-      { value: 'use-group', label: t('syncGroup.join.mode.useGroup'), tone: 'primary' },
-      { value: 'overwrite', label: t('syncGroup.join.mode.overwrite'), tone: 'danger' }
-    ]
+    ...(allowOverwrite ? {
+      description: t('syncGroup.join.mode.description'),
+      moreLabel: t('syncGroup.join.mode.more'),
+      choices: [useGroup, { value: 'overwrite', label: t('syncGroup.join.mode.overwrite'), tone: 'danger' as const }]
+    } : { description: t('syncGroup.join.mode.useGroupOnlyDescription'), choices: [useGroup] })
   });
   const mode = choice === null ? null : parseSyncGroupJoinMode(choice);
   if (mode !== 'overwrite') return mode;
