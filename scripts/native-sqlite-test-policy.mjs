@@ -208,6 +208,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncGroupLocalIdentityRekey.test.ts',
   'electron/database/syncGroupHostsMigration.test.ts',
   'electron/database/syncGroupMemberStateStore.test.ts',
+  'electron/database/syncGroupPhoneRestore.test.ts',
   'electron/database/syncGroupMemberIdentity.integration.test.ts',
   'electron/database/syncGroupRemovalMigration.test.ts',
   'electron/database/syncPackVersionPreflight.test.ts',
