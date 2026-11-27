@@ -73,7 +73,7 @@ async function applyMemberState(tx: DbPort, incoming: SyncGroupMemberStatePayloa
   }
   // Nothing can fetch a library from a phone, so another phone's restore would never arrive.
   if (localRestore && !localRestore.applied && !await loadSyncGroupOverwriteProgress(tx) &&
-      await isMobileDevice(tx, context.groupId, localRestore.event.source_device_identity_key)) {
+      await isMobileDevice(tx, context.groupId, localRestore.event.source_device_identity_key, incoming.devices)) {
     await markSyncGroupRestoreApplied(tx, localRestore.event);
     localRestore = { event: localRestore.event, applied: true };
   }
@@ -251,9 +251,10 @@ async function hasActiveRemoval(db: DbPort, groupId: string, deviceId: string) {
   [groupId, deviceId]))[0]);
 }
 
-async function isMobileDevice(db: DbPort, groupId: string, deviceId: string) {
-  const [device] = await db.query<{ platform: string }>(
+async function isMobileDevice(db: DbPort, groupId: string, deviceId: string, peerDevices: SyncGroupDevicePayload[]) {
+  const [known] = await db.query<{ platform: string }>(
     'SELECT platform FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?', [groupId, deviceId]);
+  const device = known ?? peerDevices.find((peer) => peer.device_identity_key === deviceId);
   return Boolean(device && isMobileSyncPlatform(device.platform));
 }
 

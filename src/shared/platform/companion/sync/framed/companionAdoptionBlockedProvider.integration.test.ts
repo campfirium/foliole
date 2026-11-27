@@ -62,7 +62,7 @@ it('merges both libraries once a computer settles the overwrite a phone publishe
         .run(fixture.leftSnapshot.deviceId);
       const driver = createBetterSqlite3Driver(computer);
       settleUnreceivableDesktopSyncGroupRestore(driver,
-        loadDesktopSyncGroupRestoreState(driver, 't326-group'), new Date().toISOString());
+        loadDesktopSyncGroupRestoreState(driver, 't326-group'), [], new Date().toISOString());
     } finally { computer.close(); }
 
     await host.sync();

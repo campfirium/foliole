@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import type { SyncGroupDevicePayload } from '../../lib/platform/syncGroupContract.js';
 import {
   compareSyncGroupRestoreEvents,
   parseSyncGroupRestoreEvent,
@@ -16,13 +17,15 @@ export { syncGroupRestorePeersReady };
  * pending because the local library is incomplete then.
  */
 export function settleUnreceivableDesktopSyncGroupRestore(
-  driver: DatabaseDriver, local: SyncGroupRestoreState | null, now: string
+  driver: DatabaseDriver, local: SyncGroupRestoreState | null, peerDevices: SyncGroupDevicePayload[], now: string
 ) {
   if (!local || local.applied || driver.queryOne(
     'SELECT 1 AS value FROM sync_group_metadata WHERE key = ?', [SYNC_GROUP_OVERWRITE_PROGRESS_KEY])) return local;
   const source = driver.queryOne<{ platform: string }>(
     'SELECT platform FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?',
-    [local.event.group_id, local.event.source_device_identity_key]);
+    [local.event.group_id, local.event.source_device_identity_key])
+    // A computer that only heard of the restore through another one has not merged the phone yet.
+    ?? peerDevices.find((device) => device.device_identity_key === local.event.source_device_identity_key);
   if (!source || !isMobileSyncPlatform(source.platform)) return local;
   driver.execute('UPDATE sync_group_restore_events SET applied_at = ? WHERE restore_id = ? AND applied_at IS NULL',
     [now, local.event.restore_id]);

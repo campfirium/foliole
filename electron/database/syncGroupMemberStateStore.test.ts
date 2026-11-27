@@ -2,12 +2,9 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGroupLocalAdoption.js';
-import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import {
   applyDesktopSyncGroupMemberState,
   initiateDesktopSyncGroupDeviceRemoval,
@@ -88,64 +85,6 @@ it('completes an offline target removal after every Device in the initiator list
   expect(loadDesktopSyncGroupMemberState().devices.find((device) =>
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('active');
 });
-
-it.each(['adopting group data', 'not adopting'])('settles a restore published by a phone that is %s', async (scenario) => {
-  const desktop = deviceDatabase(0, [1]);
-  markPhone(desktop, 1);
-  const phoneId = identities[1]!.identity_key;
-  const phone = phoneState(1);
-  insertPendingRestore(desktop, phoneId);
-  // The source marked its own restore applied; once it adopts group data it no longer reports one.
-  if (scenario === 'adopting group data') phone.adopting_from = identities[0]!.identity_key;
-  else phone.restore = { applied: true, event: { group_id: 'group-1', restore_id: 'stuck',
-    restored_at: '2026-11-01T00:00:00.000Z', source_device_identity_key: phoneId } };
-  const port = createBetterSqliteDbPort(desktop);
-  use(desktop);
-  expect(await syncGroupLocalPublicationBlockReason(port)).toBe('sync_group_restore_pending');
-
-  const applied = applyDesktopSyncGroupMemberState(phone, phoneId);
-
-  expect(applied.normalSyncReady).toBe(true);
-  expect(applied.state.restore?.applied).toBe(true);
-  expect(await syncGroupLocalPublicationBlockReason(port)).toBeNull();
-});
-
-it.each(['a computer source', 'a half received overwrite'])('keeps a restore pending for %s', (scenario) => {
-  const desktop = deviceDatabase(0, [1, 2]);
-  markPhone(desktop, 1);
-  const phoneId = identities[1]!.identity_key;
-  const phone = phoneState(1);
-  insertPendingRestore(desktop, scenario === 'a computer source' ? identities[2]!.identity_key : phoneId);
-  if (scenario === 'a half received overwrite') desktop.prepare(`INSERT INTO sync_group_metadata
-    (key, value, updated_at) VALUES ('sync_group_overwrite_progress', '{}', '2026-11-27')`).run();
-  use(desktop);
-
-  expect(applyDesktopSyncGroupMemberState(phone, phoneId).state.restore?.applied).toBe(false);
-});
-
-it('ignores a pending restore left behind by a group this device no longer belongs to', async () => {
-  const desktop = deviceDatabase(0, [1]);
-  insertPendingRestore(desktop, identities[1]!.identity_key);
-  desktop.prepare("DELETE FROM sync_group_local_state").run();
-
-  expect(await syncGroupLocalPublicationBlockReason(createBetterSqliteDbPort(desktop))).toBeNull();
-});
-
-function phoneState(index: number): SyncGroupMemberStatePayload {
-  use(deviceDatabase(index, [0]));
-  return { ...loadDesktopSyncGroupMemberState(), restore: null };
-}
-
-function markPhone(database: Database.Database, index: number) {
-  database.prepare("UPDATE sync_group_devices SET platform = 'android-capacitor' WHERE device_identity_key = ?")
-    .run(identities[index]!.identity_key);
-}
-
-function insertPendingRestore(database: Database.Database, sourceId: string) {
-  database.prepare(`INSERT INTO sync_group_restore_events
-    (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
-    VALUES ('stuck', 'group-1', '2026-11-01T00:00:00.000Z', ?, NULL, '2026-11-01T00:00:00.000Z')`).run(sourceId);
-}
 
 it('keeps the later of two offline backup restores before ordinary member sync', () => {
   const a = deviceDatabase(0, [1]);

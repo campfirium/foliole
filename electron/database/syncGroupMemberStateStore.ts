@@ -106,7 +106,7 @@ export function applyDesktopSyncGroupMemberState(
   driver.transaction(() => {
     saveDesktopSyncGroupPeerAdoption(driver, local, incoming, now);
     const localRestore = settleUnreceivableDesktopSyncGroupRestore(driver,
-      receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore), now);
+      receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore), incoming.devices, now);
     // Coverage is plain fact; even a peer that may not sync yet tells this device how far the group moved.
     if (!local.adopting_from) mergeDesktopSyncGroupCoverage(driver, incoming.group_id, incoming.coverage);
     normalSyncReady = local.adopting_from
