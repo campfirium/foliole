@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "Dividi testo lungo",
-  "desktop.bodyOverflow.description": "Il testo risultante supera 1 MiB. Dividi e salva il testo completo come argomenti sotto questo argomento. Annulla per mantenere il testo originale.",
-  "desktop.bodyOverflow.confirm": "Dividi e salva",
-  "desktop.bodyOverflow.failed": "Impossibile salvare il testo diviso. Il testo originale è invariato. Riprova o annulla.",
+  "desktop.bodyOverflow.title": "Testo troppo lungo",
+  "desktop.bodyOverflow.description": "Il testo risultante supera 1 MiB. Il salvataggio converte prima in allegati le immagini Base64 incorporate; se il testo supera ancora 1 MiB, il testo completo viene diviso in argomenti sotto questo argomento. Annulla per mantenere il testo originale.",
+  "desktop.bodyOverflow.confirm": "Salva",
+  "desktop.bodyOverflow.failed": "Impossibile salvare il testo. Il testo originale è invariato. Riprova o annulla.",
   "desktop.navigation.back": "Torna indietro",
   "desktop.navigation.forward": "Vai avanti",
   "desktop.navigation.parent": "Vai al genitore",

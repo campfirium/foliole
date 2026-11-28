@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "Podziel długi tekst",
-  "desktop.bodyOverflow.description": "Wynikowy tekst przekracza 1 MiB. Podziel i zapisz cały tekst jako tematy w tym temacie. Anuluj, aby zachować oryginalny tekst.",
-  "desktop.bodyOverflow.confirm": "Podziel i zapisz",
-  "desktop.bodyOverflow.failed": "Nie udało się zapisać podzielonego tekstu. Oryginalny tekst pozostał bez zmian. Spróbuj ponownie lub anuluj.",
+  "desktop.bodyOverflow.title": "Tekst jest za długi",
+  "desktop.bodyOverflow.description": "Wynikowy tekst przekracza 1 MiB. Podczas zapisu osadzone obrazy Base64 są najpierw zamieniane na załączniki; jeśli tekst nadal przekracza 1 MiB, cały tekst zostanie podzielony na tematy w tym temacie. Anuluj, aby zachować oryginalny tekst.",
+  "desktop.bodyOverflow.confirm": "Zapisz",
+  "desktop.bodyOverflow.failed": "Nie udało się zapisać tekstu. Oryginalny tekst pozostał bez zmian. Spróbuj ponownie lub anuluj.",
   "desktop.navigation.back": "Wróć",
   "desktop.navigation.forward": "Idź naprzód",
   "desktop.navigation.parent": "Idź do rodzica",

@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "लंबा टेक्स्ट बाँटें",
-  "desktop.bodyOverflow.description": "बदलाव के बाद टेक्स्ट 1 MiB से बड़ा हो गया है। पूरा टेक्स्ट बाँटकर इसी विषय के अंदर नए विषयों के रूप में सहेजें। मूल टेक्स्ट रखने के लिए रद्द करें।",
-  "desktop.bodyOverflow.confirm": "बाँटें और सहेजें",
-  "desktop.bodyOverflow.failed": "बाँटा हुआ टेक्स्ट सहेजा नहीं जा सका। मूल टेक्स्ट पहले जैसा है। फिर कोशिश करें या रद्द करें।",
+  "desktop.bodyOverflow.title": "टेक्स्ट बहुत लंबा है",
+  "desktop.bodyOverflow.description": "बदलाव के बाद टेक्स्ट 1 MiB से बड़ा हो गया है। सहेजते समय पहले अंदर जुड़ी Base64 इमेज को अटैचमेंट बनाया जाता है; अगर टेक्स्ट तब भी 1 MiB से बड़ा रहे, तो पूरा टेक्स्ट इसी विषय के अंदर नए विषयों में बाँटा जाता है। मूल टेक्स्ट रखने के लिए रद्द करें।",
+  "desktop.bodyOverflow.confirm": "सहेजें",
+  "desktop.bodyOverflow.failed": "टेक्स्ट सहेजा नहीं जा सका। मूल टेक्स्ट पहले जैसा है। फिर कोशिश करें या रद्द करें।",
   "desktop.navigation.back": "पीछे जाएँ",
   "desktop.navigation.forward": "आगे जाएँ",
   "desktop.navigation.parent": "ऊपरी स्तर पर जाएँ",

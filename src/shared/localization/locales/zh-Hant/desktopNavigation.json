@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "拆分長內文",
-  "desktop.bodyOverflow.description": "編輯後的內文超過 1 MiB。可將完整內文拆分為目前主題下的多個主題並儲存；取消則保留原文。",
-  "desktop.bodyOverflow.confirm": "拆分並儲存",
-  "desktop.bodyOverflow.failed": "無法儲存拆分後的內文，原文保持不變。請再試一次或取消。",
+  "desktop.bodyOverflow.title": "內文過長",
+  "desktop.bodyOverflow.description": "編輯後的內文超過 1 MiB。儲存時會先將內嵌的 Base64 圖片轉為附件；仍超過 1 MiB 時，再將完整內文拆分為目前主題下的多個主題。取消則保留原文。",
+  "desktop.bodyOverflow.confirm": "儲存",
+  "desktop.bodyOverflow.failed": "儲存失敗，原文保持不變。請再試一次或取消。",
   "desktop.navigation.back": "返回",
   "desktop.navigation.forward": "前進",
   "desktop.navigation.parent": "去家長那裡",

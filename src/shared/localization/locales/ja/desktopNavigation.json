@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "長いテキストを分割",
-  "desktop.bodyOverflow.description": "編集後のテキストが 1 MiB を超えています。全文を分割して、このトピックの下のトピックとして保存できます。キャンセルすると元のテキストが保持されます。",
-  "desktop.bodyOverflow.confirm": "分割して保存",
-  "desktop.bodyOverflow.failed": "分割したテキストを保存できませんでした。元のテキストは変更されていません。もう一度試すか、キャンセルしてください。",
+  "desktop.bodyOverflow.title": "テキストが長すぎます",
+  "desktop.bodyOverflow.description": "編集後のテキストが 1 MiB を超えています。保存するとまず埋め込みの Base64 画像を添付ファイルに変換します。それでも 1 MiB を超える場合は、全文を分割してこのトピックの下のトピックとして保存します。キャンセルすると元のテキストが保持されます。",
+  "desktop.bodyOverflow.confirm": "保存",
+  "desktop.bodyOverflow.failed": "テキストを保存できませんでした。元のテキストは変更されていません。もう一度試すか、キャンセルしてください。",
   "desktop.navigation.back": "戻る",
   "desktop.navigation.forward": "先に進む",
   "desktop.navigation.parent": "親に移動",

@@ -32,7 +32,7 @@ test('rejects oversized highlights and cloze answers but saves a shortened title
   expect(result.renamed).toBe(true);
   expect(result.after).toEqual(result.before);
   await expect(page.getByText(/Title shortened to 100 characters/)).toBeVisible();
-  await expect(page.getByRole('dialog', { name: 'Split long text' })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Text is too long' })).toBeHidden();
   const screenshot = path.resolve('.tmp/artifacts/desktop-acceptance/node-text-save-limit.png');
   await mkdir(path.dirname(screenshot), { recursive: true });
   await page.screenshot({ path: screenshot });

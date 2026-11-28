@@ -24,7 +24,7 @@ test('keeps the original on cancel and persists the complete oversized paste in 
     await page.keyboard.insertText(PASTE);
   };
   await paste();
-  const dialog = page.getByRole('dialog', { name: 'Split long text' });
+  const dialog = page.getByRole('dialog', { name: 'Text is too long' });
   await expect(dialog).toBeVisible();
   expect(await page.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor'))).toBe(ORIGINAL);
   const screenshot = path.resolve('.tmp/artifacts/desktop-acceptance/body-overflow-dialog.png');
@@ -36,7 +36,7 @@ test('keeps the original on cancel and persists the complete oversized paste in 
   expect((await loadNodeDocument(page, ID))?.content).toBe(ORIGINAL);
   await paste();
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Split and save' }).click();
+  await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(dialog).toBeHidden();
   expect((await loadNodeDocument(page, ID))?.content).toBe('');
   const ids = await page.evaluate((parentId) => window.__folioleWorkspaceDebug?.listNodes()

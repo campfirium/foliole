@@ -47,7 +47,7 @@ it('saves the full candidate after flushing the original draft and selects a sto
     { nodeId: 'source', parentNodeId: null, kind: 'topic', isTitleManual: true, title: 'Source', content: '', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now },
     { nodeId: 'part', parentNodeId: 'source', kind: 'topic', isTitleManual: true, title: 'Part', content: request.content, reveal: null, anchorLink: null, position: 1, createdAt: now, updatedAt: now }
   ] });
-  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(savePartitionedWorkspaceBody).toHaveBeenCalledWith({ sourceNodeId: 'source', expectedContent: 'original', content: request.content });
   expect(drainPendingNodeContentRuntimePersists).toHaveBeenCalledOnce();
@@ -70,7 +70,7 @@ it('reloads the workspace before applying child orders that name a node it lacks
       { nodeId: 'source', parentNodeId: null, kind: 'topic', isTitleManual: true, title: 'Source', content: '', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now },
       { nodeId: 'part', parentNodeId: 'source', kind: 'topic', isTitleManual: true, title: 'Part', content: 'part body', reveal: null, anchorLink: null, position: 0, createdAt: now, updatedAt: now }
     ] });
-  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(refreshWorkspaceState).toHaveBeenCalledOnce();
   expect(useWorkspaceStore.getState().activeNodeId).toBe('part');
@@ -80,9 +80,9 @@ it('reloads the workspace before applying child orders that name a node it lacks
 it('keeps the candidate available for retry or cancellation when persistence fails', async () => {
   openRequest();
   vi.mocked(savePartitionedWorkspaceBody).mockRejectedValue(new Error('fixture_failure'));
-  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-  expect(screen.getByRole('button', { name: 'Split and save' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
 });
 
@@ -116,7 +116,7 @@ it('shows a retired part in Trash as soon as repartitioning succeeds', async () 
   vi.mocked(refreshWorkspaceState).mockImplementation(async () => {
     useWorkspaceStore.setState({ trashedNodeIds: ['retired'], trashedNodeDeletedAtById: { retired: now } });
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Split and save' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(useWorkspaceStore.getState().trashedNodeIds).toContain('retired');
   expect(useWorkspaceStore.getState().activeNodeId).toBe('part');

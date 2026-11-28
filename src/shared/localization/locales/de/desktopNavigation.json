@@ -1,8 +1,8 @@
 {
-  "desktop.bodyOverflow.title": "Langen Text aufteilen",
-  "desktop.bodyOverflow.description": "Der resultierende Text überschreitet 1 MiB. Teilen Sie den vollständigen Text auf und speichern Sie ihn als Themen unter diesem Thema. Brechen Sie ab, um den ursprünglichen Text zu behalten.",
-  "desktop.bodyOverflow.confirm": "Aufteilen und speichern",
-  "desktop.bodyOverflow.failed": "Der aufgeteilte Text konnte nicht gespeichert werden. Der ursprüngliche Text ist unverändert. Versuchen Sie es erneut oder brechen Sie ab.",
+  "desktop.bodyOverflow.title": "Text ist zu lang",
+  "desktop.bodyOverflow.description": "Der resultierende Text überschreitet 1 MiB. Beim Speichern werden zuerst eingebettete Base64-Bilder in Anhänge umgewandelt. Ist der Text dann immer noch größer als 1 MiB, wird der vollständige Text in Themen unter diesem Thema aufgeteilt. Brechen Sie ab, um den ursprünglichen Text zu behalten.",
+  "desktop.bodyOverflow.confirm": "Speichern",
+  "desktop.bodyOverflow.failed": "Der Text konnte nicht gespeichert werden. Der ursprüngliche Text ist unverändert. Versuchen Sie es erneut oder brechen Sie ab.",
   "desktop.navigation.back": "Zurück",
   "desktop.navigation.forward": "Weiter",
   "desktop.navigation.parent": "Gehe zum übergeordneten Element",
