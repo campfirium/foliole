@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import { buildBookNodes } from './epubImportTree.js';
 
-it('moves chapter intro content into the first child section when the chapter has nested toc sections', () => {
+it('keeps chapter intro content on the chapter node when it has nested toc sections', () => {
   const nodes = buildBookNodes({
     chapters: [
       {
@@ -32,20 +32,12 @@ it('moves chapter intro content into the first child section when the chapter ha
 
   expect(nodes).toEqual([
     {
-      content: '**第三章 越少越好**',
+      content: '# 第三章 越少越好\n\n告诉你一个秘密。',
       degradedReason: null,
       embeddedImages: [],
       key: 'chapter-3',
       parentKey: null,
       title: '第三章 越少越好'
-    },
-    {
-      content: '# 第三章 越少越好\n\n告诉你一个秘密。',
-      degradedReason: null,
-      embeddedImages: [],
-      key: 'chapter-3::chapter-body',
-      parentKey: 'chapter-3',
-      title: '越少越好'
     },
     {
       content: '',
@@ -58,7 +50,7 @@ it('moves chapter intro content into the first child section when the chapter ha
   ]);
 });
 
-it('does not split chapter content when the toc chapter has no nested sections', () => {
+it('keeps chapter content when the toc chapter has no nested sections', () => {
   const nodes = buildBookNodes({
     chapters: [
       {
@@ -209,7 +201,7 @@ it('uses the navigation tree once and fills its body from an otherwise unconsume
   });
 
   expect(nodes.map((node) => [node.title, node.parentKey, node.content])).toEqual([
-    ['Volume One', null, '**Volume One**'],
+    ['Volume One', null, ''],
     ['Chapter 2', 'toc-1', '# Chapter 2\n\nCorrect body.']
   ]);
 });

@@ -2,19 +2,23 @@ import { buildRetainedDegradedImportContent } from '../controlledContext.js';
 
 import { type EpubBookEntries, type EpubTextStage } from './epubBookEntries.js';
 import { buildChapterMarkdown } from './epubChapterMarkdown.js';
-import { collectManagedEpubImages } from './epubEmbeddedImages.js';
+import { collectManagedEpubImages, holdsOnlyCoverImage } from './epubEmbeddedImages.js';
 import { isCoverLikeChapter } from './epubImportChapterHeuristics.js';
 import { buildCoverRootContentFromChapter, type RootBookContent } from './epubImportRootContent.js';
 import type { RawBookNode } from './epubImportTree.js';
 import { parseManifest, type SpineItem } from './epubPackageDocument.js';
+import { inlineEpubSvgImages } from './epubSvgImages.js';
 
 interface SpineChapterNode extends RawBookNode {
+  blank?: boolean;
+  matchTitle?: string;
   href: string;
   rawHtml: string;
 }
 
 interface SpineChapterBuildResult {
   chapter: SpineChapterNode | null;
+  coverHref?: string;
   rootCover: RootBookContent | null;
 }
 
@@ -53,6 +57,9 @@ function buildDegradedSpineChapterResult(input: {
 }
 
 function buildSpineChapterNode(input: {
+  bookTitle: string;
+  coverImagePaths: ReadonlySet<string>;
+  isOpeningPage: boolean;
   entries: ReadonlyMap<string, Uint8Array>;
   fallbackTitle: string;
   guideCoverPaths: ReadonlySet<string>;
@@ -77,11 +84,16 @@ function buildSpineChapterNode(input: {
       reason: `EPUB chapter missing entry: ${input.href}`
     });
   }
-  const chapter = buildChapterMarkdown(decodeText(htmlBytes), input.fallbackTitle);
+  const html = inlineEpubSvgImages(decodeText(htmlBytes));
+  const chapter = buildChapterMarkdown(html, input.fallbackTitle, input.bookTitle);
   const embeddedImages = collectManagedEpubImages(chapter.content, input.href, input.entries);
-  if (isCoverLikeChapter({ content: chapter.content, title: chapter.title }, input.href, input.guideCoverPaths)) {
+  if (
+    isCoverLikeChapter({ content: chapter.content, title: chapter.title }, input.href, input.guideCoverPaths) ||
+    (input.isOpeningPage && holdsOnlyCoverImage(chapter.content, input.href, input.coverImagePaths))
+  ) {
     return {
       chapter: null,
+      coverHref: input.href,
       rootCover: buildCoverRootContentFromChapter({ content: chapter.content, degradedReason: chapter.degradedReason, embeddedImages })
     };
   }
@@ -93,7 +105,9 @@ function buildSpineChapterNode(input: {
       href: input.href,
       key: `${input.index}-${input.href}`,
       parentKey: null,
-      rawHtml: decodeText(htmlBytes),
+      blank: chapter.blank,
+      matchTitle: chapter.matchTitle,
+      rawHtml: html,
       title: chapter.title
     },
     rootCover: null
@@ -101,13 +115,17 @@ function buildSpineChapterNode(input: {
 }
 
 export async function buildSpineChapterNodes(input: {
+  bookTitle: string;
+  coverImagePaths: ReadonlySet<string>;
   stage: EpubTextStage;
   entries: EpubBookEntries;
   guideCoverPaths: ReadonlySet<string>;
   manifest: ReturnType<typeof parseManifest>;
   spine: SpineItem[];
 }) {
-  const result: { chapters: SpineChapterNode[]; rootCover: RootBookContent | null } = { chapters: [], rootCover: null };
+  const result: { chapters: SpineChapterNode[]; coverHrefs: Set<string>; rootCover: RootBookContent | null } = {
+    chapters: [], coverHrefs: new Set(), rootCover: null
+  };
   for (const [index, spineItem] of input.spine.entries()) {
     if (!spineItem.linear) {
       continue;
@@ -133,6 +151,9 @@ export async function buildSpineChapterNodes(input: {
     }
     await input.entries.extract(item.href);
     const built = buildSpineChapterNode({
+      bookTitle: input.bookTitle,
+      coverImagePaths: input.coverImagePaths,
+      isOpeningPage: result.chapters.length === 0,
       entries: input.entries,
       fallbackTitle,
       guideCoverPaths: input.guideCoverPaths,
@@ -142,6 +163,9 @@ export async function buildSpineChapterNodes(input: {
     });
     if (built?.chapter) {
       result.chapters.push(input.stage(built.chapter, ['content', 'rawHtml']));
+    }
+    if (built.coverHref) {
+      result.coverHrefs.add(built.coverHref);
     }
     if (!result.rootCover && built?.rootCover?.content) {
       result.rootCover = built.rootCover;

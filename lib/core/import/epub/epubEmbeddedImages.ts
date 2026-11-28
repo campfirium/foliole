@@ -73,3 +73,15 @@ export function collectManagedEpubImages(
 
   return managedImages;
 }
+
+export function holdsOnlyCoverImage(content: string, chapterHref: string, coverImagePaths: ReadonlySet<string>) {
+  const body = content.replace(/^#{1,6}\s.*$/gm, (line) => (line.includes('![') ? line : '')).trim();
+  const references = collectMarkdownImageReferences(body);
+  if (references.length === 0) return false;
+  const remainder = references.reduce((text, reference) => text.replace(reference.fullMatch, ''), body);
+  return !remainder.trim() && references.every((reference) => {
+    const destination = parseMarkdownImageTarget(reference.rawTarget)?.destination;
+    const archivePath = destination ? resolveArchivePath(chapterHref, destination) : null;
+    return Boolean(archivePath && coverImagePaths.has(archivePath));
+  });
+}

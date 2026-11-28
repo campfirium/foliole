@@ -23,6 +23,7 @@ export interface FragmentSourceChapter extends RawBookNode {
 
 interface FragmentChapter extends FragmentSourceChapter {
   embeddedImages: PreparedImportEmbeddedImage[];
+  withoutIntro?: boolean;
 }
 
 function appendReason(current: string | null, next: string | null) {
@@ -102,6 +103,42 @@ function buildFragmentChapter(input: {
   };
 }
 
+function textOf(node: HtmlNode): string {
+  if (node.nodeName === '#text') return 'value' in node ? node.value.replace(/\s+/g, '') : '';
+  return 'childNodes' in node ? node.childNodes.map(textOf).join('') : '';
+}
+
+/** Returns null when cutting the page at its anchors could drop text, so the page is kept whole. */
+function buildIntroChapter(
+  chapter: FragmentSourceChapter,
+  tocEntries: EpubTocEntry[],
+  entries: ReadonlyMap<string, Uint8Array>
+): FragmentChapter | null {
+  const body = findBody(parse(chapter.rawHtml));
+  if (!body) return null;
+  const blocks = collectRenderableBlocks(body.childNodes);
+  if (blocks.map(textOf).join('') !== textOf(body)) return null;
+  const starts = tocEntries.map((entry) => {
+    const fragment = normalizeFragment(fragmentKey(entry.href) ?? '');
+    return fragment ? blocks.findIndex((block) => blockContainsFragment(block, fragment)) : -1;
+  });
+  if (starts.some((start) => start < 0)) return null;
+  const html = serializeBlocks(blocks.slice(0, Math.min(...starts)));
+  const markdown = html ? buildChapterMarkdown(`<body>${html}</body>`, chapter.title) : null;
+  const content = markdown?.content ?? '';
+  return {
+    ...chapter,
+    content,
+    degradedReason: markdown?.degradedReason ?? null,
+    embeddedImages: collectManagedEpubImages(content, chapter.href, entries),
+    key: chapter.key,
+    parentKey: chapter.parentKey,
+    rawHtml: html,
+    title: chapter.title,
+    withoutIntro: !content
+  };
+}
+
 function splitChapterByFragments(
   chapter: FragmentSourceChapter,
   tocEntries: EpubTocEntry[],
@@ -151,9 +188,11 @@ export function splitEpubChaptersByTocFragments(input: {
   const chapters = input.chapters.flatMap((chapter) => {
     const tocEntries = entriesForChapter(input.toc, chapter.href);
     const keepBaseChapter = hasBaseEntry(input.toc, chapter.href);
-    if (tocEntries.length <= 1) return [chapter];
+    if (tocEntries.length === 0) return [chapter];
+    const intro = keepBaseChapter ? buildIntroChapter(chapter, tocEntries, input.entries) : null;
+    if (!intro && tocEntries.length <= 1) return [chapter];
     const fragments = splitChapterByFragments(chapter, tocEntries, !keepBaseChapter, input.entries);
-    return keepBaseChapter ? [chapter, ...fragments] : fragments;
+    return keepBaseChapter ? [intro ?? chapter, ...fragments] : fragments;
   });
   const chapterHrefs = new Set(input.chapters.map((chapter) => chapter.href));
   const nonLinearChapters = Array.from(input.nonLinearHrefs ?? []).flatMap((href) => {

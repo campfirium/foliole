@@ -59,19 +59,25 @@ function findFirstHeadingText(node: HtmlNode): string | null {
   return null;
 }
 
-export function buildChapterMarkdown(html: string, fallbackTitle: string) {
+export function buildChapterMarkdown(html: string, fallbackTitle: string, bookTitle?: string) {
   const document = parse(html);
-  const pageTitle = normalizePageTitle(findFirstText(document, 'title'));
+  const documentTitle = normalizePageTitle(findFirstText(document, 'title'));
+  const repeatsBookTitle = Boolean(documentTitle && documentTitle === bookTitle?.trim());
+  const pageTitle = repeatsBookTitle ? null : documentTitle;
   const firstHeading = findFirstHeadingText(document);
   const converted = convertHtmlToMarkdownCompatible(html);
   const body = converted.content.trim();
   const bodyTitle = extractFirstMarkdownHeadingText(body) ?? extractUniqueLevelOneHeading(body) ?? extractFirstMeaningfulBodyLine(body);
-  const resolvedTitle = pageTitle ?? firstHeading ?? bodyTitle ?? fallbackTitle;
+  const headingTitle = repeatsBookTitle ? extractFirstMarkdownHeadingText(body) : bodyTitle;
+  const resolvedTitle = pageTitle ?? firstHeading ?? headingTitle ?? fallbackTitle;
   const needsTitleHeading =
     Boolean(body) &&
     (!bodyTitle || bodyTitle !== resolvedTitle) &&
     (Boolean(pageTitle) || Boolean(firstHeading) || resolvedTitle !== fallbackTitle);
   return {
+    blank: !body,
+    // Unlisted pages are matched to toc nodes by the title the document declares.
+    matchTitle: documentTitle ?? firstHeading ?? bodyTitle ?? fallbackTitle,
     content: needsTitleHeading && body ? `# ${resolvedTitle}\n\n${increaseMarkdownHeadingLevels(body)}` : body || `# ${resolvedTitle}`,
     degradedReason: formatHtmlConversionDegradedReason(converted.warnings),
     title: resolvedTitle

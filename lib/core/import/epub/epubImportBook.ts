@@ -5,7 +5,8 @@ import type { EpubBookEntries, EpubTextStage } from './epubBookEntries.js';
 import { splitEpubChaptersByTocFragments } from './epubImportFragmentSections.js';
 import { diagnoseEpubImportHealth } from './epubImportHealth.js';
 import {
-  buildRootCoverFromImage
+  buildRootCoverFromImage,
+  parseCoverImageItems
 } from './epubImportRootContent.js';
 import { buildSpineChapterNodes } from './epubImportSpine.js';
 import { buildBookNodes, type RawBookNode } from './epubImportTree.js';
@@ -70,7 +71,10 @@ export async function buildRawEpubBook(entries: EpubBookEntries, sourceName: str
     if (item.properties.includes('nav') || item.mediaType === 'application/x-dtbncx+xml') await entries.extract(item.href);
   }
   const toc = readEpubToc({ entries, manifest, opfDirectory, opfXml });
-  const builtSpine = await buildSpineChapterNodes({ entries, guideCoverPaths, manifest, spine, stage });
+  const coverImagePaths = new Set(parseCoverImageItems(opfXml, manifest).map((item) => item.href));
+  const builtSpine = await buildSpineChapterNodes({
+    bookTitle: title, coverImagePaths, entries, guideCoverPaths, manifest, spine, stage
+  });
   const nonLinearHrefs = new Set(
     spine.flatMap((item) => {
       const href = !item.linear ? manifest.get(item.idref)?.href : null;
@@ -85,7 +89,7 @@ export async function buildRawEpubBook(entries: EpubBookEntries, sourceName: str
   const rootCover = builtSpine.rootCover ?? buildRootCoverFromImage({ entries, manifest, opfXml });
 
   const book = {
-    nodes: buildBookNodes({ chapters: nodes, toc, storeNode }),
+    nodes: buildBookNodes({ chapters: nodes, coverHrefs: builtSpine.coverHrefs, toc, storeNode }),
     rootContent: rootCover?.content ?? '',
     rootDegradedReason: appendReason(rootCover?.degradedReason ?? null, healthReason),
     rootEmbeddedImages: rootCover?.embeddedImages ?? [],

@@ -59,7 +59,7 @@ function readChildren(parentNodeId: string) {
     .all(parentNodeId) as Array<{ content: string; id: string; title: string }>;
 }
 
-it('splits chapter intro content into the first child section when toc chapter also has nested sections', async () => {
+it('keeps the chapter intro on the chapter node and imports each nested section once', async () => {
   const filePath = await writeEpub('chapter-intro-split.epub', [
     { content: 'application/epub+zip', name: 'mimetype' },
     {
@@ -102,11 +102,10 @@ it('splits chapter intro content into the first child section when toc chapter a
   const imported = await runEpubImport(source(filePath), '2026-04-04T12:00:00.000Z');
   const chapterRows = readChildren(imported.nodeId as string);
   expect(chapterRows.map((node) => node.title)).toEqual(['第三章 越少越好']);
-  expect(chapterRows[0]?.content).toBe('**第三章 越少越好**');
+  expect(chapterRows[0]?.content).toBe('# 第三章 越少越好\n\n告诉你一个秘密。');
 
   const sectionRows = readChildren(chapterRows[0]!.id);
-  expect(sectionRows.map((node) => node.title).sort()).toEqual(['从流程开始', '最后创建', '越少越好']);
-  expect(sectionRows.find((node) => node.title === '越少越好')?.content).toContain('告诉你一个秘密。');
+  expect(sectionRows.map((node) => node.title).sort()).toEqual(['从流程开始', '最后创建']);
   expect(sectionRows.find((node) => node.title === '从流程开始')?.content).toBe('## 从流程开始\n\nAlpha');
   expect(sectionRows.find((node) => node.title === '最后创建')?.content).toBe('## 最后创建\n\nBeta');
 });

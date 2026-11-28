@@ -89,7 +89,8 @@ it('matches NCX TOC hrefs with percent-encoded spaces to spine chapter paths', a
   const nestedByTitle = new Map(nestedChildren.map((child) => [child.title, child]));
 
   expect(rootChildren.map((child) => child.title)).toEqual(['Part One']);
-  expect(nestedChildren.map((child) => child.title)).toEqual(['Part One', '高中生视角']);
+  expect(part?.content).toContain('Intro body.');
+  expect(nestedChildren.map((child) => child.title)).toEqual(['高中生视角']);
   expect(nestedChildren.every((child) => child.content.trim().length > 0)).toBe(true);
   expect(nestedByTitle.get('高中生视角')?.content).toContain('Real body.');
 });

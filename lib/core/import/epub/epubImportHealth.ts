@@ -13,7 +13,8 @@ function contentLength(node: RawBookNode) {
   return node.content.trim().length;
 }
 
-export function diagnoseEpubImportHealth(nodes: RawBookNode[]) {
+export function diagnoseEpubImportHealth(chapters: (RawBookNode & { withoutIntro?: boolean })[]) {
+  const nodes = chapters.filter((chapter) => !chapter.withoutIntro);
   if (nodes.length < MIN_HEALTH_SECTION_COUNT) {
     return null;
   }

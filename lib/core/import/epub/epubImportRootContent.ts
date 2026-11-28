@@ -40,7 +40,7 @@ function stripLeadingHeading(content: string) {
   return [headingImages, remainder].filter(Boolean).join('\n\n');
 }
 
-function parseCoverImageItems(opfXml: string, manifest: ReadonlyMap<string, ManifestItem>) {
+export function parseCoverImageItems(opfXml: string, manifest: ReadonlyMap<string, ManifestItem>) {
   const coverIds = new Set(
     Array.from(manifest.entries())
       .filter(([, item]) => item.properties.includes('cover-image'))
