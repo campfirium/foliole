@@ -49,7 +49,7 @@ function resolveLocalImageSourcePaths(destination: string, sourceLocator: string
   return [...new Set(candidates)];
 }
 
-function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
+export function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
   if (fs.existsSync(storagePath)) {
     if (createContentHash(fs.readFileSync(storagePath)) !== createContentHash(bytes)) {
       throw new Error('canonical attachment path contains different bytes');

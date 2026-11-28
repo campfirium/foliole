@@ -184,7 +184,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   await expectStoredAttachmentFiles({ assetsDir, attachments });
 });
 
-it('compacts consecutive small data-url markdown images during import', () => {
+it('turns consecutive small data-url markdown images into attachments on one line', () => {
   const smallPngDataUrl =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
   const imported = runPreparedImport(
@@ -200,7 +200,8 @@ it('compacts consecutive small data-url markdown images during import', () => {
 
   const nodeRow = openDatabaseConnection().sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(imported.nodeId as string) as { content: string };
   expect(imported.resultStatus).toBe('imported');
-  expect(nodeRow.content).toBe(`![Up](${smallPngDataUrl}) ![Down](${smallPngDataUrl})`);
+  const [icon] = listNodeAttachments(imported.nodeId as string);
+  expect(nodeRow.content).toBe(`![Up](asset://${icon!.attachmentId}.png) ![Down](asset://${icon!.attachmentId}.png)`);
   expect(nodeRow.content).not.toContain('Unsupported local image');
 });
 

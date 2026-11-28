@@ -4,7 +4,6 @@ import {
   type RunPreparedImportOptions
 } from '../../lib/core/database/index.js';
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
-import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
@@ -14,6 +13,7 @@ import { rewriteImportedImageReferences } from '../../lib/core/import/importImag
 import { openDatabaseConnection } from './connection.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { importMarkdownImageAttachment, importPdfSourceAttachment } from './importPipelineAttachments.js';
+import { linkImportImages, stageImportDataImages } from './importPipelineDataImages.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
@@ -94,19 +94,10 @@ function rewriteImportLocalImages(record: PersistedImportRecord, prepared: Prepa
   };
 }
 
-function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
-  if (!record.nodeId) return;
-  for (const reference of prepared.localizedImageResources ?? []) {
-    const driver = openDatabaseConnection().driver;
-    const row = driver.queryOne<{ resource_references: string }>('SELECT resource_references FROM nodes WHERE id = ?', [record.nodeId]);
-    if (!row) throw new Error('image_import_node_unavailable');
-    driver.execute('UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = ?',
-      [upsertNodeResourceReference(row.resource_references, reference), record.nodeId]);
-  }
-}
-
 export function runPreparedImport(input: PreparedImportRecord, options?: RunPreparedImportOptions) {
   const { driver, sqlite } = openDatabaseConnection();
+  const staged = stageImportDataImages(input);
+  const { prepared } = staged;
   // Reserve the SQLite writer before import lookups establish a read snapshot.
   return sqlite.transaction(() => {
     const existing = driver.queryOne<{ id: string }>(
@@ -117,11 +108,11 @@ export function runPreparedImport(input: PreparedImportRecord, options?: RunPrep
       [options?.forceUpdateExistingNodeId ?? input.sourceFingerprint]
     );
     if (existing) expandPartitionedNodeForImport(driver, existing.id, input.importedAt);
-    const imported = runPreparedImportViaDriver(driver, input, {
+    const imported = runPreparedImportViaDriver(driver, prepared, {
       ...options, prepareDeletionVersions: (nodeIds, deletedAt) => prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt)
     });
-    const record = rewriteImportLocalImages(imported, input);
-    linkPreparedLocalizedImages(record, input);
+    const record = rewriteImportLocalImages(imported, prepared);
+    linkImportImages(record, staged);
     if (input.sourceKind === 'pdf' && record.nodeId && record.resultStatus !== 'failed') {
       importPdfSourceAttachment(record.nodeId, input.sourceLocator);
     }

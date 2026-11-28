@@ -125,13 +125,14 @@ it.each(['missing.png', 'broken.png'])(
   }
 );
 
-it('keeps remote and inline images without creating local attachments or downloading resources', async () => {
+it('keeps remote images undownloaded and stores inline images as attachments', async () => {
   const src = 'https://example.invalid/remote.png';
   const file = await createPage('remote.html', src);
   await fs.appendFile(file, `<img src="data:image/png;base64,${PNG.toString('base64')}" alt="Inline">`);
   const result = await runImportForFilePath(file);
   expect(result.result_status).toBe('imported');
   expect(readBody(result.node_id!)).toContain(src);
-  expect(readBody(result.node_id!)).toContain(`data:image/png;base64,${PNG.toString('base64')}`);
-  expect(listNodeAttachments(result.node_id!)).toEqual([]);
+  const [inline] = listNodeAttachments(result.node_id!);
+  expect(readBody(result.node_id!)).toContain(`![Inline](asset://${inline!.attachmentId}.png)`);
+  expect(readBody(result.node_id!)).not.toContain('base64');
 });

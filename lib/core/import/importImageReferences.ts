@@ -14,7 +14,7 @@ function isSmallDataImageDestination(destination: string) {
   return Boolean(size && size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE);
 }
 
-function compactConsecutiveSmallDataImages(content: string) {
+export function compactConsecutiveSmallDataImages(content: string) {
   let compacted = '';
   let cursor = 0;
   let previousWasSmallDataImage = false;

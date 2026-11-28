@@ -2,6 +2,7 @@ import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSna
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { linkImportImages, stageImportDataImages } from '../database/importPipelineDataImages.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { recordReadwiseImportSourceMapping } from '../database/readwiseSourceMapping.js';
 import {
@@ -67,8 +68,12 @@ async function runPreparedImportWithResponsiveBoundary(prepared: PreparedImportR
     prepared.sourceProfile === 'body_with_highlight_sidecar' &&
     countPreparedImportHighlights(prepared) >= 300
   ) {
-    return runWithDatabaseConnectionOwner(() =>
-      runPreparedImportInWorkerWithSignal({ prepared, ...(signal ? { signal } : {}) }));
+    return runWithDatabaseConnectionOwner(async () => {
+      const staged = stageImportDataImages(prepared);
+      const record = await runPreparedImportInWorkerWithSignal({ prepared: staged.prepared, ...(signal ? { signal } : {}) });
+      linkImportImages(record, staged);
+      return record;
+    });
   }
   const record = runPreparedImport(prepared, { });
   throwIfKeepImportAborted(signal);
