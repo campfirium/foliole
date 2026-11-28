@@ -8,15 +8,11 @@ import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import type { MarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
-import {
-  forgetAttachmentImage,
-  readRememberedAttachmentImage,
-  rememberAttachmentImage
-} from './liveMarkdownAttachmentImageMemory';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import { finalizeLoadedMarkdownImageDisplay, finalizeMarkdownImageDisplay } from './liveMarkdownImageDisplay';
 import { isMarkdownImageWidgetDomDisposed, registerMarkdownImageWidgetCleanup } from './liveMarkdownImageDisposal';
 import type { RequestEditorMeasure } from './liveMarkdownImageElement';
+import { forgetImage, readRememberedImage, rememberImage } from './liveMarkdownImageMemory';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
 import { createImageSurface } from './liveMarkdownImageSurface';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
@@ -39,7 +35,7 @@ interface AttachmentImageContext {
 
 function showUnavailableAttachment(context: AttachmentImageContext) {
   if (!context.isActive()) return;
-  forgetAttachmentImage(context.imageMatch.source);
+  forgetImage(context.imageMatch.source);
   context.wrapper.replaceChildren(createUnavailableImageStatus(context.imageMatch, context.onRemove));
   context.requestMeasure?.();
 }
@@ -52,7 +48,7 @@ function mountAttachmentSurface(context: AttachmentImageContext, source: string)
       showUnavailableAttachment(context);
     },
     onLoad: () => {
-      rememberAttachmentImage(context.imageMatch.source, context.wrapper, source);
+      rememberImage(context.imageMatch.source, context.wrapper, source);
       finalizeLoadedMarkdownImageDisplay(context.wrapper, context.imageMatch, context.requestMeasure);
     },
     requestMeasure: context.requestMeasure
@@ -135,7 +131,7 @@ export function appendResolvedAttachmentImage(args: {
     restoredSource: null,
     wrapper: args.wrapper
   };
-  const remembered = readRememberedAttachmentImage(args.imageMatch.source);
+  const remembered = readRememberedImage(args.imageMatch.source);
   if (remembered) {
     context.restoredSource = remembered.resourceUrl;
     mountAttachmentSurface(context, remembered.resourceUrl);

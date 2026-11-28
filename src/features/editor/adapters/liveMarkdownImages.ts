@@ -8,11 +8,13 @@ import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMen
 import {
   concealLoadingMarkdownImageSurface,
   finalizeLoadedMarkdownImageDisplay,
+  finalizeMarkdownImageDisplay,
   resolveRemoteMarkdownImageDisplay,
   revealLoadedMarkdownImageSurface
 } from './liveMarkdownImageDisplay';
 import { isMarkdownImageWidgetDomDisposed } from './liveMarkdownImageDisposal';
 import type { RequestEditorMeasure } from './liveMarkdownImageElement';
+import { forgetImage, readRememberedImage, rememberImage } from './liveMarkdownImageMemory';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
 import { createImageSurface } from './liveMarkdownImageSurface';
 import {
@@ -64,6 +66,11 @@ function showRemoteImageFailure(args: {
   args.requestMeasure?.();
 }
 
+// The render source depends on the node's source context, so the same URL is remembered per node.
+function remoteImageMemoryKey(imageMatch: MarkdownImageMatch, editorNodeId: string | null) {
+  return `${editorNodeId ?? ''}\n${imageMatch.source}`;
+}
+
 function appendLoadingImageSurface(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
@@ -91,6 +98,8 @@ function appendLoadingImageSurface(
       closeActiveRemoteImageFailureMenu();
       revealLoadedMarkdownImageSurface(surface);
       wrapper.replaceChildren(surface);
+      const loadedSource = surface.querySelector<HTMLImageElement>('.cm-md-image-element')?.src;
+      if (loadedSource) rememberImage(remoteImageMemoryKey(imageMatch, editorNodeId), wrapper, loadedSource);
       finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure);
       onSurfaceReady?.();
       if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId, imageMatch.source);
@@ -110,6 +119,44 @@ function appendLoadingImageSurface(
     const image = surface.querySelector<HTMLImageElement>('.cm-md-image-element');
     if (image) image.src = source;
   }
+}
+
+function appendRemoteImage(
+  wrapper: HTMLElement,
+  imageMatch: MarkdownImageMatch,
+  editorNodeId: string | null,
+  requestMeasure: RequestEditorMeasure,
+  onRemoveImage: (() => void) | null,
+  onSurfaceReady: (() => void) | null
+) {
+  const key = remoteImageMemoryKey(imageMatch, editorNodeId);
+  const remembered = readRememberedImage(key);
+  if (!remembered) {
+    appendLoadingImageSurface(wrapper, imageMatch, editorNodeId, requestMeasure, onRemoveImage, onSurfaceReady);
+    return;
+  }
+  const isActive = () => !isMarkdownImageWidgetDomDisposed(wrapper);
+  // A failed or resized image goes back through the full loading flow.
+  const reload = () => {
+    forgetImage(key);
+    appendLoadingImageSurface(wrapper, imageMatch, editorNodeId, requestMeasure, onRemoveImage, onSurfaceReady);
+  };
+  const surface = createImageSurface(imageMatch, remembered.resourceUrl, editorNodeId, {
+    isActive,
+    onError: reload,
+    onLoad: () => {
+      const image = surface.querySelector<HTMLImageElement>('.cm-md-image-element');
+      if (image?.naturalWidth !== remembered.size.width || image.naturalHeight !== remembered.size.height) {
+        reload();
+        return;
+      }
+      onSurfaceReady?.();
+      if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId, imageMatch.source);
+    },
+    requestMeasure
+  });
+  wrapper.append(surface);
+  finalizeMarkdownImageDisplay(wrapper, imageMatch, remembered.size, null);
 }
 
 export function createMarkdownImageWidgetDom(
@@ -140,14 +187,7 @@ export function createMarkdownImageWidgetDom(
   }
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
-    appendLoadingImageSurface(
-      wrapper,
-      imageMatch,
-      editorNodeId,
-      requestMeasure,
-      onRemoveImage,
-      onSurfaceReady
-    );
+    appendRemoteImage(wrapper, imageMatch, editorNodeId, requestMeasure, onRemoveImage, onSurfaceReady);
     return wrapper;
   }
 

@@ -59,3 +59,46 @@ it('still reports a remembered attachment whose file has since gone missing', as
   await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
   disposeMarkdownImageWidgetDom(widget);
 });
+
+async function loadRemoteOnce(url: string) {
+  const widget = createRemoteWidget(url);
+  const image = widget.querySelector('img')!;
+  await waitFor(() => expect(image.getAttribute('src')).toBeTruthy());
+  Object.defineProperties(image, { naturalHeight: { value: 6000 }, naturalWidth: { value: 800 } });
+  image.dispatchEvent(new Event('load'));
+  const loadedSource = image.getAttribute('src');
+  disposeMarkdownImageWidgetDom(widget);
+  widget.remove();
+  return loadedSource;
+}
+
+function createRemoteWidget(url: string) {
+  const widget = createMarkdownImageWidgetDom({ alt: 'Remote', attachmentId: null,
+    display: 'block', from: 0, source: url, to: 90 });
+  document.body.append(widget);
+  return widget;
+}
+
+it('remounts a loaded remote image visibly at its known size', async () => {
+  const url = 'https://images.example/long.png';
+  const loadedSource = await loadRemoteOnce(url);
+
+  const widget = createRemoteWidget(url);
+
+  expect(widget.querySelector('[data-md-image-status]')).toBeNull();
+  expect(widget.querySelector('.cm-md-image-surface-loading')).toBeNull();
+  expect(widget.querySelector('img')?.getAttribute('src')).toBe(loadedSource);
+  expect(widget.querySelector<HTMLElement>('.cm-md-image-surface')?.style.aspectRatio).toBe('800 / 6000');
+  disposeMarkdownImageWidgetDom(widget);
+});
+
+it('goes back to the loading flow when a remembered remote image fails', async () => {
+  const url = 'https://images.example/gone.png';
+  await loadRemoteOnce(url);
+  const widget = createRemoteWidget(url);
+
+  widget.querySelector('img')!.dispatchEvent(new Event('error'));
+
+  expect(widget.querySelector('.cm-md-image-surface-loading')).not.toBeNull();
+  disposeMarkdownImageWidgetDom(widget);
+});
