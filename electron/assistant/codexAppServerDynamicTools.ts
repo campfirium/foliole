@@ -7,7 +7,7 @@ import {
   type AideToolCallResult,
   type AideToolRequest
 } from './aideToolExecutor.js';
-import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
+import { AIDE_TOOL_REGISTRY, modelFacingToolSchema } from './aideToolRegistry.js';
 import type { AideToolSession } from './aideToolSession.js';
 import { readNestedString, type JsonRpcMessage } from './codexAppServerProtocol.js';
 import type { TurnState } from './codexAppServerSessionTypes.js';
@@ -44,7 +44,7 @@ export function createFolioleDynamicTools(
     .filter(([name, definition]) => enabled.has(definition.capability) && !disabledTools.has(name))
     .map(([name, definition]) => ({
       description: definition.description,
-      inputSchema: definition.inputSchema,
+      inputSchema: modelFacingToolSchema(definition.inputSchema),
       name,
       type: 'function' as const
     }));

@@ -72,6 +72,35 @@ it('enforces conditional Item and Folder creation branches exactly as declared',
   })).toBeNull();
 });
 
+it('shows both providers every field without top-level branches the model cannot read past', () => {
+  const [namespace] = createFolioleDynamicTools([...AGENT_CONTROL_CAPABILITIES]);
+  const shown = [
+    ...(namespace?.tools.map((tool) => tool.inputSchema) ?? []),
+    ...createChatCompletionsAideTools([...AGENT_CONTROL_CAPABILITIES])
+      .map((tool) => tool.function.parameters as Record<string, unknown>)
+  ];
+  expect(shown.filter((schema) => 'oneOf' in schema || 'anyOf' in schema)).toEqual([]);
+  expect(namespace?.tools.find((tool) => tool.name === 'create_material')?.inputSchema).toMatchObject({
+    properties: { content: {}, kind: {}, parent_id: {}, reveal: {}, title: {} },
+    required: ['kind', 'parent_id']
+  });
+});
+
+it('tells the model what to change when its arguments are rejected', async () => {
+  const rejected = async (tool: string, args: unknown) => {
+    const outcome = await executeAideTool({ arguments: args, tool }, {
+      descriptor: descriptor(['materials.create', 'materials.update'])
+    });
+    return JSON.parse(outcome.contentItems[0]?.text ?? 'null') as unknown;
+  };
+  expect(await rejected('create_material', { kind: 'topic' }))
+    .toEqual({ error: 'invalid_arguments', missing: ['parent_id', 'title'] });
+  expect(await rejected('create_material', { kind: 'item', parent_id: null, title: 'T' }))
+    .toEqual({ error: 'invalid_arguments', missing: ['content', 'reveal'], unexpected: ['title'] });
+  expect(await rejected('update_material', { expected_updated_at: 'now', id: 'topic-1' }))
+    .toEqual({ error: 'invalid_arguments', pass_at_least_one_of: ['content', 'reveal', 'title'] });
+});
+
 it('enforces patch, uniqueness, primitive, and additional-property constraints', () => {
   expect(validateAideToolArguments('update_material', {
     expected_updated_at: 'now', id: 'topic-1'

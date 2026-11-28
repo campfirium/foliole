@@ -23,6 +23,29 @@ export function validateAideToolArguments(toolName: string, value: unknown) {
   return value as Record<string, unknown>;
 }
 
+// Tells the model what to change; the schema it was shown cannot carry the per-kind rules.
+export function describeAideArgumentProblem(toolName: string, value: unknown) {
+  const schema = AIDE_TOOL_REGISTRY[toolName]?.inputSchema as JsonSchema | undefined;
+  if (!schema || !isRecord(value)) return { message: 'Pass the arguments as one JSON object.' };
+  const properties = schema.properties ?? {};
+  const branch = schema.oneOf?.find((option) => matchesSchema(value.kind, option.properties?.kind ?? {}));
+  const missing = [...(schema.required ?? []), ...(branch?.required ?? [])]
+    .filter((key) => !Object.hasOwn(value, key));
+  const unexpected = [...Object.keys(value).filter((key) => !Object.hasOwn(properties, key)),
+    ...(branch?.not?.required ?? []).filter((key) => Object.hasOwn(value, key))];
+  const invalid = Object.keys(value)
+    .filter((key) => Object.hasOwn(properties, key) && !matchesSchema(value[key], properties[key] ?? {}));
+  const oneRequired = schema.anyOf && !schema.anyOf.some((option) => matchesSchema(value, option))
+    ? schema.anyOf.flatMap((option) => option.required ?? [])
+    : [];
+  return {
+    ...(missing.length ? { missing } : {}),
+    ...(unexpected.length ? { unexpected } : {}),
+    ...(invalid.length ? { invalid } : {}),
+    ...(oneRequired.length ? { pass_at_least_one_of: oneRequired } : {})
+  };
+}
+
 function matchesSchema(value: unknown, schema: JsonSchema): boolean {
   if (schema.const !== undefined && value !== schema.const) return false;
   if (schema.enum && !schema.enum.includes(value)) return false;

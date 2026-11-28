@@ -9,7 +9,7 @@ import { AIDE_LOCAL_EXTERNAL_TOOLS } from './aideLocalExternalTools.js';
 import { AIDE_LOCAL_READ_TOOLS, type AideLocalToolHandler } from './aideLocalReadTools.js';
 import { checkAideReadTarget, filterAideReadResult, type AideReadScope } from './aideReadScope.js';
 import { searchAideMaterials } from './aideScopedMaterialSearch.js';
-import { validateAideToolArguments } from './aideToolArguments.js';
+import { describeAideArgumentProblem, validateAideToolArguments } from './aideToolArguments.js';
 import { AIDE_TOOL_REGISTRY, type AideToolDefinition } from './aideToolRegistry.js';
 import {
   chargeAideReadResult,
@@ -60,7 +60,7 @@ export async function executeAideTool(
     return readLimitReached(0);
   }
   const body = validateAideToolArguments(request.tool, request.arguments);
-  if (!body) return failure('invalid_arguments');
+  if (!body) return invalidArguments(request);
   const readScope = definition.mutates ? undefined : options.session?.readScope;
   if (readScope && await checkAideReadTarget(readScope, request.tool, body)) return outsideReadScope();
   if (definition.mutates) return executeWrite(request.tool, definition, body, descriptor, options);
@@ -179,6 +179,10 @@ function readLimitReached(remaining: number) {
       : "This reply's read limit is reached. Answer with what has been read and say where reading stopped.",
     remaining_tokens: remaining
   }, false);
+}
+
+function invalidArguments(request: AideToolRequest) {
+  return result({ error: 'invalid_arguments', ...describeAideArgumentProblem(request.tool, request.arguments) }, false);
 }
 
 function outsideReadScope() {

@@ -59,8 +59,9 @@ it('describes conditional question-answer Item creation without enabling automat
 
   expect(createTool).toMatchObject({
     description: expect.stringContaining('only when the user explicitly asks'),
-    inputSchema: expect.objectContaining({ oneOf: expect.any(Array) })
+    inputSchema: expect.objectContaining({ required: ['kind', 'parent_id'] })
   });
+  expect(createTool?.description).toContain('For an item pass kind, parent_id, content (the question) and reveal');
   expect(JSON.stringify(createTool?.inputSchema)).toContain('reveal');
   expect(JSON.stringify(createTool?.inputSchema)).toContain('item');
 });

@@ -69,7 +69,7 @@ describe('Aide read places', () => {
     expect(result.success).toBe(true);
     expect(localTools.read_material).toHaveBeenCalledWith({ id: 'topic-1', length: 500, offset: 1000 });
     const invalid = await executeAideTool({ arguments: { id: 'topic-1', offset: -1 }, tool: 'read_material' }, { descriptor, localTools });
-    expect(readText(invalid)).toEqual({ error: 'invalid_arguments' });
+    expect(readText(invalid)).toEqual({ error: 'invalid_arguments', invalid: ['offset'] });
   });
 });
 

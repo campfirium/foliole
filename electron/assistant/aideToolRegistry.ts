@@ -18,6 +18,12 @@ const IDS = { items: STRING, minItems: 1, type: 'array', uniqueItems: true } as 
 const LIMIT = { minimum: 1, type: 'integer' } as const;
 const OFFSET = { minimum: 0, type: 'integer' } as const;
 
+// What the model is shown. Codex renders a top-level oneOf/anyOf in place of the field list, so the model
+// would see none of the fields; those rules are stated in the description and enforced on arrival.
+export function modelFacingToolSchema(inputSchema: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(inputSchema).filter(([key]) => key !== 'anyOf' && key !== 'oneOf'));
+}
+
 function schema(
   properties: Record<string, unknown>,
   required: string[] = [],
@@ -46,11 +52,11 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
   create_text_excerpt: tool('materials.createTextExcerpt', 'Create an anchored excerpt from a Topic using offsets in its stored Markdown.', 'materials/create-text-excerpt',
     schema({ source_id: STRING, expected_updated_at: STRING, from: { minimum: 0, type: 'integer' },
       to: LIMIT }, ['source_id', 'expected_updated_at', 'from', 'to'])),
-  create_material: tool('materials.create', 'Create a Foliole Topic, Folder, or question-answer Item only when the user explicitly asks to save one.', 'materials/create',
-    schema({ content: TEXT, kind: { enum: ['folder', 'item', 'topic'], type: 'string' }, parent_id: NULLABLE_STRING, reveal: TEXT, title: STRING }, [], {
+  create_material: tool('materials.create', 'Create a Foliole Topic, Folder, or question-answer Item only when the user explicitly asks to save one. For a topic or folder pass kind, parent_id and title (content is optional), without reveal. For an item pass kind, parent_id, content (the question) and reveal (the answer), without title. parent_id is null for Home.', 'materials/create',
+    schema({ content: TEXT, kind: { enum: ['folder', 'item', 'topic'], type: 'string' }, parent_id: NULLABLE_STRING, reveal: TEXT, title: STRING }, ['kind', 'parent_id'], {
       oneOf: [
-        { not: { required: ['title'] }, properties: { kind: { const: 'item' } }, required: ['content', 'kind', 'parent_id', 'reveal'] },
-        { not: { required: ['reveal'] }, properties: { kind: { enum: ['folder', 'topic'] } }, required: ['kind', 'parent_id', 'title'] }
+        { not: { required: ['title'] }, properties: { kind: { const: 'item' } }, required: ['content', 'reveal'] },
+        { not: { required: ['reveal'] }, properties: { kind: { enum: ['folder', 'topic'] } }, required: ['title'] }
       ]
     })),
   move_material: tool('materials.move', 'Move a Foliole Topic, Folder, or Item.', 'materials/move',
@@ -59,7 +65,7 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
     schema({ material_ids: IDS, parent_id: NULLABLE_STRING }, ['material_ids', 'parent_id'])),
   restore_material: tool('materials.restore', 'Restore a Foliole Topic, Folder, or Item from trash.', 'materials/restore',
     schema({ expected_updated_at: STRING, id: STRING }, ['expected_updated_at', 'id'])),
-  update_material: tool('materials.update', 'Update a Foliole Topic, Item, or Folder: body text, title, an Item answer, or a Folder name.', 'materials/update',
+  update_material: tool('materials.update', 'Update a Foliole Topic, Item, or Folder: body text, title, an Item answer, or a Folder name. Pass at least one of content, title, or reveal.', 'materials/update',
     schema({ content: TEXT, expected_updated_at: STRING, id: STRING, reveal: TEXT, title: TEXT }, ['expected_updated_at', 'id'], {
       anyOf: [{ required: ['content'] }, { required: ['reveal'] }, { required: ['title'] }]
     })),

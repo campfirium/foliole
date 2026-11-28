@@ -1,4 +1,4 @@
-import { AIDE_TOOL_REGISTRY } from './aideToolRegistry.js';
+import { AIDE_TOOL_REGISTRY, modelFacingToolSchema } from './aideToolRegistry.js';
 
 export function createChatCompletionsAideTools(
   capabilities: readonly string[] = [],
@@ -11,7 +11,7 @@ export function createChatCompletionsAideTools(
       function: {
         description: definition.description,
         name,
-        parameters: compatibleToolSchema(definition.inputSchema)
+        parameters: compatibleToolSchema(modelFacingToolSchema(definition.inputSchema))
       },
       type: 'function' as const
     }));
