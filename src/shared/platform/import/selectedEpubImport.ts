@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { rewriteEpubEmbeddedImages } from '../../../../lib/core/import/epub/epubImageReferences';
 import { buildRawEpubBook } from '../../../../lib/core/import/epub/epubImportBook';
-import { buildEpubRootContent, prepareEpubBookNode } from '../../../../lib/core/import/epub/epubPreparedBook';
+import { buildEpubRootContent, localizeEpubDataImages, prepareEpubBookNode } from '../../../../lib/core/import/epub/epubPreparedBook';
 import { createPreparedDesktopTextImport } from '../../../../lib/core/import/fingerprint';
 import { classifyAttachmentBytes } from '../../../../lib/platform/attachmentByteClassification';
 import { buildCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
@@ -31,17 +31,25 @@ export async function prepareSelectedEpubImport(bytes: Uint8Array, name: string,
       return { status: 'imported', storage_key: storageKey, original_name: image.originalName };
     });
   };
-  const rootImages = await localize({ content: root.content, embeddedImages: book.rootEmbeddedImages });
+  const localizeInline = <T extends { content: string; degradedReason: string | null }>(source: T) => {
+    signal?.throwIfAborted();
+    const inline = localizeEpubDataImages(source);
+    for (const { storageKey, bytes } of inline.images) sources.set(storageKey, { storageKey, bytes });
+    return inline;
+  };
+  const rootInline = localizeInline(root);
+  const rootImages = await localize({ content: rootInline.node.content, embeddedImages: book.rootEmbeddedImages });
   const chapters = [];
-  const reasons = [root.degradedReason, ...rootImages.degradedMessages];
+  const reasons = [rootInline.node.degradedReason, ...rootImages.degradedMessages];
   for (const [index, raw] of book.nodes.entries()) {
-    const chapter = prepareEpubBookNode(raw, index, importedAt);
-    const images = await localize(chapter);
-    reasons.push(chapter.degradedReason, ...images.degradedMessages);
-    chapters.push({ ...chapter, content: images.rewrittenContent, resourceReferences: images.resources });
+    const inline = localizeInline(prepareEpubBookNode(raw, index, importedAt));
+    const images = await localize(inline.node);
+    reasons.push(inline.node.degradedReason, ...images.degradedMessages);
+    chapters.push({ ...inline.node, content: images.rewrittenContent,
+      resourceReferences: [...inline.resources, ...images.resources] });
   }
   const degradedReason = [...new Set(reasons.filter(Boolean))].join('; ') || null;
   return { ...root, content: rootImages.rewrittenContent, degradedReason,
-    epubBook: { chapters, resources: rootImages.resources, files: [...sources.values()].sort((a, b) => a.storageKey.localeCompare(b.storageKey)) },
+    epubBook: { chapters, resources: [...rootInline.resources, ...rootImages.resources], files: [...sources.values()].sort((a, b) => a.storageKey.localeCompare(b.storageKey)) },
     ...(degradedReason ? { importWarning: 'conversion' as const } : {}) };
 }

@@ -1,4 +1,5 @@
 import { ASSET_MARKDOWN_SCHEME } from '../../platform/assetMarkdownUrl.js';
+import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../platform/markdownImageDataUrl.js';
 
 const MARKDOWN_IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\n]+)\)/g;
 
@@ -48,6 +49,9 @@ export function degradeUnmanagedEpubImages(content: string, managedDestinations:
     if (
       parsedTarget.destination.startsWith(ASSET_MARKDOWN_SCHEME) ||
       isRemoteImageDestination(parsedTarget.destination) ||
+      // Inline data is part of the chapter itself; import turns it into an attachment afterwards.
+      isDataUrlDestination(parsedTarget.destination) ||
+      normalizeSafeMarkdownDataImageUrl(parsedTarget.destination) ||
       managedDestinations.has(parsedTarget.destination)
     ) {
       return fullMatch;

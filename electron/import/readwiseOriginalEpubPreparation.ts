@@ -1,4 +1,5 @@
 import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
+import { localizeDataImageContent } from '../../lib/core/import/importDataImages.js';
 import {
   collectMarkdownImageReferences,
   parseMarkdownImageTarget
@@ -20,6 +21,7 @@ interface PreparedBody {
   resourceReferences: NodeResourceReference[];
   attachmentIds: string[];
   content: string;
+  degradedReason: string | null;
 }
 
 export interface PreparedOriginalEpubCandidate {
@@ -27,8 +29,19 @@ export interface PreparedOriginalEpubCandidate {
   stages: StagedManagedAttachment[];
 }
 
+async function stageBytes(
+  image: { bytes: Uint8Array; hash: string; mimeType: string; originalName: string },
+  now: string,
+  stages: Map<string, StagedManagedAttachment>
+) {
+  if (stages.has(image.hash)) return;
+  stages.set(image.hash, await stageManagedAttachmentFile({
+    bytes: image.bytes, mimeType: image.mimeType, now, originalName: image.originalName
+  }));
+}
+
 async function prepareBody(
-  content: string,
+  source: string,
   embeddedImages: RawEpubBook['rootEmbeddedImages'],
   now: string,
   stages: Map<string, StagedManagedAttachment>,
@@ -37,6 +50,15 @@ async function prepareBody(
   const byDestination = new Map(embeddedImages.map((image) => [image.destination, image]));
   const attachmentIds = new Set<string>();
   const references = new Map<string, NodeResourceReference>();
+  const inline = localizeDataImageContent(source);
+  const content = inline.content;
+  for (const [index, image] of inline.images.entries()) {
+    signal?.throwIfAborted();
+    const reference = inline.resources[index]!;
+    await stageBytes({ ...image, originalName: reference.original_name ?? image.storageKey }, now, stages);
+    attachmentIds.add(image.hash);
+    references.set(image.storageKey, reference);
+  }
   let rewritten = '';
   let cursor = 0;
   for (const reference of collectMarkdownImageReferences(content)) {
@@ -54,19 +76,15 @@ async function prepareBody(
     if (!canonical) throw new Error('original_epub_image_invalid');
     attachmentIds.add(canonical.hash);
     references.set(canonical.storageKey, { storage_key: canonical.storageKey, original_name: image.originalName, role: 'image' });
-    let stage = stages.get(canonical.hash);
-    if (!stage) {
-      signal?.throwIfAborted();
-      stage = filePath ? await stageManagedAttachmentFileCopy({
+    signal?.throwIfAborted();
+    if (!filePath) {
+      await stageBytes({ bytes: image.bytes, hash: canonical.hash, mimeType: canonical.mimeType,
+        originalName: image.originalName }, now, stages);
+    } else if (!stages.has(canonical.hash)) {
+      stages.set(canonical.hash, await stageManagedAttachmentFileCopy({
         sourcePath: filePath, contentHash: canonical.hash, mimeType: canonical.mimeType,
         now, originalName: image.originalName
-      }) : await stageManagedAttachmentFile({
-        bytes: image.bytes,
-        mimeType: canonical.mimeType,
-        now,
-        originalName: image.originalName
-      });
-      stages.set(canonical.hash, stage);
+      }));
     }
     const suffix = parsed.suffix ? ` ${parsed.suffix}` : '';
     rewritten += `![${reference.altText}](${buildAssetMarkdownUrl(canonical.storageKey)}${suffix})`;
@@ -75,7 +93,8 @@ async function prepareBody(
   return {
     resourceReferences: [...references.values()],
     attachmentIds: [...attachmentIds],
-    content: rewritten
+    content: rewritten,
+    degradedReason: inline.degradedReason
   };
 }
 
@@ -110,8 +129,10 @@ export async function prepareOriginalEpubCandidate(input: {
     if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
     const root = await prepareBody(book.rootContent, book.rootEmbeddedImages, input.now, stages, input.signal);
     const preparedNodes: PreparedReadwiseApiEpubImages['sections'] = [];
+    const degradedReasons = new Set([root.degradedReason]);
     for (const node of book.nodes) {
       const prepared = await prepareBody(node.content, node.embeddedImages, input.now, stages, input.signal);
+      degradedReasons.add(prepared.degradedReason);
       preparedNodes.push({
         resourceReferences: prepared.resourceReferences,
         attachmentIds: prepared.attachmentIds,
@@ -132,7 +153,7 @@ export async function prepareOriginalEpubCandidate(input: {
           treeBodyCount: stages.size,
           unavailableBodyCount: 0
         },
-        degradedReason: null,
+        degradedReason: [...degradedReasons].filter(Boolean).join('; ') || null,
         rootResourceReferences: root.resourceReferences,
         rootAttachmentIds: root.attachmentIds,
         rootBody: root.content,

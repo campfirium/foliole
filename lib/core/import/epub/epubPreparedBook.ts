@@ -1,5 +1,6 @@
 import type { PreparedImportEmbeddedImage } from '../contract.js';
 import { createPreparedDesktopTextImport } from '../fingerprint.js';
+import { localizeDataImageContent } from '../importDataImages.js';
 
 import type { RawBookNode } from './epubImportTree.js';
 
@@ -35,6 +36,16 @@ export function prepareEpubBookNode(node: RawBookNode, index: number, importedAt
     title: node.title
   } satisfies PreparedBookNode;
   return result;
+}
+
+/** Converts a prepared root or chapter body; the caller writes the returned images before storing it. */
+export function localizeEpubDataImages<T extends { content: string; degradedReason: string | null }>(node: T) {
+  const { content, degradedReason, images, resources } = localizeDataImageContent(node.content);
+  return {
+    node: { ...node, content, degradedReason: [node.degradedReason, degradedReason].filter(Boolean).join('; ') || null },
+    images,
+    resources
+  };
 }
 
 export function buildEpubRootContent(title: string, body: string) {

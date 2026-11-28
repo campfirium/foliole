@@ -18,10 +18,10 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { createCompanionFileImportHandler } from './companionFileImportActions';
 
-const native = vi.hoisted(() => ({ access: null as null | ((input: NativeCompanionFramedFileRequest) => Promise<unknown>), fail: false }));
+const native = vi.hoisted(() => ({ access: null as null | ((input: NativeCompanionFramedFileRequest) => Promise<unknown>), fail: false, platform: 'android' }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({
+  return { Capacitor: { getPlatform: () => native.platform, isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({
     ...createCompanionNativeSyncStub(), accessFramedSyncFile: async (input: NativeCompanionFramedFileRequest) => {
       if (input.operation === 'remove') return {};
       if (native.fail && input.operation === 'attachment' && input.action === 'publish-received') throw new Error('Unavailable');
@@ -33,7 +33,7 @@ let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let directory: string;
 let imageKey: string;
 beforeEach(async () => {
-  library = await createSearchLibrary(0); native.fail = false;
+  library = await createSearchLibrary(0); native.fail = false; native.platform = 'android';
   directory = path.join(library.root, 'attachments'); await mkdir(directory);
   native.access = companionAttachmentNativeFiles(directory);
   imageKey = `${createHash('sha256').update(EPUB_IMAGE).digest('hex')}.png`;
@@ -149,4 +149,20 @@ it('retains available chapters and records a visible degraded result for a missi
   expect(result).toHaveProperty('nodeId'); expect(result).toHaveProperty('importWarning', 'conversion');
   expect(library.database.prepare('SELECT result_status FROM import_runs').get()).toEqual({ result_status: 'degraded' });
   expect(library.database.prepare("SELECT title FROM nodes WHERE title='First section'").get()).toEqual({ title: 'First section' });
+});
+
+it.each(['android', 'ios'])('stores inline chapter images as attachments on %s, including one over the body budget', async platform => {
+  native.platform = platform;
+  const big = Buffer.concat([EPUB_IMAGE, Buffer.alloc(1_500_000, 1)]);
+  const bigKey = `${createHash('sha256').update(big).digest('hex')}.png`;
+  const result = await importBook(companionEpubBook(false, false,
+    `<p><img src="data:image/png;base64,${big.toString('base64')}" alt="Inline"/></p>`));
+  if ('error' in result) throw new Error(result.error);
+  expect(result.importWarning).toBeUndefined();
+  const part = (await children(result.nodeId))[0]!;
+  const section = (await children(part.id))[0]!;
+  expect(section.content).toContain(`![Inline](asset://${bigKey})`);
+  expect(section.content).not.toContain('base64');
+  expect(section.resourceReferences).toEqual([{ storage_key: bigKey, original_name: 'inline-image.png', role: 'image' }]);
+  expect(await readFile(path.join(directory, bigKey))).toEqual(big);
 });

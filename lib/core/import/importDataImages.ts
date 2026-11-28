@@ -69,16 +69,17 @@ function rewriteHighlights(highlights: PreparedImportHighlightRecord[] | undefin
 }
 
 /**
- * Moves inline base64 images out of a record before it is stored, so the body budget is judged on the
- * final text. An image that cannot become an attachment stays inline while it fits in one body part;
- * a larger one is replaced by a placeholder. Fingerprints keep describing the original source.
+ * Moves inline base64 images out of one body. An image that cannot become an attachment stays inline
+ * while it fits in one body part; a larger one is replaced by a placeholder.
  */
-export function localizeImportDataImages(prepared: PreparedImportRecord) {
+export function localizeDataImageContent(source: string) {
   const images = new Map<string, ImportDataImage>();
-  if (!prepared.content.includes('data')) return { prepared, images: [] };
-  const content = compactConsecutiveSmallDataImages(prepared.content);
-  const replacements: Replacement[] = [];
   const renames = new Map<string, string>();
+  if (!source.includes('data')) {
+    return { content: source, degradedReason: null, images: [], resources: [], renames };
+  }
+  const content = compactConsecutiveSmallDataImages(source);
+  const replacements: Replacement[] = [];
   let kept = 0;
   let removed = 0;
 
@@ -107,24 +108,39 @@ export function localizeImportDataImages(prepared: PreparedImportRecord) {
     [...replacedLabels].filter(label => !linkedLabels.has(label))));
   replacements.sort((left, right) => left.from - right.from);
 
-  const reasons = [prepared.degradedReason,
-    kept ? `Inline images kept as text data: ${kept}` : null,
+  const reasons = [kept ? `Inline images kept as text data: ${kept}` : null,
     removed ? `Inline images could not be imported: ${removed}` : null].filter(Boolean);
   const resources: NodeResourceReference[] = [...images.keys()].map(storageKey => ({
     storage_key: storageKey, original_name: `inline-image${storageKey.slice(storageKey.lastIndexOf('.'))}`, role: 'image'
   }));
+  return {
+    content: applyReplacements(content, replacements),
+    degradedReason: reasons.join('; ') || null,
+    images: [...images.values()],
+    resources,
+    renames
+  };
+}
+
+/**
+ * Converts a whole record before it is stored, so the body budget is judged on the final text.
+ * Fingerprints keep describing the original source.
+ */
+export function localizeImportDataImages(prepared: PreparedImportRecord) {
+  if (!prepared.content.includes('data')) return { prepared, images: [] };
+  const { content, degradedReason, images, resources, renames } = localizeDataImageContent(prepared.content);
   const matchedHighlights = rewriteHighlights(prepared.matchedHighlights, renames);
   const unmatchedHighlights = rewriteHighlights(prepared.unmatchedHighlights, renames);
   return {
     prepared: {
       ...prepared,
-      content: applyReplacements(content, replacements),
-      degradedReason: reasons.join('; ') || null,
+      content,
+      degradedReason: [prepared.degradedReason, degradedReason].filter(Boolean).join('; ') || null,
       ...(matchedHighlights ? { matchedHighlights } : {}),
       ...(unmatchedHighlights ? { unmatchedHighlights } : {}),
       ...(resources.length
         ? { localizedImageResources: [...(prepared.localizedImageResources ?? []), ...resources] } : {})
     },
-    images: [...images.values()]
+    images
   };
 }

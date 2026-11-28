@@ -3,14 +3,16 @@ import { createHash } from 'node:crypto';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { readBodyPartIds } from '../../lib/core/database/partitionedNodeBody.js';
 import { partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
-import { prepareEpubBookNode, buildEpubRootContent, type PreparedBookNode } from '../../lib/core/import/epub/epubPreparedBook.js';
+import { prepareEpubBookNode, buildEpubRootContent, localizeEpubDataImages, type PreparedBookNode } from '../../lib/core/import/epub/epubPreparedBook.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
+import { linkDataImageResources, persistDataImageFiles } from '../database/importPipelineDataImages.js';
 
 import { readRawEpubBook } from './epubImportBook.js';
 import { importEmbeddedImagesForNode } from './epubImportImages.js';
@@ -29,8 +31,22 @@ interface EpubImportOptions {
   targetNodeId?: string;
 }
 
+type ImportBookNode = PreparedBookNode & { dataImageResources?: NodeResourceReference[] };
+
 function prepareBookNode(node: RawBookNode, index: number, importedAt: string, root?: string) {
   const prepared = prepareEpubBookNode(node, index, importedAt);
+  return root ? stageEpubText(prepared, ['content'], root) : prepared;
+}
+
+/** Writes a body's inline images at once, so one chapter's bytes are held at a time. */
+function stageDataImages<T extends { content: string; degradedReason: string | null }>(source: T) {
+  const { node, images, resources } = localizeEpubDataImages(source);
+  persistDataImageFiles(images);
+  return { ...node, dataImageResources: resources };
+}
+
+function prepareImportNode(node: RawBookNode, index: number, importedAt: string, root?: string): ImportBookNode {
+  const prepared = stageDataImages(prepareEpubBookNode(node, index, importedAt));
   return root ? stageEpubText(prepared, ['content'], root) : prepared;
 }
 
@@ -39,7 +55,7 @@ function createBookNodes(
   parentNodeId: string,
   sourceFingerprint: string,
   importedAt: string,
-  nodes: PreparedBookNode[]
+  nodes: ImportBookNode[]
 ) {
   const nodeIdsByKey = new Map<string, string>();
   for (const node of nodes) {
@@ -63,6 +79,7 @@ function createBookNodes(
       title: node.title,
       updatedAt: importedAt
     });
+    linkDataImageResources(driver, nodeId, node.dataImageResources ?? []);
     if (needsPartition) {
       writeNodeBody({ driver, nodeId, content, title: node.title, updatedAt: importedAt });
     }
@@ -102,8 +119,8 @@ export async function loadEpubPreview(source: ImportSourceDescriptor) {
 export async function runEpubImport(source: ImportSourceDescriptor, importedAt: string, options?: EpubImportOptions) {
   const book = await readRawEpubBook(source);
   try {
-    const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt, book.workingDirectory));
-    const rootNode = createPreparedDesktopTextImport({
+    const nodes = book.nodes.map((node, index) => prepareImportNode(node, index, importedAt, book.workingDirectory));
+    const rootNode = stageDataImages(createPreparedDesktopTextImport({
       content: buildEpubRootContent(book.title, book.rootContent),
       degradedReason: book.rootDegradedReason,
       fileName: source.sourceName,
@@ -115,7 +132,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
       sourceTrackingMode: options?.sourceTrackingMode ?? 'untracked',
       sourceProfile: 'epub',
       titleStrategy: 'heading'
-    });
+    }));
     const { imported, nodeId, nodeIdsByKey } = await runWithDatabaseConnectionOwner(() => {
       const { driver, sqlite } = openDatabaseConnection();
       return sqlite.transaction(() => {
@@ -123,6 +140,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
         const imported = runPreparedImport(rootNode);
         const nodeId = imported.nodeId;
         if (!nodeId) throw new Error('EPUB import failed: parent node was not created');
+        linkDataImageResources(driver, nodeId, rootNode.dataImageResources);
         return { imported, nodeId, nodeIdsByKey: createBookNodes(
           driver, nodeId, imported.sourceFingerprint, importedAt, nodes) };
       }).immediate();
