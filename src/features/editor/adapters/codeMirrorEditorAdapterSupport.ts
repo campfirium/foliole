@@ -16,6 +16,7 @@ import {
   hasLocalizableMarkdownImageContent,
   type LocalizedImageChange
 } from './localizeRemoteMarkdownImages';
+import { prepareLocalImages } from './preparedLocalImages';
 import {
   listenForRemoteImageDisplayed,
   listenForRemoteImageLocalization,
@@ -217,18 +218,19 @@ export class RemoteImageLocalizationController {
       ? recoverMissingArticleImage(request.nodeId, request.source, contentSnapshot)
       : localizeRemoteMarkdownImageOccurrence(request.nodeId, contentSnapshot, request);
     void operation
-      .then((localized) => {
-        if (!localized || this.args.getNodeId() !== request.nodeId || this.args.getContent() !== contentSnapshot) {
-          request.resolve(false);
-          return;
+      .then(async (localized) => {
+        const changes = localized && 'changes' in localized ? localized.changes : undefined;
+        const releasePrepared = changes ? await prepareLocalImages(changes) : null;
+        try {
+          if (!localized || this.args.getNodeId() !== request.nodeId || this.args.getContent() !== contentSnapshot) {
+            request.resolve(false);
+            return;
+          }
+          this.args.applyLocalizedContent(localized.content, contentSnapshot, changes, false);
+          request.resolve(true);
+        } finally {
+          releasePrepared?.();
         }
-        this.args.applyLocalizedContent(
-          localized.content,
-          contentSnapshot,
-          'changes' in localized ? localized.changes : undefined,
-          false
-        );
-        request.resolve(true);
       })
       .catch(() => request.resolve(false));
   }

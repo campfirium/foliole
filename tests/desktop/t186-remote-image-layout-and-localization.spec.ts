@@ -112,13 +112,14 @@ async function inspectLinks(app: ElectronApplication, nodeId: string) {
 async function startFrameTrace(page: Page, alt: string) {
   await page.evaluate((targetAlt) => {
     const first = document.querySelector<HTMLImageElement>(`img[alt="${targetAlt}"]`);
-    const trace = { blankFrames: 0, initialImage: first, samples: 0 };
+    // Sample until the caller reads the result, so the swap to the local copy is always inside the window.
+    const trace = { blankFrames: 0, done: false, initialImage: first, samples: 0 };
     globalThis.__t186FrameTrace = trace;
     const sample = () => {
       const image = document.querySelector<HTMLImageElement>(`img[alt="${targetAlt}"]`);
       if (!image || !image.complete || image.naturalWidth === 0) trace.blankFrames += 1;
       trace.samples += 1;
-      if (trace.samples < 60) requestAnimationFrame(sample);
+      if (!trace.done) requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
   }, alt);
@@ -156,6 +157,7 @@ async function localizeAndExcerptSecond(page: Page) {
     const trace = globalThis.__t186FrameTrace;
     const current = document.querySelector<HTMLImageElement>('img[alt="Demand B"]');
     const beforeDelete = window.__folioleWorkspaceDebug?.getNode?.(id) ?? null;
+    trace.done = true;
     await window.__folioleWorkspaceDebug?.deleteNode?.(id);
     return {
       blankFrames: trace.blankFrames,
@@ -230,6 +232,6 @@ test('stabilizes remote layout and supports automatic and targeted image excerpt
 });
 
 declare global {
-  var __t186FrameTrace: { blankFrames: number; initialImage: HTMLImageElement | null; samples: number };
+  var __t186FrameTrace: { blankFrames: number; done: boolean; initialImage: HTMLImageElement | null; samples: number };
   var __t186Probe: Probe;
 }

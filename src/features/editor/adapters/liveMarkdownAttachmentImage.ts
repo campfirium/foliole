@@ -11,11 +11,12 @@ import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import { finalizeLoadedMarkdownImageDisplay, finalizeMarkdownImageDisplay } from './liveMarkdownImageDisplay';
 import { isMarkdownImageWidgetDomDisposed, registerMarkdownImageWidgetCleanup } from './liveMarkdownImageDisposal';
-import type { RequestEditorMeasure } from './liveMarkdownImageElement';
+import { applyMarkdownImageAttributes, type RequestEditorMeasure } from './liveMarkdownImageElement';
 import { forgetImage, readRememberedImage, rememberImage } from './liveMarkdownImageMemory';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
 import { createImageSurface } from './liveMarkdownImageSurface';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
+import { takePreparedLocalImage } from './preparedLocalImages';
 import { requestRemoteImageLocalization } from './remoteImageLocalizationEvents';
 
 interface AttachmentImageContext {
@@ -40,8 +41,9 @@ function showUnavailableAttachment(context: AttachmentImageContext) {
   context.requestMeasure?.();
 }
 
-function mountAttachmentSurface(context: AttachmentImageContext, source: string) {
+function mountAttachmentSurface(context: AttachmentImageContext, source: string, existingImage?: HTMLImageElement) {
   context.wrapper.replaceChildren(createImageSurface(context.imageMatch, source, context.editorNodeId, {
+    ...(existingImage ? { existingImage } : {}),
     isActive: context.isActive,
     onError: () => {
       closeActiveRemoteImageFailureMenu();
@@ -53,6 +55,17 @@ function mountAttachmentSurface(context: AttachmentImageContext, source: string)
     },
     requestMeasure: context.requestMeasure
   }));
+}
+
+function mountPreparedAttachment(context: AttachmentImageContext) {
+  const prepared = takePreparedLocalImage(context.imageMatch.source);
+  if (!prepared) return false;
+  context.restoredSource = prepared.resourceUrl;
+  applyMarkdownImageAttributes(prepared.image, context.imageMatch);
+  mountAttachmentSurface(context, prepared.resourceUrl, prepared.image);
+  rememberImage(context.imageMatch.source, context.wrapper, prepared.resourceUrl);
+  finalizeLoadedMarkdownImageDisplay(context.wrapper, context.imageMatch, null);
+  return true;
 }
 
 function showResolvedAttachment(context: AttachmentImageContext, source: string) {
@@ -131,13 +144,15 @@ export function appendResolvedAttachmentImage(args: {
     restoredSource: null,
     wrapper: args.wrapper
   };
-  const remembered = readRememberedImage(args.imageMatch.source);
-  if (remembered) {
-    context.restoredSource = remembered.resourceUrl;
-    mountAttachmentSurface(context, remembered.resourceUrl);
-    finalizeMarkdownImageDisplay(args.wrapper, args.imageMatch, remembered.size, null);
-  } else {
-    args.wrapper.append(createImageStatusElement('loading', args.renderPlan.display));
+  if (!mountPreparedAttachment(context)) {
+    const remembered = readRememberedImage(args.imageMatch.source);
+    if (remembered) {
+      context.restoredSource = remembered.resourceUrl;
+      mountAttachmentSurface(context, remembered.resourceUrl);
+      finalizeMarkdownImageDisplay(args.wrapper, args.imageMatch, remembered.size, null);
+    } else {
+      args.wrapper.append(createImageStatusElement('loading', args.renderPlan.display));
+    }
   }
   let pending = resolveAttachmentImage(context);
   const storageKey = parseAssetMarkdownUrl(args.imageMatch.source);
