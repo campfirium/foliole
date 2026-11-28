@@ -72,3 +72,31 @@ it('stores an oversized inline image as an attachment instead of splitting the b
   expect(runPreparedImport(prepare()).duplicateSemantic).toBe('duplicate');
   expect(loadNodeBodyResolution(driver, nodeId)!.content).toBe(content);
 });
+
+it('stores oversized reference and bare img data images as attachments', () => {
+  const url = `data:image/png;base64,${BIG_PNG.toString('base64')}`;
+  const prepared = () => createPreparedDesktopTextImport({
+    content: `# Article\n\n![Ref][pic]\n\n<img src="${url}" alt="Raw" width="200">\n\nKeep ==this sentence== marked.\n\n[pic]: ${url}\n`,
+    degradedReason: null, fileName: 'forms.md', filePath: '/source/forms.md', highlightPolicy: 'adopt',
+    importedAt: '2026-11-28T00:00:00.000Z', kind: 'markdown'
+  });
+  const imported = runPreparedImport(prepared());
+  const nodeId = imported.nodeId!;
+  const driver = openDatabaseConnection().driver;
+  const content = loadNodeBodyResolution(driver, nodeId)!.content;
+  const [attachment] = listNodeAttachments(nodeId);
+  const asset = `asset://${attachment!.attachmentId}.png`;
+
+  expect(listNodeAttachments(nodeId)).toHaveLength(1);
+  expect(readBodyPartIds(driver, nodeId)).toEqual([]);
+  expect(content).toContain(`![Ref](${asset})\n\n![Raw|200](${asset})`);
+  expect(content).not.toContain('base64');
+
+  const child = driver.queryOne<{ anchor_link: string }>(
+    'SELECT anchor_link FROM nodes WHERE parent_id = ? AND anchor_link IS NOT NULL', [nodeId])!;
+  const anchor = JSON.parse(child.anchor_link) as { locator: { from: number; to: number } };
+  expect(content.slice(anchor.locator.from, anchor.locator.to)).toBe('this sentence');
+
+  expect(runPreparedImport(prepared()).duplicateSemantic).toBe('duplicate');
+  expect(loadNodeBodyResolution(driver, nodeId)!.content).toBe(content);
+});

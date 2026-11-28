@@ -1,4 +1,5 @@
 import { splitImportBody } from '../import/importBodySegments.js';
+import { collectDataImageSourceSpans } from '../import/importDataImageNodes.js';
 import { collectMarkdownImageReferences } from '../import/markdownImageReferences.js';
 import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../nodes/textBodyBudget.js';
 
@@ -128,8 +129,11 @@ export function partitionStoredNodeBody(
       return [];
     }
     const anchors = readAnchoredChildren(driver, nodeId);
-    const imageSpans = body.content.includes('![')
-      ? collectMarkdownImageReferences(body.content).map(({ start, end }) => ({ from: start, to: end })) : [];
+    const imageSpans = [
+      ...(body.content.includes('![')
+        ? collectMarkdownImageReferences(body.content).map(({ start, end }) => ({ from: start, to: end })) : []),
+      ...collectDataImageSourceSpans(body.content)
+    ];
     const anchorSpans = protectedBodyPartAnchorSpans(body.content, anchors.map(anchor => anchor.anchor_link));
     const parts = splitImportBody(body.content, TEXT_BODY_MAX_BYTES, [...imageSpans, ...anchorSpans]);
     const placements = anchors.map((anchor) => ({ anchor, index: fittingBodyPartAnchorIndex(anchor.anchor_link, parts) }));

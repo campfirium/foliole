@@ -43,7 +43,9 @@ export const CONTENT_STRIP_TAGS = new Set(['script', 'style']);
 export const EMBEDDED_TAGS = new Set(['audio', 'embed', 'iframe', 'object', 'video']);
 
 export function buildImageMarkdown(node: HtmlElement) {
-  const src = sanitizeMarkdownUrl(getAttribute(node, 'src'));
+  const value = getAttribute(node, 'src');
+  // Folded Base64 would otherwise break the Markdown image apart.
+  const src = sanitizeMarkdownUrl(/^\s*data:/i.test(value ?? '') ? value!.replace(/\s+/g, '') : value);
   const alt = normalizeInline(getAttribute(node, 'alt') ?? '');
   if (!src) return alt;
   return `![${alt}](${src})`;

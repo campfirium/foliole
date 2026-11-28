@@ -1,44 +1,16 @@
 import { ASSET_MARKDOWN_SCHEME, buildAssetMarkdownUrl, parseAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
 import { folioleMarkdownParser } from '../markdown/folioleMarkdownParser.js';
-import { normalizeMarkdownReferenceLabel as normalizeLabel } from '../markdown/markdownReferenceLabel.js';
-
-type SyntaxNode = ReturnType<typeof folioleMarkdownParser.parse>['topNode'];
-
-function referenceTargets(tree: ReturnType<typeof folioleMarkdownParser.parse>, content: string) {
-  const references = new Map<string, { raw: string; title: string }>();
-  tree.iterate({ enter(node) {
-    if (node.name !== 'LinkReference') return;
-    const label = node.node.getChild('LinkLabel');
-    const url = node.node.getChild('URL');
-    const title = node.node.getChild('LinkTitle');
-    if (!label || !url) return;
-    const key = normalizeLabel(content.slice(label.from, label.to));
-    if (!references.has(key)) references.set(key, {
-      raw: content.slice(url.from, url.to), title: title ? content.slice(title.from, title.to) : ''
-    });
-  } });
-  return references;
-}
-
-function referenceImage(node: SyntaxNode, content: string, references: ReturnType<typeof referenceTargets>) {
-  const marks = node.getChildren('LinkMark');
-  if (!marks[0] || !marks[1]) return null;
-  const alt = content.slice(marks[0].to, marks[1].from);
-  const label = node.getChild('LinkLabel');
-  const key = normalizeLabel(label ? content.slice(label.from, label.to) : alt) || normalizeLabel(alt);
-  const reference = references.get(key);
-  return reference ? { ...reference, alt } : null;
-}
+import { collectMarkdownReferenceDefinitions, resolveMarkdownReference } from '../markdown/markdownReferences.js';
 
 function replaceImageTarget(content: string, matches: (source: string) => boolean, newKey: string) {
   const replacements: { from: number; to: number; text: string }[] = [];
   const tree = folioleMarkdownParser.parse(content);
-  const references = referenceTargets(tree, content);
+  const references = collectMarkdownReferenceDefinitions(tree, content);
   tree.iterate({
     enter(node) {
       if (node.name !== 'Image') return;
       const url = node.node.getChild('URL');
-      const reference = url ? null : referenceImage(node.node, content, references);
+      const reference = url ? null : resolveMarkdownReference(node.node, content, references);
       if (!url && !reference) return;
       const raw = url ? content.slice(url.from, url.to) : reference!.raw;
       const wrapped = raw.startsWith('<') && raw.endsWith('>');
@@ -46,7 +18,7 @@ function replaceImageTarget(content: string, matches: (source: string) => boolea
       const target = buildAssetMarkdownUrl(newKey);
       replacements.push(url
         ? { from: url.from, to: url.to, text: wrapped ? `<${target}>` : target }
-        : { from: node.from, to: node.to, text: `![${reference!.alt}](${target}${reference!.title ? ` ${reference!.title}` : ''})` });
+        : { from: node.from, to: node.to, text: `![${reference!.text}](${target}${reference!.title ? ` ${reference!.title}` : ''})` });
     }
   });
   let next = content;
@@ -68,11 +40,11 @@ export function collectArticleImageStorageKeys(content: string) {
   if (!content.includes(ASSET_MARKDOWN_SCHEME)) return [];
   const keys = new Set<string>();
   const tree = folioleMarkdownParser.parse(content);
-  const references = referenceTargets(tree, content);
+  const references = collectMarkdownReferenceDefinitions(tree, content);
   tree.iterate({ enter(node) {
     if (node.name !== 'Image') return;
     const url = node.node.getChild('URL');
-    const raw = url ? content.slice(url.from, url.to) : referenceImage(node.node, content, references)?.raw;
+    const raw = url ? content.slice(url.from, url.to) : resolveMarkdownReference(node.node, content, references)?.raw;
     if (!raw) return;
     const key = parseAssetMarkdownUrl(raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw);
     if (key) keys.add(key);

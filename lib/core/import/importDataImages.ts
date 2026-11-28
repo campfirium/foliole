@@ -4,12 +4,12 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { buildAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
 import { classifyAttachmentBytes } from '../../platform/attachmentByteClassification.js';
 import { buildCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
-import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../platform/markdownImageDataUrl.js';
+import { normalizeSafeMarkdownDataImageUrl } from '../../platform/markdownImageDataUrl.js';
 import type { NodeResourceReference } from '../database/nodeResourceReferences.js';
-import { folioleMarkdownParser } from '../markdown/folioleMarkdownParser.js';
-import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../nodes/textBodyBudget.js';
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
 import type { PreparedImportHighlightRecord, PreparedImportRecord } from './contract.js';
+import { collectImportDataImageNodes, collectUnusedDefinitionRemovals } from './importDataImageNodes.js';
 import { compactConsecutiveSmallDataImages } from './importImageReferences.js';
 
 export const UNIMPORTABLE_IMAGE_PLACEHOLDER = '[Image could not be imported]';
@@ -46,22 +46,6 @@ function decodeImage(destination: string): ImportDataImage | null {
   return storageKey ? { bytes, hash, mimeType, storageKey } : null;
 }
 
-function collectDataImageNodes(content: string) {
-  const nodes: { from: number; to: number; urlFrom: number; urlTo: number; destination: string }[] = [];
-  folioleMarkdownParser.parse(content).iterate({
-    enter(node) {
-      if (node.name !== 'Image') return;
-      const url = node.node.getChild('URL');
-      if (!url) return;
-      const raw = content.slice(url.from, url.to);
-      const destination = raw.startsWith('<') && raw.endsWith('>') ? raw.slice(1, -1) : raw;
-      if (!isDataUrlDestination(destination) && !normalizeSafeMarkdownDataImageUrl(destination)) return;
-      nodes.push({ from: node.from, to: node.to, urlFrom: url.from, urlTo: url.to, destination });
-    }
-  });
-  return nodes;
-}
-
 function applyReplacements(content: string, replacements: Replacement[]) {
   let next = '';
   let cursor = 0;
@@ -73,7 +57,10 @@ function applyReplacements(content: string, replacements: Replacement[]) {
 }
 
 function rewriteHighlights(highlights: PreparedImportHighlightRecord[] | undefined, renames: Map<string, string>) {
-  const rewrite = (text: string) => [...renames].reduce((value, [from, to]) => value.split(from).join(to), text);
+  // A shortcut reference such as `![a]` must not match the start of another image.
+  const rewrite = (text: string) => [...renames].reduce((value, [from, to]) => from.endsWith(')') || from.endsWith('>')
+    ? value.split(from).join(to)
+    : value.replace(new RegExp(`${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![[(])`, 'g'), () => to), text);
   return highlights?.map(highlight => ({
     ...highlight,
     content: rewrite(highlight.content),
@@ -95,24 +82,30 @@ export function localizeImportDataImages(prepared: PreparedImportRecord) {
   let kept = 0;
   let removed = 0;
 
-  for (const node of collectDataImageNodes(content)) {
+  const { nodes, definitions, linkedLabels } = collectImportDataImageNodes(content);
+  const replacedLabels = new Set<string>();
+
+  for (const node of nodes) {
     const original = content.slice(node.from, node.to);
     const image = decodeImage(node.destination);
-    let replacement: Replacement;
+    let text: string;
     if (image) {
       images.set(image.storageKey, image);
-      replacement = { from: node.urlFrom, to: node.urlTo, text: buildAssetMarkdownUrl(image.storageKey) };
-    } else if (utf8ByteLength(original) > TEXT_BODY_MAX_BYTES) {
+      text = node.render(buildAssetMarkdownUrl(image.storageKey));
+    } else if (node.byteLength > TEXT_BODY_MAX_BYTES) {
       removed += 1;
-      replacement = { from: node.from, to: node.to, text: UNIMPORTABLE_IMAGE_PLACEHOLDER };
+      text = UNIMPORTABLE_IMAGE_PLACEHOLDER;
     } else {
       kept += 1;
       continue;
     }
-    replacements.push(replacement);
-    renames.set(original, content.slice(node.from, replacement.from) + replacement.text
-      + content.slice(replacement.to, node.to));
+    if (node.referenceLabel !== undefined) replacedLabels.add(node.referenceLabel);
+    replacements.push({ from: node.from, to: node.to, text });
+    renames.set(original, text);
   }
+  replacements.push(...collectUnusedDefinitionRemovals(content, definitions,
+    [...replacedLabels].filter(label => !linkedLabels.has(label))));
+  replacements.sort((left, right) => left.from - right.from);
 
   const reasons = [prepared.degradedReason,
     kept ? `Inline images kept as text data: ${kept}` : null,
