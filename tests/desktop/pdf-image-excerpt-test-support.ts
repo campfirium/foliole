@@ -45,7 +45,9 @@ export async function importPdf(desktopApp: ElectronApplication, desktopWindow: 
   if (!result || typeof result !== 'object' || typeof result.node_id !== 'string') {
     throw new Error(`PDF import failed: ${JSON.stringify(result)}`);
   }
-  await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), result.node_id);
+  // The raw invoke resolves before the renderer has reloaded the imported node, so openNode can refuse it at first.
+  await expect.poll(() => desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug?.openNode?.(nodeId), result.node_id))
+    .toBe(true);
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
     .toBe(result.node_id);
   await expect(desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]:visible').first()).toBeVisible();
