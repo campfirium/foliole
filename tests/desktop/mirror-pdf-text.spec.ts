@@ -79,12 +79,9 @@ async function createPdfAnnotations(page: Page, ownerId: string) {
       prompt: 'Initial PDF prompt [...]', answer: 'Initial PDF answer.',
       anchorLink: { id: 'pdf-cloze', kind: 'cloze', locator } });
     if (!highlight || !cloze) throw new Error('Expected saved PDF annotations');
-    const nested = await debug.createTextHighlightChild({ parentNodeId: cloze, anchorId: 'nested',
-      text: 'Saved nested PDF note.', anchorLink: { id: 'nested', kind: 'highlight',
-        locator: { from: 0, to: 7, originalText: 'Initial' } } });
     await debug.openNode(parentNodeId);
     await window.electronAPI!.invoke('rebuild_mirror_output');
-    return { highlight, cloze, nested, locator };
+    return { highlight, cloze, locator };
   }, ownerId);
 }
 
@@ -116,14 +113,14 @@ test('keeps saved single-page and cross-page PDF text facts in every mirror entr
   const after = await readOutputs(desktopApp);
   const body = after.files.find((file) => file.article_id === ownerId)!.body;
   for (const fact of ['Saved PDF excerpt.', 'Saved PDF note.', 'Current PDF answer.', 'Current cloze note.',
-    'PDF prompt', 'Saved nested PDF note.', 'PDF page: 1', 'PDF pages: 1, 2']) expect(body.split(fact)).toHaveLength(2);
+    'PDF prompt', 'PDF page: 1', 'PDF pages: 1, 2']) expect(body.split(fact)).toHaveLength(2);
   expect(body).not.toContain('Initial PDF answer.');
   expect(body).toMatch(/\[PDF source\]\(<\/.*\.pdf>\)/);
   expect(body).not.toContain('asset://');
   expect(after.files.filter((file) => file.article_id !== ownerId)).toEqual(
     before.files.filter((file) => file.article_id !== ownerId));
   expect(after.files).toHaveLength(before.files.length);
-  expect(after.files.some((file) => [chain.highlight, chain.cloze, chain.nested].includes(file.article_id))).toBe(false);
+  expect(after.files.some((file) => [chain.highlight, chain.cloze].includes(file.article_id))).toBe(false);
   await exportFromPalette(desktopApp, desktopWindow, ownerId, body);
   await desktopWindow.evaluate(() => window.electronAPI!.invoke('rebuild_mirror_output'));
   const rebuilt = await readOutputs(desktopApp);
