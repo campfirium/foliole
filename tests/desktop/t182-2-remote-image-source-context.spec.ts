@@ -103,7 +103,8 @@ async function openNode(page: Page, nodeId: string) {
     await exitFlow.click();
     await expect(exitFlow).toBeHidden();
   }
-  await page.locator(`[role="treeitem"][data-node-id="${nodeId}"]`).click();
+  // Child topics start collapsed in the list, and this check is about image sources, not tree clicks.
+  await page.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id), nodeId);
   await expect.poll(() => page.evaluate(
     () => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null
   )).toBe(nodeId);

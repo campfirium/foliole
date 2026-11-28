@@ -82,11 +82,17 @@ function optionalLineImageMatches(
 ) {
   if (!documentImageMatches) return {};
   const lineTo = line.from + line.text.length;
+  const isOnLine = (image: MarkdownImageMatch) => image.from >= line.from && image.to <= lineTo;
+  const ownImages = documentImageMatches.filter(isOnLine);
+  // A repeated URL must not replace an image that has its own label and settings on this line.
+  const isOwnReference = (start: number, end: number) =>
+    ownImages.some((own) => own.from < line.from + end && own.to > line.from + start);
   return {
     imageMatches: documentImageMatches.flatMap((image) => {
-      if (image.from >= line.from && image.to <= lineTo) return [image];
+      if (isOnLine(image)) return [image];
       const lineImage = collectMarkdownImageReferences(source.slice(line.from, lineTo))
-        .find((reference) => parseMarkdownImageTarget(reference.rawTarget)?.destination === image.source);
+        .find((reference) => parseMarkdownImageTarget(reference.rawTarget)?.destination === image.source
+          && !isOwnReference(reference.start, reference.end));
       if (!lineImage) {
         return [];
       }

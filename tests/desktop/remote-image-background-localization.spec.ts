@@ -26,7 +26,6 @@ async function installHeldPersistence(app: ElectronApplication) {
     const bytes = Uint8Array.from(nativeImage.createFromPath(
       pathApi.join(process.cwd(), 'assets/brand/foliole-leaf-tight.png')
     ).resize({ height: 27, width: imageWidth }).toPNG());
-    const imageHash = require('node:crypto').createHash('sha256').update(bytes).digest('hex');
     let resolveHeld!: () => void;
     const held = new Promise<void>((resolve) => { resolveHeld = resolve; });
     const state = globalThis as typeof globalThis & { __imagePersistenceProbe?: PersistenceProbe };
@@ -42,7 +41,9 @@ async function installHeldPersistence(app: ElectronApplication) {
     setTimeout(() => state.__imagePersistenceProbe?.release(), 10_000);
     const write = fs as unknown as { writeFile: (...args: unknown[]) => Promise<void> };
     write.writeFile = async (...args) => {
-      if (String(args[0]).includes(imageHash)) {
+      // The saved attachment is written to a randomly named staging file, so match it by its bytes.
+      if (pathApi.basename(String(args[0])).startsWith('.attachment-')
+        && Buffer.from(args[1] as Uint8Array).equals(bytes)) {
         state.__imagePersistenceProbe!.started = true;
         await held;
       }

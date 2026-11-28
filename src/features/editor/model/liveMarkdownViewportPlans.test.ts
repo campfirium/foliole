@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { collectPreviewViewportPlans, collectSourceViewportPlans } from './liveMarkdownViewportPlans';
+import { collectImageMatches } from './markdownImageMatches';
 
 describe('liveMarkdownViewportPlans', () => {
   it('threads preview line plans through code fence state', () => {
@@ -56,5 +57,28 @@ describe('liveMarkdownViewportPlans', () => {
 
     expect(plans.map((item) => item.plan.isCodeFenceLine)).toEqual([true, false, true]);
     expect(plans[1]?.plan.textDecorationPlans).toHaveLength(2);
+  });
+});
+
+describe('liveMarkdownViewportPlans repeated images', () => {
+  it('keeps each occurrence of a repeated image URL on its own label', () => {
+    const first = '![First](https://example.com/same.png)';
+    const second = '![Second|120](https://example.com/same.png) trailing text';
+    const source = `${first}\n${second}`;
+    const plans = collectPreviewViewportPlans({
+      cursorLineNumber: null,
+      documentImageMatches: collectImageMatches(0, source),
+      hideTitleHeading: false,
+      lines: [
+        { from: 0, lineNumber: 1, text: first },
+        { from: first.length + 1, lineNumber: 2, text: second }
+      ],
+      markdownSyntaxVisible: false,
+      source,
+      startInCodeBlock: false
+    });
+
+    expect(plans.map((item) => item.plan.imageMatches.map((image) => [image.alt, image.displayWidth])))
+      .toEqual([[['First', undefined]], [['Second', 120]]]);
   });
 });
