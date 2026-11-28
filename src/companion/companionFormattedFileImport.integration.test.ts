@@ -85,13 +85,11 @@ it.each([
   expect(await loadCompanionWorkspaceNode(result.nodeId)).toMatchObject({ content: node!.content });
 });
 
-it('preserves inline and remote images without misreporting them as unavailable local files', async () => {
-  const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+yZB8AAAAASUVORK5CYII=';
-  const { result } = await importFile(`# Images\n\n![Inline](${encodeURIComponent(image)})\n\n![Remote](https://example.com/figure.png)`, 'images.md');
+it('preserves remote images without misreporting them as unavailable local files', async () => {
+  const { result } = await importFile('# Images\n\n![Remote](https://example.com/figure.png)', 'images.md');
   if ('error' in result) throw new Error(result.error);
   expect(result.importWarning).toBeUndefined();
   const node = await loadCompanionWorkspaceNode(result.nodeId);
-  expect(node!.content).toContain(`![Inline](${image})`);
   expect(node!.content).toContain('![Remote](https://example.com/figure.png)');
   expect(library.database.prepare('SELECT result_status FROM import_runs').get()).toEqual({ result_status: 'imported' });
 });

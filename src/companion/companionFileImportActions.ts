@@ -70,7 +70,7 @@ async function importSelectedFile(file: SelectedImportFile, parentNodeId: string
       }
     });
     const node = prepared.pdfSource ? await publishCompanionImportedFile(prepared.pdfSource, commit, owner, signal)
-      : prepared.epubBook ? await publishCompanionImportedFiles(prepared.epubBook.files, commit, owner, signal) : await commit();
+      : await publishCompanionImportedFiles(bodyImageFiles(prepared), commit, owner, signal);
     committed.nodeId = node.id;
     if (prepared.pdfSource) await completeCompanionPdfTextImport(prepared.pdfSource, node.id, owner, signal);
     return outcome();
@@ -78,6 +78,11 @@ async function importSelectedFile(file: SelectedImportFile, parentNodeId: string
     if (committed.nodeId) return { ...outcome(), interrupted: true };
     return { error: getCompanionCaptureTextErrorCode(error) ?? 'save-failed' };
   }
+}
+
+/** Attachments the stored bodies point at; they are published before the topics are committed. */
+function bodyImageFiles(prepared: PreparedSelectedFileImport) {
+  return prepared.epubBook?.files ?? prepared.inlineImageFiles ?? [];
 }
 
 function persistSelectedFile(prepared: PreparedSelectedFileImport, file: SelectedImportFile, parentNodeId: string,
@@ -88,13 +93,14 @@ function persistSelectedFile(prepared: PreparedSelectedFileImport, file: Selecte
     await assertCaptureParentAvailable(db, parentNodeId);
     if (prepared.pdfSource) invalidateAttachmentResourceResolution(prepared.pdfSource.storageKey);
     const imported = await persistCompanionImportedTextWithDb(db, prepared, parentNodeId,
-      prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }] : prepared.epubBook?.resources ?? [],
+      prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }]
+        : prepared.epubBook?.resources ?? prepared.localizedImageResources ?? [],
       prepared.epubBook?.chapters);
     if (prepared.pdfSource) {
       await recordFramedSyncResourceAvailability(db, [prepared.pdfSource.storageKey.slice(0, 64)], true);
       await completeFolderAttachmentCopy(db, prepared.pdfSource.storageKey);
     }
-    for (const resource of prepared.epubBook?.files ?? []) {
+    for (const resource of bodyImageFiles(prepared)) {
       invalidateAttachmentResourceResolution(resource.storageKey);
       await recordFramedSyncResourceAvailability(db, [resource.storageKey.slice(0, 64)], true);
       await completeFolderAttachmentCopy(db, resource.storageKey);

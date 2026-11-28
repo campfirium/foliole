@@ -1,5 +1,6 @@
 import type { PreparedImportRecord } from '../../../../lib/core/import/contract';
 import { createPreparedDesktopTextImport } from '../../../../lib/core/import/fingerprint';
+import { localizeImportDataImages } from '../../../../lib/core/import/importDataImages';
 import { resolveImportFileKind } from '../../../../lib/core/import/importFileKind';
 import { formatImportImageDegradation, isUnmanagedImportImage } from '../../../../lib/core/import/importImagePolicy';
 import { rewriteImportedImageReferences } from '../../../../lib/core/import/importImageReferences';
@@ -15,6 +16,7 @@ export type PreparedSelectedFileImport = PreparedImportRecord & {
   importWarning?: SelectedImportWarning;
   epubBook?: Awaited<ReturnType<typeof prepareSelectedEpubImport>>['epubBook'];
   pdfSource?: { bytes: Uint8Array; storageKey: string };
+  inlineImageFiles?: { bytes: Uint8Array; storageKey: string }[];
 };
 
 /** File objects grant access to the selected bytes, never to an adjacent directory. */
@@ -25,12 +27,16 @@ export async function prepareSelectedTextImport(file: SelectedImportFile, signal
   if (kind === 'epub') return (await import('./selectedEpubImport')).prepareSelectedEpubImport(bytes, file.name, signal);
   if (kind === 'pdf') return prepareSelectedPdfImport(bytes, file.name);
   const payload = readTextFileImportPayload(bytes, kind);
-  const prepared = createPreparedDesktopTextImport({
+  const source = createPreparedDesktopTextImport({
     ...payload, fileName: file.name, filePath: file.name,
     sourceIdentity: crypto.randomUUID(), sourceTrackingMode: 'untracked',
     importedAt: new Date().toISOString(), kind
   });
-  if (kind === 'text') return prepared;
+  const { prepared: localized, images } = localizeImportDataImages(source);
+  const prepared = { ...localized, ...(images.length ? { inlineImageFiles: images } : {}) };
+  if (kind === 'text') {
+    return prepared.degradedReason === source.degradedReason ? prepared : { ...prepared, importWarning: 'conversion' };
+  }
   const rewritten = rewriteImportedImageReferences(prepared.content, reference =>
     isUnmanagedImportImage(reference.destination, reference.syntax)
       ? { status: 'error', message: `Missing local image: ${reference.destination}` } : { status: 'skipped' });
