@@ -160,16 +160,17 @@ describe('personal GitHub monitor configuration', () => {
 });
 
 
-describe('separate discussion cadence', () => {
-  it('runs only discussions between full project scans', () => {
+describe('separate GitHub feedback cadence', () => {
+  it('checks new issues with discussions and replies between full project scans', () => {
     const configs = {
       discussions: { enabled: true, pollIntervalSeconds: 60 },
       issues: { enabled: true, pollIntervalSeconds: 60 },
+      replies: { enabled: true, pollIntervalSeconds: 60 },
       playReview: { enabled: true, pollIntervalSeconds: 900 }
     };
     const state = { lastCheckedAt: '2026-11-15T00:00:00Z' };
     expect(scheduledScanConfigs(configs, state, Date.parse('2026-11-15T00:01:00Z')))
-      .toEqual({ discussions: configs.discussions });
+      .toEqual({ discussions: configs.discussions, issues: configs.issues, replies: configs.replies });
     expect(scheduledScanConfigs(configs, state, Date.parse('2026-11-15T00:15:00Z')))
       .toBe(configs);
   });
