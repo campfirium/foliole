@@ -35,6 +35,7 @@ import { addForumTitleLinkDecorations } from './liveMarkdownForumTitleLinkDecora
 import { collectViewportForumTitleLinks } from './liveMarkdownForumTitleLinkViewport';
 import type { EditedMathRange } from './liveMarkdownMathEditState';
 import { addEditedMathSourceDecorations } from './liveMarkdownMathSource';
+import { addOffViewportImageDecorations } from './liveMarkdownOffViewportImages';
 import { addPrefixDecoration } from './liveMarkdownPrefixDecorations';
 import { addPreviewViewportDecorations } from './liveMarkdownPreviewViewportDecorations';
 import { addCodeFenceDecoration, addMark, addReplace } from './liveMarkdownPrimitives';
@@ -130,6 +131,7 @@ function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownP
   });
   return {
     codeFenceProjection,
+    documentImageMatches,
     calloutPrefixRangeByLineFrom: collectCalloutPrefixRangeByLineFrom(markdownTree, source),
     forumTitleLinks: collectViewportForumTitleLinks(view, viewport, codeFenceProjection.codeLineFroms),
     inlineLinks: collectMarkdownInlineLinkRangesFromTree(markdownTree, source, 0, linkReferences),
@@ -192,6 +194,13 @@ export function buildPreviewDecorationSet(
       hideLinkReferenceDefinition(targetRanges, view.state.doc, lineFrom, data.linkReferenceRangeByLineFrom),
     mermaidLineFroms: collectPreviewMermaidLineFroms(data.source, data.codeFenceProjection, view),
     prefixRangesByLineFrom: data.prefixRangesByLineFrom
+  });
+  addOffViewportImageDecorations(ranges, view.state.doc, {
+    ...context,
+    codeLineFroms: data.codeFenceProjection.codeLineFroms,
+    documentImageMatches: data.documentImageMatches,
+    source: data.source,
+    viewportLineFroms: new Set(data.viewportPlans.map((plan) => plan.lineFrom))
   });
 
   return Decoration.set(ranges, true);

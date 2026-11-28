@@ -12,6 +12,9 @@ vi.mock('../../../shared/platform/runtimeInvoke', () => ({
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
+// Attachment addresses are content hashes, so a differently sized image needs its own address.
+const ICON_ASSET_URL = `asset://${'d'.repeat(64)}.png`;
+
 afterEach(() => { document.body.innerHTML = ''; });
 
 async function loadImage(host: HTMLElement, width: number, height: number) {
@@ -46,7 +49,7 @@ it('keeps a small local image inline after it loads', async () => {
   const host = document.createElement('div');
   document.body.append(host);
   const adapter = new CodeMirrorEditorAdapter(host, {
-    initialContent: `Text ![Icon](${TEST_ATTACHMENT_ASSET_URL}) caption`
+    initialContent: `Text ![Icon](${ICON_ASSET_URL}) caption`
   });
   try {
     const image = await loadImage(host, 64, 64);

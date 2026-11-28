@@ -8,8 +8,13 @@ import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import type { MarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
+import {
+  forgetAttachmentImage,
+  readRememberedAttachmentImage,
+  rememberAttachmentImage
+} from './liveMarkdownAttachmentImageMemory';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
-import { finalizeLoadedMarkdownImageDisplay } from './liveMarkdownImageDisplay';
+import { finalizeLoadedMarkdownImageDisplay, finalizeMarkdownImageDisplay } from './liveMarkdownImageDisplay';
 import { isMarkdownImageWidgetDomDisposed, registerMarkdownImageWidgetCleanup } from './liveMarkdownImageDisposal';
 import type { RequestEditorMeasure } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
@@ -27,26 +32,36 @@ interface AttachmentImageContext {
   onRemove: (() => void) | null;
   onSurfaceReady: (() => void) | null;
   requestMeasure: RequestEditorMeasure;
+  /** Source already on screen from memory, kept if the first resolution confirms it. */
+  restoredSource: string | null;
   wrapper: HTMLElement;
 }
 
 function showUnavailableAttachment(context: AttachmentImageContext) {
   if (!context.isActive()) return;
+  forgetAttachmentImage(context.imageMatch.source);
   context.wrapper.replaceChildren(createUnavailableImageStatus(context.imageMatch, context.onRemove));
   context.requestMeasure?.();
 }
 
-function showResolvedAttachment(context: AttachmentImageContext, source: string) {
-  if (!context.isActive()) return;
+function mountAttachmentSurface(context: AttachmentImageContext, source: string) {
   context.wrapper.replaceChildren(createImageSurface(context.imageMatch, source, context.editorNodeId, {
     isActive: context.isActive,
     onError: () => {
       closeActiveRemoteImageFailureMenu();
       showUnavailableAttachment(context);
     },
-    onLoad: () => finalizeLoadedMarkdownImageDisplay(context.wrapper, context.imageMatch, context.requestMeasure),
+    onLoad: () => {
+      rememberAttachmentImage(context.imageMatch.source, context.wrapper, source);
+      finalizeLoadedMarkdownImageDisplay(context.wrapper, context.imageMatch, context.requestMeasure);
+    },
     requestMeasure: context.requestMeasure
   }));
+}
+
+function showResolvedAttachment(context: AttachmentImageContext, source: string) {
+  if (!context.isActive()) return;
+  mountAttachmentSurface(context, source);
   context.onSurfaceReady?.();
   context.requestMeasure?.();
 }
@@ -87,7 +102,10 @@ async function resolveAttachmentImage(context: AttachmentImageContext) {
   if (!context.isActive()) return;
   const resolution = await resolveRuntimeAttachmentResource(context.imageMatch.source, { refresh: true, imageDisplay: true });
   if (!context.isActive()) return;
+  const restoredSource = context.restoredSource;
+  context.restoredSource = null;
   if (resolution?.status === 'ready' && resolution.resource_url) {
+    if (resolution.resource_url === restoredSource) return;
     showResolvedAttachment(context, resolution.resource_url);
     return;
   }
@@ -114,9 +132,17 @@ export function appendResolvedAttachmentImage(args: {
     onRemove: args.onRemove,
     onSurfaceReady: args.onSurfaceReady,
     requestMeasure: args.requestMeasure,
+    restoredSource: null,
     wrapper: args.wrapper
   };
-  args.wrapper.append(createImageStatusElement('loading', args.renderPlan.display));
+  const remembered = readRememberedAttachmentImage(args.imageMatch.source);
+  if (remembered) {
+    context.restoredSource = remembered.resourceUrl;
+    mountAttachmentSurface(context, remembered.resourceUrl);
+    finalizeMarkdownImageDisplay(args.wrapper, args.imageMatch, remembered.size, null);
+  } else {
+    args.wrapper.append(createImageStatusElement('loading', args.renderPlan.display));
+  }
   let pending = resolveAttachmentImage(context);
   const storageKey = parseAssetMarkdownUrl(args.imageMatch.source);
   if (storageKey) registerMarkdownImageWidgetCleanup(args.wrapper,
